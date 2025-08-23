@@ -117,6 +117,15 @@
         .save-stock-btn.saved {
             color: #facc15; /* yellow-400 */
         }
+        #modal-raw-data-content pre {
+            background-color: #111827; /* gray-900 */
+            color: #d1d5db; /* gray-300 */
+            padding: 1rem;
+            border-radius: 0.5rem;
+            max-height: 60vh;
+            overflow-x: auto;
+            font-size: 0.75rem;
+        }
     </style>
 </head>
 <body class="bg-gray-100 text-gray-800">
@@ -452,13 +461,13 @@
                 <nav id="financials-modal-tabs" class="-mb-px flex space-x-4" aria-label="Tabs">
                     <button data-tab-target="#modal-ai-summary-content" class="modal-tab-button active whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm">AI Summary</button>
                     <button data-tab-target="#modal-key-metrics-content" class="modal-tab-button whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">Key Metrics</button>
+                    <button data-tab-target="#modal-raw-data-content" class="modal-tab-button whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">Raw Data</button>
                 </nav>
             </div>
             <div class="pt-4">
-                <div id="modal-ai-summary-content" class="modal-tab-content active">
-                    </div>
-                <div id="modal-key-metrics-content" class="modal-tab-content">
-                    </div>
+                <div id="modal-ai-summary-content" class="modal-tab-content active"></div>
+                <div id="modal-key-metrics-content" class="modal-tab-content"></div>
+                <div id="modal-raw-data-content" class="modal-tab-content"></div>
             </div>
         </div>
     </div>
@@ -468,7 +477,7 @@
     <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-database-compat.js"></script>
 
     <script>
-        // Version 4.9.4
+        // Version 4.9.6
         document.addEventListener("DOMContentLoaded", () => {
             // --- 1. Global Configuration Object ---
             const appConfig = {
@@ -1185,7 +1194,7 @@
             }
             
             async function generateAndSaveAnalysis(prompt, container, exchange, analysisId, analysisTitle) {
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${appConfig.geminiApiKey}`;
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${appConfig.geminiApiKey}`;
                 try {
                     const response = await fetch(url, {
                         method: 'POST',
@@ -1571,9 +1580,10 @@
                         document.getElementById('modal-key-metrics-content').innerHTML = '<p class="text-center text-gray-500">Refreshing data...</p>';
                         document.getElementById('modal-ai-summary-content').innerHTML = '<p class="text-center text-gray-500">Refreshing AI analysis...</p>';
                         
-                        const liveData = await fetchTickerDetails(symbol);
+                        const liveData = await fetchTickerDetails(symbol, true); // Force refresh
                         if (liveData) {
                              populateFinancialsModal(liveData);
+                             populateRawDataModal(liveData);
                              const aiSummary = await generateAiRating(liveData);
                              populateAiSummary(aiSummary);
                              const dataToSave = { ...liveData, aiSummary, timestamp: new Date().toISOString() };
@@ -1602,6 +1612,7 @@
                 // Reset UI
                 document.getElementById('modal-key-metrics-content').innerHTML = '<p class="text-center text-gray-500">Loading financial data...</p>';
                 document.getElementById('modal-ai-summary-content').innerHTML = '<p class="text-center text-gray-500">Loading AI analysis...</p>';
+                document.getElementById('modal-raw-data-content').innerHTML = '<p class="text-center text-gray-500">Loading raw data...</p>';
                 document.getElementById('modal-company-name').textContent = `Loading... (${symbol})`;
                 document.getElementById('modal-stock-price').textContent = '';
                 document.getElementById('modal-last-updated').textContent = '...';
@@ -1611,10 +1622,10 @@
                 document.querySelectorAll('.modal-tab-content').forEach(content => content.classList.remove('active'));
                 document.querySelector('#modal-ai-summary-content').classList.add('active');
 
-
                 const cachedData = await loadTickerDetailsFromFirebase(symbol);
-                if (cachedData) {
+                if (cachedData && cachedData.keyMetrics) { // Check if cache is new format
                     populateFinancialsModal(cachedData);
+                    populateRawDataModal(cachedData);
                     if (cachedData.aiSummary) {
                         populateAiSummary(cachedData.aiSummary);
                     } else {
@@ -1626,6 +1637,7 @@
                     const liveData = await fetchTickerDetails(symbol);
                      if (liveData) {
                         populateFinancialsModal(liveData);
+                        populateRawDataModal(liveData);
                         const aiSummary = await generateAiRating(liveData);
                         populateAiSummary(aiSummary);
                         const dataToSave = { ...liveData, aiSummary, timestamp: new Date().toISOString() };
@@ -1633,30 +1645,45 @@
                     } else {
                          document.getElementById('modal-key-metrics-content').innerHTML = '<p class="text-center text-red-500">Could not fetch financial data.</p>';
                          document.getElementById('modal-ai-summary-content').innerHTML = '';
+                         document.getElementById('modal-raw-data-content').innerHTML = '';
                     }
                 }
             }
 
             async function fetchTickerDetails(symbol) {
                 if (!appConfig.fmpApiKey) return null;
+                const apiKey = appConfig.fmpApiKey;
                 const urls = [
-                    `https://financialmodelingprep.com/api/v3/profile/${symbol}?apikey=${appConfig.fmpApiKey}`,
-                    `https://financialmodelingprep.com/api/v3/key-metrics-ttm/${symbol}?apikey=${appConfig.fmpApiKey}`,
-                    `https://financialmodelingprep.com/api/v3/ratios-ttm/${symbol}?apikey=${appConfig.fmpApiKey}`
+                    `https://financialmodelingprep.com/api/v3/profile/${symbol}?apikey=${apiKey}`,
+                    `https://financialmodelingprep.com/api/v3/key-metrics-annual/${symbol}?limit=5&apikey=${apiKey}`,
+                    `https://financialmodelingprep.com/api/v3/ratios-annual/${symbol}?limit=5&apikey=${apiKey}`,
+                    `https://financialmodelingprep.com/api/v3/income-statement-annual/${symbol}?limit=5&apikey=${apiKey}`,
+                    `https://financialmodelingprep.com/api/v3/balance-sheet-statement-annual/${symbol}?limit=5&apikey=${apiKey}`,
+                    `https://financialmodelingprep.com/api/v3/cash-flow-statement-annual/${symbol}?limit=5&apikey=${apiKey}`
                 ];
 
                 try {
                     const responses = await Promise.all(urls.map(url => fetch(url)));
-                    const [profileRes, metricsRes, ratiosRes] = await Promise.all(responses.map(res => res.json()));
+                    const [
+                        profileData,
+                        keyMetricsData,
+                        ratiosData,
+                        incomeStatementData,
+                        balanceSheetData,
+                        cashFlowData
+                    ] = await Promise.all(responses.map(res => res.json()));
 
-                    const profile = profileRes?.[0] || {};
-                    const metrics = metricsRes?.[0] || {};
-                    const ratios = ratiosRes?.[0] || {};
-
-                    return { profile, metrics, ratios };
+                    return { 
+                        profile: profileData,
+                        keyMetrics: keyMetricsData,
+                        ratios: ratiosData,
+                        incomeStatement: incomeStatementData,
+                        balanceSheet: balanceSheetData,
+                        cashFlow: cashFlowData
+                    };
 
                 } catch (error) {
-                    console.error(`Error fetching details for ${symbol}:`, error);
+                    console.error(`Error fetching comprehensive details for ${symbol}:`, error);
                     return null;
                 }
             }
@@ -1665,10 +1692,12 @@
                 if (!appConfig.geminiApiKey || !financialData) {
                     return { rating: 'Error', rationale: 'Could not generate AI rating. API key or financial data missing.' };
                 }
-                const { profile, metrics, ratios } = financialData;
+                const profile = financialData.profile?.[0] || {};
+                const metrics = financialData.keyMetrics?.[0] || {};
+                const ratios = financialData.ratios?.[0] || {};
 
-                const eps = metrics.netIncomePerShareTTM;
-                const bvps = metrics.bookValuePerShareTTM;
+                const eps = metrics.netIncomePerShare;
+                const bvps = metrics.bookValuePerShare;
                 let grahamNumberText = 'N/A';
                 if (eps > 0 && bvps > 0) {
                     const grahamNumber = Math.sqrt(22.5 * eps * bvps);
@@ -1676,29 +1705,29 @@
                 }
 
                 const prompt = `
-                    Act as a seasoned value investor. I will provide you with key financial metrics for a company. Your task is to analyze these metrics and provide a concise valuation assessment.
+                    Act as a seasoned value investor. I will provide you with key financial metrics for a company based on its latest ANNUAL report. Your task is to analyze these metrics and provide a concise valuation assessment.
 
                     Company: ${profile.companyName} (${profile.symbol})
                     Industry: ${profile.industry}
                     Sector: ${profile.sector}
                     
-                    Key Metrics (TTM):
-                    - P/E Ratio: ${metrics.peRatioTTM?.toFixed(2) || 'N/A'}
-                    - Price to Sales Ratio: ${metrics.priceToSalesRatioTTM?.toFixed(2) || 'N/A'}
-                    - Price to Book Ratio: ${metrics.pbRatioTTM?.toFixed(2) || 'N/A'}
+                    Key Metrics (Annual):
+                    - P/E Ratio: ${metrics.peRatio?.toFixed(2) || 'N/A'}
+                    - Price to Sales Ratio: ${metrics.priceToSalesRatio?.toFixed(2) || 'N/A'}
+                    - Price to Book Ratio: ${metrics.pbRatio?.toFixed(2) || 'N/A'}
                     - Graham Number (Intrinsic Value): ${grahamNumberText}
-                    - Debt to Equity: ${metrics.debtToEquityTTM?.toFixed(2) || 'N/A'}
-                    - Return on Equity (ROE): ${(metrics.roeTTM * 100)?.toFixed(2) || 'N/A'}%
-                    - Dividend Yield: ${(ratios.dividendYieldTTM * 100)?.toFixed(2) || 'N/A'}%
-                    - Payout Ratio: ${(ratios.payoutRatioTTM * 100)?.toFixed(2) || 'N/A'}%
-                    - Net Profit Margin: ${(ratios.netProfitMarginTTM * 100)?.toFixed(2) || 'N/A'}%
+                    - Debt to Equity: ${metrics.debtToEquity?.toFixed(2) || 'N/A'}
+                    - Return on Equity (ROE): ${(metrics.roe * 100)?.toFixed(2) || 'N/A'}%
+                    - Dividend Yield: ${(metrics.dividendYield * 100)?.toFixed(2) || 'N/A'}%
+                    - Payout Ratio: ${(ratios.payoutRatio * 100)?.toFixed(2) || 'N/A'}%
+                    - Net Profit Margin: ${(ratios.netProfitMargin * 100)?.toFixed(2) || 'N/A'}%
 
                     Based on this data, provide your analysis in a valid JSON format with two keys:
                     1. "rating": A single-word assessment. Choose from: "Undervalued", "Fairly Valued", "Overvalued", "Speculative Growth", "Caution Advised".
                     2. "rationale": A 2-3 sentence justification for your rating, referencing the provided data.
                 `;
 
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${appConfig.geminiApiKey}`;
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${appConfig.geminiApiKey}`;
                 try {
                     const response = await fetch(url, {
                         method: 'POST',
@@ -1717,14 +1746,17 @@
             }
 
             function populateFinancialsModal(data) {
-                const { profile, metrics, ratios, timestamp } = data;
+                const profile = data.profile?.[0] || {};
+                const metrics = data.keyMetrics?.[0] || {};
+                const ratios = data.ratios?.[0] || {};
+                const { timestamp } = data;
                 
                 const format = (value, prefix = '', suffix = '', digits = 2) => {
                     return (value !== null && typeof value !== 'undefined' && !isNaN(value)) ? `${prefix}${Number(value).toFixed(digits)}${suffix}` : 'N/A';
                 };
 
-                const eps = metrics.netIncomePerShareTTM;
-                const bvps = metrics.bookValuePerShareTTM;
+                const eps = metrics.netIncomePerShare;
+                const bvps = metrics.bookValuePerShare;
                 let grahamNumber = null;
                 if (eps > 0 && bvps > 0) {
                     grahamNumber = Math.sqrt(22.5 * eps * bvps);
@@ -1742,24 +1774,24 @@
                 contentEl.innerHTML = `
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-6">
                         <div class="space-y-3">
-                            <h4 class="font-semibold text-gray-700 border-b pb-2">Valuation Ratios</h4>
-                            <div class="flex justify-between text-sm"><span class="text-gray-500">P/E Ratio (TTM)</span><span class="font-medium">${format(metrics.peRatioTTM)}</span></div>
-                            <div class="flex justify-between text-sm"><span class="text-gray-500">Price to Sales (TTM)</span><span class="font-medium">${format(metrics.priceToSalesRatioTTM)}</span></div>
-                            <div class="flex justify-between text-sm"><span class="text-gray-500">Price to Book (TTM)</span><span class="font-medium">${format(metrics.pbRatioTTM)}</span></div>
-                            <div class="flex justify-between text-sm"><span class="text-gray-500">EV/EBITDA (TTM)</span><span class="font-medium">${format(metrics.enterpriseValueOverEBITDATTM)}</span></div>
+                            <h4 class="font-semibold text-gray-700 border-b pb-2">Valuation Ratios (Annual)</h4>
+                            <div class="flex justify-between text-sm"><span class="text-gray-500">P/E Ratio</span><span class="font-medium">${format(metrics.peRatio)}</span></div>
+                            <div class="flex justify-between text-sm"><span class="text-gray-500">Price to Sales</span><span class="font-medium">${format(metrics.priceToSalesRatio)}</span></div>
+                            <div class="flex justify-between text-sm"><span class="text-gray-500">Price to Book</span><span class="font-medium">${format(metrics.pbRatio)}</span></div>
+                            <div class="flex justify-between text-sm"><span class="text-gray-500">EV/EBITDA</span><span class="font-medium">${format(metrics.enterpriseValueOverEBITDA)}</span></div>
                             <div class="flex justify-between text-sm"><span class="text-gray-500">Graham Number</span><span class="font-medium">${format(grahamNumber, '$')}</span></div>
                         </div>
                         <div class="space-y-3">
-                            <h4 class="font-semibold text-gray-700 border-b pb-2">Financial Health</h4>
-                            <div class="flex justify-between text-sm"><span class="text-gray-500">Debt to Equity (TTM)</span><span class="font-medium">${format(metrics.debtToEquityTTM)}</span></div>
-                            <div class="flex justify-between text-sm"><span class="text-gray-500">Return on Equity (ROE)</span><span class="font-medium">${format(metrics.roeTTM * 100, '', '%')}</span></div>
-                             <div class="flex justify-between text-sm"><span class="text-gray-500">Operating Margin</span><span class="font-medium">${format(ratios.operatingMarginTTM * 100, '', '%')}</span></div>
-                            <div class="flex justify-between text-sm"><span class="text-gray-500">Net Profit Margin</span><span class="font-medium">${format(ratios.netProfitMarginTTM * 100, '', '%')}</span></div>
+                            <h4 class="font-semibold text-gray-700 border-b pb-2">Financial Health (Annual)</h4>
+                            <div class="flex justify-between text-sm"><span class="text-gray-500">Debt to Equity</span><span class="font-medium">${format(metrics.debtToEquity)}</span></div>
+                            <div class="flex justify-between text-sm"><span class="text-gray-500">Return on Equity (ROE)</span><span class="font-medium">${format(metrics.roe * 100, '', '%')}</span></div>
+                             <div class="flex justify-between text-sm"><span class="text-gray-500">Operating Margin</span><span class="font-medium">${format(ratios.operatingMargin * 100, '', '%')}</span></div>
+                            <div class="flex justify-between text-sm"><span class="text-gray-500">Net Profit Margin</span><span class="font-medium">${format(ratios.netProfitMargin * 100, '', '%')}</span></div>
                         </div>
                         <div class="space-y-3">
-                            <h4 class="font-semibold text-gray-700 border-b pb-2">Dividend Info</h4>
-                             <div class="flex justify-between text-sm"><span class="text-gray-500">Dividend Yield (TTM)</span><span class="font-medium">${format(ratios.dividendYieldTTM * 100, '', '%')}</span></div>
-                            <div class="flex justify-between text-sm"><span class="text-gray-500">Payout Ratio (TTM)</span><span class="font-medium">${format(ratios.payoutRatioTTM * 100, '', '%')}</span></div>
+                            <h4 class="font-semibold text-gray-700 border-b pb-2">Dividend Info (Annual)</h4>
+                             <div class="flex justify-between text-sm"><span class="text-gray-500">Dividend Yield</span><span class="font-medium">${format(metrics.dividendYield * 100, '', '%')}</span></div>
+                            <div class="flex justify-between text-sm"><span class="text-gray-500">Payout Ratio</span><span class="font-medium">${format(ratios.payoutRatio * 100, '', '%')}</span></div>
                         </div>
                     </div>
                 `;
@@ -1785,6 +1817,16 @@
                         <p class="text-gray-600 mt-2 leading-relaxed">${summary.rationale || 'No rationale provided.'}</p>
                     </div>
                 `;
+            }
+
+            function populateRawDataModal(data) {
+                const contentEl = document.getElementById('modal-raw-data-content');
+                if (!data) {
+                    contentEl.innerHTML = '<p class="text-center text-red-500">No raw data available to display.</p>';
+                    return;
+                }
+                const formattedJson = JSON.stringify(data, null, 2);
+                contentEl.innerHTML = `<pre><code>${formattedJson}</code></pre>`;
             }
 
             // --- Run the initialization function ---
