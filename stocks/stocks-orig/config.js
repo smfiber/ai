@@ -36,7 +36,6 @@ export const STARTER_SYMBOLS = [
     'VWO', 'VZ', 'WBA', 'WFC', 'WMT', 'XOM', 'ZM'
 ];
 
-
 // --- Constants ---
 export const CONSTANTS = {
     // Modals
