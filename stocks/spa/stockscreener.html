@@ -310,16 +310,11 @@
         <div class="absolute inset-0 bg-gray-900 bg-opacity-75" id="crudModalOverlay"></div>
         <div class="relative bg-white rounded-2xl shadow-lg border border-gray-200 p-8 w-full max-w-4xl m-4 overflow-y-auto max-h-[90vh]">
             <h2 class="text-2xl font-bold mb-6">Manage Saved Analyses</h2>
-            
-            <div id="savedSummariesList" class="space-y-4">
-                </div>
-
+            <div id="savedSummariesList" class="space-y-4"></div>
             <div id="editSummaryFormContainer" class="hidden mt-8 p-6 bg-gray-50 rounded-lg">
                 <h3 class="text-xl font-bold mb-4">Edit Analysis</h3>
                 <form id="editSummaryForm">
-                    <input type="hidden" id="editAnalysisId">
-                    <input type="hidden" id="editAnalysisExchange">
-                    <input type="hidden" id="editAnalysisType">
+                    <input type="hidden" id="editAnalysisId"><input type="hidden" id="editAnalysisExchange"><input type="hidden" id="editAnalysisType">
                     <textarea id="editAnalysisText" class="w-full p-2 border border-gray-300 rounded-lg" rows="10"></textarea>
                     <div class="mt-4 flex justify-end space-x-3">
                         <button type="button" id="cancelEditBtn" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg">Cancel</button>
@@ -330,12 +325,33 @@
         </div>
     </div>
 
+    <div id="financialsModal" class="fixed inset-0 z-[100] items-center justify-center p-4 modal">
+        <div id="financialsModalOverlay" class="absolute inset-0 bg-gray-900 bg-opacity-75"></div>
+        <div class="relative bg-white rounded-2xl shadow-lg border border-gray-200 p-6 w-full max-w-3xl m-4 overflow-y-auto max-h-[90vh]">
+            <div class="flex justify-between items-start pb-4 border-b">
+                <div>
+                    <h2 id="modal-company-name" class="text-2xl font-bold text-gray-800">Company Name (SYMBOL)</h2>
+                    <p id="modal-stock-price" class="text-lg font-semibold text-indigo-600 mt-1">Price</p>
+                </div>
+                <button id="financialsModalCloseBtn" class="text-gray-400 hover:text-gray-600">&times;</button>
+            </div>
+            <div class="flex justify-between items-center py-3">
+                 <p id="modal-last-updated" class="text-xs text-gray-500">Loading...</p>
+                 <button id="refreshFinancialsBtn" data-symbol="" class="text-sm bg-indigo-100 text-indigo-700 hover:bg-indigo-200 rounded-md px-3 py-1 font-semibold">
+                    <i class="fas fa-sync-alt mr-2"></i>Refresh Data
+                </button>
+            </div>
+            <div id="financialsModalContent" class="pt-4 space-y-6">
+                </div>
+        </div>
+    </div>
+
 
     <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-database-compat.js"></script>
 
     <script>
-        // Version 4.7
+        // Version 4.8
         document.addEventListener("DOMContentLoaded", () => {
             // --- 1. Global Configuration Object ---
             const appConfig = {
@@ -345,7 +361,7 @@
                 searchEngineId: "",
                 googleClientId: "",
                 firebaseConfig: {},
-                generativeAnalyses: {} // Holds the latest generated analysis text
+                generativeAnalyses: {}
             };
             
             let db = null;
@@ -373,6 +389,11 @@
             const editSummaryForm = document.getElementById('editSummaryForm');
             const cancelEditBtn = document.getElementById('cancelEditBtn');
             const advancedScreenerFilterForm = document.getElementById('advancedScreenerFilterForm');
+            const financialsModal = document.getElementById('financialsModal');
+            const financialsModalOverlay = document.getElementById('financialsModalOverlay');
+            const financialsModalCloseBtn = document.getElementById('financialsModalCloseBtn');
+            const refreshFinancialsBtn = document.getElementById('refreshFinancialsBtn');
+            const appContent = document.getElementById('appContent');
 
 
             // --- 3. Initialization Logic ---
@@ -414,6 +435,9 @@
             function showModal() { apiKeyModal.style.display = 'flex'; }
             function hideModal() { apiKeyModal.style.display = 'none'; }
             
+            function showFinancialsModal() { financialsModal.style.display = 'flex'; }
+            function hideFinancialsModal() { financialsModal.style.display = 'none'; }
+
             function setupTabs() {
                 const tabMap = {
                     'gen-ai-tab-button': 'gen-ai-tab-content',
@@ -455,6 +479,7 @@
                 console.log("Application starting...");
                 setupTabs();
                 setupCrudModalListeners();
+                setupFinancialsModalListeners();
                 advancedScreenerFilterForm.addEventListener('submit', handleAdvancedScreenerRun);
 
                 try {
@@ -530,7 +555,7 @@
                     if(genAiNav) genAiNav.innerHTML = '';
                     if(genAiContent) genAiContent.innerHTML = '';
                     const refreshedScreenerData = await fetchSimpleStockScreener(exchangeUpperCase, tableContainer, cardContainer);
-                    fetchAndRenderPriceTargetNews(refreshedScreenerData, newsContainer, exchange, true); // Force refresh
+                    fetchAndRenderPriceTargetNews(refreshedScreenerData, newsContainer, exchange, true);
                 });
             }
 
@@ -690,7 +715,7 @@
                         const newsData = snapshot.val();
                         console.log(`Loaded news for ${exchange.toUpperCase()} from Firebase.`);
                         renderNewsCards(newsData, newsContainer);
-                        await runGenerativeAnalyses(newsData, screenerData, exchange, false); // Don't force refresh on initial load
+                        await runGenerativeAnalyses(newsData, screenerData, exchange, false);
                         return true;
                     }
                     return false;
@@ -703,7 +728,6 @@
             async function autoSaveAnalysisToFirebase(exchange, analysisId, analysisData) {
                 if (!db) return;
                 try {
-                    // Using set() to overwrite the previous cache for this specific analysis type
                     await db.ref(`analyses-cache/${exchange}/${analysisId}`).set(analysisData);
                     console.log(`Auto-saved analysis '${analysisId}' for ${exchange.toUpperCase()}.`);
                 } catch (error) {
@@ -722,6 +746,27 @@
                     return null;
                 } catch (error) {
                     console.error(`Failed to load analyses from cache for ${exchange}:`, error);
+                    return null;
+                }
+            }
+            
+            async function saveTickerDetailsToFirebase(symbol, data) {
+                if (!db) return;
+                try {
+                    await db.ref(`financial-details/${symbol}`).set(data);
+                    console.log(`Details for ${symbol} saved to Firebase.`);
+                } catch (error) {
+                    console.error(`Failed to save details for ${symbol}:`, error);
+                }
+            }
+
+            async function loadTickerDetailsFromFirebase(symbol) {
+                if (!db) return null;
+                try {
+                    const snapshot = await db.ref(`financial-details/${symbol}`).get();
+                    return snapshot.exists() ? snapshot.val() : null;
+                } catch (error) {
+                    console.error(`Failed to load details for ${symbol} from Firebase:`, error);
                     return null;
                 }
             }
@@ -936,7 +981,7 @@
                     if (cached) {
                         console.log(`Using cached analysis for ${exchange} - ${analysis.title}`);
                         renderAnalysis(cached.text, container, exchange, analysis.id, analysis.title);
-                        appConfig.generativeAnalyses[exchange][analysis.id] = cached.text; // Store for manual save
+                        appConfig.generativeAnalyses[exchange][analysis.id] = cached.text; 
                         continue;
                     }
                     
@@ -960,7 +1005,7 @@
                     }
                     
                     await generateAndSaveAnalysis(promptText, container, exchange, analysis.id, analysis.title);
-                    await delay(1500); // Delay to avoid rate limiting
+                    await delay(1500); 
                 }
             }
             
@@ -1097,7 +1142,6 @@
                 };
 
                 try {
-                    // Using push() for manual saves to allow multiple snapshots
                     await db.ref(`manual-analyses/${exchange}/${analysisId}`).push(analysisData);
                     alert(`${exchange.toUpperCase()} - ${analysisTitle} analysis saved successfully!`);
                 } catch (error) {
@@ -1161,7 +1205,7 @@
                 if (confirm('Are you sure you want to delete this analysis?')) {
                     try {
                         await db.ref(`manual-analyses/${exchange}/${analysisType}/${analysisId}`).remove();
-                        await loadAnalysesForCrud(); // Refresh the list
+                        await loadAnalysesForCrud();
                     } catch (error) {
                         console.error("Error deleting analysis:", error);
                         alert("Failed to delete analysis.");
@@ -1179,7 +1223,7 @@
                 try {
                     await db.ref(`manual-analyses/${exchange}/${analysisType}/${analysisId}/text`).set(newText);
                     editSummaryFormContainer.classList.add('hidden');
-                    await loadAnalysesForCrud(); // Refresh the list
+                    await loadAnalysesForCrud();
                 } catch (error) {
                     console.error("Error updating analysis:", error);
                     alert("Failed to update analysis.");
@@ -1203,7 +1247,9 @@
                 }
                 const tableRows = data.map(stock => `
                     <tr>
-                        <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-indigo-600">${formatText(stock.symbol)}</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-sm">
+                            <button class="ticker-details-btn font-medium text-indigo-600 hover:text-indigo-800" data-symbol="${stock.symbol}">${stock.symbol}</button>
+                        </td>
                         <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-600">${formatText(stock.companyName)}</td>
                         <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-right">${formatMarketCap(stock.marketCap)}</td>
                         <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${formatText(stock.sector)}</td>
@@ -1219,7 +1265,9 @@
                 }
                 const tableRows = data.map(stock => `
                     <tr>
-                        <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-indigo-600">${formatText(stock.symbol)}</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-sm">
+                             <button class="ticker-details-btn font-medium text-indigo-600 hover:text-indigo-800" data-symbol="${stock.symbol}">${stock.symbol}</button>
+                        </td>
                         <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-600">${formatText(stock.companyName)}</td>
                         <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-right">${formatMarketCap(stock.marketCap)}</td>
                         <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${formatText(stock.sector)}</td>
@@ -1253,7 +1301,9 @@
                         grouped[sector][industry].forEach(stock => {
                             html += `<div class="bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
                                         <div class="flex justify-between items-baseline mb-1">
-                                            <p class="font-bold text-sm text-indigo-600 truncate pr-2">${formatText(stock.symbol)}</p>
+                                            <p class="font-bold text-sm text-indigo-600 truncate pr-2">
+                                                <button class="ticker-details-btn text-left w-full" data-symbol="${stock.symbol}">${stock.symbol}</button>
+                                            </p>
                                             <p class="text-xs font-semibold text-gray-700 whitespace-nowrap">${formatMarketCap(stock.marketCap)}</p>
                                         </div>
                                         <p class="text-xs text-gray-500 truncate" title="${formatText(stock.companyName)}">${formatText(stock.companyName)}</p>
@@ -1288,6 +1338,123 @@
                     </a>
                 `).join('');
                 container.innerHTML = newsHtml;
+            }
+
+            // --- Financials Modal Logic ---
+
+            function setupFinancialsModalListeners() {
+                financialsModalOverlay.addEventListener('click', hideFinancialsModal);
+                financialsModalCloseBtn.addEventListener('click', hideFinancialsModal);
+                
+                appContent.addEventListener('click', (e) => {
+                    const button = e.target.closest('.ticker-details-btn');
+                    if (button && button.dataset.symbol) {
+                        handleTickerClick(button.dataset.symbol);
+                    }
+                });
+
+                refreshFinancialsBtn.addEventListener('click', async () => {
+                    const symbol = refreshFinancialsBtn.dataset.symbol;
+                    if (symbol) {
+                        document.getElementById('financialsModalContent').innerHTML = '<p class="text-center text-gray-500">Refreshing data...</p>';
+                        const liveData = await fetchTickerDetails(symbol);
+                        if (liveData) {
+                             const dataToSave = { ...liveData, timestamp: new Date().toISOString() };
+                             await saveTickerDetailsToFirebase(symbol, dataToSave);
+                             populateFinancialsModal(dataToSave);
+                        } else {
+                            document.getElementById('financialsModalContent').innerHTML = '<p class="text-center text-red-500">Could not refresh data.</p>';
+                        }
+                    }
+                });
+            }
+
+            async function handleTickerClick(symbol) {
+                showFinancialsModal();
+                refreshFinancialsBtn.dataset.symbol = symbol;
+                document.getElementById('financialsModalContent').innerHTML = '<p class="text-center text-gray-500">Loading financial data...</p>';
+                document.getElementById('modal-company-name').textContent = `Loading... (${symbol})`;
+                document.getElementById('modal-stock-price').textContent = '';
+                document.getElementById('modal-last-updated').textContent = '...';
+
+                const cachedData = await loadTickerDetailsFromFirebase(symbol);
+                if (cachedData) {
+                    populateFinancialsModal(cachedData);
+                } else {
+                    const liveData = await fetchTickerDetails(symbol);
+                     if (liveData) {
+                        const dataToSave = { ...liveData, timestamp: new Date().toISOString() };
+                        await saveTickerDetailsToFirebase(symbol, dataToSave);
+                        populateFinancialsModal(dataToSave);
+                    } else {
+                         document.getElementById('financialsModalContent').innerHTML = '<p class="text-center text-red-500">Could not fetch financial data for this ticker.</p>';
+                    }
+                }
+            }
+
+            async function fetchTickerDetails(symbol) {
+                if (!appConfig.fmpApiKey) return null;
+                const urls = [
+                    `https://financialmodelingprep.com/api/v3/profile/${symbol}?apikey=${appConfig.fmpApiKey}`,
+                    `https://financialmodelingprep.com/api/v3/key-metrics-ttm/${symbol}?apikey=${appConfig.fmpApiKey}`,
+                    `https://financialmodelingprep.com/api/v3/ratios-ttm/${symbol}?apikey=${appConfig.fmpApiKey}`
+                ];
+
+                try {
+                    const responses = await Promise.all(urls.map(url => fetch(url)));
+                    const [profileRes, metricsRes, ratiosRes] = await Promise.all(responses.map(res => res.json()));
+
+                    const profile = profileRes?.[0] || {};
+                    const metrics = metricsRes?.[0] || {};
+                    const ratios = ratiosRes?.[0] || {};
+
+                    return { profile, metrics, ratios };
+
+                } catch (error) {
+                    console.error(`Error fetching details for ${symbol}:`, error);
+                    return null;
+                }
+            }
+
+            function populateFinancialsModal(data) {
+                const { profile, metrics, ratios, timestamp } = data;
+                
+                const format = (value, prefix = '', suffix = '', digits = 2) => {
+                    return (value !== null && typeof value !== 'undefined') ? `${prefix}${Number(value).toFixed(digits)}${suffix}` : 'N/A';
+                };
+                
+                document.getElementById('modal-company-name').textContent = `${profile.companyName || 'N/A'} (${profile.symbol || ''})`;
+                document.getElementById('modal-stock-price').textContent = format(profile.price, '$');
+                if (timestamp) {
+                    document.getElementById('modal-last-updated').textContent = `Cached: ${new Date(timestamp).toLocaleString()}`;
+                } else {
+                     document.getElementById('modal-last-updated').textContent = `Live Data (just now)`;
+                }
+
+                const contentEl = document.getElementById('financialsModalContent');
+                contentEl.innerHTML = `
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="space-y-3">
+                            <h4 class="font-semibold text-gray-700 border-b pb-2">Valuation Ratios</h4>
+                            <div class="flex justify-between text-sm"><span class="text-gray-500">P/E Ratio (TTM)</span><span class="font-medium">${format(metrics.peRatioTTM)}</span></div>
+                            <div class="flex justify-between text-sm"><span class="text-gray-500">Price to Sales (TTM)</span><span class="font-medium">${format(metrics.priceToSalesRatioTTM)}</span></div>
+                            <div class="flex justify-between text-sm"><span class="text-gray-500">Price to Book (TTM)</span><span class="font-medium">${format(metrics.pbRatioTTM)}</span></div>
+                             <div class="flex justify-between text-sm"><span class="text-gray-500">EV/EBITDA (TTM)</span><span class="font-medium">${format(metrics.enterpriseValueOverEBITDATTM)}</span></div>
+                        </div>
+                        <div class="space-y-3">
+                            <h4 class="font-semibold text-gray-700 border-b pb-2">Financial Health</h4>
+                            <div class="flex justify-between text-sm"><span class="text-gray-500">Debt to Equity (TTM)</span><span class="font-medium">${format(metrics.debtToEquityTTM)}</span></div>
+                            <div class="flex justify-between text-sm"><span class="text-gray-500">Return on Equity (ROE)</span><span class="font-medium">${format(metrics.roeTTM * 100, '', '%')}</span></div>
+                             <div class="flex justify-between text-sm"><span class="text-gray-500">Operating Margin</span><span class="font-medium">${format(ratios.operatingMarginTTM * 100, '', '%')}</span></div>
+                            <div class="flex justify-between text-sm"><span class="text-gray-500">Net Profit Margin</span><span class="font-medium">${format(ratios.netProfitMarginTTM * 100, '', '%')}</span></div>
+                        </div>
+                        <div class="space-y-3">
+                            <h4 class="font-semibold text-gray-700 border-b pb-2">Dividend Info</h4>
+                             <div class="flex justify-between text-sm"><span class="text-gray-500">Dividend Yield (TTM)</span><span class="font-medium">${format(ratios.dividendYieldTTM * 100, '', '%')}</span></div>
+                            <div class="flex justify-between text-sm"><span class="text-gray-500">Payout Ratio (TTM)</span><span class="font-medium">${format(ratios.payoutRatioTTM * 100, '', '%')}</span></div>
+                        </div>
+                    </div>
+                `;
             }
 
             // --- Run the initialization function ---
