@@ -1,21 +1,9 @@
-import { CONSTANTS, SECTORS, SECTOR_ICONS, state, NEWS_SENTIMENT_PROMPT, FINANCIAL_ANALYSIS_PROMPT, UNDERVALUED_ANALYSIS_PROMPT, BULL_VS_BEAR_PROMPT, MOAT_ANALYSIS_PROMPT, DIVIDEND_SAFETY_PROMPT, GROWTH_OUTLOOK_PROMPT, RISK_ASSESSMENT_PROMPT, CAPITAL_ALLOCATORS_PROMPT, creativePromptMap, DISRUPTOR_ANALYSIS_PROMPT, MACRO_PLAYBOOK_PROMPT, INDUSTRY_CAPITAL_ALLOCATORS_PROMPT, INDUSTRY_DISRUPTOR_ANALYSIS_PROMPT, INDUSTRY_MACRO_PLAYBOOK_PROMPT, ONE_SHOT_INDUSTRY_TREND_PROMPT, FORTRESS_ANALYSIS_PROMPT, PHOENIX_ANALYSIS_PROMPT, PICK_AND_SHOVEL_PROMPT, LINCHPIN_ANALYSIS_PROMPT, HIDDEN_VALUE_PROMPT, UNTOUCHABLES_ANALYSIS_PROMPT, MANAGEMENT_SCORECARD_PROMPT, NARRATIVE_CATALYST_PROMPT, INVESTMENT_MEMO_PROMPT, ENABLE_STARTER_PLAN_MODE, STARTER_SYMBOLS } from './config.js';
+import { CONSTANTS, SECTORS, SECTOR_ICONS, state, NEWS_SENTIMENT_PROMPT, promptMap, creativePromptMap, DISRUPTOR_ANALYSIS_PROMPT, MACRO_PLAYBOOK_PROMPT, INDUSTRY_CAPITAL_ALLOCATORS_PROMPT, INDUSTRY_DISRUPTOR_ANALYSIS_PROMPT, INDUSTRY_MACRO_PLAYBOOK_PROMPT, ONE_SHOT_INDUSTRY_TREND_PROMPT, FORTRESS_ANALYSIS_PROMPT, PHOENIX_ANALYSIS_PROMPT, PICK_AND_SHOVEL_PROMPT, LINCHPIN_ANALYSIS_PROMPT, HIDDEN_VALUE_PROMPT, UNTOUCHABLES_ANALYSIS_PROMPT, INVESTMENT_MEMO_PROMPT, ENABLE_STARTER_PLAN_MODE, STARTER_SYMBOLS } from './config.js';
 import { getFmpStockData, callApi, filterValidNews, callGeminiApi, generatePolishedArticle, getDriveToken, getOrCreateDriveFolder, createDriveFile, findStocksByIndustry, searchSectorNews, findStocksBySector, getGroupedFmpData, synthesizeAndRankCompanies, generateDeepDiveReport } from './api.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- PROMPT MAPPING ---
-const promptMap = {
-    'FinancialAnalysis': FINANCIAL_ANALYSIS_PROMPT,
-    'UndervaluedAnalysis': UNDERVALUED_ANALYSIS_PROMPT,
-    'BullVsBear': BULL_VS_BEAR_PROMPT,
-    'MoatAnalysis': MOAT_ANALYSIS_PROMPT,
-    'DividendSafety': DIVIDEND_SAFETY_PROMPT,
-    'GrowthOutlook': GROWTH_OUTLOOK_PROMPT,
-    'RiskAssessment': RISK_ASSESSMENT_PROMPT,
-    'CapitalAllocators': CAPITAL_ALLOCATORS_PROMPT,
-    'ManagementScorecard': MANAGEMENT_SCORECARD_PROMPT,
-    'NarrativeCatalyst': NARRATIVE_CATALYST_PROMPT,
-    'InvestmentMemo': INVESTMENT_MEMO_PROMPT
-};
+// The main promptMap is now imported directly from config.js
 
 // Map specific AI analysis types to the FMP endpoints they require.
 const ANALYSIS_REQUIREMENTS = {
@@ -1485,9 +1473,9 @@ export function setupEventListeners() {
 
         if (target.matches('.ai-analysis-button')) {
             const reportType = target.dataset.reportType;
-            const promptTemplate = promptMap[reportType];
-            if (promptTemplate) {
-                handleAnalysisRequest(symbol, reportType, promptTemplate);
+            const promptConfig = promptMap[reportType];
+            if (promptConfig) {
+                handleAnalysisRequest(symbol, reportType, promptConfig);
             }
         }
         
@@ -2144,66 +2132,18 @@ async function getSavedBroadReports(contextName, contextType) {
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
 
-function curateFmpDataForAI(fmpData) {
-    const safeGet = (arr) => Array.isArray(arr) && arr.length > 0 ? arr : [];
-    
-    const income = safeGet(fmpData.income_statement_annual);
-    const metrics = safeGet(fmpData.key_metrics_annual);
-
-    const calculations = {
-        cagr: (arr, valueKey, years) => {
-            const validEntries = arr.map(d => d[valueKey]).filter(v => typeof v === 'number' && v > 0);
-            if (validEntries.length < 2) return null;
-            const recent = arr.slice(0, years + 1).reverse(); // Oldest to newest
-            if (recent.length < 2) return null;
-            const beginningValue = recent[0][valueKey];
-            const endingValue = recent[recent.length - 1][valueKey];
-            const numYears = recent.length - 1;
-            if (beginningValue <= 0 || endingValue <= 0 || numYears <= 0) return null;
-            return Math.pow(endingValue / beginningValue, 1 / numYears) - 1;
-        },
-        average: (arr, valueKey, years) => {
-            const recent = arr.slice(0, years);
-            const total = recent.reduce((sum, item) => sum + (item[valueKey] || 0), 0);
-            return recent.length > 0 ? total / recent.length : null;
-        },
-        trend: (arr, valueKey) => {
-            const recent = arr.slice(0, 3).map(d => d[valueKey]);
-            if (recent.length < 2) return 'Insufficient Data';
-            if (recent[0] > recent[1] && recent[1] > recent[2]) return 'Improving';
-            if (recent[0] < recent[1] && recent[1] < recent[2]) return 'Declining';
-            return 'Stable/Volatile';
+function buildAnalysisPayload(fullData, requiredEndpoints) {
+    const payload = {};
+    for (const endpointName of requiredEndpoints) {
+        if (fullData.hasOwnProperty(endpointName)) {
+            payload[endpointName] = fullData[endpointName];
         }
-    };
-
-    const summary = {
-        profile: fmpData.profile?.[0] || {},
-        latest_metrics: metrics[0] || {},
-        historical_summary: {
-            revenue_cagr_5y: calculations.cagr(income, 'revenue', 5),
-            net_income_trend: calculations.trend(income, 'netIncome'),
-            avg_net_profit_margin_5y: calculations.average(metrics, 'netProfitMargin', 5),
-            avg_roe_5y: calculations.average(metrics, 'roe', 5)
-        },
-        analyst_sentiment: {
-            estimates: fmpData.analyst_estimates || [],
-            grades: fmpData.stock_grade_news || []
-        }
-    };
-    
-    return {
-        summary: summary,
-        historical_details: {
-            income_statement_annual: fmpData.income_statement_annual || [],
-            balance_sheet_statement_annual: fmpData.balance_sheet_statement_annual || [],
-            cash_flow_statement_annual: fmpData.cash_flow_statement_annual || [],
-            key_metrics_annual: fmpData.key_metrics_annual || []
-        }
-    };
+    }
+    return payload;
 }
 
 
-async function handleAnalysisRequest(symbol, reportType, promptTemplate, forceNew = false) {
+async function handleAnalysisRequest(symbol, reportType, promptConfig, forceNew = false) {
     const contentContainer = document.getElementById('ai-article-container');
     const statusContainer = document.getElementById('report-status-container-ai');
     
@@ -2217,7 +2157,7 @@ async function handleAnalysisRequest(symbol, reportType, promptTemplate, forceNe
             const latestReport = savedReports[0];
             displayReport(contentContainer, latestReport.content, latestReport.prompt);
             contentContainer.dataset.currentPrompt = latestReport.prompt || '';
-            updateReportStatus(statusContainer, savedReports, latestReport.id, { symbol, reportType, promptTemplate });
+            updateReportStatus(statusContainer, savedReports, latestReport.id, { symbol, reportType, promptConfig });
             return; 
         }
 
@@ -2227,59 +2167,65 @@ async function handleAnalysisRequest(symbol, reportType, promptTemplate, forceNe
         const data = await getFmpStockData(symbol);
         if (!data) throw new Error(`No cached FMP data found for ${symbol}.`);
         
-        // Manually calculate Graham Number as FMP may no longer provide it directly
-        const latestMetrics = data.key_metrics_annual?.[0];
-        
-        if (latestMetrics && latestMetrics.bookValuePerShare > 0 && latestMetrics.earningsPerShare > 0) {
-            const bvps = latestMetrics.bookValuePerShare;
-            const eps = latestMetrics.earningsPerShare;
-            const grahamNumber = Math.sqrt(22.5 * bvps * eps);
-            // Add it to the key_metrics object so the AI prompt can find it
-            if (data.key_metrics_annual[0]) {
-                 data.key_metrics_annual[0].grahamNumber = parseFloat(grahamNumber.toFixed(2));
-            }
-        }
+        const requiredEndpoints = promptConfig.requires || [];
+        const missingEndpoints = requiredEndpoints.filter(ep => !data[ep]);
 
-        const requiredEndpoints = ANALYSIS_REQUIREMENTS[reportType];
-        if (requiredEndpoints) {
-            const missingEndpoints = requiredEndpoints.filter(ep => !data || !data[ep]);
-            if (missingEndpoints.length > 0) {
+        if (missingEndpoints.length > 0) {
+            const specialReqs = ANALYSIS_REQUIREMENTS[reportType] || [];
+            const isSpecialMissing = specialReqs.some(req => missingEndpoints.includes(req));
+
+            if (isSpecialMissing) {
                 closeModal(CONSTANTS.MODAL_LOADING);
                 openConfirmationModal(
                     'Data Refresh Required',
                     `This analysis requires specific data that is not yet cached for ${symbol} (${missingEndpoints.join(', ')}). Would you like to refresh all FMP data now? This may take a moment.`,
                     async () => {
                         await handleRefreshFmpData(symbol);
-                        await handleAnalysisRequest(symbol, reportType, promptTemplate, true);
+                        // After refresh, re-run the request forcing a new generation
+                        const freshData = await getFmpStockData(symbol);
+                        await handleAnalysisRequest(symbol, reportType, promptConfig, true);
                     }
                 );
                 return;
             }
         }
         
-        const curatedData = curateFmpDataForAI(data);
+        const payloadData = buildAnalysisPayload(data, requiredEndpoints);
+        
+        // Manually calculate Graham Number if needed by the prompt and not present
+        if (requiredEndpoints.includes('key_metrics_annual') && payloadData.key_metrics_annual?.[0]) {
+             if (!payloadData.key_metrics_annual[0].grahamNumber) {
+                const latestMetrics = payloadData.key_metrics_annual[0];
+                if (latestMetrics.bookValuePerShare > 0 && latestMetrics.earningsPerShare > 0) {
+                    const bvps = latestMetrics.bookValuePerShare;
+                    const eps = latestMetrics.earningsPerShare;
+                    const grahamNumber = Math.sqrt(22.5 * bvps * eps);
+                    payloadData.key_metrics_annual[0].grahamNumber = parseFloat(grahamNumber.toFixed(2));
+                }
+             }
+        }
 
         const profile = data.profile?.[0] || {};
         const companyName = profile.companyName || 'the company';
         const tickerSymbol = profile.symbol || symbol;
 
+        const promptTemplate = promptConfig.prompt;
         const prompt = promptTemplate
             .replace(/{companyName}/g, companyName)
             .replace(/{tickerSymbol}/g, tickerSymbol)
-            .replace('{jsonData}', JSON.stringify(curatedData, null, 2));
+            .replace('{jsonData}', JSON.stringify(payloadData, null, 2));
 
         contentContainer.dataset.currentPrompt = prompt;
 
         const newReportContent = await generatePolishedArticle(prompt, loadingMessage);
         displayReport(contentContainer, newReportContent, prompt);
-        updateReportStatus(statusContainer, [], null, { symbol, reportType, promptTemplate });
+        updateReportStatus(statusContainer, [], null, { symbol, reportType, promptConfig });
 
     } catch (error) {
         displayMessageInModal(`Could not generate or load analysis: ${error.message}`, 'error');
         contentContainer.innerHTML = `<p class="text-red-500">Failed to generate report: ${error.message}</p>`;
     } finally {
-        // Only close the main loading modal if it was opened for a new generation.
-        if (forceNew || (await getSavedReports(symbol, reportType)).length === 0) {
+        if (document.getElementById(CONSTANTS.MODAL_LOADING).classList.contains('is-open')) {
             closeModal(CONSTANTS.MODAL_LOADING);
         }
     }
@@ -2387,8 +2333,8 @@ async function handleSaveReportToDb() {
         
         const savedReports = await getSavedReports(symbol, reportType);
         const latestReport = savedReports[0];
-        const promptTemplate = promptMap[reportType];
-        updateReportStatus(document.getElementById('report-status-container-ai'), savedReports, latestReport.id, { symbol, reportType, promptTemplate });
+        const promptConfig = promptMap[reportType];
+        updateReportStatus(document.getElementById('report-status-container-ai'), savedReports, latestReport.id, { symbol, reportType, promptConfig });
 
     } catch (error) {
         console.error("Error saving report to DB:", error);
@@ -2461,7 +2407,7 @@ function updateReportStatus(statusContainer, reports, activeReportId, analysisPa
     const generateNewBtn = document.getElementById(`generate-new-${analysisParams.reportType}`);
     if (generateNewBtn) {
         generateNewBtn.addEventListener('click', () => {
-            handleAnalysisRequest(analysisParams.symbol, analysisParams.reportType, analysisParams.promptTemplate, true);
+            handleAnalysisRequest(analysisParams.symbol, analysisParams.reportType, analysisParams.promptConfig, true);
         });
     }
 }
