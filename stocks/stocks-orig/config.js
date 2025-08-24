@@ -1,5 +1,5 @@
 // --- App Version ---
-export const APP_VERSION = "14.5.0"; 
+export const APP_VERSION = "14.5.1"; 
 
 // --- Shared State ---
 // This object will hold all the application's shared state.
@@ -250,7 +250,7 @@ Summarize the key risks or red flags (e.g., high debt, slowing growth, high valu
 End with a clear, final statement that **classifies the stock's profile.** For example: "While the market is cautious, the data suggests this is a **'classic value'** opportunity," or "This appears to be a **'growth at a reasonable price'** story," or "High debt and slowing growth suggest this could be a **'potential value trap.'**"
 `.trim();
 
-const NEWS_SENTIMENT_PROMPT = `
+export const NEWS_SENTIMENT_PROMPT = `
 Role: You are a financial news analyst AI who is an expert at cutting through the noise and explaining what headlines *really* mean for an everyday investor. Your goal is to assess the mood and key narratives surrounding a company based on recent news.
 
 Task: Analyze the sentiment of the following news articles for {companyName} ({tickerSymbol}). IMPORTANT: Process only the articles that include a publication date.
@@ -567,7 +567,7 @@ JSON Data:
 - **The Bear Case (Key Risk):** In one sentence, what is the single biggest data-driven risk to this narrative?
 `.trim();
 
-const INVESTMENT_MEMO_PROMPT = `
+export const INVESTMENT_MEMO_PROMPT = `
 Role: You are the Chief Investment Officer (CIO) of a value-investing fund. You have been given a dossier of reports from your analyst team on {companyName}. Your task is to synthesize these findings into a final, decisive investment memo, **weighing the pros and cons to arrive at a clear-cut recommendation.**
 
 IMPORTANT: Your analysis MUST be based *only* on the provided summaries from the other reports. Do not use any external knowledge. Synthesize, do not invent.
@@ -647,7 +647,7 @@ export const promptMap = {
     }
 };
 
-const INDUSTRY_CAPITAL_ALLOCATORS_PROMPT = `
+export const INDUSTRY_CAPITAL_ALLOCATORS_PROMPT = `
 	Act as a discerning investment strategist, channeling the analytical rigor and long-term perspective of firms like Berkshire Hathaway. Your analysis must be in the style of a detailed shareholder letter and based *only* on the provided financial data for {companyName}. **Be critical; praise should be reserved for exceptional, data-backed performance.**
 
 	Article Title: "The Capital Allocators: A Deep Dive into the Financial Stewardship of {companyName}'s Leadership"
@@ -680,7 +680,7 @@ const INDUSTRY_CAPITAL_ALLOCATORS_PROMPT = `
 	Crucial Disclaimer: This article is for informational purposes only and should not be considered financial advice. Readers should consult with a qualified financial professional before making any investment decisions.
 `;
 
-const DISRUPTOR_ANALYSIS_PROMPT = `
+export const DISRUPTOR_ANALYSIS_PROMPT = `
 Act as a senior analyst for a forward-looking investment research publication like The Motley Fool or ARK Invest, known for identifying high-growth, innovative companies. Your new assignment is to write an article for your "Disruptor Deep Dive" series.
 
 For the {sectorName} sector, your task is to identify one public company that perfectly fits the "disruptor" profile: it has already hit its stride with a proven product and significant traction, but it still has immense potential to disrupt the established leaders and redefine its industry.
@@ -720,7 +720,7 @@ When you mention a stock ticker, you MUST wrap it in a special tag like this: <s
 The tone should be insightful and optimistic about innovation, but grounded in business fundamentals and realistic about the challenges of disruption.
 `;
 
-const INDUSTRY_DISRUPTOR_ANALYSIS_PROMPT = `
+export const INDUSTRY_DISRUPTOR_ANALYSIS_PROMPT = `
 Act as a senior analyst for a forward-looking investment research publication like The Motley Fool or ARK Invest, known for identifying high-growth, innovative companies. Your new assignment is to write an article for your "Disruptor Deep Dive" series.
 
 For the {industryName} industry, your task is to identify one public company that perfectly fits the "disruptor" profile: it has already hit its stride with a proven product and significant traction, but it still has immense potential to disrupt the established leaders and redefine its industry.
@@ -760,7 +760,7 @@ When you mention a stock ticker, you MUST wrap it in a special tag like this: <s
 The tone should be insightful and optimistic about innovation, but grounded in business fundamentals and realistic about the challenges of disruption.
 `;
 
-const MACRO_PLAYBOOK_PROMPT = `
+export const MACRO_PLAYBOOK_PROMPT = `
 Act as a thematic investment strategist for a global macro fund. You are authoring a new report for your "Macro Playbook" series.
 
 ## 1. The Wave (The Macro Trend)
@@ -785,7 +785,7 @@ Act as a thematic investment strategist for a global macro fund. You are authori
 When you mention a stock ticker, you MUST wrap it in a special tag like this: <stock-ticker>TICKER</stock-ticker>.
 `;
 
-const INDUSTRY_MACRO_PLAYBOOK_PROMPT = `
+export const INDUSTRY_MACRO_PLAYBOOK_PROMPT = `
 Act as a thematic investment strategist for a global macro fund. You are authoring a new report for your "Macro Playbook" series.
 
 ## 1. The Wave (The Macro Trend)
@@ -810,7 +810,7 @@ Act as a thematic investment strategist for a global macro fund. You are authori
 When you mention a stock ticker, you MUST wrap it in a special tag like this: <stock-ticker>TICKER</stock-ticker>.
 `;
 
-const ONE_SHOT_INDUSTRY_TREND_PROMPT = `
+export const ONE_SHOT_INDUSTRY_TREND_PROMPT = `
 Role: You are an expert financial analyst AI. Your task is to write a detailed, **balanced** investment research report for a specific economic industry based on a provided list of companies and recent news articles.
 
 Task:
@@ -855,7 +855,7 @@ News Articles JSON Data:
 {newsArticlesJson}
 `;
 
-const FORTRESS_ANALYSIS_PROMPT = `
+export const FORTRESS_ANALYSIS_PROMPT = `
 Act as a conservative, risk-averse investment analyst. Your goal is to identify an "all-weather" business within the {contextName} {contextType} that is built for resilience.
 
 Article Title: "The Fortress: Why [Company Name] Is Built to Withstand Any Economic Storm"
@@ -886,7 +886,7 @@ Your analysis must be structured as follows:
 When you mention a stock ticker, you MUST wrap it in a special tag like this: <stock-ticker>TICKER</stock-ticker>.
 `;
 
-const PHOENIX_ANALYSIS_PROMPT = `
+export const PHOENIX_ANALYSIS_PROMPT = `
 Act as a special situations analyst looking for high-risk, high-reward opportunities. Your goal is to analyze a potential turnaround story.
 
 Article Title: "The Phoenix: Analyzing the Potential Turnaround of [Company Name]"
@@ -914,7 +914,7 @@ Your analysis must be structured as follows:
 When you mention a stock ticker, you MUST wrap it in a special tag like this: <stock-ticker>TICKER</stock-ticker>.
 `;
 
-const PICK_AND_SHOVEL_PROMPT = `
+export const PICK_AND_SHOVEL_PROMPT = `
 Act as an investment analyst specializing in identifying indirect beneficiaries of major economic trends.
 
 Article Title: "The 'Pick and Shovel' Play: How [Company Name] is Powering the [Trend Name] Gold Rush"
@@ -946,7 +946,7 @@ Your analysis must be structured as follows:
 When you mention a stock ticker, you MUST wrap it in a special tag like this: <stock-ticker>TICKER</stock-ticker>.
 `;
 
-const LINCHPIN_ANALYSIS_PROMPT = `
+export const LINCHPIN_ANALYSIS_PROMPT = `
 Act as a business strategist focused on identifying companies with deep, structural competitive advantages.
 
 Article Title: "The Linchpin: How [Company Name] Dominates the [Industry] Supply Chain"
@@ -975,7 +975,7 @@ Your analysis must be structured as follows:
 When you mention a stock ticker, you MUST wrap it in a special tag like this: <stock-ticker>TICKER</stock-ticker>.
 `;
 
-const HIDDEN_VALUE_PROMPT = `
+export const HIDDEN_VALUE_PROMPT = `
 Act as a value investor and activist analyst, searching for hidden value in complex companies.
 
 **Note:** This analysis is data-intensive. The quality of the output depends on the availability of public financial data for the company's individual business segments.
@@ -1012,7 +1012,7 @@ Your analysis must be structured as follows:
 When you mention a stock ticker, you MUST wrap it in a special tag like this: <stock-ticker>TICKER</stock-ticker>.
 `;
 
-const UNTOUCHABLES_ANALYSIS_PROMPT = `
+export const UNTOUCHABLES_ANALYSIS_PROMPT = `
 Act as a brand strategist and long-term investor, analyzing companies with powerful, "cult-like" brands.
 
 Article Title: "The Untouchables: Deconstructing [Company Name]'s 'Cult' Brand Moat"
