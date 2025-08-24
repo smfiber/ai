@@ -145,6 +145,9 @@
                     <button id="advanced-screener-tab-button" class="tab-button whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
                         Advanced Screener
                     </button>
+                    <button id="saved-stocks-tab-button" class="tab-button whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                        Saved Stocks
+                    </button>
                     <button id="news-tab-button" class="tab-button whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
                         Price Target News
                     </button>
@@ -336,6 +339,13 @@
                     <div id="advanced-screener-card-view" class="mb-8"></div>
                 </div>
             </div>
+            
+            <div id="saved-stocks-tab-content" class="tab-content">
+                <div class="bg-white rounded-xl shadow-md p-5">
+                    <h2 class="text-lg font-semibold mb-4">Saved Stocks</h2>
+                    <div id="saved-stocks-data-container" class="border-t pt-4"></div>
+                </div>
+            </div>
 
             <div id="news-tab-content" class="tab-content">
                 <div class="space-y-4">
@@ -481,7 +491,7 @@
     <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-database-compat.js"></script>
 
     <script>
-        // Version 5.0.2
+        // Version 5.0.3
         document.addEventListener("DOMContentLoaded", () => {
             // --- 1. Global Configuration Object ---
             const appConfig = {
@@ -491,7 +501,8 @@
                 searchEngineId: "",
                 googleClientId: "",
                 firebaseConfig: {},
-                generativeAnalyses: {}
+                generativeAnalyses: {},
+                cachedRatings: {}
             };
             
             let db = null;
@@ -575,6 +586,7 @@
                     'gen-ai-tab-button': 'gen-ai-tab-content',
                     'screener-tab-button': 'screener-tab-content',
                     'advanced-screener-tab-button': 'advanced-screener-tab-content',
+                    'saved-stocks-tab-button': 'saved-stocks-tab-content',
                     'news-tab-button': 'news-tab-content'
                 };
 
@@ -592,6 +604,9 @@
                            contentEl.style.display = (tabMap[activeButtonId] === contentId) ? 'block' : 'none';
                         }
                     });
+                    if (activeButtonId === 'saved-stocks-tab-button') {
+                        renderSavedStocksTable();
+                    }
                 };
 
                 tabButtons.forEach(button => {
@@ -628,6 +643,7 @@
                         firebase.initializeApp(appConfig.firebaseConfig);
                         db = firebase.database();
                         console.log("Firebase initialized successfully.");
+                        await loadAllCachedRatings();
                     } else {
                         console.warn("Firebase config is missing or does not contain a databaseURL. Cannot initialize Firebase.");
                     }
@@ -724,6 +740,7 @@
                 }
                 updateSavedStocksStorage();
                 updateUiForSymbol(symbol);
+                renderSavedStocksTable(); // Re-render the saved stocks table
             }
 
             function updateUiForSymbol(symbol) {
@@ -1000,6 +1017,24 @@
                 } catch (error) {
                     console.error("Failed to get all cached symbols:", error);
                     return new Set();
+                }
+            }
+            
+            async function loadAllCachedRatings() {
+                if (!db) return;
+                try {
+                    const snapshot = await db.ref('financial-details').get();
+                    if (snapshot.exists()) {
+                        const allDetails = snapshot.val();
+                        for (const symbol in allDetails) {
+                            if (allDetails[symbol].aiSummary && allDetails[symbol].aiSummary.rating) {
+                                appConfig.cachedRatings[symbol] = allDetails[symbol].aiSummary.rating;
+                            }
+                        }
+                        console.log("Successfully loaded all cached AI ratings.");
+                    }
+                } catch(error) {
+                    console.error("Could not load cached AI ratings from Firebase:", error);
                 }
             }
 
@@ -1492,6 +1527,25 @@
                 });
             }
 
+            function getRatingHtml(symbol) {
+                const rating = appConfig.cachedRatings[symbol];
+                if (!rating) return 'N/A';
+                
+                let ratingColor = 'text-gray-700';
+                if (rating === 'Undervalued') ratingColor = 'text-green-600';
+                if (rating === 'Overvalued' || rating === 'Caution Advised') ratingColor = 'text-red-600';
+                if (rating === 'Fairly Valued') ratingColor = 'text-blue-600';
+                if (rating === 'Speculative Growth') ratingColor = 'text-purple-600';
+
+                return `<span class="${ratingColor} font-medium">${rating}</span>`;
+            }
+            
+            function updateRatingDisplayForSymbol(symbol) {
+                document.querySelectorAll(`[data-rating-symbol="${symbol}"]`).forEach(cell => {
+                    cell.innerHTML = getRatingHtml(symbol);
+                });
+            }
+
             function renderSimpleStockTable(data, container) {
                 if (!container) return;
                 if (!data || data.length === 0) {
@@ -1512,9 +1566,10 @@
                         <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-600">${formatText(stock.companyName)}</td>
                         <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-right">${formatMarketCap(stock.marketCap)}</td>
                         <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${formatText(stock.sector)}</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-sm text-center" data-rating-symbol="${stock.symbol}">${getRatingHtml(stock.symbol)}</td>
                     </tr>`;
                 }).join('');
-                container.innerHTML = `<div class="overflow-x-auto max-h-96"><table class="min-w-full divide-y divide-gray-200"><thead class="bg-gray-50 sticky top-0"><tr><th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Symbol</th><th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Company</th><th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Market Cap</th><th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sector</th></tr></thead><tbody class="bg-white divide-y divide-gray-200">${tableRows}</tbody></table></div>`;
+                container.innerHTML = `<div class="overflow-x-auto max-h-96"><table class="min-w-full divide-y divide-gray-200"><thead class="bg-gray-50 sticky top-0"><tr><th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Symbol</th><th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Company</th><th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Market Cap</th><th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sector</th><th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">AI Rating</th></tr></thead><tbody class="bg-white divide-y divide-gray-200">${tableRows}</tbody></table></div>`;
                 updateViewedIndicators();
             }
 
@@ -1540,12 +1595,60 @@
                         <td class="px-4 py-3 text-sm text-gray-500 break-words">${formatText(stock.sector)}</td>
                         <td class="px-4 py-3 text-sm text-gray-500 break-words">${formatText(stock.industry)}</td>
                          <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-right">${stock.beta ? stock.beta.toFixed(2) : 'N/A'}</td>
+                         <td class="px-4 py-3 whitespace-nowrap text-sm text-center" data-rating-symbol="${stock.symbol}">${getRatingHtml(stock.symbol)}</td>
                          <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-right">${stock.price ? '$'+stock.price.toFixed(2) : 'N/A'}</td>
                          <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-right">${stock.lastAnnualDividend ? '$'+stock.lastAnnualDividend.toFixed(2) : 'N/A'}</td>
                     </tr>`;
                 }).join('');
-                container.innerHTML = `<div class="overflow-y-auto max-h-[60vh]"><table class="w-full table-fixed divide-y divide-gray-200"><thead class="bg-gray-50 sticky top-0"><tr><th class="w-[12%] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Symbol</th><th class="w-[25%] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Company</th><th class="w-[10%] px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Market Cap</th><th class="w-[15%] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sector</th><th class="w-[15%] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Industry</th><th class="w-[7%] px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Beta</th><th class="w-[8%] px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Price</th><th class="w-[8%] px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Dividend</th></tr></thead><tbody class="bg-white divide-y divide-gray-200">${tableRows}</tbody></table></div>`;
+                container.innerHTML = `<div class="overflow-y-auto max-h-[60vh]"><table class="w-full table-fixed divide-y divide-gray-200"><thead class="bg-gray-50 sticky top-0"><tr><th class="w-[12%] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Symbol</th><th class="w-[25%] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Company</th><th class="w-[10%] px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Market Cap</th><th class="w-[15%] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sector</th><th class="w-[15%] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Industry</th><th class="w-[7%] px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Beta</th><th class="w-[8%] px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">AI Rating</th><th class="w-[8%] px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Price</th><th class="w-[8%] px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Dividend</th></tr></thead><tbody class="bg-white divide-y divide-gray-200">${tableRows}</tbody></table></div>`;
                 updateViewedIndicators();
+            }
+            
+            async function renderSavedStocksTable() {
+                const container = document.getElementById('saved-stocks-data-container');
+                if (!container) return;
+
+                if (savedStocks.size === 0) {
+                    container.innerHTML = '<p class="text-gray-500">You have not saved any stocks yet.</p>';
+                    return;
+                }
+                
+                container.innerHTML = '<p class="text-gray-500">Loading saved stocks...</p>';
+
+                try {
+                    const symbols = Array.from(savedStocks).join(',');
+                    const url = `https://financialmodelingprep.com/api/v3/profile/${symbols}?apikey=${appConfig.fmpApiKey}`;
+                    const response = await fetch(url);
+                    if (!response.ok) throw new Error('Failed to fetch saved stock details');
+                    const data = await response.json();
+
+                    const tableRows = data.map(stock => {
+                        const isSaved = savedStocks.has(stock.symbol); // Should always be true here
+                        return `
+                        <tr data-symbol-row="${stock.symbol}" class="saved-stock-row">
+                            <td class="px-4 py-3 whitespace-nowrap text-sm">
+                                <button class="save-stock-btn ${isSaved ? 'saved' : ''}" data-symbol="${stock.symbol}" title="Save Stock">
+                                    <i class="${isSaved ? 'fas' : 'far'} fa-star"></i>
+                                </button>
+                                <button class="ticker-details-btn font-medium text-indigo-600 hover:text-indigo-800" data-symbol="${stock.symbol}">${stock.symbol}</button>
+                                <span class="viewed-indicator" data-indicator-symbol="${stock.symbol}"></span>
+                            </td>
+                            <td class="px-4 py-3 text-sm text-gray-600 break-words">${formatText(stock.companyName)}</td>
+                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-right">${formatMarketCap(stock.mktCap)}</td>
+                            <td class="px-4 py-3 text-sm text-gray-500 break-words">${formatText(stock.sector)}</td>
+                            <td class="px-4 py-3 whitespace-nowrap text-sm text-center" data-rating-symbol="${stock.symbol}">${getRatingHtml(stock.symbol)}</td>
+                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-right">${stock.beta ? stock.beta.toFixed(2) : 'N/A'}</td>
+                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-right">${stock.price ? '$'+stock.price.toFixed(2) : 'N/A'}</td>
+                        </tr>`;
+                    }).join('');
+
+                    container.innerHTML = `<div class="overflow-y-auto max-h-[60vh]"><table class="w-full table-fixed divide-y divide-gray-200"><thead class="bg-gray-50 sticky top-0"><tr><th class="w-[15%] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Symbol</th><th class="w-[30%] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Company</th><th class="w-[15%] px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Market Cap</th><th class="w-[15%] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sector</th><th class="w-[10%] px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">AI Rating</th><th class="w-[5%] px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Beta</th><th class="w-[10%] px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Price</th></tr></thead><tbody class="bg-white divide-y divide-gray-200">${tableRows}</tbody></table></div>`;
+                    updateViewedIndicators();
+
+                } catch (error) {
+                    console.error("Error rendering saved stocks table:", error);
+                    container.innerHTML = '<p class="text-red-500">Could not load saved stocks.</p>';
+                }
             }
 
             function renderStockCards(data, container, title) {
@@ -1646,6 +1749,8 @@
                              populateAiSummary(aiSummary);
                              const dataToSave = { ...liveData, aiSummary, timestamp: new Date().toISOString() };
                              await saveTickerDetailsToFirebase(symbol, dataToSave);
+                             appConfig.cachedRatings[symbol] = aiSummary.rating;
+                             updateRatingDisplayForSymbol(symbol);
                         } else {
                             document.getElementById('modal-key-metrics-content').innerHTML = '<p class="text-center text-red-500">Could not refresh data.</p>';
                         }
@@ -1692,6 +1797,8 @@
                         const aiSummary = await generateAiRating(cachedData);
                         populateAiSummary(aiSummary);
                         await saveTickerDetailsToFirebase(symbol, { ...cachedData, aiSummary });
+                        appConfig.cachedRatings[symbol] = aiSummary.rating;
+                        updateRatingDisplayForSymbol(symbol);
                     }
                 } else {
                     const liveData = await fetchTickerDetails(symbol);
@@ -1703,6 +1810,8 @@
                         populateAiSummary(aiSummary);
                         const dataToSave = { ...liveData, aiSummary, timestamp: new Date().toISOString() };
                         await saveTickerDetailsToFirebase(symbol, dataToSave);
+                        appConfig.cachedRatings[symbol] = aiSummary.rating;
+                        updateRatingDisplayForSymbol(symbol);
                     } else {
                          document.getElementById('modal-key-metrics-content').innerHTML = '<p class="text-center text-red-500">Could not fetch financial data.</p>';
                          document.getElementById('modal-ai-summary-content').innerHTML = '';
