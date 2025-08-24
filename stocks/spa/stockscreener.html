@@ -481,7 +481,7 @@
     <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-database-compat.js"></script>
 
     <script>
-        // Version 5.0.1
+        // Version 5.0.2
         document.addEventListener("DOMContentLoaded", () => {
             // --- 1. Global Configuration Object ---
             const appConfig = {
@@ -676,14 +676,24 @@
                     if (!response.ok) throw new Error('Failed to fetch industry list');
                     const industries = await response.json();
 
-                    industries.sort();
+                    if (Array.isArray(industries)) {
+                         // Sort array of objects by the first value of each object
+                        industries.sort((a, b) => {
+                            const nameA = a && typeof a === 'object' ? String(Object.values(a)[0] || '') : String(a);
+                            const nameB = b && typeof b === 'object' ? String(Object.values(b)[0] || '') : String(b);
+                            return nameA.localeCompare(nameB);
+                        });
 
-                    industries.forEach(industry => {
-                        const option = document.createElement('option');
-                        option.value = industry;
-                        option.textContent = industry;
-                        industrySelect.appendChild(option);
-                    });
+                        industries.forEach(industry => {
+                            const industryName = industry && typeof industry === 'object' ? Object.values(industry)[0] : industry;
+                            if(industryName && typeof industryName === 'string') {
+                                const option = document.createElement('option');
+                                option.value = industryName;
+                                option.textContent = industryName;
+                                industrySelect.appendChild(option);
+                            }
+                        });
+                    }
                 } catch (error) {
                     console.error("Could not populate industry dropdown:", error);
                     industrySelect.disabled = true;
