@@ -2167,6 +2167,19 @@ async function handleAnalysisRequest(symbol, reportType, promptTemplate, forceNe
         const data = await getFmpStockData(symbol);
         if (!data) throw new Error(`No cached FMP data found for ${symbol}.`);
         
+        // Manually calculate Graham Number as FMP may no longer provide it directly
+        const latestMetrics = data.key_metrics_annual?.[0];
+        
+        if (latestMetrics && latestMetrics.bookValuePerShare > 0 && latestMetrics.earningsPerShare > 0) {
+            const bvps = latestMetrics.bookValuePerShare;
+            const eps = latestMetrics.earningsPerShare;
+            const grahamNumber = Math.sqrt(22.5 * bvps * eps);
+            // Add it to the key_metrics object so the AI prompt can find it
+            if (data.key_metrics_annual[0]) {
+                 data.key_metrics_annual[0].grahamNumber = parseFloat(grahamNumber.toFixed(2));
+            }
+        }
+
         const requiredEndpoints = ANALYSIS_REQUIREMENTS[reportType];
         if (requiredEndpoints) {
             const missingEndpoints = requiredEndpoints.filter(ep => !data || !data[ep]);
