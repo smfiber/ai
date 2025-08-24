@@ -481,7 +481,7 @@
     <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-database-compat.js"></script>
 
     <script>
-        // Version 5.0.0
+        // Version 5.0.1
         document.addEventListener("DOMContentLoaded", () => {
             // --- 1. Global Configuration Object ---
             const appConfig = {
@@ -664,9 +664,14 @@
             async function populateIndustryDropdown() {
                 const industrySelect = document.getElementById('industry');
                 if (!industrySelect) return;
+                
+                while (industrySelect.options.length > 1) {
+                    industrySelect.remove(1);
+                }
+                industrySelect.disabled = false;
 
                 try {
-                    const url = `https://financialmodelingprep.com/api/v3/industry-list?apikey=${appConfig.fmpApiKey}`;
+                    const url = `https://financialmodelingprep.com/stable/available-industries?apikey=${appConfig.fmpApiKey}`;
                     const response = await fetch(url);
                     if (!response.ok) throw new Error('Failed to fetch industry list');
                     const industries = await response.json();
@@ -681,6 +686,11 @@
                     });
                 } catch (error) {
                     console.error("Could not populate industry dropdown:", error);
+                    industrySelect.disabled = true;
+                    const errorOption = document.createElement('option');
+                    errorOption.textContent = 'Could not load industries';
+                    errorOption.value = '';
+                    industrySelect.appendChild(errorOption);
                 }
             }
 
