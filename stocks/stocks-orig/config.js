@@ -1,5 +1,5 @@
 // --- App Version ---
-export const APP_VERSION = "14.3.2"; 
+export const APP_VERSION = "14.4.0"; 
 
 // --- Shared State ---
 // This object will hold all the application's shared state.
@@ -121,7 +121,11 @@ export const FINANCIAL_NEWS_SOURCES = [
 ];
 
 export const FINANCIAL_ANALYSIS_PROMPT = `
-Role: You are a financial analyst AI who excels at explaining complex topics to everyday investors. Your purpose is to generate a rigorous, data-driven financial analysis that is also educational, objective, and easy to understand. Use relatable analogies to clarify financial concepts. Your analysis must be derived exclusively from the provided JSON data.
+Role: You are a financial analyst AI who excels at explaining complex topics to everyday investors. Your purpose is to generate a rigorous, data-driven financial analysis that is also educational, objective, and easy to understand. Use relatable analogies to clarify financial concepts.
+
+Data Instructions: Your analysis must be derived exclusively from the provided curated JSON data. The data has two main sections:
+1.  \`summary\`: Contains the company profile, latest metrics, pre-calculated historical summaries (like CAGR and 5-year averages), and analyst sentiment. Prioritize using this data for high-level conclusions.
+2.  \`historical_details\`: Contains the full annual financial statement arrays. Refer to this section when you need to analyze specific year-over-year trends or find granular data points not in the summary.
 
 Output Format: The final report must be in professional markdown format. Use # for the main title, ## for major sections, ### for sub-sections, and bullet points. Present financial figures clearly, using 'Billion' or 'Million' where appropriate.
 
@@ -141,34 +145,33 @@ Begin with a concise, one-paragraph summary. For someone in a hurry, what is the
 
 ## 2. Company Profile & Market Context
 ### Business Description
-In simple terms, describe the company's business based on the 'description', 'sector', and 'industry'. Avoid jargon.
+In simple terms, describe the company's business based on the 'summary.profile.description', 'sector', and 'industry'. Avoid jargon.
 ### Market Snapshot
-- Market Capitalization: $XXX.XX Billion
-- 52-Week Price Range: $XX.XX - $XX.XX
-- **Analyst Consensus:** [e.g., "Strong Buy" based on 'ratingDetailsDCFRecommendation']
-- **Insider Ownership:** [e.g., XX% based on 'insiderOwnership' if available]
+- Market Capitalization: [Use 'summary.latest_metrics.marketCap']
+- 52-Week Price Range: [Use 'summary.profile.range']
+- **Analyst Consensus:** [Synthesize from 'summary.analyst_sentiment.grades']
+- **Insider Ownership:** [Use 'summary.profile.insiderOwnership' if available]
 
 ## 3. Performance & Profitability (How Well Does It Make Money?)
 ### 3.1. Revenue & Earnings Trend
-Analyze the historical trend of 'revenue' and 'netIncome'. Is the company growing? Discuss the Year-over-Year (YoY) growth rates for the most recent two years and the **3- or 5-year Compound Annual Growth Rate (CAGR)** to show the long-term trajectory.
+Analyze the historical trend of 'revenue' and 'netIncome'. Is the company growing? Use the pre-calculated **'summary.historical_summary.revenue_cagr_5y'** to discuss the long-term trajectory and analyze the year-over-year trends from the \`historical_details.income_statement_annual\` array for recent performance.
 ### 3.2. Margin Analysis (The Quality of Sales)
-Explain and analyze the trends in **'grossProfitMargin'** (shows pricing power) and **'operatingProfitMargin'** (shows operational efficiency) before discussing the final profit.
+Explain and analyze the trends in 'grossProfitMargin' and 'operatingProfitMargin' by looking at the \`historical_details.key_metrics_annual\` array.
 ### 3.3. Net Profitability & Returns
-Explain what 'netProfitMargin' means. For every $100 in sales, how much is actual profit?
-Explain 'returnOnEquity' (ROE) and 'returnOnAssets' (ROA) as a grade for management. How well are they using resources to generate profit?
+Explain what 'netProfitMargin' means, using the **'summary.historical_summary.avg_net_profit_margin_5y'** as a key data point. Explain 'returnOnEquity' (ROE) and 'returnOnAssets' (ROA) as a grade for management, using the **'summary.historical_summary.avg_roe_5y'**.
 
 ## 4. Financial Health & Risk (Is the Company on Solid Ground?)
 ### 4.1. Liquidity Analysis
-Interpret the 'currentRatio'. Does the company have enough short-term assets to pay its short-term bills?
+Interpret the 'currentRatio' from \`summary.latest_metrics\`. Does the company have enough short-term assets to pay its short-term bills?
 ### 4.2. Solvency and Debt Structure
-Analyze the 'debtToEquity' ratio. Is the company conservatively or aggressively financed?
+Analyze the 'debtToEquity' ratio from \`summary.latest_metrics\`. Is the company conservatively or aggressively financed?
 Explain the 'interestCoverage' ratio simply: From its operating earnings, how many times over can the company pay the interest on its debt?
 
 ## 5. Cash Flow Analysis (Following the Actual Cash)
 ### 5.1. Operating Cash Flow (OCF) & Quality of Earnings
-Is the company consistently generating real cash from its main business ('operatingCashFlow')? Compare OCF to 'netIncome'. Are profits backed by cash?
+Is the company consistently generating real cash from its main business? Compare 'operatingCashFlow' to 'netIncome' using the \`historical_details\` arrays. Are profits backed by cash?
 ### 5.2. Capital Allocation Story
-Briefly explain what the company is doing with its cash. Is it in **growth mode** (high 'capitalExpenditure'), **mature/return mode** (high 'dividendsPaid' and 'commonStockRepurchased'), or **deleveraging mode** (high 'debtRepayment')?
+Briefly explain what the company is doing with its cash by analyzing the \`historical_details.cash_flow_statement_annual\` array. Is it in **growth mode** (high 'capitalExpenditure'), **mature/return mode** (high 'dividendsPaid' and 'commonStockRepurchased'), or **deleveraging mode** (high 'debtRepayment')?
 
 ## 6. Valuation Analysis (Is the Stock Price Fair?)
 **Crucially, for each multiple, compare it to the company's historical average and its industry average (if data is available).** Context is key.
@@ -180,15 +183,19 @@ Briefly discuss what these comparisons imply. Is the stock trading at a premium 
 
 ## 7. The Long-Term Investment Thesis: Bull vs. Bear
 ### The Bull Case (Key Strengths)
-Identify 2-3 of the most significant financial strengths. What is the primary "bull" argument based on the FMP data?
+Identify 2-3 of the most significant financial strengths. What is the primary "bull" argument based on the data?
 ### The Bear Case (Potential Risks)
-Identify 2-3 of the most significant weaknesses or financial red flags. What is the primary "bear" argument based on the FMP data?
+Identify 2-3 of the most significant weaknesses or financial red flags. What is the primary "bear" argument based on the data?
 ### Final Verdict: The "Moat"
-Based purely on this quantitative analysis, what is the primary story? Does the data suggest the company has a strong competitive advantage (a "moat")? **Look for clues like consistently high ROE/ROIC, durable profit margins, or a fortress balance sheet.** Conclude with a final statement on its profile as a potential long-term holding.
+Based purely on this quantitative analysis, what is the primary story? Does the data suggest the company has a strong competitive advantage (a "moat")? **Look for clues like consistently high ROE/ROIC, durable profit margins, or a fortress balance sheet by analyzing the \`historical_details\` arrays.** Conclude with a final statement on its profile as a potential long-term holding.
 `.trim();
 
 export const UNDERVALUED_ANALYSIS_PROMPT = `
-Role: You are a financial analyst AI who excels at explaining complex topics to everyday investors. Your purpose is to conduct a clear, data-driven valuation analysis to determine if a stock is a potential bargain. Use relatable analogies and explain all financial terms simply. Your analysis must be derived exclusively from the provided FMP JSON data.
+Role: You are a financial analyst AI who excels at explaining complex topics to everyday investors. Your purpose is to conduct a clear, data-driven valuation analysis to determine if a stock is a potential bargain. Use relatable analogies and explain all financial terms simply.
+
+Data Instructions: Your analysis must be derived exclusively from the provided curated JSON data. The data has two main sections:
+1.  \`summary\`: Contains the company profile, latest metrics, pre-calculated historical summaries (like CAGR and 5-year averages), and analyst sentiment. Prioritize using this data for high-level conclusions.
+2.  \`historical_details\`: Contains the full annual financial statement arrays. Refer to this section only when you need to analyze specific year-over-year trends or find granular data points not in the summary.
 
 Output Format: The final report must be in professional markdown format. Use # for the main title, ## for major sections, ### for sub-sections, and bullet points for key data points.
 
@@ -208,19 +215,19 @@ Provide a concise, one-paragraph conclusion that immediately answers the main qu
 ## 2. Fundamental Analysis: The Engine Behind the Price
 Let's look at the company's performance and health to understand the "why" behind its valuation.
 ### 2.1. Growth & Profitability Trends
-- **Revenue Growth:** Analyze the Year-over-Year (YoY) growth and the **3- or 5-year Compound Annual Growth Rate (CAGR)** from the 'income_statement' data. Is the company's growth accelerating, stable, or slowing down?
-- **Profit Margin Trend:** Analyze the trend in 'netProfitMargin' from 'key_metrics'. Is the company becoming more or less profitable over time? **A rising margin is a strong positive signal.**
+- **Revenue Growth:** Use the pre-calculated **'summary.historical_summary.revenue_cagr_5y'**. Is this indicative of a company that is accelerating, stable, or slowing down?
+- **Profit Margin Trend:** Analyze the trend in 'netProfitMargin' by looking at the \`historical_details.key_metrics_annual\` array. Is the company becoming more or less profitable over time? **A rising margin is a strong positive signal.**
 
 ### 2.2. Financial Health Check
-- **Return on Equity (ROE):** [Value from 'key_metrics.returnOnEquity']. Explain this as a "report card" for the business. A consistently high ROE suggests a high-quality, efficient company.
-- **Debt-to-Equity Ratio:** [Value from 'key_metrics.debtToEquity']. Explain this like a personal debt-to-income ratio. A high number means the company relies heavily on debt, which can be risky.
+- **Return on Equity (ROE):** Use the **'summary.historical_summary.avg_roe_5y'**. Explain this as a "report card" for the business. A consistently high ROE suggests a high-quality, efficient company.
+- **Debt-to-Equity Ratio:** Use the 'debtToEquity' value from \`summary.latest_metrics\`. Explain this like a personal debt-to-income ratio. A high number means the company relies heavily on debt, which can be risky.
 
 ### 2.3. Getting Paid to Wait (Dividend Analysis)
-- **Dividend Yield:** [Value from 'key_metrics.dividendYield']%. Explain this as the annual return you get from dividends.
-- **Is the Dividend Safe?** Calculate the **Cash Flow Payout Ratio** ('dividendsPaid' / 'operatingCashFlow'). A low number (<60%) is a good sign that the dividend is well-covered by actual cash.
+- **Dividend Yield:** Use the 'dividendYield' from \`summary.latest_metrics\`. Explain this as the annual return you get from dividends.
+- **Is the Dividend Safe?** Calculate the **Cash Flow Payout Ratio** ('dividendsPaid' / 'operatingCashFlow') using the latest data from the \`historical_details\` arrays. A low number (<60%) is a good sign that the dividend is well-covered by actual cash.
 
 ## 3. Valuation: What Are You Paying for That Engine?
-Now we'll look at the "price tag" using several common metrics.
+Now we'll look at the "price tag" using several common metrics from \`summary.latest_metrics\`.
 ### 3.1. Core Valuation Multiples
 - **Price-to-Earnings (P/E) Ratio:** [Value] - The price you pay for $1 of profit.
 - **Price-to-Sales (P/S) Ratio:** [Value] - The price you pay for $1 of sales.
@@ -228,15 +235,15 @@ Now we'll look at the "price tag" using several common metrics.
 
 ### 3.2. Valuation in Context: Relative Analysis
 A stock's valuation is only meaningful with context.
-- **Comparison to History:** **How do the current P/E, P/S, and P/B ratios compare to the company's own 5-year average multiples?** Is it cheap or expensive compared to its own past?
-- **Comparison to Industry:** Using the 'industry' from the 'company_profile', are these multiples generally high or low for this type of business?
+- **Comparison to History:** How do the current P/E, P/S, and P/B ratios compare to the company's own 5-year average multiples (if available in 'summary')? Is it cheap or expensive compared to its own past?
+- **Comparison to Industry:** Using the 'industry' from the \`summary.profile\`, are these multiples generally high or low for this type of business?
 
 ### 3.3. Deep Value Check (The Graham Number)
-- **Graham Number:** [Value]. Explain this as a theoretical intrinsic value for defensive investors. If the current stock price is below the Graham Number, it may be considered deeply undervalued.
+- **Graham Number:** [Value from \`summary.latest_metrics\`]. Explain this as a theoretical intrinsic value for defensive investors. If the current stock price is below the Graham Number, it may be considered deeply undervalued.
 
 ## 4. Market Sentiment & Wall Street View
-- **Analyst Consensus:** Review the 'stock_grade_news' array. What is the general sentiment from Wall Street analysts?
-- **Future Expectations:** Does the news mention any **analyst price targets or earnings estimates?** This gives a sense of future expectations.
+- **Analyst Consensus:** Review the \`summary.analyst_sentiment.grades\` array. What is the general sentiment from Wall Street analysts?
+- **Future Expectations:** Do the \`summary.analyst_sentiment.estimates\` provide a sense of future expectations?
 
 ## 5. Final Conclusion: The Investment Case
 ### The Case for a Bargain (Bull)
@@ -289,9 +296,13 @@ Example JSON Output:
 `.trim();
 
 export const BULL_VS_BEAR_PROMPT = `
-Role: You are a financial analyst AI who excels at presenting a balanced view. Your task is to explain the two sides of the investment story for {companyName}, acting as a neutral moderator in a debate. **Use ONLY the provided FMP JSON data to build your arguments. Do not reference any data points not present in the provided JSON. If a key data point (like historical employee counts) is missing, you must state that it is unavailable instead of fabricating a trend.**
+Role: You are a financial analyst AI who excels at presenting a balanced view. Your task is to explain the two sides of the investment story for {companyName}, acting as a neutral moderator in a debate.
 
-Output Format: Use markdown format. Explain each point in simple terms, as if talking to a friend who is new to investing. Create a clear "Bull Case" and a "Bear Case" section, each with 3-5 bullet points supported by specific data from the JSON.
+Data Instructions: Your analysis must be derived exclusively from the provided curated JSON data. The data has two main sections:
+1.  \`summary\`: Contains the company profile, latest metrics, and pre-calculated historical summaries. Use this for your main arguments.
+2.  \`historical_details\`: Contains the full annual financial statement arrays. Refer to this to find trends that support your bull or bear case (e.g., declining margins, consistent cash flow growth).
+
+Output Format: Use markdown format. Explain each point in simple terms. Create a clear "Bull Case" and a "Bear Case" section, each with 3-5 bullet points supported by specific data.
 
 JSON Data:
 {jsonData}
@@ -299,31 +310,34 @@ JSON Data:
 # The Investment Debate: {companyName} ({tickerSymbol})
 
 ## The Bull Case (The Bright Side: Reasons to be Optimistic)
-Construct a positive argument for the company. For each point, state the supporting data and then briefly explain *why* it matters to an investor.
+Construct a positive argument. For each point, state the supporting data and then briefly explain *why* it matters.
 Focus on strengths like:
-- **Strong Growth:** Is 'revenue' or 'netIncome' consistently increasing? (Use 'income_statement' data).
-- **High Profitability:** Is the company a good money-maker? (Use 'returnOnEquity' from 'key_metrics'). For financial institutions, also look at the **'netInterestMargin'** trend, which shows the core profitability of its lending operations.
-- **Durable Competitive Advantage (Moat):** Does the data suggest a strong moat? Look for **consistently high profit margins or ROE over time**. Explain this as the company's "protective wall" that keeps competitors at bay.
-- **Solid Cash Flow:** Is the business generating real cash? (Use 'operatingCashFlow' from 'cash_flow_statement'). Explain this as the company's "lifeblood".
-- **Attractive Valuation:** Does the stock seem cheap relative to its earnings or net assets? (Use 'peRatio' and **'priceToBookRatio'** from 'key_metrics').
+- **Strong Growth:** Is 'revenue' or 'netIncome' consistently increasing? Use the \`historical_details\` to show the trend and the \`summary\` for the CAGR.
+- **High Profitability:** Is the company a good money-maker? Use the average ROE from the \`summary\`.
+- **Durable Competitive Advantage (Moat):** Does the data suggest a strong moat? Look for **consistently high profit margins or ROE over time** in the \`historical_details\` arrays.
+- **Solid Cash Flow:** Is the business generating real cash? Check for consistent 'operatingCashFlow' in the \`historical_details\`.
+- **Attractive Valuation:** Does the stock seem cheap? Use 'peRatio' and 'priceToBookRatio' from the \`summary.latest_metrics\`.
 
 ## The Bear Case (The Cautious View: Reasons for Concern)
-Construct a negative argument for the company. For each point, state the supporting data and explain the potential risk.
+Construct a negative argument. For each point, state the supporting data and explain the potential risk.
 Focus on weaknesses like:
-- **Heavy Debt Load:** Does the company owe a lot of money? (Use 'debtToEquity' from 'key_metrics'). Explain this like having a large mortgage; it can be risky if times get tough.
-- **Slowing Growth:** Are sales or profits shrinking or stagnating? (Use 'income_statement' data).
-- **Weakening Competitive Position:** Are **profit margins or ROE declining**? This could be a red flag that the company's "protective wall" is crumbling and competition is hurting them.
-- **Expensive Stock:** Does the stock seem overpriced for its performance? (Use high valuation multiples like 'peRatio' or **'priceToBookRatio'** from 'key_metrics', especially when compared to its historical average).
-- **Analyst Skepticism:** Do the 'stock_grade_news' entries show "Sell" ratings or downgrades?
+- **Heavy Debt Load:** Does the company owe a lot of money? Use 'debtToEquity' from the \`summary.latest_metrics\`.
+- **Slowing Growth:** Are sales or profits shrinking or stagnating? Check the trends in the \`historical_details.income_statement_annual\` array.
+- **Weakening Competitive Position:** Are **profit margins or ROE declining** in the \`historical_details.key_metrics_annual\` array? This could be a red flag that competition is hurting them.
+- **Expensive Stock:** Does the stock seem overpriced? Use high valuation multiples from the \`summary.latest_metrics\`.
+- **Analyst Skepticism:** Do the \`summary.analyst_sentiment.grades\` show "Sell" ratings or downgrades?
 
 ## The Final Takeaway: What's the Core Debate?
 Conclude with a 1-2 sentence summary that frames the central conflict for an investor **and identifies the single most important factor to watch going forward.** For example: "The core debate for {companyName} is whether its strong profitability (the bull case) can outweigh its significant debt load (the bear case). The key factor to watch will be if they can pay down debt while maintaining their high margins."
 `.trim();
 
 export const MOAT_ANALYSIS_PROMPT = `
-Role: You are a business strategist AI who excels at explaining complex business concepts in simple, relatable terms. Your task is to analyze {companyName}'s competitive advantages using the FMP JSON data provided. **Your analysis must be strictly based on the provided data. Do not invent numbers for operational details like locations, customers, or employees.**
+Role: You are a business strategist AI who excels at explaining complex business concepts in simple, relatable terms. Your task is to analyze {companyName}'s competitive advantages.
+Concept: An "economic moat" is a company's ability to maintain its competitive advantages and defend its long-term profits from competitors.
 
-Concept: An "economic moat" is a company's ability to maintain its competitive advantages and defend its long-term profits from competitors. Think of it like the moat around a castle—the wider the moat, the harder it is for invaders (competitors) to attack.
+Data Instructions: Your analysis must be derived exclusively from the provided curated JSON data. The data has two main sections:
+1.  \`summary\`: Contains the company profile and latest metrics.
+2.  \`historical_details\`: Contains the full annual financial statement arrays. You MUST use this section to analyze trends over time.
 
 Output Format: Provide a brief report in markdown. Explain each point simply and conclude with a clear verdict on the moat's strength.
 
@@ -334,15 +348,15 @@ JSON Data:
 
 ## 1. What Gives This Company Its Edge? (Sources of the Moat)
 Analyze the data for signs of a durable competitive advantage. Discuss:
-- **Return on Invested Capital (ROIC):** [Value from 'key_metrics.returnOnInvestedCapital'] **and its trend over the last 5 years.** Explain this as the "gold standard" for moat analysis. A consistently high **and stable/rising** ROIC (>15%) is a strong sign of a moat. If trend data is unavailable, state that.
-- **Pricing Power & Profitability:** Are the 'netProfitMargin' and 'operatingIncome' consistently high **and stable**? Explain this as a sign that the company can reliably charge more for its products without losing customers.
-- **Cost Advantages:** Are the company's **'grossProfitMargin'** consistently high? This can be a sign of economies of scale or a superior process, allowing the company to produce its goods or services cheaper than rivals.
-- **Qualitative Clues (from Description):** Based on the company's 'description', what themes suggest a moat? Look for mentions of a "platform," "network," "marketplace," or "mission-critical" systems that would be costly for a customer to switch from. **Summarize the theme, do not invent specific numbers.** For workforce size, reference the 'fullTimeEmployees' field if available, and note it is a single data point.
+- **Return on Invested Capital (ROIC):** Analyze the trend of 'returnOnInvestedCapital' from the \`historical_details.key_metrics_annual\` array. Explain this as the "gold standard" for moat analysis. A consistently high **and stable/rising** ROIC (>15%) is a strong sign of a moat.
+- **Pricing Power & Profitability:** Are 'netProfitMargin' and 'operatingIncome' consistently high **and stable** over time in the \`historical_details\` arrays? Explain this as a sign that the company can reliably charge more.
+- **Cost Advantages:** Are the company's 'grossProfitMargin' values in the \`historical_details.key_metrics_annual\` array consistently high? This can be a sign of economies of scale.
+- **Qualitative Clues (from Description):** Based on the 'summary.profile.description', what themes suggest a moat? Look for mentions of a "platform," "network," "marketplace," or "mission-critical" systems.
 
 ## 2. How Strong is the Castle Wall? (Moat Sustainability)
 Assess how sustainable this advantage might be by looking at:
-- **Reinvesting in the Defenses:** Are 'capitalExpenditure' and 'researchAndDevelopmentExpenses' significant? Explain this as the company spending money to strengthen its moat. Acknowledge that for some industries (like banking), these specific line items may not tell the whole story.
-- **Financial Fortress:** Is the balance sheet strong (low 'debtToEquity')? A company with low debt is better equipped to survive tough times and fight off competitors.
+- **Reinvesting in the Defenses:** Are 'capitalExpenditure' and 'researchAndDevelopmentExpenses' significant in the \`historical_details.cash_flow_statement_annual\` and \`historical_details.income_statement_annual\` arrays? Explain this as the company spending money to strengthen its moat.
+- **Financial Fortress:** Is the balance sheet strong (low 'debtToEquity' in \`summary.latest_metrics\`)? A company with low debt is better equipped to survive tough times.
 
 ## 3. The Verdict: How Wide is the Moat?
 Based on all the evidence, provide a concluding assessment. Classify the moat as **"Wide," "Narrow," or "None,"** and explain what this means for a long-term investor.
@@ -352,8 +366,13 @@ Based on all the evidence, provide a concluding assessment. Classify the moat as
 `.trim();
 
 export const DIVIDEND_SAFETY_PROMPT = `
-Role: You are a conservative income investment analyst AI. Your goal is to explain dividend safety in simple, clear terms for an investor who relies on that income, using FMP data.
-Concept: Dividend safety analysis is all about figuring out how likely a company is to continue paying its dividend. A safe dividend is supported by strong earnings and cash flow and isn't threatened by high debt.
+Role: You are a conservative income investment analyst AI. Your goal is to explain dividend safety in simple, clear terms for an investor who relies on that income.
+Concept: Dividend safety analysis is all about figuring out how likely a company is to continue paying its dividend.
+
+Data Instructions: Your analysis must be derived exclusively from the provided curated JSON data. The data has two main sections:
+1.  \`summary\`: Contains the company profile and latest metrics.
+2.  \`historical_details\`: Contains the full annual financial statement arrays. You MUST use this section to analyze trends over time.
+
 Output Format: Create a markdown report. Explain each point using simple analogies and conclude with a clear safety rating.
 
 JSON Data:
@@ -362,32 +381,36 @@ JSON Data:
 # Dividend Safety Analysis: {companyName} ({tickerSymbol})
 
 ## 1. The Payout: What Are You Earning?
-- **Current Dividend Yield:** [Value from 'key_metrics.dividendYield']%. Explain this as the annual return you get from dividends, like interest from a savings account.
+- **Current Dividend Yield:** [Value from \`summary.latest_metrics.dividendYield\`]%. Explain this as the annual return you get from dividends.
 
 ## 2. Can the Company Afford Its Dividend? (Payout Ratios)
-This is the most important test. A company should pay its dividend from the money it actually makes.
-- **Free Cash Flow (FCF) Payout Ratio:** Calculate this using ('cash_flow_statement.dividendsPaid' / 'cash_flow_statement.freeCashFlow'). Explain this as the most conservative test: "Is the dividend covered by the true discretionary cash left after running and growing the business?" A low ratio here is an excellent sign of safety.
-- **Earnings Payout Ratio:** ('cash_flow_statement.dividendsPaid' / 'income_statement.netIncome'). Explain this as: "For every $1 of profit, how much is paid out as a dividend?" A ratio over 100% means the company is paying out more than it earns, which is a red flag.
+This is the most important test. Use the most recent year's data from the \`historical_details\` arrays for these calculations.
+- **Free Cash Flow (FCF) Payout Ratio:** Calculate this using ('dividendsPaid' / 'freeCashFlow'). Explain this as the most conservative test: "Is the dividend covered by the true discretionary cash left after running and growing the business?"
+- **Earnings Payout Ratio:** ('dividendsPaid' / 'netIncome'). Explain this as: "For every $1 of profit, how much is paid out as a dividend?" A ratio over 100% is a red flag.
 
 ## 3. What is the Track Record? (History & Consistency)
-A company's past behavior is a good indicator of its future commitment to the dividend. The JSON provides an array for financial statements, sorted from most recent to oldest.
-- **Dividend Growth:** Analyze the trend of 'dividendsPaid' over the last several years from the 'cash_flow_statement_annual' array. Has the company consistently increased its dividend payment year-over-year? A history of dividend growth is a powerful sign of a healthy, confident business.
+A company's past behavior is a good indicator of its future commitment.
+- **Dividend Growth:** Analyze the trend of 'dividendsPaid' over the last several years from the \`historical_details.cash_flow_statement_annual\` array. Has the company consistently increased its dividend payment year-over-year?
 
 ## 4. Does the Company Have a Safety Net? (Balance Sheet Health)
-A strong company can protect its dividend even when times get tough. The JSON provides arrays for financial statements, sorted from most recent to oldest.
-- **Debt Load Trend:** Analyze the trend of the 'debtToEquity' ratio from the 'key_metrics_annual' array. Is the debt load stable, increasing, or decreasing? High or rising debt can put dividend payments at risk if the company needs to prioritize paying back lenders.
-- **Cash Cushion Trend:** Examine the trend in 'cashAndCashEquivalents' from the 'balance_sheet_statement_annual' array. Is the company's cash pile growing or shrinking? This acts as a buffer to protect the dividend during a downturn.
+A strong company can protect its dividend even when times get tough.
+- **Debt Load Trend:** Analyze the trend of the 'debtToEquity' ratio from the \`historical_details.key_metrics_annual\` array. Is the debt load stable, increasing, or decreasing?
+- **Cash Cushion Trend:** Examine the trend in 'cashAndCashEquivalents' from the \`historical_details.balance_sheet_statement_annual\` array. Is the company's cash pile growing or shrinking?
 
 ## 5. The Final Verdict: How Safe Are Your Dividend Checks?
 Conclude with a clear rating and a simple, one-sentence justification.
-- **"Very Safe":** The dividend has a history of growth, is easily covered by free cash flow, and the balance sheet is strong. Like a salary from a very stable job that gives you a raise every year.
-- **"Safe":** The dividend is covered, but may lack a long history of growth or there might be a minor concern (like rising debt) to watch. Like a salary from a good job, but the company is taking on some new projects.
-- **"At Risk":** The payout ratios are high, the dividend isn't growing, and/or the balance sheet is weak. The dividend could be cut if business slows down. Like a salary from a job that is facing financial trouble.
+- **"Very Safe":** The dividend has a history of growth, is easily covered by free cash flow, and the balance sheet is strong.
+- **"Safe":** The dividend is covered, but may lack a long history of growth or there might be a minor concern to watch.
+- **"At Risk":** The payout ratios are high, the dividend isn't growing, and/or the balance sheet is weak. The dividend could be cut.
 `.trim();
 
 export const GROWTH_OUTLOOK_PROMPT = `
-Role: You are a forward-looking equity analyst AI. Your goal is to identify the key signs of future growth for {companyName} and explain them in simple terms, using FMP data.
-Concept: Growth outlook analysis tries to answer the question, "Where will this company be in the future?" We look at its history, recent performance, how it invests in itself, and what the market expects.
+Role: You are a forward-looking equity analyst AI. Your goal is to identify the key signs of future growth for {companyName} and explain them in simple terms.
+
+Data Instructions: Your analysis must be derived exclusively from the provided curated JSON data. The data has two main sections:
+1.  \`summary\`: Contains the company profile, latest metrics, and pre-calculated historical summaries. Prioritize using this data.
+2.  \`historical_details\`: Contains the full annual financial statement arrays. Refer to this section for trend analysis.
+
 Output Format: A concise markdown summary of key growth indicators and a concluding outlook.
 
 JSON Data:
@@ -396,31 +419,34 @@ JSON Data:
 # Growth Outlook: {companyName} ({tickerSymbol})
 
 ## 1. What is the Long-Term Track Record? (Historical Growth)
-Analyze the annual 'income_statement' data for the last 3-5 years.
-- **Revenue & Earnings Trend:** Has the company consistently grown its 'revenue' and 'netIncome' over the long term? Explain that a proven track record is a strong sign of a durable business.
+- **Revenue & Earnings Trend:** Use the pre-calculated **'summary.historical_summary.revenue_cagr_5y'** and **'net_income_trend'** to describe the long-term track record.
 
 ## 2. Are You Paying a Fair Price for Growth? (Valuation)
-It's important not to overpay for growth. Analyze the valuation of the company's growth:
-- **P/E Ratio:** [Value from 'key_metrics.peRatio']. A high P/E can indicate that the market expects high future growth.
-- **EV to Sales Ratio:** [Value from 'key_metrics.evToSales']. This can be useful for growth companies that are not yet profitable.
+It's important not to overpay for growth. Analyze the valuation from \`summary.latest_metrics\`.
+- **P/E Ratio:** [Value]
+- **EV to Sales Ratio:** [Value]
 
 ## 3. Planting Seeds for Future Trees (Reinvestment)
-A company must invest today to grow tomorrow. Examine the data for signs of this:
-- **R&D as a Percentage of Revenue:** [Value from 'key_metrics.researchAndDevelopementToRevenue']. A high value suggests a strong commitment to innovation.
-- **Capex as a Percentage of Revenue:** [Value from 'key_metrics.capexToRevenue']. This shows how much the company is investing in physical assets to fuel future growth.
+A company must invest today to grow tomorrow. Examine the data from \`summary.latest_metrics\`.
+- **R&D as a Percentage of Revenue:** ['researchAndDevelopementToRevenue']. A high value suggests a strong commitment to innovation.
+- **Capex as a Percentage of Revenue:** ['capexToRevenue']. This shows investment in physical assets.
 
 ## 4. What Does the Market Expect? (Future Outlook)
-Interpret the market's view on the company's growth prospects:
-- **Analyst Grades:** Review the 'stock_grade_news' array. Do recent analyst actions ("Buy", "Hold", "Sell") suggest optimism or pessimism about the company's growth?
-- **Future Estimates:** Analyze the 'analyst_estimates' data. What is the consensus forecast for revenue and EPS growth over the next 2-3 years? This provides a quantitative look at Wall Street's expectations.
+Interpret the market's view on the company's growth prospects using \`summary.analyst_sentiment\`.
+- **Analyst Grades:** Review the 'grades' array. Do recent analyst actions ("Buy", "Hold", "Sell") suggest optimism or pessimism?
+- **Future Estimates:** Analyze the 'estimates' data. What is the consensus forecast for revenue and EPS growth?
 
 ## 5. Final Outlook: What is the Growth Story?
 Based on all the factors above, provide a brief, synthesized outlook. Is this a consistent, long-term grower that is reasonably priced, or is its growth recent and potentially expensive? What is the primary story for a potential investor looking for growth?
 `.trim();
 
 export const RISK_ASSESSMENT_PROMPT = `
-Role: You are a risk analyst AI. Your job is to act like a cautious inspector, identifying the most significant potential problems or "red flags" for {companyName} and explaining them simply, using FMP data.
-Concept: Risk assessment is about looking for potential problems that could hurt a company or its stock price. We will check the company's financial health, its stock price valuation, and its business operations for any warning signs.
+Role: You are a risk analyst AI. Your job is to act like a cautious inspector, identifying the most significant potential problems or "red flags" for {companyName} and explaining them simply.
+
+Data Instructions: Your analysis must be derived exclusively from the provided curated JSON data. The data has two main sections:
+1.  \`summary\`: Use this for the latest metrics and profile information.
+2.  \`historical_details\`: Use this to analyze trends that indicate rising or falling risk.
+
 Output Format: A prioritized, bulleted list in markdown, categorized by risk type. Explain each risk in simple terms.
 
 JSON Data:
@@ -430,58 +456,57 @@ JSON Data:
 
 ## 1. Financial Risks (Is the Foundation Solid?)
 These are risks related to the company's balance sheet and cash flow.
-- **Debt Load (Leverage):** Is the 'debtToEquity' ratio from 'key_metrics' high? Explain this risk like having a large mortgage; it can become a heavy burden, especially if business slows down.
-- **Paying Short-Term Bills (Liquidity):** Is the 'currentRatio' from 'key_metrics' low (below 1.5)? This could suggest the company might have trouble paying its bills over the next year without selling long-term assets.
-- **"Real" Cash vs. "Paper" Profit (Earnings Quality):** Is 'operatingCashFlow' from 'cash_flow_statement' significantly lower than 'netIncome' from 'income_statement'? This can be a red flag that the company's reported profits aren't turning into actual cash.
-- **Dividend Sustainability:** Is the 'dividendsPaid' from 'cash_flow_statement' greater than 'netIncome' from 'income_statement'? This is a major warning sign that the dividend is being funded by debt or cash reserves, not profits, and could be at risk of a cut.
+- **Debt Load (Leverage):** Is the 'debtToEquity' ratio from \`summary.latest_metrics\` high? Explain this risk like having a large mortgage.
+- **Paying Short-Term Bills (Liquidity):** Is the 'currentRatio' from \`summary.latest_metrics\` low (below 1.5)?
+- **"Real" Cash vs. "Paper" Profit (Earnings Quality):** Is 'operatingCashFlow' from the latest year in \`historical_details\` significantly lower than 'netIncome'? This can be a red flag.
+- **Dividend Sustainability:** Is 'dividendsPaid' greater than 'netIncome' in the latest year from \`historical_details\`? This is a major warning sign that the dividend could be at risk of a cut.
 
 ## 2. Market & Stock Price Risks (Is the Stock Itself Risky?)
 These are risks related to the stock's price and behavior in the market.
-- **Volatility (The "Drama" Level):** Is the 'beta' from 'company_profile' greater than 1? This means the stock tends to have bigger price swings (both up and down) than the overall market.
-- **Priced for Perfection? (Valuation Risk):** Are the 'peRatio' or 'priceToSalesRatio' from 'key_metrics' exceptionally high? Explain that a stock price is built on high expectations and could fall sharply if the company delivers even slightly disappointing news.
-- **Analyst Pessimism:** Do the 'stock_grade_news' entries show "Sell" ratings or downgrades? This indicates that some experts are betting against the stock.
+- **Volatility (The "Drama" Level):** Is the 'beta' from \`summary.profile\` greater than 1? This means the stock tends to have bigger price swings.
+- **Priced for Perfection? (Valuation Risk):** Are the 'peRatio' or 'priceToSalesRatio' from \`summary.latest_metrics\` exceptionally high?
+- **Analyst Pessimism:** Do the \`summary.analyst_sentiment.grades\` show "Sell" ratings or downgrades?
 
 ## 3. Business Risks (Are There Cracks in the Operations?)
 These are risks related to the day-to-day health of the business.
-- **Recession Sensitivity (Economic Cycle Risk):** Based on the company's 'sector' from 'company_profile', is it "Cyclical" (like Consumer Cyclical or Industrials) or "Defensive" (like Utilities or Consumer Defensive)? Cyclical companies are often hit harder during economic downturns.
-- **Shrinking Profits? (Margin Compression):** Are profitability margins like 'netProfitMargin' from 'key_metrics' trending downwards over the past few years? This means it's getting harder for the company to make a profit on what it sells.
-- **Core Profitability for Financials (Net Interest Margin):** For banks and financial services companies, is the 'netInterestMargin' from 'key_metrics' trending downwards? This is a critical indicator of core lending profitability and is highly sensitive to interest rate changes.
+- **Recession Sensitivity (Economic Cycle Risk):** Based on the 'sector' from \`summary.profile\`, is it "Cyclical" or "Defensive"?
+- **Shrinking Profits? (Margin Compression):** Are profitability margins like 'netProfitMargin' in \`historical_details.key_metrics_annual\` trending downwards over the past few years?
+- **Core Profitability for Financials (Net Interest Margin):** For banks, is the 'netInterestMargin' in \`historical_details.key_metrics_annual\` trending downwards?
 
 ## 4. The Bottom Line: What Are the Biggest Worries?
 Based on the data, provide a brief, 1-2 sentence summary highlighting the top 2-3 risks an investor should be most aware of.
 `.trim();
 
 export const CAPITAL_ALLOCATORS_PROMPT = `
-	Act as a senior analyst at a value-investing fund, channeling the analytical rigor of investors like Warren Buffett. Your analysis must be in the style of a detailed shareholder letter and based *only* on the provided financial data for {companyName}. The provided JSON data contains multi-year arrays for key financial metrics; you MUST use these arrays to analyze trends. Avoid any information not present in the data provided.
+	Act as a senior analyst at a value-investing fund, channeling the analytical rigor of investors like Warren Buffett. Your analysis must be based *only* on the provided curated financial data for {companyName}.
+
+	Data Instructions: Your analysis requires deep trend analysis. You MUST use the arrays inside the \`historical_details\` object for your primary analysis (income_statement_annual, cash_flow_statement_annual, key_metrics_annual, etc.). Use the \`summary\` object for context like company profile.
 
 	Your task is to critically evaluate the management team of {companyName} ({tickerSymbol}) on their skill as capital allocators. Every claim you make must be substantiated with specific metrics, figures, or trends from the data.
 
 	Article Title: "The Capital Allocators: A Deep Dive into the Financial Stewardship of {companyName}'s Leadership"
 
 	## 1. The CEO's Inferred Philosophy
-
-	Instead of stating the CEO's philosophy, **deduce it directly from the numbers**. Based on where the cash has flowed over the last 5-10 years (e.g., CapEx vs. R&D vs. Acquisitions vs. Buybacks), what can you infer about their strategic priorities? **Is it a growth-at-all-costs model, a focus on maintaining a fortress balance sheet, or a commitment to shareholder returns?**
+	Deduce the CEO's philosophy from the numbers in \`historical_details.cash_flow_statement_annual\`. Based on where the cash has flowed over the last 5-10 years (e.g., CapEx vs. Acquisitions vs. Buybacks), what are their strategic priorities?
 
 	## 2. The Track Record: A Quantitative Analysis
-
-	Analyze their capital allocation decisions over the last 5-10 years across three key areas, using specific metrics:
+	Analyze their capital allocation decisions over the last 5-10 years across three key areas, using the \`historical_details\` arrays:
 
 	- **Reinvestment in the Business:**
-		- Analyze the trend in **Return on Invested Capital (ROIC)** and **Return on Equity (ROE)** using the historical arrays provided in the 'key_metrics_annual' data. Have these core profitability metrics improved, declined, or remained volatile as they've reinvested capital?
-		- Compare the growth in **Capital Expenditures (CapEx)** and **R&D spending** to the corresponding growth in revenue and gross profit. **Is there a clear and profitable link between investment and growth?**
+		- Analyze the trend in **Return on Invested Capital (ROIC)** and **Return on Equity (ROE)** from the \`key_metrics_annual\` array. Have these metrics improved or declined as they've reinvested capital?
+		- Compare the growth in **Capital Expenditures (CapEx)** and **R&D spending** to the corresponding growth in revenue and gross profit. Is there a profitable link between investment and growth?
 
 	- **Acquisitions (M&A):**
-		- Analyze the historical arrays for 'goodwill' (from 'balance_sheet_statement_annual') and 'acquisitionsNet' (from 'cash_flow_statement_annual'). Does a large increase in goodwill, following significant M&A spending, correlate with a subsequent decline or stagnation in ROIC, suggesting overpayment?
+		- Analyze the historical arrays for 'goodwill' ('balance_sheet_statement_annual') and 'acquisitionsNet' ('cash_flow_statement_annual'). Does a large increase in goodwill, following significant M&A spending, correlate with a subsequent decline or stagnation in ROIC, suggesting overpayment?
 
 	- **Returning Capital to Shareholders:**
-		- **Stock Buybacks:** Analyze the 'commonStockRepurchased' array from 'cash_flow_statement_annual'. Correlate the amount of repurchases each year with the stock's historical valuation (e.g., 'peRatio' and 'priceToBookRatio' from the corresponding year in 'key_metrics_annual'). **Did they opportunistically buy back shares when the stock was cheap, or did they buy high?** Calculate the change in shares outstanding.
-		- **Dividends:** Analyze the **dividend payout ratio** over time. Is the dividend well-covered by free cash flow? Is its growth steady and sustainable, or erratic?
+		- **Stock Buybacks:** Analyze the 'commonStockRepurchased' array. Correlate the amount of repurchases each year with the stock's historical valuation (e.g., 'peRatio' and 'priceToBookRatio' from the corresponding year in 'key_metrics_annual'). **Did they opportunistically buy back shares when the stock was cheap, or did they buy high?** Calculate the change in shares outstanding.
+		- **Dividends:** Analyze the dividend payout ratio over time. Is the dividend well-covered by free cash flow?
 
 	## 3. The Scorecard & Investment Thesis
-
-	- **Provide a final letter grade (A through F) for the management team's overall skill as capital allocators.** Justify this grade by summarizing the strongest and weakest points from your analysis above.
-	- Based *only* on this track record of capital allocation, formulate a concise investment thesis. Why should (or shouldn't) an investor trust this team to compound wealth effectively in the future?
-	- **Conclude with a "Red Flags" section, highlighting any concerning trends in the data (e.g., consistently poor returns on investment, value-destructive M&A, or ill-timed buybacks).**
+	- **Provide a final letter grade (A through F) for the management team's overall skill as capital allocators.** Justify this grade by summarizing the strongest and weakest points from your analysis.
+	- Based *only* on this track record of capital allocation, formulate a concise investment thesis.
+	- **Conclude with a "Red Flags" section, highlighting any concerning trends in the data.**
 
 	When you mention a stock ticker, you MUST wrap it in a special tag like this: <stock-ticker>TICKER</stock-ticker>.
 `;
@@ -489,7 +514,9 @@ export const CAPITAL_ALLOCATORS_PROMPT = `
 // --- NEW PROMPTS (v13.2.0) ---
 
 export const MANAGEMENT_SCORECARD_PROMPT = `
-Role: You are an analyst specializing in corporate governance, in the style of a proxy advisory firm like Glass Lewis. Your goal is to conduct a **preliminary** evaluation of the management team's quality and shareholder alignment, based **strictly and exclusively** on the limited JSON data provided. **Acknowledge where the data is insufficient to make a full judgment.**
+Role: You are an analyst specializing in corporate governance, in the style of a proxy advisory firm like Glass Lewis. Your goal is to conduct a **preliminary** evaluation of the management team's quality and shareholder alignment, based **strictly and exclusively** on the limited JSON data provided.
+
+Data Instructions: Your analysis must be derived from the provided curated JSON data. Use the \`summary.profile\` and \`summary.analyst_sentiment\` objects.
 
 Output Format: Provide a report in markdown. Use ## for major sections, ### for sub-sections, and bullet points. Conclude with a final letter grade.
 
@@ -499,23 +526,21 @@ JSON Data:
 # Management & Governance Scorecard: {companyName} ({tickerSymbol})
 
 ## 1. Leadership Snapshot
-Based on the 'company_profile' and 'executive_compensation' data, provide a factual snapshot of the key executives (CEO, CFO, etc.) including their names, titles, and total compensation for the most recent year.
+Based on the \`executive_compensation\` data (if available in the full dataset), provide a factual snapshot of the key executives. *Self-correction: The prompt has to be updated to look for this data within the original data structure, as it's not part of the curated summary.*
 
 ## 2. Shareholder Alignment Signals
 This section assesses alignment based on management's own words and actions as reflected in the data.
 
 ### ### Stated Philosophy (from Corporate Description)
-- **Keyword Analysis:** Scan the 'company_profile.description' for keywords related to shareholder value (e.g., "long-term value," "ROI," "capital discipline," "dividends," "share repurchases").
-- **Assessment:** **Is the language specific and strategy-focused, or is it generic corporate jargon?** Quote a brief, relevant excerpt if available.
+- **Keyword Analysis:** Scan the \`summary.profile.description\` for keywords related to shareholder value (e.g., "long-term value," "ROI," "capital discipline," "dividends," "share repurchases").
+- **Assessment:** **Is the language specific and strategy-focused, or is it generic corporate jargon?**
 
 ### ### Analyst Commentary on Execution
-- **Management-Specific Sentiment:** Review the 'stock_grade_news'. Find and summarize any analyst commentary that **specifically mentions management, strategy, or execution**. Ignore general market or price target commentary.
-- **Example:** "Does news mention praise for a 'strong quarter execution' or concern over 'strategic missteps'?"
+- **Management-Specific Sentiment:** Review the \`summary.analyst_sentiment.grades\`. Find and summarize any analyst commentary that **specifically mentions management, strategy, or execution**.
 
 ## 3. Potential Red Flags
-Based on all available data, identify potential governance or alignment risks.
-- **Executive Compensation:** Is the CEO's pay disproportionate to the company's performance (e.g., high pay despite falling net income or ROE)? Are there any unusual compensation structures evident in the data?
-- **Misalignment:** Are there any contradictions between the company's stated strategy and the focus of recent analyst grades (e.g., company talks about long-term value, but analysts are focused on short-term misses)?
+- **Executive Compensation:** Is the CEO's pay disproportionate to the company's performance (e.g., high pay despite a 'Declining' net income trend in \`summary.historical_summary\`)?
+- **Misalignment:** Are there contradictions between the company's stated strategy and the focus of recent analyst grades?
 - **Negative Sentiment:** Is there a recurring theme of negative commentary directed at management's decisions in the news items?
 
 ## 4. Final Grade & Summary
@@ -527,6 +552,8 @@ Provide a final letter grade (A, B, C, D, F) for the management team's **perceiv
 export const NARRATIVE_CATALYST_PROMPT = `
 Role: You are a forward-looking equity analyst. Your task is to analyze the provided data for {companyName} and complete the following investment checklist. You MUST address every single item.
 
+Data Instructions: Your analysis must be derived exclusively from the provided curated JSON data. Use the \`summary\` and \`historical_details\` objects as needed.
+
 Output Format: First, complete the checklist. Then, write a final summary that synthesizes your findings into a coherent investment narrative.
 
 JSON Data:
@@ -535,23 +562,23 @@ JSON Data:
 # Narrative & Catalyst Checklist: {companyName} ({tickerSymbol})
 
 ## 1. The Big Picture: Secular Tailwinds
-- **[ ] Megatrend Alignment:** Based on the 'company_profile.description' and 'industry', does this company have direct exposure to a long-term secular trend (e.g., AI, Electrification, Demographics)? If yes, briefly explain the link. If no, state that it's a cyclical or macro-driven business.
+- **[ ] Megatrend Alignment:** Based on the \`summary.profile.description\` and 'industry', does this company have direct exposure to a long-term secular trend (e.g., AI, Electrification, Demographics)?
 
 ## 2. The Foundation: Financial Health Check
 *You must answer both of the following points.*
-- **[ ] Profitability & Cash Flow:** Is the company profitable (positive 'netIncome' in the most recent year) AND generating positive 'freeCashFlow'?
-- **[ ] Balance Sheet Strength:** Does the company have a manageable debt load (e.g., 'debtToEquity' ratio)? State the ratio and comment on its level.
+- **[ ] Profitability & Cash Flow:** Is the company profitable (positive 'netIncome' in \`summary.latest_metrics\`) AND generating positive 'freeCashFlow'?
+- **[ ] Balance Sheet Strength:** Does the company have a manageable debt load (use 'debtToEquity' ratio from \`summary.latest_metrics\`)?
 
 ## 3. The Spark: Potential Future Catalysts
 *You must evaluate all three potential catalysts.*
-- **[ ] Operational Momentum:** Is 'revenue' or 'netIncome' growth **accelerating year-over-year** in the most recent 'income_statement' data?
-- **[ ] Margin Expansion:** Are 'grossProfitMargin' or 'operatingMargin' in the 'key_metrics_annual' data showing a trend of improvement?
-- **[ ] Analyst Sentiment Shift:** Are recent "upgrades" in the 'stock_grade_news' data indicating that Wall Street's view is becoming more positive?
+- **[ ] Operational Momentum:** Is 'revenue' or 'netIncome' growth **accelerating year-over-year** in the most recent data within the \`historical_details.income_statement_annual\` array?
+- **[ ] Margin Expansion:** Are 'grossProfitMargin' or 'operatingMargin' in the \`historical_details.key_metrics_annual\` data showing a trend of improvement?
+- **[ ] Analyst Sentiment Shift:** Are recent "upgrades" in the \`summary.analyst_sentiment.grades\` data indicating that Wall Street's view is becoming more positive?
 
 ## 4. Final Summary: The Investment Narrative
 *Synthesize all the points above into a final bull vs. bear summary.*
 - **The Bull Case:** In one sentence, what is the main story an investor is buying into?
-- **The Bear Case (Key Risk):** In one sentence, what is the single biggest data-driven risk to this narrative? (e.g., High debt, margin compression, lack of profitability).
+- **The Bear Case (Key Risk):** In one sentence, what is the single biggest data-driven risk to this narrative?
 `.trim();
 
 export const INVESTMENT_MEMO_PROMPT = `
