@@ -176,13 +176,14 @@ async function handleRefreshFmpData(symbol) {
     try {
         const coreEndpoints = [
             { name: 'profile', path: 'profile', version: 'v3' },
-            { name: 'income_statement_annual', path: 'income-statement', params: 'period=annual&limit=5', version: 'v3' },
+            { name: 'income_statement_annual', path: 'income-statement', params: 'period=annual&limit=10', version: 'v3' },
             { name: 'income_statement_growth_annual', path: 'income-statement-growth', params: 'period=annual&limit=5', version: 'stable', symbolAsQuery: true },
-            { name: 'balance_sheet_statement_annual', path: 'balance-sheet-statement', params: 'period=annual&limit=5', version: 'v3' },
-            { name: 'cash_flow_statement_annual', path: 'cash-flow-statement', params: 'period=annual&limit=5', version: 'v3' },
-            { name: 'key_metrics_annual', path: 'key-metrics', params: 'period=annual&limit=5', version: 'v3' },
-            { name: 'ratios_annual', path: 'ratios', params: 'period=annual&limit=5', version: 'v3' },
+            { name: 'balance_sheet_statement_annual', path: 'balance-sheet-statement', params: 'period=annual&limit=10', version: 'v3' },
+            { name: 'cash_flow_statement_annual', path: 'cash-flow-statement', params: 'period=annual&limit=10', version: 'v3' },
+            { name: 'key_metrics_annual', path: 'key-metrics', params: 'period=annual&limit=10', version: 'v3' },
+            { name: 'ratios_annual', path: 'ratios', params: 'period=annual&limit=10', version: 'v3' },
             { name: 'stock_grade_news', path: 'grade', version: 'v3' },
+            { name: 'analyst_estimates', path: 'analyst-estimates', version: 'v3'},
             { name: 'company_core_information', path: 'company-core-information', version: 'v4', symbolAsQuery: true },
             { name: 'executive_compensation', path: 'governance-executive-compensation', version: 'stable', symbolAsQuery: true }
         ];
@@ -2143,6 +2144,65 @@ async function getSavedBroadReports(contextName, contextType) {
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
 
+function curateFmpDataForAI(fmpData) {
+    const safeGet = (arr) => Array.isArray(arr) && arr.length > 0 ? arr : [];
+    
+    const income = safeGet(fmpData.income_statement_annual);
+    const metrics = safeGet(fmpData.key_metrics_annual);
+
+    const calculations = {
+        cagr: (arr, valueKey, years) => {
+            const validEntries = arr.map(d => d[valueKey]).filter(v => typeof v === 'number' && v > 0);
+            if (validEntries.length < 2) return null;
+            const recent = arr.slice(0, years + 1).reverse(); // Oldest to newest
+            if (recent.length < 2) return null;
+            const beginningValue = recent[0][valueKey];
+            const endingValue = recent[recent.length - 1][valueKey];
+            const numYears = recent.length - 1;
+            if (beginningValue <= 0 || endingValue <= 0 || numYears <= 0) return null;
+            return Math.pow(endingValue / beginningValue, 1 / numYears) - 1;
+        },
+        average: (arr, valueKey, years) => {
+            const recent = arr.slice(0, years);
+            const total = recent.reduce((sum, item) => sum + (item[valueKey] || 0), 0);
+            return recent.length > 0 ? total / recent.length : null;
+        },
+        trend: (arr, valueKey) => {
+            const recent = arr.slice(0, 3).map(d => d[valueKey]);
+            if (recent.length < 2) return 'Insufficient Data';
+            if (recent[0] > recent[1] && recent[1] > recent[2]) return 'Improving';
+            if (recent[0] < recent[1] && recent[1] < recent[2]) return 'Declining';
+            return 'Stable/Volatile';
+        }
+    };
+
+    const summary = {
+        profile: fmpData.profile?.[0] || {},
+        latest_metrics: metrics[0] || {},
+        historical_summary: {
+            revenue_cagr_5y: calculations.cagr(income, 'revenue', 5),
+            net_income_trend: calculations.trend(income, 'netIncome'),
+            avg_net_profit_margin_5y: calculations.average(metrics, 'netProfitMargin', 5),
+            avg_roe_5y: calculations.average(metrics, 'roe', 5)
+        },
+        analyst_sentiment: {
+            estimates: fmpData.analyst_estimates || [],
+            grades: fmpData.stock_grade_news || []
+        }
+    };
+    
+    return {
+        summary: summary,
+        historical_details: {
+            income_statement_annual: fmpData.income_statement_annual || [],
+            balance_sheet_statement_annual: fmpData.balance_sheet_statement_annual || [],
+            cash_flow_statement_annual: fmpData.cash_flow_statement_annual || [],
+            key_metrics_annual: fmpData.key_metrics_annual || []
+        }
+    };
+}
+
+
 async function handleAnalysisRequest(symbol, reportType, promptTemplate, forceNew = false) {
     const contentContainer = document.getElementById('ai-article-container');
     const statusContainer = document.getElementById('report-status-container-ai');
@@ -2196,6 +2256,8 @@ async function handleAnalysisRequest(symbol, reportType, promptTemplate, forceNe
                 return;
             }
         }
+        
+        const curatedData = curateFmpDataForAI(data);
 
         const profile = data.profile?.[0] || {};
         const companyName = profile.companyName || 'the company';
@@ -2204,7 +2266,7 @@ async function handleAnalysisRequest(symbol, reportType, promptTemplate, forceNe
         const prompt = promptTemplate
             .replace(/{companyName}/g, companyName)
             .replace(/{tickerSymbol}/g, tickerSymbol)
-            .replace('{jsonData}', JSON.stringify(data, null, 2));
+            .replace('{jsonData}', JSON.stringify(curatedData, null, 2));
 
         contentContainer.dataset.currentPrompt = prompt;
 
