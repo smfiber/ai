@@ -1,5 +1,5 @@
 // --- App Version ---
-export const APP_VERSION = "14.3.1"; 
+export const APP_VERSION = "14.3.2"; 
 
 // --- Shared State ---
 // This object will hold all the application's shared state.
@@ -766,7 +766,7 @@ The report must start with an overall summary, followed by a deeper dive into th
 When you mention a stock ticker, you MUST wrap it in a special tag like this: <stock-ticker>TICKER</stock-ticker>.
 
 --- START OF REPORT ---
-## AI-Powered MarketAnalysis: {industryName} Industry
+## AI-Powered Market Analysis: {industryName} Industry
 ### Overall Industry Outlook & Key Themes
 Provide a summary of the overall outlook for the {industryName} industry.
 - **Key Tailwinds:** [Summarize the most significant positive themes from the news.]
