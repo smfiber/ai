@@ -275,14 +275,16 @@
                                         Industry
                                         <i class="fas fa-info-circle text-gray-400 ml-1" data-tooltip="A more specific classification of a company's business within a sector (e.g., Software, Biotechnology)."></i>
                                     </label>
-                                    <input type="text" id="industry" placeholder="Enter Industry" class="mt-1 w-full border-gray-300 rounded-md shadow-sm p-2">
+                                    <select id="industry" class="mt-1 w-full border-gray-300 rounded-md shadow-sm p-2 bg-white">
+                                        <option value="">Any</option>
+                                    </select>
                                 </div>
                                 <div>
                                     <label for="country" class="block font-medium text-gray-700">
                                         Country
                                         <i class="fas fa-info-circle text-gray-400 ml-1" data-tooltip="The country where the company is domiciled (e.g., US, CA)."></i>
                                     </label>
-                                    <input type="text" id="country" placeholder="e.g., US" class="mt-1 w-full border-gray-300 rounded-md shadow-sm p-2">
+                                    <input type="text" id="country" value="US" class="mt-1 w-full border-gray-300 rounded-md shadow-sm p-2">
                                 </div>
                             </div>
                             <div class="space-y-4">
@@ -479,7 +481,7 @@
     <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-database-compat.js"></script>
 
     <script>
-        // Version 4.9.8
+        // Version 4.9.9
         document.addEventListener("DOMContentLoaded", () => {
             // --- 1. Global Configuration Object ---
             const appConfig = {
@@ -612,6 +614,7 @@
                 setupCrudModalListeners();
                 setupFinancialsModalListeners();
                 advancedScreenerFilterForm.addEventListener('submit', handleAdvancedScreenerRun);
+                populateIndustryDropdown();
                 
                 appContent.addEventListener('click', (e) => {
                     const saveBtn = e.target.closest('.save-stock-btn');
@@ -656,6 +659,29 @@
                     console.log(`Completed ${exchange.toUpperCase()}.`);
                 }
                 console.log("All data loaded.");
+            }
+            
+            async function populateIndustryDropdown() {
+                const industrySelect = document.getElementById('industry');
+                if (!industrySelect) return;
+
+                try {
+                    const url = `https://financialmodelingprep.com/api/v3/industry-list?apikey=${appConfig.fmpApiKey}`;
+                    const response = await fetch(url);
+                    if (!response.ok) throw new Error('Failed to fetch industry list');
+                    const industries = await response.json();
+
+                    industries.sort();
+
+                    industries.forEach(industry => {
+                        const option = document.createElement('option');
+                        option.value = industry;
+                        option.textContent = industry;
+                        industrySelect.appendChild(option);
+                    });
+                } catch (error) {
+                    console.error("Could not populate industry dropdown:", error);
+                }
             }
 
             // --- 7. Saved Stocks Logic ---
@@ -1425,6 +1451,14 @@
                 return num.toLocaleString();
             };
             
+            function updateViewedIndicatorForSymbol(symbol) {
+                const indicators = document.querySelectorAll(`.viewed-indicator[data-indicator-symbol="${symbol}"]`);
+                indicators.forEach(indicator => {
+                    indicator.innerHTML = '👁️';
+                    indicator.title = "You have viewed the details for this stock."
+                });
+            }
+
             async function updateViewedIndicators() {
                 const cachedSymbols = await getAllCachedSymbols();
                 const indicators = document.querySelectorAll('.viewed-indicator');
@@ -1656,6 +1690,7 @@
                          document.getElementById('modal-financial-trends-content').innerHTML = '';
                     }
                 }
+                updateViewedIndicatorForSymbol(symbol);
             }
 
             async function fetchTickerDetails(symbol) {
