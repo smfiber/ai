@@ -481,7 +481,7 @@
     <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-database-compat.js"></script>
 
     <script>
-        // Version 4.9.9
+        // Version 5.0.0
         document.addEventListener("DOMContentLoaded", () => {
             // --- 1. Global Configuration Object ---
             const appConfig = {
@@ -1515,16 +1515,16 @@
                              <button class="ticker-details-btn font-medium text-indigo-600 hover:text-indigo-800" data-symbol="${stock.symbol}">${stock.symbol}</button>
                              <span class="viewed-indicator" data-indicator-symbol="${stock.symbol}"></span>
                         </td>
-                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-600">${formatText(stock.companyName)}</td>
+                        <td class="px-4 py-3 text-sm text-gray-600 break-words">${formatText(stock.companyName)}</td>
                         <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-right">${formatMarketCap(stock.marketCap)}</td>
-                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${formatText(stock.sector)}</td>
-                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${formatText(stock.industry)}</td>
+                        <td class="px-4 py-3 text-sm text-gray-500 break-words">${formatText(stock.sector)}</td>
+                        <td class="px-4 py-3 text-sm text-gray-500 break-words">${formatText(stock.industry)}</td>
                          <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-right">${stock.beta ? stock.beta.toFixed(2) : 'N/A'}</td>
                          <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-right">${stock.price ? '$'+stock.price.toFixed(2) : 'N/A'}</td>
                          <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-right">${stock.lastAnnualDividend ? '$'+stock.lastAnnualDividend.toFixed(2) : 'N/A'}</td>
                     </tr>`;
                 }).join('');
-                container.innerHTML = `<div class="overflow-x-auto max-h-[60vh]"><table class="min-w-full divide-y divide-gray-200"><thead class="bg-gray-50 sticky top-0"><tr><th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Symbol</th><th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Company</th><th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Market Cap</th><th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sector</th><th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Industry</th><th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Beta</th><th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Price</th><th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Dividend</th></tr></thead><tbody class="bg-white divide-y divide-gray-200">${tableRows}</tbody></table></div>`;
+                container.innerHTML = `<div class="overflow-y-auto max-h-[60vh]"><table class="w-full table-fixed divide-y divide-gray-200"><thead class="bg-gray-50 sticky top-0"><tr><th class="w-[12%] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Symbol</th><th class="w-[25%] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Company</th><th class="w-[10%] px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Market Cap</th><th class="w-[15%] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sector</th><th class="w-[15%] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Industry</th><th class="w-[7%] px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Beta</th><th class="w-[8%] px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Price</th><th class="w-[8%] px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Dividend</th></tr></thead><tbody class="bg-white divide-y divide-gray-200">${tableRows}</tbody></table></div>`;
                 updateViewedIndicators();
             }
 
