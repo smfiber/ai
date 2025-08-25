@@ -501,7 +501,7 @@
     <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-database-compat.js"></script>
 
     <script>
-        // Version 5.0.7
+        // Version 5.0.8
         document.addEventListener("DOMContentLoaded", () => {
             // --- 1. Global Configuration Object ---
             const appConfig = {
@@ -2042,7 +2042,13 @@
                     
                     const result = await response.json();
                     const rawText = result.candidates[0].content.parts[0].text;
-                    const jsonText = rawText.match(/```json\n([\s\S]*?)\n```/)[1];
+                    
+                    const match = rawText.match(/```json\n([\s\S]*?)\n```/);
+                    if (!match || !match[1]) {
+                        throw new Error("Failed to extract JSON from Gemini response.");
+                    }
+
+                    const jsonText = match[1];
                     const summary = JSON.parse(jsonText);
                     return { summary, prompt };
 
