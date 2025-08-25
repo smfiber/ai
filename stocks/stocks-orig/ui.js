@@ -2245,7 +2245,7 @@ async function handleInvestmentMemoRequest(symbol) {
         const reportTypes = [
             'FinancialAnalysis', 'UndervaluedAnalysis', 'BullVsBear', 'MoatAnalysis', 
             'DividendSafety', 'GrowthOutlook', 'RiskAssessment', 'CapitalAllocators',
-            'ManagementScorecard', 'NarrativeCatalyst'
+            'NarrativeCatalyst'
         ];
 
         const reportPromises = reportTypes.map(type => getSavedReports(symbol, type).then(reports => reports[0])); // Get only the latest
