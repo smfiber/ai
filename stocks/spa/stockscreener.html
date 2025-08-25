@@ -568,6 +568,7 @@
                 
                 // Helper to calculate YoY Growth
                 const calculateYoyGrowth = (data, key) => {
+                    if (!data) return [];
                     const trends = [];
                     for (let i = 1; i < data.length; i++) {
                         const prev = data[i - 1][key];
@@ -582,11 +583,13 @@
 
                 // Helper to get last N years of a metric
                 const getTrend = (data, key, formatFn = (v) => v) => {
+                    if (!data) return [];
                     return data.slice(-6).map(d => ({ year: d.calendarYear, value: formatFn(d[key]) }));
                 };
                 
                 // Helper to calculate historical average
                 const calculateAverage = (data, key) => {
+                    if (!data) return null;
                     const values = data.slice(-5).map(d => d[key]).filter(v => typeof v === 'number');
                     if (values.length === 0) return null;
                     return values.reduce((a, b) => a + b, 0) / values.length;
@@ -594,10 +597,10 @@
 
                 // 1. Growth & Profitability
                 const revenueGrowthTrend = calculateYoyGrowth(incomeStatements, 'revenue');
-                const profitabilityTrend = getTrend(keyMetrics, 'netProfitMargin', v => `${(v * 100).toFixed(2)}%`);
+                const profitabilityTrend = getTrend(keyMetrics, 'netProfitMargin', v => v ? `${(v * 100).toFixed(2)}%` : "N/A");
 
                 // 2. Financial Health
-                const roeTrend = getTrend(keyMetrics, 'returnOnEquity', v => `${(v * 100).toFixed(2)}%`);
+                const roeTrend = getTrend(keyMetrics, 'roe', v => v ? `${(v * 100).toFixed(2)}%` : "N/A");
                 const debtToEquity = latestMetrics.debtToEquity ? latestMetrics.debtToEquity.toFixed(2) : 'N/A';
                 
                 // 3. Dividend Analysis
@@ -656,69 +659,22 @@
                 };
             }
 
-            // --- NEW: PROMPT TEMPLATE FROM STOCK RESEARCH HUB ---
+            // --- MODIFIED: NEW, CONCISE PROMPT FOR AI SUMMARY ---
             
-            const UNDERVALUED_ANALYSIS_PROMPT = `
-            Role: You are a financial analyst AI who excels at explaining complex topics to everyday investors. Your purpose is to conduct a clear, data-driven valuation analysis to determine if a stock is a potential bargain. Use relatable analogies and explain all financial terms simply.
+            const AI_SUMMARY_PROMPT = `
+            Act as a seasoned investment analyst. I will provide you with a company's description, its key 5-year financial trends, and the latest price target news. Your task is to synthesize ALL this information into a holistic valuation assessment.
 
-            Data Instructions: Your analysis MUST be based *exclusively* on the pre-calculated metrics provided in the JSON data below. Do NOT attempt to recalculate any values. If a specific data point is "N/A" or missing, state that clearly in your analysis.
-
-            Output Format: The final report must be in professional markdown format. Use # for the main title, ## for major sections, ### for sub-sections, and bullet points for key data points.
-
-            IMPORTANT: Do not include any HTML tags in your output. Generate pure markdown only.
-
-            Conduct a comprehensive valuation analysis for {companyName} (Ticker: {tickerSymbol}) using the pre-calculated financial summary provided below.
-
-            JSON Data with Pre-Calculated Metrics:
+            Company: {companyName} ({tickerSymbol})
+            Industry: {industry}
+            Sector: {sector}
+            
+            Financial Summary JSON (if a value is "N/A" or an array is empty, it means the data was not available):
             {jsonData}
 
-            Based on the provided data, generate the following in-depth report:
-            # Investment Valuation Report: Is {companyName} ({tickerSymbol}) a Bargain?
-
-            ## 1. The Bottom Line: Our Verdict
-            Provide a concise, one-paragraph conclusion that immediately answers the main question: Based on the data, does this stock seem **Undervalued, Fairly Valued, or Overvalued?** Briefly mention the top 1-2 reasons for this verdict in plain English, using the provided \`summary\` data.
-
-            ## 2. Fundamental Analysis: The Engine Behind the Price
-            Let's look at the company's performance and health to understand the "why" behind its valuation.
-            ### 2.1. Growth & Profitability Trends
-            - **Revenue Growth Trend:** Using the \`revenueGrowthTrend\` data, describe the year-over-year revenue growth. State the actual growth percentages for recent years. Is the company accelerating, stable, or slowing down?
-            - **Profitability Trend:** Using the \`profitabilityTrend\` data, analyze the trend in net profit margins. State clearly whether the company's profitability is improving, stable, or declining.
-
-            ### 2.2. Financial Health Check
-            - **Return on Equity (ROE) Trend:** Using the \`roeTrend\` data, analyze the trend of ROE. Explain this as a "report card" for the business. A consistently high ROE suggests a high-quality, efficient company.
-            - **Debt-to-Equity Ratio:** Use the \`debtToEquity\` value. Explain this like a personal debt-to-income ratio. A high number means the company relies heavily on debt, which can be risky.
-
-            ### 2.3. Getting Paid to Wait (Dividend Analysis)
-            - **Dividend Yield:** Use the \`dividendYield\`. Explain this as the annual return you get from dividends.
-            - **Is the Dividend Safe?** Use the \`cashFlowPayoutRatio\`. A low number (<60%) is a good sign that the dividend is well-covered by actual cash.
-
-            ## 3. Valuation: What Are You Paying for That Engine?
-            Now we'll look at the "price tag" using several common metrics.
-            ### 3.1. Core Valuation Multiples
-            - **Price-to-Earnings (P/E) Ratio:** [Use \`peRatio\`] - The price you pay for $1 of profit.
-            - **Price-to-Sales (P/S) Ratio:** [Use \`psRatio\`] - The price you pay for $1 of sales.
-            - **Price-to-Book (P/B) Ratio:** [Use \`pbRatio\`] - The price compared to the company's net worth on paper.
-
-            ### 3.2. Valuation in Context: Relative Analysis
-            A stock's valuation is only meaningful with context.
-            - **Comparison to History:** Use the \`valuationRelativeToHistory\` object. For P/E, P/S, and P/B, state whether the stock is trading at a premium or discount to its own history, using the provided \`status\` and \`historicalAverage\` for each.
-            - **Comparison to Industry:** Using the company's \`industry\`, comment on whether these multiples are generally high or low for this type of business.
-
-            ### 3.3. Deep Value Check (The Graham Number)
-            - **Graham Number:** Use the \`grahamNumberAnalysis\` object. Explain this as a theoretical intrinsic value for defensive investors. State the result of the comparison: does the stock appear OVERVALUED or UNDERVALUED by this specific metric, based on the provided \`verdict\`?
-
-            ## 4. Market Sentiment & Wall Street View
-            - **Analyst Consensus:** Review the \`analystConsensus\` data. What is the general sentiment from Wall Street analysts?
-            - **Future Expectations:** Does the \`analystEstimatesSummary\` data provide a sense of future expectations?
-
-            ## 5. Final Conclusion: The Investment Case
-            ### The Case for a Bargain (Bull)
-            Summarize the key data points (e.g., strong growth, low valuation vs. history, price below Graham Number) that suggest the stock is undervalued.
-            ### The Case for Caution (Bear)
-            Summarize the key risks or red flags (e.g., high debt, slowing growth, high valuation vs. peers) that suggest caution is warranted.
-            ### Final Takeaway
-            End with a clear, final statement that **classifies the stock's profile.** For example: "While the market is cautious, the data suggests this is a **'classic value'** opportunity," or "This appears to be a **'growth at a reasonable price'** story," or "High debt and slowing growth suggest this could be a **'potential value trap.'**"
-            `.trim();
+            Based on the provided financial summary, provide your analysis in a valid JSON format with two keys:
+            1. "rating": A single valuation assessment. Choose ONE from the following list: "Undervalued", "Fairly Valued", "Overvalued", "Speculative Growth", "Caution Advised". Your choice must be directly supported by the data.
+            2. "rationale": A concise, 2-3 sentence justification for your rating. Your rationale MUST integrate insights from the financial data (e.g., revenue growth, valuation vs history, Graham Number verdict, ROE trend) to support your chosen rating.
+            `;
 
             // --- 3. Initialization Logic ---
             function initialize() {
@@ -2019,7 +1975,7 @@
                     `https://financialmodelingprep.com/api/v3/income-statement/${symbol}?period=annual&limit=5&apikey=${apiKey}`,
                     `https://financialmodelingprep.com/api/v3/balance-sheet-statement/${symbol}?period=annual&limit=5&apikey=${apiKey}`,
                     `https://financialmodelingprep.com/api/v3/cash-flow-statement/${symbol}?period=annual&limit=5&apikey=${apiKey}`,
-                    `https://financialmodelingprep.com/stable/price-target-news?symbol=${symbol}&page=0&limit=10&apikey=${apiKey}`
+                    `https://financialmodelingprep.com/api/v3/stock_news?tickers=${symbol}&limit=10&apikey=${apiKey}`
                 ];
 
                 try {
@@ -2034,14 +1990,13 @@
                         newsData
                     ] = await Promise.all(responses.map(res => res.json()));
 
-                    // **MODIFIED**: Rename FMP properties to match the new function's expectations
                     return { 
                         profile: profileData,
-                        key_metrics_annual: keyMetricsData, // RENAME
-                        ratios_annual: ratiosData, // RENAME
-                        income_statement_annual: incomeStatementData, // RENAME
-                        balance_sheet_statement_annual: balanceSheetData, // RENAME
-                        cash_flow_statement_annual: cashFlowData, // RENAME
+                        keyMetrics: keyMetricsData,
+                        ratios: ratiosData,
+                        incomeStatement: incomeStatementData,
+                        balanceSheet: balanceSheetData,
+                        cashFlow: cashFlowData,
                         news: newsData
                     };
 
@@ -2051,19 +2006,20 @@
                 }
             }
             
+            // --- MODIFIED: AI Rating Generation ---
             async function generateAiRating(financialData) {
                 if (!appConfig.geminiApiKey || !financialData) {
-                    return { rating: 'Error', rationale: 'Could not generate AI rating. API key or financial data missing.' };
+                    return { rating: 'Error', rationale: 'API key or financial data missing.' };
                 }
                 
-                // **MODIFIED**: Use the new processing function
                 const structuredMetrics = _calculateUndervaluedMetrics(financialData);
                 const profile = financialData.profile?.[0] || {};
                 
-                // **MODIFIED**: Build the prompt using the new structured data and prompt template
-                const prompt = UNDERVALUED_ANALYSIS_PROMPT
-                    .replace(/{companyName}/g, profile.companyName || 'the company')
-                    .replace(/{tickerSymbol}/g, profile.symbol || 'the stock')
+                const prompt = AI_SUMMARY_PROMPT
+                    .replace('{companyName}', profile.companyName || 'the company')
+                    .replace('{tickerSymbol}', profile.symbol || 'the stock')
+                    .replace('{industry}', profile.industry || 'N/A')
+                    .replace('{sector}', profile.sector || 'N/A')
                     .replace('{jsonData}', JSON.stringify(structuredMetrics, null, 2));
 
                 const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${appConfig.geminiApiKey}`;
@@ -2077,13 +2033,8 @@
                     
                     const result = await response.json();
                     const rawText = result.candidates[0].content.parts[0].text;
-                    
-                    // Since the new prompt doesn't ask for JSON, we will parse the markdown
-                    // to extract the verdict for the rating and use the full text as the rationale.
-                    const verdictMatch = rawText.match(/verdict:\s*(Undervalued|Fairly Valued|Overvalued|Value Trap|Growth at a reasonable price)/i);
-                    const rating = verdictMatch ? verdictMatch[1].trim() : 'Analysis Complete';
-
-                    return { rating: rating, rationale: rawText };
+                    const jsonText = rawText.match(/```json\n([\s\S]*?)\n```/)[1];
+                    return JSON.parse(jsonText);
 
                 } catch (error) {
                     console.error("Error generating AI rating:", error);
@@ -2093,8 +2044,8 @@
 
             function populateFinancialsModal(data) {
                 const profile = data.profile?.[0] || {};
-                const metrics = data.key_metrics_annual?.[0] || {};
-                const ratios = data.ratios_annual?.[0] || {};
+                const metrics = data.keyMetrics?.[0] || {};
+                const ratios = data.ratios?.[0] || {};
                 const { timestamp } = data;
                 
                 const format = (value, prefix = '', suffix = '', digits = 2) => {
@@ -2146,9 +2097,9 @@
             function populateFinancialTrends(data) {
                 const contentEl = document.getElementById('modal-financial-trends-content');
                 
-                const metrics = data.key_metrics_annual ? [...data.key_metrics_annual].reverse() : [];
-                const income = data.income_statement_annual ? [...data.income_statement_annual].reverse() : [];
-                const cashflow = data.cash_flow_statement_annual ? [...data.cash_flow_statement_annual].reverse() : [];
+                const metrics = data.keyMetrics ? [...data.keyMetrics].reverse() : [];
+                const income = data.incomeStatement ? [...data.incomeStatement].reverse() : [];
+                const cashflow = data.cashFlow ? [...data.cashFlow].reverse() : [];
 
                 if (metrics.length === 0 || income.length === 0) {
                     contentEl.innerHTML = '<p class="text-center text-gray-500">Trend data is not available.</p>';
@@ -2204,6 +2155,7 @@
                 `;
             }
 
+            // --- MODIFIED: UI function for the new summary format ---
              function populateAiSummary(summary) {
                 const contentEl = document.getElementById('modal-ai-summary-content');
                 if (!summary) {
@@ -2211,19 +2163,18 @@
                     return;
                 }
                 
-                // Since the rationale is now a full markdown report, we'll parse and display it.
-                // We'll use a simple method to add basic styling.
-                let formattedRationale = summary.rationale || 'No rationale provided.';
-                
-                // A simple markdown-to-HTML conversion
-                formattedRationale = formattedRationale
-                    .replace(/^# (.*$)/gim, '<h1 class="text-2xl font-bold mb-4">$1</h1>')
-                    .replace(/^## (.*$)/gim, '<h2 class="text-xl font-bold mt-6 mb-3 border-b pb-2">$1</h2>')
-                    .replace(/^### (.*$)/gim, '<h3 class="text-lg font-semibold mt-4 mb-2">$1</h3>')
-                    .replace(/\*\*(.*)\*\*/g, '<strong>$1</strong>')
-                    .replace(/\n/g, '<br />');
+                let ratingColor = 'text-gray-800';
+                if (summary.rating === 'Undervalued') ratingColor = 'text-green-600';
+                if (summary.rating === 'Overvalued' || summary.rating === 'Caution Advised') ratingColor = 'text-red-600';
+                if (summary.rating === 'Fairly Valued') ratingColor = 'text-blue-600';
+                if (summary.rating === 'Speculative Growth') ratingColor = 'text-purple-600';
 
-                contentEl.innerHTML = `<div class="prose prose-sm max-w-none">${formattedRationale}</div>`;
+                contentEl.innerHTML = `
+                    <div class="bg-indigo-50 p-4 rounded-lg">
+                        <h3 class="text-xl font-bold ${ratingColor}">${summary.rating || 'N/A'}</h3>
+                        <p class="text-gray-600 mt-2 leading-relaxed">${summary.rationale || 'No rationale provided.'}</p>
+                    </div>
+                `;
             }
 
             function populateNewsTab(newsData, timestamp) {
