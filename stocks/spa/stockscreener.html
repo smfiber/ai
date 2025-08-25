@@ -493,7 +493,7 @@
     <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-database-compat.js"></script>
 
     <script>
-        // Version 5.0.4
+        // Version 5.0.5
         document.addEventListener("DOMContentLoaded", () => {
             // --- 1. Global Configuration Object ---
             const appConfig = {
@@ -894,7 +894,7 @@
                 let allNews = [];
                 for (const [index, symbol] of symbols.entries()) {
                     try {
-                        const url = `https://financialmodelingprep.com/stable/price-target-news?symbol=${symbol}&page=0&limit=10&apikey=${appConfig.fmpApiKey}`;
+                        const url = `https://financialmodelingprep.com/api/v4/price-target-news?symbol=${symbol}&page=0&limit=10&apikey=${appConfig.fmpApiKey}`;
                         newsContainer.innerHTML = `<p class="text-gray-500 p-4">Fetching news for ${symbol} (${index + 1} of ${symbols.length})...<br><code class="text-xs text-indigo-500">${url}</code></p>`;
                         
                         const response = await fetch(url);
@@ -1840,7 +1840,7 @@
                     `https://financialmodelingprep.com/api/v3/income-statement/${symbol}?period=annual&limit=5&apikey=${apiKey}`,
                     `https://financialmodelingprep.com/api/v3/balance-sheet-statement/${symbol}?period=annual&limit=5&apikey=${apiKey}`,
                     `https://financialmodelingprep.com/api/v3/cash-flow-statement/${symbol}?period=annual&limit=5&apikey=${apiKey}`,
-                    `https://financialmodelingprep.com/stable/price-target-news?symbol=${symbol}&limit=10&page=0&apikey=${apiKey}`
+                    `https://financialmodelingprep.com/api/v4/price-target-news?symbol=${symbol}&page=0&limit=10&apikey=${apiKey}`
                 ];
 
                 try {
