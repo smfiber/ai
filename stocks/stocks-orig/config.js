@@ -1,5 +1,5 @@
 // --- App Version ---
-export const APP_VERSION = "14.10.0";
+export const APP_VERSION = "14.11.0";
 
 // --- Shared State ---
 // This object will hold all the application's shared state.
@@ -123,69 +123,70 @@ export const FINANCIAL_NEWS_SOURCES = [
 const FINANCIAL_ANALYSIS_PROMPT = `
 Role: You are a financial analyst AI who excels at explaining complex topics to everyday investors. Your purpose is to generate a rigorous, data-driven financial analysis that is also educational, objective, and easy to understand. Use relatable analogies to clarify financial concepts.
 
-Data Instructions: Your analysis must be derived exclusively from the provided JSON data, which represents raw, unfiltered data directly from the Financial Modeling Prep API. The data will contain top-level keys for various endpoints like 'profile', 'income_statement_annual', 'key_metrics_annual', etc. The most recent year in the annual data arrays often represents a future estimate; you should identify it as such and be cautious when calculating year-over-year growth from it. Be skeptical of extreme outliers in the most recent year's data (e.g., a sudden 300% jump in profit margin) and point them out as potential data anomalies or one-time events.
+Data Instructions: Your analysis MUST be based *exclusively* on the pre-calculated metrics and summaries provided in the JSON data below. Do NOT attempt to recalculate any values. If a specific data point is "N/A" or missing, state that clearly in your analysis.
 
-Output Format: The final report must be in professional markdown format. Use # for the main title, ## for major sections, ### for sub-sections, and bullet points. Present financial figures clearly, using 'Billion' or 'Million' where appropriate.
+Output Format: The final report must be in professional markdown format. Use # for the main title, ## for major sections, ### for sub-sections, and bullet points for key data points.
 
 IMPORTANT: Do not include any HTML tags in your output. Generate pure markdown only.
 
-Analyze the comprehensive financial data for {companyName} (Ticker: {tickerSymbol}) provided below. If a specific data point is "N/A" or missing, state that clearly.
+Analyze the comprehensive financial data for {companyName} (Ticker: {tickerSymbol}) provided below.
 
-JSON Data:
+JSON Data with Pre-Calculated Metrics:
 {jsonData}
 
 Based on the provided data, generate the following multi-faceted financial report:
-
 # Comprehensive Financial Analysis: {companyName} ({tickerSymbol})
 
 ## 1. Executive Summary
-Begin with a concise, one-paragraph summary. For someone in a hurry, what is the most important takeaway about this company's financial health, performance, and overall story as a potential investment?
+Begin with a concise, one-paragraph summary. For someone in a hurry, what is the most important takeaway about this company's financial health, performance, and overall story as a potential investment? Synthesize the key findings from the report below.
 
 ## 2. Company Profile & Market Context
 ### Business Description
-In simple terms, describe the company's business based on the 'profile[0].description', 'sector', and 'industry'. Avoid jargon.
+In simple terms, describe the company's business based on the provided 'description', 'sector', and 'industry'. Avoid jargon.
 ### Market Snapshot
-- Market Capitalization: [Use 'profile[0].mktCap']
-- 52-Week Price Range: [Use 'profile[0].range']
-- **Analyst Consensus:** [Synthesize from the 'stock_grade_news' array]
-- **Insider Ownership:** [Use 'profile[0].insiderOwnership' if available]
+- Market Capitalization: [Use summary.marketCap]
+- 52-Week Price Range: [Use summary.priceRange]
+- **Analyst Consensus:** [Use summary.analystConsensus]
+- **Insider Ownership:** [Use summary.insiderOwnership, state if N/A]
 
 ## 3. Performance & Profitability (How Well Does It Make Money?)
 ### 3.1. Revenue & Earnings Trend
-Analyze the historical trend of 'revenue' and 'netIncome' from the 'income_statement_annual' array. Is the company growing? Analyze the year-over-year trends for recent performance.
+- **Revenue:** Based on 'performance.revenueTrend', describe the company's recent top-line performance.
+- **Net Income:** Based on 'performance.netIncomeTrend', describe the company's recent bottom-line performance.
 ### 3.2. Margin Analysis (The Quality of Sales)
-Explain and analyze the trends in 'grossProfitMargin' and 'operatingProfitMargin' by looking at the 'key_metrics_annual' array.
+- **Gross & Operating Margins:** Explain what these margins represent. Using 'performance.grossProfitMargin.status' and 'performance.operatingProfitMargin.status', describe the trend in the company's core profitability.
 ### 3.3. Net Profitability & Returns
-Explain what 'netProfitMargin' means. Explain 'returnOnEquity' (ROE) and 'returnOnAssets' (ROA) as a grade for management, using data from the 'key_metrics_annual' array.
+- **Net Profit Margin:** Explain what this means. Using 'performance.netProfitMargin.status', what is the trend?
+- **Return on Equity (ROE):** Explain ROE as a "report card" for how well management uses shareholder money. Based on 'performance.returnOnEquity.quality', how effective is the company?
 
 ## 4. Financial Health & Risk (Is the Company on Solid Ground?)
 ### 4.1. Liquidity Analysis
-Interpret the 'currentRatio' from the latest entry in 'key_metrics_annual'. Does the company have enough short-term assets to pay its short-term bills?
+- **Current Ratio:** Explain this as the ability to pay short-term bills. Using 'health.currentRatio.status', comment on the company's short-term financial position.
 ### 4.2. Solvency and Debt Structure
-Analyze the 'debtToEquity' ratio from the latest entry in 'key_metrics_annual'. Is the company conservatively or aggressively financed?
-Explain the 'interestCoverage' ratio simply: From its operating earnings, how many times over can the company pay the interest on its debt?
+- **Debt-to-Equity:** Explain this like a personal debt-to-income ratio. Based on 'health.debtToEquity.status', is the company conservatively or aggressively financed?
+- **Interest Coverage:** Explain this as the ability to pay interest on its debt. Using 'health.interestCoverage.status', comment on its ability to handle its debt payments.
 
 ## 5. Cash Flow Analysis (Following the Actual Cash)
 ### 5.1. Operating Cash Flow (OCF) & Quality of Earnings
-Is the company consistently generating real cash from its main business? Compare 'operatingCashFlow' to 'netIncome' using data from the 'cash_flow_statement_annual' and 'income_statement_annual' arrays. Are profits backed by cash?
+- Based on 'cashFlow.qualityOfEarnings', are the company's reported profits being converted into real cash?
 ### 5.2. Capital Allocation Story
-Briefly explain what the company is doing with its cash by analyzing the 'cash_flow_statement_annual' array. Is it in **growth mode** (high 'capitalExpenditure'), **mature/return mode** (high 'dividendsPaid' and 'commonStockRepurchased'), or **deleveraging mode** (high 'debtRepayment')?
+- Based on 'cashFlow.capitalAllocationStory', what is the company primarily doing with its cash? Is it in growth mode, return mode, or deleveraging mode?
 
 ## 6. Valuation Analysis (Is the Stock Price Fair?)
-**Crucially, for each multiple, compare it to its own historical trend.** Context is key.
-- P/E Ratio ('peRatio')
-- Price-to-Sales Ratio ('priceToSalesRatio')
-- Price-to-Book Ratio ('priceToBookRatio')
-- Enterprise Value to EBITDA ('enterpriseValueOverEBITDA')
-Briefly discuss what these comparisons imply. Is the stock trading at a premium or a discount, and why might that be?
+**Crucially, for each multiple, compare it to its own historical trend using the provided 'status' field.**
+- **P/E Ratio:** [Use valuation[0].status]
+- **Price-to-Sales Ratio:** [Use valuation[1].status]
+- **Price-to-Book Ratio:** [Use valuation[2].status]
+- **Enterprise Value to EBITDA:** [Use valuation[3].status]
+Briefly discuss what these comparisons imply. Is the stock trading at a premium or a discount to its own history?
 
 ## 7. The Long-Term Investment Thesis: Bull vs. Bear
 ### The Bull Case (Key Strengths)
-Identify 2-3 of the most significant financial strengths. What is the primary "bull" argument based on the data?
+- Create a bulleted list using the points from 'thesis.bullCasePoints'.
 ### The Bear Case (Potential Risks)
-Identify 2-3 of the most significant weaknesses or financial red flags. What is the primary "bear" argument based on the data?
+- Create a bulleted list using the points from 'thesis.bearCasePoints'.
 ### Final Verdict: The "Moat"
-Based purely on this quantitative analysis, what is the primary story? Does the data suggest the company has a strong competitive advantage (a "moat")? **Look for clues like consistently high ROE/ROIC, durable profit margins, or a fortress balance sheet by analyzing the historical data arrays.** Conclude with a final statement on its profile as a potential long-term holding.
+Based purely on this quantitative analysis, what is the primary story? Does the 'thesis.moatIndicator' suggest the company has a strong competitive advantage (a "moat")? Conclude with a final statement on its profile as a potential long-term holding.
 `.trim();
 
 export const UNDERVALUED_ANALYSIS_PROMPT = `
