@@ -2293,28 +2293,16 @@ async function handleInvestmentMemoRequest(symbol) {
 
 async function handleSaveReportToDb() {
     const modal = document.getElementById('rawDataViewerModal');
-    const symbol = modal.querySelector('.ai-analysis-button')?.dataset.symbol || modal.querySelector('.tab-button.active')?.dataset.symbol;
-    const activeTab = modal.querySelector('.tab-button.active').dataset.tab;
+    const symbol = modal.querySelector('.ai-analysis-button')?.dataset.symbol;
+    const contentContainer = document.getElementById('ai-article-container');
+    const statusContainer = document.getElementById('report-status-container-ai');
+    const reportType = statusContainer.dataset.activeReportType;
+    const contentToSave = contentContainer.dataset.rawMarkdown;
 
-    let reportType, contentContainer;
-
-    if (activeTab === 'ai-analysis') {
-        const currentContent = document.getElementById('ai-article-container').innerHTML;
-        if (!currentContent || currentContent.includes('loader')) {
-            displayMessageInModal("Please generate an analysis before saving.", "warning");
-            return;
-        }
-        const statusContainer = document.getElementById('report-status-container-ai');
-        reportType = statusContainer.dataset.activeReportType;
-        contentContainer = document.getElementById('ai-article-container');
-    }
-
-    if (!reportType || !contentContainer || !symbol) {
-        displayMessageInModal("Could not determine which report to save. Please select a specific analysis.", "warning");
+    if (!symbol || !reportType || !contentToSave) {
+        displayMessageInModal("Please generate an analysis before saving.", "warning");
         return;
     }
-
-    const contentToSave = contentContainer.dataset.rawMarkdown;
 
     openModal(CONSTANTS.MODAL_LOADING);
     document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Saving ${reportType} report to database...`;
