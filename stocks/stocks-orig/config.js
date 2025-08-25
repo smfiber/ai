@@ -1,5 +1,5 @@
 // --- App Version ---
-export const APP_VERSION = "14.9.0"; 
+export const APP_VERSION = "14.10.0"; 
 
 // --- Shared State ---
 // This object will hold all the application's shared state.
@@ -191,55 +191,55 @@ Based purely on this quantitative analysis, what is the primary story? Does the 
 export const UNDERVALUED_ANALYSIS_PROMPT = `
 Role: You are a financial analyst AI who excels at explaining complex topics to everyday investors. Your purpose is to conduct a clear, data-driven valuation analysis to determine if a stock is a potential bargain. Use relatable analogies and explain all financial terms simply.
 
-Data Instructions: The provided JSON contains comprehensive historical data in arrays. Your analysis MUST be based on trends and comparisons derived from these arrays. Your analysis must be derived exclusively from the provided JSON data. If a specific data point is "N/A" or missing, state that clearly in your analysis.
+Data Instructions: Your analysis MUST be based *exclusively* on the pre-calculated metrics provided in the JSON data below. Do NOT attempt to recalculate any values. If a specific data point is "N/A" or missing, state that clearly in your analysis.
 
 Output Format: The final report must be in professional markdown format. Use # for the main title, ## for major sections, ### for sub-sections, and bullet points for key data points.
 
 IMPORTANT: Do not include any HTML tags in your output. Generate pure markdown only.
 
-Conduct a comprehensive valuation analysis for {companyName} (Ticker: {tickerSymbol}) using the financial data provided below.
+Conduct a comprehensive valuation analysis for {companyName} (Ticker: {tickerSymbol}) using the pre-calculated financial summary provided below.
 
-JSON Data:
+JSON Data with Pre-Calculated Metrics:
 {jsonData}
 
-Based on the data, generate the following in-depth report:
+Based on the provided data, generate the following in-depth report:
 # Investment Valuation Report: Is {companyName} ({tickerSymbol}) a Bargain?
 
 ## 1. The Bottom Line: Our Verdict
-Provide a concise, one-paragraph conclusion that immediately answers the main question: Based on the data, does this stock seem **Undervalued, Fairly Valued, or Overvalued?** Briefly mention the top 1-2 reasons for this verdict in plain English.
+Provide a concise, one-paragraph conclusion that immediately answers the main question: Based on the data, does this stock seem **Undervalued, Fairly Valued, or Overvalued?** Briefly mention the top 1-2 reasons for this verdict in plain English, using the provided `summary` data.
 
 ## 2. Fundamental Analysis: The Engine Behind the Price
 Let's look at the company's performance and health to understand the "why" behind its valuation.
 ### 2.1. Growth & Profitability Trends
-- **Revenue Growth Trend:** You MUST analyze the year-over-year revenue growth trend for the last 5+ years using the \`income_statement_annual\` array. State the actual growth percentages for recent years. Is the company accelerating, stable, or slowing down?
-- **Profitability Trend:** Analyze the trend in profit margins over the last 5+ years. If the \`netProfitMargin\` key is not available in \`key_metrics_annual\`, you MUST calculate it using \`netIncome\` / \`revenue\` from the \`income_statement_annual\` data (or use \`netIncomeRatio\`). State clearly whether the company's profitability is improving, stable, or declining.
+- **Revenue Growth Trend:** Using the `revenueGrowthTrend` data, describe the year-over-year revenue growth. State the actual growth percentages for recent years. Is the company accelerating, stable, or slowing down?
+- **Profitability Trend:** Using the `profitabilityTrend` data, analyze the trend in net profit margins. State clearly whether the company's profitability is improving, stable, or declining.
 
 ### 2.2. Financial Health Check
-- **Return on Equity (ROE) Trend:** Analyze the trend of ROE over the last 5+ years from the \`key_metrics_annual\` array. Explain this as a "report card" for the business. A consistently high ROE suggests a high-quality, efficient company.
-- **Debt-to-Equity Ratio:** Use the 'debtToEquity' value from the latest entry in \`key_metrics_annual\`. Explain this like a personal debt-to-income ratio. A high number means the company relies heavily on debt, which can be risky.
+- **Return on Equity (ROE) Trend:** Using the `roeTrend` data, analyze the trend of ROE. Explain this as a "report card" for the business. A consistently high ROE suggests a high-quality, efficient company.
+- **Debt-to-Equity Ratio:** Use the `debtToEquity` value. Explain this like a personal debt-to-income ratio. A high number means the company relies heavily on debt, which can be risky.
 
 ### 2.3. Getting Paid to Wait (Dividend Analysis)
-- **Dividend Yield:** Use the 'dividendYield' from the latest entry in \`key_metrics_annual\`. Explain this as the annual return you get from dividends.
-- **Is the Dividend Safe?** Calculate the **Cash Flow Payout Ratio**. You MUST use the absolute value of \`dividendsPaid\` divided by \`operatingCashFlow\` from the latest \`cash_flow_statement_annual\` entry. A low number (<60%) is a good sign that the dividend is well-covered by actual cash.
+- **Dividend Yield:** Use the `dividendYield`. Explain this as the annual return you get from dividends.
+- **Is the Dividend Safe?** Use the `cashFlowPayoutRatio`. A low number (<60%) is a good sign that the dividend is well-covered by actual cash.
 
 ## 3. Valuation: What Are You Paying for That Engine?
-Now we'll look at the "price tag" using several common metrics from the latest entry in \`key_metrics_annual\`.
+Now we'll look at the "price tag" using several common metrics.
 ### 3.1. Core Valuation Multiples
-- **Price-to-Earnings (P/E) Ratio:** [Value] - The price you pay for $1 of profit.
-- **Price-to-Sales (P/S) Ratio:** [Value] - The price you pay for $1 of sales.
-- **Price-to-Book (P/B) Ratio:** [Value] - The price compared to the company's net worth on paper.
+- **Price-to-Earnings (P/E) Ratio:** [Use `peRatio`] - The price you pay for $1 of profit.
+- **Price-to-Sales (P/S) Ratio:** [Use `psRatio`] - The price you pay for $1 of sales.
+- **Price-to-Book (P/B) Ratio:** [Use `pbRatio`] - The price compared to the company's net worth on paper.
 
 ### 3.2. Valuation in Context: Relative Analysis
 A stock's valuation is only meaningful with context.
-- **Comparison to History:** This is a critical step. You MUST compare the latest P/E, P/S, and P/B ratios to their 5-year historical averages, which you will calculate from the \`key_metrics_annual\` array. State whether the stock is trading at a premium or discount to its own history.
-- **Comparison to Industry:** Using the 'industry' from the 'profile[0]' object, are these multiples generally high or low for this type of business?
+- **Comparison to History:** Use the `valuationRelativeToHistory` object. For P/E, P/S, and P/B, state whether the stock is trading at a premium or discount to its own history, using the provided `status` and `historicalAverage` for each.
+- **Comparison to Industry:** Using the company's `industry`, comment on whether these multiples are generally high or low for this type of business.
 
 ### 3.3. Deep Value Check (The Graham Number)
-- **Graham Number:** Use the 'grahamNumber' from the latest 'key_metrics_annual' entry. Explain this as a theoretical intrinsic value for defensive investors. You must then explicitly compare the stock 'price' from the \`profile\` object to the 'grahamNumber'. If the price is HIGHER than the Graham Number, you must state that the stock appears OVERVALUED by this metric. If the price is LOWER, state that it appears UNDERVALUED.
+- **Graham Number:** Use the `grahamNumberAnalysis` object. Explain this as a theoretical intrinsic value for defensive investors. State the result of the comparison: does the stock appear OVERVALUED or UNDERVALUED by this specific metric, based on the provided `verdict`?
 
 ## 4. Market Sentiment & Wall Street View
-- **Analyst Consensus:** Review the 'stock_grade_news' array. What is the general sentiment from Wall Street analysts?
-- **Future Expectations:** Does the 'analyst_estimates' data provide a sense of future expectations?
+- **Analyst Consensus:** Review the `analystConsensus` data. What is the general sentiment from Wall Street analysts?
+- **Future Expectations:** Does the `analystEstimatesSummary` data provide a sense of future expectations?
 
 ## 5. Final Conclusion: The Investment Case
 ### The Case for a Bargain (Bull)
