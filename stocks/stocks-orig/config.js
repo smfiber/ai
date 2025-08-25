@@ -495,7 +495,7 @@ const CAPITAL_ALLOCATORS_PROMPT = `
 	- **Conclude with a "Red Flags" section, highlighting any concerning trends in the data.**
 
 	When you mention a stock ticker, you MUST wrap it in a special tag like this: <stock-ticker>TICKER</stock-ticker>.
-`;
+`.trim();
 
 // --- NEW PROMPTS (v13.2.0) ---
 
