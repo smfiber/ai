@@ -1,5 +1,5 @@
 // --- App Version ---
-export const APP_VERSION = "14.5.1"; 
+export const APP_VERSION = "14.6.0"; 
 
 // --- Shared State ---
 // This object will hold all the application's shared state.
@@ -985,7 +985,7 @@ Article Title: "Hidden Value: A Sum-of-the-Parts Investigation of [Company Name]
 Your analysis must be structured as follows:
 
 ## 1. The Misunderstood Giant
-- Introduce a large, multi-divisional company in the {contextName} {contextType} that you believe the market misunderstands and may be subject to a "conglomerate discount."
+- Introduce a large, multi-divisional company in the {contextName} {contextType} that you believe the market understands and may be subject to a "conglomerate discount."
 
 ## 2. Breaking Down the Empire
 - Identify and describe the company's primary business segments. For each, identify its key pure-play competitors.
