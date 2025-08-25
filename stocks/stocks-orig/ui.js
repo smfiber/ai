@@ -2157,6 +2157,7 @@ async function handleAnalysisRequest(symbol, reportType, promptConfig, forceNew 
             const latestReport = savedReports[0];
             displayReport(contentContainer, latestReport.content, latestReport.prompt);
             contentContainer.dataset.currentPrompt = latestReport.prompt || '';
+            contentContainer.dataset.rawMarkdown = latestReport.content;
             updateReportStatus(statusContainer, savedReports, latestReport.id, { symbol, reportType, promptConfig });
             return; 
         }
@@ -2218,6 +2219,7 @@ async function handleAnalysisRequest(symbol, reportType, promptConfig, forceNew 
         contentContainer.dataset.currentPrompt = prompt;
 
         const newReportContent = await generatePolishedArticle(prompt, loadingMessage);
+        contentContainer.dataset.rawMarkdown = newReportContent;
         displayReport(contentContainer, newReportContent, prompt);
         updateReportStatus(statusContainer, [], null, { symbol, reportType, promptConfig });
 
@@ -2314,8 +2316,7 @@ async function handleSaveReportToDb() {
         return;
     }
 
-    const contentToSave = contentContainer.innerHTML;
-    const promptToSave = contentContainer.dataset.currentPrompt || null;
+    const contentToSave = contentContainer.dataset.rawMarkdown;
 
     openModal(CONSTANTS.MODAL_LOADING);
     document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Saving ${reportType} report to database...`;
@@ -2325,8 +2326,7 @@ async function handleSaveReportToDb() {
             ticker: symbol,
             reportType: reportType,
             content: contentToSave,
-            savedAt: Timestamp.now(),
-            prompt: promptToSave
+            savedAt: Timestamp.now()
         };
         await addDoc(collection(state.db, CONSTANTS.DB_COLLECTION_AI_REPORTS), reportData);
         displayMessageInModal("Report saved successfully!", "info");
@@ -2356,11 +2356,7 @@ function displayReport(container, content, prompt = null) {
         `;
     }
 
-    if (content.startsWith('<')) { // If content is already HTML
-        finalHtml += content;
-    } else { // Assume it's markdown
-        finalHtml += marked.parse(content);
-    }
+    finalHtml += marked.parse(content || '');
     container.innerHTML = finalHtml;
 }
 
@@ -2399,6 +2395,7 @@ function updateReportStatus(statusContainer, reports, activeReportId, analysisPa
                 const contentContainer = statusContainer.nextElementSibling;
                 displayReport(contentContainer, selectedReport.content, selectedReport.prompt);
                 contentContainer.dataset.currentPrompt = selectedReport.prompt || '';
+                contentContainer.dataset.rawMarkdown = selectedReport.content;
                 updateReportStatus(statusContainer, reports, selectedReport.id, analysisParams);
             }
         });
