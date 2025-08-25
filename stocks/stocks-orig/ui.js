@@ -2181,7 +2181,6 @@ async function handleAnalysisRequest(symbol, reportType, promptConfig, forceNew 
                     async () => {
                         await handleRefreshFmpData(symbol);
                         // After refresh, re-run the request forcing a new generation
-                        const freshData = await getFmpStockData(symbol);
                         await handleAnalysisRequest(symbol, reportType, promptConfig, true);
                     }
                 );
@@ -2189,7 +2188,12 @@ async function handleAnalysisRequest(symbol, reportType, promptConfig, forceNew 
             }
         }
         
-        const payloadData = buildAnalysisPayload(data, requiredEndpoints);
+        let payloadData;
+        if (reportType === 'UndervaluedAnalysis') {
+            payloadData = _calculateUndervaluedMetrics(data);
+        } else {
+            payloadData = buildAnalysisPayload(data, requiredEndpoints);
+        }
         
         // Manually calculate Graham Number if needed by the prompt and not present
         if (requiredEndpoints.includes('key_metrics_annual') && payloadData.key_metrics_annual?.[0]) {
@@ -2601,4 +2605,126 @@ async function handleSaveToDrive(modalId) {
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
+}
+
+/**
+ * Calculates a summary of metrics for the "Undervalued Analysis" prompt.
+ * @param {object} data - The full FMP data object for a stock.
+ * @returns {object} A summary object with pre-calculated metrics.
+ */
+function _calculateUndervaluedMetrics(data) {
+    const profile = data.profile?.[0] || {};
+    const incomeStatements = (data.income_statement_annual || []).slice().reverse(); // Oldest to newest
+    const keyMetrics = (data.key_metrics_annual || []).slice().reverse(); // Oldest to newest
+    const cashFlows = (data.cash_flow_statement_annual || []).slice().reverse();
+
+    const latestMetrics = keyMetrics[keyMetrics.length - 1] || {};
+    const latestCashFlow = cashFlows[cashFlows.length - 1] || {};
+    
+    // Helper to calculate YoY Growth
+    const calculateYoyGrowth = (data, key) => {
+        const trends = [];
+        for (let i = 1; i < data.length; i++) {
+            const prev = data[i - 1][key];
+            const curr = data[i][key];
+            if (prev && curr && prev !== 0) {
+                const growth = ((curr - prev) / prev) * 100;
+                trends.push({ year: data[i].calendarYear, growth: `${growth.toFixed(2)}%` });
+            }
+        }
+        return trends.slice(-6); // Last 6 years of growth
+    };
+
+    // Helper to get last N years of a metric
+    const getTrend = (data, key, formatFn = (v) => v) => {
+        return data.slice(-6).map(d => ({ year: d.calendarYear, value: formatFn(d[key]) }));
+    };
+    
+    // Helper to calculate historical average
+    const calculateAverage = (data, key) => {
+        const values = data.slice(-5).map(d => d[key]).filter(v => typeof v === 'number');
+        if (values.length === 0) return null;
+        return values.reduce((a, b) => a + b, 0) / values.length;
+    };
+
+    // 1. Growth & Profitability
+    const revenueGrowthTrend = calculateYoyGrowth(incomeStatements, 'revenue');
+    const profitabilityTrend = getTrend(keyMetrics, 'netProfitMargin', v => `${(v * 100).toFixed(2)}%`);
+
+    // 2. Financial Health
+    const roeTrend = getTrend(keyMetrics, 'returnOnEquity', v => `${(v * 100).toFixed(2)}%`);
+    const debtToEquity = latestMetrics.debtToEquity ? latestMetrics.debtToEquity.toFixed(2) : 'N/A';
+    
+    // 3. Dividend Analysis
+    const dividendYield = latestMetrics.dividendYield ? `${(latestMetrics.dividendYield * 100).toFixed(2)}%` : 'N/A';
+    let cashFlowPayoutRatio = 'N/A';
+    if (latestCashFlow.operatingCashFlow && latestCashFlow.dividendsPaid) {
+        if (latestCashFlow.operatingCashFlow > 0) {
+            const ratio = (Math.abs(latestCashFlow.dividendsPaid) / latestCashFlow.operatingCashFlow) * 100;
+            cashFlowPayoutRatio = `${ratio.toFixed(2)}%`;
+        }
+    }
+
+    // 4. Valuation Multiples
+    const peRatio = latestMetrics.peRatio ? latestMetrics.peRatio.toFixed(2) : 'N/A';
+    const psRatio = latestMetrics.priceToSalesRatio ? latestMetrics.priceToSalesRatio.toFixed(2) : 'N/A';
+    const pbRatio = latestMetrics.pbRatio ? latestMetrics.pbRatio.toFixed(2) : 'N/A';
+
+    // 5. Valuation in Context
+    const historicalPe = calculateAverage(keyMetrics, 'peRatio');
+    const historicalPs = calculateAverage(keyMetrics, 'priceToSalesRatio');
+    const historicalPb = calculateAverage(keyMetrics, 'pbRatio');
+
+    const valuationRelativeToHistory = {
+        pe: {
+            current: peRatio,
+            historicalAverage: historicalPe ? historicalPe.toFixed(2) : 'N/A',
+            status: historicalPe && peRatio !== 'N/A' ? (peRatio > historicalPe ? 'Premium' : 'Discount') : 'N/A'
+        },
+        ps: {
+            current: psRatio,
+            historicalAverage: historicalPs ? historicalPs.toFixed(2) : 'N/A',
+            status: historicalPs && psRatio !== 'N/A' ? (psRatio > historicalPs ? 'Premium' : 'Discount') : 'N/A'
+        },
+        pb: {
+            current: pbRatio,
+            historicalAverage: historicalPb ? historicalPb.toFixed(2) : 'N/A',
+            status: historicalPb && pbRatio !== 'N/A' ? (pbRatio > historicalPb ? 'Premium' : 'Discount') : 'N/A'
+        }
+    };
+    
+    // 6. Graham Number
+    const grahamNumber = latestMetrics.grahamNumber;
+    const currentPrice = profile.price;
+    let grahamVerdict = 'N/A';
+    if (grahamNumber && currentPrice) {
+        grahamVerdict = currentPrice < grahamNumber ? 'UNDERVALUED' : 'OVERVALUED';
+    }
+
+    // 7. Analyst Consensus & Estimates
+    const analystConsensus = (data.stock_grade_news || []).slice(0, 5).map(g => `${g.gradingCompany}: ${g.newGrade}`).join(', ');
+    const latestEstimate = (data.analyst_estimates || []).find(e => new Date(e.date).getFullYear() === new Date().getFullYear() + 1);
+
+    return {
+        summary: {
+            industry: profile.industry || 'N/A',
+        },
+        revenueGrowthTrend,
+        profitabilityTrend,
+        roeTrend,
+        debtToEquity,
+        dividendYield,
+        cashFlowPayoutRatio,
+        peRatio,
+        psRatio,
+        pbRatio,
+        valuationRelativeToHistory,
+        grahamNumberAnalysis: {
+            grahamNumber: grahamNumber ? grahamNumber.toFixed(2) : 'N/A',
+            currentPrice: currentPrice || 'N/A',
+            verdict: grahamVerdict
+        },
+        analystConsensus: analystConsensus || 'No recent ratings.',
+        analystEstimatesSummary: latestEstimate ? `Avg. estimated revenue for next year is ${formatLargeNumber(latestEstimate.estimatedRevenueAvg)}.` : 'No estimates available.'
+    };
 }
