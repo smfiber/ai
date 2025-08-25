@@ -188,16 +188,16 @@ Identify 2-3 of the most significant weaknesses or financial red flags. What is 
 Based purely on this quantitative analysis, what is the primary story? Does the data suggest the company has a strong competitive advantage (a "moat")? **Look for clues like consistently high ROE/ROIC, durable profit margins, or a fortress balance sheet by analyzing the historical data arrays.** Conclude with a final statement on its profile as a potential long-term holding.
 `.trim();
 
-const UNDERVALUED_ANALYSIS_PROMPT = `
+export const UNDERVALUED_ANALYSIS_PROMPT = `
 Role: You are a financial analyst AI who excels at explaining complex topics to everyday investors. Your purpose is to conduct a clear, data-driven valuation analysis to determine if a stock is a potential bargain. Use relatable analogies and explain all financial terms simply.
 
-Data Instructions: Your analysis must be derived exclusively from the provided JSON data, which represents raw, unfiltered data directly from the Financial Modeling Prep API. The data will contain top-level keys for various endpoints like 'profile', 'income_statement_annual', 'key_metrics_annual', etc.
+Data Instructions: The provided JSON contains comprehensive historical data in arrays. Your analysis MUST be based on trends and comparisons derived from these arrays. Your analysis must be derived exclusively from the provided JSON data. If a specific data point is "N/A" or missing, state that clearly in your analysis.
 
 Output Format: The final report must be in professional markdown format. Use # for the main title, ## for major sections, ### for sub-sections, and bullet points for key data points.
 
 IMPORTANT: Do not include any HTML tags in your output. Generate pure markdown only.
 
-Conduct a comprehensive valuation analysis for {companyName} (Ticker: {tickerSymbol}) using the financial data provided below. If a specific data point is "N/A" or missing, state that clearly in your analysis.
+Conduct a comprehensive valuation analysis for {companyName} (Ticker: {tickerSymbol}) using the financial data provided below.
 
 JSON Data:
 {jsonData}
@@ -211,19 +211,19 @@ Provide a concise, one-paragraph conclusion that immediately answers the main qu
 ## 2. Fundamental Analysis: The Engine Behind the Price
 Let's look at the company's performance and health to understand the "why" behind its valuation.
 ### 2.1. Growth & Profitability Trends
-- **Revenue Growth:** Analyze the year-over-year revenue growth from the 'income_statement_annual' array. Is this indicative of a company that is accelerating, stable, or slowing down?
-- **Profit Margin Trend:** Analyze the trend in 'netProfitMargin' by looking at the 'key_metrics_annual' array. Is the company becoming more or less profitable over time? **A rising margin is a strong positive signal.**
+- **Revenue Growth Trend:** You MUST analyze the year-over-year revenue growth trend for the last 5+ years using the \`income_statement_annual\` array. State the actual growth percentages for recent years. Is the company accelerating, stable, or slowing down?
+- **Profitability Trend:** Analyze the trend in profit margins over the last 5+ years. If the \`netProfitMargin\` key is not available in \`key_metrics_annual\`, you MUST calculate it using \`netIncome\` / \`revenue\` from the \`income_statement_annual\` data (or use \`netIncomeRatio\`). State clearly whether the company's profitability is improving, stable, or declining.
 
 ### 2.2. Financial Health Check
-- **Return on Equity (ROE):** Analyze the trend of ROE from 'key_metrics_annual'. Explain this as a "report card" for the business. A consistently high ROE suggests a high-quality, efficient company.
-- **Debt-to-Equity Ratio:** Use the 'debtToEquity' value from the latest entry in 'key_metrics_annual'. Explain this like a personal debt-to-income ratio. A high number means the company relies heavily on debt, which can be risky.
+- **Return on Equity (ROE) Trend:** Analyze the trend of ROE over the last 5+ years from the \`key_metrics_annual\` array. Explain this as a "report card" for the business. A consistently high ROE suggests a high-quality, efficient company.
+- **Debt-to-Equity Ratio:** Use the 'debtToEquity' value from the latest entry in \`key_metrics_annual\`. Explain this like a personal debt-to-income ratio. A high number means the company relies heavily on debt, which can be risky.
 
 ### 2.3. Getting Paid to Wait (Dividend Analysis)
-- **Dividend Yield:** Use the 'dividendYield' from the latest entry in 'key_metrics_annual'. Explain this as the annual return you get from dividends.
-- **Is the Dividend Safe?** Calculate the **Cash Flow Payout Ratio** ('dividendsPaid' / 'operatingCashFlow') using the latest data from the 'cash_flow_statement_annual' array. A low number (<60%) is a good sign that the dividend is well-covered by actual cash.
+- **Dividend Yield:** Use the 'dividendYield' from the latest entry in \`key_metrics_annual\`. Explain this as the annual return you get from dividends.
+- **Is the Dividend Safe?** Calculate the **Cash Flow Payout Ratio**. You MUST use the absolute value of \`dividendsPaid\` divided by \`operatingCashFlow\` from the latest \`cash_flow_statement_annual\` entry. A low number (<60%) is a good sign that the dividend is well-covered by actual cash.
 
 ## 3. Valuation: What Are You Paying for That Engine?
-Now we'll look at the "price tag" using several common metrics from the latest entry in 'key_metrics_annual'.
+Now we'll look at the "price tag" using several common metrics from the latest entry in \`key_metrics_annual\`.
 ### 3.1. Core Valuation Multiples
 - **Price-to-Earnings (P/E) Ratio:** [Value] - The price you pay for $1 of profit.
 - **Price-to-Sales (P/S) Ratio:** [Value] - The price you pay for $1 of sales.
@@ -231,7 +231,7 @@ Now we'll look at the "price tag" using several common metrics from the latest e
 
 ### 3.2. Valuation in Context: Relative Analysis
 A stock's valuation is only meaningful with context.
-- **Comparison to History:** How do the current P/E, P/S, and P/B ratios compare to the company's own historical average from the 'key_metrics_annual' array? Is it cheap or expensive compared to its own past?
+- **Comparison to History:** This is a critical step. You MUST compare the latest P/E, P/S, and P/B ratios to their 5-year historical averages, which you will calculate from the \`key_metrics_annual\` array. State whether the stock is trading at a premium or discount to its own history.
 - **Comparison to Industry:** Using the 'industry' from the 'profile[0]' object, are these multiples generally high or low for this type of business?
 
 ### 3.3. Deep Value Check (The Graham Number)
