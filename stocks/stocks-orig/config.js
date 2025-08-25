@@ -235,7 +235,7 @@ A stock's valuation is only meaningful with context.
 - **Comparison to Industry:** Using the 'industry' from the 'profile[0]' object, are these multiples generally high or low for this type of business?
 
 ### 3.3. Deep Value Check (The Graham Number)
-- **Graham Number:** Use the 'grahamNumber' from the latest 'key_metrics_annual' entry. Explain this as a theoretical intrinsic value for defensive investors. If the current stock price is below the Graham Number, it may be considered deeply undervalued.
+- **Graham Number:** Use the 'grahamNumber' from the latest 'key_metrics_annual' entry. Explain this as a theoretical intrinsic value for defensive investors. You must then explicitly compare the stock 'price' from the \`profile\` object to the 'grahamNumber'. If the price is HIGHER than the Graham Number, you must state that the stock appears OVERVALUED by this metric. If the price is LOWER, state that it appears UNDERVALUED.
 
 ## 4. Market Sentiment & Wall Street View
 - **Analyst Consensus:** Review the 'stock_grade_news' array. What is the general sentiment from Wall Street analysts?
