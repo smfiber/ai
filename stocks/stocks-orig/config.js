@@ -1,5 +1,5 @@
 // --- App Version ---
-export const APP_VERSION = "14.6.0"; 
+export const APP_VERSION = "14.7.0"; 
 
 // --- Shared State ---
 // This object will hold all the application's shared state.
@@ -499,42 +499,6 @@ const CAPITAL_ALLOCATORS_PROMPT = `
 
 // --- NEW PROMPTS (v13.2.0) ---
 
-const MANAGEMENT_SCORECARD_PROMPT = `
-Role: You are an analyst specializing in corporate governance, in the style of a proxy advisory firm like Glass Lewis. Your goal is to conduct a **preliminary** evaluation of the management team's quality and shareholder alignment, based **strictly and exclusively** on the JSON data provided.
-
-Data Instructions: Your analysis must be derived from the provided financial data. Use the 'profile', 'stock_grade_news', 'executive_compensation', and 'income_statement_annual' arrays/objects.
-
-Output Format: Provide a report in markdown. Use ## for major sections, ### for sub-sections, and bullet points. Conclude with a final letter grade.
-
-JSON Data:
-{jsonData}
-
-# Management & Governance Scorecard: {companyName} ({tickerSymbol})
-
-## 1. Leadership Snapshot
-Based on the 'executive_compensation' data (if available), provide a factual snapshot of the key executives.
-
-## 2. Shareholder Alignment Signals
-This section assesses alignment based on management's own words and actions as reflected in the data.
-
-### ### Stated Philosophy (from Corporate Description)
-- **Keyword Analysis:** Scan the 'profile[0].description' for keywords related to shareholder value (e.g., "long-term value," "ROI," "capital discipline," "dividends," "share repurchases").
-- **Assessment:** **Is the language specific and strategy-focused, or is it generic corporate jargon?**
-
-### ### Analyst Commentary on Execution
-- **Management-Specific Sentiment:** Review the 'stock_grade_news' array. Find and summarize any analyst commentary that **specifically mentions management, strategy, or execution**.
-
-## 3. Potential Red Flags
-- **Executive Compensation:** Is the CEO's pay disproportionate to the company's performance (e.g., high pay despite a declining net income trend in 'income_statement_annual')?
-- **Misalignment:** Are there contradictions between the company's stated strategy and the focus of recent analyst grades?
-- **Negative Sentiment:** Is there a recurring theme of negative commentary directed at management's decisions in the news items?
-
-## 4. Final Grade & Summary
-Provide a final letter grade (A, B, C, D, F) for the management team's **perceived quality and alignment based *only* on this data**. Justify the grade by summarizing the key data points.
-- **Grade:** [Your Grade]
-- **Summary:** [Your justification, directly referencing findings from the sections above].
-`.trim();
-
 const NARRATIVE_CATALYST_PROMPT = `
 Role: You are a forward-looking equity analyst. Your task is to analyze the provided data for {companyName} and complete the following investment checklist. You MUST address every single item.
 
@@ -632,10 +596,6 @@ export const promptMap = {
     'CapitalAllocators': {
         prompt: CAPITAL_ALLOCATORS_PROMPT,
         requires: ['cash_flow_statement_annual', 'key_metrics_annual', 'income_statement_annual', 'balance_sheet_statement_annual']
-    },
-    'ManagementScorecard': {
-        prompt: MANAGEMENT_SCORECARD_PROMPT,
-        requires: ['profile', 'stock_grade_news', 'executive_compensation', 'income_statement_annual']
     },
     'NarrativeCatalyst': {
         prompt: NARRATIVE_CATALYST_PROMPT,
