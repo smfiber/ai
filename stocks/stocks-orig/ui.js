@@ -2191,6 +2191,8 @@ async function handleAnalysisRequest(symbol, reportType, promptConfig, forceNew 
         let payloadData;
         if (reportType === 'UndervaluedAnalysis') {
             payloadData = _calculateUndervaluedMetrics(data);
+        } else if (reportType === 'FinancialAnalysis') {
+            payloadData = _calculateFinancialAnalysisMetrics(data);
         } else {
             payloadData = buildAnalysisPayload(data, requiredEndpoints);
         }
@@ -2727,4 +2729,141 @@ function _calculateUndervaluedMetrics(data) {
         analystConsensus: analystConsensus || 'No recent ratings.',
         analystEstimatesSummary: latestEstimate ? `Avg. estimated revenue for next year is ${formatLargeNumber(latestEstimate.estimatedRevenueAvg)}.` : 'No estimates available.'
     };
+}
+
+/**
+ * Calculates a comprehensive summary of metrics for the "Financial Analysis" prompt.
+ * @param {object} data - The full FMP data object for a stock.
+ * @returns {object} A summary object with pre-calculated metrics and trends.
+ */
+function _calculateFinancialAnalysisMetrics(data) {
+    // 1. Helpers
+    const getTrendStatus = (series, lookback = 5, isPercentage = true) => {
+        if (!series || series.length < 3) return "Not enough data for a trend.";
+        const recentSeries = series.slice(-lookback);
+        if (recentSeries.length < 3) return "Not enough data for a trend.";
+
+        const firstHalf = recentSeries.slice(0, Math.floor(recentSeries.length / 2));
+        const secondHalf = recentSeries.slice(Math.ceil(recentSeries.length / 2));
+        
+        const avg = (arr) => arr.reduce((a, b) => a + b, 0) / arr.length;
+        const firstAvg = avg(firstHalf);
+        const secondAvg = avg(secondHalf);
+
+        const change = ((secondAvg - firstAvg) / Math.abs(firstAvg)) * 100;
+        
+        if (change > (isPercentage ? 5 : 10)) return 'is improving';
+        if (change < -(isPercentage ? 5 : 10)) return 'is declining';
+        return 'has been stable';
+    };
+    
+    const calculateAverage = (data, key, lookback = 5) => {
+        const values = data.slice(-lookback).map(d => d[key]).filter(v => typeof v === 'number');
+        if (values.length === 0) return null;
+        return values.reduce((a, b) => a + b, 0) / values.length;
+    };
+
+    // 2. Data Preparation
+    const profile = data.profile?.[0] || {};
+    const incomeStatements = (data.income_statement_annual || []).slice().reverse();
+    const keyMetrics = (data.key_metrics_annual || []).slice().reverse();
+    const cashFlows = (data.cash_flow_statement_annual || []).slice().reverse();
+    const grades = (data.stock_grade_news || []).slice(0, 15);
+
+    const latestIncome = incomeStatements[incomeStatements.length - 1] || {};
+    const latestMetrics = keyMetrics[keyMetrics.length - 1] || {};
+    const latestCashFlow = cashFlows[cashFlows.length - 1] || {};
+
+    // 3. Calculations
+    // Summary
+    const analystConsensus = (() => {
+        if (grades.length === 0) return "No recent analyst ratings available.";
+        const buys = grades.filter(g => ['buy', 'outperform', 'overweight', 'strong buy'].includes(g.newGrade.toLowerCase())).length;
+        const sells = grades.filter(g => ['sell', 'underperform', 'underweight'].includes(g.newGrade.toLowerCase())).length;
+        const holds = grades.length - buys - sells;
+        return `Generally ${buys > sells ? 'positive' : 'neutral'}, with ${buys} buys, ${holds} holds, and ${sells} sells in the last ${grades.length} ratings.`;
+    })();
+    const summary = {
+        companyName: profile.companyName,
+        tickerSymbol: profile.symbol,
+        description: profile.description,
+        sector: profile.sector,
+        industry: profile.industry,
+        marketCap: formatLargeNumber(profile.mktCap),
+        priceRange: profile.range || 'N/A',
+        analystConsensus: analystConsensus,
+        insiderOwnership: 'N/A' // This field is not in the provided profile data
+    };
+
+    // Performance
+    const performance = {
+        revenueTrend: `Revenue ${getTrendStatus(incomeStatements.map(i=>i.revenue), 5, false)}.`,
+        netIncomeTrend: `Net income ${getTrendStatus(incomeStatements.map(i=>i.netIncome), 5, false)}.`,
+        grossProfitMargin: { status: getTrendStatus(keyMetrics.map(k=>k.grossProfitMargin)) },
+        operatingProfitMargin: { status: getTrendStatus(keyMetrics.map(k=>k.operatingProfitMargin)) },
+        netProfitMargin: { status: getTrendStatus(keyMetrics.map(k=>k.netProfitMargin)) },
+        returnOnEquity: { quality: latestMetrics.returnOnEquity > 0.15 ? 'High' : (latestMetrics.returnOnEquity > 0.05 ? 'Moderate' : 'Low') }
+    };
+    
+    // Health
+    const health = {
+        currentRatio: { status: latestMetrics.currentRatio > 2 ? 'Strong' : (latestMetrics.currentRatio > 1 ? 'Healthy' : 'a potential risk') },
+        debtToEquity: { status: latestMetrics.debtToEquity > 1 ? 'Aggressive' : (latestMetrics.debtToEquity > 0.5 ? 'Moderate' : 'Conservative') },
+        interestCoverage: { status: latestMetrics.interestCoverage > 5 ? 'Very strong' : (latestMetrics.interestCoverage > 2 ? 'Healthy' : 'a potential concern') }
+    };
+
+    // Cash Flow
+    const capitalAllocationStory = (() => {
+        const recentFlows = cashFlows.slice(-3);
+        if (recentFlows.length === 0) return "Not enough data.";
+        const total = (key) => recentFlows.reduce((sum, cf) => sum + Math.abs(cf[key] || 0), 0);
+        const capex = total('capitalExpenditure');
+        const dividends = total('dividendsPaid');
+        const buybacks = total('commonStockRepurchased');
+        const debtRepay = total('debtRepayment');
+        const allocations = { 'investing in growth (CapEx)': capex, 'paying dividends': dividends, 'buying back stock': buybacks, 'paying down debt': debtRepay };
+        const largest = Object.keys(allocations).reduce((a, b) => allocations[a] > allocations[b] ? a : b);
+        return `The company is primarily in return/deleveraging mode, with its largest use of cash over the last few years being ${largest}.`;
+    })();
+    const cashFlow = {
+        qualityOfEarnings: latestCashFlow.operatingCashFlow > latestIncome.netIncome ? "Strong, as operating cash flow exceeds net income." : "A potential concern, as net income is higher than operating cash flow.",
+        capitalAllocationStory
+    };
+
+    // Valuation
+    const valuationMetrics = ['peRatio', 'priceToSalesRatio', 'pbRatio', 'enterpriseValueOverEBITDA'];
+    const valuation = valuationMetrics.map(metric => {
+        const current = latestMetrics[metric];
+        const historicalAverage = calculateAverage(keyMetrics, metric);
+        let status = 'N/A';
+        if (current && historicalAverage) {
+            status = current > historicalAverage ? 'trading at a premium to its historical average' : 'trading at a discount to its historical average';
+        }
+        return { metric, status };
+    });
+
+    // Thesis
+    const bullCasePoints = [];
+    if (performance.revenueTrend.includes('growing')) bullCasePoints.push("Consistent or growing revenue.");
+    if (cashFlow.qualityOfEarnings.includes('Strong')) bullCasePoints.push("Strong operating cash flow that exceeds net income.");
+    if (health.debtToEquity.status === 'Conservative') bullCasePoints.push("A strong balance sheet with a conservative debt load.");
+    if (performance.returnOnEquity.quality === 'High') bullCasePoints.push("High return on equity, indicating efficient use of shareholder capital.");
+
+    const bearCasePoints = [];
+    if (performance.revenueTrend.includes('declining')) bearCasePoints.push("Declining or stagnant revenue.");
+    if (performance.netIncomeTrend.includes('declining')) bearCasePoints.push("Declining profitability.");
+    if (health.debtToEquity.status === 'Aggressive') bearCasePoints.push("High debt load, which adds financial risk.");
+    if (health.currentRatio.status === 'a potential risk') bearCasePoints.push("Low liquidity, which could be a short-term risk.");
+    
+    const moatIndicator = (() => {
+        const highRoe = keyMetrics.slice(-5).every(k => k.returnOnEquity > 0.15);
+        const stableMargins = !performance.netProfitMargin.status.includes('declining');
+        if (highRoe && stableMargins) return "The data, showing consistently high ROE and stable margins, suggests the presence of a strong competitive moat.";
+        if (stableMargins) return "The data suggests a potential moat, indicated by stable profit margins.";
+        return "The data does not strongly indicate a durable competitive moat, due to fluctuating margins or returns.";
+    })();
+
+    const thesis = { bullCasePoints, bearCasePoints, moatIndicator };
+    
+    return { summary, performance, health, cashFlow, valuation, thesis };
 }
