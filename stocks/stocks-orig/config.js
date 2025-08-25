@@ -1,5 +1,5 @@
 // --- App Version ---
-export const APP_VERSION = "14.10.0"; 
+export const APP_VERSION = "14.10.0";
 
 // --- Shared State ---
 // This object will hold all the application's shared state.
@@ -25,14 +25,14 @@ export const state = {
 // Set to true to only fetch starter-plan-limited endpoints for symbols in the list below.
 export const ENABLE_STARTER_PLAN_MODE = true;
 export const STARTER_SYMBOLS = [
-    'AAL', 'AAPL', 'ABBV', 'ADBE', 'AMD', 'AMZN', 'ATVI', 'BA', 'BABA', 'BAC', 
-    'BIDU', 'BILI', 'C', 'CARR', 'CCL', 'COIN', 'COST', 'CPRX', 'CSCO', 'CVX', 
-    'DAL', 'DIS', 'DOCU', 'ET', 'ETSY', 'F', 'FDX', 'FUBO', 'GE', 'GM', 
-    'GOOGL', 'GS', 'HCA', 'HOOD', 'INTC', 'JNJ', 'JPM', 'KO', 'LCID', 'LMT', 
-    'META', 'MGM', 'MRNA', 'MRO', 'MSFT', 'NFLX', 'NIO', 'NKE', 'NOK', 'NVDA', 
-    'PEP', 'PFE', 'PINS', 'PLTR', 'PYPL', 'RBLX', 'RIOT', 'RIVN', 'RKT', 'ROKU', 
-    'SBUX', 'SHOP', 'SIRI', 'SNAP', 'SOFI', 'SONY', 'SPY', 'SPYG', 'SQ', 'T', 
-    'TGT', 'TLRY', 'TSLA', 'TSM', 'TWTR', 'UAL', 'UBER', 'UNH', 'V', 'VIAC', 
+    'AAL', 'AAPL', 'ABBV', 'ADBE', 'AMD', 'AMZN', 'ATVI', 'BA', 'BABA', 'BAC',
+    'BIDU', 'BILI', 'C', 'CARR', 'CCL', 'COIN', 'COST', 'CPRX', 'CSCO', 'CVX',
+    'DAL', 'DIS', 'DOCU', 'ET', 'ETSY', 'F', 'FDX', 'FUBO', 'GE', 'GM',
+    'GOOGL', 'GS', 'HCA', 'HOOD', 'INTC', 'JNJ', 'JPM', 'KO', 'LCID', 'LMT',
+    'META', 'MGM', 'MRNA', 'MRO', 'MSFT', 'NFLX', 'NIO', 'NKE', 'NOK', 'NVDA',
+    'PEP', 'PFE', 'PINS', 'PLTR', 'PYPL', 'RBLX', 'RIOT', 'RIVN', 'RKT', 'ROKU',
+    'SBUX', 'SHOP', 'SIRI', 'SNAP', 'SOFI', 'SONY', 'SPY', 'SPYG', 'SQ', 'T',
+    'TGT', 'TLRY', 'TSLA', 'TSM', 'TWTR', 'UAL', 'UBER', 'UNH', 'V', 'VIAC',
     'VWO', 'VZ', 'WBA', 'WFC', 'WMT', 'XOM', 'ZM'
 ];
 
@@ -206,40 +206,40 @@ Based on the provided data, generate the following in-depth report:
 # Investment Valuation Report: Is {companyName} ({tickerSymbol}) a Bargain?
 
 ## 1. The Bottom Line: Our Verdict
-Provide a concise, one-paragraph conclusion that immediately answers the main question: Based on the data, does this stock seem **Undervalued, Fairly Valued, or Overvalued?** Briefly mention the top 1-2 reasons for this verdict in plain English, using the provided `summary` data.
+Provide a concise, one-paragraph conclusion that immediately answers the main question: Based on the data, does this stock seem **Undervalued, Fairly Valued, or Overvalued?** Briefly mention the top 1-2 reasons for this verdict in plain English, using the provided \`summary\` data.
 
 ## 2. Fundamental Analysis: The Engine Behind the Price
 Let's look at the company's performance and health to understand the "why" behind its valuation.
 ### 2.1. Growth & Profitability Trends
-- **Revenue Growth Trend:** Using the `revenueGrowthTrend` data, describe the year-over-year revenue growth. State the actual growth percentages for recent years. Is the company accelerating, stable, or slowing down?
-- **Profitability Trend:** Using the `profitabilityTrend` data, analyze the trend in net profit margins. State clearly whether the company's profitability is improving, stable, or declining.
+- **Revenue Growth Trend:** Using the \`revenueGrowthTrend\` data, describe the year-over-year revenue growth. State the actual growth percentages for recent years. Is the company accelerating, stable, or slowing down?
+- **Profitability Trend:** Using the \`profitabilityTrend\` data, analyze the trend in net profit margins. State clearly whether the company's profitability is improving, stable, or declining.
 
 ### 2.2. Financial Health Check
-- **Return on Equity (ROE) Trend:** Using the `roeTrend` data, analyze the trend of ROE. Explain this as a "report card" for the business. A consistently high ROE suggests a high-quality, efficient company.
-- **Debt-to-Equity Ratio:** Use the `debtToEquity` value. Explain this like a personal debt-to-income ratio. A high number means the company relies heavily on debt, which can be risky.
+- **Return on Equity (ROE) Trend:** Using the \`roeTrend\` data, analyze the trend of ROE. Explain this as a "report card" for the business. A consistently high ROE suggests a high-quality, efficient company.
+- **Debt-to-Equity Ratio:** Use the \`debtToEquity\` value. Explain this like a personal debt-to-income ratio. A high number means the company relies heavily on debt, which can be risky.
 
 ### 2.3. Getting Paid to Wait (Dividend Analysis)
-- **Dividend Yield:** Use the `dividendYield`. Explain this as the annual return you get from dividends.
-- **Is the Dividend Safe?** Use the `cashFlowPayoutRatio`. A low number (<60%) is a good sign that the dividend is well-covered by actual cash.
+- **Dividend Yield:** Use the \`dividendYield\`. Explain this as the annual return you get from dividends.
+- **Is the Dividend Safe?** Use the \`cashFlowPayoutRatio\`. A low number (<60%) is a good sign that the dividend is well-covered by actual cash.
 
 ## 3. Valuation: What Are You Paying for That Engine?
 Now we'll look at the "price tag" using several common metrics.
 ### 3.1. Core Valuation Multiples
-- **Price-to-Earnings (P/E) Ratio:** [Use `peRatio`] - The price you pay for $1 of profit.
-- **Price-to-Sales (P/S) Ratio:** [Use `psRatio`] - The price you pay for $1 of sales.
-- **Price-to-Book (P/B) Ratio:** [Use `pbRatio`] - The price compared to the company's net worth on paper.
+- **Price-to-Earnings (P/E) Ratio:** [Use \`peRatio\`] - The price you pay for $1 of profit.
+- **Price-to-Sales (P/S) Ratio:** [Use \`psRatio\`] - The price you pay for $1 of sales.
+- **Price-to-Book (P/B) Ratio:** [Use \`pbRatio\`] - The price compared to the company's net worth on paper.
 
 ### 3.2. Valuation in Context: Relative Analysis
 A stock's valuation is only meaningful with context.
-- **Comparison to History:** Use the `valuationRelativeToHistory` object. For P/E, P/S, and P/B, state whether the stock is trading at a premium or discount to its own history, using the provided `status` and `historicalAverage` for each.
-- **Comparison to Industry:** Using the company's `industry`, comment on whether these multiples are generally high or low for this type of business.
+- **Comparison to History:** Use the \`valuationRelativeToHistory\` object. For P/E, P/S, and P/B, state whether the stock is trading at a premium or discount to its own history, using the provided \`status\` and \`historicalAverage\` for each.
+- **Comparison to Industry:** Using the company's \`industry\`, comment on whether these multiples are generally high or low for this type of business.
 
 ### 3.3. Deep Value Check (The Graham Number)
-- **Graham Number:** Use the `grahamNumberAnalysis` object. Explain this as a theoretical intrinsic value for defensive investors. State the result of the comparison: does the stock appear OVERVALUED or UNDERVALUED by this specific metric, based on the provided `verdict`?
+- **Graham Number:** Use the \`grahamNumberAnalysis\` object. Explain this as a theoretical intrinsic value for defensive investors. State the result of the comparison: does the stock appear OVERVALUED or UNDERVALUED by this specific metric, based on the provided \`verdict\`?
 
 ## 4. Market Sentiment & Wall Street View
-- **Analyst Consensus:** Review the `analystConsensus` data. What is the general sentiment from Wall Street analysts?
-- **Future Expectations:** Does the `analystEstimatesSummary` data provide a sense of future expectations?
+- **Analyst Consensus:** Review the \`analystConsensus\` data. What is the general sentiment from Wall Street analysts?
+- **Future Expectations:** Does the \`analystEstimatesSummary\` data provide a sense of future expectations?
 
 ## 5. Final Conclusion: The Investment Case
 ### The Case for a Bargain (Bull)
