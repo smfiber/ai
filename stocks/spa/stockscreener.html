@@ -472,6 +472,7 @@
             <div class="border-b border-gray-200">
                 <nav id="financials-modal-tabs" class="-mb-px flex space-x-4" aria-label="Tabs">
                     <button data-tab-target="#modal-ai-summary-content" class="modal-tab-button active whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm">AI Summary</button>
+                    <button data-tab-target="#modal-news-content" class="modal-tab-button whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">News</button>
                     <button data-tab-target="#modal-key-metrics-content" class="modal-tab-button whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">Key Metrics</button>
                     <button data-tab-target="#modal-financial-trends-content" class="modal-tab-button whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">Financial Trends</button>
                     <button data-tab-target="#modal-raw-data-content" class="modal-tab-button whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">Raw Data</button>
@@ -479,6 +480,7 @@
             </div>
             <div class="pt-4">
                 <div id="modal-ai-summary-content" class="modal-tab-content active"></div>
+                <div id="modal-news-content" class="modal-tab-content"></div>
                 <div id="modal-key-metrics-content" class="modal-tab-content"></div>
                 <div id="modal-financial-trends-content" class="modal-tab-content"></div>
                 <div id="modal-raw-data-content" class="modal-tab-content"></div>
@@ -491,7 +493,7 @@
     <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-database-compat.js"></script>
 
     <script>
-        // Version 5.0.3
+        // Version 5.0.4
         document.addEventListener("DOMContentLoaded", () => {
             // --- 1. Global Configuration Object ---
             const appConfig = {
@@ -1739,13 +1741,15 @@
                         document.getElementById('modal-key-metrics-content').innerHTML = '<p class="text-center text-gray-500">Refreshing data...</p>';
                         document.getElementById('modal-ai-summary-content').innerHTML = '<p class="text-center text-gray-500">Refreshing AI analysis...</p>';
                          document.getElementById('modal-financial-trends-content').innerHTML = '<p class="text-center text-gray-500">Refreshing trend data...</p>';
-                        
+                         document.getElementById('modal-news-content').innerHTML = '<p class="text-center text-gray-500">Refreshing news...</p>';
+
                         const liveData = await fetchTickerDetails(symbol, true); // Force refresh
                         if (liveData) {
                              populateFinancialsModal(liveData);
                              populateFinancialTrends(liveData);
                              populateRawDataModal(liveData);
-                             const aiSummary = await generateAiRating(liveData);
+                             populateNewsTab(liveData.news, null);
+                             const aiSummary = await generateAiRating(liveData, liveData.news);
                              populateAiSummary(aiSummary);
                              const dataToSave = { ...liveData, aiSummary, timestamp: new Date().toISOString() };
                              await saveTickerDetailsToFirebase(symbol, dataToSave);
@@ -1777,6 +1781,7 @@
                 document.getElementById('modal-ai-summary-content').innerHTML = '<p class="text-center text-gray-500">Loading AI analysis...</p>';
                 document.getElementById('modal-raw-data-content').innerHTML = '<p class="text-center text-gray-500">Loading raw data...</p>';
                 document.getElementById('modal-financial-trends-content').innerHTML = '<p class="text-center text-gray-500">Loading trend data...</p>';
+                document.getElementById('modal-news-content').innerHTML = '<p class="text-center text-gray-500">Loading news...</p>';
                 document.getElementById('modal-company-name').textContent = `Loading... (${symbol})`;
                 document.getElementById('modal-stock-price').textContent = '';
                 document.getElementById('modal-last-updated').textContent = '...';
@@ -1791,10 +1796,11 @@
                     populateFinancialsModal(cachedData);
                     populateFinancialTrends(cachedData);
                     populateRawDataModal(cachedData);
+                    populateNewsTab(cachedData.news, cachedData.timestamp);
                     if (cachedData.aiSummary) {
                         populateAiSummary(cachedData.aiSummary);
                     } else {
-                        const aiSummary = await generateAiRating(cachedData);
+                        const aiSummary = await generateAiRating(cachedData, cachedData.news);
                         populateAiSummary(aiSummary);
                         await saveTickerDetailsToFirebase(symbol, { ...cachedData, aiSummary });
                         appConfig.cachedRatings[symbol] = aiSummary.rating;
@@ -1806,7 +1812,8 @@
                         populateFinancialsModal(liveData);
                         populateFinancialTrends(liveData);
                         populateRawDataModal(liveData);
-                        const aiSummary = await generateAiRating(liveData);
+                        populateNewsTab(liveData.news, null);
+                        const aiSummary = await generateAiRating(liveData, liveData.news);
                         populateAiSummary(aiSummary);
                         const dataToSave = { ...liveData, aiSummary, timestamp: new Date().toISOString() };
                         await saveTickerDetailsToFirebase(symbol, dataToSave);
@@ -1817,6 +1824,7 @@
                          document.getElementById('modal-ai-summary-content').innerHTML = '';
                          document.getElementById('modal-raw-data-content').innerHTML = '';
                          document.getElementById('modal-financial-trends-content').innerHTML = '';
+                         document.getElementById('modal-news-content').innerHTML = '';
                     }
                 }
                 updateViewedIndicatorForSymbol(symbol);
@@ -1831,7 +1839,8 @@
                     `https://financialmodelingprep.com/api/v3/ratios/${symbol}?period=annual&limit=5&apikey=${apiKey}`,
                     `https://financialmodelingprep.com/api/v3/income-statement/${symbol}?period=annual&limit=5&apikey=${apiKey}`,
                     `https://financialmodelingprep.com/api/v3/balance-sheet-statement/${symbol}?period=annual&limit=5&apikey=${apiKey}`,
-                    `https://financialmodelingprep.com/api/v3/cash-flow-statement/${symbol}?period=annual&limit=5&apikey=${apiKey}`
+                    `https://financialmodelingprep.com/api/v3/cash-flow-statement/${symbol}?period=annual&limit=5&apikey=${apiKey}`,
+                    `https://financialmodelingprep.com/stable/price-target-news?symbol=${symbol}&limit=10&apikey=${apiKey}`
                 ];
 
                 try {
@@ -1842,7 +1851,8 @@
                         ratiosData,
                         incomeStatementData,
                         balanceSheetData,
-                        cashFlowData
+                        cashFlowData,
+                        newsData
                     ] = await Promise.all(responses.map(res => res.json()));
 
                     return { 
@@ -1851,7 +1861,8 @@
                         ratios: ratiosData,
                         incomeStatement: incomeStatementData,
                         balanceSheet: balanceSheetData,
-                        cashFlow: cashFlowData
+                        cashFlow: cashFlowData,
+                        news: newsData
                     };
 
                 } catch (error) {
@@ -1860,7 +1871,7 @@
                 }
             }
             
-             async function generateAiRating(financialData) {
+             async function generateAiRating(financialData, newsData) {
                 if (!appConfig.geminiApiKey || !financialData) {
                     return { rating: 'Error', rationale: 'Could not generate AI rating. API key or financial data missing.' };
                 }
@@ -1891,16 +1902,20 @@
                 const debtToEquityTrend = getTrend(financialData.keyMetrics, 'debtToEquity', formatRatio);
                 const roeTrend = getTrend(financialData.keyMetrics, 'roe', formatPercent);
                 const freeCashFlowTrend = getTrend(financialData.cashFlow, 'freeCashFlow', formatBillions);
+                
+                const newsArticlesText = (newsData && newsData.length > 0) 
+                    ? newsData.map(n => JSON.stringify({title: n.newsTitle, publisher: n.newsPublisher, analyst: n.analystName, target: n.priceTarget})).join('\n')
+                    : "No recent news available.";
 
                 const prompt = `
-                    Act as a seasoned value investor. I will provide you with the business description and key 5-year financial trends for a company. Your task is to analyze these trends and provide a concise valuation assessment.
+                    Act as a seasoned investment analyst, blending quantitative value investing with qualitative sentiment analysis. I will provide you with a company's description, its key 5-year financial trends, and the latest 10 price target news articles. Your task is to synthesize ALL this information into a holistic valuation assessment.
 
                     Company: ${profile.companyName} (${profile.symbol})
                     Industry: ${profile.industry}
                     Sector: ${profile.sector}
                     Description: ${companyDescription}
                     
-                    5-Year Financial Trends (oldest to newest):
+                    Part 1: 5-Year Financial Trends (oldest to newest):
                     - Revenue: ${revenueTrend}
                     - Net Income: ${netIncomeTrend}
                     - P/E Ratio: ${peRatioTrend}
@@ -1908,9 +1923,12 @@
                     - Return on Equity (ROE): ${roeTrend}
                     - Free Cash Flow: ${freeCashFlowTrend}
 
-                    Based on this data, provide your analysis in a valid JSON format with two keys:
+                    Part 2: Recent Analyst News & Sentiment (as JSON objects):
+                    ${newsArticlesText}
+
+                    Based on BOTH the financial trends and the recent news sentiment, provide your analysis in a valid JSON format with two keys:
                     1. "rating": A single-word assessment. Choose from: "Undervalued", "Fairly Valued", "Overvalued", "Speculative Growth", "Caution Advised".
-                    2. "rationale": A 2-3 sentence justification for your rating. Your rationale should comment on revenue growth, profitability trends, the company's debt management, and free cash flow generation based on the 5-year trends.
+                    2. "rationale": A 3-4 sentence justification for your rating. Your rationale MUST integrate insights from BOTH the financial data (e.g., revenue growth, debt) AND the news sentiment (e.g., analyst upgrades, price target trends, market catalysts). For example, mention if the news sentiment confirms or contradicts the story told by the financial numbers.
                 `;
 
                 const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${appConfig.geminiApiKey}`;
@@ -2064,6 +2082,34 @@
                         <p class="text-gray-600 mt-2 leading-relaxed">${summary.rationale || 'No rationale provided.'}</p>
                     </div>
                 `;
+            }
+
+            function populateNewsTab(newsData, timestamp) {
+                const contentEl = document.getElementById('modal-news-content');
+                if (!newsData || newsData.length === 0) {
+                    contentEl.innerHTML = '<p class="text-center text-gray-500">No recent price target news found for this stock.</p>';
+                    return;
+                }
+
+                const timeString = timestamp ? `Last Fetched: ${new Date(timestamp).toLocaleString()}` : 'Live Data (just now)';
+                let newsHtml = `<p class="text-xs text-gray-400 mb-3">${timeString}</p><div class="space-y-3 max-h-96 overflow-y-auto pr-2">`;
+                
+                newsHtml += newsData.map(news => `
+                    <a href="${news.newsURL}" target="_blank" rel="noopener noreferrer" class="block bg-gray-50 p-3 rounded-lg shadow-sm hover:bg-gray-100 transition-colors">
+                        <div class="flex justify-between items-start mb-1">
+                             <p class="font-semibold text-gray-800 text-sm">${formatText(news.newsTitle)}</p>
+                            <p class="text-xs text-gray-500 whitespace-nowrap ml-4">${new Date(news.publishedDate).toLocaleDateString()}</p>
+                        </div>
+                        <div class="text-xs text-gray-500 flex flex-wrap gap-x-4 gap-y-1 mt-2">
+                            <span><strong>Publisher:</strong> ${formatText(news.newsPublisher)}</span>
+                            <span><strong>Analyst:</strong> ${formatText(news.analystName) || 'N/A'} @ ${formatText(news.analystCompany)}</span>
+                            <span><strong>Target:</strong> ${news.priceTarget ? '$'+news.priceTarget.toFixed(2) : 'N/A'}</span>
+                        </div>
+                    </a>
+                `).join('');
+
+                newsHtml += `</div>`;
+                contentEl.innerHTML = newsHtml;
             }
 
             function populateRawDataModal(data) {
