@@ -1,5 +1,5 @@
 // --- App Version ---
-export const APP_VERSION = "14.12.0";
+export const APP_VERSION = "14.12.1";
 
 // --- Shared State ---
 // This object will hold all the application's shared state.
@@ -307,17 +307,17 @@ JSON Data:
 ## The Bull Case (The Bright Side: Reasons to be Optimistic)
 Construct a positive argument. For each point, state the supporting data and then briefly explain *why* it matters.
 Focus on strengths like:
-- **Strong Growth:** Is 'revenue' or 'netIncome' consistently increasing? Use the trends in the 'growth' object.
-- **High Profitability:** Is the company a good money-maker? Use the trend in 'profitability.roeTrend'.
-- **Solid Cash Flow:** Is the business generating real cash? Check for consistent 'ocf' in the 'cashFlow.operatingCashFlowTrend'.
-- **Attractive Valuation:** Does the stock seem cheap? Use 'valuation.peRatio' and 'valuation.pbRatio'.
+- **Strong Growth:** Is 'revenue' or 'net_income' consistently increasing? Use the trends in the 'growth_trends' object.
+- **High Profitability:** Is the company a good money-maker? Analyze the trend in 'profitability_metrics.roe_trend'.
+- **Solid Cash Flow:** Is the business generating real cash? Check for consistent positive values in the 'cash_flow_trends.operating_cash_flow' array.
+- **Attractive Valuation:** Does the stock seem cheap relative to its history? Use recent values from 'valuation_metrics.pe_ratio_trend' and 'valuation_metrics.pb_ratio_trend'.
 
 ## The Bear Case (The Cautious View: Reasons for Concern)
 Construct a negative argument. For each point, state the supporting data and explain the potential risk.
 Focus on weaknesses like:
-- **Heavy Debt Load:** Does the company owe a lot of money? Use 'health.debtToEquity'.
-- **Slowing Growth:** Are sales or profits shrinking or stagnating? Check the trends in the 'growth' object.
-- **Analyst Skepticism:** Do the 'analystRatings' show downgrades?
+- **Heavy Debt Load:** Does the company owe a lot of money? Analyze the trend in 'balance_sheet_health.debt_to_equity_trend'.
+- **Slowing Growth:** Are sales or profits shrinking or stagnating? Check the trends in the 'growth_trends' object.
+- **Analyst Skepticism:** Do the 'analyst_ratings' show downgrades?
 
 ## The Final Takeaway: What's the Core Debate?
 Conclude with a 1-2 sentence summary that frames the central conflict for an investor **and identifies the single most important factor to watch going forward.** For example: "The core debate for {companyName} is whether its strong profitability (the bull case) can outweigh its significant debt load (the bear case). The key factor to watch will be if they can pay down debt while maintaining their high margins."
@@ -428,7 +428,7 @@ Based on all the factors above, provide a brief, synthesized outlook. Is this a 
 const RISK_ASSESSMENT_PROMPT = `
 Role: You are a risk analyst AI. Your job is to act like a cautious inspector, identifying the most significant potential problems or "red flags" for {companyName} and explaining them simply.
 
-Data Instructions: Your analysis must be derived exclusively from the provided JSON data, which contains pre-calculated metrics and trends.
+Data Instructions: Your analysis must be derived exclusively from the provided JSON data, which contains pre-calculated trends and metrics.
 
 Output Format: A prioritized, bulleted list in markdown, categorized by risk type. Explain each risk in simple terms.
 
