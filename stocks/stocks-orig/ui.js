@@ -2620,6 +2620,7 @@ function _calculateUndervaluedMetrics(data) {
     const incomeStatements = (data.income_statement_annual || []).slice().reverse(); // Oldest to newest
     const keyMetrics = (data.key_metrics_annual || []).slice().reverse(); // Oldest to newest
     const cashFlows = (data.cash_flow_statement_annual || []).slice().reverse();
+    const ratios = (data.ratios_annual || []).slice().reverse(); // Oldest to newest
 
     const latestMetrics = keyMetrics[keyMetrics.length - 1] || {};
     const latestCashFlow = cashFlows[cashFlows.length - 1] || {};
@@ -2652,10 +2653,10 @@ function _calculateUndervaluedMetrics(data) {
 
     // 1. Growth & Profitability
     const revenueGrowthTrend = calculateYoyGrowth(incomeStatements, 'revenue');
-    const profitabilityTrend = getTrend(keyMetrics, 'netProfitMargin', v => typeof v === 'number' ? `${(v * 100).toFixed(2)}%` : 'N/A');
+    const profitabilityTrend = getTrend(ratios, 'netProfitMargin', v => typeof v === 'number' ? `${(v * 100).toFixed(2)}%` : 'N/A');
 
     // 2. Financial Health
-    const roeTrend = getTrend(keyMetrics, 'returnOnEquity', v => typeof v === 'number' ? `${(v * 100).toFixed(2)}%` : 'N/A');
+    const roeTrend = getTrend(ratios, 'returnOnEquity', v => typeof v === 'number' ? `${(v * 100).toFixed(2)}%` : 'N/A');
     const debtToEquity = latestMetrics.debtToEquity ? latestMetrics.debtToEquity.toFixed(2) : 'N/A';
     
     // 3. Dividend Analysis
