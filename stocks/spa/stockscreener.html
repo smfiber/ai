@@ -501,7 +501,7 @@
     <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-database-compat.js"></script>
 
     <script>
-        // Version 5.0.9
+        // Version 5.1.1
         document.addEventListener("DOMContentLoaded", () => {
             // --- 1. Global Configuration Object ---
             const appConfig = {
@@ -1988,11 +1988,13 @@
                     `https://financialmodelingprep.com/api/v3/income-statement/${symbol}?period=annual&limit=5&apikey=${apiKey}`,
                     `https://financialmodelingprep.com/api/v3/balance-sheet-statement/${symbol}?period=annual&limit=5&apikey=${apiKey}`,
                     `https://financialmodelingprep.com/api/v3/cash-flow-statement/${symbol}?period=annual&limit=5&apikey=${apiKey}`,
-                    `https://financialmodelingprep.com/api/v3/stock_news?tickers=${symbol}&limit=10&apikey=${apiKey}`
+                    `https://financialmodelingprep.com/stable/news/stock?symbols=${symbol}&limit=20&apikey=${apiKey}`,
+                    `https://financialmodelingprep.com/stable/price-target-news?symbol=${symbol}&limit=10&apikey=${apiKey}`,
+                    `https://financialmodelingprep.com/stable/grades-news?symbol=${symbol}&limit=10&apikey=${apiKey}`
                 ];
 
                 try {
-                    const responses = await Promise.all(urls.map(url => fetch(url)));
+                    const responses = await Promise.all(urls.map(url => fetch(url).then(res => res.json())));
                     const [
                         profileData,
                         keyMetricsData,
@@ -2000,8 +2002,43 @@
                         incomeStatementData,
                         balanceSheetData,
                         cashFlowData,
-                        newsData
-                    ] = await Promise.all(responses.map(res => res.json()));
+                        generalNewsData,
+                        priceTargetNewsData,
+                        stockGradeNewsData
+                    ] = responses;
+
+                    // Normalize and combine news
+                    const normalizedGeneralNews = (generalNewsData || []).map(item => ({
+                        type: 'General',
+                        title: item.title,
+                        site: item.site,
+                        url: item.url,
+                        publishedDate: item.publishedDate
+                    }));
+
+                    const normalizedPriceTargetNews = (priceTargetNewsData || []).map(item => ({
+                        type: 'Price Target',
+                        title: item.newsTitle,
+                        site: item.newsPublisher,
+                        url: item.newsURL,
+                        publishedDate: item.publishedDate,
+                        analyst: `${item.analystName || 'N/A'} @ ${item.analystCompany || 'N/A'}`,
+                        priceTarget: item.priceTarget
+                    }));
+                    
+                    const normalizedGradeNews = (stockGradeNewsData || []).map(item => ({
+                        type: 'Grade Change',
+                        title: `Grade Change by ${item.gradingCompany}: ${item.previousGrade} → ${item.newGrade}`,
+                        site: item.gradingCompany,
+                        url: '#', 
+                        publishedDate: item.date,
+                        previousGrade: item.previousGrade,
+                        newGrade: item.newGrade
+                    }));
+                    
+                    const combinedNews = [...normalizedGeneralNews, ...normalizedPriceTargetNews, ...normalizedGradeNews]
+                        .sort((a, b) => new Date(b.publishedDate) - new Date(a.publishedDate));
+
 
                     return { 
                         profile: profileData,
@@ -2010,7 +2047,7 @@
                         incomeStatement: incomeStatementData,
                         balanceSheet: balanceSheetData,
                         cashFlow: cashFlowData,
-                        news: newsData
+                        news: combinedNews
                     };
 
                 } catch (error) {
@@ -2229,24 +2266,48 @@
             function populateNewsTab(newsData, timestamp) {
                 const contentEl = document.getElementById('modal-news-content');
                 if (!newsData || newsData.length === 0) {
-                    contentEl.innerHTML = '<p class="text-center text-gray-500">No recent price target news found for this stock.</p>';
+                    contentEl.innerHTML = '<p class="text-center text-gray-500">No recent news found for this stock.</p>';
                     return;
                 }
 
                 const timeString = timestamp ? `Last Fetched: ${new Date(timestamp).toLocaleString()}` : 'Live Data (just now)';
                 let newsHtml = `<p class="text-xs text-gray-400 mb-3">${timeString}</p><div class="space-y-3 max-h-96 overflow-y-auto pr-2">`;
                 
-                newsHtml += newsData.map(news => `
-                    <a href="${news.url}" target="_blank" rel="noopener noreferrer" class="block bg-gray-50 p-3 rounded-lg shadow-sm hover:bg-gray-100 transition-colors">
+                newsHtml += newsData.map(news => {
+                    let detailsHtml = '';
+                    let title = formatText(news.title);
+                    let url = news.url || '#';
+                    let bgColor = 'bg-gray-50';
+                    let linkWrapper = (content) => `<a href="${url}" target="_blank" rel="noopener noreferrer" class="block ${bgColor} p-3 rounded-lg shadow-sm hover:bg-gray-100 transition-colors">${content}</a>`;
+
+                    if (news.type === 'Price Target') {
+                        detailsHtml = `
+                            <span><strong>Publisher:</strong> ${formatText(news.site)}</span>
+                            <span><strong>Analyst:</strong> ${formatText(news.analyst)}</span>
+                            <span><strong>Target:</strong> ${news.priceTarget ? '$'+news.priceTarget.toFixed(2) : 'N/A'}</span>`;
+                    } else if (news.type === 'Grade Change') {
+                        bgColor = 'bg-blue-50';
+                        detailsHtml = `
+                            <span><strong>Firm:</strong> ${formatText(news.site)}</span>
+                            <span><strong>Previous:</strong> ${formatText(news.previousGrade)}</span>
+                            <span><strong>New:</strong> ${formatText(news.newGrade)}</span>`;
+                        // Grade changes don't have a URL, so we don't wrap them in an <a> tag
+                        linkWrapper = (content) => `<div class="block ${bgColor} p-3 rounded-lg shadow-sm">${content}</div>`;
+                    } else { // General News
+                        detailsHtml = `<span><strong>Publisher:</strong> ${formatText(news.site)}</span>`;
+                    }
+
+                    const content = `
                         <div class="flex justify-between items-start mb-1">
-                             <p class="font-semibold text-gray-800 text-sm">${formatText(news.title)}</p>
+                             <p class="font-semibold text-gray-800 text-sm">${title}</p>
                             <p class="text-xs text-gray-500 whitespace-nowrap ml-4">${new Date(news.publishedDate).toLocaleDateString()}</p>
                         </div>
                         <div class="text-xs text-gray-500 flex flex-wrap gap-x-4 gap-y-1 mt-2">
-                            <span><strong>Publisher:</strong> ${formatText(news.site)}</span>
-                        </div>
-                    </a>
-                `).join('');
+                           ${detailsHtml}
+                        </div>`;
+                    
+                    return linkWrapper(content);
+                }).join('');
 
                 newsHtml += `</div>`;
                 contentEl.innerHTML = newsHtml;
