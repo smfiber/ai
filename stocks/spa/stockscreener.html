@@ -501,7 +501,7 @@
     <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-database-compat.js"></script>
 
     <script>
-        // Version 5.1.1
+        // Version 5.1.2
         document.addEventListener("DOMContentLoaded", () => {
             // --- 1. Global Configuration Object ---
             const appConfig = {
@@ -1000,6 +1000,8 @@
                     if(cardEl) cardEl.innerHTML = errorMsg;
                     return [];
                 }
+
+                await loadAllCachedRatings(); // Refresh local cache from Firebase
 
                 let url = `https://financialmodelingprep.com/api/v3/stock-screener?apikey=${appConfig.fmpApiKey}&limit=1000`;
                 
