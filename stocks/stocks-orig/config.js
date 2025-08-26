@@ -1,5 +1,5 @@
 // --- App Version ---
-export const APP_VERSION = "14.14.1";
+export const APP_VERSION = "14.15.0";
 
 // --- Shared State ---
 // This object will hold all the application's shared state.
@@ -308,7 +308,7 @@ JSON Data:
 Construct a positive argument. For each point, state the supporting data and then briefly explain *why* it matters.
 Focus on strengths like:
 - **Strong Growth:** Is 'revenue' or 'net_income' consistently increasing? Use the trends in the 'growth_trends' object.
-- **High Profitability:** Is the company a good money-maker? Analyze the trend in 'profitability_metrics.roe_trend'.
+- **High Profitability:** Is the company a good money-maker? Analyze the trends in 'profitability_metrics'. If 'roe_trend' has valid data, use it. If not, analyze 'net_profit_margin_trend' or 'operating_margin_trend'.
 - **Solid Cash Flow:** Is the business generating real cash? Check for consistent positive values in the 'cash_flow_trends.operating_cash_flow' array.
 - **Attractive Valuation:** Does the stock seem cheap relative to its history? Use recent values from 'valuation_metrics.pe_ratio_trend' and 'valuation_metrics.pb_ratio_trend'.
 
@@ -316,7 +316,7 @@ Focus on strengths like:
 Construct a negative argument. For each point, state the supporting data and explain the potential risk.
 Focus on weaknesses like:
 - **Heavy Debt Load:** Does the company owe a lot of money? Analyze the trend in 'balance_sheet_health.debt_to_equity_trend'.
-- **Slowing Growth:** Are sales or profits shrinking or stagnating? Check the trends in the 'growth_trends' object.
+- **Slowing Growth or Declining Profitability:** Are sales or profits shrinking or stagnating? Check the 'growth_trends' object. Are the trends in 'profitability_metrics' declining?
 - **Analyst Skepticism:** Do the 'analyst_ratings' show downgrades?
 
 ## The Final Takeaway: What's the Core Debate?
