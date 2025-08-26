@@ -2193,21 +2193,22 @@ async function handleAnalysisRequest(symbol, reportType, promptConfig, forceNew 
             payloadData = _calculateUndervaluedMetrics(data);
         } else if (reportType === 'FinancialAnalysis') {
             payloadData = _calculateFinancialAnalysisMetrics(data);
+        } else if (reportType === 'BullVsBear') {
+            payloadData = _calculateBullVsBearMetrics(data);
+        } else if (reportType === 'MoatAnalysis') {
+            payloadData = _calculateMoatAnalysisMetrics(data);
+        } else if (reportType === 'DividendSafety') {
+            payloadData = _calculateDividendSafetyMetrics(data);
+        } else if (reportType === 'GrowthOutlook') {
+            payloadData = _calculateGrowthOutlookMetrics(data);
+        } else if (reportType === 'RiskAssessment') {
+            payloadData = _calculateRiskAssessmentMetrics(data);
+        } else if (reportType === 'CapitalAllocators') {
+            payloadData = _calculateCapitalAllocatorsMetrics(data);
+        } else if (reportType === 'NarrativeCatalyst') {
+            payloadData = _calculateNarrativeCatalystMetrics(data);
         } else {
             payloadData = buildAnalysisPayload(data, requiredEndpoints);
-        }
-        
-        // Manually calculate Graham Number if needed by the prompt and not present
-        if (requiredEndpoints.includes('key_metrics_annual') && payloadData.key_metrics_annual?.[0]) {
-             if (!payloadData.key_metrics_annual[0].grahamNumber) {
-                const latestMetrics = payloadData.key_metrics_annual[0];
-                if (latestMetrics.bookValuePerShare > 0 && latestMetrics.earningsPerShare > 0) {
-                    const bvps = latestMetrics.bookValuePerShare;
-                    const eps = latestMetrics.earningsPerShare;
-                    const grahamNumber = Math.sqrt(22.5 * bvps * eps);
-                    payloadData.key_metrics_annual[0].grahamNumber = parseFloat(grahamNumber.toFixed(2));
-                }
-             }
         }
 
         const profile = data.profile?.[0] || {};
@@ -2866,4 +2867,254 @@ function _calculateFinancialAnalysisMetrics(data) {
     const thesis = { bullCasePoints, bearCasePoints, moatIndicator };
     
     return { summary, performance, health, cashFlow, valuation, thesis };
+}
+
+/**
+ * NEW: Calculates metrics for the "Bull Vs Bear" prompt.
+ */
+function _calculateBullVsBearMetrics(data) {
+    const income = (data.income_statement_annual || []).slice(-5);
+    const metrics = (data.key_metrics_annual || []).slice(-5);
+    const cashFlow = (data.cash_flow_statement_annual || []).slice(-5);
+    const grades = (data.stock_grade_news || []).slice(0, 10);
+
+    const formatTrend = (arr, key) => arr.map(item => ({ year: item.calendarYear, value: formatLargeNumber(item[key]) }));
+
+    return {
+        growth_trends: {
+            revenue: formatTrend(income, 'revenue'),
+            net_income: formatTrend(income, 'netIncome')
+        },
+        profitability_metrics: {
+            roe_trend: metrics.map(m => ({ year: m.calendarYear, value: `${(m.returnOnEquity * 100).toFixed(2)}%` }))
+        },
+        cash_flow_trends: {
+            operating_cash_flow: formatTrend(cashFlow, 'operatingCashFlow')
+        },
+        valuation_metrics: {
+            pe_ratio_trend: metrics.map(m => ({ year: m.calendarYear, value: m.peRatio?.toFixed(2) })),
+            pb_ratio_trend: metrics.map(m => ({ year: m.calendarYear, value: m.priceToBookRatio?.toFixed(2) }))
+        },
+        balance_sheet_health: {
+            debt_to_equity_trend: metrics.map(m => ({ year: m.calendarYear, value: m.debtToEquity?.toFixed(2) }))
+        },
+        analyst_ratings: grades.map(g => ({ company: g.gradingCompany, from: g.previousGrade, to: g.newGrade }))
+    };
+}
+
+/**
+ * NEW: Calculates metrics for the "Moat Analysis" prompt.
+ */
+function _calculateMoatAnalysisMetrics(data) {
+    const profile = data.profile?.[0] || {};
+    const metrics = (data.key_metrics_annual || []).slice(-10);
+    const income = (data.income_statement_annual || []).slice(-10);
+    const cashFlow = (data.cash_flow_statement_annual || []).slice(-10);
+
+    const formatPercentTrend = (arr, key) => arr.map(item => ({ year: item.calendarYear, value: item[key] ? `${(item[key] * 100).toFixed(2)}%` : 'N/A' }));
+
+    return {
+        description: profile.description,
+        trends: {
+            returnOnInvestedCapital: formatPercentTrend(metrics, 'returnOnInvestedCapital'),
+            netProfitMargin: formatPercentTrend(metrics, 'netProfitMargin'),
+            operatingIncome: income.map(i => ({ year: i.calendarYear, value: formatLargeNumber(i.operatingIncome) })),
+            grossProfitMargin: formatPercentTrend(metrics, 'grossProfitMargin'),
+            capitalExpenditure: cashFlow.map(cf => ({ year: cf.calendarYear, value: formatLargeNumber(cf.capitalExpenditure) })),
+            researchAndDevelopment: income.map(i => ({ year: i.calendarYear, value: formatLargeNumber(i.researchAndDevelopmentExpenses) }))
+        },
+        latest_health: {
+            debtToEquity: metrics[metrics.length - 1]?.debtToEquity?.toFixed(2) || 'N/A'
+        }
+    };
+}
+
+/**
+ * NEW: Calculates metrics for the "Dividend Safety" prompt.
+ */
+function _calculateDividendSafetyMetrics(data) {
+    const metrics = (data.key_metrics_annual || []).slice(-10);
+    const cashFlow = (data.cash_flow_statement_annual || []).slice(-10);
+    const income = (data.income_statement_annual || []).slice(-10);
+    const balanceSheet = (data.balance_sheet_statement_annual || []).slice(-10);
+
+    const latestMetrics = metrics[metrics.length - 1] || {};
+    
+    // Create a map for easy lookup by year
+    const incomeMap = new Map(income.map(i => [i.calendarYear, i]));
+
+    const payoutRatios = cashFlow.map(cf => {
+        const correspondingIncome = incomeMap.get(cf.calendarYear);
+        const dividends = Math.abs(cf.dividendsPaid || 0);
+        const fcf = cf.freeCashFlow;
+        const netIncome = correspondingIncome?.netIncome;
+
+        return {
+            year: cf.calendarYear,
+            fcf_payout_ratio: (fcf && fcf > 0) ? `${((dividends / fcf) * 100).toFixed(2)}%` : 'N/A',
+            earnings_payout_ratio: (netIncome && netIncome > 0) ? `${((dividends / netIncome) * 100).toFixed(2)}%` : 'N/A'
+        };
+    });
+
+    return {
+        current_yield: latestMetrics.dividendYield ? `${(latestMetrics.dividendYield * 100).toFixed(2)}%` : 'N/A',
+        payout_ratios: payoutRatios,
+        dividend_growth_trend: cashFlow.map(cf => ({ year: cf.calendarYear, dividends_paid: formatLargeNumber(cf.dividendsPaid) })),
+        balance_sheet_trends: {
+            debt_to_equity: metrics.map(m => ({ year: m.calendarYear, value: m.debtToEquity?.toFixed(2) })),
+            cash_cushion: balanceSheet.map(bs => ({ year: bs.calendarYear, value: formatLargeNumber(bs.cashAndCashEquivalents) }))
+        }
+    };
+}
+
+/**
+ * NEW: Calculates metrics for the "Growth Outlook" prompt.
+ */
+function _calculateGrowthOutlookMetrics(data) {
+    const income = (data.income_statement_annual || []).slice(-5);
+    const metrics = (data.key_metrics_annual || []).slice(-5);
+    const grades = (data.stock_grade_news || []).slice(0, 10);
+    const estimates = (data.analyst_estimates || []).slice(0, 5);
+
+    const latestMetrics = metrics[metrics.length - 1] || {};
+
+    return {
+        historical_growth: {
+            revenue_trend: income.map(i => ({ year: i.calendarYear, value: formatLargeNumber(i.revenue) })),
+            net_income_trend: income.map(i => ({ year: i.calendarYear, value: formatLargeNumber(i.netIncome) }))
+        },
+        valuation: {
+            pe_ratio: latestMetrics.peRatio?.toFixed(2) || 'N/A',
+            ev_to_sales: latestMetrics.evToSales?.toFixed(2) || 'N/A'
+        },
+        reinvestment: {
+            rd_as_percent_of_revenue: latestMetrics.researchAndDevelopementToRevenue ? `${(latestMetrics.researchAndDevelopementToRevenue * 100).toFixed(2)}%` : 'N/A',
+            capex_as_percent_of_revenue: latestMetrics.capexToRevenue ? `${(latestMetrics.capexToRevenue * 100).toFixed(2)}%` : 'N/A'
+        },
+        market_expectations: {
+            analyst_grades: grades.map(g => ({ date: g.date, company: g.gradingCompany, action: g.action, from: g.previousGrade, to: g.newGrade })),
+            future_estimates: estimates.map(e => ({
+                date: e.date,
+                revenue_avg: formatLargeNumber(e.estimatedRevenueAvg),
+                eps_avg: e.estimatedEpsAvg?.toFixed(2)
+            }))
+        }
+    };
+}
+
+/**
+ * NEW: Calculates metrics for the "Risk Assessment" prompt.
+ */
+function _calculateRiskAssessmentMetrics(data) {
+    const profile = data.profile?.[0] || {};
+    const metrics = (data.key_metrics_annual || []).slice(-5);
+    const cashFlow = (data.cash_flow_statement_annual || []).slice(-5);
+    const income = (data.income_statement_annual || []).slice(-5);
+    const grades = (data.stock_grade_news || []).slice(0, 10);
+
+    const latestMetrics = metrics[metrics.length - 1] || {};
+    const latestCashFlow = cashFlow[cashFlow.length - 1] || {};
+    const latestIncome = income[income.length - 1] || {};
+
+    return {
+        financial_risks: {
+            debt_to_equity: latestMetrics.debtToEquity?.toFixed(2) || 'N/A',
+            current_ratio: latestMetrics.currentRatio?.toFixed(2) || 'N/A',
+            earnings_quality: {
+                operating_cash_flow: formatLargeNumber(latestCashFlow.operatingCashFlow),
+                net_income: formatLargeNumber(latestIncome.netIncome)
+            },
+            dividend_sustainability: {
+                dividends_paid: formatLargeNumber(latestCashFlow.dividendsPaid),
+                net_income: formatLargeNumber(latestIncome.netIncome)
+            }
+        },
+        market_risks: {
+            beta: profile.beta?.toFixed(2) || 'N/A',
+            valuation: {
+                pe_ratio: latestMetrics.peRatio?.toFixed(2) || 'N/A',
+                ps_ratio: latestMetrics.priceToSalesRatio?.toFixed(2) || 'N/A'
+            },
+            analyst_pessimism: grades.filter(g => ['sell', 'underperform', 'underweight'].includes(g.newGrade.toLowerCase()))
+                                    .map(g => `${g.gradingCompany} rated ${g.newGrade}`)
+        },
+        business_risks: {
+            recession_sensitivity_sector: profile.sector,
+            margin_trend: metrics.map(m => ({ year: m.calendarYear, net_profit_margin: m.netProfitMargin ? `${(m.netProfitMargin * 100).toFixed(2)}%` : 'N/A' })),
+            net_interest_margin_trend: (profile.sector === 'Financial Services') ? metrics.map(m => ({ year: m.calendarYear, net_interest_margin: m.netInterestMargin ? `${(m.netInterestMargin * 100).toFixed(2)}%` : 'N/A' })) : 'N/A for this sector'
+        }
+    };
+}
+
+/**
+ * NEW: Calculates metrics for the "Capital Allocators" prompt.
+ */
+function _calculateCapitalAllocatorsMetrics(data) {
+    const cashFlow = (data.cash_flow_statement_annual || []).slice(-10);
+    const metrics = (data.key_metrics_annual || []).slice(-10);
+    const income = (data.income_statement_annual || []).slice(-10);
+    const balanceSheet = (data.balance_sheet_statement_annual || []).slice(-10);
+
+    // Create a map for easy lookup by year
+    const metricsMap = new Map(metrics.map(m => [m.calendarYear, m]));
+
+    const buyback_vs_valuation = cashFlow.map(cf => {
+        const correspondingMetrics = metricsMap.get(cf.calendarYear);
+        return {
+            year: cf.calendarYear,
+            common_stock_repurchased: formatLargeNumber(cf.commonStockRepurchased),
+            pe_ratio_that_year: correspondingMetrics?.peRatio?.toFixed(2) || 'N/A',
+            pb_ratio_that_year: correspondingMetrics?.priceToBookRatio?.toFixed(2) || 'N/A'
+        };
+    });
+
+    return {
+        cash_flow_statement_annual: cashFlow,
+        key_metrics_annual: metrics,
+        income_statement_annual: income,
+        balance_sheet_statement_annual: balanceSheet,
+        buyback_vs_valuation // Add the correlated data directly
+    };
+}
+
+/**
+ * NEW: Calculates metrics for the "Narrative & Catalyst" prompt.
+ */
+function _calculateNarrativeCatalystMetrics(data) {
+    const profile = data.profile?.[0] || {};
+    const metrics = (data.key_metrics_annual || []).slice(-5);
+    const cashFlow = (data.cash_flow_statement_annual || []).slice(-5);
+    const income = (data.income_statement_annual || []).slice(-5);
+    const grades = (data.stock_grade_news || []).slice(0, 10);
+
+    const latestMetrics = metrics[metrics.length - 1] || {};
+    const latestCashFlow = cashFlow[cashFlow.length - 1] || {};
+    const latestIncome = income[income.length - 1] || {};
+
+    const isGrowthAccelerating = () => {
+        if (income.length < 3) return false;
+        const yoy = (arr, key) => ((arr[arr.length - 1][key] / arr[arr.length - 2][key]) - 1);
+        const latestGrowth = yoy(income, 'revenue');
+        const prevGrowth = yoy(income.slice(0, -1), 'revenue');
+        return latestGrowth > prevGrowth;
+    };
+
+    const isMarginExpanding = () => {
+        if (metrics.length < 2) return false;
+        return metrics[metrics.length - 1].operatingMargin > metrics[metrics.length - 2].operatingMargin;
+    };
+
+    return {
+        profile: { description: profile.description, industry: profile.industry },
+        financial_health: {
+            is_profitable: (latestIncome.netIncome || 0) > 0,
+            is_cash_flow_positive: (latestCashFlow.freeCashFlow || 0) > 0,
+            debt_to_equity: latestMetrics.debtToEquity?.toFixed(2) || 'N/A'
+        },
+        catalysts: {
+            is_growth_accelerating: isGrowthAccelerating(),
+            is_margin_expanding: isMarginExpanding(),
+            analyst_sentiment_shift: grades.filter(g => g.action.toLowerCase() === 'upgrade').length > 0
+        }
+    };
 }
