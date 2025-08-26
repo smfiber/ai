@@ -501,7 +501,7 @@
     <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-database-compat.js"></script>
 
     <script>
-        // Version 5.0.8
+        // Version 5.0.9
         document.addEventListener("DOMContentLoaded", () => {
             // --- 1. Global Configuration Object ---
             const appConfig = {
@@ -570,6 +570,7 @@
                 const incomeStatements = (data.incomeStatement || []).slice().reverse(); // Oldest to newest
                 const keyMetrics = (data.keyMetrics || []).slice().reverse(); // Oldest to newest
                 const cashFlows = (data.cashFlow || []).slice().reverse();
+                const ratios = (data.ratios || []).slice().reverse(); // Oldest to newest
 
                 const latestMetrics = keyMetrics[keyMetrics.length - 1] || {};
                 const latestCashFlow = cashFlows[cashFlows.length - 1] || {};
@@ -605,7 +606,7 @@
 
                 // 1. Growth & Profitability
                 const revenueGrowthTrend = calculateYoyGrowth(incomeStatements, 'revenue');
-                const profitabilityTrend = getTrend(keyMetrics, 'netProfitMargin', v => v ? `${(v * 100).toFixed(2)}%` : "N/A");
+                const profitabilityTrend = getTrend(ratios, 'netProfitMargin', v => v ? `${(v * 100).toFixed(2)}%` : "N/A");
 
                 // 2. Financial Health
                 const roeTrend = getTrend(keyMetrics, 'roe', v => v ? `${(v * 100).toFixed(2)}%` : "N/A");
@@ -670,7 +671,7 @@
             // --- MODIFIED: NEW, CONCISE PROMPT FOR AI SUMMARY ---
             
             const AI_SUMMARY_PROMPT = `
-            Act as a seasoned investment analyst. I will provide you with a company's description, its key 5-year financial trends, and the latest price target news. Your task is to synthesize ALL this information into a holistic valuation assessment.
+            Act as a seasoned investment analyst. I will provide you with a company's description, its key 5-year financial trends, and the latest news headlines. Your task is to synthesize ALL this information into a holistic valuation assessment.
 
             Company: {companyName} ({tickerSymbol})
             Industry: {industry}
@@ -679,9 +680,12 @@
             Financial Summary JSON (if a value is "N/A" or an array is empty, it means the data was not available):
             {jsonData}
 
-            Based on the provided financial summary, provide your analysis in a valid JSON format with two keys:
-            1. "rating": A single valuation assessment. Choose ONE from the following list: "Undervalued", "Fairly Valued", "Overvalued", "Speculative Growth", "Caution Advised". Your choice must be directly supported by the data.
-            2. "rationale": A concise, 2-3 sentence justification for your rating. Your rationale MUST integrate insights from the financial data (e.g., revenue growth, valuation vs history, Graham Number verdict, ROE trend) to support your chosen rating.
+            Latest News Headlines (last 10 days):
+            {newsHeadlines}
+
+            Based on a synthesis of the financial summary AND the news headlines, provide your analysis in a valid JSON format with two keys:
+            1. "rating": A single valuation assessment. Choose ONE from the following list: "Undervalued", "Fairly Valued", "Overvalued", "Speculative Growth", "Caution Advised". Your choice must be directly supported by the data and news.
+            2. "rationale": A concise, 2-3 sentence justification for your rating. Your rationale MUST integrate insights from both the financial data (e.g., revenue growth, valuation, Graham Number, ROE) and the sentiment from the news headlines to support your chosen rating.
             `;
 
             // --- 3. Initialization Logic ---
@@ -2023,13 +2027,19 @@
                 
                 const structuredMetrics = _calculateUndervaluedMetrics(financialData);
                 const profile = financialData.profile?.[0] || {};
+                const news = financialData.news || [];
                 
+                const newsHeadlines = news.length > 0
+                    ? news.map(n => `- ${n.title}`).join('\n')
+                    : 'No recent news available.';
+
                 const prompt = AI_SUMMARY_PROMPT
                     .replace('{companyName}', profile.companyName || 'the company')
                     .replace('{tickerSymbol}', profile.symbol || 'the stock')
                     .replace('{industry}', profile.industry || 'N/A')
                     .replace('{sector}', profile.sector || 'N/A')
-                    .replace('{jsonData}', JSON.stringify(structuredMetrics, null, 2));
+                    .replace('{jsonData}', JSON.stringify(structuredMetrics, null, 2))
+                    .replace('{newsHeadlines}', newsHeadlines);
 
                 const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${appConfig.geminiApiKey}`;
                 try {
@@ -2227,15 +2237,13 @@
                 let newsHtml = `<p class="text-xs text-gray-400 mb-3">${timeString}</p><div class="space-y-3 max-h-96 overflow-y-auto pr-2">`;
                 
                 newsHtml += newsData.map(news => `
-                    <a href="${news.newsURL}" target="_blank" rel="noopener noreferrer" class="block bg-gray-50 p-3 rounded-lg shadow-sm hover:bg-gray-100 transition-colors">
+                    <a href="${news.url}" target="_blank" rel="noopener noreferrer" class="block bg-gray-50 p-3 rounded-lg shadow-sm hover:bg-gray-100 transition-colors">
                         <div class="flex justify-between items-start mb-1">
-                             <p class="font-semibold text-gray-800 text-sm">${formatText(news.newsTitle)}</p>
+                             <p class="font-semibold text-gray-800 text-sm">${formatText(news.title)}</p>
                             <p class="text-xs text-gray-500 whitespace-nowrap ml-4">${new Date(news.publishedDate).toLocaleDateString()}</p>
                         </div>
                         <div class="text-xs text-gray-500 flex flex-wrap gap-x-4 gap-y-1 mt-2">
-                            <span><strong>Publisher:</strong> ${formatText(news.newsPublisher)}</span>
-                            <span><strong>Analyst:</strong> ${formatText(news.analystName) || 'N/A'} @ ${formatText(news.analystCompany)}</span>
-                            <span><strong>Target:</strong> ${news.priceTarget ? '$'+news.priceTarget.toFixed(2) : 'N/A'}</span>
+                            <span><strong>Publisher:</strong> ${formatText(news.site)}</span>
                         </div>
                     </a>
                 `).join('');
