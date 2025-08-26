@@ -2881,6 +2881,7 @@ function _calculateBullVsBearMetrics(data) {
     const grades = (data.stock_grade_news || []).slice(0, 10);
 
     const formatTrend = (arr, key) => arr.map(item => ({ year: item.calendarYear, value: formatLargeNumber(item[key]) }));
+    const formatPercentTrend = (arr, key) => arr.map(item => ({ year: item.calendarYear, value: item[key] ? `${(item[key] * 100).toFixed(2)}%` : 'N/A' }));
 
     return {
         growth_trends: {
@@ -2888,7 +2889,9 @@ function _calculateBullVsBearMetrics(data) {
             net_income: formatTrend(income, 'netIncome')
         },
         profitability_metrics: {
-            roe_trend: metrics.map(m => ({ year: m.calendarYear, value: m.returnOnEquity ? `${(m.returnOnEquity * 100).toFixed(2)}%` : 'N/A' }))
+            roe_trend: formatPercentTrend(metrics, 'returnOnEquity'),
+            net_profit_margin_trend: formatPercentTrend(metrics, 'netProfitMargin'),
+            operating_margin_trend: formatPercentTrend(metrics, 'operatingMargin')
         },
         cash_flow_trends: {
             operating_cash_flow: formatTrend(cashFlow, 'operatingCashFlow')
