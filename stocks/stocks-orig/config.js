@@ -1,5 +1,5 @@
 // --- App Version ---
-export const APP_VERSION = "14.12.1";
+export const APP_VERSION = "14.13.0";
 
 // --- Shared State ---
 // This object will hold all the application's shared state.
@@ -571,7 +571,7 @@ export const promptMap = {
     },
     'UndervaluedAnalysis': {
         prompt: UNDERVALUED_ANALYSIS_PROMPT,
-        requires: ['profile', 'key_metrics_annual', 'income_statement_annual', 'cash_flow_statement_annual', 'stock_grade_news', 'analyst_estimates']
+        requires: ['profile', 'key_metrics_annual', 'income_statement_annual', 'cash_flow_statement_annual', 'stock_grade_news', 'analyst_estimates', 'ratios_annual']
     },
     'BullVsBear': {
         prompt: BULL_VS_BEAR_PROMPT,
