@@ -2886,14 +2886,14 @@ function _calculateBullVsBearMetrics(data) {
             net_income: formatTrend(income, 'netIncome')
         },
         profitability_metrics: {
-            roe_trend: metrics.map(m => ({ year: m.calendarYear, value: `${(m.returnOnEquity * 100).toFixed(2)}%` }))
+            roe_trend: metrics.map(m => ({ year: m.calendarYear, value: m.returnOnEquity ? `${(m.returnOnEquity * 100).toFixed(2)}%` : 'N/A' }))
         },
         cash_flow_trends: {
             operating_cash_flow: formatTrend(cashFlow, 'operatingCashFlow')
         },
         valuation_metrics: {
             pe_ratio_trend: metrics.map(m => ({ year: m.calendarYear, value: m.peRatio?.toFixed(2) })),
-            pb_ratio_trend: metrics.map(m => ({ year: m.calendarYear, value: m.priceToBookRatio?.toFixed(2) }))
+            pb_ratio_trend: metrics.map(m => ({ year: m.calendarYear, value: m.pbRatio?.toFixed(2) }))
         },
         balance_sheet_health: {
             debt_to_equity_trend: metrics.map(m => ({ year: m.calendarYear, value: m.debtToEquity?.toFixed(2) }))
@@ -3114,7 +3114,7 @@ function _calculateNarrativeCatalystMetrics(data) {
         catalysts: {
             is_growth_accelerating: isGrowthAccelerating(),
             is_margin_expanding: isMarginExpanding(),
-            analyst_sentiment_shift: grades.filter(g => g.action.toLowerCase() === 'upgrade').length > 0
+            has_recent_upgrades: grades.filter(g => g.action.toLowerCase() === 'upgrade').length > 0
         }
     };
 }
