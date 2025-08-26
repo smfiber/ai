@@ -2624,6 +2624,7 @@ function _calculateUndervaluedMetrics(data) {
 
     const latestMetrics = keyMetrics[keyMetrics.length - 1] || {};
     const latestCashFlow = cashFlows[cashFlows.length - 1] || {};
+    const latestRatios = ratios[ratios.length - 1] || {};
     
     // Helper to calculate YoY Growth
     const calculateYoyGrowth = (data, key) => {
@@ -2653,11 +2654,11 @@ function _calculateUndervaluedMetrics(data) {
 
     // 1. Growth & Profitability
     const revenueGrowthTrend = calculateYoyGrowth(incomeStatements, 'revenue');
-    const profitabilityTrend = getTrend(keyMetrics, 'netProfitMargin', v => typeof v === 'number' ? `${(v * 100).toFixed(2)}%` : 'N/A');
+    const profitabilityTrend = getTrend(ratios, 'netProfitMargin', v => typeof v === 'number' ? `${(v * 100).toFixed(2)}%` : 'N/A');
 
     // 2. Financial Health
-    const roeTrend = getTrend(keyMetrics, 'returnOnEquity', v => typeof v === 'number' ? `${(v * 100).toFixed(2)}%` : 'N/A');
-    const debtToEquity = latestMetrics.debtToEquity ? latestMetrics.debtToEquity.toFixed(2) : 'N/A';
+    const roeTrend = getTrend(ratios, 'returnOnEquity', v => typeof v === 'number' ? `${(v * 100).toFixed(2)}%` : 'N/A');
+    const debtToEquity = latestRatios.debtToEquityRatio ? latestRatios.debtToEquityRatio.toFixed(2) : 'N/A';
     
     // 3. Dividend Analysis
     const dividendYield = latestMetrics.dividendYield ? `${(latestMetrics.dividendYield * 100).toFixed(2)}%` : 'N/A';
