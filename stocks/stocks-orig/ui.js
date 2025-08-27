@@ -2879,6 +2879,7 @@ function _calculateBullVsBearMetrics(data) {
     const metrics = (data.key_metrics_annual || []).slice(-5);
     const cashFlow = (data.cash_flow_statement_annual || []).slice(-5);
     const grades = (data.stock_grade_news || []).slice(0, 10);
+    const ratios = (data.ratios_annual || []).slice(-5);
 
     const formatTrend = (arr, key) => arr.map(item => ({ year: item.calendarYear, value: formatLargeNumber(item[key]) }));
     const formatPercentTrend = (arr, key) => arr.map(item => ({ year: item.calendarYear, value: item[key] ? `${(item[key] * 100).toFixed(2)}%` : 'N/A' }));
@@ -2889,8 +2890,8 @@ function _calculateBullVsBearMetrics(data) {
             net_income: formatTrend(income, 'netIncome')
         },
         profitability_metrics: {
-            roe_trend: formatPercentTrend(metrics, 'returnOnEquity'),
-            net_profit_margin_trend: formatPercentTrend(metrics, 'netProfitMargin'),
+            roe_trend: formatPercentTrend(ratios, 'returnOnEquity'),
+            net_profit_margin_trend: formatPercentTrend(ratios, 'netProfitMargin'),
             operating_margin_trend: formatPercentTrend(metrics, 'operatingMargin')
         },
         cash_flow_trends: {
@@ -2919,20 +2920,16 @@ function _calculateMoatAnalysisMetrics(data) {
     const formatPercentTrend = (arr, key) => arr.map(item => ({ year: item.calendarYear, value: item[key] ? `${(item[key] * 100).toFixed(2)}%` : 'N/A' }));
 
     return {
-        qualitativeClues: {
-            description: profile.description,
-        },
-        roicTrend: formatPercentTrend(metrics, 'returnOnInvestedCapital'),
-        profitabilityTrends: {
+        description: profile.description,
+        trends: {
+            returnOnInvestedCapital: formatPercentTrend(metrics, 'returnOnInvestedCapital'),
             netProfitMargin: formatPercentTrend(metrics, 'netProfitMargin'),
             operatingIncome: income.map(i => ({ year: i.calendarYear, value: formatLargeNumber(i.operatingIncome) })),
             grossProfitMargin: formatPercentTrend(metrics, 'grossProfitMargin'),
+            capitalExpenditure: cashFlow.map(cf => ({ year: cf.calendarYear, value: formatLargeNumber(cf.capitalExpenditure) })),
+            researchAndDevelopment: income.map(i => ({ year: i.calendarYear, value: formatLargeNumber(i.researchAndDevelopmentExpenses) }))
         },
-        reinvestmentTrends: {
-            capex: cashFlow.map(cf => ({ year: cf.calendarYear, value: formatLargeNumber(cf.capitalExpenditure) })),
-            rdExpenses: income.map(i => ({ year: i.calendarYear, value: formatLargeNumber(i.researchAndDevelopmentExpenses) }))
-        },
-        balanceSheetHealth: {
+        latest_health: {
             debtToEquity: metrics[metrics.length - 1]?.debtToEquity?.toFixed(2) || 'N/A'
         }
     };
