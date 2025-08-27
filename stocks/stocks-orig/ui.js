@@ -3031,7 +3031,7 @@ function _calculateRiskAssessmentMetrics(data) {
                 net_income: formatLargeNumber(latestIncome.netIncome)
             },
             dividend_sustainability: {
-                dividends_paid: formatLargeNumber(latestCashFlow.dividendsPaid),
+                dividends_paid: formatLargeNumber(Math.abs(latestCashFlow.dividendsPaid)),
                 net_income: formatLargeNumber(latestIncome.netIncome)
             }
         },
