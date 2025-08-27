@@ -500,7 +500,7 @@ font-size: 0.75rem;
 <script src="[https://www.gstatic.com/firebasejs/11.6.1/firebase-database-compat.js](https://www.gstatic.com/firebasejs/11.6.1/firebase-database-compat.js)"></script>
 
 <script>
-    // Version 5.1.4
+    // Version 5.1.3
     document.addEventListener("DOMContentLoaded", () => {
         // --- 1. Global Configuration Object ---
         const appConfig = {
@@ -1018,13 +1018,9 @@ font-size: 0.75rem;
                 if (!response.ok) throw new Error(`API request failed: ${response.status}`);
                 const data = await response.json();
                 
-                const filteredData = data.filter(stock => 
-                    !stock.companyName.includes('ETF') && !stock.companyName.includes('Fund')
-                );
-
-                renderAdvancedStockTable(filteredData, tableEl);
-                renderStockCards(filteredData, cardEl, "Advanced Screener");
-                return filteredData;
+                renderAdvancedStockTable(data, tableEl);
+                renderStockCards(data, cardEl, "Advanced Screener");
+                return data;
             } catch (error) {
                 console.error(`Error fetching advanced screener data:`, error);
                 const errorMsg = `<p class="text-red-500">Error fetching screener data. Check console for details.</p>`;
