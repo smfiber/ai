@@ -515,7 +515,7 @@ font-size: 0.75rem;
 <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth-compat.js"></script>
 
 <script>
-    // Version 5.2.5
+    // Version 5.2.6
     document.addEventListener("DOMContentLoaded", () => {
         // --- 1. Global Configuration Object ---
         const appConfig = {
@@ -1104,8 +1104,6 @@ font-size: 0.75rem;
                 if(cardEl) cardEl.innerHTML = errorMsg;
                 return;
             }
-
-            await loadAllCachedRatings();
 
             let url = `https://financialmodelingprep.com/api/v3/stock-screener?apikey=${appConfig.fmpApiKey}&limit=1000&isEtf=false&isFund=false`;
             
