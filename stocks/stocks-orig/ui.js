@@ -2919,16 +2919,20 @@ function _calculateMoatAnalysisMetrics(data) {
     const formatPercentTrend = (arr, key) => arr.map(item => ({ year: item.calendarYear, value: item[key] ? `${(item[key] * 100).toFixed(2)}%` : 'N/A' }));
 
     return {
-        description: profile.description,
-        trends: {
-            returnOnInvestedCapital: formatPercentTrend(metrics, 'returnOnInvestedCapital'),
+        qualitativeClues: {
+            description: profile.description,
+        },
+        roicTrend: formatPercentTrend(metrics, 'returnOnInvestedCapital'),
+        profitabilityTrends: {
             netProfitMargin: formatPercentTrend(metrics, 'netProfitMargin'),
             operatingIncome: income.map(i => ({ year: i.calendarYear, value: formatLargeNumber(i.operatingIncome) })),
             grossProfitMargin: formatPercentTrend(metrics, 'grossProfitMargin'),
-            capitalExpenditure: cashFlow.map(cf => ({ year: cf.calendarYear, value: formatLargeNumber(cf.capitalExpenditure) })),
-            researchAndDevelopment: income.map(i => ({ year: i.calendarYear, value: formatLargeNumber(i.researchAndDevelopmentExpenses) }))
         },
-        latest_health: {
+        reinvestmentTrends: {
+            capex: cashFlow.map(cf => ({ year: cf.calendarYear, value: formatLargeNumber(cf.capitalExpenditure) })),
+            rdExpenses: income.map(i => ({ year: i.calendarYear, value: formatLargeNumber(i.researchAndDevelopmentExpenses) }))
+        },
+        balanceSheetHealth: {
             debtToEquity: metrics[metrics.length - 1]?.debtToEquity?.toFixed(2) || 'N/A'
         }
     };
