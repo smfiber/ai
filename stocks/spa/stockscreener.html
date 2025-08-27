@@ -1569,7 +1569,7 @@ font-size: 0.75rem;
         }
         
         async function generateAndSaveAnalysis(prompt, container, exchange, analysisId, analysisTitle, symbol = null) {
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${appConfig.geminiApiKey}`;
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${appConfig.geminiApiKey}`;
             try {
                 const response = await fetch(url, {
                     method: 'POST',
