@@ -515,7 +515,7 @@ font-size: 0.75rem;
 <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth-compat.js"></script>
 
 <script>
-    // Version 5.2.1
+    // Version 5.2.2
     document.addEventListener("DOMContentLoaded", () => {
         // --- 1. Global Configuration Object ---
         const appConfig = {
@@ -2120,7 +2120,7 @@ font-size: 0.75rem;
                     title: item.title,
                     site: item.site,
                     url: item.url,
-                    publishedDate: item.publishedDate
+                    publishedDate: item.publishedDate || new Date().toISOString()
                 }));
 
                 const normalizedPriceTargetNews = (priceTargetNews || []).map(item => ({
@@ -2128,7 +2128,7 @@ font-size: 0.75rem;
                     title: item.newsTitle,
                     site: item.newsPublisher,
                     url: item.newsURL,
-                    publishedDate: item.publishedDate,
+                    publishedDate: item.publishedDate || new Date().toISOString(),
                     analyst: `${item.analystName || 'N/A'} @ ${item.analystCompany || 'N/A'}`,
                     priceTarget: item.priceTarget
                 }));
@@ -2138,7 +2138,7 @@ font-size: 0.75rem;
                     title: `Grade Change by ${item.gradingCompany}: ${item.previousGrade} → ${item.newGrade}`,
                     site: item.gradingCompany,
                     url: '#', 
-                    publishedDate: item.date,
+                    publishedDate: item.date || new Date().toISOString(),
                     previousGrade: item.previousGrade,
                     newGrade: item.newGrade
                 }));
