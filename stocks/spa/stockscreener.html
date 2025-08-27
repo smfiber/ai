@@ -515,7 +515,7 @@ font-size: 0.75rem;
 <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth-compat.js"></script>
 
 <script>
-    // Version 5.2.4
+    // Version 5.2.5
     document.addEventListener("DOMContentLoaded", () => {
         // --- 1. Global Configuration Object ---
         const appConfig = {
@@ -1906,16 +1906,16 @@ font-size: 0.75rem;
             };
 
             const headers = [
-                getSortableHeaderHtml('symbol', 'Symbol', 'w-[12%]', 'left'),
-                getSortableHeaderHtml('companyName', 'Company', 'w-[22%]', 'left'),
+                getSortableHeaderHtml('symbol', 'Symbol', 'w-[10%]', 'left'),
+                getSortableHeaderHtml('companyName', 'Company', 'w-[20%]', 'left'),
                 getSortableHeaderHtml('marketCap', 'Market Cap', 'w-[10%]', 'right'),
                 getSortableHeaderHtml('volume', 'Volume', 'w-[10%]', 'right'),
-                getSortableHeaderHtml('sector', 'Sector', 'w-[13%]', 'left'),
-                getSortableHeaderHtml('industry', 'Industry', 'w-[13%]', 'left'),
-                getSortableHeaderHtml('beta', 'Beta', 'w-[7%]', 'right'),
+                getSortableHeaderHtml('sector', 'Sector', 'w-[12%]', 'left'),
+                getSortableHeaderHtml('industry', 'Industry', 'w-[12%]', 'left'),
+                getSortableHeaderHtml('beta', 'Beta', 'w-[6%]', 'right'),
                 `<th class="w-[8%] px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">AI Rating</th>`,
-                getSortableHeaderHtml('price', 'Price', 'w-[8%]', 'right'),
-                getSortableHeaderHtml('lastAnnualDividend', 'Dividend', 'w-[8%]', 'right')
+                getSortableHeaderHtml('price', 'Price', 'w-[6%]', 'right'),
+                getSortableHeaderHtml('lastAnnualDividend', 'Dividend', 'w-[6%]', 'right')
             ].join('');
 
             const tableRows = data.map(stock => {
