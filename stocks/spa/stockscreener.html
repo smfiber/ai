@@ -515,7 +515,7 @@ font-size: 0.75rem;
 <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth-compat.js"></script>
 
 <script>
-    // Version 5.2.2
+    // Version 5.2.3
     document.addEventListener("DOMContentLoaded", () => {
         // --- 1. Global Configuration Object ---
         const appConfig = {
@@ -532,6 +532,9 @@ font-size: 0.75rem;
         let db = null;
         let savedStocks = new Set();
         let sessionTimer = null;
+        let advancedScreenerData = [];
+        let currentSort = { key: 'marketCap', direction: 'desc' };
+
 
         // --- Utility to pause execution ---
         const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
@@ -890,6 +893,7 @@ font-size: 0.75rem;
             setupCrudModalListeners();
             setupFinancialsModalListeners();
             advancedScreenerFilterForm.addEventListener('submit', handleAdvancedScreenerRun);
+            document.getElementById('advanced-screener-data-container').addEventListener('click', handleSortClick);
             populateIndustryDropdown();
             
             appContent.addEventListener('click', (e) => {
@@ -1056,7 +1060,7 @@ font-size: 0.75rem;
             });
         }
 
-        // --- 11. Screener Fetching Functions ---
+        // --- 11. Screener Fetching & Sorting Functions ---
         async function fetchSimpleStockScreener(exchange, tableEl, cardEl) {
             const loadingMsg = `<p class="text-gray-500">Loading screener for ${exchange}...</p>`;
             if(tableEl) tableEl.innerHTML = loadingMsg;
@@ -1098,10 +1102,10 @@ font-size: 0.75rem;
                 const errorMsg = '<p class="text-red-500">Financial Modeling Prep API Key is missing.</p>';
                 if(tableEl) tableEl.innerHTML = errorMsg;
                 if(cardEl) cardEl.innerHTML = errorMsg;
-                return [];
+                return;
             }
 
-            await loadAllCachedRatings(); // Refresh local cache from Firebase
+            await loadAllCachedRatings();
 
             let url = `https://financialmodelingprep.com/api/v3/stock-screener?apikey=${appConfig.fmpApiKey}&limit=1000&isEtf=false&isFund=false`;
             
@@ -1119,18 +1123,55 @@ font-size: 0.75rem;
                 if (!response.ok) throw new Error(`API request failed: ${response.status}`);
                 const data = await response.json();
                 
-                renderAdvancedStockTable(data, tableEl);
+                advancedScreenerData = data;
+                currentSort = { key: 'marketCap', direction: 'desc' };
+                sortAndRerenderAdvancedTable();
                 renderStockCards(data, cardEl, "Advanced Screener");
-                return data;
+                
             } catch (error) {
                 console.error(`Error fetching advanced screener data:`, error);
                 const errorMsg = `<p class="text-red-500">Error fetching screener data. Check console for details.</p>`;
                 if(tableEl) tableEl.innerHTML = errorMsg;
                 if(cardEl) cardEl.innerHTML = errorMsg;
-                return [];
             }
         }
         
+        function handleSortClick(e) {
+            const header = e.target.closest('[data-sort-key]');
+            if (!header) return;
+
+            const key = header.dataset.sortKey;
+            
+            if (currentSort.key === key) {
+                currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentSort.key = key;
+                const numericDesc = ['marketCap', 'volume', 'price', 'lastAnnualDividend'];
+                currentSort.direction = numericDesc.includes(key) ? 'desc' : 'asc';
+            }
+            sortAndRerenderAdvancedTable();
+        }
+
+        function sortAndRerenderAdvancedTable() {
+            const { key, direction } = currentSort;
+            const sortedData = [...advancedScreenerData].sort((a, b) => {
+                let valA = a[key];
+                let valB = b[key];
+
+                if (valA === null || valA === undefined) return 1;
+                if (valB === null || valB === undefined) return -1;
+
+                if (typeof valA === 'string') {
+                    return direction === 'asc' 
+                        ? valA.localeCompare(valB) 
+                        : valB.localeCompare(valA);
+                } else {
+                    return direction === 'asc' ? valA - valB : valB - valA;
+                }
+            });
+            renderAdvancedStockTable(sortedData, document.getElementById('advanced-screener-data-container'));
+        }
+
         // --- 12. Fetch and Render Price Target News ---
         async function fetchAndRenderPriceTargetNews(screenerData, newsContainer, exchange, forceGenAiRefresh = false) {
             const symbols = screenerData.map(stock => stock.symbol);
@@ -1498,19 +1539,21 @@ font-size: 0.75rem;
 
                 if (cached) {
                     console.log(`Using cached analysis for ${exchange} - ${analysis.title}`);
-                    renderAnalysis(cached.text, container, exchange, analysis.id, analysis.title);
+                    renderAnalysis(cached.text, container, exchange, analysis.id, analysis.title, cached.symbol);
                     appConfig.generativeAnalyses[exchange][analysis.id] = cached.text; 
                     continue;
                 }
                 
                 console.log(`Generating analysis for ${exchange} - ${analysis.title}`);
                 let promptText;
+                let symbolForSave = null;
 
                 if (analysis.id === 'single-stock-deep-dive') {
                     if (!singleStockSymbol) {
                         container.innerHTML = '<p class="text-gray-500">No stock available for a deep dive.</p>';
                         continue;
                     }
+                    symbolForSave = singleStockSymbol;
                     const stockNews = newsData.filter(n => n.symbol === singleStockSymbol);
                     if (stockNews.length === 0) {
                          container.innerHTML = `<p class="text-gray-500">No recent news found for ${singleStockSymbol} to perform a deep dive.</p>`;
@@ -1522,12 +1565,12 @@ font-size: 0.75rem;
                     promptText = analysis.prompt(exchange, articlesText);
                 }
                 
-                await generateAndSaveAnalysis(promptText, container, exchange, analysis.id, analysis.title);
+                await generateAndSaveAnalysis(promptText, container, exchange, analysis.id, analysis.title, symbolForSave);
                 await delay(1500); 
             }
         }
         
-        async function generateAndSaveAnalysis(prompt, container, exchange, analysisId, analysisTitle) {
+        async function generateAndSaveAnalysis(prompt, container, exchange, analysisId, analysisTitle, symbol = null) {
             const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${appConfig.geminiApiKey}`;
             try {
                 const response = await fetch(url, {
@@ -1543,12 +1586,13 @@ font-size: 0.75rem;
                 const result = await response.json();
                 const analysisText = result.candidates[0].content.parts[0].text;
                 
-                renderAnalysis(analysisText, container, exchange, analysisId, analysisTitle);
+                renderAnalysis(analysisText, container, exchange, analysisId, analysisTitle, symbol);
                 
                 const analysisData = {
                     text: analysisText,
                     title: analysisTitle,
-                    timestamp: new Date().toISOString()
+                    timestamp: new Date().toISOString(),
+                    symbol: symbol
                 };
                 await autoSaveAnalysisToFirebase(exchange, analysisId, analysisData);
 
@@ -1558,7 +1602,7 @@ font-size: 0.75rem;
             }
         }
         
-        function renderAnalysis(analysisText, container, exchange, analysisId, analysisTitle) {
+        function renderAnalysis(analysisText, container, exchange, analysisId, analysisTitle, symbol = null) {
              if (!appConfig.generativeAnalyses[exchange]) {
                 appConfig.generativeAnalyses[exchange] = {};
             }
@@ -1572,10 +1616,12 @@ font-size: 0.75rem;
                 .replace(/^- (.*)/gm, '<li class="ml-4 list-disc">$1</li>')
                 .replace(/\n/g, '<br>');
             
+            const symbolAttr = symbol ? `data-symbol="${symbol}"` : '';
+
             container.innerHTML = `
                 <div class="flex justify-between items-start mb-4">
                     <h3 class="text-lg font-bold text-indigo-600">${analysisTitle}</h3>
-                    <button data-exchange="${exchange}" data-analysis-id="${analysisId}" class="save-analysis-btn text-sm bg-green-100 text-green-700 hover:bg-green-200 rounded-md px-3 py-1">
+                    <button data-exchange="${exchange}" data-analysis-id="${analysisId}" ${symbolAttr} class="save-analysis-btn text-sm bg-green-100 text-green-700 hover:bg-green-200 rounded-md px-3 py-1">
                         <i class="fas fa-save mr-2"></i>Save Manually
                     </button>
                 </div>
@@ -1583,9 +1629,7 @@ font-size: 0.75rem;
             `;
 
             container.querySelector('.save-analysis-btn').addEventListener('click', (e) => {
-                const ex = e.currentTarget.dataset.exchange;
-                const id = e.currentTarget.dataset.analysisId;
-                manualSaveAnalysisToFirebase(ex, id);
+                manualSaveAnalysisToFirebase(e);
             });
         }
 
@@ -1646,13 +1690,17 @@ font-size: 0.75rem;
             editSummaryForm.addEventListener('submit', handleUpdateSubmit);
         }
 
-        async function manualSaveAnalysisToFirebase(exchange, analysisId) {
+        async function manualSaveAnalysisToFirebase(event) {
             if (!db) return alert("Firebase not initialized.");
+            
+            const { exchange, analysisId, symbol } = event.currentTarget.dataset;
+
             const analysisText = appConfig.generativeAnalyses[exchange]?.[analysisId];
             const analysisTitle = analysisPrompts.find(p => p.id === analysisId)?.title || 'Analysis';
 
             if (!analysisText) return alert("No analysis text found to save.");
 
+            // --- Part 1: Save to Firebase (existing functionality) ---
             const analysisData = {
                 title: analysisTitle,
                 text: analysisText,
@@ -1663,8 +1711,28 @@ font-size: 0.75rem;
                 await db.ref(`manual-analyses/${exchange}/${analysisId}`).push(analysisData);
                 alert(`${exchange.toUpperCase()} - ${analysisTitle} analysis saved successfully!`);
             } catch (error) {
-                console.error("Error saving analysis:", error);
-                alert("Failed to save analysis.");
+                console.error("Error saving analysis to Firebase:", error);
+                alert("Failed to save analysis to Firebase.");
+            }
+            
+            // --- Part 2: Trigger Markdown file download ---
+            try {
+                const identifier = symbol || exchange.toUpperCase();
+                const formattedTitle = analysisTitle.replace(/\s+/g, '_');
+                const timestamp = new Date().toISOString().split('T')[0];
+                const filename = `${identifier}_${formattedTitle}_${timestamp}.md`;
+
+                const blob = new Blob([analysisText], { type: 'text/markdown;charset=utf-8' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = filename;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+            } catch (error) {
+                console.error("Error creating download file:", error);
+                alert("Could not create download file.");
             }
         }
         
@@ -1830,6 +1898,25 @@ font-size: 0.75rem;
                 container.innerHTML = '<p class="text-gray-500">No stock data found for the selected criteria.</p>';
                 return;
             }
+
+            const getSortableHeaderHtml = (key, title, width, align = 'left') => {
+                const sortIndicator = currentSort.key === key ? (currentSort.direction === 'asc' ? '▲' : '▼') : '↕';
+                const textAlign = `text-${align}`;
+                return `<th class="${width} px-4 py-3 ${textAlign} text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100" data-sort-key="${key}">${title} <span class="text-gray-400">${sortIndicator}</span></th>`;
+            };
+
+            const headers = [
+                getSortableHeaderHtml('symbol', 'Symbol', 'w-[12%]', 'left'),
+                getSortableHeaderHtml('companyName', 'Company', 'w-[25%]', 'left'),
+                getSortableHeaderHtml('marketCap', 'Market Cap', 'w-[10%]', 'right'),
+                getSortableHeaderHtml('sector', 'Sector', 'w-[15%]', 'left'),
+                getSortableHeaderHtml('industry', 'Industry', 'w-[15%]', 'left'),
+                getSortableHeaderHtml('beta', 'Beta', 'w-[7%]', 'right'),
+                `<th class="w-[8%] px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">AI Rating</th>`,
+                getSortableHeaderHtml('price', 'Price', 'w-[8%]', 'right'),
+                getSortableHeaderHtml('lastAnnualDividend', 'Dividend', 'w-[8%]', 'right')
+            ].join('');
+
             const tableRows = data.map(stock => {
                 const isSaved = savedStocks.has(stock.symbol);
                 return `
@@ -1851,7 +1938,7 @@ font-size: 0.75rem;
                      <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-right">${stock.lastAnnualDividend ? '$'+stock.lastAnnualDividend.toFixed(2) : 'N/A'}</td>
                 </tr>`;
             }).join('');
-            container.innerHTML = `<div class="overflow-y-auto max-h-[60vh]"><table class="w-full table-fixed divide-y divide-gray-200"><thead class="bg-gray-50 sticky top-0"><tr><th class="w-[12%] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Symbol</th><th class="w-[25%] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Company</th><th class="w-[10%] px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Market Cap</th><th class="w-[15%] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sector</th><th class="w-[15%] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Industry</th><th class="w-[7%] px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Beta</th><th class="w-[8%] px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">AI Rating</th><th class="w-[8%] px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Price</th><th class="w-[8%] px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Dividend</th></tr></thead><tbody class="bg-white divide-y divide-gray-200">${tableRows}</tbody></table></div>`;
+            container.innerHTML = `<div class="overflow-y-auto max-h-[60vh]"><table class="w-full table-fixed divide-y divide-gray-200"><thead class="bg-gray-50 sticky top-0"><tr>${headers}</tr></thead><tbody class="bg-white divide-y divide-gray-200">${tableRows}</tbody></table></div>`;
             updateViewedIndicators();
         }
         
