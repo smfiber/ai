@@ -1,5 +1,5 @@
 // --- App Version ---
-export const APP_VERSION = "14.16.0";
+export const APP_VERSION = "14.16.1";
 
 // --- Shared State ---
 // This object will hold all the application's shared state.
@@ -430,7 +430,7 @@ Role: You are a risk analyst AI. Your job is to act like a cautious inspector, i
 
 Data Instructions: Your analysis must be derived exclusively from the provided JSON data, which contains pre-calculated trends and metrics.
 
-Output Format: A prioritized, bulleted list in markdown, categorized by risk type. Explain each risk in simple terms.
+Output Format: You MUST return a prioritized, bulleted list in markdown, categorized by risk type. Do NOT use prose or paragraph format for the main analysis. Explain each risk in simple terms within the bullet points.
 
 JSON Data:
 {jsonData}
@@ -441,8 +441,8 @@ JSON Data:
 These are risks related to the company's balance sheet and cash flow.
 - **Debt Load (Leverage):** Is the 'financialRisks.debtToEquity' ratio high? Explain this risk like having a large mortgage.
 - **Paying Short-Term Bills (Liquidity):** Is the 'financialRisks.currentRatio' low (below 1.5)?
-- **"Real" Cash vs. "Paper" Profit (Earnings Quality):** Is 'financialRisks.earningsQuality.ocf' significantly lower than 'financialRisks.earningsQuality.netIncome'? This can be a red flag.
-- **Dividend Sustainability:** Is 'financialRisks.dividendSustainability.dividendsPaid' greater than 'financialRisks.dividendSustainability.netIncome'? This is a major warning sign.
+- **"Real" Cash vs. "Paper" Profit (Earnings Quality):** Is 'financialRisks.earningsQuality.operating_cash_flow' significantly lower than 'financialRisks.earningsQuality.net_income'? This can be a red flag.
+- **Dividend Sustainability:** Is the *amount* of 'dividends_paid' (a positive number representing cash outflow) greater than 'net_income'? This is a major warning sign.
 
 ## 2. Market & Stock Price Risks (Is the Stock Itself Risky?)
 These are risks related to the stock's price and behavior in the market.
@@ -452,7 +452,7 @@ These are risks related to the stock's price and behavior in the market.
 
 ## 3. Business Risks (Are There Cracks in the Operations?)
 These are risks related to the day-to-day health of the business.
-- **Recession Sensitivity (Economic Cycle Risk):** Based on the 'businessRisks.sector', is it "Cyclical" or "Defensive"?
+- **Recession Sensitivity (Economic Cycle Risk):** Based on the 'businessRisks.recession_sensitivity_sector', is it "Cyclical" or "Defensive"?
 - **Shrinking Profits? (Margin Compression):** Is the 'businessRisks.marginTrend' trending downwards over the past few years?
 - **Core Profitability for Financials (Net Interest Margin):** For banks, is the 'businessRisks.netInterestMarginTrend' trending downwards?
 
