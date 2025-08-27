@@ -500,7 +500,7 @@ font-size: 0.75rem;
 <script src="[https://www.gstatic.com/firebasejs/11.6.1/firebase-database-compat.js](https://www.gstatic.com/firebasejs/11.6.1/firebase-database-compat.js)"></script>
 
 <script>
-    // Version 5.1.5
+    // Version 5.1.6
     document.addEventListener("DOMContentLoaded", () => {
         // --- 1. Global Configuration Object ---
         const appConfig = {
@@ -799,9 +799,6 @@ font-size: 0.75rem;
                 console.error("Firebase initialization failed:", e);
                 alert("Could not initialize Firebase. Please check your configuration.");
             }
-
-            // Initialize Advanced Screener with default values
-            fetchAdvancedStockScreener();
 
             const exchanges = ['nasdaq', 'nyse', 'amex'];
             const genAiContainer = document.getElementById('gen-ai-tab-content');
