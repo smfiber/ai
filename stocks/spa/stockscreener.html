@@ -400,23 +400,27 @@ font-size: 0.75rem;
 <div id="apiKeyModal" class="fixed inset-0 z-[100] items-center justify-center p-4 modal">
     <div class="absolute inset-0 bg-gray-900 bg-opacity-75"></div>
     <div class="relative bg-white rounded-2xl shadow-lg border border-gray-200 p-8 w-full max-w-lg m-4 overflow-y-auto max-h-[90vh]">
-        <div id="auth-container">
-             <h2 class="text-2xl font-bold mb-4">Authentication Required</h2>
-             <p class="text-gray-500 mb-6">Please sign in to continue.</p>
-             <button id="googleSignInBtn" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg flex items-center justify-center">
-                <i class="fab fa-google mr-2"></i> Sign In with Google
-            </button>
-             <div id="auth-user-info" style="display: none;" class="mt-6 text-center">
+         <div id="auth-container" class="text-center">
+             <div id="auth-user-info" style="display: none;" class="mb-4">
                 <p class="text-gray-600">Signed in as: <span id="user-email" class="font-semibold"></span></p>
                 <button id="signOutBtn" class="mt-2 text-sm text-blue-500 hover:underline">Sign Out</button>
             </div>
+             <button id="googleSignInBtn" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg flex items-center justify-center mb-4">
+                <i class="fab fa-google mr-2"></i> Sign In with Google
+            </button>
         </div>
 
-        <div id="apiKeyFormContainer" style="display: none;">
-            <h2 class="text-2xl font-bold mb-4">API Keys Required</h2>
-            <p class="text-gray-500 mb-6">Please provide your API keys to get started.</p>
+        <hr class="my-6">
+        
+        <div>
+            <h2 class="text-2xl font-bold mb-4">API Keys & Configuration</h2>
+             <p class="text-gray-500 mb-6">These are required to power the application.</p>
             <form id="apiKeyForm">
                 <div class="space-y-4">
+                     <div>
+                        <label for="firebaseConfigInput" class="block text-sm font-semibold text-gray-800 mb-1">Firebase Web App Config</label>
+                        <textarea id="firebaseConfigInput" class="border border-gray-300 rounded-lg w-full p-2 font-mono text-xs" rows="6" placeholder="Paste your Firebase Web App Config Object"></textarea>
+                    </div>
                     <div>
                         <label for="geminiApiKeyInput" class="block text-sm font-semibold text-gray-800 mb-1">Google Gemini API Key</label>
                         <input type="password" id="geminiApiKeyInput" class="border border-gray-300 rounded-lg w-full p-2" placeholder="Enter your Google Gemini API Key">
@@ -436,10 +440,6 @@ font-size: 0.75rem;
                     <div>
                         <label for="fmpApiKeyInput" class="block text-sm font-semibold text-gray-800 mb-1">Financial Modeling Prep API Key</label>
                         <input type="password" id="fmpApiKeyInput" class="border border-gray-300 rounded-lg w-full p-2" placeholder="Enter your FMP API Key">
-                    </div>
-                    <div>
-                        <label for="firebaseConfigInput" class="block text-sm font-semibold text-gray-800 mb-1">Firebase Web App Config</label>
-                        <textarea id="firebaseConfigInput" class="border border-gray-300 rounded-lg w-full p-2 font-mono text-xs" rows="6" placeholder="Paste your Firebase Web App Config Object"></textarea>
                     </div>
                 </div>
                 <p id="api-key-error" class="text-red-500 text-sm mt-4 h-5"></p>
@@ -515,7 +515,7 @@ font-size: 0.75rem;
 <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth-compat.js"></script>
 
 <script>
-    // Version 5.2.0
+    // Version 5.2.1
     document.addEventListener("DOMContentLoaded", () => {
         // --- 1. Global Configuration Object ---
         const appConfig = {
@@ -539,7 +539,6 @@ font-size: 0.75rem;
         // --- 2. DOM Element Selection ---
         const apiKeyModal = document.getElementById('apiKeyModal');
         const apiKeyForm = document.getElementById('apiKeyForm');
-        const apiKeyFormContainer = document.getElementById('apiKeyFormContainer');
         const errorMessage = document.getElementById('api-key-error');
         const geminiApiKeyInput = document.getElementById('geminiApiKeyInput');
         const googleClientIdInput = document.getElementById('googleClientIdInput');
@@ -719,6 +718,10 @@ font-size: 0.75rem;
         
         // --- 4. Auth and Session Management ---
         function signInWithGoogle() {
+            if (!firebase.apps.length) {
+                alert("Please provide your configuration and API keys and click 'Save and Continue' first to initialize the application.");
+                return;
+            }
             const provider = new firebase.auth.GoogleAuthProvider();
             firebase.auth().signInWithPopup(provider).catch(error => {
                 console.error("Google Sign-In Error:", error);
@@ -784,20 +787,43 @@ font-size: 0.75rem;
                 
                 // Initialize Firebase here, after getting the config
                 try {
-                    firebase.initializeApp(appConfig.firebaseConfig);
+                    if (!firebase.apps.length) {
+                        firebase.initializeApp(appConfig.firebaseConfig);
+                    }
                     db = firebase.database();
                     console.log("Firebase initialized successfully.");
+
+                    // NOW, attach the auth listener
+                    firebase.auth().onAuthStateChanged(user => {
+                        if (user) {
+                            // User is signed in.
+                            console.log("User signed in:", user.email);
+                            userEmailSpan.textContent = user.email;
+                            googleSignInBtn.style.display = 'none';
+                            authUserInfo.style.display = 'block';
+                            
+                            startSessionTimer();
+                            hideModal();
+                            startApp();
+                        } else {
+                            // User is signed out.
+                            console.log("User is signed out.");
+                            userEmailSpan.textContent = '';
+                            googleSignInBtn.style.display = 'block';
+                            authUserInfo.style.display = 'none';
+                            appContent.style.display = 'none';
+                            showModal(); 
+                            clearSessionTimer();
+                        }
+                    });
+
                 } catch (e) {
                      if (!/already exists/.test(e.message)) {
                         console.error("Firebase initialization failed:", e);
                         alert("Could not initialize Firebase. Please check your configuration.");
-                        return; // Stop if Firebase fails
+                        return;
                     }
                 }
-
-                hideModal();
-                startApp();
-
             } catch (error) {
                 errorMessage.textContent = 'Invalid Firebase Config JSON.';
             }
@@ -856,6 +882,9 @@ font-size: 0.75rem;
         // --- 7. Main Application Logic ---
         async function startApp() {
             console.log("Application starting...");
+            // Clear any existing content to prevent duplication on re-login
+            document.getElementById('gen-ai-tab-content').innerHTML = '';
+
             loadSavedStocks();
             setupTabs();
             setupCrudModalListeners();
@@ -2404,28 +2433,6 @@ font-size: 0.75rem;
         // --- Run the initialization function ---
         initialize();
 
-        // --- Auth State Change Listener ---
-        firebase.auth().onAuthStateChanged(user => {
-            if (user) {
-                // User is signed in
-                console.log("User signed in:", user.email);
-                userEmailSpan.textContent = user.email;
-                googleSignInBtn.style.display = 'none';
-                authUserInfo.style.display = 'block';
-                apiKeyFormContainer.style.display = 'block';
-                startSessionTimer();
-            } else {
-                // User is signed out
-                console.log("User signed out.");
-                userEmailSpan.textContent = '';
-                googleSignInBtn.style.display = 'block';
-                authUserInfo.style.display = 'none';
-                apiKeyFormContainer.style.display = 'none';
-                appContent.style.display = 'none'; // Hide main content
-                showModal(); // Show login/API modal
-                clearSessionTimer();
-            }
-        });
     });
 </script>
 </body>
