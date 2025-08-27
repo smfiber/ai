@@ -1,5 +1,5 @@
 // --- App Version ---
-export const APP_VERSION = "14.15.1";
+export const APP_VERSION = "14.16.0";
 
 // --- Shared State ---
 // This object will hold all the application's shared state.
@@ -339,12 +339,12 @@ JSON Data:
 ## 1. What Gives This Company Its Edge? (Sources of the Moat)
 Analyze the data for signs of a durable competitive advantage. Discuss:
 - **Return on Invested Capital (ROIC):** Analyze the 'roicTrend' data. Explain this as the "gold standard" for moat analysis. A consistently high **and stable/rising** ROIC (>15%) is a strong sign of a moat.
-- **Pricing Power & Profitability:** Analyze the trends within the 'profitabilityTrends' object (netProfitMargin, operatingIncome, grossProfitMargin). Are they consistently high **and stable** over time? Explain this as a sign that the company can reliably charge more.
+- **Pricing Power & Profitability:** Are the trends in 'profitabilityTrends' (net profit margin, operating income, gross profit margin) consistently high **and stable** over time? Explain this as a sign that the company can reliably charge more.
 - **Qualitative Clues (from Description):** Based on the 'qualitativeClues.description', what themes suggest a moat? Look for mentions of a "platform," "network," "marketplace," or "mission-critical" systems.
 
 ## 2. How Strong is the Castle Wall? (Moat Sustainability)
 Assess how sustainable this advantage might be by looking at:
-- **Reinvesting in the Defenses:** Are 'capex' and 'rdExpenses' in the 'reinvestmentTrends' data significant? Explain this as the company spending money to strengthen its moat.
+- **Reinvesting in the Defenses:** Are 'capex' and 'rdExpenses' significant in the 'reinvestmentTrends' data? Explain this as the company spending money to strengthen its moat.
 - **Financial Fortress:** Is the balance sheet strong (low 'debtToEquity' in 'balanceSheetHealth')? A company with low debt is better equipped to survive tough times.
 
 ## 3. The Verdict: How Wide is the Moat?
