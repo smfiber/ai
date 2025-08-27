@@ -515,7 +515,7 @@ font-size: 0.75rem;
 <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth-compat.js"></script>
 
 <script>
-    // Version 5.2.3
+    // Version 5.2.4
     document.addEventListener("DOMContentLoaded", () => {
         // --- 1. Global Configuration Object ---
         const appConfig = {
@@ -1907,10 +1907,11 @@ font-size: 0.75rem;
 
             const headers = [
                 getSortableHeaderHtml('symbol', 'Symbol', 'w-[12%]', 'left'),
-                getSortableHeaderHtml('companyName', 'Company', 'w-[25%]', 'left'),
+                getSortableHeaderHtml('companyName', 'Company', 'w-[22%]', 'left'),
                 getSortableHeaderHtml('marketCap', 'Market Cap', 'w-[10%]', 'right'),
-                getSortableHeaderHtml('sector', 'Sector', 'w-[15%]', 'left'),
-                getSortableHeaderHtml('industry', 'Industry', 'w-[15%]', 'left'),
+                getSortableHeaderHtml('volume', 'Volume', 'w-[10%]', 'right'),
+                getSortableHeaderHtml('sector', 'Sector', 'w-[13%]', 'left'),
+                getSortableHeaderHtml('industry', 'Industry', 'w-[13%]', 'left'),
                 getSortableHeaderHtml('beta', 'Beta', 'w-[7%]', 'right'),
                 `<th class="w-[8%] px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">AI Rating</th>`,
                 getSortableHeaderHtml('price', 'Price', 'w-[8%]', 'right'),
@@ -1930,6 +1931,7 @@ font-size: 0.75rem;
                     </td>
                     <td class="px-4 py-3 text-sm text-gray-600 break-words">${formatText(stock.companyName)}</td>
                     <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-right">${formatMarketCap(stock.marketCap)}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-right">${stock.volume ? stock.volume.toLocaleString() : 'N/A'}</td>
                     <td class="px-4 py-3 text-sm text-gray-500 break-words">${formatText(stock.sector)}</td>
                     <td class="px-4 py-3 text-sm text-gray-500 break-words">${formatText(stock.industry)}</td>
                      <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-right">${stock.beta ? stock.beta.toFixed(2) : 'N/A'}</td>
