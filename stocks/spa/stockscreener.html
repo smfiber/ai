@@ -515,7 +515,7 @@ font-size: 0.75rem;
 <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth-compat.js"></script>
 
 <script>
-    // Version 5.2.7
+    // Version 5.2.8
     document.addEventListener("DOMContentLoaded", () => {
         // --- 1. Global Configuration Object ---
         const appConfig = {
@@ -526,7 +526,7 @@ font-size: 0.75rem;
             googleClientId: "",
             firebaseConfig: {},
             generativeAnalyses: {},
-            cachedRatings: {}
+            cachedStockInfo: {}
         };
         
         let db = null;
@@ -904,7 +904,7 @@ font-size: 0.75rem;
                 }
             });
 
-            await loadAllCachedRatings();
+            await loadAllCachedInfo();
 
             // Initialize Advanced Screener with default values
             fetchAdvancedStockScreener();
@@ -1121,6 +1121,11 @@ font-size: 0.75rem;
                 const response = await fetch(url);
                 if (!response.ok) throw new Error(`API request failed: ${response.status}`);
                 const data = await response.json();
+
+                data.forEach(stock => {
+                    const cachedInfo = appConfig.cachedStockInfo[stock.symbol];
+                    stock.cachedTimestamp = cachedInfo?.timestamp ? new Date(cachedInfo.timestamp).getTime() : null;
+                });
                 
                 advancedScreenerData = data;
                 currentSort = { key: 'marketCap', direction: 'desc' };
@@ -1145,7 +1150,7 @@ font-size: 0.75rem;
                 currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
             } else {
                 currentSort.key = key;
-                const numericDesc = ['marketCap', 'volume', 'price', 'lastAnnualDividend'];
+                const numericDesc = ['marketCap', 'volume', 'price', 'lastAnnualDividend', 'cachedTimestamp'];
                 currentSort.direction = numericDesc.includes(key) ? 'desc' : 'asc';
             }
             sortAndRerenderAdvancedTable();
@@ -1311,21 +1316,21 @@ font-size: 0.75rem;
             }
         }
         
-        async function loadAllCachedRatings() {
+        async function loadAllCachedInfo() {
             if (!db) return;
             try {
                 const snapshot = await db.ref('financial-details').get();
                 if (snapshot.exists()) {
                     const allDetails = snapshot.val();
                     for (const symbol in allDetails) {
-                        if (allDetails[symbol].aiSummary && allDetails[symbol].aiSummary.rating) {
-                            appConfig.cachedRatings[symbol] = allDetails[symbol].aiSummary.rating;
+                        if (allDetails[symbol].aiSummary && allDetails[symbol].aiSummary.rating && allDetails[symbol].timestamp) {
+                            appConfig.cachedStockInfo[symbol] = { rating: allDetails[symbol].aiSummary.rating, timestamp: allDetails[symbol].timestamp };
                         }
                     }
-                    console.log("Successfully loaded all cached AI ratings.");
+                    console.log("Successfully loaded all cached stock info (ratings and timestamps).");
                 }
             } catch(error) {
-                console.error("Could not load cached AI ratings from Firebase:", error);
+                console.error("Could not load cached stock info from Firebase:", error);
             }
         }
 
@@ -1846,7 +1851,7 @@ font-size: 0.75rem;
         }
 
         function getRatingHtml(symbol) {
-            const rating = appConfig.cachedRatings[symbol];
+            const rating = appConfig.cachedStockInfo[symbol]?.rating;
             if (!rating) return 'N/A';
             
             let ratingColor = 'text-gray-700';
@@ -1906,15 +1911,16 @@ font-size: 0.75rem;
 
             const headers = [
                 getSortableHeaderHtml('symbol', 'Symbol', 'w-[10%]', 'left'),
-                getSortableHeaderHtml('companyName', 'Company', 'w-[20%]', 'left'),
-                getSortableHeaderHtml('marketCap', 'Market Cap', 'w-[10%]', 'right'),
-                getSortableHeaderHtml('volume', 'Volume', 'w-[10%]', 'right'),
-                getSortableHeaderHtml('sector', 'Sector', 'w-[12%]', 'left'),
-                getSortableHeaderHtml('industry', 'Industry', 'w-[12%]', 'left'),
+                getSortableHeaderHtml('companyName', 'Company', 'w-[15%]', 'left'),
+                getSortableHeaderHtml('marketCap', 'Market Cap', 'w-[9%]', 'right'),
+                getSortableHeaderHtml('volume', 'Volume', 'w-[9%]', 'right'),
+                getSortableHeaderHtml('sector', 'Sector', 'w-[10%]', 'left'),
+                getSortableHeaderHtml('industry', 'Industry', 'w-[10%]', 'left'),
                 getSortableHeaderHtml('beta', 'Beta', 'w-[6%]', 'right'),
                 `<th class="w-[8%] px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">AI Rating</th>`,
                 getSortableHeaderHtml('price', 'Price', 'w-[6%]', 'right'),
-                getSortableHeaderHtml('lastAnnualDividend', 'Dividend', 'w-[6%]', 'right')
+                getSortableHeaderHtml('lastAnnualDividend', 'Dividend', 'w-[6%]', 'right'),
+                getSortableHeaderHtml('cachedTimestamp', 'Cached On', 'w-[11%]', 'left')
             ].join('');
 
             const tableRows = data.map(stock => {
@@ -1937,6 +1943,7 @@ font-size: 0.75rem;
                      <td class="px-4 py-3 whitespace-nowrap text-sm text-center" data-rating-symbol="${stock.symbol}">${getRatingHtml(stock.symbol)}</td>
                      <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-right">${stock.price ? '$'+stock.price.toFixed(2) : 'N/A'}</td>
                      <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-right">${stock.lastAnnualDividend ? '$'+stock.lastAnnualDividend.toFixed(2) : 'N/A'}</td>
+                     <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${stock.cachedTimestamp ? new Date(stock.cachedTimestamp).toLocaleString() : 'N/A'}</td>
                 </tr>`;
             }).join('');
             container.innerHTML = `<div class="overflow-y-auto max-h-[60vh]"><table class="w-full table-fixed divide-y divide-gray-200"><thead class="bg-gray-50 sticky top-0"><tr>${headers}</tr></thead><tbody class="bg-white divide-y divide-gray-200">${tableRows}</tbody></table></div>`;
@@ -2090,7 +2097,7 @@ font-size: 0.75rem;
                          populateAiSummary(aiSummary, aiPrompt);
                          const dataToSave = { ...liveData, aiSummary, timestamp: new Date().toISOString() };
                          await saveTickerDetailsToFirebase(symbol, dataToSave);
-                         appConfig.cachedRatings[symbol] = aiSummary.rating;
+                         appConfig.cachedStockInfo[symbol] = { rating: aiSummary.rating, timestamp: dataToSave.timestamp };
                          updateRatingDisplayForSymbol(symbol);
                     } else {
                         document.getElementById('modal-key-metrics-content').innerHTML = '<p class="text-center text-red-500">Could not refresh data.</p>';
@@ -2141,7 +2148,7 @@ font-size: 0.75rem;
                     const { summary: aiSummary, prompt: aiPrompt } = await generateAiRating(cachedData);
                     populateAiSummary(aiSummary, aiPrompt);
                     await saveTickerDetailsToFirebase(symbol, { ...cachedData, aiSummary });
-                    appConfig.cachedRatings[symbol] = aiSummary.rating;
+                    appConfig.cachedStockInfo[symbol] = { rating: aiSummary.rating, timestamp: new Date().toISOString() };
                     updateRatingDisplayForSymbol(symbol);
                 }
             } else {
@@ -2155,7 +2162,7 @@ font-size: 0.75rem;
                     populateAiSummary(aiSummary, aiPrompt);
                     const dataToSave = { ...liveData, aiSummary, timestamp: new Date().toISOString() };
                     await saveTickerDetailsToFirebase(symbol, dataToSave);
-                    appConfig.cachedRatings[symbol] = aiSummary.rating;
+                    appConfig.cachedStockInfo[symbol] = { rating: aiSummary.rating, timestamp: dataToSave.timestamp };
                     updateRatingDisplayForSymbol(symbol);
                 } else {
                      document.getElementById('modal-key-metrics-content').innerHTML = '<p class="text-center text-red-500">Could not fetch financial data.</p>';
