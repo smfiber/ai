@@ -515,7 +515,7 @@ font-size: 0.75rem;
 <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth-compat.js"></script>
 
 <script>
-    // Version 5.2.6
+    // Version 5.2.7
     document.addEventListener("DOMContentLoaded", () => {
         // --- 1. Global Configuration Object ---
         const appConfig = {
@@ -750,8 +750,9 @@ font-size: 0.75rem;
             const thirtyMinutes = 30 * 60 * 1000;
             if (Date.now() - loginTimestamp > thirtyMinutes) {
                 console.log("Session expired after 30 minutes.");
+                clearSessionTimer();
                 alert("Your session has expired. Please sign in again.");
-                signOut();
+                signInWithGoogle();
             }
         }
         
