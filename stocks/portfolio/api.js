@@ -51,7 +51,7 @@ export async function callGeminiApi(prompt) {
     
     state.sessionLog.push({ type: 'prompt', timestamp: new Date(), content: prompt });
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${state.geminiApiKey}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${state.geminiApiKey}`;
     const body = { contents: [{ parts: [{ "text": prompt }] }] };
     const data = await callApi(url, {
         method: 'POST',
@@ -78,7 +78,7 @@ export async function callGeminiApiWithTools(contents) {
 
     state.sessionLog.push({ type: 'prompt', timestamp: new Date(), content: JSON.stringify(contents, null, 2) });
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${state.geminiApiKey}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${state.geminiApiKey}`;
     const data = await callApi(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -353,53 +353,90 @@ export async function calculatePortfolioHealthScore(portfolioStocks) {
     const stockScores = allStockData.map(fmpData => {
         if (!fmpData) return 50; // Assign a neutral score if data is missing
 
-        let score = 0;
-        let factors = 0;
+        // --- 1. Financial Health Score (50% weight) ---
+        let healthScore = 0;
+        let healthFactors = 0;
 
-        // Factor 1: Debt-to-Equity (lower is better)
+        // Factor 1a: Debt-to-Equity (lower is better)
         const debtToEquity = _getLatestAnnualMetric(fmpData, 'key_metrics_annual', 'debtToEquity');
         if (debtToEquity !== null) {
-            factors++;
-            if (debtToEquity < 0.5) score += 100;      // Very low debt
-            else if (debtToEquity < 1.0) score += 75; // Moderate debt
-            else if (debtToEquity < 2.0) score += 50; // High debt
-            else score += 25;                         // Very high debt
+            healthFactors++;
+            if (debtToEquity < 0.5) healthScore += 100;      // Very low debt
+            else if (debtToEquity < 1.0) healthScore += 75; // Moderate debt
+            else if (debtToEquity < 2.0) healthScore += 50; // High debt
+            else healthScore += 25;                         // Very high debt
         }
 
-        // Factor 2: Current Ratio (higher is better)
+        // Factor 1b: Current Ratio (higher is better)
         const currentRatio = _getLatestAnnualMetric(fmpData, 'key_metrics_annual', 'currentRatio');
         if (currentRatio !== null) {
-            factors++;
-            if (currentRatio > 2.0) score += 100;     // Very strong liquidity
-            else if (currentRatio > 1.5) score += 80; // Strong liquidity
-            else if (currentRatio > 1.0) score += 60; // Healthy liquidity
-            else score += 30;                         // Potential risk
+            healthFactors++;
+            if (currentRatio > 2.0) healthScore += 100;     // Very strong liquidity
+            else if (currentRatio > 1.5) healthScore += 80; // Strong liquidity
+            else if (currentRatio > 1.0) healthScore += 60; // Healthy liquidity
+            else healthScore += 30;                         // Potential risk
         }
 
-        // Factor 3: Return on Equity (ROE) (higher is better)
+        // Factor 1c: Return on Equity (ROE) (higher is better)
         const roe = _getLatestAnnualMetric(fmpData, 'ratios_annual', 'returnOnEquity');
         if (roe !== null) {
-            factors++;
-            if (roe > 0.20) score += 100; // Excellent
-            else if (roe > 0.15) score += 85; // Very Good
-            else if (roe > 0.10) score += 70; // Good
-            else if (roe > 0.0) score += 50;  // Positive
-            else score += 20;                 // Negative
+            healthFactors++;
+            if (roe > 0.20) healthScore += 100; // Excellent
+            else if (roe > 0.15) healthScore += 85; // Very Good
+            else if (roe > 0.10) healthScore += 70; // Good
+            else if (roe > 0.0) healthScore += 50;  // Positive
+            else healthScore += 20;                 // Negative
         }
         
-        // Factor 4: Net Profit Margin (higher is better)
+        // Factor 1d: Net Profit Margin (higher is better)
         const netProfitMargin = _getLatestAnnualMetric(fmpData, 'ratios_annual', 'netProfitMargin');
          if (netProfitMargin !== null) {
-            factors++;
-            if (netProfitMargin > 0.20) score += 100; // Excellent
-            else if (netProfitMargin > 0.10) score += 80; // Very Good
-            else if (netProfitMargin > 0.05) score += 60; // Good
-            else if (netProfitMargin > 0.0) score += 40;  // Profitable
-            else score += 10;                  // Unprofitable
+            healthFactors++;
+            if (netProfitMargin > 0.20) healthScore += 100; // Excellent
+            else if (netProfitMargin > 0.10) healthScore += 80; // Very Good
+            else if (netProfitMargin > 0.05) healthScore += 60; // Good
+            else if (netProfitMargin > 0.0) healthScore += 40;  // Profitable
+            else healthScore += 10;                  // Unprofitable
         }
 
-        // Return the average score for the stock, or a neutral 50 if no factors were found
-        return factors > 0 ? score / factors : 50;
+        const finalHealthScore = healthFactors > 0 ? healthScore / healthFactors : 50;
+
+        // --- 2. Risk Score (Beta) (25% weight) ---
+        let riskScore = 50; // Default neutral score for missing beta
+        const beta = fmpData?.profile?.[0]?.beta;
+        if (typeof beta === 'number') {
+            if (beta < 0.8) riskScore = 100;      // Very Low Risk
+            else if (beta < 1.0) riskScore = 80;  // Low Risk
+            else if (beta < 1.2) riskScore = 60;  // Average Risk
+            else if (beta < 1.5) riskScore = 40;  // Moderate-High Risk
+            else riskScore = 20;                  // High Risk
+        }
+
+        // --- 3. Analyst Sentiment Score (25% weight) ---
+        let sentimentScore = 50; // Default neutral score
+        const grades = fmpData?.stock_grade_news?.slice(0, 10) || [];
+        if (grades.length > 0) {
+            let sentimentPoints = 0;
+            grades.forEach(grade => {
+                const action = grade.action?.toLowerCase() || '';
+                const newGrade = grade.newGrade?.toLowerCase() || '';
+                if (action.includes('upgrade')) {
+                    sentimentPoints += 2;
+                } else if (action.includes('downgrade')) {
+                    sentimentPoints -= 2;
+                } else if (action.includes('initiate') && ['buy', 'outperform', 'strong buy', 'overweight'].some(g => newGrade.includes(g))) {
+                    sentimentPoints += 1;
+                }
+            });
+            // Normalize score from a potential range of -20 to +20 -> 0 to 100
+            const normalized = ((sentimentPoints + 20) / 40) * 100;
+            sentimentScore = Math.max(0, Math.min(100, normalized)); // Clamp between 0 and 100
+        }
+
+        // --- Final Weighted Score for the stock ---
+        const finalScore = (finalHealthScore * 0.50) + (riskScore * 0.25) + (sentimentScore * 0.25);
+        return finalScore;
+
     }).filter(score => score !== null);
 
     if (stockScores.length === 0) {
