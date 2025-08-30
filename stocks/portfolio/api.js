@@ -1,12 +1,12 @@
-import { CONSTANTS, state, MORNING_BRIEFING_PROMPT, NEWS_SENTIMENT_PROMPT, OPPORTUNITY_SCANNER_PROMPT, PORTFOLIO_ANALYSIS_PROMPT } from './config.js';
-import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { CONSTANTS, state, MORNING_BRIEFING_PROMPT, NEWS_SENTIMENT_PROMPT, OPPORTUNITY_SCANNER_PROMPT, PORTFOLIO_ANALYSIS_PROMPT, TREND_ANALYSIS_PROMPT } from './config.js';
+import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- UTILITY & SECURITY HELPERS (Moved from ui.js) ---
 function isValidHttpUrl(urlString) {
     if (typeof urlString !== 'string' || !urlString) return false;
     try {
         const url = new URL(urlString);
-        return url.protocol === "http:" || url.protocol === "https:";
+        return url.protocol === "http:" || url.protocol === "https:"
     } catch (_) {
         return false;
     }
@@ -451,12 +451,11 @@ export async function calculatePortfolioHealthScore(portfolioStocks) {
  * Internal helper to get a structured news summary for a single stock.
  * @param {string} ticker The stock ticker.
  * @param {string} companyName The company name.
+ * @param {Array} newsData The raw news articles from FMP.
  * @returns {Promise<object|null>} An object with the news summary or null on failure.
  */
-async function _getNewsAnalysisForScanner(ticker, companyName) {
+async function _getNewsAnalysisForScanner(ticker, companyName, newsData) {
     try {
-        const url = `https://financialmodelingprep.com/api/v3/stock_news?tickers=${ticker}&limit=10&apikey=${state.fmpApiKey}`;
-        const newsData = await callApi(url);
         const validArticles = filterValidNews(newsData);
         if (validArticles.length === 0) return null;
 
@@ -503,9 +502,18 @@ export async function runOpportunityScanner(stocksToScan, updateProgress) {
         try {
             updateProgress(processedCount, stocksToScan.length, `Analyzing ${stock.ticker}...`);
             
-            // Fetch necessary data in parallel
+            // --- Fetch and Save FMP News ---
+            const newsUrl = `https://financialmodelingprep.com/api/v3/stock_news?tickers=${stock.ticker}&limit=10&apikey=${state.fmpApiKey}`;
+            const newsData = await callApi(newsUrl);
+            const newsDocRef = doc(state.db, CONSTANTS.DB_COLLECTION_FMP_NEWS_CACHE, stock.ticker);
+            await setDoc(newsDocRef, {
+                cachedAt: Timestamp.now(),
+                articles: newsData
+            });
+
+            // --- Fetch other data in parallel ---
             const fmpDataPromise = getFmpStockData(stock.ticker);
-            const newsSummaryPromise = _getNewsAnalysisForScanner(stock.ticker, stock.companyName);
+            const newsSummaryPromise = _getNewsAnalysisForScanner(stock.ticker, stock.companyName, newsData);
             const [fmpData, newsSummary] = await Promise.all([fmpDataPromise, newsSummaryPromise]);
 
             if (!fmpData || !fmpData.profile || !fmpData.profile[0]) {
@@ -519,7 +527,6 @@ export async function runOpportunityScanner(stocksToScan, updateProgress) {
                 date: r.date, action: r.action, from: r.previousGrade, to: r.newGrade, firm: r.gradingCompany
             }));
 
-            // Assemble the data packet for the main prompt
             const dataPacket = {
                 companyName: stock.companyName,
                 tickerSymbol: stock.ticker,
@@ -546,11 +553,14 @@ export async function runOpportunityScanner(stocksToScan, updateProgress) {
             const resultJson = JSON.parse(resultStr.replace(/```json\n?|\n?```/g, ''));
 
             if (resultJson && resultJson.is_significant) {
-                opportunities.push({
+                const reportData = {
                     ticker: stock.ticker,
                     companyName: stock.companyName,
+                    scannedAt: Timestamp.now(),
                     ...resultJson
-                });
+                };
+                await addDoc(collection(state.db, CONSTANTS.DB_COLLECTION_SCANNER_RESULTS), reportData);
+                opportunities.push(reportData);
             }
         } catch (error) {
             console.error(`Error processing ${stock.ticker} in opportunity scanner:`, error);
@@ -606,5 +616,57 @@ export async function generatePortfolioAnalysis(userQuestion) {
         .replace('{userQuestion}', userQuestion)
         .replace('{portfolioJson}', JSON.stringify(portfolioDataForPrompt, null, 2));
 
+    return await callGeminiApi(prompt);
+}
+
+export async function generateTrendAnalysis(ticker) {
+    // 1. Get latest and historical scanner results
+    const scannerQuery = query(
+        collection(state.db, CONSTANTS.DB_COLLECTION_SCANNER_RESULTS),
+        where("ticker", "==", ticker),
+        orderBy("scannedAt", "desc")
+    );
+    const scannerSnapshot = await getDocs(scannerQuery);
+    const allScanResults = scannerSnapshot.docs.map(doc => ({ ...doc.data(), scannedAt: doc.data().scannedAt.toDate().toISOString().split('T')[0] }));
+    
+    if (allScanResults.length < 2) {
+        return "Not enough historical scanner data exists for this stock to perform a trend analysis. At least two past significant results are needed.";
+    }
+
+    const latestScanResult = allScanResults[0];
+    const historicalScanResults = allScanResults.slice(1);
+
+    // 2. Get historical news context
+    const newsDocRef = doc(state.db, CONSTANTS.DB_COLLECTION_FMP_NEWS_CACHE, ticker);
+    const newsDoc = await getDoc(newsDocRef);
+    let historicalNewsSummary = "No historical news context available.";
+    if (newsDoc.exists()) {
+        const articles = newsDoc.data().articles || [];
+        historicalNewsSummary = "Recent news headlines include: " + articles.slice(0, 5).map(a => `"${a.title}"`).join('; ');
+    }
+
+    // 3. Prepare payload for AI
+    const dataForPrompt = {
+        latest_scan_result: {
+            date: latestScanResult.scannedAt,
+            type: latestScanResult.type,
+            headline: latestScanResult.headline,
+            summary: latestScanResult.summary
+        },
+        historical_scan_results: historicalScanResults.map(r => ({
+            date: r.scannedAt,
+            type: r.type,
+            headline: r.headline
+        })),
+        historical_news_summary: historicalNewsSummary
+    };
+
+    // 4. Prepare and call the AI
+    const stockInfo = state.portfolioCache.find(s => s.ticker === ticker) || { companyName: ticker };
+    const prompt = TREND_ANALYSIS_PROMPT
+        .replace(/{companyName}/g, stockInfo.companyName)
+        .replace(/{tickerSymbol}/g, ticker)
+        .replace('{jsonData}', JSON.stringify(dataForPrompt, null, 2));
+    
     return await callGeminiApi(prompt);
 }
