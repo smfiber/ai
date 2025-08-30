@@ -458,7 +458,9 @@ export async function renderAllocationChart() {
                                 const formattedValue = formatCurrency(stockData.value);
                                 const total = item.dataset.tree.reduce((sum, d) => sum + d.value, 0);
                                 const percentage = ((stockData.value / total) * 100).toFixed(2);
-                                const changeFormatted = `${stockData.change >= 0 ? '+' : ''}${stockData.change.toFixed(2)}`;
+                                const changeFormatted = typeof stockData.change === 'number'
+                                    ? `${stockData.change >= 0 ? '+' : ''}${stockData.change.toFixed(2)}`
+                                    : 'N/A';
                                 return [
                                     `Value: ${formattedValue} (${percentage}%)`,
                                     `Day's Change: ${changeFormatted}`
