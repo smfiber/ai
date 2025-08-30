@@ -1,5 +1,5 @@
 // --- App Version ---
-export const APP_VERSION = "14.17.0";
+export const APP_VERSION = "14.18.0";
 
 // --- Shared State ---
 // This object will hold all the application's shared state.
@@ -18,6 +18,7 @@ export const state = {
     driveFolderId: null,
     portfolioCache: [],
     availableIndustries: [],
+    cashBalance: 0, // v14.18.0: Add cash balance to state
     sessionLog: [] // To hold prompts and responses for the current session
 };
 
@@ -74,6 +75,7 @@ export const CONSTANTS = {
     CLASS_HIDDEN: 'hidden',
     // Database Collections
     DB_COLLECTION_PORTFOLIO: 'portfolio_stocks',
+    DB_COLLECTION_USER_DATA: 'user_data', // v14.18.0: New collection for user-specific data like cash
     DB_COLLECTION_SECTOR_ANALYSIS: 'sector_analysis_runs',
     DB_COLLECTION_FMP_CACHE: 'fmp_cached_data',
     DB_COLLECTION_FMP_ENDPOINTS: 'fmp_endpoints',
