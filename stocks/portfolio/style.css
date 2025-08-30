@@ -249,4 +249,129 @@ body.modal-open {
 
 /*
  * =================================================================
- * AI-GENERATED CONTENT ST
+ * AI-GENERATED CONTENT STYLES
+ * =================================================================
+ */
+.prose h1 {
+    font-size: 1.875rem;
+    line-height: 2.25rem;
+    font-weight: 800;
+}
+.prose h2 {
+    font-size: 1.5rem;
+    line-height: 2rem;
+    font-weight: 700;
+    border-bottom: 1px solid #e5e7eb;
+    padding-bottom: 0.5rem;
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+}
+.prose h3 {
+    font-size: 1.25rem;
+    line-height: 1.75rem;
+    font-weight: 600;
+    margin-top: 1.5rem;
+    margin-bottom: 0.75rem;
+}
+.prose ul {
+    list-style-type: disc;
+    padding-left: 1.5rem;
+}
+.prose li {
+    margin-bottom: 0.5rem;
+}
+.prose p {
+    line-height: 1.6;
+    margin-bottom: 1rem;
+}
+
+/*
+ * =================================================================
+ * ANALYSIS TILES (v13.1.0)
+ * =================================================================
+ */
+.analysis-tile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    background-color: #f9fafb; /* bg-gray-50 */
+    border: 1px solid #e5e7eb; /* border-gray-200 */
+    border-radius: 0.75rem; /* rounded-xl */
+    padding: 1rem;
+    text-align: center;
+    transition: all 0.2s ease-in-out;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+}
+
+.analysis-tile:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    border-color: var(--color-primary);
+}
+
+.analysis-tile .tile-icon {
+    width: 2rem;
+    height: 2rem;
+    color: var(--color-primary);
+}
+
+.analysis-tile .tile-name {
+    font-weight: 600;
+    color: #374151; /* text-gray-700 */
+    font-size: 0.875rem; /* text-sm */
+}
+
+.analysis-tile.has-saved-report::after {
+    content: '';
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 9999px;
+    background-color: #22c55e; /* bg-green-500 */
+    border: 1px solid white;
+}
+
+/*
+ * =================================================================
+ * TOOLTIP STYLES (v13.1.0)
+ * =================================================================
+ */
+.custom-tooltip {
+    position: fixed;
+    background-color: #111827; /* bg-gray-900 */
+    color: white;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.375rem; /* rounded-md */
+    font-size: 0.75rem; /* text-xs */
+    z-index: 200; /* Ensure it's on top */
+    opacity: 0;
+    transition: opacity 0.2s ease-in-out;
+    max-width: 250px;
+    pointer-events: none; /* Prevent tooltip from blocking mouse events */
+}
+
+/*
+ * =================================================================
+ * AI CO-PILOT CHAT STYLES (v14.22.0)
+ * =================================================================
+ */
+#portfolio-chat-response {
+    transition: background-color 0.3s ease;
+}
+
+#portfolio-chat-form button:disabled {
+    background-color: #6b7280; /* bg-gray-500 */
+    cursor: not-allowed;
+}
+
+#portfolio-chat-response .loader {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-width: 3px;
+}
