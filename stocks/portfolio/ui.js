@@ -1,5 +1,5 @@
 import { CONSTANTS, SECTORS, SECTOR_ICONS, state, NEWS_SENTIMENT_PROMPT, promptMap, creativePromptMap, INVESTMENT_MEMO_PROMPT, ENABLE_STARTER_PLAN_MODE, STARTER_SYMBOLS } from './config.js';
-import { getFmpStockData, callApi, filterValidNews, callGeminiApi, generatePolishedArticle, getDriveToken, getOrCreateDriveFolder, createDriveFile, getGroupedFmpData, generateMorningBriefing } from './api.js';
+import { getFmpStockData, callApi, filterValidNews, callGeminiApi, generatePolishedArticle, getDriveToken, getOrCreateDriveFolder, createDriveFile, getGroupedFmpData, generateMorningBriefing, calculatePortfolioHealthScore } from './api.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- PROMPT MAPPING ---
@@ -276,6 +276,36 @@ export async function renderMorningBriefing() {
             <p class="font-semibold">Could not generate briefing.</p>
             <p class="text-sm">${error.message}</p>
         </div>`;
+    }
+}
+
+export async function renderPortfolioHealthScore() {
+    const scoreDisplay = document.getElementById('health-score-display');
+    if (!scoreDisplay) return;
+
+    try {
+        const portfolioStocks = state.portfolioCache.filter(s => s.status === 'Portfolio');
+        if (portfolioStocks.length === 0) {
+            scoreDisplay.textContent = '--';
+            return;
+        }
+        
+        const score = await calculatePortfolioHealthScore(portfolioStocks);
+        scoreDisplay.textContent = score;
+        
+        // Update color based on score
+        scoreDisplay.classList.remove('text-green-500', 'text-yellow-500', 'text-red-500');
+        if (score >= 75) {
+            scoreDisplay.classList.add('text-green-500');
+        } else if (score >= 50) {
+            scoreDisplay.classList.add('text-yellow-500');
+        } else {
+            scoreDisplay.classList.add('text-red-500');
+        }
+
+    } catch (error) {
+        console.error("Error calculating portfolio health score:", error);
+        scoreDisplay.textContent = '--';
     }
 }
 
