@@ -1,5 +1,5 @@
 import { CONSTANTS, SECTORS, SECTOR_ICONS, state, NEWS_SENTIMENT_PROMPT, promptMap, creativePromptMap, DISRUPTOR_ANALYSIS_PROMPT, MACRO_PLAYBOOK_PROMPT, INDUSTRY_CAPITAL_ALLOCATORS_PROMPT, INDUSTRY_DISRUPTOR_ANALYSIS_PROMPT, INDUSTRY_MACRO_PLAYBOOK_PROMPT, ONE_SHOT_INDUSTRY_TREND_PROMPT, FORTRESS_ANALYSIS_PROMPT, PHOENIX_ANALYSIS_PROMPT, PICK_AND_SHOVEL_PROMPT, LINCHPIN_ANALYSIS_PROMPT, HIDDEN_VALUE_PROMPT, UNTOUCHABLES_ANALYSIS_PROMPT, INVESTMENT_MEMO_PROMPT, ENABLE_STARTER_PLAN_MODE, STARTER_SYMBOLS } from './config.js';
-import { getFmpStockData, callApi, filterValidNews, callGeminiApi, generatePolishedArticle, getDriveToken, getOrCreateDriveFolder, createDriveFile, findStocksByIndustry, searchSectorNews, findStocksBySector, getGroupedFmpData, synthesizeAndRankCompanies, generateDeepDiveReport } from './api.js';
+import { getFmpStockData, callApi, filterValidNews, callGeminiApi, generatePolishedArticle, getDriveToken, getOrCreateDriveFolder, createDriveFile, findStocksByIndustry, searchSectorNews, findStocksBySector, getGroupedFmpData, synthesizeAndRankCompanies, generateDeepDiveReport, generateMorningBriefing } from './api.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- PROMPT MAPPING ---
@@ -246,6 +246,38 @@ async function handleRefreshFmpData(symbol) {
 
 
 // --- PORTFOLIO & DASHBOARD MANAGEMENT ---
+
+export async function renderMorningBriefing() {
+    const briefingContainer = document.getElementById('morning-briefing-content');
+    const briefingTitle = document.querySelector('#dashboard-section h3');
+    if (!briefingContainer || !briefingTitle) return;
+
+    try {
+        const currentDate = new Date().toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+        briefingTitle.textContent = `AI Morning Briefing for ${currentDate}`;
+
+        const portfolioStocks = state.portfolioCache.filter(s => s.status === 'Portfolio');
+
+        if (portfolioStocks.length === 0) {
+            briefingContainer.innerHTML = `<div class="text-center p-8 text-gray-500">Add stocks to your portfolio to see your morning briefing.</div>`;
+            return;
+        }
+
+        const briefingMarkdown = await generateMorningBriefing(portfolioStocks);
+        briefingContainer.innerHTML = marked.parse(briefingMarkdown);
+
+    } catch (error) {
+        console.error("Error generating morning briefing:", error);
+        briefingContainer.innerHTML = `<div class="text-center p-4 text-red-500 bg-red-50 rounded-lg">
+            <p class="font-semibold">Could not generate briefing.</p>
+            <p class="text-sm">${error.message}</p>
+        </div>`;
+    }
+}
 
 async function _renderGroupedStockList(container, stocksWithData, listType) {
     container.innerHTML = ''; 
