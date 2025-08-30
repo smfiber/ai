@@ -1,5 +1,5 @@
 import { CONSTANTS, SECTORS, SECTOR_ICONS, state, NEWS_SENTIMENT_PROMPT, promptMap, creativePromptMap, INVESTMENT_MEMO_PROMPT, ENABLE_STARTER_PLAN_MODE, STARTER_SYMBOLS } from './config.js';
-import { getFmpStockData, callApi, filterValidNews, callGeminiApi, generatePolishedArticle, getDriveToken, getOrCreateDriveFolder, createDriveFile, getGroupedFmpData, generateMorningBriefing, calculatePortfolioHealthScore, runOpportunityScanner } from './api.js';
+import { getFmpStockData, callApi, filterValidNews, callGeminiApi, generatePolishedArticle, getDriveToken, getOrCreateDriveFolder, createDriveFile, getGroupedFmpData, generateMorningBriefing, calculatePortfolioHealthScore, runOpportunityScanner, generatePortfolioAnalysis } from './api.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- PROMPT MAPPING ---
@@ -1693,6 +1693,36 @@ function initializeTooltips() {
     }
 }
 
+async function handlePortfolioChatSubmit(e) {
+    e.preventDefault();
+    const form = document.getElementById('portfolio-chat-form');
+    const input = document.getElementById('portfolio-chat-input');
+    const button = form.querySelector('button[type="submit"]');
+    const responseContainer = document.getElementById('portfolio-chat-response');
+    const userQuestion = input.value.trim();
+
+    if (!userQuestion) {
+        displayMessageInModal("Please enter a question.", "warning");
+        return;
+    }
+
+    input.disabled = true;
+    button.disabled = true;
+    responseContainer.innerHTML = '<div class="flex justify-center items-center h-full"><div class="loader"></div></div>';
+
+    try {
+        const markdownResponse = await generatePortfolioAnalysis(userQuestion);
+        responseContainer.innerHTML = marked.parse(markdownResponse);
+    } catch (error) {
+        console.error("Error during portfolio chat analysis:", error);
+        responseContainer.innerHTML = `<p class="text-red-500"><strong>Error:</strong> ${error.message}</p>`;
+    } finally {
+        input.disabled = false;
+        button.disabled = false;
+        input.value = '';
+    }
+}
+
 export function setupEventListeners() {
     initializeTooltips();
     
@@ -1723,6 +1753,8 @@ export function setupEventListeners() {
 
     document.getElementById('manage-broad-endpoint-form')?.addEventListener('submit', handleSaveBroadEndpoint);
     document.getElementById('cancel-broad-endpoint-edit')?.addEventListener('click', cancelBroadEndpointEdit);
+
+    document.getElementById('portfolio-chat-form')?.addEventListener('submit', handlePortfolioChatSubmit);
 
     document.querySelectorAll('.save-to-drive-button').forEach(button => {
         button.addEventListener('click', (e) => {
