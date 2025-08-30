@@ -1,4 +1,4 @@
-import { CONSTANTS, state, MORNING_BRIEFING_PROMPT } from './config.js';
+import { CONSTANTS, state, MORNING_BRIEFING_PROMPT, NEWS_SENTIMENT_PROMPT, OPPORTUNITY_SCANNER_PROMPT } from './config.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- UTILITY & SECURITY HELPERS (Moved from ui.js) ---
@@ -445,4 +445,120 @@ export async function calculatePortfolioHealthScore(portfolioStocks) {
 
     const totalScore = stockScores.reduce((acc, current) => acc + current, 0);
     return Math.round(totalScore / stockScores.length);
+}
+
+/**
+ * Internal helper to get a structured news summary for a single stock.
+ * @param {string} ticker The stock ticker.
+ * @param {string} companyName The company name.
+ * @returns {Promise<object|null>} An object with the news summary or null on failure.
+ */
+async function _getNewsAnalysisForScanner(ticker, companyName) {
+    try {
+        const url = `https://financialmodelingprep.com/api/v3/stock_news?tickers=${ticker}&limit=10&apikey=${state.fmpApiKey}`;
+        const newsData = await callApi(url);
+        const validArticles = filterValidNews(newsData);
+        if (validArticles.length === 0) return null;
+
+        const articlesForPrompt = validArticles.map(a => ({
+            title: a.title,
+            snippet: a.text,
+            publicationDate: a.publishedDate ? a.publishedDate.split(' ')[0] : 'N/A'
+        }));
+
+        const prompt = NEWS_SENTIMENT_PROMPT
+            .replace('{companyName}', companyName)
+            .replace('{tickerSymbol}', ticker)
+            .replace('{news_articles_json}', JSON.stringify(articlesForPrompt, null, 2));
+
+        const rawResult = await callGeminiApi(prompt);
+        const summaryMatch = rawResult.match(/## News Narrative & Pulse([\s\S]*)/);
+        const summaryMarkdown = summaryMatch ? summaryMatch[1].trim() : "Could not parse summary.";
+        
+        // Extract dominant narrative for a concise summary
+        const narrativeMatch = summaryMarkdown.match(/\*\*Dominant Narrative:\*\*\s*(.*)/);
+        const overallSentimentMatch = summaryMarkdown.match(/\*\*Overall Sentiment:\*\*\s*(.*)/);
+
+        return {
+            overall_sentiment: overallSentimentMatch ? overallSentimentMatch[1].trim() : "N/A",
+            dominant_narrative: narrativeMatch ? narrativeMatch[1].trim() : "N/A"
+        };
+    } catch (error) {
+        console.error(`Failed to get news analysis for ${ticker}:`, error);
+        return null;
+    }
+}
+
+/**
+ * Runs the opportunity scanner across a list of stocks.
+ * @param {Array<object>} stocksToScan - Array of stock objects from the portfolio cache.
+ * @param {function} updateProgress - Callback function to update UI with progress.
+ * @returns {Promise<Array<object>>} A promise that resolves to an array of significant opportunities.
+ */
+export async function runOpportunityScanner(stocksToScan, updateProgress) {
+    const opportunities = [];
+    let processedCount = 0;
+    
+    for (const stock of stocksToScan) {
+        try {
+            updateProgress(processedCount, stocksToScan.length, `Analyzing ${stock.ticker}...`);
+            
+            // Fetch necessary data in parallel
+            const fmpDataPromise = getFmpStockData(stock.ticker);
+            const newsSummaryPromise = _getNewsAnalysisForScanner(stock.ticker, stock.companyName);
+            const [fmpData, newsSummary] = await Promise.all([fmpDataPromise, newsSummaryPromise]);
+
+            if (!fmpData || !fmpData.profile || !fmpData.profile[0]) {
+                console.warn(`Skipping ${stock.ticker} due to missing profile data.`);
+                processedCount++;
+                continue;
+            }
+
+            const profile = fmpData.profile[0];
+            const analystRatings = (fmpData.stock_grade_news || []).slice(0, 5).map(r => ({
+                date: r.date, action: r.action, from: r.previousGrade, to: r.newGrade, firm: r.gradingCompany
+            }));
+
+            // Assemble the data packet for the main prompt
+            const dataPacket = {
+                companyName: stock.companyName,
+                tickerSymbol: stock.ticker,
+                price_action: {
+                    current_price: profile.price,
+                    '50_day_ma': profile.priceAvg50,
+                    '200_day_ma': profile.priceAvg200,
+                    '52_week_high': profile.yearHigh,
+                    '52_week_low': profile.yearLow,
+                },
+                recent_analyst_ratings: analystRatings,
+                recent_news_summary: newsSummary || {
+                    overall_sentiment: "N/A",
+                    dominant_narrative: "No recent news found."
+                }
+            };
+
+            const prompt = OPPORTUNITY_SCANNER_PROMPT
+                .replace('{companyName}', stock.companyName)
+                .replace('{tickerSymbol}', stock.ticker)
+                .replace('{jsonData}', JSON.stringify(dataPacket, null, 2));
+
+            const resultStr = await callGeminiApi(prompt);
+            const resultJson = JSON.parse(resultStr.replace(/```json\n?|\n?```/g, ''));
+
+            if (resultJson && resultJson.is_significant) {
+                opportunities.push({
+                    ticker: stock.ticker,
+                    companyName: stock.companyName,
+                    ...resultJson
+                });
+            }
+        } catch (error) {
+            console.error(`Error processing ${stock.ticker} in opportunity scanner:`, error);
+        } finally {
+            processedCount++;
+        }
+    }
+    
+    updateProgress(stocksToScan.length, stocksToScan.length, "Scan complete.");
+    return opportunities;
 }
