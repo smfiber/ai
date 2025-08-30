@@ -1,5 +1,5 @@
 // --- App Version ---
-export const APP_VERSION = "14.21.0";
+export const APP_VERSION = "14.22.0";
 
 // --- Shared State ---
 // This object will hold all the application's shared state.
@@ -642,6 +642,23 @@ If no significant divergence is found, return:
 }
 `.trim();
 
+export const PORTFOLIO_ANALYSIS_PROMPT = `
+Role: You are a professional portfolio analyst AI. Your task is to answer a specific question about an investment portfolio based *only* on the provided JSON data. Your tone should be objective, data-driven, and clear.
+
+Data Instructions:
+- Your entire analysis MUST be based exclusively on the provided JSON data which contains profiles, key metrics, and news summaries for every stock in the portfolio.
+- Do NOT use any external knowledge or make assumptions beyond what is in the data.
+- If the data is insufficient to answer the question, state that clearly and explain what data is missing.
+
+User's Question:
+"{userQuestion}"
+
+Portfolio Data (JSON):
+{portfolioJson}
+
+Based on the user's question and the portfolio data, provide a concise and direct answer in markdown format.
+`.trim();
+
 export const promptMap = {
     'FinancialAnalysis': {
         prompt: FINANCIAL_ANALYSIS_PROMPT,
@@ -686,6 +703,10 @@ export const promptMap = {
     'OpportunityScanner': {
         prompt: OPPORTUNITY_SCANNER_PROMPT,
         requires: ['profile', 'stock_grade_news'] // News will be fetched separately
+    },
+    'PortfolioAnalysis': {
+        prompt: PORTFOLIO_ANALYSIS_PROMPT,
+        requires: [] // Data is gathered dynamically for the whole portfolio
     }
 };
 
