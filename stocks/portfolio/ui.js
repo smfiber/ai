@@ -376,50 +376,69 @@ export async function renderAllocationChart() {
         const dataPromises = portfolioStocks.map(stock => getFmpStockData(stock.ticker));
         const allStockData = await Promise.all(dataPromises);
 
-        const sectorAllocations = allStockData.reduce((acc, fmpData, index) => {
+        const chartData = [];
+        allStockData.forEach((fmpData, index) => {
             const stock = portfolioStocks[index];
             const profile = fmpData?.profile?.[0];
             const price = profile?.price;
             const sector = stock.sector || 'Uncategorized';
+            const change = profile?.change || 0;
 
             if (price && typeof price === 'number' && stock.shares > 0) {
                 const holdingValue = price * stock.shares;
-                if (!acc[sector]) {
-                    acc[sector] = 0;
-                }
-                acc[sector] += holdingValue;
+                chartData.push({
+                    sector: sector,
+                    value: holdingValue,
+                    ticker: stock.ticker,
+                    change: change
+                });
             }
-            return acc;
-        }, {});
-
-        const labels = Object.keys(sectorAllocations);
-        const data = Object.values(sectorAllocations);
+        });
 
         if (cashBalance > 0) {
-            labels.push('Cash');
-            data.push(cashBalance);
+            chartData.push({
+                sector: 'Cash',
+                value: cashBalance,
+                ticker: 'CASH',
+                change: 0
+            });
         }
-
-        if (labels.length === 0) {
+        
+        if (chartData.length === 0) {
             container.innerHTML = `<p class="text-sm text-gray-400">Could not calculate holding values.</p>`;
             return;
         }
 
-        const chartColors = [
-            '#4f46e5', '#10b981', '#ef4444', '#f59e0b', '#3b82f6', '#8b5cf6', 
-            '#ec4899', '#6b7280', '#14b8a6', '#f97316', '#0ea5e9'
-        ];
-
         new Chart(newCanvas.getContext('2d'), {
-            type: 'doughnut',
+            type: 'treemap',
             data: {
-                labels: labels,
                 datasets: [{
                     label: 'Portfolio Allocation',
-                    data: data,
-                    backgroundColor: chartColors.slice(0, labels.length),
-                    borderColor: '#f9fafb',
-                    borderWidth: 2
+                    tree: chartData,
+                    key: 'value',
+                    groups: ['sector'],
+                    backgroundColor(ctx) {
+                        if (ctx.type !== 'data' || !ctx.raw) return 'transparent';
+                        const change = ctx.raw._data.change;
+                        if (change > 0.5) return 'rgba(16, 185, 129, 0.9)';   // Strong Green
+                        if (change > 0) return 'rgba(16, 185, 129, 0.6)';     // Green
+                        if (change < -0.5) return 'rgba(239, 68, 68, 0.9)';   // Strong Red
+                        if (change < 0) return 'rgba(239, 68, 68, 0.6)';     // Red
+                        return 'rgba(156, 163, 175, 0.7)'; // Gray
+                    },
+                    labels: {
+                        display: true,
+                        formatter(ctx) {
+                            if (ctx.raw) {
+                                return [ctx.raw._data.ticker, formatCurrency(ctx.raw.v)];
+                            }
+                            return [];
+                        },
+                        color: 'white',
+                        font: { size: 12, weight: 'bold' },
+                        align: 'center',
+                        position: 'center'
+                    }
                 }]
             },
             options: {
@@ -427,28 +446,23 @@ export async function renderAllocationChart() {
                 maintainAspectRatio: false,
                 plugins: {
                     legend: {
-                        position: 'bottom',
-                        labels: {
-                            boxWidth: 12,
-                            padding: 15,
-                            font: {
-                                size: 10
-                            }
-                        }
+                        display: false
                     },
                     tooltip: {
                         callbacks: {
-                            label: function(context) {
-                                let label = context.label || '';
-                                if (label) {
-                                    label += ': ';
-                                }
-                                if (context.parsed !== null) {
-                                    const total = context.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
-                                    const percentage = ((context.parsed / total) * 100).toFixed(2);
-                                    label += `${formatCurrency(context.parsed)} (${percentage}%)`;
-                                }
-                                return label;
+                            title(items) {
+                                return items[0].raw._data.ticker;
+                            },
+                            label(item) {
+                                const stockData = item.raw._data;
+                                const formattedValue = formatCurrency(stockData.value);
+                                const total = item.dataset.tree.reduce((sum, d) => sum + d.value, 0);
+                                const percentage = ((stockData.value / total) * 100).toFixed(2);
+                                const changeFormatted = `${stockData.change >= 0 ? '+' : ''}${stockData.change.toFixed(2)}`;
+                                return [
+                                    `Value: ${formattedValue} (${percentage}%)`,
+                                    `Day's Change: ${changeFormatted}`
+                                ];
                             }
                         }
                     }
