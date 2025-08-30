@@ -1,4 +1,4 @@
-import { CONSTANTS, state } from './config.js';
+import { CONSTANTS, state, MORNING_BRIEFING_PROMPT } from './config.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- UTILITY & SECURITY HELPERS (Moved from ui.js) ---
@@ -51,7 +51,7 @@ export async function callGeminiApi(prompt) {
     
     state.sessionLog.push({ type: 'prompt', timestamp: new Date(), content: prompt });
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${state.geminiApiKey}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${state.geminiApiKey}`;
     const body = { contents: [{ parts: [{ "text": prompt }] }] };
     const data = await callApi(url, {
         method: 'POST',
@@ -121,6 +121,67 @@ export async function generatePolishedArticle(initialPrompt, loadingMessageEleme
 
     return finalArticle;
 }
+
+export async function generateMorningBriefing(portfolioStocks) {
+    if (!portfolioStocks || portfolioStocks.length === 0) {
+        return "Your portfolio is empty. Please add stocks to generate a briefing.";
+    }
+
+    // 1. Fetch all necessary data in parallel
+    const dataPromises = portfolioStocks.map(stock => getFmpStockData(stock.ticker));
+    
+    const tickersString = portfolioStocks.map(s => s.ticker).join(',');
+    const newsUrl = `https://financialmodelingprep.com/api/v3/stock_news?tickers=${tickersString}&limit=5&apikey=${state.fmpApiKey}`;
+    const newsPromise = callApi(newsUrl);
+
+    const [allStockData, allNews] = await Promise.all([
+        Promise.all(dataPromises),
+        newsPromise
+    ]);
+
+    // 2. Consolidate data for the prompt
+    const portfolioDataForPrompt = portfolioStocks.map((stock, index) => {
+        const stockData = allStockData[index];
+        const profile = stockData?.profile?.[0] || {};
+        const grades = stockData?.stock_grade_news?.slice(0, 3) || [];
+        
+        const stockNews = allNews.filter(n => n.symbol === stock.ticker).map(n => ({
+            headline: n.title,
+            source: n.site
+        }));
+
+        return {
+            ticker: stock.ticker,
+            companyName: stock.companyName,
+            profile: {
+                price: profile.price,
+                change: profile.change,
+                changesPercentage: profile.changesPercentage
+            },
+            news: stockNews,
+            analyst_grades: grades.map(g => ({
+                company: g.gradingCompany,
+                action: g.action,
+                from: g.previousGrade,
+                to: g.newGrade
+            }))
+        };
+    });
+
+    // 3. Prepare and call the AI
+    const currentDate = new Date().toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+    });
+
+    const prompt = MORNING_BRIEFING_PROMPT
+        .replace('{portfolioJson}', JSON.stringify({ portfolio_stocks: portfolioDataForPrompt }, null, 2))
+        .replace('{currentDate}', currentDate);
+
+    return await callGeminiApi(prompt);
+}
+
 
 export async function getFmpStockData(symbol) {
     const fmpCacheRef = collection(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, symbol, 'endpoints');
