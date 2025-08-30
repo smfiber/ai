@@ -319,3 +319,93 @@ export async function createDriveFile(folderId, fileName, content) {
     
     return response;
 }
+
+// --- PORTFOLIO HEALTH SCORE ---
+/**
+ * Helper to get the most recent annual value for a given metric from FMP data.
+ * @param {object} fmpData The cached FMP data for a single stock.
+ * @param {string} endpoint The endpoint name (e.g., 'key_metrics_annual').
+ * @param {string} metric The metric key (e.g., 'debtToEquity').
+ * @returns {number|null} The latest value or null if not found.
+ */
+function _getLatestAnnualMetric(fmpData, endpoint, metric) {
+    if (!fmpData || !fmpData[endpoint] || !Array.isArray(fmpData[endpoint]) || fmpData[endpoint].length === 0) {
+        return null;
+    }
+    // FMP data is usually ordered most recent first.
+    const latestRecord = fmpData[endpoint][0];
+    return latestRecord[metric] ?? null;
+}
+
+/**
+ * Calculates a health score for the entire portfolio.
+ * @param {Array<object>} portfolioStocks - Array of stock objects from the portfolio cache.
+ * @returns {Promise<number>} A score from 0 to 100.
+ */
+export async function calculatePortfolioHealthScore(portfolioStocks) {
+    if (!portfolioStocks || portfolioStocks.length === 0) {
+        return 0; // Return 0 if portfolio is empty
+    }
+
+    const dataPromises = portfolioStocks.map(stock => getFmpStockData(stock.ticker));
+    const allStockData = await Promise.all(dataPromises);
+
+    const stockScores = allStockData.map(fmpData => {
+        if (!fmpData) return 50; // Assign a neutral score if data is missing
+
+        let score = 0;
+        let factors = 0;
+
+        // Factor 1: Debt-to-Equity (lower is better)
+        const debtToEquity = _getLatestAnnualMetric(fmpData, 'key_metrics_annual', 'debtToEquity');
+        if (debtToEquity !== null) {
+            factors++;
+            if (debtToEquity < 0.5) score += 100;      // Very low debt
+            else if (debtToEquity < 1.0) score += 75; // Moderate debt
+            else if (debtToEquity < 2.0) score += 50; // High debt
+            else score += 25;                         // Very high debt
+        }
+
+        // Factor 2: Current Ratio (higher is better)
+        const currentRatio = _getLatestAnnualMetric(fmpData, 'key_metrics_annual', 'currentRatio');
+        if (currentRatio !== null) {
+            factors++;
+            if (currentRatio > 2.0) score += 100;     // Very strong liquidity
+            else if (currentRatio > 1.5) score += 80; // Strong liquidity
+            else if (currentRatio > 1.0) score += 60; // Healthy liquidity
+            else score += 30;                         // Potential risk
+        }
+
+        // Factor 3: Return on Equity (ROE) (higher is better)
+        const roe = _getLatestAnnualMetric(fmpData, 'ratios_annual', 'returnOnEquity');
+        if (roe !== null) {
+            factors++;
+            if (roe > 0.20) score += 100; // Excellent
+            else if (roe > 0.15) score += 85; // Very Good
+            else if (roe > 0.10) score += 70; // Good
+            else if (roe > 0.0) score += 50;  // Positive
+            else score += 20;                 // Negative
+        }
+        
+        // Factor 4: Net Profit Margin (higher is better)
+        const netProfitMargin = _getLatestAnnualMetric(fmpData, 'ratios_annual', 'netProfitMargin');
+         if (netProfitMargin !== null) {
+            factors++;
+            if (netProfitMargin > 0.20) score += 100; // Excellent
+            else if (netProfitMargin > 0.10) score += 80; // Very Good
+            else if (netProfitMargin > 0.05) score += 60; // Good
+            else if (netProfitMargin > 0.0) score += 40;  // Profitable
+            else score += 10;                  // Unprofitable
+        }
+
+        // Return the average score for the stock, or a neutral 50 if no factors were found
+        return factors > 0 ? score / factors : 50;
+    }).filter(score => score !== null);
+
+    if (stockScores.length === 0) {
+        return 50; // Return neutral score if no stocks could be scored
+    }
+
+    const totalScore = stockScores.reduce((acc, current) => acc + current, 0);
+    return Math.round(totalScore / stockScores.length);
+}
