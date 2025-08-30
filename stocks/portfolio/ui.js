@@ -1174,7 +1174,7 @@ async function renderPortfolioManagerList() {
             const sharesDisplay = stock.status === 'Portfolio' && stock.shares > 0
                 ? `<p class="text-sm text-gray-500">${stock.shares} Shares</p>`
                 : '';
-            
+
             const fmpData = fmpDataMap.get(stock.ticker);
             const price = fmpData?.profile?.[0]?.price;
             const totalValue = (price && stock.shares) ? price * stock.shares : 0;
@@ -1188,7 +1188,7 @@ async function renderPortfolioManagerList() {
                             ${sharesDisplay}
                         </div>
                     </div>
-                     <div class="flex items-center gap-4">
+                    <div class="flex items-center gap-4">
                         <div class="text-right">
                             <p class="font-semibold text-gray-800">${totalValue > 0 ? formatCurrency(totalValue) : ''}</p>
                             <p class="text-sm text-gray-500">${price ? `${formatCurrency(price)}/share` : ''}</p>
