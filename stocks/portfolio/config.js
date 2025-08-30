@@ -1,5 +1,5 @@
 // --- App Version ---
-export const APP_VERSION = "14.20.0";
+export const APP_VERSION = "14.21.0";
 
 // --- Shared State ---
 // This object will hold all the application's shared state.
@@ -604,6 +604,44 @@ Review the 'analyst_grades' for all stocks. Report any notable upgrades, downgra
 Conclude with a 1-2 sentence summary that synthesizes the above points. What is the overall "story" for this portfolio heading into the trading day? Is it facing headwinds from negative news, enjoying tailwinds from positive earnings, or is it a mixed picture?
 `.trim();
 
+export const OPPORTUNITY_SCANNER_PROMPT = `
+Role: You are an AI financial analyst specializing in detecting narrative inflection points and data divergences. Your goal is to help an investor operating on a "buy low, sell high" strategy.
+
+Task: Analyze the provided data packet for {companyName} ({tickerSymbol}). Your task is to identify if a significant bullish or bearish narrative shift is occurring that warrants an investor's immediate attention. You are looking for CONFLICTS and DIVERGENCES between technicals, fundamentals, and news flow.
+
+Data Packet:
+{jsonData}
+
+Analysis Framework:
+1.  **Bullish Divergence (A "Buy Low" Signal):** Look for situations where the price action is weak, but the underlying news or analyst sentiment is turning positive.
+    * Example: The stock price is below its 50-day moving average, but the company just received two analyst upgrades and a wave of positive news about a new product.
+2.  **Bearish Divergence (A "Sell High" Signal):** Look for situations where the price action is strong, but the underlying news or analyst sentiment is turning negative.
+    * Example: The stock price is near its 52-week high, but several analysts have recently downgraded it to "Hold" and news has emerged about new regulatory scrutiny.
+
+Output Format:
+You MUST return a single, clean JSON object. Do not add any text before or after the JSON block.
+The JSON object must have the following structure:
+{
+  "is_significant": boolean,
+  "type": "Bullish" | "Bearish" | "Neutral",
+  "headline": string,
+  "summary": string
+}
+
+-   **is_significant**: Set to 'true' only if a clear, actionable divergence is found. Otherwise, set to 'false'.
+-   **type**: Classify the signal as "Bullish", "Bearish", or "Neutral".
+-   **headline**: A very brief, punchy headline summarizing the divergence (e.g., "Positive News Diverges From Weak Price Action").
+-   **summary**: A 1-2 sentence explanation of the specific divergence, mentioning the key data points that are in conflict and explaining the potential opportunity or risk for an investor.
+
+If no significant divergence is found, return:
+{
+  "is_significant": false,
+  "type": "Neutral",
+  "headline": "No Significant Shift Detected",
+  "summary": "The stock's current price action, news flow, and analyst sentiment appear to be aligned. No actionable divergence was found."
+}
+`.trim();
+
 export const promptMap = {
     'FinancialAnalysis': {
         prompt: FINANCIAL_ANALYSIS_PROMPT,
@@ -644,6 +682,10 @@ export const promptMap = {
     'InvestmentMemo': {
         prompt: INVESTMENT_MEMO_PROMPT,
         requires: [] // This prompt uses other reports, not raw FMP data.
+    },
+    'OpportunityScanner': {
+        prompt: OPPORTUNITY_SCANNER_PROMPT,
+        requires: ['profile', 'stock_grade_news'] // News will be fetched separately
     }
 };
 
