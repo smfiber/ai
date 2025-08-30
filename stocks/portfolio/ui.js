@@ -381,7 +381,7 @@ export async function renderAllocationChart() {
             const stock = portfolioStocks[index];
             const profile = fmpData?.profile?.[0];
             const price = profile?.price;
-            const sector = stock.sector || 'Uncategorized';
+            const sector = profile?.sector || stock.sector || 'Uncategorized';
             const change = profile?.change || 0;
 
             if (price && typeof price === 'number' && stock.shares > 0) {
@@ -1118,7 +1118,7 @@ function renderOverviewCard(data, symbol, status) {
 }
 
 // --- PORTFOLIO MANAGER MODAL ---
-function renderPortfolioManagerList() {
+async function renderPortfolioManagerList() {
     const container = document.getElementById('portfolio-manager-list-container');
     if (!container) return;
     
@@ -1141,6 +1141,15 @@ function renderPortfolioManagerList() {
         listWrapper.innerHTML = `<p class="text-center text-gray-500 p-8">No stocks in your portfolio or watchlist.</p>`;
         return;
     }
+
+    const fmpDataPromises = state.portfolioCache.map(stock => getFmpStockData(stock.ticker));
+    const fmpDataResults = await Promise.all(fmpDataPromises);
+    const fmpDataMap = new Map();
+    state.portfolioCache.forEach((stock, index) => {
+        if (fmpDataResults[index]) {
+            fmpDataMap.set(stock.ticker, fmpDataResults[index]);
+        }
+    });
 
     const groupedBySector = state.portfolioCache.reduce((acc, stock) => {
         const sector = stock.sector || 'Uncategorized';
@@ -1165,6 +1174,10 @@ function renderPortfolioManagerList() {
             const sharesDisplay = stock.status === 'Portfolio' && stock.shares > 0
                 ? `<p class="text-sm text-gray-500">${stock.shares} Shares</p>`
                 : '';
+            
+            const fmpData = fmpDataMap.get(stock.ticker);
+            const price = fmpData?.profile?.[0]?.price;
+            const totalValue = (price && stock.shares) ? price * stock.shares : 0;
 
             html += `
                 <li class="p-4 flex justify-between items-center hover:bg-gray-50">
@@ -1175,9 +1188,15 @@ function renderPortfolioManagerList() {
                             ${sharesDisplay}
                         </div>
                     </div>
-                    <div class="flex gap-2">
-                        <button class="edit-stock-btn text-sm font-medium text-indigo-600 hover:text-indigo-800" data-ticker="${sanitizeText(stock.ticker)}">Edit</button>
-                        <button class="delete-stock-btn text-sm font-medium text-red-600 hover:text-red-800" data-ticker="${sanitizeText(stock.ticker)}">Delete</button>
+                     <div class="flex items-center gap-4">
+                        <div class="text-right">
+                            <p class="font-semibold text-gray-800">${totalValue > 0 ? formatCurrency(totalValue) : ''}</p>
+                            <p class="text-sm text-gray-500">${price ? `${formatCurrency(price)}/share` : ''}</p>
+                        </div>
+                        <div class="flex gap-2">
+                            <button class="edit-stock-btn text-sm font-medium text-indigo-600 hover:text-indigo-800" data-ticker="${sanitizeText(stock.ticker)}">Edit</button>
+                            <button class="delete-stock-btn text-sm font-medium text-red-600 hover:text-red-800" data-ticker="${sanitizeText(stock.ticker)}">Delete</button>
+                        </div>
                     </div>
                 </li>
             `;
