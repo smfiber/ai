@@ -309,6 +309,102 @@ export async function renderPortfolioHealthScore() {
     }
 }
 
+export async function renderAllocationChart() {
+    const container = document.getElementById('allocation-chart-container');
+    const canvas = document.getElementById('allocation-chart');
+    if (!container || !canvas) return;
+
+    try {
+        const portfolioStocks = state.portfolioCache.filter(s => s.status === 'Portfolio');
+        if (portfolioStocks.length === 0) {
+            container.innerHTML = `<p class="text-sm text-gray-400">Add stocks to your portfolio to see allocation.</p>`;
+            return;
+        }
+
+        const dataPromises = portfolioStocks.map(stock => getFmpStockData(stock.ticker));
+        const allStockData = await Promise.all(dataPromises);
+
+        const sectorAllocations = allStockData.reduce((acc, fmpData, index) => {
+            const stock = portfolioStocks[index];
+            const profile = fmpData?.profile?.[0];
+            const marketCap = profile?.mktCap;
+            const sector = stock.sector || 'Uncategorized';
+
+            if (marketCap && typeof marketCap === 'number') {
+                if (!acc[sector]) {
+                    acc[sector] = 0;
+                }
+                acc[sector] += marketCap;
+            }
+            return acc;
+        }, {});
+
+        const labels = Object.keys(sectorAllocations);
+        const data = Object.values(sectorAllocations);
+
+        if (labels.length === 0) {
+            container.innerHTML = `<p class="text-sm text-gray-400">Market cap data missing for portfolio stocks.</p>`;
+            return;
+        }
+
+        const chartColors = [
+            '#4f46e5', '#10b981', '#ef4444', '#f59e0b', '#3b82f6', '#8b5cf6', 
+            '#ec4899', '#6b7280', '#14b8a6', '#f97316', '#0ea5e9'
+        ];
+
+        new Chart(canvas.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Portfolio Allocation by Market Cap',
+                    data: data,
+                    backgroundColor: chartColors.slice(0, labels.length),
+                    borderColor: '#f9fafb',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            boxWidth: 12,
+                            padding: 15,
+                            font: {
+                                size: 10
+                            }
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                if (context.parsed !== null) {
+                                    const total = context.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+                                    const percentage = ((context.parsed / total) * 100).toFixed(2);
+                                    label += `${percentage}%`;
+                                }
+                                return label;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+    } catch (error) {
+        console.error("Error rendering allocation chart:", error);
+        container.innerHTML = `<p class="text-xs text-red-500 text-center">Could not render chart:<br>${error.message}</p>`;
+    }
+}
+
+
 async function _renderGroupedStockList(container, stocksWithData, listType) {
     container.innerHTML = ''; 
     if (stocksWithData.length === 0) {
