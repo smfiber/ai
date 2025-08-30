@@ -1,4 +1,4 @@
-import { setupEventListeners, openModal, closeModal, displayMessageInModal, fetchAndCachePortfolioData, renderMorningBriefing } from './ui.js';
+import { setupEventListeners, openModal, closeModal, displayMessageInModal, fetchAndCachePortfolioData, renderMorningBriefing, renderPortfolioHealthScore } from './ui.js';
 import { CONSTANTS, APP_VERSION, state } from './config.js';
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, signOut, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -26,6 +26,7 @@ async function initializeAppContent() {
     
     await fetchAndCachePortfolioData();
     await renderMorningBriefing();
+    await renderPortfolioHealthScore();
     // We will add the call to render the other new dashboard widgets here later.
 }
 
