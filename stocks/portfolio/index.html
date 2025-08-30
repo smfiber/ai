@@ -8,6 +8,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script src="https://apis.google.com/js/api.js" async defer></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -69,8 +70,8 @@
                 
                             <div class="bg-gray-50 p-4 rounded-lg border">
                                 <h3 class="text-lg font-bold text-gray-700 mb-2">Portfolio Allocation</h3>
-                                <div id="allocation-chart-container" class="flex items-center justify-center h-32">
-                                    <p class="text-sm text-gray-400">Chart coming soon...</p>
+                                <div id="allocation-chart-container" class="relative h-48 w-full flex items-center justify-center">
+                                    <canvas id="allocation-chart"></canvas>
                                 </div>
                             </div>
                         </div>
