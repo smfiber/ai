@@ -1,5 +1,5 @@
 import { CONSTANTS, SECTORS, SECTOR_ICONS, state, NEWS_SENTIMENT_PROMPT, promptMap, creativePromptMap, INVESTMENT_MEMO_PROMPT, ENABLE_STARTER_PLAN_MODE, STARTER_SYMBOLS } from './config.js';
-import { getFmpStockData, callApi, filterValidNews, callGeminiApi, generatePolishedArticle, getDriveToken, getOrCreateDriveFolder, createDriveFile, getGroupedFmpData, generateMorningBriefing, calculatePortfolioHealthScore } from './api.js';
+import { getFmpStockData, callApi, filterValidNews, callGeminiApi, generatePolishedArticle, getDriveToken, getOrCreateDriveFolder, createDriveFile, getGroupedFmpData, generateMorningBriefing, calculatePortfolioHealthScore, runOpportunityScanner } from './api.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- PROMPT MAPPING ---
@@ -1458,6 +1458,92 @@ function handleDeleteBroadEndpoint(id) {
     });
 }
 
+// --- OPPORTUNITY SCANNER ---
+
+function renderScannerResults(container, results) {
+    if (!results || results.length === 0) {
+        container.innerHTML = `<div class="text-center text-gray-500 py-16">
+            <svg xmlns="http://www.w3.org/2000/svg" class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <h3 class="mt-2 text-lg font-medium text-gray-900">No Significant Shifts Detected</h3>
+            <p class="mt-1 text-sm text-gray-500">The scanner didn't find any notable divergences in your portfolio or watchlist at this time.</p>
+        </div>`;
+        return;
+    }
+
+    const bullishResults = results.filter(r => r.type === 'Bullish');
+    const bearishResults = results.filter(r => r.type === 'Bearish');
+    
+    let html = '';
+
+    if (bullishResults.length > 0) {
+        html += `<h3 class="text-xl font-bold text-green-600 mb-3">Potential Bullish Shifts 🟢</h3>`;
+        html += '<div class="space-y-4">';
+        bullishResults.forEach(item => {
+            html += `<div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                <h4 class="font-bold text-green-800">${sanitizeText(item.companyName)} (${sanitizeText(item.ticker)})</h4>
+                <p class="text-sm font-semibold text-green-700 mt-1">"${sanitizeText(item.headline)}"</p>
+                <p class="text-sm text-green-900 mt-2">${sanitizeText(item.summary)}</p>
+                 <button class="scanner-item-view-button text-sm font-semibold text-indigo-600 hover:underline mt-3" data-ticker="${sanitizeText(item.ticker)}">Perform Deep Dive →</button>
+            </div>`;
+        });
+        html += '</div>';
+    }
+
+    if (bearishResults.length > 0) {
+        html += `<h3 class="text-xl font-bold text-red-600 mt-6 mb-3">Potential Bearish Shifts 🔴</h3>`;
+        html += '<div class="space-y-4">';
+        bearishResults.forEach(item => {
+            html += `<div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                <h4 class="font-bold text-red-800">${sanitizeText(item.companyName)} (${sanitizeText(item.ticker)})</h4>
+                <p class="text-sm font-semibold text-red-700 mt-1">"${sanitizeText(item.headline)}"</p>
+                <p class="text-sm text-red-900 mt-2">${sanitizeText(item.summary)}</p>
+                <button class="scanner-item-view-button text-sm font-semibold text-indigo-600 hover:underline mt-3" data-ticker="${sanitizeText(item.ticker)}">Perform Deep Dive →</button>
+            </div>`;
+        });
+        html += '</div>';
+    }
+
+    container.innerHTML = html;
+}
+
+async function handleRunOpportunityScanner() {
+    const stocksToScan = state.portfolioCache;
+    if (!stocksToScan || stocksToScan.length === 0) {
+        displayMessageInModal("Please add stocks to your portfolio or watchlist before running the scanner.", "info");
+        return;
+    }
+
+    const modalId = 'opportunityScannerModal';
+    const modal = document.getElementById(modalId);
+    const contentContainer = modal.querySelector('#opportunity-scanner-content');
+    const statusBar = modal.querySelector('#scanner-progress-bar');
+    const statusBarContainer = modal.querySelector('#scanner-progress-bar-container');
+    const statusText = modal.querySelector('#scanner-status-text');
+
+    contentContainer.innerHTML = '<div class="loader mx-auto mt-16"></div>';
+    statusBar.style.width = '0%';
+    statusBarContainer.classList.remove('hidden');
+    statusText.textContent = 'Starting scan...';
+    openModal(modalId);
+
+    const updateProgress = (completed, total, message) => {
+        const percentage = total > 0 ? (completed / total) * 100 : 0;
+        statusBar.style.width = `${percentage}%`;
+        statusText.textContent = `(${completed}/${total}) ${message}`;
+    };
+
+    try {
+        const results = await runOpportunityScanner(stocksToScan, updateProgress);
+        renderScannerResults(contentContainer, results);
+        statusBarContainer.classList.add('hidden');
+    } catch (error) {
+        console.error("Error running opportunity scanner:", error);
+        contentContainer.innerHTML = `<p class="text-red-500 text-center">The scan failed: ${error.message}</p>`;
+    }
+}
+
 
 // --- EVENT LISTENER SETUP ---
 
@@ -1661,8 +1747,10 @@ export function setupEventListeners() {
     document.getElementById('manage-fmp-endpoints-button')?.addEventListener('click', openManageFmpEndpointsModal);
     document.getElementById('manage-broad-endpoints-button')?.addEventListener('click', openManageBroadEndpointsModal);
     document.getElementById('session-log-button')?.addEventListener('click', openSessionLogModal);
+    document.getElementById('opportunity-scanner-button')?.addEventListener('click', handleRunOpportunityScanner);
 
     const modalsToClose = [
+        { modal: 'opportunityScannerModal', button: 'close-opportunity-scanner-modal', bg: 'close-opportunity-scanner-modal-bg' },
         { modal: CONSTANTS.MODAL_CUSTOM_ANALYSIS, button: 'close-custom-analysis-modal', bg: 'close-custom-analysis-modal-bg' },
         { modal: CONSTANTS.MODAL_INDUSTRY_ANALYSIS, button: 'close-industry-analysis-modal', bg: 'close-industry-analysis-modal-bg' },
         { modal: CONSTANTS.MODAL_MANAGE_STOCK, bg: 'close-manage-stock-modal-bg'},
@@ -1726,6 +1814,14 @@ export function setupEventListeners() {
             handleEditBroadEndpoint(id, target.dataset.name, target.dataset.url);
         } else if (target.classList.contains('delete-broad-endpoint-btn')) {
             handleDeleteBroadEndpoint(id);
+        }
+    });
+
+    document.getElementById('opportunityScannerModal')?.addEventListener('click', (e) => {
+        const button = e.target.closest('.scanner-item-view-button');
+        if (button && button.dataset.ticker) {
+            closeModal('opportunityScannerModal');
+            openRawDataViewer(button.dataset.ticker);
         }
     });
 
