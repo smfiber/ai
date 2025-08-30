@@ -1,4 +1,4 @@
-import { CONSTANTS, state, MORNING_BRIEFING_PROMPT, NEWS_SENTIMENT_PROMPT, OPPORTUNITY_SCANNER_PROMPT } from './config.js';
+import { CONSTANTS, state, MORNING_BRIEFING_PROMPT, NEWS_SENTIMENT_PROMPT, OPPORTUNITY_SCANNER_PROMPT, PORTFOLIO_ANALYSIS_PROMPT } from './config.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- UTILITY & SECURITY HELPERS (Moved from ui.js) ---
@@ -561,4 +561,50 @@ export async function runOpportunityScanner(stocksToScan, updateProgress) {
     
     updateProgress(stocksToScan.length, stocksToScan.length, "Scan complete.");
     return opportunities;
+}
+
+export async function generatePortfolioAnalysis(userQuestion) {
+    const portfolioStocks = state.portfolioCache.filter(s => s.status === 'Portfolio');
+    if (!portfolioStocks || portfolioStocks.length === 0) {
+        return "Your portfolio is empty. Please add stocks with the 'Portfolio' status to use this feature.";
+    }
+
+    // 1. Fetch all necessary data in parallel
+    const dataPromises = portfolioStocks.map(stock => getFmpStockData(stock.ticker));
+    const allStockData = await Promise.all(dataPromises);
+
+    // 2. Consolidate and simplify data for the prompt
+    const portfolioDataForPrompt = portfolioStocks.map((stock, index) => {
+        const fmpData = allStockData[index];
+        if (!fmpData) return null;
+
+        const profile = fmpData.profile?.[0] || {};
+        const latestMetrics = fmpData.key_metrics_annual?.[0] || {};
+        const grades = (fmpData.stock_grade_news || []).slice(0, 3);
+
+        return {
+            ticker: stock.ticker,
+            companyName: stock.companyName,
+            sector: profile.sector,
+            industry: profile.industry,
+            price: profile.price,
+            change: profile.change,
+            marketCap: profile.mktCap,
+            peRatio: latestMetrics.peRatio,
+            debtToEquity: latestMetrics.debtToEquity,
+            returnOnEquity: fmpData.ratios_annual?.[0]?.returnOnEquity,
+            analyst_grades_summary: grades.map(g => `${g.action} to ${g.newGrade} by ${g.gradingCompany}`).join('; ')
+        };
+    }).filter(Boolean);
+
+    if (portfolioDataForPrompt.length === 0) {
+        return "Could not retrieve sufficient data for the stocks in your portfolio. Please try refreshing their data.";
+    }
+
+    // 3. Prepare and call the AI
+    const prompt = PORTFOLIO_ANALYSIS_PROMPT
+        .replace('{userQuestion}', userQuestion)
+        .replace('{portfolioJson}', JSON.stringify(portfolioDataForPrompt, null, 2));
+
+    return await callGeminiApi(prompt);
 }
