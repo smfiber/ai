@@ -1,5 +1,5 @@
 // --- App Version ---
-export const APP_VERSION = "14.22.1";
+export const APP_VERSION = "14.23.0";
 
 // --- Shared State ---
 // This object will hold all the application's shared state.
@@ -74,17 +74,19 @@ export const CONSTANTS = {
     CLASS_BODY_MODAL_OPEN: 'modal-open',
     CLASS_HIDDEN: 'hidden',
     // Database Collections
-    DB_COLLECTION_PORTFOLIO: 'portfolio_stocks',
-    DB_COLLECTION_USER_DATA: 'user_data', // v14.18.0: New collection for user-specific data like cash
-    DB_COLLECTION_SECTOR_ANALYSIS: 'sector_analysis_runs',
-    DB_COLLECTION_FMP_CACHE: 'fmp_cached_data',
-    DB_COLLECTION_FMP_ENDPOINTS: 'fmp_endpoints',
-    DB_COLLECTION_BROAD_ENDPOINTS: 'broad_api_endpoints',
     DB_COLLECTION_AI_REPORTS: 'ai_analysis_reports',
+    DB_COLLECTION_BROAD_ENDPOINTS: 'broad_api_endpoints',
     // v13.1.0: New collection for sector/industry reports
     DB_COLLECTION_BROAD_REPORTS: 'ai_broad_reports',
+    DB_COLLECTION_FMP_CACHE: 'fmp_cached_data',
+    DB_COLLECTION_FMP_ENDPOINTS: 'fmp_endpoints',
+    DB_COLLECTION_FMP_NEWS_CACHE: 'fmp_news_cache',
+    DB_COLLECTION_PORTFOLIO: 'portfolio_stocks',
     // v13.8.0: New collection for screener tile interactions
     DB_COLLECTION_SCREENER_INTERACTIONS: 'screener_interactions',
+    DB_COLLECTION_SCANNER_RESULTS: 'scanner_results',
+    DB_COLLECTION_SECTOR_ANALYSIS: 'sector_analysis_runs',
+    DB_COLLECTION_USER_DATA: 'user_data', // v14.18.0: New collection for user-specific data like cash
 };
 
 export const SECTOR_ICONS = {
@@ -657,6 +659,38 @@ Portfolio Data (JSON):
 {portfolioJson}
 
 Based on the user's question and the portfolio data, provide a concise and direct answer in markdown format.
+`.trim();
+
+export const TREND_ANALYSIS_PROMPT = `
+Role: You are an AI financial analyst specializing in narrative evolution. Your task is to analyze how the investment story for a company has changed over time by comparing its most recent scanner-generated narrative against its historical narratives and news.
+
+Data Instructions:
+- Your analysis MUST be based *only* on the provided JSON data.
+- The data includes the latest scanner result, a list of historical results, and a summary of historical news themes.
+- Synthesize the information to identify trends, reversals, or new developments.
+
+JSON Data for the analysis:
+{jsonData}
+
+Based on the provided data for {companyName} ({tickerSymbol}), generate the following report in markdown format:
+
+# Narrative Trend Analysis: {companyName} ({tickerSymbol})
+
+## 1. Current Narrative vs. History
+Directly compare the latest scanner result to the historical ones. Is the current signal a **continuation** of a previous trend, a **reversal** (e.g., flipping from Bearish to Bullish), or a **new narrative** altogether? Explain your reasoning.
+
+## 2. Key Themes Evolution
+Analyze the historical news themes and scanner headlines. What were the dominant topics in the past? Have those themes faded, intensified, or been replaced by new ones in the latest scan? (e.g., "The focus has shifted from 'turnaround potential' to 'margin compression concerns'.")
+
+## 3. Conviction Score (1-10)
+Based on the data, provide a "Conviction Score" for the LATEST narrative.
+- A **high score (8-10)** means the latest narrative is supported by a clear, multi-period trend or a sharp, decisive reversal.
+- A **medium score (4-7)** means the narrative is emerging but lacks a long history, or contradicts some previous data.
+- A **low score (1-3)** means the latest narrative is noisy, unsupported by historical trends, or appears to be a minor, temporary divergence.
+Justify your score in one sentence.
+
+## 4. The Bottom Line
+Provide a 1-2 sentence summary for an investor. What is the most important takeaway from this trend analysis? For example: "The consistently bullish narrative around undervaluation is strengthening over time, suggesting the market continues to overlook the company's progress." or "The recent bearish signal about competition is a new and significant risk that has not appeared in previous scans."
 `.trim();
 
 export const promptMap = {
