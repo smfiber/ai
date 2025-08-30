@@ -41,6 +41,11 @@ function formatLargeNumber(value, precision = 2) {
     return num.toFixed(precision);
 }
 
+function formatCurrency(value) {
+    if (typeof value !== 'number') return '$--';
+    return value.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+}
+
 function sanitizeText(text) {
     if (typeof text !== 'string') return '';
     const tempDiv = document.createElement('div');
@@ -309,15 +314,62 @@ export async function renderPortfolioHealthScore() {
     }
 }
 
+export async function renderPortfolioValue() {
+    const valueDisplay = document.getElementById('portfolio-value-display');
+    const breakdownDisplay = document.getElementById('portfolio-value-breakdown');
+    if (!valueDisplay || !breakdownDisplay) return;
+
+    valueDisplay.textContent = '--';
+    breakdownDisplay.innerHTML = `<p>Stocks: $--</p><p>Cash: $--</p>`;
+
+    try {
+        const portfolioStocks = state.portfolioCache.filter(s => s.status === 'Portfolio' && s.shares > 0);
+        
+        const dataPromises = portfolioStocks.map(stock => getFmpStockData(stock.ticker));
+        const allStockData = await Promise.all(dataPromises);
+
+        let totalStockValue = 0;
+        allStockData.forEach((fmpData, index) => {
+            const stock = portfolioStocks[index];
+            const price = fmpData?.profile?.[0]?.price;
+            if (price && stock.shares) {
+                totalStockValue += price * stock.shares;
+            }
+        });
+
+        const cashBalance = state.cashBalance || 0;
+        const totalPortfolioValue = totalStockValue + cashBalance;
+
+        valueDisplay.textContent = formatCurrency(totalPortfolioValue);
+        breakdownDisplay.innerHTML = `
+            <p>Stocks: ${formatCurrency(totalStockValue)}</p>
+            <p>Cash: ${formatCurrency(cashBalance)}</p>
+        `;
+    } catch (error) {
+        console.error("Error rendering portfolio value:", error);
+        valueDisplay.textContent = 'Error';
+    }
+}
+
 export async function renderAllocationChart() {
     const container = document.getElementById('allocation-chart-container');
     const canvas = document.getElementById('allocation-chart');
     if (!container || !canvas) return;
+    
+    // Clear previous chart instance if it exists
+    const existingChart = Chart.getChart(canvas);
+    if (existingChart) {
+        existingChart.destroy();
+    }
+    container.innerHTML = '<canvas id="allocation-chart"></canvas>';
+    const newCanvas = document.getElementById('allocation-chart');
 
     try {
-        const portfolioStocks = state.portfolioCache.filter(s => s.status === 'Portfolio');
-        if (portfolioStocks.length === 0) {
-            container.innerHTML = `<p class="text-sm text-gray-400">Add stocks to your portfolio to see allocation.</p>`;
+        const portfolioStocks = state.portfolioCache.filter(s => s.status === 'Portfolio' && s.shares > 0);
+        const cashBalance = state.cashBalance || 0;
+
+        if (portfolioStocks.length === 0 && cashBalance === 0) {
+            container.innerHTML = `<p class="text-sm text-gray-400">Add portfolio holdings to see allocation.</p>`;
             return;
         }
 
@@ -327,14 +379,15 @@ export async function renderAllocationChart() {
         const sectorAllocations = allStockData.reduce((acc, fmpData, index) => {
             const stock = portfolioStocks[index];
             const profile = fmpData?.profile?.[0];
-            const marketCap = profile?.mktCap;
+            const price = profile?.price;
             const sector = stock.sector || 'Uncategorized';
 
-            if (marketCap && typeof marketCap === 'number') {
+            if (price && typeof price === 'number' && stock.shares > 0) {
+                const holdingValue = price * stock.shares;
                 if (!acc[sector]) {
                     acc[sector] = 0;
                 }
-                acc[sector] += marketCap;
+                acc[sector] += holdingValue;
             }
             return acc;
         }, {});
@@ -342,8 +395,13 @@ export async function renderAllocationChart() {
         const labels = Object.keys(sectorAllocations);
         const data = Object.values(sectorAllocations);
 
+        if (cashBalance > 0) {
+            labels.push('Cash');
+            data.push(cashBalance);
+        }
+
         if (labels.length === 0) {
-            container.innerHTML = `<p class="text-sm text-gray-400">Market cap data missing for portfolio stocks.</p>`;
+            container.innerHTML = `<p class="text-sm text-gray-400">Could not calculate holding values.</p>`;
             return;
         }
 
@@ -352,12 +410,12 @@ export async function renderAllocationChart() {
             '#ec4899', '#6b7280', '#14b8a6', '#f97316', '#0ea5e9'
         ];
 
-        new Chart(canvas.getContext('2d'), {
+        new Chart(newCanvas.getContext('2d'), {
             type: 'doughnut',
             data: {
                 labels: labels,
                 datasets: [{
-                    label: 'Portfolio Allocation by Market Cap',
+                    label: 'Portfolio Allocation',
                     data: data,
                     backgroundColor: chartColors.slice(0, labels.length),
                     borderColor: '#f9fafb',
@@ -388,7 +446,7 @@ export async function renderAllocationChart() {
                                 if (context.parsed !== null) {
                                     const total = context.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
                                     const percentage = ((context.parsed / total) * 100).toFixed(2);
-                                    label += `${percentage}%`;
+                                    label += `${formatCurrency(context.parsed)} (${percentage}%)`;
                                 }
                                 return label;
                             }
@@ -464,21 +522,24 @@ export async function fetchAndCachePortfolioData() {
     document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = "Loading dashboard data...";
     
     try {
-        const querySnapshot = await getDocs(collection(state.db, CONSTANTS.DB_COLLECTION_PORTFOLIO));
-        state.portfolioCache = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        // Fetch portfolio stocks
+        const portfolioQuery = await getDocs(collection(state.db, CONSTANTS.DB_COLLECTION_PORTFOLIO));
+        state.portfolioCache = portfolioQuery.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-        const portfolioStocks = state.portfolioCache.filter(s => s.status === 'Portfolio');
-        const watchlistStocks = state.portfolioCache.filter(s => s.status === 'Watchlist');
-
-        // These elements are no longer in the HTML, but we leave the logic for now
-        // document.getElementById('portfolio-count').textContent = portfolioStocks.length;
-        // document.getElementById('watchlist-count').textContent = watchlistStocks.length;
+        // Fetch cash balance
+        if (state.userId) {
+            const cashDocRef = doc(state.db, CONSTANTS.DB_COLLECTION_USER_DATA, state.userId);
+            const cashDoc = await getDoc(cashDocRef);
+            if (cashDoc.exists()) {
+                state.cashBalance = cashDoc.data().cashBalance || 0;
+            } else {
+                state.cashBalance = 0;
+            }
+        }
 
     } catch (error) {
         console.error("Error loading dashboard data:", error);
         displayMessageInModal(`Failed to load dashboard data: ${error.message}`, 'error');
-        // document.getElementById('portfolio-count').textContent = 'E';
-        // document.getElementById('watchlist-count').textContent = 'E';
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
@@ -529,6 +590,10 @@ async function openStockListModal(listType) {
 async function openManageStockModal(stockData = {}) {
     const form = document.getElementById('manage-stock-form');
     form.reset();
+
+    const sharesContainer = document.getElementById('manage-stock-shares-container');
+    const sharesInput = document.getElementById('manage-stock-shares');
+    const statusSelect = document.getElementById('manage-stock-status');
     
     if (stockData.isEditMode) {
         document.getElementById('manage-stock-modal-title').textContent = `Edit ${stockData.ticker}`;
@@ -536,7 +601,8 @@ async function openManageStockModal(stockData = {}) {
         document.getElementById('manage-stock-ticker').value = stockData.ticker;
         document.getElementById('manage-stock-name').value = stockData.companyName;
         document.getElementById('manage-stock-exchange').value = stockData.exchange;
-        document.getElementById('manage-stock-status').value = stockData.status || 'Watchlist';
+        statusSelect.value = stockData.status || 'Watchlist';
+        sharesInput.value = stockData.shares || '';
         document.getElementById('manage-stock-sector').value = stockData.sector || '';
         document.getElementById('manage-stock-industry').value = stockData.industry || '';
     } else {
@@ -545,10 +611,18 @@ async function openManageStockModal(stockData = {}) {
         document.getElementById('manage-stock-ticker').value = stockData.ticker || '';
         document.getElementById('manage-stock-name').value = stockData.companyName || '';
         document.getElementById('manage-stock-exchange').value = stockData.exchange || '';
-        document.getElementById('manage-stock-status').value = 'Watchlist';
+        statusSelect.value = 'Watchlist';
+        sharesInput.value = '';
         document.getElementById('manage-stock-sector').value = stockData.sector || '';
         document.getElementById('manage-stock-industry').value = stockData.industry || '';
     }
+
+    if (statusSelect.value === 'Portfolio') {
+        sharesContainer.classList.remove('hidden');
+    } else {
+        sharesContainer.classList.add('hidden');
+    }
+
     openModal(CONSTANTS.MODAL_MANAGE_STOCK);
 }
 
@@ -562,11 +636,16 @@ async function handleSaveStock(e) {
         return;
     }
 
+    const status = document.getElementById('manage-stock-status').value;
+    const sharesInput = document.getElementById('manage-stock-shares').value;
+    const shares = status === 'Portfolio' ? parseFloat(sharesInput) || 0 : 0;
+
     const stockData = {
         ticker: newTicker,
         companyName: document.getElementById('manage-stock-name').value.trim(),
         exchange: document.getElementById('manage-stock-exchange').value.trim(),
-        status: document.getElementById('manage-stock-status').value.trim(),
+        status: status,
+        shares: shares,
         sector: document.getElementById('manage-stock-sector').value.trim(),
         industry: document.getElementById('manage-stock-industry').value.trim(),
     };
@@ -590,6 +669,10 @@ async function handleSaveStock(e) {
 
         closeModal(CONSTANTS.MODAL_MANAGE_STOCK);
         await fetchAndCachePortfolioData();
+        renderPortfolioManagerList(); // Refresh the list in the manager modal
+        renderPortfolioValue(); // Refresh dashboard value
+        renderAllocationChart(); // Refresh dashboard chart
+
     } catch(error) {
         console.error("Error saving stock:", error);
         displayMessageInModal(`Could not save stock: ${error.message}`, 'error');
@@ -611,6 +694,8 @@ async function handleDeleteStock(ticker) {
                 if(document.getElementById(CONSTANTS.MODAL_PORTFOLIO_MANAGER).classList.contains(CONSTANTS.CLASS_MODAL_OPEN)) {
                     renderPortfolioManagerList();
                 }
+                renderPortfolioValue(); // Refresh dashboard value
+                renderAllocationChart(); // Refresh dashboard chart
             } catch (error) {
                 console.error("Error deleting stock:", error);
                 displayMessageInModal(`Could not delete ${ticker}: ${error.message}`, 'error');
@@ -1022,9 +1107,24 @@ function renderOverviewCard(data, symbol, status) {
 function renderPortfolioManagerList() {
     const container = document.getElementById('portfolio-manager-list-container');
     if (!container) return;
+    
+    const cashInput = document.getElementById('manage-cash-amount');
+    if (cashInput) {
+        cashInput.value = state.cashBalance > 0 ? state.cashBalance : '';
+    }
+
+    // Find the existing list part of the container to clear it, preserving the cash form
+    const listWrapperId = 'portfolio-list-wrapper';
+    let listWrapper = document.getElementById(listWrapperId);
+    if (!listWrapper) {
+        listWrapper = document.createElement('div');
+        listWrapper.id = listWrapperId;
+        container.appendChild(listWrapper);
+    }
+    listWrapper.innerHTML = ''; // Clear only the list part
 
     if (state.portfolioCache.length === 0) {
-        container.innerHTML = `<p class="text-center text-gray-500 p-8">No stocks in your portfolio or watchlist.</p>`;
+        listWrapper.innerHTML = `<p class="text-center text-gray-500 p-8">No stocks in your portfolio or watchlist.</p>`;
         return;
     }
 
@@ -1047,12 +1147,19 @@ function renderPortfolioManagerList() {
             const statusBadge = stock.status === 'Portfolio'
                 ? '<span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-green-100 text-green-800">Portfolio</span>'
                 : '<span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800">Watchlist</span>';
+            
+            const sharesDisplay = stock.status === 'Portfolio' && stock.shares > 0
+                ? `<p class="text-sm text-gray-500">${stock.shares} Shares</p>`
+                : '';
 
             html += `
                 <li class="p-4 flex justify-between items-center hover:bg-gray-50">
                     <div>
                         <p class="font-semibold text-gray-800">${sanitizeText(stock.companyName)} (${sanitizeText(stock.ticker)})</p>
-                        <p class="text-sm text-gray-500">${statusBadge}</p>
+                        <div class="flex items-center gap-2 mt-1">
+                            ${statusBadge}
+                            ${sharesDisplay}
+                        </div>
                     </div>
                     <div class="flex gap-2">
                         <button class="edit-stock-btn text-sm font-medium text-indigo-600 hover:text-indigo-800" data-ticker="${sanitizeText(stock.ticker)}">Edit</button>
@@ -1063,13 +1170,52 @@ function renderPortfolioManagerList() {
         });
         html += '</ul>';
     }
-    container.innerHTML = html;
+    listWrapper.innerHTML = html;
 }
 
 
 function openPortfolioManagerModal() {
     renderPortfolioManagerList();
     openModal(CONSTANTS.MODAL_PORTFOLIO_MANAGER);
+}
+
+async function handleSaveCash(e) {
+    e.preventDefault();
+    if (!state.userId) {
+        displayMessageInModal("You must be logged in to save data.", "error");
+        return;
+    }
+
+    const cashInput = document.getElementById('manage-cash-amount');
+    const cashValue = parseFloat(cashInput.value);
+
+    if (isNaN(cashValue) || cashValue < 0) {
+        displayMessageInModal("Please enter a valid, non-negative number for your cash balance.", "warning");
+        return;
+    }
+
+    const saveButton = e.target.querySelector('button[type="submit"]');
+    saveButton.disabled = true;
+    saveButton.textContent = 'Saving...';
+
+    try {
+        const docRef = doc(state.db, CONSTANTS.DB_COLLECTION_USER_DATA, state.userId);
+        await setDoc(docRef, { cashBalance: cashValue }, { merge: true });
+        state.cashBalance = cashValue;
+        
+        // Refresh dashboard widgets
+        await renderPortfolioValue();
+        await renderAllocationChart();
+
+        displayMessageInModal("Cash balance updated successfully!", "info");
+
+    } catch (error) {
+        console.error("Error saving cash balance:", error);
+        displayMessageInModal(`Could not save cash balance: ${error.message}`, 'error');
+    } finally {
+        saveButton.disabled = false;
+        saveButton.textContent = 'Save Cash';
+    }
 }
 
 async function handleViewFmpData(symbol) {
@@ -1303,11 +1449,14 @@ function handleDeleteBroadEndpoint(id) {
 
 function setupGlobalEventListeners() {
     // This function will be expanded to handle the new "Add Stock" button in the manager modal
-    document.getElementById('dashboard-section').addEventListener('click', (e) => {
+    document.getElementById('dashboard-section').addEventListener('click', async (e) => {
         const refreshButton = e.target.closest('.dashboard-refresh-button');
         if (refreshButton) {
-            fetchAndCachePortfolioData();
-            // We will add a call to refresh the dashboard widgets here later
+            await fetchAndCachePortfolioData();
+            await renderPortfolioValue();
+            await renderMorningBriefing();
+            await renderPortfolioHealthScore();
+            await renderAllocationChart();
             return;
         }
     });
@@ -1446,8 +1595,6 @@ function initializeTooltips() {
 
 export function setupEventListeners() {
     initializeTooltips();
-    // The main research form is gone, but we'll re-purpose its handler for the modal
-    // document.getElementById(CONSTANTS.FORM_STOCK_RESEARCH)?.addEventListener('submit', handleResearchSubmit);
     
     document.getElementById('manage-stock-form')?.addEventListener('submit', handleSaveStock);
     document.getElementById('cancel-manage-stock-button')?.addEventListener('click', () => closeModal(CONSTANTS.MODAL_MANAGE_STOCK));
@@ -1458,6 +1605,18 @@ export function setupEventListeners() {
             handleDeleteStock(ticker);
         }
     });
+
+    // Listener for the status dropdown to toggle shares input
+    document.getElementById('manage-stock-status')?.addEventListener('change', (e) => {
+        const sharesContainer = document.getElementById('manage-stock-shares-container');
+        if (e.target.value === 'Portfolio') {
+            sharesContainer.classList.remove('hidden');
+        } else {
+            sharesContainer.classList.add('hidden');
+        }
+    });
+    
+    document.getElementById('manage-cash-form')?.addEventListener('submit', handleSaveCash);
 
     document.getElementById('manage-fmp-endpoint-form')?.addEventListener('submit', handleSaveFmpEndpoint);
     document.getElementById('cancel-fmp-endpoint-edit')?.addEventListener('click', cancelFmpEndpointEdit);
