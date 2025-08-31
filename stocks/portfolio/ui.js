@@ -1,29 +1,7 @@
 // ui.js
-import { CONSTANTS, SECTORS, SECTOR_ICONS, state, NEWS_SENTIMENT_PROMPT, promptMap, creativePromptMap, INVESTMENT_MEMO_PROMPT, ENABLE_STARTER_PLAN_MODE, STARTER_SYMBOLS } from './config.js';
+import { CONSTANTS, SECTORS, SECTOR_ICONS, state, NEWS_SENTIMENT_PROMPT, DEEP_DIVE_PROMPT, creativePromptMap, ENABLE_STARTER_PLAN_MODE, STARTER_SYMBOLS } from './config.js';
 import { getFmpStockData, callApi, filterValidNews, callGeminiApi, generatePolishedArticle, getDriveToken, getOrCreateDriveFolder, createDriveFile, getGroupedFmpData, generateMorningBriefing, calculatePortfolioHealthScore, runOpportunityScanner, generatePortfolioAnalysis, generateTrendAnalysis, getCachedNews, getScannerResults } from './api.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-// --- PROMPT MAPPING ---
-// The main promptMap is now imported directly from config.js
-
-// Map specific AI analysis types to the FMP endpoints they require.
-const ANALYSIS_REQUIREMENTS = {
-    'ManagementScorecard': ['executive_compensation']
-};
-
-// v13.1.0: Icons for stock-specific analysis tiles
-const ANALYSIS_ICONS = {
-    'FinancialAnalysis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6a7.5 7.5 0 100 15 7.5 7.5 0 000-15z" /><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.2-5.2" /><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 10.5H10.5v.008H10.5V10.5zm.008 0h.008v4.502h-.008V10.5z" /></svg>`,
-    'UndervaluedAnalysis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0l.879-.659M7.5 14.25l6-6M4.5 12l6-6m6 6l-6 6" /></svg>`,
-    'BullVsBear': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 15.75l-2.489-2.489m0 0a3.375 3.375 0 10-4.773-4.773 3.375 3.375 0 004.774 4.774zM21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`,
-    'MoatAnalysis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.286zm0 13.036h.008v.008h-.008v-.008z" /></svg>`,
-    'DividendSafety': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a2.25 2.25 0 00-2.25-2.25H15a3 3 0 11-6 0H5.25A2.25 2.25 0 003 12m18 0v6a2.25 2.25 0 01-2.25-2.25H5.25A2.25 2.25 0 013 18v-6m18 0V9M3 12V9m18 3a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 12m15 0a2.25 2.25 0 01-2.25 2.25H12a2.25 2.25 0 01-2.25-2.25" /></svg>`,
-    'GrowthOutlook': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941" /></svg>`,
-    'RiskAssessment': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" /></svg>`,
-    'CapitalAllocators': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15.91 15.91a2.25 2.25 0 01-3.182 0l-3.03-3.03a.75.75 0 011.06-1.061l2.47 2.47 2.47-2.47a.75.75 0 011.06 1.06l-3.03 3.03z" /></svg>`,
-    'NarrativeCatalyst': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.362 5.214A8.252 8.252 0 0112 21 8.25 8.25 0 016.038 7.048 8.287 8.287 0 009 9.62a8.983 8.983 0 013.362-3.867 8.262 8.262 0 013 2.456z" /><path stroke-linecap="round" stroke-linejoin="round" d="M12 18a3.75 3.75 0 00.495-7.467 5.99 5.99 0 00-1.925 3.546 5.974 5.974 0 01-2.133-1A3.75 3.75 0 0012 18z" /></svg>`,
-    'InvestmentMemo': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>`
-};
 
 // --- UTILITY & SECURITY HELPERS ---
 
@@ -724,35 +702,13 @@ async function openRawDataViewer(ticker) {
              rawDataContainer.innerHTML = '<p class="text-center text-gray-500 py-8">Could not load grouped raw data.</p>';
         }
 
-
-        // Build AI buttons
-        const buttons = [
-            { reportType: 'FinancialAnalysis', text: 'Financial Analysis', tooltip: 'Deep dive into financial statements, ratios, and health.' },
-            { reportType: 'UndervaluedAnalysis', text: 'Undervalued', tooltip: 'Assess if the stock is a potential bargain based on valuation metrics.' },
-            { reportType: 'BullVsBear', text: 'Bull vs. Bear', tooltip: 'Presents both the positive and negative investment arguments.' },
-            { reportType: 'MoatAnalysis', text: 'Moat Analysis', tooltip: 'Evaluates the company\'s competitive advantages.' },
-            { reportType: 'DividendSafety', text: 'Dividend Safety', tooltip: 'Checks the sustainability of the company\'s dividend payments.' },
-            { reportType: 'GrowthOutlook', text: 'Growth Outlook', tooltip: 'Analyzes the company\'s future growth potential.' },
-            { reportType: 'RiskAssessment', text: 'Risk Assessment', tooltip: 'Identifies potential financial, market, and business risks.' },
-            { reportType: 'CapitalAllocators', text: 'Capital Allocators', tooltip: 'Assesses management\'s skill in deploying capital.' },
-            { reportType: 'NarrativeCatalyst', text: 'Catalysts', tooltip: 'Identifies the investment story and future catalysts.' }
-        ];
-        
-        aiButtonsContainer.innerHTML = buttons.map(btn => {
-            const hasSaved = savedReportTypes.has(btn.reportType) ? 'has-saved-report' : '';
-            const icon = ANALYSIS_ICONS[btn.reportType] || '';
-            return `<button data-symbol="${ticker}" data-report-type="${btn.reportType}" class="ai-analysis-button analysis-tile ${hasSaved}" data-tooltip="${btn.tooltip}">
-                        ${icon}
-                        <span class="tile-name">${btn.text}</span>
-                    </button>`
-        }).join('');
-        
-        // Add the special Investment Memo button
-        aiButtonsContainer.innerHTML += `
-            <div class="w-full border-t my-4"></div>
-            <button data-symbol="${ticker}" id="investment-memo-button" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-all duration-200 hover:shadow-lg" data-tooltip="Synthesizes all other reports into a final verdict. Requires all other analyses to be saved first.">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                Generate Investment Committee Memo
+        // Build the single "Deep Dive" button
+        aiButtonsContainer.innerHTML = `
+            <button data-symbol="${ticker}" id="deep-dive-analysis-button" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-all duration-200 hover:shadow-lg">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 10.5a.5.5 0 01.5-.5h3a.5.5 0 010 1h-3a.5.5 0 01-.5-.5z" />
+                </svg>
+                Generate Deep Dive Analysis
             </button>
         `;
 
@@ -1000,7 +956,7 @@ function renderOverviewCard(data, symbol, status) {
             <div class="mt-6 border-t pt-4 flex items-center flex-wrap gap-x-4 gap-y-2 justify-center">
                 <button data-symbol="${symbol}" class="refresh-fmp-button text-sm bg-cyan-100 text-cyan-700 hover:bg-cyan-200 font-semibold py-2 px-4 rounded-lg">Refresh FMP</button>
                 <button data-symbol="${symbol}" class="view-fmp-data-button text-sm bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg">View FMP Data</button>
-                <button data-symbol="${symbol}" class="fetch-news-button text-sm bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg">Fetch News</button>
+                <button data-symbol="${symbol}" class.fetch-news-button text-sm bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg">Fetch News</button>
             </div>
             <div class="text-right text-xs text-gray-400 mt-4">
                 <div>${fmpTimestampString}</div>
@@ -1894,17 +1850,9 @@ export function setupEventListeners() {
         
         const symbol = target.dataset.symbol;
         if (!symbol) return;
-
-        if (target.matches('.ai-analysis-button')) {
-            const reportType = target.dataset.reportType;
-            const promptConfig = promptMap[reportType];
-            if (promptConfig) {
-                handleAnalysisRequest(symbol, reportType, promptConfig);
-            }
-        }
         
-        if (target.id === 'investment-memo-button') {
-            handleInvestmentMemoRequest(symbol);
+        if (target.id === 'deep-dive-analysis-button') {
+            handleDeepDiveRequest(symbol);
         }
     });
 	
@@ -1940,18 +1888,74 @@ async function getSavedReports(ticker, reportType) {
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
 
-function buildAnalysisPayload(fullData, requiredEndpoints) {
-    const payload = {};
-    for (const endpointName of requiredEndpoints) {
-        if (fullData.hasOwnProperty(endpointName)) {
-            payload[endpointName] = fullData[endpointName];
+/**
+ * Calculates a comprehensive summary of metrics for the "Deep Dive" prompt.
+ * @param {object} data - The full FMP data object for a stock.
+ * @returns {object} A summary object with pre-calculated metrics and trends.
+ */
+function _calculateDeepDiveMetrics(data) {
+    const profile = data.profile?.[0] || {};
+    const income = (data.income_statement_annual || []).slice().reverse(); // Oldest to newest
+    const keyMetrics = (data.key_metrics_annual || []).slice().reverse();
+    const cashFlow = (data.cash_flow_statement_annual || []).slice().reverse();
+    const ratios = (data.ratios_annual || []).slice().reverse();
+
+    const latestMetrics = keyMetrics[keyMetrics.length - 1] || {};
+    const latestCashFlow = cashFlow[cashFlow.length - 1] || {};
+    const latestIncome = income[income.length - 1] || {};
+
+    const getTrend = (series, key, lookback = 5) => {
+        if (!series || series.length < 2) return "Not enough data.";
+        const recent = series.slice(-lookback);
+        const first = recent[0][key];
+        const last = recent[recent.length - 1][key];
+        if (typeof first !== 'number' || typeof last !== 'number' || first === 0) return "Not applicable.";
+        const change = ((last - first) / Math.abs(first));
+        if (change > 0.1) return "growing";
+        if (change < -0.1) return "declining";
+        return "stable";
+    };
+
+    const calculateAverage = (data, key, lookback = 5) => {
+        const values = data.slice(-lookback).map(d => d[key]).filter(v => typeof v === 'number');
+        if (values.length === 0) return null;
+        return values.reduce((a, b) => a + b, 0) / values.length;
+    };
+    
+    const valuation = (metricKey, ratioKey) => {
+        const current = latestMetrics[metricKey];
+        const historical = calculateAverage(keyMetrics, metricKey);
+        if (current && historical) {
+            const status = current > historical ? 'at a premium' : 'at a discount';
+            return `Current ${ratioKey} of ${current.toFixed(2)} is ${status} to its 5-year average of ${historical.toFixed(2)}.`;
         }
-    }
-    return payload;
+        return `Current ${ratioKey} is ${current ? current.toFixed(2) : 'N/A'}.`;
+    };
+
+    return {
+        description: profile.description,
+        sector: profile.sector,
+        industry: profile.industry,
+        roeTrend: getTrend(ratios, 'returnOnEquity'),
+        grossMarginTrend: getTrend(ratios, 'grossProfitMargin'),
+        netMarginTrend: getTrend(ratios, 'netProfitMargin'),
+        revenueTrend: getTrend(income, 'revenue'),
+        netIncomeTrend: getTrend(income, 'netIncome'),
+        debtToEquityTrend: getTrend(ratios, 'debtToEquityRatio'),
+        cashFlowVsNetIncome: `Operating Cash Flow (${formatLargeNumber(latestCashFlow.operatingCashFlow)}) vs. Net Income (${formatLargeNumber(latestIncome.netIncome)}).`,
+        dividendYield: latestMetrics.dividendYield ? `${(latestMetrics.dividendYield * 100).toFixed(2)}%` : 'N/A',
+        fcfPayoutRatio: (latestCashFlow.freeCashFlow > 0) ? `${(Math.abs(latestCashFlow.dividendsPaid || 0) / latestCashFlow.freeCashFlow * 100).toFixed(2)}%` : 'N/A',
+        pe_valuation: valuation('peRatio', 'P/E'),
+        ps_valuation: valuation('priceToSalesRatio', 'P/S'),
+        pb_valuation: valuation('pbRatio', 'P/B'),
+        grahamNumber: latestMetrics.grahamNumber ? latestMetrics.grahamNumber.toFixed(2) : 'N/A',
+        currentPrice: profile.price || 'N/A'
+    };
 }
 
 
-async function handleAnalysisRequest(symbol, reportType, promptConfig, forceNew = false) {
+async function handleDeepDiveRequest(symbol, forceNew = false) {
+    const reportType = 'DeepDive';
     const contentContainer = document.getElementById('ai-article-container');
     const statusContainer = document.getElementById('report-status-container-ai');
     
@@ -1966,7 +1970,7 @@ async function handleAnalysisRequest(symbol, reportType, promptConfig, forceNew 
             displayReport(contentContainer, latestReport.content, latestReport.prompt);
             contentContainer.dataset.currentPrompt = latestReport.prompt || '';
             contentContainer.dataset.rawMarkdown = latestReport.content;
-            updateReportStatus(statusContainer, savedReports, latestReport.id, { symbol, reportType, promptConfig });
+            updateReportStatus(statusContainer, savedReports, latestReport.id, { symbol, reportType });
             return; 
         }
 
@@ -1976,57 +1980,28 @@ async function handleAnalysisRequest(symbol, reportType, promptConfig, forceNew 
         const data = await getFmpStockData(symbol);
         if (!data) throw new Error(`No cached FMP data found for ${symbol}.`);
         
-        const requiredEndpoints = promptConfig.requires || [];
-        const missingEndpoints = requiredEndpoints.filter(ep => !data[ep]);
+        const requiredEndpoints = ['profile', 'ratios_annual', 'key_metrics_annual', 'income_statement_annual', 'cash_flow_statement_annual'];
+        const missingEndpoints = requiredEndpoints.filter(ep => !data[ep] || data[ep].length === 0);
 
         if (missingEndpoints.length > 0) {
-            const specialReqs = ANALYSIS_REQUIREMENTS[reportType] || [];
-            const isSpecialMissing = specialReqs.some(req => missingEndpoints.includes(req));
-
-            if (isSpecialMissing) {
-                closeModal(CONSTANTS.MODAL_LOADING);
-                openConfirmationModal(
-                    'Data Refresh Required',
-                    `This analysis requires specific data that is not yet cached for ${symbol} (${missingEndpoints.join(', ')}). Would you like to refresh all FMP data now? This may take a moment.`,
-                    async () => {
-                        await handleRefreshFmpData(symbol);
-                        // After refresh, re-run the request forcing a new generation
-                        await handleAnalysisRequest(symbol, reportType, promptConfig, true);
-                    }
-                );
-                return;
-            }
+            closeModal(CONSTANTS.MODAL_LOADING);
+            openConfirmationModal(
+                'Data Refresh Required',
+                `This analysis requires data that is not yet cached for ${symbol} (${missingEndpoints.join(', ')}). Would you like to refresh all FMP data now? This may take a moment.`,
+                async () => {
+                    await handleRefreshFmpData(symbol);
+                    await handleDeepDiveRequest(symbol, true);
+                }
+            );
+            return;
         }
         
-        let payloadData;
-        if (reportType === 'UndervaluedAnalysis') {
-            payloadData = _calculateUndervaluedMetrics(data);
-        } else if (reportType === 'FinancialAnalysis') {
-            payloadData = _calculateFinancialAnalysisMetrics(data);
-        } else if (reportType === 'BullVsBear') {
-            payloadData = _calculateBullVsBearMetrics(data);
-        } else if (reportType === 'MoatAnalysis') {
-            payloadData = _calculateMoatAnalysisMetrics(data);
-        } else if (reportType === 'DividendSafety') {
-            payloadData = _calculateDividendSafetyMetrics(data);
-        } else if (reportType === 'GrowthOutlook') {
-            payloadData = _calculateGrowthOutlookMetrics(data);
-        } else if (reportType === 'RiskAssessment') {
-            payloadData = _calculateRiskAssessmentMetrics(data);
-        } else if (reportType === 'CapitalAllocators') {
-            payloadData = _calculateCapitalAllocatorsMetrics(data);
-        } else if (reportType === 'NarrativeCatalyst') {
-            payloadData = _calculateNarrativeCatalystMetrics(data);
-        } else {
-            payloadData = buildAnalysisPayload(data, requiredEndpoints);
-        }
-
+        const payloadData = _calculateDeepDiveMetrics(data);
         const profile = data.profile?.[0] || {};
         const companyName = profile.companyName || 'the company';
         const tickerSymbol = profile.symbol || symbol;
 
-        const promptTemplate = promptConfig.prompt;
-        const prompt = promptTemplate
+        const prompt = DEEP_DIVE_PROMPT
             .replace(/{companyName}/g, companyName)
             .replace(/{tickerSymbol}/g, tickerSymbol)
             .replace('{jsonData}', JSON.stringify(payloadData, null, 2));
@@ -2036,7 +2011,7 @@ async function handleAnalysisRequest(symbol, reportType, promptConfig, forceNew 
         const newReportContent = await generatePolishedArticle(prompt, loadingMessage);
         contentContainer.dataset.rawMarkdown = newReportContent;
         displayReport(contentContainer, newReportContent, prompt);
-        updateReportStatus(statusContainer, [], null, { symbol, reportType, promptConfig });
+        updateReportStatus(statusContainer, [], null, { symbol, reportType });
 
     } catch (error) {
         displayMessageInModal(`Could not generate or load analysis: ${error.message}`, 'error');
@@ -2048,69 +2023,10 @@ async function handleAnalysisRequest(symbol, reportType, promptConfig, forceNew 
     }
 }
 
-async function handleInvestmentMemoRequest(symbol) {
-    const contentContainer = document.getElementById('ai-article-container');
-    const statusContainer = document.getElementById('report-status-container-ai');
-    contentContainer.innerHTML = '';
-    statusContainer.classList.add('hidden');
-
-    openModal(CONSTANTS.MODAL_LOADING);
-    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
-
-    try {
-        loadingMessage.textContent = "Gathering all latest analysis reports from the database...";
-        const reportTypes = [
-            'FinancialAnalysis', 'UndervaluedAnalysis', 'BullVsBear', 'MoatAnalysis', 
-            'DividendSafety', 'GrowthOutlook', 'RiskAssessment', 'CapitalAllocators',
-            'NarrativeCatalyst'
-        ];
-
-        const reportPromises = reportTypes.map(type => getSavedReports(symbol, type).then(reports => reports[0])); // Get only the latest
-        const allLatestReports = await Promise.all(reportPromises);
-
-        const foundReports = allLatestReports.filter(Boolean); // Filter out any undefined/null reports
-        const missingReports = reportTypes.filter((type, index) => !allLatestReports[index]);
-
-        if (missingReports.length > 0) {
-            throw new Error(`Cannot generate memo. Please generate and save the following reports first: ${missingReports.join(', ')}`);
-        }
-
-        loadingMessage.textContent = "Synthesizing reports into a final memo...";
-        
-        let allAnalysesData = foundReports.map(report => {
-            const reportTitle = report.content.match(/#\s*(.*)/)?.[1] || report.reportType;
-            return `--- REPORT: ${reportTitle} ---\n\n${report.content}\n\n`;
-        }).join('\n');
-        
-        const data = await getFmpStockData(symbol);
-        const profile = data.profile?.[0] || {};
-        const companyName = profile.companyName || 'the company';
-
-        const prompt = INVESTMENT_MEMO_PROMPT
-            .replace(/{companyName}/g, companyName)
-            .replace(/{tickerSymbol}/g, symbol)
-            .replace('{allAnalysesData}', allAnalysesData);
-
-        const memoContent = await generatePolishedArticle(prompt, loadingMessage);
-        displayReport(contentContainer, memoContent);
-        
-        // Since this is a unique, synthesized report, we don't show versioning for it.
-        statusContainer.innerHTML = `<span class="text-sm font-semibold text-green-800">Investment Memo generated successfully.</span>`;
-        statusContainer.classList.remove('hidden');
-
-    } catch (error) {
-        console.error("Error generating investment memo:", error);
-        displayMessageInModal(`Could not generate memo: ${error.message}`, 'error');
-        contentContainer.innerHTML = `<p class="text-red-500">Failed to generate memo: ${error.message}</p>`;
-    } finally {
-        closeModal(CONSTANTS.MODAL_LOADING);
-    }
-}
-
 
 async function handleSaveReportToDb() {
     const modal = document.getElementById('rawDataViewerModal');
-    const symbol = modal.querySelector('.ai-analysis-button')?.dataset.symbol;
+    const symbol = modal.dataset.activeSymbol;
     const contentContainer = document.getElementById('ai-article-container');
     const statusContainer = document.getElementById('report-status-container-ai');
     const reportType = statusContainer.dataset.activeReportType;
@@ -2136,8 +2052,7 @@ async function handleSaveReportToDb() {
         
         const savedReports = await getSavedReports(symbol, reportType);
         const latestReport = savedReports[0];
-        const promptConfig = promptMap[reportType];
-        updateReportStatus(document.getElementById('report-status-container-ai'), savedReports, latestReport.id, { symbol, reportType, promptConfig });
+        updateReportStatus(document.getElementById('report-status-container-ai'), savedReports, latestReport.id, { symbol, reportType });
 
     } catch (error) {
         console.error("Error saving report to DB:", error);
@@ -2207,7 +2122,7 @@ function updateReportStatus(statusContainer, reports, activeReportId, analysisPa
     const generateNewBtn = document.getElementById(`generate-new-${analysisParams.reportType}`);
     if (generateNewBtn) {
         generateNewBtn.addEventListener('click', () => {
-            handleAnalysisRequest(analysisParams.symbol, analysisParams.reportType, analysisParams.promptConfig, true);
+            handleDeepDiveRequest(analysisParams.symbol, true);
         });
     }
 }
@@ -2283,519 +2198,4 @@ async function handleSaveToDrive(modalId) {
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
-}
-
-/**
- * Calculates a summary of metrics for the "Undervalued Analysis" prompt.
- * @param {object} data - The full FMP data object for a stock.
- * @returns {object} A summary object with pre-calculated metrics.
- */
-function _calculateUndervaluedMetrics(data) {
-    const profile = data.profile?.[0] || {};
-    const incomeStatements = (data.income_statement_annual || []).slice().reverse(); // Oldest to newest
-    const keyMetrics = (data.key_metrics_annual || []).slice().reverse(); // Oldest to newest
-    const cashFlows = (data.cash_flow_statement_annual || []).slice().reverse();
-    const ratios = (data.ratios_annual || []).slice().reverse(); // Oldest to newest
-
-    const latestMetrics = keyMetrics[keyMetrics.length - 1] || {};
-    const latestCashFlow = cashFlows[cashFlows.length - 1] || {};
-    const latestRatios = ratios[ratios.length - 1] || {};
-    
-    // Helper to calculate YoY Growth
-    const calculateYoyGrowth = (data, key) => {
-        const trends = [];
-        for (let i = 1; i < data.length; i++) {
-            const prev = data[i - 1][key];
-            const curr = data[i][key];
-            if (prev && curr && prev !== 0) {
-                const growth = ((curr - prev) / prev) * 100;
-                trends.push({ year: data[i].calendarYear, growth: `${growth.toFixed(2)}%` });
-            }
-        }
-        return trends.slice(-6); // Last 6 years of growth
-    };
-
-    // Helper to get last N years of a metric
-    const getTrend = (data, key, formatFn = (v) => v) => {
-        return data.slice(-6).map(d => ({ year: d.calendarYear, value: formatFn(d[key]) }));
-    };
-    
-    // Helper to calculate historical average
-    const calculateAverage = (data, key) => {
-        const values = data.slice(-5).map(d => d[key]).filter(v => typeof v === 'number');
-        if (values.length === 0) return null;
-        return values.reduce((a, b) => a + b, 0) / values.length;
-    };
-
-    // 1. Growth & Profitability
-    const revenueGrowthTrend = calculateYoyGrowth(incomeStatements, 'revenue');
-    const profitabilityTrend = getTrend(ratios, 'netProfitMargin', v => typeof v === 'number' ? `${(v * 100).toFixed(2)}%` : 'N/A');
-
-    // 2. Financial Health
-    const roeTrend = getTrend(ratios, 'returnOnEquity', v => typeof v === 'number' ? `${(v * 100).toFixed(2)}%` : 'N/A');
-    const debtToEquity = latestRatios.debtToEquityRatio ? latestRatios.debtToEquityRatio.toFixed(2) : 'N/A';
-    
-    // 3. Dividend Analysis
-    const dividendYield = latestMetrics.dividendYield ? `${(latestMetrics.dividendYield * 100).toFixed(2)}%` : 'N/A';
-    let cashFlowPayoutRatio = 'N/A';
-    if (latestCashFlow.operatingCashFlow && latestCashFlow.dividendsPaid) {
-        if (latestCashFlow.operatingCashFlow > 0) {
-            const ratio = (Math.abs(latestCashFlow.dividendsPaid) / latestCashFlow.operatingCashFlow) * 100;
-            cashFlowPayoutRatio = `${ratio.toFixed(2)}%`;
-        }
-    }
-
-    // 4. Valuation Multiples
-    const peRatio = latestMetrics.peRatio ? latestMetrics.peRatio.toFixed(2) : 'N/A';
-    const psRatio = latestMetrics.priceToSalesRatio ? latestMetrics.priceToSalesRatio.toFixed(2) : 'N/A';
-    const pbRatio = latestMetrics.pbRatio ? latestMetrics.pbRatio.toFixed(2) : 'N/A';
-
-    // 5. Valuation in Context
-    const historicalPe = calculateAverage(keyMetrics, 'peRatio');
-    const historicalPs = calculateAverage(keyMetrics, 'priceToSalesRatio');
-    const historicalPb = calculateAverage(keyMetrics, 'pbRatio');
-
-    const valuationRelativeToHistory = {
-        pe: {
-            current: peRatio,
-            historicalAverage: historicalPe ? historicalPe.toFixed(2) : 'N/A',
-            status: historicalPe && peRatio !== 'N/A' ? (peRatio > historicalPe ? 'Premium' : 'Discount') : 'N/A'
-        },
-        ps: {
-            current: psRatio,
-            historicalAverage: historicalPs ? historicalPs.toFixed(2) : 'N/A',
-            status: historicalPs && psRatio !== 'N/A' ? (psRatio > historicalPs ? 'Premium' : 'Discount') : 'N/A'
-        },
-        pb: {
-            current: pbRatio,
-            historicalAverage: historicalPb ? historicalPb.toFixed(2) : 'N/A',
-            status: historicalPb && pbRatio !== 'N/A' ? (pbRatio > historicalPb ? 'Premium' : 'Discount') : 'N/A'
-        }
-    };
-    
-    // 6. Graham Number
-    const grahamNumber = latestMetrics.grahamNumber;
-    const currentPrice = profile.price;
-    let grahamVerdict = 'N/A';
-    if (grahamNumber && currentPrice) {
-        grahamVerdict = currentPrice < grahamNumber ? 'UNDERVALUED' : 'OVERVALUED';
-    }
-
-    // 7. Analyst Consensus & Estimates
-    const analystConsensus = (data.stock_grade_news || []).slice(0, 5).map(g => `${g.gradingCompany}: ${g.newGrade}`).join(', ');
-    const latestEstimate = (data.analyst_estimates || []).find(e => new Date(e.date).getFullYear() === new Date().getFullYear() + 1);
-
-    return {
-        summary: {
-            industry: profile.industry || 'N/A',
-        },
-        revenueGrowthTrend,
-        profitabilityTrend,
-        roeTrend,
-        debtToEquity,
-        dividendYield,
-        cashFlowPayoutRatio,
-        peRatio,
-        psRatio,
-        pbRatio,
-        valuationRelativeToHistory,
-        grahamNumberAnalysis: {
-            grahamNumber: grahamNumber ? grahamNumber.toFixed(2) : 'N/A',
-            currentPrice: currentPrice || 'N/A',
-            verdict: grahamVerdict
-        },
-        analystConsensus: analystConsensus || 'No recent ratings.',
-        analystEstimatesSummary: latestEstimate ? `Avg. estimated revenue for next year is ${formatLargeNumber(latestEstimate.estimatedRevenueAvg)}.` : 'No estimates available.'
-    };
-}
-
-/**
- * Calculates a comprehensive summary of metrics for the "Financial Analysis" prompt.
- * @param {object} data - The full FMP data object for a stock.
- * @returns {object} A summary object with pre-calculated metrics and trends.
- */
-function _calculateFinancialAnalysisMetrics(data) {
-    // 1. Helpers
-    const getTrendStatus = (series, lookback = 5, isPercentage = true) => {
-        if (!series || series.length < 3) return "Not enough data for a trend.";
-        const recentSeries = series.slice(-lookback);
-        if (recentSeries.length < 3) return "Not enough data for a trend.";
-
-        const firstHalf = recentSeries.slice(0, Math.floor(recentSeries.length / 2));
-        const secondHalf = recentSeries.slice(Math.ceil(recentSeries.length / 2));
-        
-        const avg = (arr) => arr.reduce((a, b) => a + b, 0) / arr.length;
-        const firstAvg = avg(firstHalf);
-        const secondAvg = avg(secondHalf);
-
-        const change = ((secondAvg - firstAvg) / Math.abs(firstAvg)) * 100;
-        
-        if (change > (isPercentage ? 5 : 10)) return 'is improving';
-        if (change < -(isPercentage ? 5 : 10)) return 'is declining';
-        return 'has been stable';
-    };
-    
-    const calculateAverage = (data, key, lookback = 5) => {
-        const values = data.slice(-lookback).map(d => d[key]).filter(v => typeof v === 'number');
-        if (values.length === 0) return null;
-        return values.reduce((a, b) => a + b, 0) / values.length;
-    };
-
-    // 2. Data Preparation
-    const profile = data.profile?.[0] || {};
-    const incomeStatements = (data.income_statement_annual || []).slice().reverse();
-    const keyMetrics = (data.key_metrics_annual || []).slice().reverse();
-    const cashFlows = (data.cash_flow_statement_annual || []).slice().reverse();
-    const grades = (data.stock_grade_news || []).slice(0, 15);
-
-    const latestIncome = incomeStatements[incomeStatements.length - 1] || {};
-    const latestMetrics = keyMetrics[keyMetrics.length - 1] || {};
-    const latestCashFlow = cashFlows[cashFlows.length - 1] || {};
-
-    // 3. Calculations
-    // Summary
-    const analystConsensus = (() => {
-        if (grades.length === 0) return "No recent analyst ratings available.";
-        const buys = grades.filter(g => ['buy', 'outperform', 'overweight', 'strong buy'].includes(g.newGrade.toLowerCase())).length;
-        const sells = grades.filter(g => ['sell', 'underperform', 'underweight'].includes(g.newGrade.toLowerCase())).length;
-        const holds = grades.length - buys - sells;
-        return `Generally ${buys > sells ? 'positive' : 'neutral'}, with ${buys} buys, ${holds} holds, and ${sells} sells in the last ${grades.length} ratings.`;
-    })();
-    const summary = {
-        companyName: profile.companyName,
-        tickerSymbol: profile.symbol,
-        description: profile.description,
-        sector: profile.sector,
-        industry: profile.industry,
-        marketCap: formatLargeNumber(profile.mktCap),
-        priceRange: profile.range || 'N/A',
-        analystConsensus: analystConsensus,
-        insiderOwnership: 'N/A' // This field is not in the provided profile data
-    };
-
-    // Performance
-    const performance = {
-        revenueTrend: `Revenue ${getTrendStatus(incomeStatements.map(i=>i.revenue), 5, false)}.`,
-        netIncomeTrend: `Net income ${getTrendStatus(incomeStatements.map(i=>i.netIncome), 5, false)}.`,
-        grossProfitMargin: { status: getTrendStatus(keyMetrics.map(k=>k.grossProfitMargin)) },
-        operatingProfitMargin: { status: getTrendStatus(keyMetrics.map(k=>k.operatingProfitMargin)) },
-        netProfitMargin: { status: getTrendStatus(keyMetrics.map(k=>k.netProfitMargin)) },
-        returnOnEquity: { quality: latestMetrics.returnOnEquity > 0.15 ? 'High' : (latestMetrics.returnOnEquity > 0.05 ? 'Moderate' : 'Low') }
-    };
-    
-    // Health
-    const health = {
-        currentRatio: { status: latestMetrics.currentRatio > 2 ? 'Strong' : (latestMetrics.currentRatio > 1 ? 'Healthy' : 'a potential risk') },
-        debtToEquity: { status: latestMetrics.debtToEquity > 1 ? 'Aggressive' : (latestMetrics.debtToEquity > 0.5 ? 'Moderate' : 'Conservative') },
-        interestCoverage: { status: latestMetrics.interestCoverage > 5 ? 'Very strong' : (latestMetrics.interestCoverage > 2 ? 'Healthy' : 'a potential concern') }
-    };
-
-    // Cash Flow
-    const capitalAllocationStory = (() => {
-        const recentFlows = cashFlows.slice(-3);
-        if (recentFlows.length === 0) return "Not enough data.";
-        const total = (key) => recentFlows.reduce((sum, cf) => sum + Math.abs(cf[key] || 0), 0);
-        const capex = total('capitalExpenditure');
-        const dividends = total('dividendsPaid');
-        const buybacks = total('commonStockRepurchased');
-        const debtRepay = total('debtRepayment');
-        const allocations = { 'investing in growth (CapEx)': capex, 'paying dividends': dividends, 'buying back stock': buybacks, 'paying down debt': debtRepay };
-        const largest = Object.keys(allocations).reduce((a, b) => allocations[a] > allocations[b] ? a : b);
-        return `The company is primarily in return/deleveraging mode, with its largest use of cash over the last few years being ${largest}.`;
-    })();
-    const cashFlow = {
-        qualityOfEarnings: latestCashFlow.operatingCashFlow > latestIncome.netIncome ? "Strong, as operating cash flow exceeds net income." : "A potential concern, as net income is higher than operating cash flow.",
-        capitalAllocationStory
-    };
-
-    // Valuation
-    const valuationMetrics = ['peRatio', 'priceToSalesRatio', 'pbRatio', 'enterpriseValueOverEBITDA'];
-    const valuation = valuationMetrics.map(metric => {
-        const current = latestMetrics[metric];
-        const historicalAverage = calculateAverage(keyMetrics, metric);
-        let status = 'N/A';
-        if (current && historicalAverage) {
-            status = current > historicalAverage ? 'trading at a premium to its historical average' : 'trading at a discount to its historical average';
-        }
-        return { metric, status };
-    });
-
-    // Thesis
-    const bullCasePoints = [];
-    if (performance.revenueTrend.includes('growing')) bullCasePoints.push("Consistent or growing revenue.");
-    if (cashFlow.qualityOfEarnings.includes('Strong')) bullCasePoints.push("Strong operating cash flow that exceeds net income.");
-    if (health.debtToEquity.status === 'Conservative') bullCasePoints.push("A strong balance sheet with a conservative debt load.");
-    if (performance.returnOnEquity.quality === 'High') bullCasePoints.push("High return on equity, indicating efficient use of shareholder capital.");
-
-    const bearCasePoints = [];
-    if (performance.revenueTrend.includes('declining')) bearCasePoints.push("Declining or stagnant revenue.");
-    if (performance.netIncomeTrend.includes('declining')) bearCasePoints.push("Declining profitability.");
-    if (health.debtToEquity.status === 'Aggressive') bearCasePoints.push("High debt load, which adds financial risk.");
-    if (health.currentRatio.status === 'a potential risk') bearCasePoints.push("Low liquidity, which could be a short-term risk.");
-    
-    const moatIndicator = (() => {
-        const highRoe = keyMetrics.slice(-5).every(k => k.returnOnEquity > 0.15);
-        const stableMargins = !performance.netProfitMargin.status.includes('declining');
-        if (highRoe && stableMargins) return "The data, showing consistently high ROE and stable margins, suggests the presence of a strong competitive moat.";
-        if (stableMargins) return "The data suggests a potential moat, indicated by stable profit margins.";
-        return "The data does not strongly indicate a durable competitive moat, due to fluctuating margins or returns.";
-    })();
-
-    const thesis = { bullCasePoints, bearCasePoints, moatIndicator };
-    
-    return { summary, performance, health, cashFlow, valuation, thesis };
-}
-
-/**
- * NEW: Calculates metrics for the "Bull Vs Bear" prompt.
- */
-function _calculateBullVsBearMetrics(data) {
-    const income = (data.income_statement_annual || []).slice(-5);
-    const metrics = (data.key_metrics_annual || []).slice(-5);
-    const cashFlow = (data.cash_flow_statement_annual || []).slice(-5);
-    const grades = (data.stock_grade_news || []).slice(0, 10);
-    const ratios = (data.ratios_annual || []).slice(-5);
-
-    const formatTrend = (arr, key) => arr.map(item => ({ year: item.calendarYear, value: formatLargeNumber(item[key]) }));
-    const formatPercentTrend = (arr, key) => arr.map(item => ({ year: item.calendarYear, value: item[key] ? `${(item[key] * 100).toFixed(2)}%` : 'N/A' }));
-
-    return {
-        growth_trends: {
-            revenue: formatTrend(income, 'revenue'),
-            net_income: formatTrend(income, 'netIncome')
-        },
-        profitability_metrics: {
-            roe_trend: formatPercentTrend(ratios, 'returnOnEquity'),
-            net_profit_margin_trend: formatPercentTrend(ratios, 'netProfitMargin'),
-            operating_margin_trend: formatPercentTrend(metrics, 'operatingMargin')
-        },
-        cash_flow_trends: {
-            operating_cash_flow: formatTrend(cashFlow, 'operatingCashFlow')
-        },
-        valuation_metrics: {
-            pe_ratio_trend: metrics.map(m => ({ year: m.calendarYear, value: m.peRatio?.toFixed(2) })),
-            pb_ratio_trend: metrics.map(m => ({ year: m.calendarYear, value: m.pbRatio?.toFixed(2) }))
-        },
-        balance_sheet_health: {
-            debt_to_equity_trend: metrics.map(m => ({ year: m.calendarYear, value: m.debtToEquity?.toFixed(2) }))
-        },
-        analyst_ratings: grades.map(g => ({ company: g.gradingCompany, from: g.previousGrade, to: g.newGrade }))
-    };
-}
-
-/**
- * NEW: Calculates metrics for the "Moat Analysis" prompt.
- */
-function _calculateMoatAnalysisMetrics(data) {
-    const profile = data.profile?.[0] || {};
-    const metrics = (data.key_metrics_annual || []).slice(-10);
-    const income = (data.income_statement_annual || []).slice(-10);
-    const cashFlow = (data.cash_flow_statement_annual || []).slice(-10);
-
-    const formatPercentTrend = (arr, key) => arr.map(item => ({ year: item.calendarYear, value: item[key] ? `${(item[key] * 100).toFixed(2)}%` : 'N/A' }));
-
-    return {
-        description: profile.description,
-        trends: {
-            returnOnInvestedCapital: formatPercentTrend(metrics, 'returnOnInvestedCapital'),
-            netProfitMargin: formatPercentTrend(metrics, 'netProfitMargin'),
-            operatingIncome: income.map(i => ({ year: i.calendarYear, value: formatLargeNumber(i.operatingIncome) })),
-            grossProfitMargin: formatPercentTrend(metrics, 'grossProfitMargin'),
-            capitalExpenditure: cashFlow.map(cf => ({ year: cf.calendarYear, value: formatLargeNumber(cf.capitalExpenditure) })),
-            researchAndDevelopment: income.map(i => ({ year: i.calendarYear, value: formatLargeNumber(i.researchAndDevelopmentExpenses) }))
-        },
-        latest_health: {
-            debtToEquity: metrics[metrics.length - 1]?.debtToEquity?.toFixed(2) || 'N/A'
-        }
-    };
-}
-
-/**
- * NEW: Calculates metrics for the "Dividend Safety" prompt.
- */
-function _calculateDividendSafetyMetrics(data) {
-    const metrics = (data.key_metrics_annual || []).slice(-10);
-    const cashFlow = (data.cash_flow_statement_annual || []).slice(-10);
-    const income = (data.income_statement_annual || []).slice(-10);
-    const balanceSheet = (data.balance_sheet_statement_annual || []).slice(-10);
-
-    const latestMetrics = metrics[metrics.length - 1] || {};
-    
-    // Create a map for easy lookup by year
-    const incomeMap = new Map(income.map(i => [i.calendarYear, i]));
-
-    const payoutRatios = cashFlow.map(cf => {
-        const correspondingIncome = incomeMap.get(cf.calendarYear);
-        const dividends = Math.abs(cf.dividendsPaid || 0);
-        const fcf = cf.freeCashFlow;
-        const netIncome = correspondingIncome?.netIncome;
-
-        return {
-            year: cf.calendarYear,
-            fcf_payout_ratio: (fcf && fcf > 0) ? `${((dividends / fcf) * 100).toFixed(2)}%` : 'N/A',
-            earnings_payout_ratio: (netIncome && netIncome > 0) ? `${((dividends / netIncome) * 100).toFixed(2)}%` : 'N/A'
-        };
-    });
-
-    return {
-        current_yield: latestMetrics.dividendYield ? `${(latestMetrics.dividendYield * 100).toFixed(2)}%` : 'N/A',
-        payout_ratios: payoutRatios,
-        dividend_growth_trend: cashFlow.map(cf => ({ year: cf.calendarYear, dividends_paid: formatLargeNumber(cf.dividendsPaid) })),
-        balance_sheet_trends: {
-            debt_to_equity: metrics.map(m => ({ year: m.calendarYear, value: m.debtToEquity?.toFixed(2) })),
-            cash_cushion: balanceSheet.map(bs => ({ year: bs.calendarYear, value: formatLargeNumber(bs.cashAndCashEquivalents) }))
-        }
-    };
-}
-
-/**
- * NEW: Calculates metrics for the "Growth Outlook" prompt.
- */
-function _calculateGrowthOutlookMetrics(data) {
-    const income = (data.income_statement_annual || []).slice(-5);
-    const metrics = (data.key_metrics_annual || []).slice(-5);
-    const grades = (data.stock_grade_news || []).slice(0, 10);
-    const estimates = (data.analyst_estimates || []).slice(0, 5);
-
-    const latestMetrics = metrics[metrics.length - 1] || {};
-
-    return {
-        historical_growth: {
-            revenue_trend: income.map(i => ({ year: i.calendarYear, value: formatLargeNumber(i.revenue) })),
-            net_income_trend: income.map(i => ({ year: i.calendarYear, value: formatLargeNumber(i.netIncome) }))
-        },
-        valuation: {
-            pe_ratio: latestMetrics.peRatio?.toFixed(2) || 'N/A',
-            ev_to_sales: latestMetrics.evToSales?.toFixed(2) || 'N/A'
-        },
-        reinvestment: {
-            rd_as_percent_of_revenue: latestMetrics.researchAndDevelopementToRevenue ? `${(latestMetrics.researchAndDevelopementToRevenue * 100).toFixed(2)}%` : 'N/A',
-            capex_as_percent_of_revenue: latestMetrics.capexToRevenue ? `${(latestMetrics.capexToRevenue * 100).toFixed(2)}%` : 'N/A'
-        },
-        market_expectations: {
-            analyst_grades: grades.map(g => ({ date: g.date, company: g.gradingCompany, action: g.action, from: g.previousGrade, to: g.newGrade })),
-            future_estimates: estimates.map(e => ({
-                date: e.date,
-                revenue_avg: formatLargeNumber(e.estimatedRevenueAvg),
-                eps_avg: e.estimatedEpsAvg?.toFixed(2)
-            }))
-        }
-    };
-}
-
-/**
- * NEW: Calculates metrics for the "Risk Assessment" prompt.
- */
-function _calculateRiskAssessmentMetrics(data) {
-    const profile = data.profile?.[0] || {};
-    const metrics = (data.key_metrics_annual || []).slice(-5);
-    const cashFlow = (data.cash_flow_statement_annual || []).slice(-5);
-    const income = (data.income_statement_annual || []).slice(-5);
-    const grades = (data.stock_grade_news || []).slice(0, 10);
-
-    const latestMetrics = metrics[metrics.length - 1] || {};
-    const latestCashFlow = cashFlow[cashFlow.length - 1] || {};
-    const latestIncome = income[income.length - 1] || {};
-
-    return {
-        financial_risks: {
-            debt_to_equity: latestMetrics.debtToEquity?.toFixed(2) || 'N/A',
-            current_ratio: latestMetrics.currentRatio?.toFixed(2) || 'N/A',
-            earnings_quality: {
-                operating_cash_flow: formatLargeNumber(latestCashFlow.operatingCashFlow),
-                net_income: formatLargeNumber(latestIncome.netIncome)
-            },
-            dividend_sustainability: {
-                dividends_paid: formatLargeNumber(Math.abs(latestCashFlow.dividendsPaid)),
-                net_income: formatLargeNumber(latestIncome.netIncome)
-            }
-        },
-        market_risks: {
-            beta: profile.beta?.toFixed(2) || 'N/A',
-            valuation: {
-                pe_ratio: latestMetrics.peRatio?.toFixed(2) || 'N/A',
-                ps_ratio: latestMetrics.priceToSalesRatio?.toFixed(2) || 'N/A'
-            },
-            analyst_pessimism: grades.filter(g => ['sell', 'underperform', 'underweight'].includes(g.newGrade.toLowerCase()))
-                                    .map(g => `${g.gradingCompany} rated ${g.newGrade}`)
-        },
-        business_risks: {
-            recession_sensitivity_sector: profile.sector,
-            margin_trend: metrics.map(m => ({ year: m.calendarYear, net_profit_margin: m.netProfitMargin ? `${(m.netProfitMargin * 100).toFixed(2)}%` : 'N/A' })),
-            net_interest_margin_trend: (profile.sector === 'Financial Services') ? metrics.map(m => ({ year: m.calendarYear, net_interest_margin: m.netInterestMargin ? `${(m.netInterestMargin * 100).toFixed(2)}%` : 'N/A' })) : 'N/A for this sector'
-        }
-    };
-}
-
-/**
- * NEW: Calculates metrics for the "Capital Allocators" prompt.
- */
-function _calculateCapitalAllocatorsMetrics(data) {
-    const cashFlow = (data.cash_flow_statement_annual || []).slice(-10);
-    const metrics = (data.key_metrics_annual || []).slice(-10);
-    const income = (data.income_statement_annual || []).slice(-10);
-    const balanceSheet = (data.balance_sheet_statement_annual || []).slice(-10);
-
-    // Create a map for easy lookup by year
-    const metricsMap = new Map(metrics.map(m => [m.calendarYear, m]));
-
-    const buyback_vs_valuation = cashFlow.map(cf => {
-        const correspondingMetrics = metricsMap.get(cf.calendarYear);
-        return {
-            year: cf.calendarYear,
-            common_stock_repurchased: formatLargeNumber(cf.commonStockRepurchased),
-            pe_ratio_that_year: correspondingMetrics?.peRatio?.toFixed(2) || 'N/A',
-            pb_ratio_that_year: correspondingMetrics?.priceToBookRatio?.toFixed(2) || 'N/A'
-        };
-    });
-
-    return {
-        cash_flow_statement_annual: cashFlow,
-        key_metrics_annual: metrics,
-        income_statement_annual: income,
-        balance_sheet_statement_annual: balanceSheet,
-        buyback_vs_valuation // Add the correlated data directly
-    };
-}
-
-/**
- * NEW: Calculates metrics for the "Narrative & Catalyst" prompt.
- */
-function _calculateNarrativeCatalystMetrics(data) {
-    const profile = data.profile?.[0] || {};
-    const metrics = (data.key_metrics_annual || []).slice(-5);
-    const cashFlow = (data.cash_flow_statement_annual || []).slice(-5);
-    const income = (data.income_statement_annual || []).slice(-5);
-    const grades = (data.stock_grade_news || []).slice(0, 10);
-
-    const latestMetrics = metrics[metrics.length - 1] || {};
-    const latestCashFlow = cashFlow[cashFlow.length - 1] || {};
-    const latestIncome = income[income.length - 1] || {};
-
-    const isGrowthAccelerating = () => {
-        if (income.length < 3) return false;
-        const yoy = (arr, key) => ((arr[arr.length - 1][key] / arr[arr.length - 2][key]) - 1);
-        const latestGrowth = yoy(income, 'revenue');
-        const prevGrowth = yoy(income.slice(0, -1), 'revenue');
-        return latestGrowth > prevGrowth;
-    };
-
-    const isMarginExpanding = () => {
-        if (metrics.length < 2) return false;
-        return metrics[metrics.length - 1].operatingMargin > metrics[metrics.length - 2].operatingMargin;
-    };
-
-    return {
-        profile: { description: profile.description, industry: profile.industry },
-        financial_health: {
-            is_profitable: (latestIncome.netIncome || 0) > 0,
-            is_cash_flow_positive: (latestCashFlow.freeCashFlow || 0) > 0,
-            debt_to_equity: latestMetrics.debtToEquity?.toFixed(2) || 'N/A'
-        },
-        catalysts: {
-            is_growth_accelerating: isGrowthAccelerating(),
-            is_margin_expanding: isMarginExpanding(),
-            has_recent_upgrades: grades.filter(g => g.action.toLowerCase() === 'upgrade').length > 0
-        }
-    };
 }
