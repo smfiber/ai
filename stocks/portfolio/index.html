@@ -264,13 +264,21 @@
                     <button id="close-portfolio-manager-modal" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
                 </div>
             </div>
-            <div id="portfolio-manager-list-container" class="overflow-y-auto flex-grow">
-                <div class="p-4 border-b bg-gray-50">
+            <div id="portfolio-manager-list-container" class="flex-grow flex flex-col">
+                <div class="p-4 border-b bg-gray-50 flex-shrink-0">
                     <form id="manage-cash-form" class="flex items-center gap-4">
                         <label for="manage-cash-amount" class="block text-sm font-medium text-gray-700">Cash Balance:</label>
                         <input type="number" step="0.01" id="manage-cash-amount" class="block w-full border border-gray-300 rounded-md shadow-sm p-2" placeholder="e.g., 5000.00">
                         <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg whitespace-nowrap">Save Cash</button>
                     </form>
+                </div>
+                <div class="modal-tab-nav flex-shrink-0">
+                    <button class="modal-tab-button active" data-tab="manager-portfolio">Portfolio</button>
+                    <button class="modal-tab-button" data-tab="manager-watchlist">Watchlist</button>
+                </div>
+                <div class="modal-tab-content overflow-y-auto flex-grow">
+                    <div id="manager-portfolio-tab-pane" class="modal-tab-pane active"></div>
+                    <div id="manager-watchlist-tab-pane" class="modal-tab-pane"></div>
                 </div>
             </div>
         </div>
