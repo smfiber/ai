@@ -425,25 +425,22 @@ export async function fetchAndCachePortfolioData() {
     }
 }
 
-async function openStockListModal(listType) {
-    const modalId = CONSTANTS.MODAL_STOCK_LIST;
-    const modal = document.getElementById(modalId);
-    if (!modal) return;
+async function _renderStockListForTab(listType) {
+    const containerId = listType === 'Portfolio' ? 'portfolio-tab-pane' : 'watchlist-tab-pane';
+    const container = document.getElementById(containerId);
+    if (!container) return;
 
-    openModal(CONSTANTS.MODAL_LOADING);
-    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Loading ${listType}...`;
-
-    const title = modal.querySelector('#stock-list-modal-title');
-    const container = modal.querySelector('#stock-list-modal-content');
-    title.textContent = listType === 'Portfolio' ? 'My Portfolio' : 'My Watchlist';
-    container.innerHTML = '';
+    // Prevent re-rendering if content already exists
+    if (container.innerHTML.trim() !== '') {
+        return;
+    }
+    
+    container.innerHTML = `<div class="flex justify-center p-8"><div class="loader"></div></div>`;
 
     try {
         const stocksToFetch = state.portfolioCache.filter(s => s.status === listType);
         if (stocksToFetch.length === 0) {
             container.innerHTML = `<p class="text-center text-gray-500 py-8">No stocks in your ${listType}.</p>`;
-            openModal(modalId);
-            closeModal(CONSTANTS.MODAL_LOADING);
             return;
         }
 
@@ -458,13 +455,29 @@ async function openStockListModal(listType) {
         }).filter(stock => stock.fmpData);
 
         await _renderGroupedStockList(container, stocksWithData, listType);
-        openModal(modalId);
     } catch (error) {
-        console.error(`Error loading ${listType} modal:`, error);
-        displayMessageInModal(`Failed to load ${listType}: ${error.message}`, 'error');
-    } finally {
-        closeModal(CONSTANTS.MODAL_LOADING);
+        console.error(`Error loading ${listType} list:`, error);
+        container.innerHTML = `<p class="text-red-500 text-center">Failed to load ${listType}: ${error.message}</p>`;
     }
+}
+
+
+async function handleOpenStockListViewer() {
+    openModal(CONSTANTS.MODAL_STOCK_LIST);
+    // Reset tabs to default state on open
+    const modal = document.getElementById(CONSTANTS.MODAL_STOCK_LIST);
+    modal.querySelectorAll('.modal-tab-button').forEach(btn => btn.classList.remove('active'));
+    modal.querySelectorAll('.modal-tab-pane').forEach(pane => {
+        pane.classList.remove('active');
+        pane.innerHTML = ''; // Clear content to ensure it reloads
+    });
+
+    // Set portfolio as the default active tab
+    modal.querySelector('.modal-tab-button[data-tab="portfolio"]').classList.add('active');
+    modal.querySelector('#portfolio-tab-pane').classList.add('active');
+    
+    // Load the default tab's content
+    await _renderStockListForTab('Portfolio');
 }
 
 async function openManageStockModal(stockData = {}) {
@@ -1466,18 +1479,38 @@ function setupGlobalEventListeners() {
             await renderPortfolioHealthScore();
             return;
         }
+
+        const viewAllButton = e.target.closest('#view-all-stocks-button');
+        if (viewAllButton) {
+            handleOpenStockListViewer();
+        }
     });
 
     document.getElementById(CONSTANTS.MODAL_STOCK_LIST).addEventListener('click', (e) => {
         const target = e.target.closest('button');
         if (!target) return;
 
+        if (target.classList.contains('modal-tab-button')) {
+            const tabId = target.dataset.tab;
+            const modal = target.closest('.modal');
+
+            modal.querySelectorAll('.modal-tab-button').forEach(btn => btn.classList.remove('active'));
+            modal.querySelectorAll('.modal-tab-pane').forEach(pane => pane.classList.remove('active'));
+
+            target.classList.add('active');
+            document.getElementById(`${tabId}-tab-pane`).classList.add('active');
+
+            const listType = tabId === 'portfolio' ? 'Portfolio' : 'Watchlist';
+            _renderStockListForTab(listType);
+            return;
+        }
+
         if (target.id === 'expand-all-button') {
-            document.querySelectorAll('#stock-list-modal-content .sector-group').forEach(d => d.open = true);
+            document.querySelectorAll('#stockListModal .modal-tab-pane.active .sector-group').forEach(d => d.open = true);
             return;
         }
         if (target.id === 'collapse-all-button') {
-            document.querySelectorAll('#stock-list-modal-content .sector-group').forEach(d => d.open = false);
+            document.querySelectorAll('#stockListModal .modal-tab-pane.active .sector-group').forEach(d => d.open = false);
             return;
         }
         
