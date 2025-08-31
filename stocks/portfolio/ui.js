@@ -1904,16 +1904,20 @@ function _calculateDeepDiveMetrics(data) {
     const latestCashFlow = cashFlow[cashFlow.length - 1] || {};
     const latestIncome = income[income.length - 1] || {};
 
-    const getTrend = (series, key, lookback = 5) => {
-        if (!series || series.length < 2) return "Not enough data.";
-        const recent = series.slice(-lookback);
-        const first = recent[0][key];
-        const last = recent[recent.length - 1][key];
-        if (typeof first !== 'number' || typeof last !== 'number' || first === 0) return "Not applicable.";
-        const change = ((last - first) / Math.abs(first));
-        if (change > 0.1) return "growing";
-        if (change < -0.1) return "declining";
-        return "stable";
+    const formatTrend = (series, key, lookback = 5) => {
+        if (!series) return [];
+        return series.slice(-lookback).map(item => ({
+            year: item.calendarYear,
+            value: typeof item[key] === 'number' ? item[key].toFixed(2) : 'N/A'
+        }));
+    };
+    
+    const formatLargeNumberTrend = (series, key, lookback = 5) => {
+         if (!series) return [];
+        return series.slice(-lookback).map(item => ({
+            year: item.calendarYear,
+            value: typeof item[key] === 'number' ? formatLargeNumber(item[key]) : 'N/A'
+        }));
     };
 
     const calculateAverage = (data, key, lookback = 5) => {
@@ -1936,12 +1940,12 @@ function _calculateDeepDiveMetrics(data) {
         description: profile.description,
         sector: profile.sector,
         industry: profile.industry,
-        roeTrend: getTrend(ratios, 'returnOnEquity'),
-        grossMarginTrend: getTrend(ratios, 'grossProfitMargin'),
-        netMarginTrend: getTrend(ratios, 'netProfitMargin'),
-        revenueTrend: getTrend(income, 'revenue'),
-        netIncomeTrend: getTrend(income, 'netIncome'),
-        debtToEquityTrend: getTrend(ratios, 'debtToEquityRatio'),
+        roeTrend: formatTrend(ratios, 'returnOnEquity'),
+        grossMarginTrend: formatTrend(ratios, 'grossProfitMargin'),
+        netMarginTrend: formatTrend(ratios, 'netProfitMargin'),
+        revenueTrend: formatLargeNumberTrend(income, 'revenue'),
+        netIncomeTrend: formatLargeNumberTrend(income, 'netIncome'),
+        debtToEquityTrend: formatTrend(ratios, 'debtEquityRatio'),
         cashFlowVsNetIncome: `Operating Cash Flow (${formatLargeNumber(latestCashFlow.operatingCashFlow)}) vs. Net Income (${formatLargeNumber(latestIncome.netIncome)}).`,
         dividendYield: latestMetrics.dividendYield ? `${(latestMetrics.dividendYield * 100).toFixed(2)}%` : 'N/A',
         fcfPayoutRatio: (latestCashFlow.freeCashFlow > 0) ? `${(Math.abs(latestCashFlow.dividendsPaid || 0) / latestCashFlow.freeCashFlow * 100).toFixed(2)}%` : 'N/A',
