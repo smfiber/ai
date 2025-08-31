@@ -689,3 +689,47 @@ export async function generateTrendAnalysis(ticker) {
     
     return await callGeminiApi(prompt);
 }
+
+/**
+ * Generates a concise news summary and sentiment for a single stock.
+ * @param {string} ticker The stock ticker.
+ * @param {string} companyName The company name.
+ * @returns {Promise<object|null>} An object with the news summary or null on failure.
+ */
+export async function generateNewsSummary(ticker, companyName) {
+    try {
+        const newsUrl = `https://financialmodelingprep.com/api/v3/stock_news?tickers=${ticker}&limit=10&apikey=${state.fmpApiKey}`;
+        const newsData = await callApi(newsUrl);
+        const validArticles = filterValidNews(newsData);
+        if (validArticles.length === 0) return { dominant_narrative: "No recent news found.", overall_sentiment: "Neutral" };
+
+        const articlesForPrompt = validArticles.map(a => ({
+            title: a.title,
+            snippet: a.text,
+            publicationDate: a.publishedDate ? a.publishedDate.split(' ')[0] : 'N/A'
+        }));
+
+        const prompt = NEWS_SENTIMENT_PROMPT
+            .replace('{companyName}', companyName)
+            .replace('{tickerSymbol}', ticker)
+            .replace('{news_articles_json}', JSON.stringify(articlesForPrompt, null, 2));
+
+        const rawResult = await callGeminiApi(prompt);
+        
+        // Use regex to be more robust against small formatting changes from the AI
+        const summaryMatch = rawResult.match(/## News Narrative & Pulse([\s\S]*)/);
+        if (!summaryMatch) return { dominant_narrative: "Could not parse news summary.", overall_sentiment: "N/A" };
+        
+        const summaryMarkdown = summaryMatch[1].trim();
+        const narrativeMatch = summaryMarkdown.match(/\*\*Dominant Narrative:\*\*\s*(.*)/);
+        const overallSentimentMatch = summaryMarkdown.match(/\*\*Overall Sentiment:\*\*\s*(.*)/);
+
+        return {
+            overall_sentiment: overallSentimentMatch ? overallSentimentMatch[1].trim() : "N/A",
+            dominant_narrative: narrativeMatch ? narrativeMatch[1].trim() : "Could not parse dominant narrative."
+        };
+    } catch (error) {
+        console.error(`Failed to generate news summary for ${ticker}:`, error);
+        return { dominant_narrative: `Error fetching news: ${error.message}`, overall_sentiment: "N/A" };
+    }
+}
