@@ -521,7 +521,7 @@ font-size: 0.75rem;
 <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth-compat.js"></script>
 
 <script>
-    // Version 5.3.0
+    // Version 5.3.1
     document.addEventListener("DOMContentLoaded", () => {
         // --- 1. Global Configuration Object ---
         const appConfig = {
@@ -1077,10 +1077,9 @@ font-size: 0.75rem;
             
             const screenerData = await fetchSimpleStockScreener(exchangeUpperCase, tableContainer, cardContainer);
             
-            const loadedFromCache = await loadNewsFromFirebase(exchange, newsContainer, screenerData);
-            if (!loadedFromCache) {
-                await fetchAndRenderPriceTargetNews(screenerData, newsContainer, exchange);
-            }
+            // Attempt to load news from cache on startup, but do not fetch from API if cache is empty.
+            // API fetching will only happen when the user clicks the "Refresh News" button.
+            await loadNewsFromFirebase(exchange, newsContainer, screenerData);
 
             refreshButton.addEventListener('click', async (e) => {
                 e.stopPropagation();
