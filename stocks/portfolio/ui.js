@@ -681,7 +681,10 @@ async function openRawDataViewer(ticker) {
         const groupedDataPromise = getGroupedFmpData(ticker);
         const savedReportsPromise = getDocs(query(collection(state.db, CONSTANTS.DB_COLLECTION_AI_REPORTS), where("ticker", "==", ticker)));
 
-        const [fmpData, groupedFmpData, savedReportsSnapshot] = await Promise.all([fmpDataPromise, groupedDataPromise, savedReportsSnapshot]);
+        const results = await Promise.all([fmpDataPromise, groupedDataPromise, savedReportsPromise]);
+        const fmpData = results[0];
+        const groupedFmpData = results[1];
+        const savedReportsSnapshot = results[2];
 
         if (!fmpData || !fmpData.profile || fmpData.profile.length === 0) {
             closeModal(modalId);
