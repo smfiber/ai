@@ -1,6 +1,6 @@
 // ui.js
 import { CONSTANTS, SECTORS, SECTOR_ICONS, state, NEWS_SENTIMENT_PROMPT, DEEP_DIVE_PROMPT, ENABLE_STARTER_PLAN_MODE, STARTER_SYMBOLS } from './config.js';
-import { getFmpStockData, callApi, filterValidNews, callGeminiApi, generatePolishedArticle, getDriveToken, getOrCreateDriveFolder, createDriveFile, getGroupedFmpData, generateMorningBriefing, calculatePortfolioHealthScore, runOpportunityScanner, generatePortfolioAnalysis, generateTrendAnalysis, getCachedNews, getScannerResults } from './api.js';
+import { getFmpStockData, callApi, filterValidNews, callGeminiApi, generatePolishedArticle, getDriveToken, getOrCreateDriveFolder, createDriveFile, getGroupedFmpData, generateMorningBriefing, calculatePortfolioHealthScore, runOpportunityScanner, generatePortfolioAnalysis, generateTrendAnalysis, getCachedNews, getScannerResults, generateNewsSummary } from './api.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- UTILITY & SECURITY HELPERS ---
@@ -1891,18 +1891,22 @@ async function getSavedReports(ticker, reportType) {
 /**
  * Calculates a comprehensive summary of metrics for the "Deep Dive" prompt.
  * @param {object} data - The full FMP data object for a stock.
+ * @param {string} newsNarrative - A concise summary of the recent news narrative.
  * @returns {object} A summary object with pre-calculated metrics and trends.
  */
-function _calculateDeepDiveMetrics(data) {
+function _calculateDeepDiveMetrics(data, newsNarrative) {
     const profile = data.profile?.[0] || {};
     const income = (data.income_statement_annual || []).slice().reverse(); // Oldest to newest
     const keyMetrics = (data.key_metrics_annual || []).slice().reverse();
     const cashFlow = (data.cash_flow_statement_annual || []).slice().reverse();
     const ratios = (data.ratios_annual || []).slice().reverse();
+    const analystEstimates = data.analyst_estimates || [];
+    const analystGrades = data.stock_grade_news || [];
 
     const latestMetrics = keyMetrics[keyMetrics.length - 1] || {};
     const latestCashFlow = cashFlow[cashFlow.length - 1] || {};
     const latestIncome = income[income.length - 1] || {};
+    const lastYearIncome = income[income.length - 2] || {};
 
     const formatTrend = (series, key, lookback = 5) => {
         if (!series) return [];
@@ -1936,24 +1940,52 @@ function _calculateDeepDiveMetrics(data) {
         return `Current ${ratioKey} is ${current ? current.toFixed(2) : 'N/A'}.`;
     };
 
+    // --- NEW: Process Analyst Data ---
+    const nextYearEstimate = analystEstimates[0] || {};
+    const lastActualRevenue = latestIncome.revenue;
+    let revenueGrowthForecast = 'N/A';
+    if (nextYearEstimate.estimatedRevenueAvg && lastActualRevenue) {
+        revenueGrowthForecast = `${(((nextYearEstimate.estimatedRevenueAvg / lastActualRevenue) - 1) * 100).toFixed(2)}%`;
+    }
+    
+    const recentRatings = analystGrades.slice(0, 5).map(grade => 
+        `${grade.action} to '${grade.newGrade}' by ${grade.gradingCompany} on ${grade.date}`
+    );
+
     return {
+        // Core Info
         description: profile.description,
         sector: profile.sector,
         industry: profile.industry,
+        currentPrice: profile.price || 'N/A',
+
+        // NEW: Forward-Looking Data
+        analystConsensus: {
+            nextYearRevenueForecast: formatLargeNumber(nextYearEstimate.estimatedRevenueAvg),
+            nextYearEpsForecast: nextYearEstimate.estimatedEpsAvg ? nextYearEstimate.estimatedEpsAvg.toFixed(2) : 'N/A',
+            estimatedRevenueGrowth: revenueGrowthForecast
+        },
+        recentAnalystRatings: recentRatings,
+        recentNewsNarrative: newsNarrative,
+        
+        // Historical Performance & Quality
         roeTrend: formatTrend(ratios, 'returnOnEquity'),
         grossMarginTrend: formatTrend(ratios, 'grossProfitMargin'),
         netMarginTrend: formatTrend(ratios, 'netProfitMargin'),
         revenueTrend: formatLargeNumberTrend(income, 'revenue'),
         netIncomeTrend: formatLargeNumberTrend(income, 'netIncome'),
-        debtToEquityTrend: formatTrend(ratios, 'debtEquityRatio'),
+        
+        // Financial Health
+        debtToEquityTrend: formatTrend(ratios, 'debtToEquityRatio'),
         cashFlowVsNetIncome: `Operating Cash Flow (${formatLargeNumber(latestCashFlow.operatingCashFlow)}) vs. Net Income (${formatLargeNumber(latestIncome.netIncome)}).`,
         dividendYield: latestMetrics.dividendYield ? `${(latestMetrics.dividendYield * 100).toFixed(2)}%` : 'N/A',
         fcfPayoutRatio: (latestCashFlow.freeCashFlow > 0) ? `${(Math.abs(latestCashFlow.dividendsPaid || 0) / latestCashFlow.freeCashFlow * 100).toFixed(2)}%` : 'N/A',
+        
+        // Valuation
         pe_valuation: valuation('peRatio', 'P/E'),
         ps_valuation: valuation('priceToSalesRatio', 'P/S'),
         pb_valuation: valuation('pbRatio', 'P/B'),
-        grahamNumber: latestMetrics.grahamNumber ? latestMetrics.grahamNumber.toFixed(2) : 'N/A',
-        currentPrice: profile.price || 'N/A'
+        grahamNumber: latestMetrics.grahamNumber ? latestMetrics.grahamNumber.toFixed(2) : 'N/A'
     };
 }
 
@@ -1981,10 +2013,11 @@ async function handleDeepDiveRequest(symbol, forceNew = false) {
         openModal(CONSTANTS.MODAL_LOADING);
         const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
         
+        loadingMessage.textContent = `Fetching financial data for ${symbol}...`;
         const data = await getFmpStockData(symbol);
         if (!data) throw new Error(`No cached FMP data found for ${symbol}.`);
         
-        const requiredEndpoints = ['profile', 'ratios_annual', 'key_metrics_annual', 'income_statement_annual', 'cash_flow_statement_annual'];
+        const requiredEndpoints = ['profile', 'ratios_annual', 'key_metrics_annual', 'income_statement_annual', 'cash_flow_statement_annual', 'analyst_estimates', 'stock_grade_news'];
         const missingEndpoints = requiredEndpoints.filter(ep => !data[ep] || data[ep].length === 0);
 
         if (missingEndpoints.length > 0) {
@@ -2000,10 +2033,14 @@ async function handleDeepDiveRequest(symbol, forceNew = false) {
             return;
         }
         
-        const payloadData = _calculateDeepDiveMetrics(data);
+        loadingMessage.textContent = `Analyzing recent news for ${symbol}...`;
         const profile = data.profile?.[0] || {};
         const companyName = profile.companyName || 'the company';
         const tickerSymbol = profile.symbol || symbol;
+        
+        const newsSummary = await generateNewsSummary(tickerSymbol, companyName);
+
+        const payloadData = _calculateDeepDiveMetrics(data, newsSummary.dominant_narrative);
 
         const prompt = DEEP_DIVE_PROMPT
             .replace(/{companyName}/g, companyName)
