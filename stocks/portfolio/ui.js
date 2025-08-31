@@ -1,6 +1,6 @@
 // ui.js
 import { CONSTANTS, SECTORS, SECTOR_ICONS, state, NEWS_SENTIMENT_PROMPT, promptMap, creativePromptMap, INVESTMENT_MEMO_PROMPT, ENABLE_STARTER_PLAN_MODE, STARTER_SYMBOLS } from './config.js';
-import { getFmpStockData, callApi, filterValidNews, callGeminiApi, generatePolishedArticle, getDriveToken, getOrCreateDriveFolder, createDriveFile, getGroupedFmpData, generateMorningBriefing, calculatePortfolioHealthScore, runOpportunityScanner, generatePortfolioAnalysis, generateTrendAnalysis, getCachedNews } from './api.js';
+import { getFmpStockData, callApi, filterValidNews, callGeminiApi, generatePolishedArticle, getDriveToken, getOrCreateDriveFolder, createDriveFile, getGroupedFmpData, generateMorningBriefing, calculatePortfolioHealthScore, runOpportunityScanner, generatePortfolioAnalysis, generateTrendAnalysis, getCachedNews, getScannerResults } from './api.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- PROMPT MAPPING ---
@@ -665,6 +665,7 @@ async function openRawDataViewer(ticker) {
     const titleEl = document.getElementById('raw-data-viewer-modal-title');
     const trendContentContainer = document.getElementById('trend-analysis-content');
     const newsContentContainer = document.getElementById('news-content-container');
+    const scannerResultsContainer = document.getElementById('scanner-results-tab');
     
     titleEl.textContent = `Analyzing ${ticker}...`;
     rawDataContainer.innerHTML = '<div class="loader mx-auto"></div>';
@@ -673,6 +674,8 @@ async function openRawDataViewer(ticker) {
     profileDisplayContainer.innerHTML = '';
     if (trendContentContainer) trendContentContainer.innerHTML = ''; // Clear trend content on open
     if (newsContentContainer) newsContentContainer.innerHTML = ''; // Clear news content on open
+    if (scannerResultsContainer) scannerResultsContainer.innerHTML = ''; // Clear scanner content on open
+
 
     document.querySelectorAll('#rawDataViewerModal .tab-content').forEach(c => c.classList.add('hidden'));
     document.querySelectorAll('#rawDataViewerModal .tab-button').forEach(b => b.classList.remove('active'));
@@ -1465,6 +1468,59 @@ async function handleTrendAnalysisRequest(ticker) {
     }
 }
 
+// --- NEW SCANNER RESULTS TAB ---
+function renderScannerResultsForStock(container, results, ticker) {
+    if (!results || results.length === 0) {
+        container.innerHTML = `<div class="text-center text-gray-500 py-16">
+            <h3 class="mt-2 text-lg font-medium text-gray-900">No Scanner Results Found</h3>
+            <p class="mt-1 text-sm text-gray-500">No significant narrative shifts have been recorded for ${ticker}. Run the 'Scan for Opportunities' on the dashboard to generate data.</p>
+        </div>`;
+        return;
+    }
+
+    const resultsHtml = results.map(item => {
+        const date = item.scannedAt && item.scannedAt.toDate ? item.scannedAt.toDate().toLocaleDateString() : 'N/A';
+        const isBullish = item.type === 'Bullish';
+        const badgeClass = isBullish ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
+        const icon = isBullish ? '🟢' : '🔴';
+
+        return `
+            <div class="border border-gray-200 rounded-lg p-4 mb-4 bg-white shadow-sm">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full ${badgeClass}">${icon} ${item.type}</span>
+                        <h4 class="font-bold text-gray-800 mt-2">"${sanitizeText(item.headline)}"</h4>
+                    </div>
+                    <span class="text-sm text-gray-500 flex-shrink-0 ml-4">${date}</span>
+                </div>
+                <p class="text-sm text-gray-700 mt-2">${sanitizeText(item.summary)}</p>
+            </div>
+        `;
+    }).join('');
+
+    container.innerHTML = `<h3 class="text-xl font-bold text-gray-800 mb-4">Historical Scanner Results for ${ticker}</h3><div class="space-y-4">${resultsHtml}</div>`;
+}
+
+
+async function handleScannerResultsRequest(ticker) {
+    const contentContainer = document.getElementById('scanner-results-tab');
+    if (!contentContainer) return;
+
+    if (contentContainer.innerHTML.trim() !== '') {
+        return; // Avoid re-fetching
+    }
+
+    contentContainer.innerHTML = '<div class="flex justify-center items-center h-full pt-16"><div class="loader"></div></div>';
+
+    try {
+        const results = await getScannerResults(ticker);
+        renderScannerResultsForStock(contentContainer, results, ticker);
+    } catch (error) {
+        console.error("Error fetching scanner results:", error);
+        contentContainer.innerHTML = `<div class="text-center p-4 text-red-500 bg-red-50 rounded-lg"><p class="font-semibold">Could not load scanner results.</p><p class="text-sm">${error.message}</p></div>`;
+    }
+}
+
 // --- NEW CACHED NEWS TAB ---
 function renderCachedNews(container, articles, ticker) {
     if (!articles || articles.length === 0) {
@@ -1829,6 +1885,8 @@ export function setupEventListeners() {
                     handleTrendAnalysisRequest(symbol);
                 } else if (tabId === 'news') {
                     handleNewsTabRequest(symbol);
+                } else if (tabId === 'scanner-results') {
+                    handleScannerResultsRequest(symbol);
                 }
             }
             return;
