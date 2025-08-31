@@ -1,5 +1,5 @@
 import { CONSTANTS, SECTORS, SECTOR_ICONS, state, NEWS_SENTIMENT_PROMPT, promptMap, creativePromptMap, INVESTMENT_MEMO_PROMPT, ENABLE_STARTER_PLAN_MODE, STARTER_SYMBOLS } from './config.js';
-import { getFmpStockData, callApi, filterValidNews, callGeminiApi, generatePolishedArticle, getDriveToken, getOrCreateDriveFolder, createDriveFile, getGroupedFmpData, generateMorningBriefing, calculatePortfolioHealthScore, runOpportunityScanner, generatePortfolioAnalysis } from './api.js';
+import { getFmpStockData, callApi, filterValidNews, callGeminiApi, generatePolishedArticle, getDriveToken, getOrCreateDriveFolder, createDriveFile, getGroupedFmpData, generateMorningBriefing, calculatePortfolioHealthScore, runOpportunityScanner, generatePortfolioAnalysis, generateTrendAnalysis } from './api.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- PROMPT MAPPING ---
@@ -777,6 +777,9 @@ async function handleResearchSubmit(e) {
 
 async function openRawDataViewer(ticker) {
     const modalId = 'rawDataViewerModal';
+    const modal = document.getElementById(modalId);
+    if (!modal) return;
+    modal.dataset.activeSymbol = ticker; // Store the active symbol
     openModal(modalId);
     
     const rawDataContainer = document.getElementById('raw-data-accordion-container');
@@ -784,12 +787,14 @@ async function openRawDataViewer(ticker) {
     const aiArticleContainer = document.getElementById('ai-article-container');
     const profileDisplayContainer = document.getElementById('company-profile-display-container');
     const titleEl = document.getElementById('raw-data-viewer-modal-title');
+    const trendContentContainer = document.getElementById('trend-analysis-content');
     
     titleEl.textContent = `Analyzing ${ticker}...`;
     rawDataContainer.innerHTML = '<div class="loader mx-auto"></div>';
     aiButtonsContainer.innerHTML = '';
     aiArticleContainer.innerHTML = '';
     profileDisplayContainer.innerHTML = '';
+    trendContentContainer.innerHTML = ''; // Clear trend content on open
 
     document.querySelectorAll('#rawDataViewerModal .tab-content').forEach(c => c.classList.add('hidden'));
     document.querySelectorAll('#rawDataViewerModal .tab-button').forEach(b => b.classList.remove('active'));
@@ -1565,6 +1570,27 @@ async function handleRunOpportunityScanner() {
     }
 }
 
+// --- NEW TREND ANALYSIS ---
+async function handleTrendAnalysisRequest(ticker) {
+    const contentContainer = document.getElementById('trend-analysis-content');
+    if (!contentContainer) return;
+
+    // Check if the content is already generated to avoid re-fetching on simple tab clicks
+    if (contentContainer.innerHTML.trim() !== '') {
+        return;
+    }
+
+    contentContainer.innerHTML = '<div class="flex justify-center items-center h-full pt-16"><div class="loader"></div></div>';
+
+    try {
+        const markdownResponse = await generateTrendAnalysis(ticker);
+        contentContainer.innerHTML = marked.parse(markdownResponse);
+    } catch (error) {
+        console.error("Error generating trend analysis:", error);
+        contentContainer.innerHTML = `<div class="text-center p-4 text-red-500 bg-red-50 rounded-lg"><p class="font-semibold">Could not generate trend analysis.</p><p class="text-sm">${error.message}</p></div>`;
+    }
+}
+
 
 // --- EVENT LISTENER SETUP ---
 
@@ -1835,10 +1861,24 @@ export function setupEventListeners() {
 
         if (target.matches('.tab-button')) {
             const tabId = target.dataset.tab;
-            document.querySelectorAll('#rawDataViewerModal .tab-content').forEach(c => c.classList.add('hidden'));
+            document.querySelectorAll('#rawDataViewerModal .tab-content').forEach(c => {
+                // Don't hide the trend analysis tab content once it's loaded
+                if (c.id !== 'trend-analysis-tab') {
+                    c.classList.add('hidden');
+                }
+            });
             document.querySelectorAll('#rawDataViewerModal .tab-button').forEach(b => b.classList.remove('active'));
-            document.getElementById(`${tabId}-tab`).classList.remove('hidden');
+            
+            const activeTabContent = document.getElementById(`${tabId}-tab`);
+            activeTabContent.classList.remove('hidden');
             target.classList.add('active');
+
+            if (tabId === 'trend-analysis') {
+                const symbol = document.getElementById('rawDataViewerModal').dataset.activeSymbol;
+                if (symbol) {
+                    handleTrendAnalysisRequest(symbol);
+                }
+            }
             return;
         }
         
