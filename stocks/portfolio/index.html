@@ -388,7 +388,7 @@
 
 <div id="rawDataViewerModal" class="fixed inset-0 z-[105] items-center justify-center p-4 modal">
     <div class="absolute inset-0 bg-gray-900 bg-opacity-75" id="close-raw-data-viewer-modal-bg"></div>
-    <div class="relative bg-white rounded-2xl shadow-lg border border-gray-200 flex flex-col w-full max-w-4xl h-full max-h-[90vh] m-4">
+    <div class="relative bg-white rounded-2xl shadow-lg border border-gray-200 flex flex-col w-full max-w-4xl h-full max-h-[90vh] m-4 overflow-hidden">
         <div class="p-6 border-b border-gray-200 flex justify-between items-center">
             <h2 id="raw-data-viewer-modal-title" class="text-2xl font-bold text-gray-800">Raw FMP Data</h2>
             <button id="close-raw-data-viewer-modal" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
@@ -399,6 +399,7 @@
                     <button class="tab-button" data-tab="company-profile">Company Profile</button>
                     <button class="tab-button" data-tab="raw-data">Raw Data</button>
                     <button class="tab-button" data-tab="ai-analysis">AI Analysis</button>
+                    <button class="tab-button" data-tab="news">News</button>
                     <button class="tab-button" data-tab="trend-analysis">Trend Analysis</button>
                 </nav>
             </div>
@@ -416,6 +417,10 @@
 
                 <div id="raw-data-tab" class="tab-content hidden p-6 bg-gray-50">
                     <div id="raw-data-accordion-container"></div>
+                </div>
+
+                <div id="news-tab" class="tab-content hidden p-6">
+                    <div id="news-content-container"></div>
                 </div>
 
                 <div id="trend-analysis-tab" class="tab-content hidden p-6">
