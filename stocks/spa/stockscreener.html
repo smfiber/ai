@@ -134,6 +134,34 @@ border-radius: 0.5rem;
 overflow-x: auto;
 font-size: 0.75rem;
 }
+/* Styling for rendered markdown from marked.js */
+.prose ul {
+    list-style-type: disc;
+    padding-left: 1.5rem;
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+.prose ol {
+    list-style-type: decimal;
+    padding-left: 1.5rem;
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+.prose li {
+    margin-bottom: 0.25rem;
+}
+.prose h3 {
+    font-size: 1.125rem; /* text-lg */
+    font-weight: 700;
+    margin-top: 1rem;
+    margin-bottom: 0.5rem;
+}
+.prose h4 {
+    font-size: 1rem; /* text-base */
+    font-weight: 600;
+    margin-top: 1rem;
+    margin-bottom: 0.5rem;
+}
 </style>
 </head>
 <body class="bg-gray-100 text-gray-800">
@@ -517,12 +545,13 @@ font-size: 0.75rem;
 </div>
 
 
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth-compat.js"></script>
 
 <script>
-    // Version 5.3.1
+    // Version 5.3.2
     document.addEventListener("DOMContentLoaded", () => {
         // --- 1. Global Configuration Object ---
         const appConfig = {
@@ -1428,8 +1457,9 @@ font-size: 0.75rem;
                     2.  Identify the top 5 stocks with the highest calculated potential upside.
                     3.  Present the results in a Markdown numbered list, including the **stock symbol**, the **highest price target**, the **analyst firm** that set it, and the **calculated upside percentage**.
 
-                    NEWS ARTICLES:
-                    ${articlesText}`
+                    --- BEGIN NEWS ARTICLES (JSON) ---
+                    ${articlesText}
+                    --- END NEWS ARTICLES ---`
             },
             {
                 title: "Firm Views",
@@ -1442,8 +1472,9 @@ font-size: 0.75rem;
                     2.  For each of these top 3 firms, provide a 2-3 sentence summary of their overall stance.
                     3.  Note whether they appear generally bullish, bearish, or focused on a specific sector. Mention one stock they are particularly positive or negative on, if the data shows a clear example. Format using Markdown.
 
-                    NEWS ARTICLES:
-                    ${articlesText}`
+                    --- BEGIN NEWS ARTICLES (JSON) ---
+                    ${articlesText}
+                    --- END NEWS ARTICLES ---`
             },
             {
                 title: "Single-Stock Deep Dive",
@@ -1474,8 +1505,9 @@ font-size: 0.75rem;
                     2.  For each of these top 3 sectors, assign a sentiment score (e.g., Positive, Negative, Neutral).
                     3.  Provide a 1-2 sentence justification for the assigned sentiment, referencing specific company examples or trends. Format using Markdown.
 
-                    NEWS ARTICLES:
-                    ${articlesText}`
+                    --- BEGIN NEWS ARTICLES (JSON) ---
+                    ${articlesText}
+                    --- END NEWS ARTICLES ---`
             },
             {
                 title: "Upgrades/Downgrades",
@@ -1493,8 +1525,9 @@ font-size: 0.75rem;
 
                     If there are no significant upgrades or downgrades, state that analyst sentiment appears stable.
 
-                    NEWS ARTICLES:
-                    ${articlesText}`
+                    --- BEGIN NEWS ARTICLES (JSON) ---
+                    ${articlesText}
+                    --- END NEWS ARTICLES ---`
             },
             {
                 title: "Influential Analysts",
@@ -1510,8 +1543,9 @@ font-size: 0.75rem;
                     
                     Format using Markdown.
 
-                    NEWS ARTICLES:
-                    ${articlesText}`
+                    --- BEGIN NEWS ARTICLES (JSON) ---
+                    ${articlesText}
+                    --- END NEWS ARTICLES ---`
             },
             {
                 title: "Target Revisions",
@@ -1527,8 +1561,9 @@ font-size: 0.75rem;
                     
                     Format using Markdown.
 
-                    NEWS ARTICLES:
-                    ${articlesText}`
+                    --- BEGIN NEWS ARTICLES (JSON) ---
+                    ${articlesText}
+                    --- END NEWS ARTICLES ---`
             },
             {
                 title: "New Coverage",
@@ -1546,8 +1581,9 @@ font-size: 0.75rem;
 
                     If no new coverage was initiated, simply state that.
 
-                    NEWS ARTICLES:
-                    ${articlesText}`
+                    --- BEGIN NEWS ARTICLES (JSON) ---
+                    ${articlesText}
+                    --- END NEWS ARTICLES ---`
             }
         ];
 
@@ -1657,13 +1693,7 @@ font-size: 0.75rem;
             }
             appConfig.generativeAnalyses[exchange][analysisId] = analysisText;
 
-            let formattedAnalysis = analysisText
-                .replace(/(\*\*|__)(.*?)\1/g, '<strong>$2</strong>')
-                .replace(/(\*|_)(.*?)\1/g, '<em>$2</em>')
-                .replace(/### (.*)/g, '<h4 class="text-md font-semibold mt-4 mb-2">$1</h4>')
-                .replace(/## (.*)/g, '<h3 class="text-lg font-bold mt-4 mb-2">$1</h3>')
-                .replace(/^- (.*)/gm, '<li class="ml-4 list-disc">$1</li>')
-                .replace(/\n/g, '<br>');
+            let formattedAnalysis = marked.parse(analysisText);
             
             const symbolAttr = symbol ? `data-symbol="${symbol}"` : '';
 
@@ -1674,7 +1704,7 @@ font-size: 0.75rem;
                         <i class="fas fa-save mr-2"></i>Save Manually
                     </button>
                 </div>
-                <div class="prose prose-sm max-w-none text-gray-700 leading-relaxed">${formattedAnalysis}</div>
+                <div class="prose max-w-none text-gray-700 leading-relaxed">${formattedAnalysis}</div>
             `;
 
             container.querySelector('.save-analysis-btn').addEventListener('click', (e) => {
