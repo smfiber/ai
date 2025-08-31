@@ -1,157 +1,437 @@
 <!DOCTYPE html>
+
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Portfolio Co-Pilot</title>
-    
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-treemap@2.3.0/dist/chartjs-chart-treemap.min.js"></script>
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
-    <script src="https://apis.google.com/js/api.js" async defer></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    
-    <link rel="stylesheet" href="style.css">
-    <link rel="icon" href="data:,">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Magickal Portfolio Oracle</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+/* Apply the Inter font family */
+body {
+font-family: 'Inter', sans-serif;
+}
+/* Style for the modal to be hidden by default */
+.modal {
+display: none;
+}
+/* Styles for accordion transition */
+.accordion-content {
+max-height: 0;
+overflow: hidden;
+transition: max-height 0.3s ease-out;
+}
+/* Hide tab content by default */
+.tab-content {
+display: none;
+}
+/* Styles for nested generative AI tabs */
+.gen-ai-tab-button {
+transition: all 0.3s ease;
+}
+.gen-ai-tab-content {
+display: none;
+}
+/* Custom scrollbar for nested tabs */
+.nested-tabs-container::-webkit-scrollbar {
+height: 4px;
+}
+.nested-tabs-container::-webkit-scrollbar-track {
+background: #f1f5f9;
+}
+.nested-tabs-container::-webkit-scrollbar-thumb {
+background: #6366f1;
+border-radius: 10px;
+}
+/* Styles for Modal Tabs */
+.modal-tab-button.active {
+border-color: #6366f1;
+color: #4338ca;
+background-color: #eef2ff;
+}
+.modal-tab-content {
+display: none;
+}
+.modal-tab-content.active {
+display: block;
+}
+.viewed-indicator {
+margin-left: 8px;
+color: #6366f1;
+font-size: 0.9em;
+}
+/* Custom Tooltip Styles */
+[data-tooltip] {
+position: relative;
+cursor: help;
+display: inline-block;
+}
+[data-tooltip]::before,
+[data-tooltip]::after {
+position: absolute;
+left: 50%;
+transform: translateX(-50%);
+opacity: 0;
+pointer-events: none;
+transition: opacity 0.2s ease-in-out;
+z-index: 10;
+}
+[data-tooltip]::after { /* Tooltip content box */
+content: attr(data-tooltip);
+background-color: #1f2937; /* bg-gray-800 */
+color: white;
+font-size: 0.75rem; /* text-xs */
+line-height: 1.25;
+padding: 6px 10px;
+border-radius: 4px;
+white-space: nowrap;
+bottom: calc(100% + 8px); /* Position above the element */
+}
+[data-tooltip]::before { /* Tooltip arrow */
+content: '';
+border-style: solid;
+border-width: 5px;
+border-color: #1f2937 transparent transparent transparent;
+bottom: calc(100% + 3px);
+}
+[data-tooltip]:hover::before,
+[data-tooltip]:hover::after {
+opacity: 1;
+}
+/* Saved Stock Styles */
+.saved-stock-row {
+background-color: #fefce8; /* Tailwind yellow-50 */
+}
+.save-stock-btn {
+margin-right: 8px;
+cursor: pointer;
+color: #9ca3af; /* gray-400 */
+transition: color 0.2s ease-in-out;
+}
+.save-stock-btn:hover {
+color: #f59e0b; /* yellow-500 */
+}
+.save-stock-btn.saved {
+color: #facc15; /* yellow-400 */
+}
+#modal-raw-data-content pre {
+background-color: #111827; /* gray-900 */
+color: #d1d5db; /* gray-300 */
+padding: 1rem;
+border-radius: 0.5rem;
+max-height: 60vh;
+overflow-x: auto;
+font-size: 0.75rem;
+}
+#modal-ai-summary-content pre {
+background-color: #111827; /* gray-900 */
+color: #d1d5db; /* gray-300 */
+padding: 1rem;
+border-radius: 0.5rem;
+overflow-x: auto;
+font-size: 0.75rem;
+}
+</style>
 </head>
-<body class="bg-gray-100">
+<body class="bg-gray-100 text-gray-800">
 
-    <header class="relative bg-gray-800 text-white p-6 shadow-lg">
-        <div id="header-bg-image" class="absolute inset-0 bg-cover bg-center opacity-20"></div>
-        <div class="relative container mx-auto flex justify-between items-center">
-            <div>
-                <h1 class="text-3xl font-bold tracking-tight">Portfolio Co-Pilot</h1>
-                <div class="flex items-center gap-x-3">
-                    <p class="text-sm text-gray-300 mt-1">Your Personal Market Briefing</p>
-                    <span id="app-version-display" class="text-xs text-gray-400 mt-1"></span>
-                </div>
-            </div>
-            <div id="auth-status" class="flex items-center"></div>
+<div id="appContent" class="p-4 md:p-8" style="display: none;">
+    <h1 class="text-3xl md:text-4xl font-bold text-indigo-600 text-center mb-8">Magickal Portfolio Oracle</h1>
+    
+    <div class="mb-8">
+        <div class="border-b border-gray-200">
+            <nav class="-mb-px flex space-x-6" aria-label="Tabs">
+                <button id="gen-ai-tab-button" class="tab-button whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                    Generative AI Analysis
+                </button>
+                <button id="screener-tab-button" class="tab-button whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                    Stock Screener
+                </button>
+                <button id="advanced-screener-tab-button" class="tab-button whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                    Advanced Screener
+                </button>
+                <button id="saved-stocks-tab-button" class="tab-button whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                    Saved Stocks
+                </button>
+                <button id="news-tab-button" class="tab-button whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                    Price Target News
+                </button>
+            </nav>
         </div>
-    </header>
+    </div>
 
-    <div id="app-container" class="hidden">
-        <main class="container mx-auto p-4 sm:p-6 lg:p-8">
+    <div>
 
-            <div id="dashboard-section" class="hidden">
-                <div class="dashboard-card">
-                    <h2 class="dashboard-card-title">
-                        <span>Co-Pilot Dashboard</span>
-                        <div class="flex items-center gap-2">
-                             <button id="opportunity-scanner-button" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-1 px-3 text-sm rounded-lg shadow-sm flex items-center gap-2" title="Scan portfolio and watchlist for narrative shifts">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                    <path d="M9 9a2 2 0 114 0 2 2 0 01-4 0z" />
-                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a4 4 0 100 8 4 4 0 000-8z" clip-rule="evenodd" />
-                                </svg>
-                                Scan for Opportunities
-                            </button>
-                            <button class="dashboard-refresh-button" title="Refresh Dashboard">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0011.664 0M2.985 19.644A8.25 8.25 0 0116.023 9.348" />
-                                </svg>
-                            </button>
-                        </div>
-                    </h2>
-                    
-                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                
-                        <div class="lg:col-span-2 space-y-6">
-                            <div class="bg-gray-50 p-4 rounded-lg border">
-                                <h3 class="text-lg font-bold text-gray-700 mb-3 border-b pb-2">AI Morning Briefing</h3>
-                                <div id="morning-briefing-content" class="prose max-w-none">
-                                    <div class="flex items-center justify-center h-48">
-                                        <div class="loader"></div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="bg-gray-50 p-4 rounded-lg border">
-                                <h3 class="text-lg font-bold text-gray-700 mb-3 border-b pb-2">AI Co-Pilot Chat</h3>
-                                <div id="portfolio-chat-response" class="prose max-w-none bg-white p-4 rounded-md min-h-[150px] border">
-                                    <p class="text-gray-500">Ask a question about your portfolio, such as "What is my biggest risk?" or "Which of my holdings has the best profitability?"</p>
-                                </div>
-                                <form id="portfolio-chat-form" class="mt-4 flex gap-2">
-                                    <input type="text" id="portfolio-chat-input" class="border border-gray-300 rounded-lg w-full p-2" placeholder="Ask a question..." required>
-                                    <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg">Ask</button>
-                                </form>
-                            </div>
-                        </div>
-                
-                        <div class="space-y-6">
-                            <div class="bg-gray-50 p-4 rounded-lg border">
-                                <h3 class="text-lg font-bold text-gray-700 mb-2 text-center">Total Portfolio Value</h3>
-                                <div id="portfolio-value-display" class="text-4xl font-bold text-center text-gray-800 my-3">
-                                    --
-                                </div>
-                                <div id="portfolio-value-breakdown" class="text-sm text-center text-gray-500">
-                                    <p>Stocks: $--</p>
-                                    <p>Cash: $--</p>
-                                </div>
-                            </div>
+        <div id="gen-ai-tab-content" class="tab-content">
+            </div>
 
-                            <div class="bg-gray-50 p-4 rounded-lg border">
-                                <h3 class="text-lg font-bold text-gray-700 mb-2 text-center">Portfolio Health Score</h3>
-                                <div id="health-score-display" class="text-6xl font-bold text-center text-green-500 my-4">
-                                    --
-                                </div>
-                                <p class="text-xs text-gray-500 text-center">This score aggregates financial health, risk, and news sentiment across your portfolio.</p>
-                            </div>
-                
-                        </div>
-                
+        <div id="screener-tab-content" class="tab-content">
+            <div class="space-y-4">
+                <div id="nasdaqScreenerAccordion" class="bg-white rounded-xl shadow-md">
+                    <button id="nasdaq-accordion-button" class="w-full flex justify-between items-center p-5 text-left font-semibold text-lg hover:bg-gray-50 rounded-t-xl focus:outline-none">
+                        <span>Stock Screener Table: NASDAQ (Market Cap > $1B)</span>
+                        <svg id="nasdaq-accordion-icon" class="w-6 h-6 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </button>
+                    <div id="nasdaq-accordion-content" class="accordion-content px-5 pb-5">
+                        <div id="nasdaq-screener-data-container" class="mt-4 border-t pt-4"></div>
+                    </div>
+                </div>
+                <div id="nyseScreenerAccordion" class="bg-white rounded-xl shadow-md">
+                    <button id="nyse-accordion-button" class="w-full flex justify-between items-center p-5 text-left font-semibold text-lg hover:bg-gray-50 rounded-t-xl focus:outline-none">
+                        <span>Stock Screener Table: NYSE (Market Cap > $1B)</span>
+                        <svg id="nyse-accordion-icon" class="w-6 h-6 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </button>
+                    <div id="nyse-accordion-content" class="accordion-content px-5 pb-5">
+                        <div id="nyse-screener-data-container" class="mt-4 border-t pt-4"></div>
+                    </div>
+                </div>
+                <div id="amexScreenerAccordion" class="bg-white rounded-xl shadow-md">
+                    <button id="amex-accordion-button" class="w-full flex justify-between items-center p-5 text-left font-semibold text-lg hover:bg-gray-50 rounded-t-xl focus:outline-none">
+                        <span>Stock Screener Table: AMEX (Market Cap > $1B)</span>
+                        <svg id="amex-accordion-icon" class="w-6 h-6 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </button>
+                    <div id="amex-accordion-content" class="accordion-content px-5 pb-5">
+                        <div id="amex-screener-data-container" class="mt-4 border-t pt-4"></div>
                     </div>
                 </div>
             </div>
 
-            <div id="dynamic-content-container" class="space-y-8"></div>
+            <div class="mt-12">
+                <h2 class="text-2xl font-bold text-center mb-6">Stock Card View by Sector & Industry</h2>
+                <div id="nasdaq-card-view" class="mb-8"></div>
+                <div id="nyse-card-view" class="mb-8"></div>
+                <div id="amex-card-view" class="mb-8"></div>
+            </div>
+        </div>
 
-        </main>
-        <button id="scroll-to-top-button" class="fixed w-14 h-14 rounded-full shadow-lg text-2xl flex items-center justify-center transition-transform duration-200 hover:scale-110 bg-indigo-600 hover:bg-indigo-700 text-white z-30 hidden" style="bottom: 2rem; left: 2rem;">&uarr;</button>
+        <div id="advanced-screener-tab-content" class="tab-content">
+            <div class="bg-white p-6 rounded-xl shadow-md mb-8">
+                <h2 class="text-xl font-bold mb-4 text-gray-800">Advanced Stock Screener</h2>
+                <form id="advancedScreenerFilterForm">
+                    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 text-sm">
+                        <div class="space-y-4">
+                            <div>
+                                <label for="marketCapMoreThan" class="block font-medium text-gray-700">
+                                    Market Cap More Than
+                                    <i class="fas fa-info-circle text-gray-400 ml-1" data-tooltip="The total market value of a company's shares in USD (e.g., 1000000000 for $1B)."></i>
+                                </label>
+                                <input type="number" id="marketCapMoreThan" placeholder="Enter Number" value="1000000000" class="mt-1 w-full border-gray-300 rounded-md shadow-sm p-2">
+                            </div>
+                            <div>
+                                <label for="volumeMoreThan" class="block font-medium text-gray-700">
+                                    Volume More Than
+                                    <i class="fas fa-info-circle text-gray-400 ml-1" data-tooltip="The total number of shares traded for a stock on the last trading day."></i>
+                                </label>
+                                <input type="number" id="volumeMoreThan" placeholder="Enter Number" class="mt-1 w-full border-gray-300 rounded-md shadow-sm p-2">
+                            </div>
+                        </div>
+                        <div class="space-y-4">
+                            <div>
+                                <label for="marketCapLowerThan" class="block font-medium text-gray-700">
+                                    Market Cap Lower Than
+                                    <i class="fas fa-info-circle text-gray-400 ml-1" data-tooltip="The total market value of a company's shares in USD (e.g., 50000000000 for $50B)."></i>
+                                </label>
+                                <input type="number" id="marketCapLowerThan" placeholder="Enter Number" class="mt-1 w-full border-gray-300 rounded-md shadow-sm p-2">
+                            </div>
+                            <div>
+                                <label for="volumeLowerThan" class="block font-medium text-gray-700">
+                                    Volume Lower Than
+                                    <i class="fas fa-info-circle text-gray-400 ml-1" data-tooltip="The total number of shares traded for a stock on the last trading day."></i>
+                                </label>
+                                <input type="number" id="volumeLowerThan" placeholder="Enter Number" class="mt-1 w-full border-gray-300 rounded-md shadow-sm p-2">
+                            </div>
+                        </div>
+                        <div class="space-y-4">
+                            <div>
+                                <label for="sector" class="block font-medium text-gray-700">
+                                    Sector
+                                    <i class="fas fa-info-circle text-gray-400 ml-1" data-tooltip="A broad classification of a company's main business activities (e.g., Technology, Healthcare)."></i>
+                                </label>
+                                <select id="sector" class="mt-1 w-full border-gray-300 rounded-md shadow-sm p-2 bg-white">
+                                    <option value="">Any</option>
+                                    <option value="Consumer Cyclical">Consumer Cyclical</option>
+                                    <option value="Energy">Energy</option>
+                                    <option value="Technology">Technology</option>
+                                    <option value="Industrials">Industrials</option>
+                                    <option value="Financial Services">Financial Services</option>
+                                    <option value="Basic Materials">Basic Materials</option>
+                                    <option value="Communication Services">Communication Services</option>
+                                    <option value="Consumer Defensive">Consumer Defensive</option>
+                                    <option value="Healthcare">Healthcare</option>
+                                    <option value="Real Estate">Real Estate</option>
+                                    <option value="Utilities">Utilities</option>
+                                </select>
+                            </div>
+                            <div>
+                               <label for="exchange" class="block font-medium text-gray-700">
+                                    Exchange
+                                    <i class="fas fa-info-circle text-gray-400 ml-1" data-tooltip="The stock exchange where the company's shares are listed (e.g., NASDAQ, NYSE)."></i>
+                                 </label>
+                                <select id="exchange" class="mt-1 w-full border-gray-300 rounded-md shadow-sm p-2 bg-white">
+                                    <option value="">Any</option>
+                                    <option value="NASDAQ">NASDAQ</option>
+                                    <option value="NYSE">NYSE</option>
+                                    <option value="AMEX">AMEX</option>
+                                </select>
+                            </div>
+                        </div>
+                         <div class="space-y-4">
+                            <div>
+                                <label for="industry" class="block font-medium text-gray-700">
+                                    Industry
+                                    <i class="fas fa-info-circle text-gray-400 ml-1" data-tooltip="A more specific classification of a company's business within a sector (e.g., Software, Biotechnology)."></i>
+                                </label>
+                                <select id="industry" class="mt-1 w-full border-gray-300 rounded-md shadow-sm p-2 bg-white">
+                                    <option value="">Any</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="country" class="block font-medium text-gray-700">
+                                    Country
+                                    <i class="fas fa-info-circle text-gray-400 ml-1" data-tooltip="The country where the company is domiciled (e.g., US, CA)."></i>
+                                </label>
+                                <input type="text" id="country" value="US" class="mt-1 w-full border-gray-300 rounded-md shadow-sm p-2">
+                            </div>
+                        </div>
+                        <div class="space-y-4">
+                            <div>
+                                <label for="betaMoreThan" class="block font-medium text-gray-700">
+                                    Beta More Than
+                                    <i class="fas fa-info-circle text-gray-400 ml-1" data-tooltip="A measure of volatility relative to the market. Beta > 1 is more volatile; Beta < 1 is less volatile."></i>
+                                </label>
+                                <input type="number" step="0.1" id="betaMoreThan" placeholder="Enter Number" class="mt-1 w-full border-gray-300 rounded-md shadow-sm p-2">
+                            </div>
+                            <div>
+                                <label for="dividendMoreThan" class="block font-medium text-gray-700">
+                                    Dividend More Than
+                                    <i class="fas fa-info-circle text-gray-400 ml-1" data-tooltip="The cash dividend amount paid per share in USD (e.g., 0.50), not the percentage yield."></i>
+                                </label>
+                                <input type="number" step="0.1" id="dividendMoreThan" placeholder="e.g., 0.50" class="mt-1 w-full border-gray-300 rounded-md shadow-sm p-2">
+                            </div>
+                        </div>
+                        <div class="space-y-4">
+                            <div>
+                                <label for="betaLowerThan" class="block font-medium text-gray-700">
+                                    Beta Lower Than
+                                    <i class="fas fa-info-circle text-gray-400 ml-1" data-tooltip="A measure of volatility relative to the market. Beta > 1 is more volatile; Beta < 1 is less volatile."></i>
+                                </label>
+                                <input type="number" step="0.1" id="betaLowerThan" placeholder="Enter Number" class="mt-1 w-full border-gray-300 rounded-md shadow-sm p-2">
+                            </div>
+                            <div>
+                                <label for="dividendLowerThan" class="block font-medium text-gray-700">
+                                    Dividend Lower Than
+                                    <i class="fas fa-info-circle text-gray-400 ml-1" data-tooltip="The cash dividend amount paid per share in USD (e.g., 2.50), not the percentage yield."></i>
+                                </label>
+                                <input type="number" step="0.1" id="dividendLowerThan" placeholder="e.g., 2.50" class="mt-1 w-full border-gray-300 rounded-md shadow-sm p-2">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-6 flex justify-end">
+                        <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-6 rounded-lg shadow-md transition-colors">Run Screener</button>
+                    </div>
+                </form>
+            </div>
+            
+            <div class="bg-white rounded-xl shadow-md p-5">
+                <h2 class="text-lg font-semibold mb-4">Screener Results</h2>
+                <div id="advanced-screener-data-container" class="border-t pt-4"></div>
+            </div>
+
+            <div class="mt-12">
+                <h2 class="text-2xl font-bold text-center mb-6">Stock Card View by Sector & Industry</h2>
+                <div id="advanced-screener-card-view" class="mb-8"></div>
+            </div>
+        </div>
         
-        <button id="manage-broad-endpoints-button" class="fixed w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-transform duration-200 hover:scale-110 bg-emerald-600 hover:bg-emerald-700 text-white z-30" style="bottom: 17rem; right: 2rem;" title="Manage Broad API Endpoints">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-            </svg>
-        </button>
-        <button id="manage-fmp-endpoints-button" class="fixed w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-transform duration-200 hover:scale-110 bg-cyan-600 hover:bg-cyan-700 text-white z-30" style="bottom: 12rem; right: 2rem;" title="Manage FMP Endpoints">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M4 7v10m16-5H4m16 0l-3 3m3-3l-3-3" />
-            </svg>
-        </button>
-        <button id="manage-all-stocks-button" class="fixed w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-transform duration-200 hover:scale-110 bg-indigo-600 hover:bg-indigo-700 text-white z-30" style="bottom: 7rem; right: 2rem;" title="Manage All Stocks">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-            </svg>
-        </button>
-        <button id="session-log-button" class="fixed w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-transform duration-200 hover:scale-110 bg-purple-600 hover:bg-purple-700 text-white z-30" style="bottom: 2rem; right: 2rem;" title="View Session Log">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-        </button>
-    </div>
+        <div id="saved-stocks-tab-content" class="tab-content">
+            <div class="bg-white rounded-xl shadow-md p-5">
+                <h2 class="text-lg font-semibold mb-4">Saved Stocks</h2>
+                <div id="saved-stocks-data-container" class="border-t pt-4"></div>
+            </div>
+        </div>
 
-    <div id="apiKeyModal" class="fixed inset-0 z-[100] items-center justify-center p-4 modal">
-        <div class="absolute inset-0 bg-gray-900 bg-opacity-75"></div>
-        <div class="relative bg-white rounded-2xl shadow-lg border border-gray-200 p-8 w-full max-w-lg m-4 overflow-y-auto max-h-[90vh]">
-            <h2 class="text-2xl font-bold mb-4">API Keys Required</h2>
-            <p class="text-gray-500 mb-6">Please provide your API keys to get started. These are required for the application to function.</p>
+        <div id="news-tab-content" class="tab-content">
+            <div class="space-y-4">
+                <div class="bg-white rounded-xl shadow-md">
+                    <div id="nasdaq-news-accordion-button" class="w-full flex justify-between items-center p-5 text-left font-semibold text-lg hover:bg-gray-50 rounded-xl focus:outline-none cursor-pointer">
+                        <span>NASDAQ Price Target News</span>
+                        <div class="flex items-center">
+                            <button id="refresh-nasdaq-news" class="text-sm bg-indigo-100 text-indigo-700 hover:bg-indigo-200 rounded-md px-3 py-1 mr-4">Refresh News</button>
+                            <svg id="nasdaq-news-accordion-icon" class="w-6 h-6 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </div>
+                    </div>
+                    <div id="nasdaq-news-accordion-content" class="accordion-content px-5 pb-5">
+                        <div id="nasdaq-news-container" class="mt-4 border-t pt-4 space-y-4"></div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-xl shadow-md">
+                    <div id="nyse-news-accordion-button" class="w-full flex justify-between items-center p-5 text-left font-semibold text-lg hover:bg-gray-50 rounded-xl focus:outline-none cursor-pointer">
+                        <span>NYSE Price Target News</span>
+                        <div class="flex items-center">
+                            <button id="refresh-nyse-news" class="text-sm bg-indigo-100 text-indigo-700 hover:bg-indigo-200 rounded-md px-3 py-1 mr-4">Refresh News</button>
+                            <svg id="nyse-news-accordion-icon" class="w-6 h-6 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </div>
+                    </div>
+                    <div id="nyse-news-accordion-content" class="accordion-content px-5 pb-5">
+                        <div id="nyse-news-container" class="mt-4 border-t pt-4 space-y-4"></div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-xl shadow-md">
+                    <div id="amex-news-accordion-button" class="w-full flex justify-between items-center p-5 text-left font-semibold text-lg hover:bg-gray-50 rounded-xl focus:outline-none cursor-pointer">
+                        <span>AMEX Price Target News</span>
+                        <div class="flex items-center">
+                            <button id="refresh-amex-news" class="text-sm bg-indigo-100 text-indigo-700 hover:bg-indigo-200 rounded-md px-3 py-1 mr-4">Refresh News</button>
+                            <svg id="amex-news-accordion-icon" class="w-6 h-6 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </div>
+                    </div>
+                    <div id="amex-news-accordion-content" class="accordion-content px-5 pb-5">
+                        <div id="amex-news-container" class="mt-4 border-t pt-4 space-y-4"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="apiKeyModal" class="fixed inset-0 z-[100] items-center justify-center p-4 modal">
+    <div class="absolute inset-0 bg-gray-900 bg-opacity-75"></div>
+    <div class="relative bg-white rounded-2xl shadow-lg border border-gray-200 p-8 w-full max-w-lg m-4 overflow-y-auto max-h-[90vh]">
+         <div id="auth-container" class="text-center">
+             <div id="auth-user-info" style="display: none;" class="mb-4">
+                <p class="text-gray-600">Signed in as: <span id="user-email" class="font-semibold"></span></p>
+                <button id="signOutBtn" class="mt-2 text-sm text-blue-500 hover:underline">Sign Out</button>
+            </div>
+             <button id="googleSignInBtn" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg flex items-center justify-center mb-4">
+                <i class="fab fa-google mr-2"></i> Sign In with Google
+            </button>
+        </div>
+
+        <hr class="my-6">
+        
+        <div>
+            <h2 class="text-2xl font-bold mb-4">API Keys & Configuration</h2>
+             <p class="text-gray-500 mb-6">These are required to power the application.</p>
             <form id="apiKeyForm">
                 <div class="space-y-4">
+                     <div>
+                        <label for="firebaseConfigInput" class="block text-sm font-semibold text-gray-800 mb-1">Firebase Web App Config</label>
+                        <textarea id="firebaseConfigInput" class="border border-gray-300 rounded-lg w-full p-2 font-mono text-xs" rows="6" placeholder="Paste your Firebase Web App Config Object"></textarea>
+                    </div>
                     <div>
                         <label for="geminiApiKeyInput" class="block text-sm font-semibold text-gray-800 mb-1">Google Gemini API Key</label>
-                        <input type="text" id="geminiApiKeyInput" class="border border-gray-300 rounded-lg w-full p-2" placeholder="Enter your Google Gemini API Key">
+                        <input type="password" id="geminiApiKeyInput" class="border border-gray-300 rounded-lg w-full p-2" placeholder="Enter your Google Gemini API Key">
                     </div>
                     <div>
                         <label for="googleClientIdInput" class="block text-sm font-semibold text-gray-800 mb-1">Google Cloud Client ID</label>
-                        <input type="text" id="googleClientIdInput" class="border border-gray-300 rounded-lg w-full p-2" placeholder="Enter your Google Cloud Web Client ID">
+                        <input type="password" id="googleClientIdInput" class="border border-gray-300 rounded-lg w-full p-2" placeholder="Enter your Google Cloud Web Client ID">
                     </div>
                     <div>
                         <label for="webSearchApiKeyInput" class="block text-sm font-semibold text-gray-800 mb-1">Web Search API Key (Google)</label>
-                        <input type="text" id="webSearchApiKeyInput" class="border border-gray-300 rounded-lg w-full p-2" placeholder="Enter your Google Cloud API Key">
+                        <input type="password" id="webSearchApiKeyInput" class="border border-gray-300 rounded-lg w-full p-2" placeholder="Enter your Google Cloud API Key">
                     </div>
                     <div>
                         <label for="searchEngineIdInput" class="block text-sm font-semibold text-gray-800 mb-1">Search Engine ID (cx value)</label>
@@ -159,268 +439,2096 @@
                     </div>
                     <div>
                         <label for="fmpApiKeyInput" class="block text-sm font-semibold text-gray-800 mb-1">Financial Modeling Prep API Key</label>
-                        <input type="text" id="fmpApiKeyInput" class="border border-gray-300 rounded-lg w-full p-2" placeholder="Enter your FMP API Key">
-                    </div>
-                    <div>
-                        <label for="firebaseConfigInput" class="block text-sm font-semibold text-gray-800 mb-1">Firebase Web App Config</label>
-                        <textarea id="firebaseConfigInput" class="border border-gray-300 rounded-lg w-full p-2" rows="6" placeholder="Paste your Firebase Web App Config Object"></textarea>
+                        <input type="password" id="fmpApiKeyInput" class="border border-gray-300 rounded-lg w-full p-2" placeholder="Enter your FMP API Key">
                     </div>
                 </div>
-                <p id="api-key-error" class="text-red-500 text-sm mt-2"></p>
+                <p id="api-key-error" class="text-red-500 text-sm mt-4 h-5"></p>
                 <div class="mt-6 flex justify-end">
-                    <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-5 rounded-lg shadow-md">Save and Continue</button>
+                    <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-5 rounded-lg shadow-md transition-colors">Save and Continue</button>
                 </div>
             </form>
         </div>
     </div>
-    
-    <div id="loadingStateModal" class="fixed inset-0 z-[110] flex-col items-center justify-center p-4 modal"><div class="absolute inset-0 bg-gray-900 bg-opacity-75"></div><div class="relative flex flex-col items-center"><div class="loader"></div><p id="loading-message" class="text-white mt-4"></p></div></div>
-    <div id="messageModal" class="fixed inset-0 z-[110] items-center justify-center p-4 modal"><div class="absolute inset-0 bg-gray-900 bg-opacity-75"></div><div class="relative modal-content"></div></div>
-    <div id="confirmationModal" class="fixed inset-0 z-[110] items-center justify-center p-4 modal"><div class="absolute inset-0 bg-gray-900 bg-opacity-75"></div><div class="relative bg-white rounded-2xl shadow-lg border border-gray-200 p-8 w-full max-w-sm m-4 text-center"><h2 id="confirmation-title" class="text-2xl font-bold mb-4 text-yellow-600">Are you sure?</h2><p id="confirmation-message" class="mb-6 text-gray-500">This action cannot be undone.</p><div class="flex justify-center gap-4"><button id="cancel-button" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-5 rounded-lg w-full">Cancel</button><button id="confirm-button" class="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-5 rounded-lg w-full">Confirm</button></div></div></div>
-    
-    <div id="opportunityScannerModal" class="fixed inset-0 z-[105] items-center justify-center p-4 modal">
-        <div class="absolute inset-0 bg-gray-900 bg-opacity-75" id="close-opportunity-scanner-modal-bg"></div>
-        <div class="relative bg-white rounded-2xl shadow-lg border border-gray-200 flex flex-col w-full max-w-4xl h-full max-h-[90vh] m-4">
-            <div class="p-6 border-b border-gray-200 flex justify-between items-center">
-                <h2 class="text-2xl font-bold text-gray-800">Opportunity Scanner Results</h2>
-                <button id="close-opportunity-scanner-modal" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
-            </div>
-            <div class="p-4 bg-gray-50 border-b">
-                <div id="scanner-progress-bar-container" class="w-full bg-gray-200 rounded-full h-2.5 hidden">
-                    <div id="scanner-progress-bar" class="bg-indigo-600 h-2.5 rounded-full" style="width: 0%"></div>
-                </div>
-                <p id="scanner-status-text" class="text-center text-sm text-gray-600 mt-2"></p>
-            </div>
-            <div id="opportunity-scanner-content" class="overflow-y-auto flex-grow p-6 space-y-6">
-                </div>
-        </div>
-    </div>
+</div>
 
-    <div id="customAnalysisModal" class="fixed inset-0 z-[105] items-center justify-center p-4 modal">
-        <div class="absolute inset-0 bg-gray-900 bg-opacity-75" id="close-custom-analysis-modal-bg"></div>
-        <div class="relative bg-white rounded-2xl shadow-lg border border-gray-200 flex flex-col w-full max-w-4xl h-full max-h-[90vh] m-4">
-            <div class="p-6 border-b border-gray-200">
-                <div class="flex justify-between items-center">
-                    <h2 id="custom-analysis-modal-title" class="text-2xl font-bold text-gray-800">Sector Deep Dive</h2>
-                    <button id="close-custom-analysis-modal" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
-                </div>
-            </div>
-            <div id="custom-analysis-selector-container" class="p-4 border-b border-gray-200 bg-gray-50 flex flex-wrap gap-2 justify-center">
-            </div>
-            <div class="flex-grow overflow-y-auto p-6">
-                <div id="report-status-container-sector" class="hidden p-3 mb-4 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between gap-4"></div>
-                <div id="custom-analysis-content" class="prose max-w-none">
-                    <div class="text-center text-gray-500 pt-16">Please select an analysis type above to begin.</div>
-                </div>
-            </div>
-            <div class="p-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-4">
-                <button data-modal-id="customAnalysisModal" class="save-to-db-button bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg">Save to Database</button>
-                <button data-modal-id="customAnalysisModal" class="save-to-drive-button bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg">Save to Drive</button>
-            </div>
-        </div>
-    </div>
+<button id="manageSummariesBtn" class="fixed bottom-8 right-8 bg-indigo-600 text-white w-14 h-14 rounded-full shadow-lg flex items-center justify-center hover:bg-indigo-700 transition-transform transform hover:scale-110 focus:outline-none">
+    <i class="fas fa-archive fa-lg"></i>
+</button>
 
-    <div id="industryAnalysisModal" class="fixed inset-0 z-[105] items-center justify-center p-4 modal">
-        <div class="absolute inset-0 bg-gray-900 bg-opacity-75" id="close-industry-analysis-modal-bg"></div>
-        <div class="relative bg-white rounded-2xl shadow-lg border border-gray-200 flex flex-col w-full max-w-4xl h-full max-h-[90vh] m-4">
-            <div class="p-6 border-b border-gray-200">
-                <div class="flex justify-between items-center">
-                    <h2 id="industry-analysis-modal-title" class="text-2xl font-bold text-gray-800">Industry Deep Dive</h2>
-                    <button id="close-industry-analysis-modal" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+<div id="summaryCrudModal" class="fixed inset-0 z-[100] items-center justify-center p-4 modal">
+    <div class="absolute inset-0 bg-gray-900 bg-opacity-75" id="crudModalOverlay"></div>
+    <div class="relative bg-white rounded-2xl shadow-lg border border-gray-200 p-8 w-full max-w-4xl m-4 overflow-y-auto max-h-[90vh]">
+        <h2 class="text-2xl font-bold mb-6">Manage Saved Analyses</h2>
+        <div id="savedSummariesList" class="space-y-4"></div>
+        <div id="editSummaryFormContainer" class="hidden mt-8 p-6 bg-gray-50 rounded-lg">
+            <h3 class="text-xl font-bold mb-4">Edit Analysis</h3>
+            <form id="editSummaryForm">
+                <input type="hidden" id="editAnalysisId"><input type="hidden" id="editAnalysisExchange"><input type="hidden" id="editAnalysisType">
+                <textarea id="editAnalysisText" class="w-full p-2 border border-gray-300 rounded-lg" rows="10"></textarea>
+                <div class="mt-4 flex justify-end space-x-3">
+                    <button type="button" id="cancelEditBtn" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg">Cancel</button>
+                    <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg">Save Changes</button>
                 </div>
-            </div>
-            <div id="industry-analysis-selector-container" class="p-4 border-b border-gray-200 bg-gray-50 flex flex-wrap gap-2 justify-center">
-            </div>
-            <div class="flex-grow overflow-y-auto p-6">
-                 <div id="report-status-container-industry" class="hidden p-3 mb-4 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between gap-4"></div>
-                <div id="industry-analysis-content" class="prose max-w-none">
-                    <div class="text-center text-gray-500 pt-16">Please select an analysis type above to begin.</div>
-                </div>
-            </div>
-            <div class="p-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-4">
-                <button data-modal-id="industryAnalysisModal" class="save-to-db-button bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg">Save to Database</button>
-                <button data-modal-id="industryAnalysisModal" class="save-to-drive-button bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg">Save to Drive</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="portfolioManagerModal" class="fixed inset-0 z-[105] items-center justify-center p-4 modal">
-        <div class="absolute inset-0 bg-gray-900 bg-opacity-75" id="close-portfolio-manager-modal-bg"></div>
-        <div class="relative bg-white rounded-2xl shadow-lg border border-gray-200 flex flex-col w-full max-w-2xl h-full max-h-[90vh] m-4">
-            <div class="p-6 border-b border-gray-200 flex justify-between items-center">
-                <h2 class="text-2xl font-bold text-gray-800">Portfolio & Watchlist Manager</h2>
-                <div class="flex items-center gap-x-4">
-                    <button id="add-new-stock-button" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-1 px-3 text-sm rounded-lg shadow-sm">Add New Stock</button>
-                    <button id="close-portfolio-manager-modal" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
-                </div>
-            </div>
-            <div id="portfolio-manager-list-container" class="overflow-y-auto flex-grow">
-                <div class="p-4 border-b bg-gray-50">
-                    <form id="manage-cash-form" class="flex items-center gap-4">
-                        <label for="manage-cash-amount" class="block text-sm font-medium text-gray-700">Cash Balance:</label>
-                        <input type="number" step="0.01" id="manage-cash-amount" class="block w-full border border-gray-300 rounded-md shadow-sm p-2" placeholder="e.g., 5000.00">
-                        <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg whitespace-nowrap">Save Cash</button>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div id="manageStockModal" class="fixed inset-0 z-[106] items-center justify-center p-4 modal"><div class="absolute inset-0 bg-gray-900 bg-opacity-75" id="close-manage-stock-modal-bg"></div><div class="relative bg-white rounded-2xl shadow-lg border border-gray-200 flex flex-col w-full max-w-2xl h-full max-h-[90vh] m-4"><form id="manage-stock-form" class="flex flex-col h-full"><div class="p-6 border-b border-gray-200"><h2 id="manage-stock-modal-title" class="text-2xl font-bold text-gray-800">Manage Stock</h2></div><div class="p-6 overflow-y-auto flex-grow space-y-4"><input type="hidden" id="manage-stock-original-ticker"><div><label for="manage-stock-ticker" class="block text-sm font-medium text-gray-700">Ticker Symbol</label><input type="text" id="manage-stock-ticker" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 uppercase" required></div><div><label for="manage-stock-name" class="block text-sm font-medium text-gray-700">Company Name</label><input type="text" id="manage-stock-name" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required></div><div><label for="manage-stock-exchange" class="block text-sm font-medium text-gray-700">Exchange</label><input type="text" id="manage-stock-exchange" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required></div><div><label for="manage-stock-sector" class="block text-sm font-medium text-gray-700">Sector</label><input type="text" id="manage-stock-sector" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 bg-gray-100" readonly></div><div><label for="manage-stock-industry" class="block text-sm font-medium text-gray-700">Industry</label><input type="text" id="manage-stock-industry" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 bg-gray-100" readonly></div><div><label for="manage-stock-status" class="block text-sm font-medium text-gray-700">Status</label><select id="manage-stock-status" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"><option value="Watchlist">Watchlist</option><option value="Portfolio">Portfolio</option></select></div><div id="manage-stock-shares-container" class="hidden"><label for="manage-stock-shares" class="block text-sm font-medium text-gray-700">Number of Shares</label><input type="number" step="any" id="manage-stock-shares" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" placeholder="e.g., 10.5"></div></div><div class="p-4 border-t border-gray-200 bg-gray-50 flex justify-between items-center"><button type="button" id="delete-stock-button" class="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg">Delete</button><div class="flex gap-4"><button type="button" id="cancel-manage-stock-button" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg">Cancel</button><button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg">Save Changes</button></div></div></form></div></div>
-
-    <div id="stockListModal" class="fixed inset-0 z-[105] items-center justify-center p-4 modal">
-        <div class="absolute inset-0 bg-gray-900 bg-opacity-75" id="close-stock-list-modal-bg"></div>
-        <div class="relative bg-white rounded-2xl shadow-lg border border-gray-200 flex flex-col w-full max-w-3xl h-full max-h-[90vh] m-4">
-            <div class="p-6 border-b border-gray-200 flex justify-between items-center">
-                <h2 id="stock-list-modal-title" class="text-2xl font-bold text-gray-800">My List</h2>
-                <div class="flex items-center gap-2">
-                    <button id="expand-all-button" class="text-sm bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-1 px-3 rounded-lg">Expand All</button>
-                    <button id="collapse-all-button" class="text-sm bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-1 px-3 rounded-lg">Collapse All</button>
-                    <button id="close-stock-list-modal" class="text-gray-400 hover:text-gray-600 text-2xl ml-4">&times;</button>
-                </div>
-            </div>
-            <div id="stock-list-modal-content" class="overflow-y-auto flex-grow p-2"></div>
-        </div>
-    </div>
-
-    <div id="viewFmpDataModal" class="fixed inset-0 z-[105] items-center justify-center p-4 modal">
-        <div class="absolute inset-0 bg-gray-900 bg-opacity-75" id="close-view-fmp-data-modal-bg"></div>
-        <div class="relative bg-white rounded-2xl shadow-lg border border-gray-200 flex flex-col w-full max-w-4xl h-full max-h-[90vh] m-4">
-            <div class="p-6 border-b border-gray-200 flex justify-between items-center">
-                <h2 id="view-fmp-data-modal-title" class="text-2xl font-bold text-gray-800">Cached FMP Data</h2>
-                <button id="close-view-fmp-data-modal" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
-            </div>
-            <div id="view-fmp-data-content" class="p-6 overflow-y-auto flex-grow bg-gray-50 space-y-4"></div>
-            <div class="p-4 border-t border-gray-200 bg-gray-50 flex justify-end">
-                <button data-modal-id="viewFmpDataModal" class="save-to-drive-button bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg">Save to Drive</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="manageFmpEndpointsModal" class="fixed inset-0 z-[106] items-center justify-center p-4 modal">
-        <div class="absolute inset-0 bg-gray-900 bg-opacity-75" id="close-manage-fmp-endpoints-modal-bg"></div>
-        <div class="relative bg-white rounded-2xl shadow-lg border border-gray-200 flex flex-col w-full max-w-3xl h-full max-h-[90vh] m-4">
-            <div class="p-6 border-b border-gray-200">
-                <h2 class="text-2xl font-bold text-gray-800">Manage FMP Endpoints</h2>
-                <p class="text-sm text-gray-500">Add or remove FMP API endpoints to fetch. Use `${symbol}` and `${fmpApiKey}` as placeholders.</p>
-            </div>
-            <div class="p-6 flex-grow overflow-y-auto">
-                <form id="manage-fmp-endpoint-form" class="p-4 border rounded-lg bg-gray-50 space-y-4 mb-6">
-                    <input type="hidden" id="fmp-endpoint-id">
-                    <div>
-                        <label for="fmp-endpoint-name" class="block text-sm font-medium text-gray-700">Endpoint Name</label>
-                        <input type="text" id="fmp-endpoint-name" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" placeholder="e.g., Company Profile" required>
-                    </div>
-                    <div>
-                        <label for="fmp-endpoint-url" class="block text-sm font-medium text-gray-700">URL Template</label>
-                        <input type="text" id="fmp-endpoint-url" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" placeholder="e.g., https://site.com/api/profile?symbol=${symbol}&apikey=${fmpApiKey}" required>
-                    </div>
-                    <div class="flex justify-end gap-2">
-                         <button type="button" id="cancel-fmp-endpoint-edit" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg hidden">Cancel</button>
-                        <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg">Save Endpoint</button>
-                    </div>
-                </form>
-                <h3 class="text-lg font-semibold text-gray-700 mb-2">Saved Endpoints</h3>
-                <div id="fmp-endpoints-list-container" class="space-y-2"></div>
-            </div>
-            <div class="p-4 bg-gray-50 border-t flex justify-end">
-                <button type="button" id="close-manage-fmp-endpoints-modal" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg">Close</button>
-            </div>
-        </div>
-    </div>
-    
-    <div id="manageBroadEndpointsModal" class="fixed inset-0 z-[106] items-center justify-center p-4 modal">
-        <div class="absolute inset-0 bg-gray-900 bg-opacity-75" id="close-manage-broad-endpoints-modal-bg"></div>
-        <div class="relative bg-white rounded-2xl shadow-lg border border-gray-200 flex flex-col w-full max-w-3xl h-full max-h-[90vh] m-4">
-            <div class="p-6 border-b border-gray-200">
-                <h2 class="text-2xl font-bold text-gray-800">Manage Broad API Endpoints</h2>
-                <p class="text-sm text-gray-500">Add or remove general-purpose API endpoints. Use placeholders like `${apiKey}` as needed.</p>
-            </div>
-            <div class="p-6 flex-grow overflow-y-auto">
-                <form id="manage-broad-endpoint-form" class="p-4 border rounded-lg bg-gray-50 space-y-4 mb-6">
-                    <input type="hidden" id="broad-endpoint-id">
-                    <div>
-                        <label for="broad-endpoint-name" class="block text-sm font-medium text-gray-700">Endpoint Name</label>
-                        <input type="text" id="broad-endpoint-name" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" placeholder="e.g., Economic Indicators" required>
-                    </div>
-                    <div>
-                        <label for="broad-endpoint-url" class="block text-sm font-medium text-gray-700">URL Template</label>
-                        <input type="text" id="broad-endpoint-url" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" placeholder="e.g., https://api.stlouisfed.org/fred/series/observations?series_id=GNPCA&api_key=${apiKey}" required>
-                    </div>
-                    <div class="flex justify-end gap-2">
-                         <button type="button" id="cancel-broad-endpoint-edit" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg hidden">Cancel</button>
-                        <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg">Save Endpoint</button>
-                    </div>
-                </form>
-                <h3 class="text-lg font-semibold text-gray-700 mb-2">Saved Endpoints</h3>
-                <div id="broad-endpoints-list-container" class="space-y-2"></div>
-            </div>
-            <div class="p-4 bg-gray-50 border-t flex justify-end">
-                <button type="button" id="close-manage-broad-endpoints-modal" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg">Close</button>
-            </div>
-        </div>
-    </div>
-
-<div id="rawDataViewerModal" class="fixed inset-0 z-[105] items-center justify-center p-4 modal">
-    <div class="absolute inset-0 bg-gray-900 bg-opacity-75" id="close-raw-data-viewer-modal-bg"></div>
-    <div class="relative bg-white rounded-2xl shadow-lg border border-gray-200 flex flex-col w-full max-w-4xl h-full max-h-[90vh] m-4">
-        <div class="p-6 border-b border-gray-200 flex justify-between items-center">
-            <h2 id="raw-data-viewer-modal-title" class="text-2xl font-bold text-gray-800">Raw FMP Data</h2>
-            <button id="close-raw-data-viewer-modal" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
-        </div>
-        <div id="raw-data-viewer-content" class="flex-grow flex flex-col overflow-hidden">
-            <div class="border-b border-gray-200">
-                <nav id="analysis-tabs" class="flex -mb-px" aria-label="Tabs">
-                    <button class="tab-button" data-tab="company-profile">Company Profile</button>
-                    <button class="tab-button" data-tab="raw-data">Raw Data</button>
-                    <button class="tab-button" data-tab="ai-analysis">AI Analysis</button>
-                    <button class="tab-button" data-tab="trend-analysis">Trend Analysis</button>
-                </nav>
-            </div>
-
-            <div class="flex-grow overflow-y-auto">
-                <div id="ai-analysis-tab" class="tab-content p-6">
-                    <div id="ai-buttons-container" class="border-b pb-4 mb-4 flex flex-wrap gap-2 justify-center"></div>
-                    <div id="report-status-container-ai" class="hidden p-3 mb-4 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between gap-4"></div>
-                    <div id="ai-article-container" class="prose max-w-none"></div>
-                </div>
-
-                <div id="company-profile-tab" class="tab-content hidden p-6">
-                    <div id="company-profile-display-container"></div>
-                </div>
-
-                <div id="raw-data-tab" class="tab-content hidden p-6 bg-gray-50">
-                    <div id="raw-data-accordion-container"></div>
-                </div>
-
-                <div id="trend-analysis-tab" class="tab-content hidden p-6">
-                    <div id="trend-analysis-content" class="prose max-w-none"></div>
-                </div>
-            </div>
-        </div>
-        <div class="p-4 bg-gray-50 border-t flex justify-end gap-4">
-            <button type="button" id="close-raw-data-viewer-modal-button" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg">Close</button>
-            <button data-modal-id="rawDataViewerModal" class="save-to-db-button bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg">Save to Database</button>
-            <button data-modal-id="rawDataViewerModal" class="save-to-drive-button bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg">Save to Drive</button>
+            </form>
         </div>
     </div>
 </div>
 
-<div id="sessionLogModal" class="fixed inset-0 z-[105] items-center justify-center p-4 modal">
-    <div class="absolute inset-0 bg-gray-900 bg-opacity-75" id="close-session-log-modal-bg"></div>
-    <div class="relative bg-white rounded-2xl shadow-lg border border-gray-200 flex flex-col w-full max-w-4xl h-full max-h-[90vh] m-4">
-        <div class="p-6 border-b border-gray-200 flex justify-between items-center">
-            <h2 class="text-2xl font-bold text-gray-800">AI Session Log</h2>
-            <button id="close-session-log-modal" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
-        </div>
-        <div id="session-log-content" class="p-6 overflow-y-auto flex-grow bg-gray-50 space-y-4">
+<div id="financialsModal" class="fixed inset-0 z-[100] items-center justify-center p-4 modal">
+    <div id="financialsModalOverlay" class="absolute inset-0 bg-gray-900 bg-opacity-75"></div>
+    <div class="relative bg-white rounded-2xl shadow-lg border border-gray-200 p-6 w-full max-w-5xl m-4 overflow-y-auto max-h-[90vh]">
+        <div class="flex justify-between items-start pb-4 border-b">
+            <div>
+                <h2 id="modal-company-name" class="text-2xl font-bold text-gray-800">Company Name (SYMBOL)</h2>
+                <p id="modal-stock-price" class="text-lg font-semibold text-indigo-600 mt-1">Price</p>
             </div>
+            <button id="financialsModalCloseBtn" class="text-3xl font-light text-gray-400 hover:text-gray-600">&times;</button>
+        </div>
+         <div class="flex justify-between items-center py-3">
+             <p id="modal-last-updated" class="text-xs text-gray-500">Loading...</p>
+             <button id="refreshFinancialsBtn" data-symbol="" class="text-sm bg-indigo-100 text-indigo-700 hover:bg-indigo-200 rounded-md px-3 py-1 font-semibold">
+                 <i class="fas fa-sync-alt mr-2"></i>Refresh Data
+            </button>
+        </div>
+        <div class="border-b border-gray-200">
+            <nav id="financials-modal-tabs" class="-mb-px flex space-x-4" aria-label="Tabs">
+                <button data-tab-target="#modal-ai-summary-content" class="modal-tab-button active whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm">AI Summary</button>
+                <button data-tab-target="#modal-news-content" class="modal-tab-button whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">News</button>
+                <button data-tab-target="#modal-key-metrics-content" class="modal-tab-button whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">Key Metrics</button>
+                <button data-tab-target="#modal-financial-trends-content" class="modal-tab-button whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">Financial Trends</button>
+                <button data-tab-target="#modal-raw-data-content" class="modal-tab-button whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">Raw Data</button>
+            </nav>
+        </div>
+        <div class="pt-4">
+            <div id="modal-ai-summary-content" class="modal-tab-content active"></div>
+            <div id="modal-news-content" class="modal-tab-content"></div>
+            <div id="modal-key-metrics-content" class="modal-tab-content"></div>
+            <div id="modal-financial-trends-content" class="modal-tab-content"></div>
+            <div id="modal-raw-data-content" class="modal-tab-content"></div>
+        </div>
     </div>
 </div>
 
-    <script type="module" src="config.js"></script>
-    <script type="module" src="api.js"></script>
-    <script type="module" src="ui.js"></script>
-    <script type="module" src="main.js"></script>
+
+<script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth-compat.js"></script>
+
+<script>
+    // Version 5.2.8
+    document.addEventListener("DOMContentLoaded", () => {
+        // --- 1. Global Configuration Object ---
+        const appConfig = {
+            fmpApiKey: "",
+            geminiApiKey: "",
+            searchApiKey: "",
+            searchEngineId: "",
+            googleClientId: "",
+            firebaseConfig: {},
+            generativeAnalyses: {},
+            cachedStockInfo: {}
+        };
+        
+        let db = null;
+        let savedStocks = new Set();
+        let sessionTimer = null;
+        let advancedScreenerData = [];
+        let currentSort = { key: 'marketCap', direction: 'desc' };
+
+
+        // --- Utility to pause execution ---
+        const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+        // --- 2. DOM Element Selection ---
+        const apiKeyModal = document.getElementById('apiKeyModal');
+        const apiKeyForm = document.getElementById('apiKeyForm');
+        const errorMessage = document.getElementById('api-key-error');
+        const geminiApiKeyInput = document.getElementById('geminiApiKeyInput');
+        const googleClientIdInput = document.getElementById('googleClientIdInput');
+        const webSearchApiKeyInput = document.getElementById('webSearchApiKeyInput');
+        const searchEngineIdInput = document.getElementById('searchEngineIdInput');
+        const fmpApiKeyInput = document.getElementById('fmpApiKeyInput');
+        const firebaseConfigInput = document.getElementById('firebaseConfigInput');
+        const tabButtons = document.querySelectorAll('.tab-button');
+        const tabContents = document.querySelectorAll('.tab-content');
+        const manageSummariesBtn = document.getElementById('manageSummariesBtn');
+        const summaryCrudModal = document.getElementById('summaryCrudModal');
+        const crudModalOverlay = document.getElementById('crudModalOverlay');
+        const savedSummariesList = document.getElementById('savedSummariesList');
+        const editSummaryFormContainer = document.getElementById('editSummaryFormContainer');
+        const editSummaryForm = document.getElementById('editSummaryForm');
+        const cancelEditBtn = document.getElementById('cancelEditBtn');
+        const advancedScreenerFilterForm = document.getElementById('advancedScreenerFilterForm');
+        const financialsModal = document.getElementById('financialsModal');
+        const financialsModalOverlay = document.getElementById('financialsModalOverlay');
+        const financialsModalCloseBtn = document.getElementById('financialsModalCloseBtn');
+        const refreshFinancialsBtn = document.getElementById('refreshFinancialsBtn');
+        const appContent = document.getElementById('appContent');
+        const financialsModalTabs = document.getElementById('financials-modal-tabs');
+        // Auth Elements
+        const googleSignInBtn = document.getElementById('googleSignInBtn');
+        const signOutBtn = document.getElementById('signOutBtn');
+        const authUserInfo = document.getElementById('auth-user-info');
+        const userEmailSpan = document.getElementById('user-email');
+
+        // --- NEW: DATA PROCESSING LOGIC FROM STOCK RESEARCH HUB ---
+
+        function formatLargeNumber(value, precision = 2) {
+            const num = parseFloat(value);
+            if (isNaN(num) || num === 0) return "N/A";
+            const tiers = [
+                { value: 1e12, suffix: 'T' }, { value: 1e9,  suffix: 'B' },
+                { value: 1e6,  suffix: 'M' }, { value: 1e3,  suffix: 'K' },
+            ];
+            const tier = tiers.find(t => Math.abs(num) >= t.value);
+            if (tier) {
+                const formattedNum = (num / tier.value).toFixed(precision);
+                return `${formattedNum}${tier.suffix}`;
+            }
+            return num.toFixed(precision);
+        }
+
+        function _calculateUndervaluedMetrics(data) {
+            const profile = data.profile?.[0] || {};
+            const incomeStatements = (data.incomeStatement || []).slice().reverse(); // Oldest to newest
+            const keyMetrics = (data.keyMetrics || []).slice().reverse(); // Oldest to newest
+            const cashFlows = (data.cashFlow || []).slice().reverse();
+            const ratios = (data.ratios || []).slice().reverse(); // Oldest to newest
+
+            const latestMetrics = keyMetrics[keyMetrics.length - 1] || {};
+            const latestCashFlow = cashFlows[cashFlows.length - 1] || {};
+            
+            // Helper to calculate YoY Growth
+            const calculateYoyGrowth = (data, key) => {
+                if (!data) return [];
+                const trends = [];
+                for (let i = 1; i < data.length; i++) {
+                    const prev = data[i - 1][key];
+                    const curr = data[i][key];
+                    if (prev && curr && prev !== 0) {
+                        const growth = ((curr - prev) / prev) * 100;
+                        trends.push({ year: data[i].calendarYear, growth: `${growth.toFixed(2)}%` });
+                    }
+                }
+                return trends.slice(-6); // Last 6 years of growth
+            };
+
+            // Helper to get last N years of a metric
+            const getTrend = (data, key, formatFn = (v) => v) => {
+                if (!data) return [];
+                return data.slice(-6).map(d => ({ year: d.calendarYear, value: formatFn(d[key]) }));
+            };
+            
+            // Helper to calculate historical average
+            const calculateAverage = (data, key) => {
+                if (!data) return null;
+                const values = data.slice(-5).map(d => d[key]).filter(v => typeof v === 'number');
+                if (values.length === 0) return null;
+                return values.reduce((a, b) => a + b, 0) / values.length;
+            };
+
+            // 1. Growth & Profitability
+            const revenueGrowthTrend = calculateYoyGrowth(incomeStatements, 'revenue');
+            const profitabilityTrend = getTrend(ratios, 'netProfitMargin', v => v ? `${(v * 100).toFixed(2)}%` : "N/A");
+
+            // 2. Financial Health
+            const roeTrend = getTrend(keyMetrics, 'roe', v => v ? `${(v * 100).toFixed(2)}%` : "N/A");
+            const debtToEquity = latestMetrics.debtToEquity ? latestMetrics.debtToEquity.toFixed(2) : 'N/A';
+            
+            // 3. Dividend Analysis
+            const dividendYield = latestMetrics.dividendYield ? `${(latestMetrics.dividendYield * 100).toFixed(2)}%` : 'N/A';
+            let cashFlowPayoutRatio = 'N/A';
+            if (latestCashFlow.operatingCashFlow && latestCashFlow.dividendsPaid) {
+                if (latestCashFlow.operatingCashFlow > 0) {
+                    const ratio = (Math.abs(latestCashFlow.dividendsPaid) / latestCashFlow.operatingCashFlow) * 100;
+                    cashFlowPayoutRatio = `${ratio.toFixed(2)}%`;
+                }
+            }
+
+            // 4. Valuation Multiples
+            const peRatio = latestMetrics.peRatio ? latestMetrics.peRatio.toFixed(2) : 'N/A';
+            const psRatio = latestMetrics.priceToSalesRatio ? latestMetrics.priceToSalesRatio.toFixed(2) : 'N/A';
+            const pbRatio = latestMetrics.pbRatio ? latestMetrics.pbRatio.toFixed(2) : 'N/A';
+
+            // 5. Valuation in Context
+            const historicalPe = calculateAverage(keyMetrics, 'peRatio');
+            const historicalPs = calculateAverage(keyMetrics, 'priceToSalesRatio');
+            const historicalPb = calculateAverage(keyMetrics, 'pbRatio');
+
+            const valuationRelativeToHistory = {
+                pe: { current: peRatio, historicalAverage: historicalPe ? historicalPe.toFixed(2) : 'N/A', status: historicalPe && peRatio !== 'N/A' ? (peRatio > historicalPe ? 'Premium' : 'Discount') : 'N/A' },
+                ps: { current: psRatio, historicalAverage: historicalPs ? historicalPs.toFixed(2) : 'N/A', status: historicalPs && psRatio !== 'N/A' ? (psRatio > historicalPs ? 'Premium' : 'Discount') : 'N/A' },
+                pb: { current: pbRatio, historicalAverage: historicalPb ? historicalPb.toFixed(2) : 'N/A', status: historicalPb && pbRatio !== 'N/A' ? (pbRatio > historicalPb ? 'Premium' : 'Discount') : 'N/A' }
+            };
+            
+            // 6. Graham Number
+            const grahamNumber = latestMetrics.grahamNumber;
+            const currentPrice = profile.price;
+            let grahamVerdict = 'N/A';
+            if (grahamNumber && currentPrice) {
+                grahamVerdict = currentPrice < grahamNumber ? 'UNDERVALUED' : 'OVERVALUED';
+            }
+
+            // 7. Analyst Consensus & Estimates
+            const analystConsensus = (data.stock_grade_news || []).slice(0, 5).map(g => `${g.gradingCompany}: ${g.newGrade}`).join(', ');
+            const latestEstimate = (data.analyst_estimates || []).find(e => new Date(e.date).getFullYear() === new Date().getFullYear() + 1);
+
+            return {
+                summary: { industry: profile.industry || 'N/A' },
+                revenueGrowthTrend,
+                profitabilityTrend,
+                roeTrend,
+                debtToEquity,
+                dividendYield,
+                cashFlowPayoutRatio,
+                peRatio,
+                psRatio,
+                pbRatio,
+                valuationRelativeToHistory,
+                grahamNumberAnalysis: { grahamNumber: grahamNumber ? grahamNumber.toFixed(2) : 'N/A', currentPrice: currentPrice || 'N/A', verdict: grahamVerdict },
+                analystConsensus: analystConsensus || 'No recent ratings.',
+                analystEstimatesSummary: latestEstimate ? `Avg. estimated revenue for next year is ${formatLargeNumber(latestEstimate.estimatedRevenueAvg)}.` : 'No estimates available.'
+            };
+        }
+
+        // --- MODIFIED: NEW, CONCISE PROMPT FOR AI SUMMARY ---
+        
+        const AI_SUMMARY_PROMPT = `
+        Act as a seasoned investment analyst. I will provide you with a company's description, its key 5-year financial trends, and the latest news headlines. Your task is to synthesize ALL this information into a holistic valuation assessment.
+
+        Company: {companyName} ({tickerSymbol})
+        Industry: {industry}
+        Sector: {sector}
+        
+        Financial Summary JSON (if a value is "N/A" or an array is empty, it means the data was not available):
+        {jsonData}
+
+        Latest News Headlines (last 10 days):
+        {newsHeadlines}
+
+        Based on a synthesis of the financial summary AND the news headlines, provide your analysis in a valid JSON format with two keys:
+        1. "rating": A single valuation assessment. Choose ONE from the following list: "Undervalued", "Fairly Valued", "Overvalued", "Speculative Growth", "Caution Advised". Your choice must be directly supported by the data and news.
+        2. "rationale": A concise, 2-3 sentence justification for your rating. Your rationale MUST integrate insights from both the financial data (e.g., revenue growth, valuation, Graham Number, ROE) and the sentiment from the news headlines to support your chosen rating.
+        `;
+
+        // --- 3. Initialization Logic ---
+        function initialize() {
+            showModal();
+            googleSignInBtn.addEventListener('click', signInWithGoogle);
+            signOutBtn.addEventListener('click', signOut);
+            apiKeyForm.addEventListener('submit', handleApiKeyFormSubmit);
+        }
+        
+        // --- 4. Auth and Session Management ---
+        function signInWithGoogle() {
+            if (!firebase.apps.length) {
+                alert("Please provide your configuration and API keys and click 'Save and Continue' first to initialize the application.");
+                return;
+            }
+            const provider = new firebase.auth.GoogleAuthProvider();
+            firebase.auth().signInWithPopup(provider).catch(error => {
+                console.error("Google Sign-In Error:", error);
+                errorMessage.textContent = `Sign-in failed: ${error.message}`;
+            });
+        }
+
+        function signOut() {
+            firebase.auth().signOut();
+        }
+
+        function startSessionTimer() {
+            clearSessionTimer(); 
+            localStorage.setItem('loginTimestamp', Date.now());
+            sessionTimer = setInterval(checkSession, 60000); // Check every minute
+            console.log("Session timer started.");
+        }
+
+        function checkSession() {
+            const loginTimestamp = localStorage.getItem('loginTimestamp');
+            if (!loginTimestamp) return;
+
+            const thirtyMinutes = 30 * 60 * 1000;
+            if (Date.now() - loginTimestamp > thirtyMinutes) {
+                console.log("Session expired after 30 minutes.");
+                clearSessionTimer();
+                alert("Your session has expired. Please sign in again.");
+                signInWithGoogle();
+            }
+        }
+        
+        function clearSessionTimer() {
+            if (sessionTimer) {
+                clearInterval(sessionTimer);
+                sessionTimer = null;
+                localStorage.removeItem('loginTimestamp');
+                console.log("Session timer cleared.");
+            }
+        }
+        
+        // --- 5. Form Submission Handler ---
+        function handleApiKeyFormSubmit(event) {
+            event.preventDefault();
+            errorMessage.textContent = '';
+            const formValues = {
+                geminiApiKey: geminiApiKeyInput.value.trim(),
+                googleClientId: googleClientIdInput.value.trim(),
+                searchApiKey: webSearchApiKeyInput.value.trim(),
+                searchEngineId: searchEngineIdInput.value.trim(),
+                fmpApiKey: fmpApiKeyInput.value.trim(),
+                firebaseConfigString: firebaseConfigInput.value.trim()
+            };
+            if (Object.values(formValues).some(value => value === '')) {
+                errorMessage.textContent = 'All fields are required.';
+                return;
+            }
+            try {
+                const parsedFirebaseConfig = JSON.parse(formValues.firebaseConfigString);
+                if (!parsedFirebaseConfig.databaseURL) {
+                    errorMessage.textContent = 'Firebase Config must include a "databaseURL" property.';
+                    return;
+                }
+                Object.assign(appConfig, { ...formValues, firebaseConfig: parsedFirebaseConfig });
+                
+                // Initialize Firebase here, after getting the config
+                try {
+                    if (!firebase.apps.length) {
+                        firebase.initializeApp(appConfig.firebaseConfig);
+                    }
+                    db = firebase.database();
+                    console.log("Firebase initialized successfully.");
+
+                    // NOW, attach the auth listener
+                    firebase.auth().onAuthStateChanged(user => {
+                        if (user) {
+                            // User is signed in.
+                            console.log("User signed in:", user.email);
+                            userEmailSpan.textContent = user.email;
+                            googleSignInBtn.style.display = 'none';
+                            authUserInfo.style.display = 'block';
+                            
+                            startSessionTimer();
+                            hideModal();
+                            startApp();
+                        } else {
+                            // User is signed out.
+                            console.log("User is signed out.");
+                            userEmailSpan.textContent = '';
+                            googleSignInBtn.style.display = 'block';
+                            authUserInfo.style.display = 'none';
+                            appContent.style.display = 'none';
+                            showModal(); 
+                            clearSessionTimer();
+                        }
+                    });
+
+                } catch (e) {
+                     if (!/already exists/.test(e.message)) {
+                        console.error("Firebase initialization failed:", e);
+                        alert("Could not initialize Firebase. Please check your configuration.");
+                        return;
+                    }
+                }
+            } catch (error) {
+                errorMessage.textContent = 'Invalid Firebase Config JSON.';
+            }
+        }
+
+        // --- 6. Modal & Tab Utility Functions ---
+        function showModal() { apiKeyModal.style.display = 'flex'; }
+        function hideModal() { 
+            apiKeyModal.style.display = 'none'; 
+            appContent.style.display = 'block';
+        }
+        
+        function showFinancialsModal() { financialsModal.style.display = 'flex'; }
+        function hideFinancialsModal() { financialsModal.style.display = 'none'; }
+
+        function setupTabs() {
+            const tabMap = {
+                'gen-ai-tab-button': 'gen-ai-tab-content',
+                'screener-tab-button': 'screener-tab-content',
+                'advanced-screener-tab-button': 'advanced-screener-tab-content',
+                'saved-stocks-tab-button': 'saved-stocks-tab-content',
+                'news-tab-button': 'news-tab-content'
+            };
+
+            const setActiveTab = (activeButtonId) => {
+                tabButtons.forEach(button => {
+                    const isActive = button.id === activeButtonId;
+                    button.classList.toggle('border-indigo-500', isActive);
+                    button.classList.toggle('text-indigo-600', isActive);
+                    button.classList.toggle('border-transparent', !isActive);
+                    button.classList.toggle('text-gray-500', !isActive);
+                });
+                Object.values(tabMap).forEach(contentId => {
+                    const contentEl = document.getElementById(contentId);
+                    if (contentEl) {
+                       contentEl.style.display = (tabMap[activeButtonId] === contentId) ? 'block' : 'none';
+                    }
+                });
+                if (activeButtonId === 'saved-stocks-tab-button') {
+                    renderSavedStocksTable();
+                }
+            };
+
+            tabButtons.forEach(button => {
+                button.addEventListener('click', () => setActiveTab(button.id));
+            });
+            
+            setActiveTab('gen-ai-tab-button');
+        }
+        
+        async function handleAdvancedScreenerRun(event) {
+            event.preventDefault();
+            await fetchAdvancedStockScreener();
+        }
+
+        // --- 7. Main Application Logic ---
+        async function startApp() {
+            console.log("Application starting...");
+            // Clear any existing content to prevent duplication on re-login
+            document.getElementById('gen-ai-tab-content').innerHTML = '';
+
+            loadSavedStocks();
+            setupTabs();
+            setupCrudModalListeners();
+            setupFinancialsModalListeners();
+            advancedScreenerFilterForm.addEventListener('submit', handleAdvancedScreenerRun);
+            document.getElementById('advanced-screener-data-container').addEventListener('click', handleSortClick);
+            populateIndustryDropdown();
+            
+            appContent.addEventListener('click', (e) => {
+                const saveBtn = e.target.closest('.save-stock-btn');
+                if (saveBtn && saveBtn.dataset.symbol) {
+                    toggleSaveStock(saveBtn.dataset.symbol);
+                }
+            });
+
+            await loadAllCachedInfo();
+
+            // Initialize Advanced Screener with default values
+            fetchAdvancedStockScreener();
+
+            const exchanges = ['nasdaq', 'nyse', 'amex'];
+            const genAiContainer = document.getElementById('gen-ai-tab-content');
+            genAiContainer.innerHTML = exchanges.map(ex => `
+                <div id="${ex}-gen-ai-section" class="mb-12">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4">${ex.toUpperCase()} Analysis</h2>
+                    <div class="bg-white rounded-xl shadow-md p-4">
+                        <div class="border-b border-gray-200 overflow-x-auto nested-tabs-container">
+                            <nav id="${ex}-gen-ai-tabs-nav" class="-mb-px flex space-x-6" aria-label="Nested Tabs"></nav>
+                        </div>
+                        <div id="${ex}-gen-ai-tabs-content" class="mt-4"></div>
+                    </div>
+                </div>
+            `).join('');
+
+            for (const exchange of exchanges) {
+                console.log(`Initializing components for ${exchange.toUpperCase()}...`);
+                await initExchangeData(exchange);
+                console.log(`Completed ${exchange.toUpperCase()}.`);
+            }
+            console.log("All data loaded.");
+        }
+        
+        async function populateIndustryDropdown() {
+            const industrySelect = document.getElementById('industry');
+            if (!industrySelect) return;
+            
+            while (industrySelect.options.length > 1) {
+                industrySelect.remove(1);
+            }
+            industrySelect.disabled = false;
+
+            try {
+                const url = `https://financialmodelingprep.com/stable/available-industries?apikey=${appConfig.fmpApiKey}`;
+                const response = await fetch(url);
+                if (!response.ok) throw new Error('Failed to fetch industry list');
+                const industries = await response.json();
+
+                if (Array.isArray(industries)) {
+                     // Sort array of objects by the first value of each object
+                    industries.sort((a, b) => {
+                        const nameA = a && typeof a === 'object' ? String(Object.values(a)[0] || '') : String(a);
+                        const nameB = b && typeof b === 'object' ? String(Object.values(b)[0] || '') : String(b);
+                        return nameA.localeCompare(nameB);
+                    });
+
+                    industries.forEach(industry => {
+                        const industryName = industry && typeof industry === 'object' ? Object.values(industry)[0] : industry;
+                        if(industryName && typeof industryName === 'string') {
+                            const option = document.createElement('option');
+                            option.value = industryName;
+                            option.textContent = industryName;
+                            industrySelect.appendChild(option);
+                        }
+                    });
+                }
+            } catch (error) {
+                console.error("Could not populate industry dropdown:", error);
+                industrySelect.disabled = true;
+                const errorOption = document.createElement('option');
+                errorOption.textContent = 'Could not load industries';
+                errorOption.value = '';
+                industrySelect.appendChild(errorOption);
+            }
+        }
+
+        // --- 8. Saved Stocks Logic ---
+        function loadSavedStocks() {
+            const stored = localStorage.getItem('magickalOracleSavedStocks');
+            if (stored) {
+                savedStocks = new Set(JSON.parse(stored));
+            }
+        }
+
+        function updateSavedStocksStorage() {
+            localStorage.setItem('magickalOracleSavedStocks', JSON.stringify(Array.from(savedStocks)));
+        }
+
+        function toggleSaveStock(symbol) {
+            if (savedStocks.has(symbol)) {
+                savedStocks.delete(symbol);
+            } else {
+                savedStocks.add(symbol);
+            }
+            updateSavedStocksStorage();
+            updateUiForSymbol(symbol);
+            renderSavedStocksTable(); // Re-render the saved stocks table
+        }
+
+        function updateUiForSymbol(symbol) {
+            const isSaved = savedStocks.has(symbol);
+            document.querySelectorAll(`tr[data-symbol-row="${symbol}"]`).forEach(row => {
+                row.classList.toggle('saved-stock-row', isSaved);
+            });
+            document.querySelectorAll(`.save-stock-btn[data-symbol="${symbol}"]`).forEach(btn => {
+                btn.classList.toggle('saved', isSaved);
+                const icon = btn.querySelector('i');
+                if (icon) {
+                    icon.classList.toggle('fas', isSaved);
+                    icon.classList.toggle('far', !isSaved);
+                }
+            });
+        }
+
+        // --- 9. Data Initialization for Each Exchange ---
+        async function initExchangeData(exchange) {
+            const exchangeUpperCase = exchange.toUpperCase();
+            // Simple Screener Accordion
+            const screenerAccordionButton = document.getElementById(`${exchange}-accordion-button`);
+            const screenerAccordionContent = document.getElementById(`${exchange}-accordion-content`);
+            const screenerAccordionIcon = document.getElementById(`${exchange}-accordion-icon`);
+            // News Accordion
+            const newsAccordionButton = document.getElementById(`${exchange}-news-accordion-button`);
+            const newsAccordionContent = document.getElementById(`${exchange}-news-accordion-content`);
+            const newsAccordionIcon = document.getElementById(`${exchange}-news-accordion-icon`);
+            // Data Containers
+            const tableContainer = document.getElementById(`${exchange}-screener-data-container`);
+            const cardContainer = document.getElementById(`${exchange}-card-view`);
+            const newsContainer = document.getElementById(`${exchange}-news-container`);
+            const refreshButton = document.getElementById(`refresh-${exchange}-news`);
+
+            setupAccordionToggle(screenerAccordionButton, screenerAccordionContent, screenerAccordionIcon);
+            setupAccordionToggle(newsAccordionButton, newsAccordionContent, newsAccordionIcon);
+            
+            const screenerData = await fetchSimpleStockScreener(exchangeUpperCase, tableContainer, cardContainer);
+            
+            const loadedFromCache = await loadNewsFromFirebase(exchange, newsContainer, screenerData);
+            if (!loadedFromCache) {
+                await fetchAndRenderPriceTargetNews(screenerData, newsContainer, exchange);
+            }
+
+            refreshButton.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                newsContainer.innerHTML = `<p class="text-indigo-500 font-semibold p-4">Refreshing news for ${exchangeUpperCase}...</p>`;
+                const genAiNav = document.getElementById(`${exchange}-gen-ai-tabs-nav`);
+                const genAiContent = document.getElementById(`${exchange}-gen-ai-tabs-content`);
+                if(genAiNav) genAiNav.innerHTML = '';
+                if(genAiContent) genAiContent.innerHTML = '';
+                const refreshedScreenerData = await fetchSimpleStockScreener(exchangeUpperCase, tableContainer, cardContainer);
+                fetchAndRenderPriceTargetNews(refreshedScreenerData, newsContainer, exchange, true);
+            });
+        }
+
+        // --- 10. Accordion Toggle Logic ---
+        function setupAccordionToggle(button, content, icon) {
+            if (!button) return;
+            button.addEventListener('click', () => {
+                const isOpen = content.style.maxHeight && content.style.maxHeight !== "0px";
+                content.style.maxHeight = isOpen ? "0px" : content.scrollHeight + "px";
+                if(icon) icon.style.transform = isOpen ? "rotate(0deg)" : "rotate(180deg)";
+            });
+        }
+
+        // --- 11. Screener Fetching & Sorting Functions ---
+        async function fetchSimpleStockScreener(exchange, tableEl, cardEl) {
+            const loadingMsg = `<p class="text-gray-500">Loading screener for ${exchange}...</p>`;
+            if(tableEl) tableEl.innerHTML = loadingMsg;
+            if(cardEl) cardEl.innerHTML = loadingMsg;
+
+            if (!appConfig.fmpApiKey) {
+                const errorMsg = '<p class="text-red-500">Financial Modeling Prep API Key is missing.</p>';
+                if(tableEl) tableEl.innerHTML = errorMsg;
+                if(cardEl) cardEl.innerHTML = errorMsg;
+                return [];
+            }
+
+            const url = `https://financialmodelingprep.com/api/v3/stock-screener?marketCapMoreThan=1000000000&exchange=${exchange}&limit=1000&apikey=${appConfig.fmpApiKey}`;
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error(`API request failed: ${response.status}`);
+                const data = await response.json();
+                
+                renderSimpleStockTable(data, tableEl);
+                renderStockCards(data, cardEl, exchange);
+                return data;
+            } catch (error) {
+                console.error(`Error fetching simple screener data for ${exchange}:`, error);
+                const errorMsg = `<p class="text-red-500">Error fetching data for ${exchange}.</p>`;
+                 if(tableEl) tableEl.innerHTML = errorMsg;
+                if(cardEl) cardEl.innerHTML = errorMsg;
+                return [];
+            }
+        }
+        
+        async function fetchAdvancedStockScreener() {
+            const tableEl = document.getElementById('advanced-screener-data-container');
+            const cardEl = document.getElementById('advanced-screener-card-view');
+            const loadingMsg = `<p class="text-gray-500">Loading screener data...</p>`;
+            if(tableEl) tableEl.innerHTML = loadingMsg;
+            if(cardEl) cardEl.innerHTML = loadingMsg;
+
+            if (!appConfig.fmpApiKey) {
+                const errorMsg = '<p class="text-red-500">Financial Modeling Prep API Key is missing.</p>';
+                if(tableEl) tableEl.innerHTML = errorMsg;
+                if(cardEl) cardEl.innerHTML = errorMsg;
+                return;
+            }
+
+            let url = `https://financialmodelingprep.com/api/v3/stock-screener?apikey=${appConfig.fmpApiKey}&limit=1000&isEtf=false&isFund=false`;
+            
+            const formIds = ["marketCapMoreThan", "marketCapLowerThan", "betaMoreThan", "betaLowerThan", "volumeMoreThan", "volumeLowerThan", "dividendMoreThan", "dividendLowerThan", "sector", "industry", "exchange", "country"];
+            const form = document.getElementById('advancedScreenerFilterForm');
+            formIds.forEach(id => {
+                const element = form.querySelector(`#${id}`);
+                if(element && element.value) {
+                     url += `&${id}=${encodeURIComponent(element.value)}`;
+                }
+            });
+
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error(`API request failed: ${response.status}`);
+                const data = await response.json();
+
+                data.forEach(stock => {
+                    const cachedInfo = appConfig.cachedStockInfo[stock.symbol];
+                    stock.cachedTimestamp = cachedInfo?.timestamp ? new Date(cachedInfo.timestamp).getTime() : null;
+                });
+                
+                advancedScreenerData = data;
+                currentSort = { key: 'marketCap', direction: 'desc' };
+                sortAndRerenderAdvancedTable();
+                renderStockCards(data, cardEl, "Advanced Screener");
+                
+            } catch (error) {
+                console.error(`Error fetching advanced screener data:`, error);
+                const errorMsg = `<p class="text-red-500">Error fetching screener data. Check console for details.</p>`;
+                if(tableEl) tableEl.innerHTML = errorMsg;
+                if(cardEl) cardEl.innerHTML = errorMsg;
+            }
+        }
+        
+        function handleSortClick(e) {
+            const header = e.target.closest('[data-sort-key]');
+            if (!header) return;
+
+            const key = header.dataset.sortKey;
+            
+            if (currentSort.key === key) {
+                currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentSort.key = key;
+                const numericDesc = ['marketCap', 'volume', 'price', 'lastAnnualDividend', 'cachedTimestamp'];
+                currentSort.direction = numericDesc.includes(key) ? 'desc' : 'asc';
+            }
+            sortAndRerenderAdvancedTable();
+        }
+
+        function sortAndRerenderAdvancedTable() {
+            const { key, direction } = currentSort;
+            const sortedData = [...advancedScreenerData].sort((a, b) => {
+                let valA = a[key];
+                let valB = b[key];
+
+                if (valA === null || valA === undefined) return 1;
+                if (valB === null || valB === undefined) return -1;
+
+                if (typeof valA === 'string') {
+                    return direction === 'asc' 
+                        ? valA.localeCompare(valB) 
+                        : valB.localeCompare(valA);
+                } else {
+                    return direction === 'asc' ? valA - valB : valB - valA;
+                }
+            });
+            renderAdvancedStockTable(sortedData, document.getElementById('advanced-screener-data-container'));
+        }
+
+        // --- 12. Fetch and Render Price Target News ---
+        async function fetchAndRenderPriceTargetNews(screenerData, newsContainer, exchange, forceGenAiRefresh = false) {
+            const symbols = screenerData.map(stock => stock.symbol);
+
+            if (symbols.length === 0) {
+                newsContainer.innerHTML = `<p class="text-gray-500">No stocks found to fetch news for.</p>`;
+                return;
+            }
+
+            let allNews = [];
+            for (const [index, symbol] of symbols.entries()) {
+                try {
+                    const url = `https://financialmodelingprep.com/api/v4/price-target-news?symbol=${symbol}&page=0&limit=10&apikey=${appConfig.fmpApiKey}`;
+                    newsContainer.innerHTML = `<p class="text-gray-500 p-4">Fetching news for ${symbol} (${index + 1} of ${symbols.length})...<br><code class="text-xs text-indigo-500">${url}</code></p>`;
+                    
+                    const response = await fetch(url);
+
+                    if (response.status === 429) {
+                        console.error(`Rate limit exceeded when fetching news for ${symbol}. Stopping further requests.`);
+                        newsContainer.innerHTML += `<p class="text-red-500 p-4 font-semibold">API rate limit reached. Please wait a moment and try refreshing again.</p>`;
+                        break;
+                    }
+
+                    if(response.ok) {
+                        const newsItems = await response.json();
+                        if (newsItems && newsItems.length > 0) {
+                            allNews.push(...newsItems);
+                        }
+                    } else {
+                        console.warn(`Could not fetch news for ${symbol}: ${response.status} ${response.statusText}`);
+                    }
+                    await delay(600);
+                } catch (loopError) {
+                    console.error(`An error occurred in the news fetching loop for ${symbol}:`, loopError);
+                }
+            }
+
+            let filteredNews = allNews.flat().filter(item => item && item.newsTitle && item.publishedDate && item.newsURL);
+
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+            filteredNews = filteredNews.filter(newsItem => {
+                const newsDate = new Date(newsItem.publishedDate);
+                return newsDate >= thirtyDaysAgo;
+            });
+            
+            filteredNews.sort((a, b) => new Date(b.publishedDate) - new Date(a.publishedDate));
+
+            renderNewsCards(filteredNews, newsContainer);
+            await runGenerativeAnalyses(filteredNews, screenerData, exchange, forceGenAiRefresh);
+            await saveNewsToFirebase(exchange, filteredNews);
+        }
+        
+        // --- 13. Firebase Functions ---
+        async function saveNewsToFirebase(exchange, newsData) {
+            if (!db) return;
+            try {
+                await db.ref(`news/${exchange}`).set(newsData);
+                console.log(`News for ${exchange.toUpperCase()} saved to Firebase.`);
+            } catch (error) {
+                console.error(`Failed to save news for ${exchange} to Firebase:`, error);
+            }
+        }
+
+        async function loadNewsFromFirebase(exchange, newsContainer, screenerData) {
+            if (!db) return false;
+            try {
+                const snapshot = await db.ref(`news/${exchange}`).get();
+                if (snapshot.exists()) {
+                    const newsData = snapshot.val();
+                    console.log(`Loaded news for ${exchange.toUpperCase()} from Firebase.`);
+                    renderNewsCards(newsData, newsContainer);
+                    await runGenerativeAnalyses(newsData, screenerData, exchange, false);
+                    return true;
+                }
+                return false;
+            } catch (error) {
+                console.error(`Failed to load news for ${exchange} from Firebase:`, error);
+                return false;
+            }
+        }
+        
+        async function autoSaveAnalysisToFirebase(exchange, analysisId, analysisData) {
+            if (!db) return;
+            try {
+                await db.ref(`analyses-cache/${exchange}/${analysisId}`).set(analysisData);
+                console.log(`Auto-saved analysis '${analysisId}' for ${exchange.toUpperCase()}.`);
+            } catch (error) {
+                console.error(`Failed to auto-save analysis for ${exchange}:`, error);
+            }
+        }
+
+        async function loadAnalysesFromCache(exchange) {
+            if (!db) return null;
+            try {
+                const snapshot = await db.ref(`analyses-cache/${exchange}`).get();
+                if (snapshot.exists()) {
+                    console.log(`Loaded analyses from cache for ${exchange.toUpperCase()}.`);
+                    return snapshot.val();
+                }
+                return null;
+            } catch (error) {
+                console.error(`Failed to load analyses from cache for ${exchange}:`, error);
+                return null;
+            }
+        }
+        
+        async function saveTickerDetailsToFirebase(symbol, data) {
+            if (!db) return;
+            try {
+                await db.ref(`financial-details/${symbol}`).set(data);
+                console.log(`Details for ${symbol} saved to Firebase.`);
+            } catch (error) {
+                console.error(`Failed to save details for ${symbol}:`, error);
+            }
+        }
+
+        async function loadTickerDetailsFromFirebase(symbol) {
+            if (!db) return null;
+            try {
+                const snapshot = await db.ref(`financial-details/${symbol}`).get();
+                return snapshot.exists() ? snapshot.val() : null;
+            } catch (error) {
+                console.error(`Failed to load details for ${symbol} from Firebase:`, error);
+                return null;
+            }
+        }
+        
+        async function getAllCachedSymbols() {
+            if(!db) return new Set();
+            try {
+                const snapshot = await db.ref('financial-details').get();
+                return snapshot.exists() ? new Set(Object.keys(snapshot.val())) : new Set();
+            } catch (error) {
+                console.error("Failed to get all cached symbols:", error);
+                return new Set();
+            }
+        }
+        
+        async function loadAllCachedInfo() {
+            if (!db) return;
+            try {
+                const snapshot = await db.ref('financial-details').get();
+                if (snapshot.exists()) {
+                    const allDetails = snapshot.val();
+                    for (const symbol in allDetails) {
+                        if (allDetails[symbol].aiSummary && allDetails[symbol].aiSummary.rating && allDetails[symbol].timestamp) {
+                            appConfig.cachedStockInfo[symbol] = { rating: allDetails[symbol].aiSummary.rating, timestamp: allDetails[symbol].timestamp };
+                        }
+                    }
+                    console.log("Successfully loaded all cached stock info (ratings and timestamps).");
+                }
+            } catch(error) {
+                console.error("Could not load cached stock info from Firebase:", error);
+            }
+        }
+
+
+        // --- 14. Generative AI Analysis ---
+        
+        const analysisPrompts = [
+            {
+                title: "Market Summary",
+                id: "market-summary",
+                prompt: (exchange, articlesText) => `
+                    Act as an expert financial analyst. I will provide you with a list of recent news articles as JSON objects for the ${exchange.toUpperCase()} stock exchange from the last 30 days.
+                    Your task is to synthesize this information into a concise market briefing.
+
+                    Please structure your analysis into three parts:
+                    1.  **Key Themes:** In bullet points, identify 2-3 dominant themes or narratives driving analyst commentary (e.g., AI investment, inflation concerns, specific sector strength).
+                    2.  **Overall Sentiment:** State the prevailing market sentiment (e.g., Bullish 🐂, Bearish 🐻, or Mixed/Neutral ⚖️) and provide a one-sentence justification based on the balance of positive versus negative analyst ratings.
+                    3.  **Notable Movers:** Mention 1-2 companies that received particularly significant or frequent analyst attention.
+
+                    Format your response using Markdown.
+
+                    NEWS ARTICLES:
+                    ${articlesText}`
+            },
+            {
+                title: "Battleground Stocks",
+                id: "battleground-stocks",
+                prompt: (exchange, articlesText) => `
+                    Act as a quantitative financial analyst. Based on the provided news articles as JSON objects for the ${exchange.toUpperCase()} stock exchange, identify the top 2-3 "battleground stocks."
+                    These are stocks with the widest disparity in analyst price targets, indicating significant debate about their future value.
+
+                    For each identified battleground stock, provide:
+                    -   **Stock Symbol:** The ticker symbol.
+                    -   **Price Target Range:** The highest and lowest price target issued in the provided data.
+                    -   **Analyst Disagreement:** A brief (1-2 sentence) summary of the likely reasons for the conflicting opinions, as inferred from the data.
+
+                    Conclude with a sentence on what this level of disagreement implies for investors. Format using Markdown.
+
+                    NEWS ARTICLES:
+                    ${articlesText}`
+            },
+            {
+                title: "Top Upside",
+                id: "top-upside",
+                prompt: (exchange, articlesText) => `
+                    Act as a financial analyst for a growth-focused fund. Your goal is to identify stocks with the highest potential upside based on recent analyst price targets from the ${exchange.toUpperCase()}. The news is provided as JSON objects.
+
+                    Please perform the following:
+                    1.  For each article containing a price target, calculate the potential upside using the formula: Upside % = (priceTarget - priceWhenPosted) / priceWhenPosted.
+                    2.  Identify the top 5 stocks with the highest calculated potential upside.
+                    3.  Present the results in a Markdown numbered list, including the **stock symbol**, the **highest price target**, the **analyst firm** that set it, and the **calculated upside percentage**.
+
+                    NEWS ARTICLES:
+                    ${articlesText}`
+            },
+            {
+                title: "Firm Views",
+                id: "firm-views",
+                prompt: (exchange, articlesText) => `
+                    Act as a financial markets strategist. I have provided a list of analyst actions as JSON objects on the ${exchange.toUpperCase()} stock exchange.
+                    Your task is to analyze the "house view" of the most active analyst firms.
+
+                    1.  Identify the 3 firms (e.g., "Wolfe Research", "Goldman Sachs") with the highest number of published ratings in the dataset.
+                    2.  For each of these top 3 firms, provide a 2-3 sentence summary of their overall stance.
+                    3.  Note whether they appear generally bullish, bearish, or focused on a specific sector. Mention one stock they are particularly positive or negative on, if the data shows a clear example. Format using Markdown.
+
+                    NEWS ARTICLES:
+                    ${articlesText}`
+            },
+            {
+                title: "Single-Stock Deep Dive",
+                id: "single-stock-deep-dive",
+                prompt: (exchange, articlesText, symbol) => `
+                    Act as a senior equity research analyst. I will provide you with all recent news articles (as JSON objects) concerning the stock symbol ${symbol.toUpperCase()} from the last 30 days.
+                    Synthesize all the provided information into a professional "Deep Dive" summary.
+
+                    Your summary must include:
+                    -   **Analyst Consensus:** What is the general consensus (Buy, Hold, Sell)? What is the average or consensus price target from the data?
+                    -   **Bull Case Summary:** Briefly summarize the key arguments from analysts with positive ratings or high price targets.
+                    -   **Bear Case Summary:** Briefly summarize the key arguments or risks highlighted by analysts with more cautious ratings.
+                    -   **Recent Timeline:** Note any recent upgrades, downgrades, or target changes in chronological order.
+
+                    Format using Markdown.
+
+                    NEWS ARTICLES for ${symbol.toUpperCase()}:
+                    ${articlesText}`
+            },
+            {
+                title: "Sector Sentiment",
+                id: "sector-sentiment",
+                prompt: (exchange, articlesText) => `
+                    Act as a macro-focused financial analyst. Using the provided news (as JSON objects) from the ${exchange.toUpperCase()}, perform a sector-level sentiment analysis.
+                    You will need to infer the sector for each company (e.g., technology, healthcare, financials, consumer discretionary), likely from the company name or your own knowledge.
+
+                    1.  Identify the 3 sectors that received the most news coverage in the dataset.
+                    2.  For each of these top 3 sectors, assign a sentiment score (e.g., Positive, Negative, Neutral).
+                    3.  Provide a 1-2 sentence justification for the assigned sentiment, referencing specific company examples or trends. Format using Markdown.
+
+                    NEWS ARTICLES:
+                    ${articlesText}`
+            },
+            {
+                title: "Upgrades/Downgrades",
+                id: "upgrades-downgrades",
+                prompt: (exchange, articlesText) => `
+                    Act as an equity analyst. Your task is to track and summarize significant analyst rating changes from the provided news (as JSON objects) on the ${exchange.toUpperCase()}.
+                    Scan all headlines for keywords indicating a change (e.g., "Upgrades," "Downgrades," "Initiates Coverage," "Lowers Rating").
+
+                    Create two Markdown lists: **"Recent Upgrades"** and **"Recent Downgrades."**
+
+                    For each entry in the lists, provide:
+                    -   The stock symbol.
+                    -   The analyst firm making the change.
+                    -   A 1-sentence summary of the new rating and price target (e.g., "Upgraded to Outperform with a $120 price target.").
+
+                    If there are no significant upgrades or downgrades, state that analyst sentiment appears stable.
+
+                    NEWS ARTICLES:
+                    ${articlesText}`
+            },
+            {
+                title: "Influential Analysts",
+                id: "influential-analysts",
+                 prompt: (exchange, articlesText) => `
+                    Act as a financial markets commentator. From the list of news articles (as JSON objects) for the ${exchange.toUpperCase()}, identify the most influential analysts in the past 30 days.
+
+                    Your analysis should name the **Top 3 Most Active Analysts** based on the number of reports in the data.
+                    For each of these three analysts, provide:
+                    -   **Analyst Name and Firm:** e.g., "Akash Tewari (Wolfe Research)".
+                    -   **General Stance:** A brief description of their recent activity (e.g., "Appears bullish on the biotech sector, reiterating multiple 'Outperform' ratings.").
+                    -   **Highlight Call:** Mention their most optimistic or notable call from the dataset.
+                    
+                    Format using Markdown.
+
+                    NEWS ARTICLES:
+                    ${articlesText}`
+            },
+            {
+                title: "Target Revisions",
+                id: "target-revisions",
+                prompt: (exchange, articlesText) => `
+                    Act as an equity analyst tracking sentiment momentum. From the provided news articles (as JSON objects) on the ${exchange.toUpperCase()}, identify stocks that have received multiple price target revisions within the last 30 days.
+
+                    Your goal is to find companies where analyst sentiment is actively shifting.
+                    Identify up to 3 companies with the most revisions and for each, describe the trend:
+                    -   **Stock Symbol:** The ticker symbol.
+                    -   **Trend Direction:** Is the consensus price target trending Upward, Downward, or is it Mixed?
+                    -   **Summary of Revisions:** Briefly explain the changes. For example: "Morgan Stanley raised its target from $150 to $175, followed by Goldman Sachs increasing its target to $180, indicating a strengthening positive outlook."
+                    
+                    Format using Markdown.
+
+                    NEWS ARTICLES:
+                    ${articlesText}`
+            },
+            {
+                title: "New Coverage",
+                id: "new-coverage",
+                prompt: (exchange, articlesText) => `
+                    Act as a special situations analyst. Your specific task is to scan the provided news (as JSON objects) from the ${exchange.toUpperCase()} and identify all instances of **new analyst coverage initiations.**
+
+                    Filter for headlines containing keywords like "Initiates," "Starts," or "Begins Coverage."
+
+                    Present your findings as a Markdown summary list. For each new coverage initiation, detail:
+                    -   **Stock Symbol:** The company being covered.
+                    -   **Analyst Firm:** The firm initiating coverage.
+                    -   **Initial Rating:** The starting rating (e.g., Buy, Hold, Outperform).
+                    -   **Initial Price Target:** The new price target assigned to the stock.
+
+                    If no new coverage was initiated, simply state that.
+
+                    NEWS ARTICLES:
+                    ${articlesText}`
+            }
+        ];
+
+        async function runGenerativeAnalyses(newsData, screenerData, exchange, forceRefresh = false) {
+            if (!appConfig.geminiApiKey) {
+                console.error("Gemini API Key is missing. Cannot run generative analyses.");
+                return;
+            }
+
+            appConfig.generativeAnalyses[exchange] = {}; 
+            const cachedAnalyses = forceRefresh ? null : await loadAnalysesFromCache(exchange);
+
+            const navContainer = document.getElementById(`${exchange}-gen-ai-tabs-nav`);
+            const contentContainer = document.getElementById(`${exchange}-gen-ai-tabs-content`);
+            
+            if(!navContainer || !contentContainer) return;
+
+            navContainer.innerHTML = analysisPrompts.map((p, index) => `
+                <button id="${exchange}-${p.id}-tab" class="gen-ai-tab-button whitespace-nowrap py-3 px-4 text-sm font-medium rounded-t-lg ${index === 0 ? 'bg-indigo-50 text-indigo-700' : 'text-gray-500 hover:text-indigo-600 hover:bg-indigo-50'}">
+                    ${p.title}
+                </button>
+            `).join('');
+
+            contentContainer.innerHTML = analysisPrompts.map((p, index) => `
+                <div id="${exchange}-${p.id}-content" class="gen-ai-tab-content p-4 border border-t-0 rounded-b-lg ${index === 0 ? 'block' : 'hidden'}">
+                    <p class="text-gray-500">Loading analysis...</p>
+                </div>
+            `).join('');
+
+            setupGenerativeTabs(exchange);
+
+            const articlesText = newsData.map(n => JSON.stringify(n)).join('\n');
+            const singleStockSymbol = screenerData.length > 0 ? screenerData[0].symbol : null;
+
+            for (const analysis of analysisPrompts) {
+                const container = document.getElementById(`${exchange}-${analysis.id}-content`);
+                const cached = cachedAnalyses ? cachedAnalyses[analysis.id] : null;
+
+                if (cached) {
+                    console.log(`Using cached analysis for ${exchange} - ${analysis.title}`);
+                    renderAnalysis(cached.text, container, exchange, analysis.id, analysis.title, cached.symbol);
+                    appConfig.generativeAnalyses[exchange][analysis.id] = cached.text; 
+                    continue;
+                }
+                
+                console.log(`Generating analysis for ${exchange} - ${analysis.title}`);
+                let promptText;
+                let symbolForSave = null;
+
+                if (analysis.id === 'single-stock-deep-dive') {
+                    if (!singleStockSymbol) {
+                        container.innerHTML = '<p class="text-gray-500">No stock available for a deep dive.</p>';
+                        continue;
+                    }
+                    symbolForSave = singleStockSymbol;
+                    const stockNews = newsData.filter(n => n.symbol === singleStockSymbol);
+                    if (stockNews.length === 0) {
+                         container.innerHTML = `<p class="text-gray-500">No recent news found for ${singleStockSymbol} to perform a deep dive.</p>`;
+                         continue;
+                    }
+                    const stockNewsText = stockNews.map(n => JSON.stringify(n)).join('\n');
+                    promptText = analysis.prompt(exchange, stockNewsText, singleStockSymbol);
+                } else {
+                    promptText = analysis.prompt(exchange, articlesText);
+                }
+                
+                await generateAndSaveAnalysis(promptText, container, exchange, analysis.id, analysis.title, symbolForSave);
+                await delay(1500); 
+            }
+        }
+        
+        async function generateAndSaveAnalysis(prompt, container, exchange, analysisId, analysisTitle, symbol = null) {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${appConfig.geminiApiKey}`;
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                });
+                if (!response.ok) {
+                    const errorBody = await response.json();
+                    console.error("Gemini API Error:", errorBody);
+                    throw new Error(`Gemini API request failed: ${response.status}`);
+                }
+                const result = await response.json();
+                const analysisText = result.candidates[0].content.parts[0].text;
+                
+                renderAnalysis(analysisText, container, exchange, analysisId, analysisTitle, symbol);
+                
+                const analysisData = {
+                    text: analysisText,
+                    title: analysisTitle,
+                    timestamp: new Date().toISOString(),
+                    symbol: symbol
+                };
+                await autoSaveAnalysisToFirebase(exchange, analysisId, analysisData);
+
+            } catch (error) {
+                console.error(`Error generating analysis:`, error);
+                container.innerHTML = `<p class="text-red-500">Could not generate analysis. Check console for details.</p>`;
+            }
+        }
+        
+        function renderAnalysis(analysisText, container, exchange, analysisId, analysisTitle, symbol = null) {
+             if (!appConfig.generativeAnalyses[exchange]) {
+                appConfig.generativeAnalyses[exchange] = {};
+            }
+            appConfig.generativeAnalyses[exchange][analysisId] = analysisText;
+
+            let formattedAnalysis = analysisText
+                .replace(/(\*\*|__)(.*?)\1/g, '<strong>$2</strong>')
+                .replace(/(\*|_)(.*?)\1/g, '<em>$2</em>')
+                .replace(/### (.*)/g, '<h4 class="text-md font-semibold mt-4 mb-2">$1</h4>')
+                .replace(/## (.*)/g, '<h3 class="text-lg font-bold mt-4 mb-2">$1</h3>')
+                .replace(/^- (.*)/gm, '<li class="ml-4 list-disc">$1</li>')
+                .replace(/\n/g, '<br>');
+            
+            const symbolAttr = symbol ? `data-symbol="${symbol}"` : '';
+
+            container.innerHTML = `
+                <div class="flex justify-between items-start mb-4">
+                    <h3 class="text-lg font-bold text-indigo-600">${analysisTitle}</h3>
+                    <button data-exchange="${exchange}" data-analysis-id="${analysisId}" ${symbolAttr} class="save-analysis-btn text-sm bg-green-100 text-green-700 hover:bg-green-200 rounded-md px-3 py-1">
+                        <i class="fas fa-save mr-2"></i>Save Manually
+                    </button>
+                </div>
+                <div class="prose prose-sm max-w-none text-gray-700 leading-relaxed">${formattedAnalysis}</div>
+            `;
+
+            container.querySelector('.save-analysis-btn').addEventListener('click', (e) => {
+                manualSaveAnalysisToFirebase(e);
+            });
+        }
+
+
+        function setupGenerativeTabs(exchange) {
+            const buttons = document.querySelectorAll(`#${exchange}-gen-ai-tabs-nav .gen-ai-tab-button`);
+            const contents = document.querySelectorAll(`#${exchange}-gen-ai-tabs-content .gen-ai-tab-content`);
+
+            buttons.forEach(button => {
+                button.addEventListener('click', () => {
+                    buttons.forEach(btn => {
+                        btn.classList.remove('bg-indigo-50', 'text-indigo-700');
+                        btn.classList.add('text-gray-500', 'hover:text-indigo-600', 'hover:bg-indigo-50');
+                    });
+                    button.classList.add('bg-indigo-50', 'text-indigo-700');
+                    button.classList.remove('text-gray-500', 'hover:text-indigo-600', 'hover:bg-indigo-50');
+
+                    contents.forEach(content => {
+                        content.style.display = 'none';
+                    });
+
+                    const targetId = button.id.replace('-tab', '-content');
+                    const targetContent = document.getElementById(targetId);
+                    if (targetContent) {
+                        targetContent.style.display = 'block';
+                    }
+                });
+            });
+        }
+        
+        // --- 15. CRUD Functions for Analyses ---
+        function setupCrudModalListeners() {
+            manageSummariesBtn.addEventListener('click', async () => {
+                summaryCrudModal.style.display = 'flex';
+                await loadAnalysesForCrud();
+            });
+            crudModalOverlay.addEventListener('click', () => {
+                summaryCrudModal.style.display = 'none';
+                editSummaryFormContainer.classList.add('hidden');
+            });
+            cancelEditBtn.addEventListener('click', () => {
+                editSummaryFormContainer.classList.add('hidden');
+            });
+            savedSummariesList.addEventListener('click', (e) => {
+                const target = e.target.closest('button');
+                if (!target) return;
+
+                const analysisId = target.dataset.id;
+                const exchange = target.dataset.exchange;
+                const analysisType = target.dataset.type;
+
+                if (target.classList.contains('edit-btn')) {
+                    handleEditClick(analysisId, exchange, analysisType);
+                } else if (target.classList.contains('delete-btn')) {
+                    handleDeleteClick(analysisId, exchange, analysisType);
+                }
+            });
+            editSummaryForm.addEventListener('submit', handleUpdateSubmit);
+        }
+
+        async function manualSaveAnalysisToFirebase(event) {
+            if (!db) return alert("Firebase not initialized.");
+            
+            const { exchange, analysisId, symbol } = event.currentTarget.dataset;
+
+            const analysisText = appConfig.generativeAnalyses[exchange]?.[analysisId];
+            const analysisTitle = analysisPrompts.find(p => p.id === analysisId)?.title || 'Analysis';
+
+            if (!analysisText) return alert("No analysis text found to save.");
+
+            // --- Part 1: Save to Firebase (existing functionality) ---
+            const analysisData = {
+                title: analysisTitle,
+                text: analysisText,
+                timestamp: new Date().toISOString()
+            };
+
+            try {
+                await db.ref(`manual-analyses/${exchange}/${analysisId}`).push(analysisData);
+                alert(`${exchange.toUpperCase()} - ${analysisTitle} analysis saved successfully!`);
+            } catch (error) {
+                console.error("Error saving analysis to Firebase:", error);
+                alert("Failed to save analysis to Firebase.");
+            }
+            
+            // --- Part 2: Trigger Markdown file download ---
+            try {
+                const identifier = symbol || exchange.toUpperCase();
+                const formattedTitle = analysisTitle.replace(/\s+/g, '_');
+                const timestamp = new Date().toISOString().split('T')[0];
+                const filename = `${identifier}_${formattedTitle}_${timestamp}.md`;
+
+                const blob = new Blob([analysisText], { type: 'text/markdown;charset=utf-8' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = filename;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+            } catch (error) {
+                console.error("Error creating download file:", error);
+                alert("Could not create download file.");
+            }
+        }
+        
+        async function loadAnalysesForCrud() {
+            if (!db) return;
+            savedSummariesList.innerHTML = '<p>Loading saved analyses...</p>';
+            try {
+                const snapshot = await db.ref('manual-analyses').get();
+                if (!snapshot.exists()) {
+                    savedSummariesList.innerHTML = '<p>No analyses have been manually saved yet.</p>';
+                    return;
+                }
+                const allAnalyses = snapshot.val();
+                let html = '';
+                for (const exchange in allAnalyses) {
+                    html += `<h3 class="text-xl font-bold mt-6 mb-2 text-gray-700 border-b pb-2">${exchange.toUpperCase()}</h3>`;
+                    const exchangeAnalyses = allAnalyses[exchange];
+                    for (const analysisType in exchangeAnalyses) {
+                        const analyses = exchangeAnalyses[analysisType];
+                         for (const id in analyses) {
+                            const analysis = analyses[id];
+                            html += `
+                                <div class="bg-gray-50 p-4 rounded-lg border mb-4">
+                                    <p class="font-bold text-indigo-600">${analysis.title}</p>
+                                    <p class="text-sm text-gray-500 mb-2">Saved on: ${new Date(analysis.timestamp).toLocaleString()}</p>
+                                    <p class="text-gray-800">${analysis.text.replace(/\n/g, '<br>')}</p>
+                                    <div class="flex justify-end space-x-2 mt-3">
+                                        <button data-id="${id}" data-exchange="${exchange}" data-type="${analysisType}" class="edit-btn text-sm text-blue-600 hover:text-blue-800"><i class="fas fa-edit"></i> Edit</button>
+                                        <button data-id="${id}" data-exchange="${exchange}" data-type="${analysisType}" class="delete-btn text-sm text-red-600 hover:text-red-800"><i class="fas fa-trash"></i> Delete</button>
+                                    </div>
+                                </div>
+                            `;
+                        }
+                    }
+                }
+                savedSummariesList.innerHTML = html || '<p>No analyses have been saved yet.</p>';
+            } catch (error) {
+                console.error("Error loading analyses for CRUD:", error);
+                savedSummariesList.innerHTML = '<p class="text-red-500">Could not load analyses.</p>';
+            }
+        }
+
+        async function handleEditClick(analysisId, exchange, analysisType) {
+            const snapshot = await db.ref(`manual-analyses/${exchange}/${analysisType}/${analysisId}`).get();
+            if (snapshot.exists()) {
+                const analysis = snapshot.val();
+                document.getElementById('editAnalysisId').value = analysisId;
+                document.getElementById('editAnalysisExchange').value = exchange;
+                document.getElementById('editAnalysisType').value = analysisType;
+                document.getElementById('editAnalysisText').value = analysis.text;
+                editSummaryFormContainer.classList.remove('hidden');
+            }
+        }
+
+        async function handleDeleteClick(analysisId, exchange, analysisType) {
+            if (confirm('Are you sure you want to delete this analysis?')) {
+                try {
+                    await db.ref(`manual-analyses/${exchange}/${analysisType}/${analysisId}`).remove();
+                    await loadAnalysesForCrud();
+                } catch (error) {
+                    console.error("Error deleting analysis:", error);
+                    alert("Failed to delete analysis.");
+                }
+            }
+        }
+
+        async function handleUpdateSubmit(e) {
+            e.preventDefault();
+            const analysisId = document.getElementById('editAnalysisId').value;
+            const exchange = document.getElementById('editAnalysisExchange').value;
+            const analysisType = document.getElementById('editAnalysisType').value;
+            const newText = document.getElementById('editAnalysisText').value;
+
+            try {
+                await db.ref(`manual-analyses/${exchange}/${analysisType}/${analysisId}/text`).set(newText);
+                editSummaryFormContainer.classList.add('hidden');
+                await loadAnalysesForCrud();
+            } catch (error) {
+                console.error("Error updating analysis:", error);
+                alert("Failed to update analysis.");
+            }
+        }
+
+        // --- 16. Rendering Functions ---
+        const formatText = (text) => text || 'N/A';
+        const formatMarketCap = (num) => {
+            if (!num) return 'N/A';
+            if (num >= 1e12) return (num / 1e12).toFixed(2) + 'T';
+            if (num >= 1e9) return (num / 1e9).toFixed(2) + 'B';
+            return num.toLocaleString();
+        };
+        
+        function updateViewedIndicatorForSymbol(symbol) {
+            const indicators = document.querySelectorAll(`.viewed-indicator[data-indicator-symbol="${symbol}"]`);
+            indicators.forEach(indicator => {
+                indicator.innerHTML = '👁️';
+                indicator.title = "You have viewed the details for this stock."
+            });
+        }
+
+        async function updateViewedIndicators() {
+            const cachedSymbols = await getAllCachedSymbols();
+            const indicators = document.querySelectorAll('.viewed-indicator');
+            indicators.forEach(indicator => {
+                if (cachedSymbols.has(indicator.dataset.indicatorSymbol)) {
+                    indicator.innerHTML = '👁️';
+                    indicator.title = "You have viewed the details for this stock."
+                } else {
+                    indicator.innerHTML = '';
+                }
+            });
+        }
+
+        function getRatingHtml(symbol) {
+            const rating = appConfig.cachedStockInfo[symbol]?.rating;
+            if (!rating) return 'N/A';
+            
+            let ratingColor = 'text-gray-700';
+            if (rating === 'Undervalued') ratingColor = 'text-green-600';
+            if (rating === 'Overvalued' || rating === 'Caution Advised') ratingColor = 'text-red-600';
+            if (rating === 'Fairly Valued') ratingColor = 'text-blue-600';
+            if (rating === 'Speculative Growth') ratingColor = 'text-purple-600';
+
+            return `<span class="${ratingColor} font-medium">${rating}</span>`;
+        }
+        
+        function updateRatingDisplayForSymbol(symbol) {
+            document.querySelectorAll(`[data-rating-symbol="${symbol}"]`).forEach(cell => {
+                cell.innerHTML = getRatingHtml(symbol);
+            });
+        }
+
+        function renderSimpleStockTable(data, container) {
+            if (!container) return;
+            if (!data || data.length === 0) {
+                container.innerHTML = '<p class="text-gray-500">No stock data found.</p>';
+                return;
+            }
+            const tableRows = data.map(stock => {
+                const isSaved = savedStocks.has(stock.symbol);
+                return `
+                <tr data-symbol-row="${stock.symbol}" class="${isSaved ? 'saved-stock-row' : ''}">
+                    <td class="px-4 py-3 whitespace-nowrap text-sm">
+                         <button class="save-stock-btn ${isSaved ? 'saved' : ''}" data-symbol="${stock.symbol}" title="Save Stock">
+                            <i class="${isSaved ? 'fas' : 'far'} fa-star"></i>
+                        </button>
+                        <button class="ticker-details-btn font-medium text-indigo-600 hover:text-indigo-800" data-symbol="${stock.symbol}">${stock.symbol}</button>
+                        <span class="viewed-indicator" data-indicator-symbol="${stock.symbol}"></span>
+                    </td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-600">${formatText(stock.companyName)}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-right">${formatMarketCap(stock.marketCap)}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${formatText(stock.sector)}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-center" data-rating-symbol="${stock.symbol}">${getRatingHtml(stock.symbol)}</td>
+                </tr>`;
+            }).join('');
+            container.innerHTML = `<div class="overflow-x-auto max-h-96"><table class="min-w-full divide-y divide-gray-200"><thead class="bg-gray-50 sticky top-0"><tr><th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Symbol</th><th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Company</th><th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Market Cap</th><th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sector</th><th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">AI Rating</th></tr></thead><tbody class="bg-white divide-y divide-gray-200">${tableRows}</tbody></table></div>`;
+            updateViewedIndicators();
+        }
+
+        function renderAdvancedStockTable(data, container) {
+            if (!container) return;
+            if (!data || data.length === 0) {
+                container.innerHTML = '<p class="text-gray-500">No stock data found for the selected criteria.</p>';
+                return;
+            }
+
+            const getSortableHeaderHtml = (key, title, width, align = 'left') => {
+                const sortIndicator = currentSort.key === key ? (currentSort.direction === 'asc' ? '▲' : '▼') : '↕';
+                const textAlign = `text-${align}`;
+                return `<th class="${width} px-4 py-3 ${textAlign} text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100" data-sort-key="${key}">${title} <span class="text-gray-400">${sortIndicator}</span></th>`;
+            };
+
+            const headers = [
+                getSortableHeaderHtml('symbol', 'Symbol', 'w-[10%]', 'left'),
+                getSortableHeaderHtml('companyName', 'Company', 'w-[15%]', 'left'),
+                getSortableHeaderHtml('marketCap', 'Market Cap', 'w-[9%]', 'right'),
+                getSortableHeaderHtml('volume', 'Volume', 'w-[9%]', 'right'),
+                getSortableHeaderHtml('sector', 'Sector', 'w-[10%]', 'left'),
+                getSortableHeaderHtml('industry', 'Industry', 'w-[10%]', 'left'),
+                getSortableHeaderHtml('beta', 'Beta', 'w-[6%]', 'right'),
+                `<th class="w-[8%] px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">AI Rating</th>`,
+                getSortableHeaderHtml('price', 'Price', 'w-[6%]', 'right'),
+                getSortableHeaderHtml('lastAnnualDividend', 'Dividend', 'w-[6%]', 'right'),
+                getSortableHeaderHtml('cachedTimestamp', 'Cached On', 'w-[11%]', 'left')
+            ].join('');
+
+            const tableRows = data.map(stock => {
+                const isSaved = savedStocks.has(stock.symbol);
+                return `
+                <tr data-symbol-row="${stock.symbol}" class="${isSaved ? 'saved-stock-row' : ''}">
+                    <td class="px-4 py-3 whitespace-nowrap text-sm">
+                        <button class="save-stock-btn ${isSaved ? 'saved' : ''}" data-symbol="${stock.symbol}" title="Save Stock">
+                            <i class="${isSaved ? 'fas' : 'far'} fa-star"></i>
+                        </button>
+                         <button class="ticker-details-btn font-medium text-indigo-600 hover:text-indigo-800" data-symbol="${stock.symbol}">${stock.symbol}</button>
+                         <span class="viewed-indicator" data-indicator-symbol="${stock.symbol}"></span>
+                    </td>
+                    <td class="px-4 py-3 text-sm text-gray-600 break-words">${formatText(stock.companyName)}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-right">${formatMarketCap(stock.marketCap)}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-right">${stock.volume ? stock.volume.toLocaleString() : 'N/A'}</td>
+                    <td class="px-4 py-3 text-sm text-gray-500 break-words">${formatText(stock.sector)}</td>
+                    <td class="px-4 py-3 text-sm text-gray-500 break-words">${formatText(stock.industry)}</td>
+                     <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-right">${stock.beta ? stock.beta.toFixed(2) : 'N/A'}</td>
+                     <td class="px-4 py-3 whitespace-nowrap text-sm text-center" data-rating-symbol="${stock.symbol}">${getRatingHtml(stock.symbol)}</td>
+                     <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-right">${stock.price ? '$'+stock.price.toFixed(2) : 'N/A'}</td>
+                     <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-right">${stock.lastAnnualDividend ? '$'+stock.lastAnnualDividend.toFixed(2) : 'N/A'}</td>
+                     <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${stock.cachedTimestamp ? new Date(stock.cachedTimestamp).toLocaleString() : 'N/A'}</td>
+                </tr>`;
+            }).join('');
+            container.innerHTML = `<div class="overflow-y-auto max-h-[60vh]"><table class="w-full table-fixed divide-y divide-gray-200"><thead class="bg-gray-50 sticky top-0"><tr>${headers}</tr></thead><tbody class="bg-white divide-y divide-gray-200">${tableRows}</tbody></table></div>`;
+            updateViewedIndicators();
+        }
+        
+        async function renderSavedStocksTable() {
+            const container = document.getElementById('saved-stocks-data-container');
+            if (!container) return;
+
+            if (savedStocks.size === 0) {
+                container.innerHTML = '<p class="text-gray-500">You have not saved any stocks yet.</p>';
+                return;
+            }
+            
+            container.innerHTML = '<p class="text-gray-500">Loading saved stocks...</p>';
+
+            try {
+                const symbols = Array.from(savedStocks).join(',');
+                const url = `https://financialmodelingprep.com/api/v3/profile/${symbols}?apikey=${appConfig.fmpApiKey}`;
+                const response = await fetch(url);
+                if (!response.ok) throw new Error('Failed to fetch saved stock details');
+                const data = await response.json();
+
+                const tableRows = data.map(stock => {
+                    const isSaved = savedStocks.has(stock.symbol); // Should always be true here
+                    return `
+                    <tr data-symbol-row="${stock.symbol}" class="saved-stock-row">
+                        <td class="px-4 py-3 whitespace-nowrap text-sm">
+                            <button class="save-stock-btn ${isSaved ? 'saved' : ''}" data-symbol="${stock.symbol}" title="Save Stock">
+                                <i class="${isSaved ? 'fas' : 'far'} fa-star"></i>
+                            </button>
+                            <button class="ticker-details-btn font-medium text-indigo-600 hover:text-indigo-800" data-symbol="${stock.symbol}">${stock.symbol}</button>
+                            <span class="viewed-indicator" data-indicator-symbol="${stock.symbol}"></span>
+                        </td>
+                        <td class="px-4 py-3 text-sm text-gray-600 break-words">${formatText(stock.companyName)}</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-right">${formatMarketCap(stock.mktCap)}</td>
+                        <td class="px-4 py-3 text-sm text-gray-500 break-words">${formatText(stock.sector)}</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-sm text-center" data-rating-symbol="${stock.symbol}">${getRatingHtml(stock.symbol)}</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-right">${stock.beta ? stock.beta.toFixed(2) : 'N/A'}</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-right">${stock.price ? '$'+stock.price.toFixed(2) : 'N/A'}</td>
+                    </tr>`;
+                }).join('');
+
+                container.innerHTML = `<div class="overflow-y-auto max-h-[60vh]"><table class="w-full table-fixed divide-y divide-gray-200"><thead class="bg-gray-50 sticky top-0"><tr><th class="w-[15%] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Symbol</th><th class="w-[30%] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Company</th><th class="w-[15%] px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Market Cap</th><th class="w-[15%] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sector</th><th class="w-[10%] px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">AI Rating</th><th class="w-[5%] px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Beta</th><th class="w-[10%] px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Price</th></tr></thead><tbody class="bg-white divide-y divide-gray-200">${tableRows}</tbody></table></div>`;
+                updateViewedIndicators();
+
+            } catch (error) {
+                console.error("Error rendering saved stocks table:", error);
+                container.innerHTML = '<p class="text-red-500">Could not load saved stocks.</p>';
+            }
+        }
+
+        function renderStockCards(data, container, title) {
+            if (!container) return;
+            if (!data || data.length === 0) {
+                container.innerHTML = '<p class="text-center text-gray-500">No stocks found to display in card view.</p>'; return;
+            }
+            const grouped = data.reduce((acc, stock) => {
+                const sector = stock.sector || 'Unclassified';
+                const industry = stock.industry || 'Unclassified';
+                acc[sector] = acc[sector] || {};
+                acc[sector][industry] = acc[sector][industry] || [];
+                acc[sector][industry].push(stock);
+                return acc;
+            }, {});
+
+            let html = `<h3 class="text-xl font-bold mb-4 text-gray-700">${title} Stocks by Sector</h3>`;
+            for (const sector in grouped) {
+                html += `<div class="mb-6"><h4 class="text-lg font-semibold text-indigo-700 p-2 bg-indigo-50 rounded-md">${sector}</h4>`;
+                for (const industry in grouped[sector]) {
+                    html += `<div class="mt-4"><h5 class="text-md font-medium text-gray-600 mb-3 ml-2">${industry}</h5><div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">`;
+                    grouped[sector][industry].forEach(stock => {
+                        const isSaved = savedStocks.has(stock.symbol);
+                        html += `<div class="bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
+                                    <div class="flex justify-between items-baseline mb-1">
+                                        <div class="flex items-center truncate">
+                                            <button class="save-stock-btn ${isSaved ? 'saved' : ''}" data-symbol="${stock.symbol}" title="Save Stock">
+                                                <i class="${isSaved ? 'fas' : 'far'} fa-star"></i>
+                                            </button>
+                                            <p class="font-bold text-sm text-indigo-600 truncate pr-2">
+                                                <button class="ticker-details-btn text-left w-full" data-symbol="${stock.symbol}">${stock.symbol}
+                                                    <span class="viewed-indicator" data-indicator-symbol="${stock.symbol}"></span>
+                                                </button>
+                                            </p>
+                                        </div>
+                                        <p class="text-xs font-semibold text-gray-700 whitespace-nowrap">${formatMarketCap(stock.marketCap)}</p>
+                                    </div>
+                                    <p class="text-xs text-gray-500 truncate" title="${formatText(stock.companyName)}">${formatText(stock.companyName)}</p>
+                                </div>`;
+                    });
+                    html += `</div></div>`;
+                }
+                html += `</div>`;
+            }
+            container.innerHTML = html;
+            updateViewedIndicators();
+        }
+
+        function renderNewsCards(newsData, container) {
+            if (!container) return;
+            if (!newsData || newsData.length === 0) {
+                container.innerHTML = '<p class="text-gray-500 p-4">No recent price target news found for the selected stocks in this exchange for the last 30 days. Click "Refresh News" to fetch the latest.</p>';
+                return;
+            }
+            const newsHtml = newsData.map(news => `
+                <a href="${news.newsURL}" target="_blank" rel="noopener noreferrer" class="block bg-gray-50 p-4 rounded-lg shadow-sm hover:bg-gray-100 transition-colors">
+                    <div class="flex justify-between items-start mb-1">
+                        <p class="font-bold text-indigo-600">${formatText(news.symbol)}</p>
+                        <p class="text-xs text-gray-500">${new Date(news.publishedDate).toLocaleDateString()}</p>
+                    </div>
+                    <h4 class="font-semibold text-gray-800">${formatText(news.newsTitle)}</h4>
+                    <div class="text-xs text-gray-500 flex flex-wrap gap-x-4 gap-y-1 mt-2">
+                        <span><strong>Publisher:</strong> ${formatText(news.newsPublisher)}</span>
+                        <span><strong>Analyst:</strong> ${formatText(news.analystName) || 'N/A'} @ ${formatText(news.analystCompany)}</span>
+                        <span><strong>Posted Price:</strong> ${news.priceWhenPosted ? '$'+news.priceWhenPosted.toFixed(2) : 'N/A'}</span>
+                        <span><strong>Target Price:</strong> ${news.priceTarget ? '$'+news.priceTarget.toFixed(2) : 'N/A'}</span>
+                    </div>
+                </a>
+            `).join('');
+            container.innerHTML = newsHtml;
+        }
+
+        // --- 17. Financials Modal Logic ---
+        function setupFinancialsModalListeners() {
+            financialsModalOverlay.addEventListener('click', hideFinancialsModal);
+            financialsModalCloseBtn.addEventListener('click', hideFinancialsModal);
+            
+            appContent.addEventListener('click', (e) => {
+                const button = e.target.closest('.ticker-details-btn');
+                if (button && button.dataset.symbol) {
+                    handleTickerClick(button.dataset.symbol);
+                }
+            });
+
+            refreshFinancialsBtn.addEventListener('click', async () => {
+                const symbol = refreshFinancialsBtn.dataset.symbol;
+                if (symbol) {
+                    document.getElementById('modal-key-metrics-content').innerHTML = '<p class="text-center text-gray-500">Refreshing data...</p>';
+                    document.getElementById('modal-ai-summary-content').innerHTML = '<p class="text-center text-gray-500">Refreshing AI analysis...</p>';
+                     document.getElementById('modal-financial-trends-content').innerHTML = '<p class="text-center text-gray-500">Refreshing trend data...</p>';
+                     document.getElementById('modal-news-content').innerHTML = '<p class="text-center text-gray-500">Refreshing news...</p>';
+
+                    const liveData = await fetchTickerDetails(symbol, true); // Force refresh
+                    if (liveData) {
+                         populateFinancialsModal(liveData);
+                         populateFinancialTrends(liveData);
+                         populateRawDataModal(liveData);
+                         populateNewsTab(liveData.news, null);
+                         const { summary: aiSummary, prompt: aiPrompt } = await generateAiRating(liveData);
+                         populateAiSummary(aiSummary, aiPrompt);
+                         const dataToSave = { ...liveData, aiSummary, timestamp: new Date().toISOString() };
+                         await saveTickerDetailsToFirebase(symbol, dataToSave);
+                         appConfig.cachedStockInfo[symbol] = { rating: aiSummary.rating, timestamp: dataToSave.timestamp };
+                         updateRatingDisplayForSymbol(symbol);
+                    } else {
+                        document.getElementById('modal-key-metrics-content').innerHTML = '<p class="text-center text-red-500">Could not refresh data.</p>';
+                    }
+                }
+            });
+
+            financialsModalTabs.addEventListener('click', (e) => {
+                const button = e.target.closest('.modal-tab-button');
+                if (button) {
+                    financialsModalTabs.querySelectorAll('.modal-tab-button').forEach(btn => btn.classList.remove('active'));
+                    button.classList.add('active');
+                    
+                    document.querySelectorAll('.modal-tab-content').forEach(content => content.classList.remove('active'));
+                    document.querySelector(button.dataset.tabTarget).classList.add('active');
+                }
+            });
+        }
+
+        async function handleTickerClick(symbol) {
+            showFinancialsModal();
+            refreshFinancialsBtn.dataset.symbol = symbol;
+            // Reset UI
+            document.getElementById('modal-key-metrics-content').innerHTML = '<p class="text-center text-gray-500">Loading financial data...</p>';
+            document.getElementById('modal-ai-summary-content').innerHTML = '<p class="text-center text-gray-500">Loading AI analysis...</p>';
+            document.getElementById('modal-raw-data-content').innerHTML = '<p class="text-center text-gray-500">Loading raw data...</p>';
+            document.getElementById('modal-financial-trends-content').innerHTML = '<p class="text-center text-gray-500">Loading trend data...</p>';
+            document.getElementById('modal-news-content').innerHTML = '<p class="text-center text-gray-500">Loading news...</p>';
+            document.getElementById('modal-company-name').textContent = `Loading... (${symbol})`;
+            document.getElementById('modal-stock-price').textContent = '';
+            document.getElementById('modal-last-updated').textContent = '...';
+             // Reset to first tab
+            financialsModalTabs.querySelectorAll('.modal-tab-button').forEach(btn => btn.classList.remove('active'));
+            financialsModalTabs.querySelector('button').classList.add('active');
+            document.querySelectorAll('.modal-tab-content').forEach(content => content.classList.remove('active'));
+            document.querySelector('#modal-ai-summary-content').classList.add('active');
+
+            const cachedData = await loadTickerDetailsFromFirebase(symbol);
+            if (cachedData && cachedData.keyMetrics) { // Check if cache is new format
+                populateFinancialsModal(cachedData);
+                populateFinancialTrends(cachedData);
+                populateRawDataModal(cachedData);
+                populateNewsTab(cachedData.news, cachedData.timestamp);
+                if (cachedData.aiSummary) {
+                    const { prompt: aiPrompt } = await generateAiRating(cachedData);
+                    populateAiSummary(cachedData.aiSummary, aiPrompt);
+                } else {
+                    const { summary: aiSummary, prompt: aiPrompt } = await generateAiRating(cachedData);
+                    populateAiSummary(aiSummary, aiPrompt);
+                    await saveTickerDetailsToFirebase(symbol, { ...cachedData, aiSummary });
+                    appConfig.cachedStockInfo[symbol] = { rating: aiSummary.rating, timestamp: new Date().toISOString() };
+                    updateRatingDisplayForSymbol(symbol);
+                }
+            } else {
+                const liveData = await fetchTickerDetails(symbol);
+                 if (liveData) {
+                    populateFinancialsModal(liveData);
+                    populateFinancialTrends(liveData);
+                    populateRawDataModal(liveData);
+                    populateNewsTab(liveData.news, null);
+                    const { summary: aiSummary, prompt: aiPrompt } = await generateAiRating(liveData);
+                    populateAiSummary(aiSummary, aiPrompt);
+                    const dataToSave = { ...liveData, aiSummary, timestamp: new Date().toISOString() };
+                    await saveTickerDetailsToFirebase(symbol, dataToSave);
+                    appConfig.cachedStockInfo[symbol] = { rating: aiSummary.rating, timestamp: dataToSave.timestamp };
+                    updateRatingDisplayForSymbol(symbol);
+                } else {
+                     document.getElementById('modal-key-metrics-content').innerHTML = '<p class="text-center text-red-500">Could not fetch financial data.</p>';
+                     document.getElementById('modal-ai-summary-content').innerHTML = '';
+                     document.getElementById('modal-raw-data-content').innerHTML = '';
+                     document.getElementById('modal-financial-trends-content').innerHTML = '';
+                     document.getElementById('modal-news-content').innerHTML = '';
+                }
+            }
+            updateViewedIndicatorForSymbol(symbol);
+        }
+
+        async function fetchTickerDetails(symbol) {
+            if (!appConfig.fmpApiKey) return null;
+            const apiKey = appConfig.fmpApiKey;
+            const endpoints = {
+                profile: `https://financialmodelingprep.com/api/v3/profile/${symbol}?apikey=${apiKey}`,
+                keyMetrics: `https://financialmodelingprep.com/api/v3/key-metrics/${symbol}?period=annual&limit=5&apikey=${apiKey}`,
+                ratios: `https://financialmodelingprep.com/api/v3/ratios/${symbol}?period=annual&limit=5&apikey=${apiKey}`,
+                incomeStatement: `https://financialmodelingprep.com/api/v3/income-statement/${symbol}?period=annual&limit=5&apikey=${apiKey}`,
+                balanceSheet: `https://financialmodelingprep.com/api/v3/balance-sheet-statement/${symbol}?period=annual&limit=5&apikey=${apiKey}`,
+                cashFlow: `https://financialmodelingprep.com/api/v3/cash-flow-statement/${symbol}?period=annual&limit=5&apikey=${apiKey}`,
+                generalNews: `https://financialmodelingprep.com/stable/news/stock?symbols=${symbol}&limit=20&apikey=${apiKey}`,
+                priceTargetNews: `https://financialmodelingprep.com/stable/price-target-news?symbol=${symbol}&limit=10&apikey=${apiKey}`,
+                stockGradeNews: `https://financialmodelingprep.com/stable/grades-news?symbol=${symbol}&limit=10&apikey=${apiKey}`
+            };
+
+            try {
+                const promises = Object.values(endpoints).map(url => fetch(url).then(res => res.json()));
+                const results = await Promise.allSettled(promises);
+                
+                const data = {};
+                const keys = Object.keys(endpoints);
+
+                results.forEach((result, index) => {
+                    const key = keys[index];
+                    if (result.status === 'fulfilled') {
+                        data[key] = result.value;
+                    } else {
+                        console.warn(`Failed to fetch data for ${key} (${symbol}):`, result.reason);
+                        data[key] = []; // Default to empty array on failure
+                    }
+                });
+
+                const { generalNews, priceTargetNews, stockGradeNews } = data;
+
+                // Normalize and combine news
+                const normalizedGeneralNews = (generalNews || []).map(item => ({
+                    type: 'General',
+                    title: item.title,
+                    site: item.site,
+                    url: item.url,
+                    publishedDate: item.publishedDate || new Date().toISOString()
+                }));
+
+                const normalizedPriceTargetNews = (priceTargetNews || []).map(item => ({
+                    type: 'Price Target',
+                    title: item.newsTitle,
+                    site: item.newsPublisher,
+                    url: item.newsURL,
+                    publishedDate: item.publishedDate || new Date().toISOString(),
+                    analyst: `${item.analystName || 'N/A'} @ ${item.analystCompany || 'N/A'}`,
+                    priceTarget: item.priceTarget
+                }));
+                
+                const normalizedGradeNews = (stockGradeNews || []).map(item => ({
+                    type: 'Grade Change',
+                    title: `Grade Change by ${item.gradingCompany}: ${item.previousGrade} → ${item.newGrade}`,
+                    site: item.gradingCompany,
+                    url: '#', 
+                    publishedDate: item.date || new Date().toISOString(),
+                    previousGrade: item.previousGrade,
+                    newGrade: item.newGrade
+                }));
+                
+                const combinedNews = [...normalizedGeneralNews, ...normalizedPriceTargetNews, ...normalizedGradeNews]
+                    .sort((a, b) => new Date(b.publishedDate) - new Date(a.publishedDate));
+
+
+                return { 
+                    profile: data.profile,
+                    keyMetrics: data.keyMetrics,
+                    ratios: data.ratios,
+                    incomeStatement: data.incomeStatement,
+                    balanceSheet: data.balanceSheet,
+                    cashFlow: data.cashFlow,
+                    news: combinedNews
+                };
+
+            } catch (error) {
+                console.error(`A critical error occurred while fetching details for ${symbol}:`, error);
+                return null;
+            }
+        }
+        
+        // --- MODIFIED: AI Rating Generation ---
+        async function generateAiRating(financialData) {
+            if (!appConfig.geminiApiKey || !financialData) {
+                return { summary: { rating: 'Error', rationale: 'API key or financial data missing.' }, prompt: "Prompt could not be generated." };
+            }
+            
+            const structuredMetrics = _calculateUndervaluedMetrics(financialData);
+            const profile = financialData.profile?.[0] || {};
+            const news = financialData.news || [];
+            
+            const newsHeadlines = news.length > 0
+                ? news.map(n => `- ${n.title}`).join('\n')
+                : 'No recent news available.';
+
+            const prompt = AI_SUMMARY_PROMPT
+                .replace('{companyName}', profile.companyName || 'the company')
+                .replace('{tickerSymbol}', profile.symbol || 'the stock')
+                .replace('{industry}', profile.industry || 'N/A')
+                .replace('{sector}', profile.sector || 'N/A')
+                .replace('{jsonData}', JSON.stringify(structuredMetrics, null, 2))
+                .replace('{newsHeadlines}', newsHeadlines);
+
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${appConfig.geminiApiKey}`;
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                });
+                if (!response.ok) throw new Error(`Gemini API request failed: ${response.status}`);
+                
+                const result = await response.json();
+                const rawText = result.candidates[0].content.parts[0].text;
+                
+                const match = rawText.match(/```json\n([\s\S]*?)\n```/);
+                if (!match || !match[1]) {
+                    throw new Error("Failed to extract JSON from Gemini response.");
+                }
+
+                const jsonText = match[1];
+                const summary = JSON.parse(jsonText);
+                return { summary, prompt };
+
+            } catch (error) {
+                console.error("Error generating AI rating:", error);
+                const errorSummary = { rating: 'Error', rationale: 'Failed to generate AI analysis. The model may be unavailable or the response was malformed.' };
+                return { summary: errorSummary, prompt };
+            }
+        }
+
+        function populateFinancialsModal(data) {
+            const profile = data.profile?.[0] || {};
+            const metrics = data.keyMetrics?.[0] || {};
+            const ratios = data.ratios?.[0] || {};
+            const { timestamp } = data;
+            
+            const format = (value, prefix = '', suffix = '', digits = 2) => {
+                return (value !== null && typeof value !== 'undefined' && !isNaN(value)) ? `${prefix}${Number(value).toFixed(digits)}${suffix}` : 'N/A';
+            };
+
+            const eps = metrics.netIncomePerShare;
+            const bvps = metrics.bookValuePerShare;
+            let grahamNumber = null;
+            if (eps > 0 && bvps > 0) {
+                grahamNumber = Math.sqrt(22.5 * eps * bvps);
+            }
+            
+            document.getElementById('modal-company-name').textContent = `${profile.companyName || 'N/A'} (${profile.symbol || ''})`;
+            document.getElementById('modal-stock-price').textContent = format(profile.price, '$');
+            if (timestamp) {
+                document.getElementById('modal-last-updated').textContent = `Cached: ${new Date(timestamp).toLocaleString()}`;
+            } else {
+                 document.getElementById('modal-last-updated').textContent = `Live Data (just now)`;
+            }
+
+            const contentEl = document.getElementById('modal-key-metrics-content');
+            contentEl.innerHTML = `
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-6">
+                    <div class="space-y-3">
+                        <h4 class="font-semibold text-gray-700 border-b pb-2">Valuation Ratios (Annual)</h4>
+                        <div class="flex justify-between text-sm"><span class="text-gray-500">P/E Ratio</span><span class="font-medium">${format(metrics.peRatio)}</span></div>
+                        <div class="flex justify-between text-sm"><span class="text-gray-500">Price to Sales</span><span class="font-medium">${format(metrics.priceToSalesRatio)}</span></div>
+                        <div class="flex justify-between text-sm"><span class="text-gray-500">Price to Book</span><span class="font-medium">${format(metrics.pbRatio)}</span></div>
+                        <div class="flex justify-between text-sm"><span class="text-gray-500">EV/EBITDA</span><span class="font-medium">${format(metrics.enterpriseValueOverEBITDA)}</span></div>
+                        <div class="flex justify-between text-sm"><span class="text-gray-500">Graham Number</span><span class="font-medium">${format(grahamNumber, '$')}</span></div>
+                    </div>
+                    <div class="space-y-3">
+                        <h4 class="font-semibold text-gray-700 border-b pb-2">Financial Health (Annual)</h4>
+                        <div class="flex justify-between text-sm"><span class="text-gray-500">Debt to Equity</span><span class="font-medium">${format(metrics.debtToEquity)}</span></div>
+                        <div class="flex justify-between text-sm"><span class="text-gray-500">Return on Equity (ROE)</span><span class="font-medium">${format(metrics.roe * 100, '', '%')}</span></div>
+                         <div class="flex justify-between text-sm"><span class="text-gray-500">Operating Margin</span><span class="font-medium">${format(ratios.operatingMargin * 100, '', '%')}</span></div>
+                        <div class="flex justify-between text-sm"><span class="text-gray-500">Net Profit Margin</span><span class="font-medium">${format(ratios.netProfitMargin * 100, '', '%')}</span></div>
+                    </div>
+                    <div class="space-y-3">
+                        <h4 class="font-semibold text-gray-700 border-b pb-2">Dividend Info (Annual)</h4>
+                         <div class="flex justify-between text-sm"><span class="text-gray-500">Dividend Yield</span><span class="font-medium">${format(metrics.dividendYield * 100, '', '%')}</span></div>
+                        <div class="flex justify-between text-sm"><span class="text-gray-500">Payout Ratio</span><span class="font-medium">${format(ratios.payoutRatio * 100, '', '%')}</span></div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function populateFinancialTrends(data) {
+            const contentEl = document.getElementById('modal-financial-trends-content');
+            
+            const metrics = data.keyMetrics ? [...data.keyMetrics].reverse() : [];
+            const income = data.incomeStatement ? [...data.incomeStatement].reverse() : [];
+            const cashflow = data.cashFlow ? [...data.cashFlow].reverse() : [];
+
+            if (metrics.length === 0 || income.length === 0) {
+                contentEl.innerHTML = '<p class="text-center text-gray-500">Trend data is not available.</p>';
+                return;
+            }
+            
+            const formatNum = (val, type = 'default') => {
+                if (val === null || typeof val === 'undefined' || isNaN(val)) return 'N/A';
+                if (type === 'currency') {
+                     if (Math.abs(val) >= 1e12) return `${(val / 1e12).toFixed(2)}T`;
+                     if (Math.abs(val) >= 1e9) return `${(val / 1e9).toFixed(2)}B`;
+                     if (Math.abs(val) >= 1e6) return `${(val / 1e6).toFixed(2)}M`;
+                     return val.toFixed(2);
+                }
+                if (type === 'percent') return `${(val * 100).toFixed(2)}%`;
+                if (type === 'eps') return val.toFixed(2);
+                return val.toFixed(2);
+            };
+
+            const years = income.map(i => i.calendarYear);
+            const headers = years.map(y => `<th class="px-3 py-2 text-xs text-right font-medium text-gray-500 uppercase tracking-wider">${y}</th>`).join('');
+
+            const createRow = (title, dataArray, key, formatType) => {
+                const cells = years.map(year => {
+                    const record = dataArray.find(d => d.calendarYear === year);
+                    const value = record ? record[key] : undefined;
+                    return `<td class="px-3 py-2 whitespace-nowrap text-sm text-right text-gray-500">${formatNum(value, formatType)}</td>`;
+                }).join('');
+                return `<tr><td class="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">${title}</td>${cells}</tr>`;
+            };
+
+            const tableRows = [
+                createRow('Revenue', income, 'revenue', 'currency'),
+                createRow('Net Income', income, 'netIncome', 'currency'),
+                createRow('EPS (Diluted)', income, 'epsdiluted', 'eps'),
+                createRow('Return on Equity (ROE)', metrics, 'roe', 'percent'),
+                createRow('Debt to Equity', metrics, 'debtToEquity', 'default'),
+                createRow('Free Cash Flow', cashflow, 'freeCashFlow', 'currency')
+            ].join('');
+
+            contentEl.innerHTML = `
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Metric</th>
+                                ${headers}
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">${tableRows}</tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        // --- MODIFIED: UI function for the new summary format ---
+         function populateAiSummary(summary, prompt) {
+            const contentEl = document.getElementById('modal-ai-summary-content');
+            if (!summary) {
+                contentEl.innerHTML = '<p class="text-center text-red-500">Could not generate AI summary.</p>';
+                return;
+            }
+            
+            let ratingColor = 'text-gray-800';
+            if (summary.rating === 'Undervalued') ratingColor = 'text-green-600';
+            if (summary.rating === 'Overvalued' || summary.rating === 'Caution Advised') ratingColor = 'text-red-600';
+            if (summary.rating === 'Fairly Valued') ratingColor = 'text-blue-600';
+            if (summary.rating === 'Speculative Growth') ratingColor = 'text-purple-600';
+
+            const escapedPrompt = (prompt || 'Prompt not available.').replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+            contentEl.innerHTML = `
+                <div class="bg-indigo-50 p-4 rounded-lg">
+                    <h3 class="text-xl font-bold ${ratingColor}">${summary.rating || 'N/A'}</h3>
+                    <p class="text-gray-600 mt-2 leading-relaxed">${summary.rationale || 'No rationale provided.'}</p>
+                </div>
+                <div class="mt-4 border-t pt-4">
+                    <button id="prompt-accordion-button" class="w-full flex justify-between items-center text-left font-semibold text-sm text-gray-600 hover:text-gray-800 focus:outline-none">
+                        <span>View Gemini API Prompt</span>
+                        <svg id="prompt-accordion-icon" class="w-5 h-5 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </button>
+                    <div id="prompt-accordion-content" class="accordion-content mt-2">
+                        <pre><code>${escapedPrompt}</code></pre>
+                    </div>
+                </div>
+            `;
+
+            const button = contentEl.querySelector('#prompt-accordion-button');
+            const content = contentEl.querySelector('#prompt-accordion-content');
+            const icon = contentEl.querySelector('#prompt-accordion-icon');
+            if (button) {
+                button.addEventListener('click', () => {
+                    const isOpen = content.style.maxHeight && content.style.maxHeight !== "0px";
+                    content.style.maxHeight = isOpen ? "0px" : content.scrollHeight + "px";
+                    if(icon) icon.style.transform = isOpen ? "rotate(0deg)" : "rotate(180deg)";
+                });
+            }
+        }
+
+        function populateNewsTab(newsData, timestamp) {
+            const contentEl = document.getElementById('modal-news-content');
+            if (!newsData || newsData.length === 0) {
+                contentEl.innerHTML = '<p class="text-center text-gray-500">No recent news found for this stock.</p>';
+                return;
+            }
+
+            const timeString = timestamp ? `Last Fetched: ${new Date(timestamp).toLocaleString()}` : 'Live Data (just now)';
+            let newsHtml = `<p class="text-xs text-gray-400 mb-3">${timeString}</p><div class="space-y-3 max-h-96 overflow-y-auto pr-2">`;
+            
+            newsHtml += newsData.map(news => {
+                let detailsHtml = '';
+                let title = formatText(news.title);
+                let url = news.url || '#';
+                let bgColor = 'bg-gray-50';
+                let linkWrapper = (content) => `<a href="${url}" target="_blank" rel="noopener noreferrer" class="block ${bgColor} p-3 rounded-lg shadow-sm hover:bg-gray-100 transition-colors">${content}</a>`;
+
+                if (news.type === 'Price Target') {
+                    detailsHtml = `
+                        <span><strong>Publisher:</strong> ${formatText(news.site)}</span>
+                        <span><strong>Analyst:</strong> ${formatText(news.analyst)}</span>
+                        <span><strong>Target:</strong> ${news.priceTarget ? '$'+news.priceTarget.toFixed(2) : 'N/A'}</span>`;
+                } else if (news.type === 'Grade Change') {
+                    bgColor = 'bg-blue-50';
+                    detailsHtml = `
+                        <span><strong>Firm:</strong> ${formatText(news.site)}</span>
+                        <span><strong>Previous:</strong> ${formatText(news.previousGrade)}</span>
+                        <span><strong>New:</strong> ${formatText(news.newGrade)}</span>`;
+                    // Grade changes don't have a URL, so we don't wrap them in an <a> tag
+                    linkWrapper = (content) => `<div class="block ${bgColor} p-3 rounded-lg shadow-sm">${content}</div>`;
+                } else { // General News
+                    detailsHtml = `<span><strong>Publisher:</strong> ${formatText(news.site)}</span>`;
+                }
+
+                const content = `
+                    <div class="flex justify-between items-start mb-1">
+                         <p class="font-semibold text-gray-800 text-sm">${title}</p>
+                        <p class="text-xs text-gray-500 whitespace-nowrap ml-4">${new Date(news.publishedDate).toLocaleDateString()}</p>
+                    </div>
+                    <div class="text-xs text-gray-500 flex flex-wrap gap-x-4 gap-y-1 mt-2">
+                       ${detailsHtml}
+                    </div>`;
+                
+                return linkWrapper(content);
+            }).join('');
+
+            newsHtml += `</div>`;
+            contentEl.innerHTML = newsHtml;
+        }
+
+        function populateRawDataModal(data) {
+            const contentEl = document.getElementById('modal-raw-data-content');
+            if (!data) {
+                contentEl.innerHTML = '<p class="text-center text-red-500">No raw data available to display.</p>';
+                return;
+            }
+            const formattedJson = JSON.stringify(data, null, 2);
+            contentEl.innerHTML = `<pre><code>${formattedJson}</code></pre>`;
+        }
+        
+        // --- Run the initialization function ---
+        initialize();
+
+    });
+</script>
 </body>
 </html>
