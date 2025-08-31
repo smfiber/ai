@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -355,6 +354,14 @@ font-size: 0.75rem;
         </div>
 
         <div id="news-tab-content" class="tab-content">
+            <div class="bg-white rounded-xl shadow-md p-5 mb-4 border border-indigo-100">
+                <h3 class="font-semibold text-gray-700 mb-3">API Health Check</h3>
+                <p class="text-sm text-gray-500 mb-4">Before running a full news refresh, you can perform a quick test to ensure the Financial Modeling Prep API is responding correctly.</p>
+                <button id="checkFmpApiBtn" class="bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-2 px-4 rounded-lg shadow-sm transition-colors">
+                    <i class="fas fa-network-wired mr-2"></i>Check FMP API Status
+                </button>
+                <div id="fmpApiCheckResult" class="mt-4 text-sm font-medium p-3 rounded-md" style="display: none;"></div>
+            </div>
             <div class="space-y-4">
                 <div class="bg-white rounded-xl shadow-md">
                     <div id="nasdaq-news-accordion-button" class="w-full flex justify-between items-center p-5 text-left font-semibold text-lg hover:bg-gray-50 rounded-xl focus:outline-none cursor-pointer">
@@ -515,7 +522,7 @@ font-size: 0.75rem;
 <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth-compat.js"></script>
 
 <script>
-    // Version 5.2.8
+    // Version 5.3.0
     document.addEventListener("DOMContentLoaded", () => {
         // --- 1. Global Configuration Object ---
         const appConfig = {
@@ -895,6 +902,7 @@ font-size: 0.75rem;
             setupFinancialsModalListeners();
             advancedScreenerFilterForm.addEventListener('submit', handleAdvancedScreenerRun);
             document.getElementById('advanced-screener-data-container').addEventListener('click', handleSortClick);
+            document.getElementById('checkFmpApiBtn').addEventListener('click', checkFmpApiStatus);
             populateIndustryDropdown();
             
             appContent.addEventListener('click', (e) => {
@@ -971,6 +979,43 @@ font-size: 0.75rem;
                 errorOption.textContent = 'Could not load industries';
                 errorOption.value = '';
                 industrySelect.appendChild(errorOption);
+            }
+        }
+        
+        async function checkFmpApiStatus() {
+            const resultEl = document.getElementById('fmpApiCheckResult');
+            if (!resultEl) return;
+
+            resultEl.style.display = 'block';
+            resultEl.className = 'mt-4 text-sm font-medium p-3 rounded-md bg-yellow-100 text-yellow-800';
+            resultEl.textContent = 'Checking API status for AAPL...';
+
+            if (!appConfig.fmpApiKey) {
+                resultEl.className = 'mt-4 text-sm font-medium p-3 rounded-md bg-red-100 text-red-800';
+                resultEl.textContent = 'Error: Financial Modeling Prep API Key is missing.';
+                return;
+            }
+
+            const testUrl = `https://financialmodelingprep.com/stable/price-target-news?symbol=AAPL&limit=1&apikey=${appConfig.fmpApiKey}`;
+
+            try {
+                const response = await fetch(testUrl);
+                if (!response.ok) {
+                    throw new Error(`API request failed with status: ${response.status} ${response.statusText}`);
+                }
+
+                const data = await response.json();
+
+                if (Array.isArray(data) && data.length > 0 && data[0].symbol === 'AAPL' && data[0].newsTitle) {
+                     resultEl.className = 'mt-4 text-sm font-medium p-3 rounded-md bg-green-100 text-green-800';
+                     resultEl.innerHTML = `<strong>Success!</strong> API is responding correctly. Received valid data for AAPL.`;
+                } else {
+                    throw new Error('API response received, but data format is unexpected.');
+                }
+            } catch (error) {
+                console.error("FMP API Check Error:", error);
+                resultEl.className = 'mt-4 text-sm font-medium p-3 rounded-md bg-red-100 text-red-800';
+                resultEl.innerHTML = `<strong>Failed.</strong> Could not get a valid response from the API. <br><strong>Error:</strong> ${error.message}`;
             }
         }
 
@@ -1188,7 +1233,7 @@ font-size: 0.75rem;
             let allNews = [];
             for (const [index, symbol] of symbols.entries()) {
                 try {
-                    const url = `https://financialmodelingprep.com/api/v4/price-target-news?symbol=${symbol}&page=0&limit=10&apikey=${appConfig.fmpApiKey}`;
+                    const url = `https://financialmodelingprep.com/stable/price-target-news?symbol=${symbol}&page=0&limit=10&apikey=${appConfig.fmpApiKey}`;
                     newsContainer.innerHTML = `<p class="text-gray-500 p-4">Fetching news for ${symbol} (${index + 1} of ${symbols.length})...<br><code class="text-xs text-indigo-500">${url}</code></p>`;
                     
                     const response = await fetch(url);
