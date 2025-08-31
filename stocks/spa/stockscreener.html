@@ -355,6 +355,12 @@ font-size: 0.75rem;
         </div>
 
         <div id="news-tab-content" class="tab-content">
+            <div class="bg-white p-4 rounded-xl shadow-md mb-4 border border-gray-200">
+                <h3 class="font-semibold text-gray-800 mb-2">API Endpoint Test</h3>
+                <p class="text-sm text-gray-500 mb-3">Click to run a single API call to verify the connection and data format before using the "Refresh News" buttons below.</p>
+                <button id="test-api-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg text-sm shadow-sm transition-colors">Run API Test</button>
+                <div id="api-test-results" class="mt-3 text-sm font-medium"></div>
+            </div>
             <div class="space-y-4">
                 <div class="bg-white rounded-xl shadow-md">
                     <div id="nasdaq-news-accordion-button" class="w-full flex justify-between items-center p-5 text-left font-semibold text-lg hover:bg-gray-50 rounded-xl focus:outline-none cursor-pointer">
@@ -515,7 +521,7 @@ font-size: 0.75rem;
 <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth-compat.js"></script>
 
 <script>
-    // Version 5.2.8
+    // Version 5.3.0
     document.addEventListener("DOMContentLoaded", () => {
         // --- 1. Global Configuration Object ---
         const appConfig = {
@@ -897,6 +903,11 @@ font-size: 0.75rem;
             document.getElementById('advanced-screener-data-container').addEventListener('click', handleSortClick);
             populateIndustryDropdown();
             
+            const testApiBtn = document.getElementById('test-api-btn');
+            if (testApiBtn) {
+                testApiBtn.addEventListener('click', runApiTest);
+            }
+            
             appContent.addEventListener('click', (e) => {
                 const saveBtn = e.target.closest('.save-stock-btn');
                 if (saveBtn && saveBtn.dataset.symbol) {
@@ -971,6 +982,38 @@ font-size: 0.75rem;
                 errorOption.textContent = 'Could not load industries';
                 errorOption.value = '';
                 industrySelect.appendChild(errorOption);
+            }
+        }
+        
+        async function runApiTest() {
+            const resultsEl = document.getElementById('api-test-results');
+            if (!resultsEl) return;
+            resultsEl.innerHTML = '<span class="text-gray-500">Testing...</span>';
+
+            const testSymbol = 'AAPL';
+            const url = `https://financialmodelingprep.com/stable/price-target-latest-news?symbol=${testSymbol}&limit=1&apikey=${appConfig.fmpApiKey}`;
+
+            try {
+                const response = await fetch(url);
+                if (!response.ok) {
+                    resultsEl.innerHTML = `<span class="text-red-500">❌ API Test Failed: Server responded with status ${response.status}. Please check your API key and network connection.</span>`;
+                    return;
+                }
+
+                const data = await response.json();
+                if (Array.isArray(data) && data.length > 0) {
+                    const firstItem = data[0];
+                    if (firstItem.symbol && firstItem.publishedDate && firstItem.newsTitle && firstItem.newsURL) {
+                        resultsEl.innerHTML = `<span class="text-green-600">✅ API Test Successful. Response format is correct.</span>`;
+                    } else {
+                        resultsEl.innerHTML = `<span class="text-yellow-600">⚠️ API Test Succeeded, but the response format is UNEXPECTED. Expected keys like 'newsTitle' and 'newsURL' were not found. Do not proceed with full refresh.</span><pre class="text-xs mt-2 bg-gray-100 p-2 rounded"><code>${JSON.stringify(firstItem, null, 2)}</code></pre>`;
+                    }
+                } else {
+                    resultsEl.innerHTML = `<span class="text-yellow-600">⚠️ API Test Succeeded, but no data was returned for the test symbol (${testSymbol}). The endpoint may be valid but empty.</span>`;
+                }
+            } catch (error) {
+                console.error("API Test Error:", error);
+                resultsEl.innerHTML = `<span class="text-red-500">❌ API Test Failed: A network error occurred. Check the console for details.</span>`;
             }
         }
 
@@ -1188,7 +1231,7 @@ font-size: 0.75rem;
             let allNews = [];
             for (const [index, symbol] of symbols.entries()) {
                 try {
-                    const url = `https://financialmodelingprep.com/api/v4/price-target-news?symbol=${symbol}&page=0&limit=10&apikey=${appConfig.fmpApiKey}`;
+                    const url = `https://financialmodelingprep.com/stable/price-target-latest-news?symbol=${symbol}&page=0&limit=10&apikey=${appConfig.fmpApiKey}`;
                     newsContainer.innerHTML = `<p class="text-gray-500 p-4">Fetching news for ${symbol} (${index + 1} of ${symbols.length})...<br><code class="text-xs text-indigo-500">${url}</code></p>`;
                     
                     const response = await fetch(url);
