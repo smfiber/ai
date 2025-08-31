@@ -1,6 +1,6 @@
 // config.js
 // --- App Version ---
-export const APP_VERSION = "14.28.4";
+export const APP_VERSION = "14.29.0";
 
 // --- Shared State ---
 // This object will hold all the application's shared state.
@@ -143,16 +143,25 @@ Based on the provided data, generate the following multi-faceted investment memo
 # Investment Memo: {companyName} ({tickerSymbol})
 
 ## 1. Executive Summary & Investment Thesis
-Begin with a concise, one-paragraph summary. What is the most important takeaway about this company's quality, valuation, and overall story as a potential investment? Synthesize the key findings from the report below into a coherent investment thesis.
+Begin with a concise, one-paragraph summary. What is the most important takeaway about this company's quality, valuation, and overall story as a potential investment? Synthesize the key findings from the report below, including the forward-looking analyst consensus and recent news narrative, into a coherent investment thesis.
 
-## 2. Business Quality & Competitive Moat
+## 2. Forward-Looking Outlook & Recent Events
+### Analyst Consensus
+- Based on the provided forecasts, what is the market's expectation for next year's revenue and EPS?
+- What does the estimated revenue growth rate suggest about the company's future trajectory?
+### Recent Analyst Actions
+- Review the list of recent analyst ratings. What is the prevailing sentiment? Is there a clear trend of upgrades, downgrades, or mixed opinions?
+### Key News Narrative
+- Summarize the dominant news narrative. How does this recent story frame the company's current situation and potential future?
+
+## 3. Business Quality & Competitive Moat
 ### Business Description
 In simple terms, describe the company's business based on the provided 'description', 'sector', and 'industry'.
 ### Moat Analysis
 - **Return on Equity (ROE):** Explain ROE as a "report card" for how well management uses shareholder money. Based on the ROE trend, how effective and consistent is the company at generating profits from its equity?
 - **Margin Stability:** Analyze the trends in Gross and Net Profit Margins. Are they stable, expanding, or contracting? What does this suggest about the company's pricing power and competitive position?
 
-## 3. Financial Health & Performance
+## 4. Financial Health & Performance
 ### Performance Trends
 - **Revenue Growth:** Describe the company's recent top-line performance based on the revenue trend. Is it accelerating, stable, or slowing down?
 - **Net Income Growth:** Describe the company's recent bottom-line performance based on the net income trend.
@@ -162,21 +171,21 @@ In simple terms, describe the company's business based on the provided 'descript
 - **Quality of Earnings:** Are the company's reported profits being converted into real cash? Compare Operating Cash Flow to Net Income.
 - **Dividend Safety:** If applicable, analyze the dividend yield and cash flow payout ratio. Is the dividend well-covered by actual cash?
 
-## 4. Valuation Analysis
+## 5. Valuation Analysis
 ### Key Multiples vs. History
 - For each key multiple (P/E, P/S, P/B), compare its current value to its historical average.
 - **Overall Verdict:** Based on this comparison, is the stock currently trading at a premium, a discount, or in line with its own history?
 ### Deep Value Check
 - **Graham Number:** If available, compare the current price to the Graham Number. Does this classic value investing metric suggest the stock is over or undervalued?
 
-## 5. Bull & Bear Case (Strengths & Risks)
+## 6. Bull & Bear Case (Strengths & Risks)
 ### The Bull Case (Key Strengths)
-- Create a bulleted list summarizing the most compelling positive data points from your analysis (e.g., strong ROE, consistent growth, low debt, attractive valuation).
+- Create a bulleted list summarizing the most compelling positive data points from your analysis (e.g., strong ROE, positive analyst revisions, favorable news narrative, attractive valuation).
 ### The Bear Case (Potential Risks)
-- Create a bulleted list summarizing the most significant risks or red flags identified in the data (e.g., high debt, declining margins, slowing growth, high valuation).
+- Create a bulleted list summarizing the most significant risks or red flags identified in the data (e.g., high debt, declining margins, negative news, high valuation).
 
-## 6. Final Verdict & Recommendation
-Conclude with a final, decisive paragraph. Weigh the strengths against the risks. Based *only* on this quantitative analysis, classify the stock's profile (e.g., "High-Quality Compounder," "Classic Value Play," "Speculative Turnaround," "Potential Value Trap") and state a clear recommendation.
+## 7. Final Verdict & Recommendation
+Conclude with a final, decisive paragraph. Weigh the strengths against the risks, incorporating both the historical financial data and the forward-looking context. Based *only* on this quantitative and qualitative analysis, classify the stock's profile (e.g., "High-Quality Compounder," "Classic Value Play," "Speculative Turnaround," "Potential Value Trap") and state a clear recommendation.
 `.trim();
 
 export const MORNING_BRIEFING_PROMPT = `
