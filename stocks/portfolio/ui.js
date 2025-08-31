@@ -254,17 +254,9 @@ async function handleRefreshFmpData(symbol) {
 
 export async function renderMorningBriefing() {
     const briefingContainer = document.getElementById('morning-briefing-content');
-    const briefingTitle = document.querySelector('#dashboard-section h3');
-    if (!briefingContainer || !briefingTitle) return;
+    if (!briefingContainer) return;
 
     try {
-        const currentDate = new Date().toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-        });
-        briefingTitle.textContent = `AI Morning Briefing for ${currentDate}`;
-
         const portfolioStocks = state.portfolioCache.filter(s => s.status === 'Portfolio');
 
         if (portfolioStocks.length === 0) {
@@ -350,134 +342,6 @@ export async function renderPortfolioValue() {
         valueDisplay.textContent = 'Error';
     }
 }
-
-export async function renderAllocationChart() {
-    const container = document.getElementById('allocation-chart-container');
-    const canvas = document.getElementById('allocation-chart');
-    if (!container || !canvas) return;
-    
-    // Clear previous chart instance if it exists
-    const existingChart = Chart.getChart(canvas);
-    if (existingChart) {
-        existingChart.destroy();
-    }
-    container.innerHTML = '<canvas id="allocation-chart"></canvas>';
-    const newCanvas = document.getElementById('allocation-chart');
-
-    try {
-        const portfolioStocks = state.portfolioCache.filter(s => s.status === 'Portfolio' && s.shares > 0);
-        const cashBalance = state.cashBalance || 0;
-
-        if (portfolioStocks.length === 0 && cashBalance === 0) {
-            container.innerHTML = `<p class="text-sm text-gray-400">Add portfolio holdings to see allocation.</p>`;
-            return;
-        }
-
-        const dataPromises = portfolioStocks.map(stock => getFmpStockData(stock.ticker));
-        const allStockData = await Promise.all(dataPromises);
-
-        const chartData = [];
-        allStockData.forEach((fmpData, index) => {
-            const stock = portfolioStocks[index];
-            const profile = fmpData?.profile?.[0];
-            const price = profile?.price;
-            const sector = profile?.sector || stock.sector || 'Uncategorized';
-            const change = profile?.change || 0;
-
-            if (price && typeof price === 'number' && stock.shares > 0) {
-                const holdingValue = price * stock.shares;
-                chartData.push({
-                    sector: sector,
-                    value: holdingValue,
-                    ticker: stock.ticker,
-                    change: change
-                });
-            }
-        });
-
-        if (cashBalance > 0) {
-            chartData.push({
-                sector: 'Cash',
-                value: cashBalance,
-                ticker: 'CASH',
-                change: 0
-            });
-        }
-        
-        if (chartData.length === 0) {
-            container.innerHTML = `<p class="text-sm text-gray-400">Could not calculate holding values.</p>`;
-            return;
-        }
-
-        new Chart(newCanvas.getContext('2d'), {
-            type: 'treemap',
-            data: {
-                datasets: [{
-                    label: 'Portfolio Allocation',
-                    tree: chartData,
-                    key: 'value',
-                    groups: ['sector'],
-                    backgroundColor(ctx) {
-                        if (ctx.type !== 'data' || !ctx.raw) return 'transparent';
-                        const change = ctx.raw._data.change;
-                        if (change > 0.5) return 'rgba(16, 185, 129, 0.9)';   // Strong Green
-                        if (change > 0) return 'rgba(16, 185, 129, 0.6)';     // Green
-                        if (change < -0.5) return 'rgba(239, 68, 68, 0.9)';   // Strong Red
-                        if (change < 0) return 'rgba(239, 68, 68, 0.6)';     // Red
-                        return 'rgba(156, 163, 175, 0.7)'; // Gray
-                    },
-                    labels: {
-                        display: true,
-                        formatter(ctx) {
-                            if (ctx.raw) {
-                                return [ctx.raw._data.ticker, formatCurrency(ctx.raw.v)];
-                            }
-                            return [];
-                        },
-                        color: 'white',
-                        font: { size: 12, weight: 'bold' },
-                        align: 'center',
-                        position: 'center'
-                    }
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: false
-                    },
-                    tooltip: {
-                        callbacks: {
-                            title(items) {
-                                return items[0].raw._data.ticker;
-                            },
-                            label(item) {
-                                const stockData = item.raw._data;
-                                const formattedValue = formatCurrency(stockData.value);
-                                const total = item.dataset.tree.reduce((sum, d) => sum + d.value, 0);
-                                const percentage = ((stockData.value / total) * 100).toFixed(2);
-                                const changeFormatted = typeof stockData.change === 'number'
-                                    ? `${stockData.change >= 0 ? '+' : ''}${stockData.change.toFixed(2)}`
-                                    : 'N/A';
-                                return [
-                                    `Value: ${formattedValue} (${percentage}%)`,
-                                    `Day's Change: ${changeFormatted}`
-                                ];
-                            }
-                        }
-                    }
-                }
-            }
-        });
-
-    } catch (error) {
-        console.error("Error rendering allocation chart:", error);
-        container.innerHTML = `<p class="text-xs text-red-500 text-center">Could not render chart:<br>${error.message}</p>`;
-    }
-}
-
 
 async function _renderGroupedStockList(container, stocksWithData, listType) {
     container.innerHTML = ''; 
@@ -687,7 +551,6 @@ async function handleSaveStock(e) {
         await fetchAndCachePortfolioData();
         renderPortfolioManagerList(); // Refresh the list in the manager modal
         renderPortfolioValue(); // Refresh dashboard value
-        renderAllocationChart(); // Refresh dashboard chart
 
     } catch(error) {
         console.error("Error saving stock:", error);
@@ -711,7 +574,6 @@ async function handleDeleteStock(ticker) {
                     renderPortfolioManagerList();
                 }
                 renderPortfolioValue(); // Refresh dashboard value
-                renderAllocationChart(); // Refresh dashboard chart
             } catch (error) {
                 console.error("Error deleting stock:", error);
                 displayMessageInModal(`Could not delete ${ticker}: ${error.message}`, 'error');
@@ -806,7 +668,7 @@ async function openRawDataViewer(ticker) {
         const groupedDataPromise = getGroupedFmpData(ticker);
         const savedReportsPromise = getDocs(query(collection(state.db, CONSTANTS.DB_COLLECTION_AI_REPORTS), where("ticker", "==", ticker)));
 
-        const [fmpData, groupedFmpData, savedReportsSnapshot] = await Promise.all([fmpDataPromise, groupedDataPromise, savedReportsPromise]);
+        const [fmpData, groupedFmpData, savedReportsSnapshot] = await Promise.all([fmpDataPromise, groupedDataPromise, savedReportsSnapshot]);
 
         if (!fmpData || !fmpData.profile || fmpData.profile.length === 0) {
             closeModal(modalId);
@@ -1245,7 +1107,6 @@ async function handleSaveCash(e) {
         
         // Refresh dashboard widgets
         await renderPortfolioValue();
-        await renderAllocationChart();
 
         displayMessageInModal("Cash balance updated successfully!", "info");
 
@@ -1603,7 +1464,6 @@ function setupGlobalEventListeners() {
             await renderPortfolioValue();
             await renderMorningBriefing();
             await renderPortfolioHealthScore();
-            await renderAllocationChart();
             return;
         }
     });
