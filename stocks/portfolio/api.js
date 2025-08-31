@@ -239,6 +239,15 @@ export async function getGroupedFmpData(symbol) {
     return groupedData;
 }
 
+export async function getCachedNews(ticker) {
+    const newsDocRef = doc(state.db, CONSTANTS.DB_COLLECTION_FMP_NEWS_CACHE, ticker);
+    const newsDoc = await getDoc(newsDocRef);
+    if (newsDoc.exists()) {
+        return newsDoc.data().articles || [];
+    }
+    return [];
+}
+
 // --- GOOGLE DRIVE FUNCTIONS ---
 export function getDriveToken() {
     return new Promise((resolve, reject) => {
