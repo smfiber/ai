@@ -582,6 +582,16 @@ export async function runOpportunityScanner(stocksToScan, updateProgress) {
     return opportunities;
 }
 
+export async function getScannerResults(ticker) {
+    const scannerQuery = query(
+        collection(state.db, CONSTANTS.DB_COLLECTION_SCANNER_RESULTS),
+        where("ticker", "==", ticker),
+        orderBy("scannedAt", "desc")
+    );
+    const scannerSnapshot = await getDocs(scannerQuery);
+    return scannerSnapshot.docs.map(doc => doc.data());
+}
+
 export async function generatePortfolioAnalysis(userQuestion) {
     const portfolioStocks = state.portfolioCache.filter(s => s.status === 'Portfolio');
     if (!portfolioStocks || portfolioStocks.length === 0) {
