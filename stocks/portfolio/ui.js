@@ -1004,28 +1004,17 @@ function renderOverviewCard(data, symbol, status) {
 
 // --- PORTFOLIO MANAGER MODAL ---
 async function renderPortfolioManagerList() {
-    const container = document.getElementById('portfolio-manager-list-container');
-    if (!container) return;
-    
+    const portfolioContainer = document.getElementById('manager-portfolio-tab-pane');
+    const watchlistContainer = document.getElementById('manager-watchlist-tab-pane');
+    if (!portfolioContainer || !watchlistContainer) return;
+
     const cashInput = document.getElementById('manage-cash-amount');
     if (cashInput) {
         cashInput.value = state.cashBalance > 0 ? state.cashBalance : '';
     }
 
-    // Find the existing list part of the container to clear it, preserving the cash form
-    const listWrapperId = 'portfolio-list-wrapper';
-    let listWrapper = document.getElementById(listWrapperId);
-    if (!listWrapper) {
-        listWrapper = document.createElement('div');
-        listWrapper.id = listWrapperId;
-        container.appendChild(listWrapper);
-    }
-    listWrapper.innerHTML = ''; // Clear only the list part
-
-    if (state.portfolioCache.length === 0) {
-        listWrapper.innerHTML = `<p class="text-center text-gray-500 p-8">No stocks in your portfolio or watchlist.</p>`;
-        return;
-    }
+    portfolioContainer.innerHTML = '<div class="flex justify-center p-8"><div class="loader"></div></div>';
+    watchlistContainer.innerHTML = '<div class="flex justify-center p-8"><div class="loader"></div></div>';
 
     const fmpDataPromises = state.portfolioCache.map(stock => getFmpStockData(stock.ticker));
     const fmpDataResults = await Promise.all(fmpDataPromises);
@@ -1036,63 +1025,68 @@ async function renderPortfolioManagerList() {
         }
     });
 
-    const groupedBySector = state.portfolioCache.reduce((acc, stock) => {
-        const sector = stock.sector || 'Uncategorized';
-        if (!acc[sector]) {
-            acc[sector] = [];
+    function _generateHtmlForList(stocks) {
+        if (stocks.length === 0) {
+            return `<p class="text-center text-gray-500 p-8">No stocks in this list.</p>`;
         }
-        acc[sector].push(stock);
-        return acc;
-    }, {});
-
-    let html = '';
-    const sortedSectors = Object.keys(groupedBySector).sort();
-    
-    for (const sector of sortedSectors) {
-        html += `<div class="portfolio-exchange-header">${sanitizeText(sector)}</div>`;
-        html += '<ul class="divide-y divide-gray-200">';
-        groupedBySector[sector].sort((a,b) => a.companyName.localeCompare(b.companyName)).forEach(stock => {
-            const statusBadge = stock.status === 'Portfolio'
-                ? '<span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-green-100 text-green-800">Portfolio</span>'
-                : '<span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800">Watchlist</span>';
-            
-            const sharesDisplay = stock.status === 'Portfolio' && stock.shares > 0
-                ? `<p class="text-sm text-gray-500">${stock.shares} Shares</p>`
-                : '';
-
-            const fmpData = fmpDataMap.get(stock.ticker);
-            const price = fmpData?.profile?.[0]?.price;
-            const totalValue = (price && stock.shares) ? price * stock.shares : 0;
-
-            html += `
-                <li class="p-4 flex justify-between items-center hover:bg-gray-50">
-                    <div>
-                        <p class="font-semibold text-gray-800">${sanitizeText(stock.companyName)} (${sanitizeText(stock.ticker)})</p>
-                        <div class="flex items-center gap-2 mt-1">
-                            ${statusBadge}
-                            ${sharesDisplay}
+        const groupedBySector = stocks.reduce((acc, stock) => {
+            const sector = stock.sector || 'Uncategorized';
+            if (!acc[sector]) acc[sector] = [];
+            acc[sector].push(stock);
+            return acc;
+        }, {});
+        let html = '';
+        const sortedSectors = Object.keys(groupedBySector).sort();
+        for (const sector of sortedSectors) {
+            html += `<div class="portfolio-exchange-header">${sanitizeText(sector)}</div>`;
+            html += '<ul class="divide-y divide-gray-200">';
+            groupedBySector[sector].sort((a, b) => a.companyName.localeCompare(b.companyName)).forEach(stock => {
+                const statusBadge = stock.status === 'Portfolio'
+                    ? '<span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-green-100 text-green-800">Portfolio</span>'
+                    : '<span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800">Watchlist</span>';
+                const sharesDisplay = stock.status === 'Portfolio' && stock.shares > 0
+                    ? `<p class="text-sm text-gray-500">${stock.shares} Shares</p>`: '';
+                const fmpData = fmpDataMap.get(stock.ticker);
+                const price = fmpData?.profile?.[0]?.price;
+                const totalValue = (price && stock.shares) ? price * stock.shares : 0;
+                html += `
+                    <li class="p-4 flex justify-between items-center hover:bg-gray-50">
+                        <div>
+                            <p class="font-semibold text-gray-800">${sanitizeText(stock.companyName)} (${sanitizeText(stock.ticker)})</p>
+                            <div class="flex items-center gap-2 mt-1">${statusBadge}${sharesDisplay}</div>
                         </div>
-                    </div>
-                    <div class="flex items-center gap-4">
-                        <div class="text-right">
-                            <p class="font-semibold text-gray-800">${totalValue > 0 ? formatCurrency(totalValue) : ''}</p>
-                            <p class="text-sm text-gray-500">${price ? `${formatCurrency(price)}/share` : ''}</p>
+                        <div class="flex items-center gap-4">
+                            <div class="text-right">
+                                <p class="font-semibold text-gray-800">${totalValue > 0 ? formatCurrency(totalValue) : ''}</p>
+                                <p class="text-sm text-gray-500">${price ? `${formatCurrency(price)}/share` : ''}</p>
+                            </div>
+                            <div class="flex gap-2">
+                                <button class="edit-stock-btn text-sm font-medium text-indigo-600 hover:text-indigo-800" data-ticker="${sanitizeText(stock.ticker)}">Edit</button>
+                                <button class="delete-stock-btn text-sm font-medium text-red-600 hover:text-red-800" data-ticker="${sanitizeText(stock.ticker)}">Delete</button>
+                            </div>
                         </div>
-                        <div class="flex gap-2">
-                            <button class="edit-stock-btn text-sm font-medium text-indigo-600 hover:text-indigo-800" data-ticker="${sanitizeText(stock.ticker)}">Edit</button>
-                            <button class="delete-stock-btn text-sm font-medium text-red-600 hover:text-red-800" data-ticker="${sanitizeText(stock.ticker)}">Delete</button>
-                        </div>
-                    </div>
-                </li>
-            `;
-        });
-        html += '</ul>';
+                    </li>`;
+            });
+            html += '</ul>';
+        }
+        return html;
     }
-    listWrapper.innerHTML = html;
+
+    const portfolioStocks = state.portfolioCache.filter(s => s.status === 'Portfolio');
+    const watchlistStocks = state.portfolioCache.filter(s => s.status === 'Watchlist');
+    portfolioContainer.innerHTML = _generateHtmlForList(portfolioStocks);
+    watchlistContainer.innerHTML = _generateHtmlForList(watchlistStocks);
 }
 
 
 function openPortfolioManagerModal() {
+    const modal = document.getElementById(CONSTANTS.MODAL_PORTFOLIO_MANAGER);
+    modal.querySelectorAll('.modal-tab-button').forEach(btn => btn.classList.remove('active'));
+    modal.querySelectorAll('.modal-tab-pane').forEach(pane => pane.classList.remove('active'));
+
+    modal.querySelector('.modal-tab-button[data-tab="manager-portfolio"]').classList.add('active');
+    document.getElementById('manager-portfolio-tab-pane').classList.add('active');
+
     renderPortfolioManagerList();
     openModal(CONSTANTS.MODAL_PORTFOLIO_MANAGER);
 }
@@ -1547,8 +1541,23 @@ function setupGlobalEventListeners() {
     document.getElementById('portfolioManagerModal').addEventListener('click', (e) => {
         const target = e.target.closest('button');
         if (!target) return;
-        const ticker = target.dataset.ticker;
 
+        if (target.id === 'add-new-stock-button') {
+            openManageStockModal({});
+            return;
+        }
+
+        if (target.classList.contains('modal-tab-button')) {
+            const tabId = target.dataset.tab;
+            const modal = target.closest('.modal');
+            modal.querySelectorAll('.modal-tab-button').forEach(btn => btn.classList.remove('active'));
+            modal.querySelectorAll('.modal-tab-pane').forEach(pane => pane.classList.remove('active'));
+            target.classList.add('active');
+            document.getElementById(`${tabId}-tab-pane`).classList.add('active');
+            return;
+        }
+
+        const ticker = target.dataset.ticker;
         if (target.classList.contains('edit-stock-btn')) {
             const stockData = state.portfolioCache.find(s => s.ticker === ticker);
             if (stockData) {
