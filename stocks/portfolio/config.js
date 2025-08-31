@@ -1,6 +1,6 @@
 // config.js
 // --- App Version ---
-export const APP_VERSION = "14.28.1";
+export const APP_VERSION = "14.28.2";
 
 // --- Shared State ---
 // This object will hold all the application's shared state.
@@ -177,6 +177,44 @@ In simple terms, describe the company's business based on the provided 'descript
 
 ## 6. Final Verdict & Recommendation
 Conclude with a final, decisive paragraph. Weigh the strengths against the risks. Based *only* on this quantitative analysis, classify the stock's profile (e.g., "High-Quality Compounder," "Classic Value Play," "Speculative Turnaround," "Potential Value Trap") and state a clear recommendation.
+`.trim();
+
+export const MORNING_BRIEFING_PROMPT = `
+Role: You are a sharp, concise financial analyst AI. Your task is to generate a "Morning Briefing" for an investor based on the provided JSON data for their personal stock portfolio. Your tone should be professional, objective, and straight to the point, like a pre-market brief from a top-tier financial firm.
+
+Data Instructions:
+- Your analysis MUST be based *exclusively* on the provided JSON data.
+- The data includes stock profiles (with price changes), recent news, and analyst rating changes.
+- Do NOT include any information not present in the data.
+- Focus on synthesis and relevance. Do not just list data; explain *why* it's important for the investor this morning.
+
+Output Format:
+- The entire output must be in professional markdown format.
+- Use the specified headers exactly as written.
+
+JSON Data for the portfolio:
+{portfolioJson}
+
+---
+
+Generate the briefing according to this structure:
+
+# AI Morning Briefing for {currentDate}
+
+## Market Snapshot & Biggest Movers
+Start with a single sentence summarizing the general mood based on the number of stocks that are up versus down. Then, identify the most significant pre-market movers from the portfolio data.
+
+- **Top Gainers:** List up to 3 stocks with the highest positive 'changesPercentage'. For each, briefly state the percentage change.
+- **Top Losers:** List up to 3 stocks with the most negative 'changesPercentage'. For each, briefly state the percentage change.
+
+## Key Portfolio News & Events
+Synthesize the **most impactful and relevant** news from the provided articles. Do not simply list headlines. Group related stories (e.g., multiple stories about a single company's earnings) and summarize the key takeaways. Focus on what an investor needs to know right now. If there's no significant news, state that clearly.
+
+## Analyst Sentiment Shifts
+Review the 'analyst_grades' for all stocks. Report any notable upgrades, downgrades, or new coverage initiations. Mention the firm and the change in rating (e.g., "from Hold to Buy"). If there are no changes, state "No significant analyst rating changes detected."
+
+## The Bottom Line
+Conclude with a 1-2 sentence summary that synthesizes the above points. What is the overall "story" for this portfolio heading into the trading day? Is it facing headwinds from negative news, enjoying tailwinds from positive earnings, or is it a mixed picture?
 `.trim();
 
 export const NEWS_SENTIMENT_PROMPT = `
@@ -705,33 +743,3 @@ Your analysis must be structured as follows:
 
 When you mention a stock ticker, you MUST wrap it in a special tag like this: <stock-ticker>TICKER</stock-ticker>.
 `;
-
-
-
-// --- NEW NARRATIVE SECTOR PROMPTS (v7.2.0) ---
-const TECHNOLOGY_SECTOR_PROMPT = CAPITAL_ALLOCATORS_PROMPT;
-const HEALTH_CARE_SECTOR_PROMPT = CAPITAL_ALLOCATORS_PROMPT;
-const FINANCIALS_SECTOR_PROMPT = CAPITAL_ALLOCATORS_PROMPT;
-const CONSUMER_DISCRETIONARY_SECTOR_PROMPT = CAPITAL_ALLOCATORS_PROMPT;
-const COMMUNICATION_SERVICES_SECTOR_PROMPT = CAPITAL_ALLOCATORS_PROMPT;
-const INDUSTRIALS_SECTOR_PROMPT = CAPITAL_ALLOCATORS_PROMPT;
-const CONSUMER_STAPLES_SECTOR_PROMPT = CAPITAL_ALLOCATORS_PROMPT;
-const ENERGY_SECTOR_PROMPT = CAPITAL_ALLOCATORS_PROMPT;
-const UTILITIES_SECTOR_PROMPT = CAPITAL_ALLOCATORS_PROMPT;
-const REAL_ESTATE_SECTOR_PROMPT = CAPITAL_ALLOCATORS_PROMPT;
-const MATERIALS_SECTOR_PROMPT = CAPITAL_ALLOCATORS_PROMPT;
-
-
-export const creativePromptMap = {
-    'Technology': { prompt: TECHNOLOGY_SECTOR_PROMPT, label: 'Playbook' },
-    'Health Care': { prompt: HEALTH_CARE_SECTOR_PROMPT, label: 'Playbook' },
-    'Financials': { prompt: FINANCIALS_SECTOR_PROMPT, label: 'Playbook' },
-    'Consumer Discretionary': { prompt: CONSUMER_DISCRETIONARY_SECTOR_PROMPT, label: 'Playbook' },
-    'Communication Services': { prompt: COMMUNICATION_SERVICES_SECTOR_PROMPT, label: 'Playbook' },
-    'Industrials': { prompt: INDUSTRIALS_SECTOR_PROMPT, label: 'Playbook' },
-    'Consumer Staples': { prompt: CONSUMER_STAPLES_SECTOR_PROMPT, label: 'Playbook' },
-    'Energy': { prompt: ENERGY_SECTOR_PROMPT, label: 'Playbook' },
-    'Utilities': { prompt: UTILITIES_SECTOR_PROMPT, label: 'Playbook' },
-    'Real Estate': { prompt: REAL_ESTATE_SECTOR_PROMPT, label: 'Playbook' },
-    'Materials': { prompt: MATERIALS_SECTOR_PROMPT, label: 'Playbook' }
-};
