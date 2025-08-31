@@ -375,3 +375,49 @@ body.modal-open {
     height: 2.5rem;
     border-width: 3px;
 }
+
+/*
+ * =================================================================
+ * MODAL TABS (v14.25.0)
+ * =================================================================
+ */
+.modal-tab-nav {
+    display: flex;
+    border-bottom: 1px solid #e5e7eb; /* border-gray-200 */
+    padding: 0 1rem; /* px-4 */
+    background-color: #f9fafb; /* bg-gray-50 */
+}
+
+.modal-tab-button {
+    padding: 0.75rem 1rem; /* py-3 px-4 */
+    font-weight: 600; /* font-semibold */
+    font-size: 0.875rem; /* text-sm */
+    color: #6b7280; /* text-gray-500 */
+    border: none;
+    background-color: transparent;
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -1px; /* To make the bottom border overlap the container's border */
+    transition: all 0.2s ease-in-out;
+}
+
+.modal-tab-button:hover {
+    color: #1f2937; /* text-gray-800 */
+}
+
+.modal-tab-button.active {
+    color: var(--color-primary);
+    border-bottom-color: var(--color-primary);
+}
+
+.modal-tab-content {
+    padding: 0.5rem; /* p-2, matches original modal content padding */
+}
+
+.modal-tab-pane {
+    display: none;
+}
+
+.modal-tab-pane.active {
+    display: block;
+}
