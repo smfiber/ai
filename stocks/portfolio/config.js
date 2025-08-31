@@ -1,6 +1,6 @@
 // config.js
 // --- App Version ---
-export const APP_VERSION = "14.28.3";
+export const APP_VERSION = "14.28.4";
 
 // --- Shared State ---
 // This object will hold all the application's shared state.
@@ -743,31 +743,3 @@ Your analysis must be structured as follows:
 
 When you mention a stock ticker, you MUST wrap it in a special tag like this: <stock-ticker>TICKER</stock-ticker>.
 `;
-
-// --- NEW NARRATIVE SECTOR PROMPTS (v7.2.0) ---
-const TECHNOLOGY_SECTOR_PROMPT = INDUSTRY_CAPITAL_ALLOCATORS_PROMPT;
-const HEALTH_CARE_SECTOR_PROMPT = INDUSTRY_CAPITAL_ALLOCATORS_PROMPT;
-const FINANCIALS_SECTOR_PROMPT = INDUSTRY_CAPITAL_ALLOCATORS_PROMPT;
-const CONSUMER_DISCRETIONARY_SECTOR_PROMPT = INDUSTRY_CAPITAL_ALLOCATORS_PROMPT;
-const COMMUNICATION_SERVICES_SECTOR_PROMPT = INDUSTRY_CAPITAL_ALLOCATORS_PROMPT;
-const INDUSTRIALS_SECTOR_PROMPT = INDUSTRY_CAPITAL_ALLOCATORS_PROMPT;
-const CONSUMER_STAPLES_SECTOR_PROMPT = INDUSTRY_CAPITAL_ALLOCATORS_PROMPT;
-const ENERGY_SECTOR_PROMPT = INDUSTRY_CAPITAL_ALLOCATORS_PROMPT;
-const UTILITIES_SECTOR_PROMPT = INDUSTRY_CAPITAL_ALLOCATORS_PROMPT;
-const REAL_ESTATE_SECTOR_PROMPT = INDUSTRY_CAPITAL_ALLOCATORS_PROMPT;
-const MATERIALS_SECTOR_PROMPT = INDUSTRY_CAPITAL_ALLOCATORS_PROMPT;
-
-
-export const creativePromptMap = {
-    'Technology': { prompt: TECHNOLOGY_SECTOR_PROMPT, label: 'Playbook' },
-    'Health Care': { prompt: HEALTH_CARE_SECTOR_PROMPT, label: 'Playbook' },
-    'Financials': { prompt: FINANCIALS_SECTOR_PROMPT, label: 'Playbook' },
-    'Consumer Discretionary': { prompt: CONSUMER_DISCRETIONARY_SECTOR_PROMPT, label: 'Playbook' },
-    'Communication Services': { prompt: COMMUNICATION_SERVICES_SECTOR_PROMPT, label: 'Playbook' },
-    'Industrials': { prompt: INDUSTRIALS_SECTOR_PROMPT, label: 'Playbook' },
-    'Consumer Staples': { prompt: CONSUMER_STAPLES_SECTOR_PROMPT, label: 'Playbook' },
-    'Energy': { prompt: ENERGY_SECTOR_PROMPT, label: 'Playbook' },
-    'Utilities': { prompt: UTILITIES_SECTOR_PROMPT, label: 'Playbook' },
-    'Real Estate': { prompt: REAL_ESTATE_SECTOR_PROMPT, label: 'Playbook' },
-    'Materials': { prompt: MATERIALS_SECTOR_PROMPT, label: 'Playbook' }
-};
