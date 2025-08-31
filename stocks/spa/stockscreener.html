@@ -522,7 +522,7 @@ font-size: 0.75rem;
 <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth-compat.js"></script>
 
 <script>
-    // Version 5.3.0
+    // Version 5.3.1
     document.addEventListener("DOMContentLoaded", () => {
         // --- 1. Global Configuration Object ---
         const appConfig = {
@@ -1081,7 +1081,7 @@ font-size: 0.75rem;
             
             const loadedFromCache = await loadNewsFromFirebase(exchange, newsContainer, screenerData);
             if (!loadedFromCache) {
-                await fetchAndRenderPriceTargetNews(screenerData, newsContainer, exchange);
+                newsContainer.innerHTML = `<p class="text-gray-500 p-4">No cached news found. Please click 'Refresh News' to fetch the latest price target news.</p>`;
             }
 
             refreshButton.addEventListener('click', async (e) => {
