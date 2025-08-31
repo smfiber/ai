@@ -1,5 +1,6 @@
+// config.js
 // --- App Version ---
-export const APP_VERSION = "14.25.2";
+export const APP_VERSION = "14.26.0";
 
 // --- Shared State ---
 // This object will hold all the application's shared state.
