@@ -1,5 +1,6 @@
+// ui.js
 import { CONSTANTS, SECTORS, SECTOR_ICONS, state, NEWS_SENTIMENT_PROMPT, promptMap, creativePromptMap, INVESTMENT_MEMO_PROMPT, ENABLE_STARTER_PLAN_MODE, STARTER_SYMBOLS } from './config.js';
-import { getFmpStockData, callApi, filterValidNews, callGeminiApi, generatePolishedArticle, getDriveToken, getOrCreateDriveFolder, createDriveFile, getGroupedFmpData, generateMorningBriefing, calculatePortfolioHealthScore, runOpportunityScanner, generatePortfolioAnalysis, generateTrendAnalysis } from './api.js';
+import { getFmpStockData, callApi, filterValidNews, callGeminiApi, generatePolishedArticle, getDriveToken, getOrCreateDriveFolder, createDriveFile, getGroupedFmpData, generateMorningBriefing, calculatePortfolioHealthScore, runOpportunityScanner, generatePortfolioAnalysis, generateTrendAnalysis, getCachedNews } from './api.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- PROMPT MAPPING ---
@@ -663,13 +664,15 @@ async function openRawDataViewer(ticker) {
     const profileDisplayContainer = document.getElementById('company-profile-display-container');
     const titleEl = document.getElementById('raw-data-viewer-modal-title');
     const trendContentContainer = document.getElementById('trend-analysis-content');
+    const newsContentContainer = document.getElementById('news-content-container');
     
     titleEl.textContent = `Analyzing ${ticker}...`;
     rawDataContainer.innerHTML = '<div class="loader mx-auto"></div>';
     aiButtonsContainer.innerHTML = '';
     aiArticleContainer.innerHTML = '';
     profileDisplayContainer.innerHTML = '';
-    trendContentContainer.innerHTML = ''; // Clear trend content on open
+    if (trendContentContainer) trendContentContainer.innerHTML = ''; // Clear trend content on open
+    if (newsContentContainer) newsContentContainer.innerHTML = ''; // Clear news content on open
 
     document.querySelectorAll('#rawDataViewerModal .tab-content').forEach(c => c.classList.add('hidden'));
     document.querySelectorAll('#rawDataViewerModal .tab-button').forEach(b => b.classList.remove('active'));
@@ -1462,6 +1465,51 @@ async function handleTrendAnalysisRequest(ticker) {
     }
 }
 
+// --- NEW CACHED NEWS TAB ---
+function renderCachedNews(container, articles, ticker) {
+    if (!articles || articles.length === 0) {
+        container.innerHTML = `<div class="text-center text-gray-500 py-16">
+            <h3 class="mt-2 text-lg font-medium text-gray-900">No Cached News Found</h3>
+            <p class="mt-1 text-sm text-gray-500">No news for ${ticker} has been stored in the database. Run the Opportunity Scanner to cache the latest news.</p>
+        </div>`;
+        return;
+    }
+
+    const articlesHtml = articles.map(article => {
+        const publishedDate = article.publishedDate ? new Date(article.publishedDate).toLocaleDateString() : 'No Date';
+        return `
+            <div class="mb-4 p-4 rounded-lg border border-gray-200 bg-white shadow-sm">
+                <a href="${sanitizeText(article.url)}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:underline font-semibold block mb-2">${sanitizeText(article.title)}</a>
+                <p class="text-sm text-gray-700 mb-3">${sanitizeText(article.text)}</p>
+                <div class="flex flex-wrap items-center gap-2 text-xs font-medium">
+                    <span class="px-2 py-1 rounded-full bg-gray-200 text-gray-800">${sanitizeText(article.site)}</span>
+                    <span class="px-2 py-1 rounded-full bg-gray-200 text-gray-800">${sanitizeText(publishedDate)}</span>
+                </div>
+            </div>
+        `;
+    }).join('');
+    container.innerHTML = `<h3 class="text-xl font-bold text-gray-800 mb-4">Cached News for ${ticker}</h3>${articlesHtml}`;
+}
+
+async function handleNewsTabRequest(ticker) {
+    const contentContainer = document.getElementById('news-content-container');
+    if (!contentContainer) return;
+
+    if (contentContainer.innerHTML.trim() !== '') {
+        return;
+    }
+
+    contentContainer.innerHTML = '<div class="flex justify-center items-center h-full pt-16"><div class="loader"></div></div>';
+
+    try {
+        const articles = await getCachedNews(ticker);
+        renderCachedNews(contentContainer, articles, ticker);
+    } catch (error) {
+        console.error("Error fetching cached news:", error);
+        contentContainer.innerHTML = '<p class="text-red-500 text-center">Could not load cached news.</p>';
+    }
+}
+
 
 // --- EVENT LISTENER SETUP ---
 
@@ -1767,10 +1815,7 @@ export function setupEventListeners() {
         if (target.matches('.tab-button')) {
             const tabId = target.dataset.tab;
             document.querySelectorAll('#rawDataViewerModal .tab-content').forEach(c => {
-                // Don't hide the trend analysis tab content once it's loaded
-                if (c.id !== 'trend-analysis-tab') {
-                    c.classList.add('hidden');
-                }
+                c.classList.add('hidden');
             });
             document.querySelectorAll('#rawDataViewerModal .tab-button').forEach(b => b.classList.remove('active'));
             
@@ -1778,10 +1823,12 @@ export function setupEventListeners() {
             activeTabContent.classList.remove('hidden');
             target.classList.add('active');
 
-            if (tabId === 'trend-analysis') {
-                const symbol = document.getElementById('rawDataViewerModal').dataset.activeSymbol;
-                if (symbol) {
+            const symbol = document.getElementById('rawDataViewerModal').dataset.activeSymbol;
+            if (symbol) {
+                if (tabId === 'trend-analysis') {
                     handleTrendAnalysisRequest(symbol);
+                } else if (tabId === 'news') {
+                    handleNewsTabRequest(symbol);
                 }
             }
             return;
