@@ -1976,7 +1976,7 @@ function _calculateDeepDiveMetrics(data, newsNarrative) {
         netIncomeTrend: formatLargeNumberTrend(income, 'netIncome'),
         
         // Financial Health
-        debtToEquityTrend: formatTrend(ratios, 'debtToEquityRatio'),
+        debtToEquityTrend: formatTrend(ratios, 'debtEquityRatio'),
         cashFlowVsNetIncome: `Operating Cash Flow (${formatLargeNumber(latestCashFlow.operatingCashFlow)}) vs. Net Income (${formatLargeNumber(latestIncome.netIncome)}).`,
         dividendYield: latestMetrics.dividendYield ? `${(latestMetrics.dividendYield * 100).toFixed(2)}%` : 'N/A',
         fcfPayoutRatio: (latestCashFlow.freeCashFlow > 0) ? `${(Math.abs(latestCashFlow.dividendsPaid || 0) / latestCashFlow.freeCashFlow * 100).toFixed(2)}%` : 'N/A',
