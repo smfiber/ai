@@ -1821,9 +1821,11 @@ export function setupEventListeners() {
     });
 
     document.getElementById('rawDataViewerModal').addEventListener('click', (e) => {
+        const modal = document.getElementById('rawDataViewerModal');
+        const activeSymbol = modal.dataset.activeSymbol;
         const target = e.target.closest('button');
         if (!target) return;
-
+    
         if (target.matches('.tab-button')) {
             const tabId = target.dataset.tab;
             document.querySelectorAll('#rawDataViewerModal .tab-content').forEach(c => {
@@ -1834,25 +1836,23 @@ export function setupEventListeners() {
             const activeTabContent = document.getElementById(`${tabId}-tab`);
             activeTabContent.classList.remove('hidden');
             target.classList.add('active');
-
-            const symbol = document.getElementById('rawDataViewerModal').dataset.activeSymbol;
-            if (symbol) {
+    
+            if (activeSymbol) {
                 if (tabId === 'trend-analysis') {
-                    handleTrendAnalysisRequest(symbol);
+                    handleTrendAnalysisRequest(activeSymbol);
                 } else if (tabId === 'news') {
-                    handleNewsTabRequest(symbol);
+                    handleNewsTabRequest(activeSymbol);
                 } else if (tabId === 'scanner-results') {
-                    handleScannerResultsRequest(symbol);
+                    handleScannerResultsRequest(activeSymbol);
                 }
             }
             return;
         }
         
-        const symbol = target.dataset.symbol;
-        if (!symbol) return;
-        
         if (target.id === 'deep-dive-analysis-button') {
-            handleDeepDiveRequest(symbol);
+            if (activeSymbol) {
+                handleDeepDiveRequest(activeSymbol);
+            }
         }
     });
 	
