@@ -159,7 +159,8 @@ async function handleRefreshFmpData(symbol) {
             { name: 'stock_grade_news', path: 'grade', version: 'v3' },
             { name: 'analyst_estimates', path: 'analyst-estimates', version: 'v3'},
             { name: 'company_core_information', path: 'company-core-information', version: 'v4', symbolAsQuery: true },
-            { name: 'executive_compensation', path: 'governance-executive-compensation', version: 'stable', symbolAsQuery: true }
+            { name: 'executive_compensation', path: 'governance-executive-compensation', version: 'stable', symbolAsQuery: true },
+            { name: 'insider_trading_stats', path: 'insider-trading/statistics', version: 'stable', symbolAsQuery: true }
         ];
 
         let successfulFetches = 0;
@@ -2061,9 +2062,10 @@ async function getSavedReports(ticker, reportType) {
  * Calculates a comprehensive summary of metrics for the "Deep Dive" prompt.
  * @param {object} data - The full FMP data object for a stock.
  * @param {string} newsNarrative - A concise summary of the recent news narrative.
+ * @param {Array|null} institutionalHolders - Data from SEC-API.io.
  * @returns {object} A summary object with pre-calculated metrics and trends.
  */
-function _calculateDeepDiveMetrics(data, newsNarrative) {
+function _calculateDeepDiveMetrics(data, newsNarrative, institutionalHolders) {
     const profile = data.profile?.[0] || {};
     const income = (data.income_statement_annual || []).slice().reverse(); // Oldest to newest
     const keyMetrics = (data.key_metrics_annual || []).slice().reverse();
@@ -2071,6 +2073,7 @@ function _calculateDeepDiveMetrics(data, newsNarrative) {
     const ratios = (data.ratios_annual || []).slice().reverse();
     const analystEstimates = data.analyst_estimates || [];
     const analystGrades = data.stock_grade_news || [];
+    const insiderStats = data.insider_trading_stats || [];
 
     const latestMetrics = keyMetrics[keyMetrics.length - 1] || {};
     const latestCashFlow = cashFlow[cashFlow.length - 1] || {};
@@ -2109,7 +2112,6 @@ function _calculateDeepDiveMetrics(data, newsNarrative) {
         return `Current ${ratioKey} is ${current ? current.toFixed(2) : 'N/A'}.`;
     };
 
-    // --- NEW: Process Analyst Data ---
     const nextYearEstimate = analystEstimates[0] || {};
     const lastActualRevenue = latestIncome.revenue;
     let revenueGrowthForecast = 'N/A';
@@ -2122,13 +2124,10 @@ function _calculateDeepDiveMetrics(data, newsNarrative) {
     );
 
     return {
-        // Core Info
         description: profile.description,
         sector: profile.sector,
         industry: profile.industry,
         currentPrice: profile.price || 'N/A',
-
-        // NEW: Forward-Looking Data
         analystConsensus: {
             nextYearRevenueForecast: formatLargeNumber(nextYearEstimate.estimatedRevenueAvg),
             nextYearEpsForecast: nextYearEstimate.estimatedEpsAvg ? nextYearEstimate.estimatedEpsAvg.toFixed(2) : 'N/A',
@@ -2136,21 +2135,34 @@ function _calculateDeepDiveMetrics(data, newsNarrative) {
         },
         recentAnalystRatings: recentRatings,
         recentNewsNarrative: newsNarrative,
-        
-        // Historical Performance & Quality
+        insiderTransactionSummary: (() => {
+            const stats6m = insiderStats.find(s => s.period === '6M');
+            if (!stats6m) return 'Insider transaction data for the last 6 months is not available.';
+            const netShares = stats6m.totalBought - stats6m.totalSold;
+            if (netShares > 0) {
+                return `Over the last 6 months, insiders were net buyers of ${netShares.toLocaleString()} shares.`;
+            } else if (netShares < 0) {
+                return `Over the last 6 months, insiders were net sellers of ${Math.abs(netShares).toLocaleString()} shares.`;
+            } else {
+                return 'Over the last 6 months, there was no net buying or selling by insiders.';
+            }
+        })(),
+        topInstitutionalHolders: (() => {
+            if (!institutionalHolders || institutionalHolders.length === 0) {
+                return ['Institutional ownership data not available.'];
+            }
+            const sortedHolders = institutionalHolders.sort((a, b) => b.value - a.value);
+            return sortedHolders.slice(0, 5).map(h => h.name);
+        })(),
         roeTrend: formatTrend(ratios, 'returnOnEquity'),
         grossMarginTrend: formatTrend(ratios, 'grossProfitMargin'),
         netMarginTrend: formatTrend(ratios, 'netProfitMargin'),
         revenueTrend: formatLargeNumberTrend(income, 'revenue'),
         netIncomeTrend: formatLargeNumberTrend(income, 'netIncome'),
-        
-        // Financial Health
         debtToEquityTrend: formatTrend(ratios, 'debtEquityRatio'),
         cashFlowVsNetIncome: `Operating Cash Flow (${formatLargeNumber(latestCashFlow.operatingCashFlow)}) vs. Net Income (${formatLargeNumber(latestIncome.netIncome)}).`,
         dividendYield: latestMetrics.dividendYield ? `${(latestMetrics.dividendYield * 100).toFixed(2)}%` : 'N/A',
         fcfPayoutRatio: (latestCashFlow.freeCashFlow > 0) ? `${(Math.abs(latestCashFlow.dividendsPaid || 0) / latestCashFlow.freeCashFlow * 100).toFixed(2)}%` : 'N/A',
-        
-        // Valuation
         pe_valuation: valuation('peRatio', 'P/E'),
         ps_valuation: valuation('priceToSalesRatio', 'P/S'),
         pb_valuation: valuation('pbRatio', 'P/B'),
@@ -2186,7 +2198,7 @@ async function handleDeepDiveRequest(symbol, forceNew = false) {
         const data = await getFmpStockData(symbol);
         if (!data) throw new Error(`No cached FMP data found for ${symbol}.`);
         
-        const requiredEndpoints = ['profile', 'ratios_annual', 'key_metrics_annual', 'income_statement_annual', 'cash_flow_statement_annual', 'analyst_estimates', 'stock_grade_news'];
+        const requiredEndpoints = ['profile', 'ratios_annual', 'key_metrics_annual', 'income_statement_annual', 'cash_flow_statement_annual', 'analyst_estimates', 'stock_grade_news', 'insider_trading_stats'];
         const missingEndpoints = requiredEndpoints.filter(ep => !data[ep] || data[ep].length === 0);
 
         if (missingEndpoints.length > 0) {
@@ -2201,6 +2213,29 @@ async function handleDeepDiveRequest(symbol, forceNew = false) {
             );
             return;
         }
+
+        loadingMessage.textContent = `Fetching institutional ownership for ${symbol}...`;
+        let institutionalHolders = null;
+        if (state.secApiKey) {
+            try {
+                const query = {
+                    "query": { "query_string": { "query": `ticker:\"${symbol}\" AND formType:\"13F-HR\"` } },
+                    "from": "0",
+                    "size": "1",
+                    "sort": [{ "filedAt": { "order": "desc" } }]
+                };
+                const secResponse = await callApi(`https://api.sec-api.io/query?token=${state.secApiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(query)
+                });
+                if (secResponse && secResponse.filings && secResponse.filings.length > 0) {
+                    institutionalHolders = secResponse.filings[0].holdings;
+                }
+            } catch (secError) {
+                console.warn(`Could not fetch institutional ownership data for ${symbol}:`, secError);
+            }
+        }
         
         loadingMessage.textContent = `Analyzing recent news for ${symbol}...`;
         const profile = data.profile?.[0] || {};
@@ -2209,7 +2244,7 @@ async function handleDeepDiveRequest(symbol, forceNew = false) {
         
         const newsSummary = await generateNewsSummary(tickerSymbol, companyName);
 
-        const payloadData = _calculateDeepDiveMetrics(data, newsSummary.dominant_narrative);
+        const payloadData = _calculateDeepDiveMetrics(data, newsSummary.dominant_narrative, institutionalHolders);
 
         const prompt = DEEP_DIVE_PROMPT
             .replace(/{companyName}/g, companyName)
