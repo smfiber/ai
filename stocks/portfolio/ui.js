@@ -2224,7 +2224,7 @@ async function handleDeepDiveRequest(symbol, forceNew = false) {
                     "size": "1",
                     "sort": [{ "filedAt": { "order": "desc" } }]
                 };
-                const secResponse = await callApi(`https://api.sec-api.io/query?token=${state.secApiKey}`, {
+                const secResponse = await callApi(`https://api.sec-api.io?token=${state.secApiKey}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(query)
