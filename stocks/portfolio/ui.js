@@ -221,7 +221,19 @@ async function handleRefreshFmpData(symbol) {
         }
         
         displayMessageInModal(`Successfully fetched and updated data for ${successfulFetches} FMP endpoint(s).`, 'info');
-        await fetchAndCachePortfolioData(); // Refresh portfolio cache which might contain new FMP data references
+        await fetchAndCachePortfolioData(); // Refresh portfolio cache
+        
+        // Refresh stock list modal if it's open
+        if (document.getElementById(CONSTANTS.MODAL_STOCK_LIST).classList.contains(CONSTANTS.CLASS_MODAL_OPEN)) {
+            const modal = document.getElementById(CONSTANTS.MODAL_STOCK_LIST);
+            const activeTabButton = modal.querySelector('.modal-tab-button.active');
+            if (activeTabButton) {
+                const listType = activeTabButton.dataset.tab === 'portfolio' ? 'Portfolio' : 'Watchlist';
+                const containerId = listType === 'Portfolio' ? 'portfolio-tab-pane' : 'watchlist-tab-pane';
+                document.getElementById(containerId).innerHTML = ''; // Clear to force reload
+                await _renderStockListForTab(listType);
+            }
+        }
 
     } catch (error) {
         console.error("Error fetching FMP data:", error);
@@ -399,6 +411,12 @@ export async function renderAllocationChart() {
                     tree: chartData,
                     key: 'value',
                     groups: ['sector'],
+                    captions: {
+                        display: true,
+                        color: 'rgba(255, 255, 255, 0.8)',
+                        font: { size: 16, weight: 'bold' },
+                        padding: 6,
+                    },
                     labels: {
                         display: true,
                         formatter: (ctx) => ctx.raw._data.ticker,
@@ -408,7 +426,11 @@ export async function renderAllocationChart() {
                     backgroundColor: (ctx) => {
                         if (ctx.type === 'data') {
                             const sector = ctx.raw._data.sector;
-                            return sectorColors[sector] || '#CCCCCC';
+                            const baseColor = sectorColors[sector] || '#CCCCCC';
+                            return Chart.helpers.color(baseColor).darken(0.2).rgbString();
+                        }
+                        if (ctx.type === 'group') {
+                            return sectorColors[ctx.raw.g] || '#CCCCCC';
                         }
                         return 'transparent';
                     },
@@ -424,11 +446,21 @@ export async function renderAllocationChart() {
                     legend: { display: false },
                     tooltip: {
                         callbacks: {
-                            title: (item) => item[0].raw._data.sector,
+                            title: (items) => {
+                                const item = items[0];
+                                const raw = item.raw;
+                                return raw.g ? raw.g : raw._data.sector;
+                            },
                             label: (item) => {
-                                const stock = item.raw._data;
-                                const percentage = ((stock.value / totalPortfolioValue) * 100).toFixed(2);
-                                return `${stock.ticker}: ${formatCurrency(stock.value)} (${percentage}%)`;
+                                const raw = item.raw;
+                                const value = raw.v;
+                                const percentage = totalPortfolioValue > 0 ? ((value / totalPortfolioValue) * 100).toFixed(2) : 0;
+                                if (raw.g) {
+                                    return `${formatCurrency(value)} (${percentage}%)`;
+                                } else {
+                                    const stock = raw._data;
+                                    return `${stock.ticker}: ${formatCurrency(value)} (${percentage}%)`;
+                                }
                             }
                         }
                     }
@@ -684,6 +716,17 @@ async function handleDeleteStock(ticker) {
                 await fetchAndCachePortfolioData();
                 if(document.getElementById(CONSTANTS.MODAL_PORTFOLIO_MANAGER).classList.contains(CONSTANTS.CLASS_MODAL_OPEN)) {
                     renderPortfolioManagerList();
+                }
+                // Refresh stock list modal if it's open
+                if (document.getElementById(CONSTANTS.MODAL_STOCK_LIST).classList.contains(CONSTANTS.CLASS_MODAL_OPEN)) {
+                    const modal = document.getElementById(CONSTANTS.MODAL_STOCK_LIST);
+                    const activeTabButton = modal.querySelector('.modal-tab-button.active');
+                    if (activeTabButton) {
+                        const listType = activeTabButton.dataset.tab === 'portfolio' ? 'Portfolio' : 'Watchlist';
+                        const containerId = listType === 'Portfolio' ? 'portfolio-tab-pane' : 'watchlist-tab-pane';
+                        document.getElementById(containerId).innerHTML = ''; // Clear to force reload
+                        await _renderStockListForTab(listType);
+                    }
                 }
                 renderPortfolioValue(); // Refresh dashboard value
             } catch (error) {
