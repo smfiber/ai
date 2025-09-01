@@ -1,6 +1,6 @@
 // config.js
 // --- App Version ---
-export const APP_VERSION = "14.34.0";
+export const APP_VERSION = "14.36.0";
 
 // --- Shared State ---
 // This object will hold all the application's shared state.
@@ -723,7 +723,7 @@ Your analysis must be structured as follows:
 - Compare your SOTP value to the current market cap. If there's a significant discount, summarize the activist thesis.
 - What are the **specific catalysts (e.g., spin-offs, divestitures, a new management team)** that could unlock this value for shareholders?
 
-When you mention a stock ticker, you MUST wrap it in a special tag like this: <stock-sticker>TICKER</stock-sticker>.
+When you mention a stock ticker, you MUST wrap it in a special tag like this: <stock-ticker>TICKER</stock-ticker>.
 `;
 
 export const UNTOUCHABLES_ANALYSIS_PROMPT = `
@@ -757,5 +757,5 @@ Your analysis must be structured as follows:
 ## 6. The Long-Term Investment Thesis
 - Conclude by explaining why this powerful brand—**validated by its financial performance and after considering the risks and valuation**—creates a durable competitive advantage that is extremely difficult to replicate, leading to predictable long-term profits.
 
-When you mention a stock ticker, you MUST wrap it in a special tag like this: <stock-sticker>TICKER</stock-sticker>.
+When you mention a stock ticker, you MUST wrap it in a special tag like this: <stock-ticker>TICKER</stock-ticker>.
 `;
