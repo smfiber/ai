@@ -3,6 +3,9 @@ import { CONSTANTS, SECTORS, SECTOR_ICONS, state, NEWS_SENTIMENT_PROMPT, DEEP_DI
 import { getFmpStockData, callApi, filterValidNews, callGeminiApi, generatePolishedArticle, getDriveToken, getOrCreateDriveFolder, createDriveFile, getGroupedFmpData, generateMorningBriefing, calculatePortfolioHealthScore, runOpportunityScanner, generatePortfolioAnalysis, generateTrendAnalysis, getCachedNews, getScannerResults, generateNewsSummary } from './api.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+// --- CHART INSTANCES ---
+let allocationChartInstance = null;
+
 // --- UTILITY & SECURITY HELPERS ---
 
 function formatLargeNumber(value, precision = 2) {
@@ -319,6 +322,123 @@ export async function renderPortfolioValue() {
     } catch (error) {
         console.error("Error rendering portfolio value:", error);
         valueDisplay.textContent = 'Error';
+    }
+}
+
+export async function renderAllocationChart() {
+    const container = document.getElementById('allocation-chart-container');
+    if (!container) return;
+
+    if (allocationChartInstance) {
+        allocationChartInstance.destroy();
+        allocationChartInstance = null;
+    }
+    container.innerHTML = '<canvas id="allocation-chart"></canvas>';
+    const ctx = document.getElementById('allocation-chart').getContext('2d');
+
+    try {
+        const portfolioStocks = state.portfolioCache.filter(s => s.status === 'Portfolio' && s.shares > 0);
+        const cashBalance = state.cashBalance || 0;
+
+        if (portfolioStocks.length === 0 && cashBalance <= 0) {
+            container.innerHTML = `<p class="text-center text-sm text-gray-500">Add stocks to your portfolio to see allocation.</p>`;
+            return;
+        }
+
+        container.innerHTML = '<div class="loader"></div>';
+
+        const dataPromises = portfolioStocks.map(stock => getFmpStockData(stock.ticker));
+        const allStockData = await Promise.all(dataPromises);
+
+        let totalPortfolioValue = 0;
+        const chartData = [];
+
+        allStockData.forEach((fmpData, index) => {
+            const stock = portfolioStocks[index];
+            const price = fmpData?.profile?.[0]?.price;
+            const sector = stock.sector || 'Uncategorized';
+            if (price && stock.shares) {
+                const value = price * stock.shares;
+                totalPortfolioValue += value;
+                chartData.push({ value, ticker: stock.ticker, sector });
+            }
+        });
+        
+        if (cashBalance > 0) {
+            chartData.push({ value: cashBalance, ticker: 'Cash', sector: 'Cash' });
+            totalPortfolioValue += cashBalance;
+        }
+
+        if (chartData.length === 0) {
+             container.innerHTML = `<p class="text-center text-sm text-gray-500">Could not calculate portfolio values.</p>`;
+             return;
+        }
+
+        container.innerHTML = '<canvas id="allocation-chart"></canvas>';
+        const finalCtx = document.getElementById('allocation-chart').getContext('2d');
+
+        const sectorColors = {};
+        const sectors = [...new Set(chartData.map(d => d.sector))];
+        sectors.forEach(sector => {
+            if (sector === 'Cash') {
+                sectorColors['Cash'] = '#6b7280'; // Gray for cash
+                return;
+            }
+            let hash = 0;
+            for (let i = 0; i < sector.length; i++) {
+                hash = sector.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            const color = (hash & 0x00FFFFFF).toString(16).toUpperCase();
+            sectorColors[sector] = "#" + "00000".substring(0, 6 - color.length) + color;
+        });
+
+        allocationChartInstance = new Chart(finalCtx, {
+            type: 'treemap',
+            data: {
+                datasets: [{
+                    tree: chartData,
+                    key: 'value',
+                    groups: ['sector'],
+                    labels: {
+                        display: true,
+                        formatter: (ctx) => ctx.raw._data.ticker,
+                        color: 'white',
+                        font: { weight: 'bold', size: 14 }
+                    },
+                    backgroundColor: (ctx) => {
+                        if (ctx.type === 'data') {
+                            const sector = ctx.raw._data.sector;
+                            return sectorColors[sector] || '#CCCCCC';
+                        }
+                        return 'transparent';
+                    },
+                    borderColor: 'white',
+                    borderWidth: 2,
+                    spacing: 1
+                }]
+            },
+            options: {
+                maintainAspectRatio: false,
+                plugins: {
+                    title: { display: false },
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            title: (item) => item[0].raw._data.sector,
+                            label: (item) => {
+                                const stock = item.raw._data;
+                                const percentage = ((stock.value / totalPortfolioValue) * 100).toFixed(2);
+                                return `${stock.ticker}: ${formatCurrency(stock.value)} (${percentage}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+    } catch (error) {
+        console.error("Error rendering allocation chart:", error);
+        container.innerHTML = `<p class="text-center text-xs text-red-500">Could not load chart: ${error.message}</p>`;
     }
 }
 
@@ -1534,6 +1654,7 @@ function setupGlobalEventListeners() {
             await renderPortfolioValue();
             await renderMorningBriefing();
             await renderPortfolioHealthScore();
+            await renderAllocationChart();
             return;
         }
 
@@ -1604,6 +1725,11 @@ function setupGlobalEventListeners() {
 
         if (target.id === 'add-new-stock-button') {
             openManageStockModal({});
+            return;
+        }
+
+        if (target.id === 'refresh-manager-list-button') {
+            renderPortfolioManagerList();
             return;
         }
 
