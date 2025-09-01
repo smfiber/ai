@@ -2119,9 +2119,18 @@ function _calculateDeepDiveMetrics(data, newsNarrative, institutionalHolders) {
         revenueGrowthForecast = `${(((nextYearEstimate.estimatedRevenueAvg / lastActualRevenue) - 1) * 100).toFixed(2)}%`;
     }
     
-    const recentRatings = analystGrades.slice(0, 5).map(grade => 
-        `${grade.action} to '${grade.newGrade}' by ${grade.gradingCompany} on ${grade.date}`
-    );
+    const recentRatings = analystGrades.slice(0, 5).map(grade => {
+        const action = grade.action?.toLowerCase();
+        const from = grade.previousGrade;
+        const to = grade.newGrade;
+        const firm = grade.gradingCompany;
+        const date = grade.date;
+
+        if (action === 'initiate' || !from || from.toLowerCase() === 'undefined') {
+            return `Initiated coverage with '${to}' rating by ${firm} on ${date}`;
+        }
+        return `${grade.action} from '${from}' to '${to}' by ${firm} on ${date}`;
+    });
 
     return {
         description: profile.description,
