@@ -160,7 +160,7 @@ async function handleRefreshFmpData(symbol) {
             { name: 'analyst_estimates', path: 'analyst-estimates', version: 'v3'},
             { name: 'company_core_information', path: 'company-core-information', version: 'v4', symbolAsQuery: true },
             { name: 'executive_compensation', path: 'governance-executive-compensation', version: 'stable', symbolAsQuery: true },
-            { name: 'insider_trading_stats', path: 'insider-trading/statistics', version: 'stable', symbolAsQuery: true }
+            { name: 'insider_trading_stats', path: 'insider-trading/search', params: 'limit=100', version: 'stable', symbolAsQuery: true }
         ];
 
         let successfulFetches = 0;
