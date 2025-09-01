@@ -551,7 +551,7 @@ font-size: 0.75rem;
 <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth-compat.js"></script>
 
 <script>
-    // Version 5.4.0
+    // Version 5.5.0
     document.addEventListener("DOMContentLoaded", () => {
         // --- 1. Global Configuration Object ---
         const appConfig = {
@@ -1420,7 +1420,8 @@ font-size: 0.75rem;
                 prompt: (exchange, articlesText) => `
                     Act as an expert financial analyst. I will provide you with a list of recent news articles as JSON objects for the ${exchange.toUpperCase()} stock exchange from the last 30 days.
                     Your task is to synthesize this information into a concise market briefing.
-                    Please structure your analysis into three parts:
+                    If the provided "NEWS ARTICLES" list is empty, you MUST respond with only this message: "No recent news was available to generate a market summary for this exchange."
+                    If news is available, please structure your analysis into three parts:
                     1.  **Key Themes:** In bullet points, identify 2-3 dominant themes or narratives driving analyst commentary (e.g., AI investment, inflation concerns, specific sector strength).
                     2.  **Overall Sentiment:** State the prevailing market sentiment (e.g., Bullish 🐂, Bearish 🐻, or Mixed/Neutral ⚖️) and provide a one-sentence justification based on the balance of positive versus negative analyst ratings.
                     3.  **Notable Movers:** Mention 1-2 companies that received particularly significant or frequent analyst attention.
@@ -1434,10 +1435,12 @@ font-size: 0.75rem;
                 requiresSymbol: false,
                 prompt: (exchange, articlesText) => `
                     Act as a macro-focused financial analyst. Using the provided news (as JSON objects) from the ${exchange.toUpperCase()}, perform a sector-level sentiment analysis.
-                    You will need to infer the sector for each company (e.g., technology, healthcare, financials, consumer discretionary), likely from the company name or your own knowledge.
-                    1.  Identify the 3 sectors that received the most news coverage in the dataset.
-                    2.  For each of these top 3 sectors, assign a sentiment score (e.g., Positive, Negative, Neutral).
-                    3.  Provide a 1-2 sentence justification for the assigned sentiment, referencing specific company examples or trends. Format using Markdown.
+                    If the provided "NEWS ARTICLES" list is empty, you MUST respond with only this message: "No recent news was available to perform a sector sentiment analysis."
+                    If news is available:
+                    1.  You will need to infer the sector for each company (e.g., technology, healthcare, financials, consumer discretionary), likely from the company name or your own knowledge.
+                    2.  Identify the 3 sectors that received the most news coverage in the dataset.
+                    3.  For each of these top 3 sectors, assign a sentiment score (e.g., Positive, Negative, Neutral).
+                    4.  Provide a 1-2 sentence justification for the assigned sentiment, referencing specific company examples or trends. Format using Markdown.
                     NEWS ARTICLES:
                     ${articlesText}`
             },
@@ -1447,11 +1450,12 @@ font-size: 0.75rem;
                 id: "top-upside",
                 requiresSymbol: false,
                 prompt: (exchange, articlesText) => `
-                    Act as a financial analyst for a growth-focused fund. Your goal is to identify stocks with the highest potential upside based on recent analyst price targets from the ${exchange.toUpperCase()}. The news is provided as JSON objects.
-                    Please perform the following:
-                    1.  For each article containing a price target, calculate the potential upside using the formula: Upside % = (priceTarget - priceWhenPosted) / priceWhenPosted.
-                    2.  Identify the top 5 stocks with the highest calculated potential upside.
-                    3.  Present the results in a Markdown numbered list, including the **stock symbol**, the **highest price target**, the **analyst firm** that set it, and the **calculated upside percentage**.
+                    Act as a financial analyst for a growth-focused fund. Your goal is to identify stocks with the highest potential upside based on recent analyst price targets from the ${exchange.toUpperCase()}, provided as JSON objects.
+                    First, examine the provided "NEWS ARTICLES (JSON)". If the list is empty or contains no articles with both a 'priceTarget' and a 'priceWhenPosted' value, you MUST respond with only this message: "No articles with actionable price targets were found in the provided news data."
+                    If such articles exist, perform the following:
+                    1. For each article with the required data, calculate the potential upside: Upside % = (priceTarget - priceWhenPosted) / priceWhenPosted.
+                    2. Identify the top 5 stocks with the highest calculated potential upside.
+                    3. Present the results in a Markdown numbered list, including the **stock symbol**, the **highest price target**, the **analyst firm** that set it, and the **calculated upside percentage**.
                     NEWS ARTICLES (JSON):
                     ${articlesText}`
             },
@@ -1462,7 +1466,7 @@ font-size: 0.75rem;
                 prompt: (exchange, articlesText) => `
                     Act as a financial analyst. Scan the provided news articles for any mentions of insider trading (buying or selling by executives) for companies on the ${exchange.toUpperCase()} exchange. 
                     Summarize any significant findings for specific companies in a bulleted list. 
-                    If no mentions are found, state "No significant insider activity was mentioned in the provided news articles."
+                    If no mentions are found, or if the news article list is empty, state "No significant insider activity was mentioned in the provided news articles."
                     NEWS ARTICLES:
                     ${articlesText}`
             },
@@ -1473,7 +1477,8 @@ font-size: 0.75rem;
                 prompt: (exchange, articlesText) => `
                     Act as a quantitative financial analyst. Based on the provided news articles as JSON objects for the ${exchange.toUpperCase()} stock exchange, identify the top 2-3 "battleground stocks."
                     These are stocks with the widest disparity in analyst price targets, indicating significant debate about their future value.
-                    For each identified battleground stock, provide:
+                    If the provided "NEWS ARTICLES (JSON)" list is empty or contains insufficient data to identify a clear price target range for any stock, you MUST respond with only this message: "Insufficient price target data was found to identify battleground stocks."
+                    If data is available, for each identified battleground stock, provide:
                     -   **Stock Symbol:** The ticker symbol.
                     -   **Price Target Range:** The highest and lowest price target issued in the provided data.
                     -   **Analyst Disagreement:** A brief (1-2 sentence) summary of the likely reasons for the conflicting opinions, as inferred from the data.
@@ -1487,20 +1492,29 @@ font-size: 0.75rem;
                 id: "financial-snapshot",
                 requiresSymbol: true,
                 prompt: (exchange, articlesText, symbol) => `
-                    Act as a financial data analyst. For the stock symbol ${symbol.toUpperCase()}, provide a concise "Financial Snapshot". Your response must be in Markdown and include:
-                    1. A table with the latest available key metrics: Revenue Growth (YoY), Net Profit Margin, and Debt to Equity.
-                    2. A one-sentence qualitative summary of the company's financial health (e.g., "Strong growth with high profitability," "Leveraged but profitable," etc.).
-                    You must use your general financial knowledge for this task.`
+                    Act as an equity analyst. For the stock symbol ${symbol.toUpperCase()}, provide a "News-Based Sentiment Summary" based ONLY on the provided news articles.
+                    Your response must be in Markdown and include:
+                    1.  **Overall Sentiment:** Based on the articles, classify the recent sentiment as Positive, Negative, or Neutral.
+                    2.  **Key News Drivers:** In a bulleted list, summarize 2-3 key topics or events driving the sentiment (e.g., "Positive analyst ratings," "Concerns about competition," "New product announcements").
+                    3.  **Qualitative Summary:** Provide a one-sentence qualitative summary of the company's perceived health based on the news (e.g., "Recent news suggests a positive outlook driven by strong analyst ratings," or "News flow indicates caution due to competitive pressures.").
+                    Do not use any external knowledge or data not present in the articles.
+                    NEWS ARTICLES for ${symbol.toUpperCase()}:
+                    ${articlesText}`
             },
             {
                 title: "Relative Valuation",
                 id: "relative-valuation",
                 requiresSymbol: true,
                 prompt: (exchange, articlesText, symbol) => `
-                    Act as an equity analyst. For the stock symbol ${symbol.toUpperCase()}, perform a brief relative valuation analysis. 
-                    First, identify its top 2-3 direct competitors. 
-                    Second, present a Markdown table comparing ${symbol.toUpperCase()} to these competitors on the following metrics: P/E Ratio and Price-to-Sales (P/S) Ratio. 
-                    Conclude with a one-sentence summary of whether the stock appears overvalued, undervalued, or fairly valued compared to its peers based on these metrics.`
+                    Act as an equity analyst. For the stock symbol ${symbol.toUpperCase()}, perform a "Peer Mention Analysis" based ONLY on the provided news articles.
+                    Scan the articles for any mentions of competitor companies.
+                    If no competitors are mentioned, respond with only this message: "No competitor mentions were found in the recent news for this stock."
+                    If competitors are mentioned, please provide:
+                    1.  A bulleted list of the competitor companies mentioned by name.
+                    2.  A brief summary of the context in which the competitors were mentioned (e.g., "Company X was mentioned as a key competitor in the cloud computing space," or "Analysts compared its growth to Company Y.").
+                    Do not use any external knowledge to identify competitors. Base your analysis solely on the text of the provided articles.
+                    NEWS ARTICLES for ${symbol.toUpperCase()}:
+                    ${articlesText}`
             },
             {
                 title: "Upgrades/Downgrades",
@@ -1508,13 +1522,13 @@ font-size: 0.75rem;
                 requiresSymbol: false,
                 prompt: (exchange, articlesText) => `
                     Act as an equity analyst. Your task is to track and summarize significant analyst rating changes from the provided news (as JSON objects) on the ${exchange.toUpperCase()}.
-                    Scan all headlines for keywords indicating a change (e.g., "Upgrades," "Downgrades," "Initiates Coverage," "Lowers Rating").
-                    Create two Markdown lists: **"Recent Upgrades"** and **"Recent Downgrades."**
+                    First, scan all headlines for keywords indicating a change (e.g., "Upgrades," "Downgrades," "Initiates Coverage," "Lowers Rating").
+                    If the provided news list is empty or no such rating changes are found, you MUST respond with only this message: "No significant analyst upgrades or downgrades were found in the recent news."
+                    If changes are found, create two Markdown lists: **"Recent Upgrades"** and **"Recent Downgrades."**
                     For each entry in the lists, provide:
                     -   The stock symbol.
                     -   The analyst firm making the change.
                     -   A 1-sentence summary of the new rating and price target (e.g., "Upgraded to Outperform with a $120 price target.").
-                    If there are no significant upgrades or downgrades, state that analyst sentiment appears stable.
                     NEWS ARTICLES (JSON):
                     ${articlesText}`
             },
@@ -1524,8 +1538,8 @@ font-size: 0.75rem;
                 requiresSymbol: false,
                 prompt: (exchange, articlesText) => `
                     Act as an equity analyst tracking sentiment momentum. From the provided news articles (as JSON objects) on the ${exchange.toUpperCase()}, identify stocks that have received multiple price target revisions within the last 30 days.
-                    Your goal is to find companies where analyst sentiment is actively shifting.
-                    Identify up to 3 companies with the most revisions and for each, describe the trend:
+                    If the provided news list is empty or no companies have multiple revisions, you MUST respond with only this message: "No stocks with multiple recent price target revisions were found."
+                    If such companies are found, identify up to 3 with the most revisions and for each, describe the trend:
                     -   **Stock Symbol:** The ticker symbol.
                     -   **Trend Direction:** Is the consensus price target trending Upward, Downward, or is it Mixed?
                     -   **Summary of Revisions:** Briefly explain the changes. For example: "Morgan Stanley raised its target from $150 to $175, followed by Goldman Sachs increasing its target to $180, indicating a strengthening positive outlook."
@@ -1539,7 +1553,8 @@ font-size: 0.75rem;
                 requiresSymbol: false,
                  prompt: (exchange, articlesText) => `
                     Act as a financial markets commentator. From the list of news articles (as JSON objects) for the ${exchange.toUpperCase()}, identify the most influential analysts in the past 30 days.
-                    Your analysis should name the **Top 3 Most Active Analysts** based on the number of reports in the data.
+                    If the provided "NEWS ARTICLES (JSON)" list is empty or too sparse to identify active analysts, you MUST respond with only this message: "Insufficient data to identify the most active analysts."
+                    If data is available, your analysis should name the **Top 3 Most Active Analysts** based on the number of reports in the data.
                     For each of these three analysts, provide:
                     -   **Analyst Name and Firm:** e.g., "Akash Tewari (Wolfe Research)".
                     -   **General Stance:** A brief description of their recent activity (e.g., "Appears bullish on the biotech sector, reiterating multiple 'Outperform' ratings.").
@@ -1555,6 +1570,8 @@ font-size: 0.75rem;
                 prompt: (exchange, articlesText) => `
                     Act as a financial markets strategist. I have provided a list of analyst actions as JSON objects on the ${exchange.toUpperCase()} stock exchange.
                     Your task is to analyze the "house view" of the most active analyst firms.
+                    If the provided "NEWS ARTICLES (JSON)" list is empty or no single firm has published multiple reports, you MUST respond with only this message: "Insufficient data to determine the house view for any analyst firm."
+                    If data is available:
                     1.  Identify the 3 firms (e.g., "Wolfe Research", "Goldman Sachs") with the highest number of published ratings in the dataset.
                     2.  For each of these top 3 firms, provide a 2-3 sentence summary of their overall stance.
                     3.  Note whether they appear generally bullish, bearish, or focused on a specific sector. Mention one stock they are particularly positive or negative on, if the data shows a clear example. Format using Markdown.
@@ -1585,6 +1602,7 @@ font-size: 0.75rem;
                 prompt: (exchange, articlesText, symbol) => `
                     Act as a risk analyst. Based on the provided news articles for ${symbol.toUpperCase()} and your general knowledge of the company, identify and summarize the top 3-5 key risks for the stock.
                     Categorize the risks if possible (e.g., Market Risk, Competitive Risk, Regulatory Risk). Present your findings as a bulleted list in Markdown.
+                    If the provided articles do not contain enough information to identify specific risks, state that "No specific risk factors were highlighted in the provided news articles."
                     NEWS ARTICLES for ${symbol.toUpperCase()}:
                     ${articlesText}`
             },
@@ -1595,12 +1613,12 @@ font-size: 0.75rem;
                 prompt: (exchange, articlesText) => `
                     Act as a special situations analyst. Your specific task is to scan the provided news (as JSON objects) from the ${exchange.toUpperCase()} and identify all instances of **new analyst coverage initiations.**
                     Filter for headlines containing keywords like "Initiates," "Starts," or "Begins Coverage."
-                    Present your findings as a Markdown summary list. For each new coverage initiation, detail:
+                    If the provided news list is empty or no new coverage initiations are found, you MUST respond with only this message: "No new analyst coverage initiations were found in the recent news."
+                    If initiations are found, present your findings as a Markdown summary list. For each new coverage initiation, detail:
                     -   **Stock Symbol:** The company being covered.
                     -   **Analyst Firm:** The firm initiating coverage.
                     -   **Initial Rating:** The starting rating (e.g., Buy, Hold, Outperform).
                     -   **Initial Price Target:** The new price target assigned to the stock.
-                    If no new coverage was initiated, simply state that.
                     NEWS ARTICLES (JSON):
                     ${articlesText}`
             }
