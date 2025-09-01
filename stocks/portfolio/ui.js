@@ -2227,19 +2227,10 @@ async function handleDeepDiveRequest(symbol, forceNew = false) {
         let institutionalHolders = null;
         if (state.secApiKey) {
             try {
-                const query = {
-                    "query": { "query_string": { "query": `ticker:\"${symbol}\" AND formType:\"13F-HR\"` } },
-                    "from": "0",
-                    "size": "1",
-                    "sort": [{ "filedAt": { "order": "desc" } }]
-                };
-                const secResponse = await callApi(`https://api.sec-api.io?token=${state.secApiKey}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(query)
-                });
-                if (secResponse && secResponse.filings && secResponse.filings.length > 0) {
-                    institutionalHolders = secResponse.filings[0].holdings;
+                const secUrl = `https://api.sec-api.io/filing/13f-hr?ticker=${symbol}&token=${state.secApiKey}`;
+                const secResponse = await callApi(secUrl); // This is a GET request by default in callApi
+                if (secResponse && Array.isArray(secResponse) && secResponse.length > 0) {
+                    institutionalHolders = secResponse;
                 }
             } catch (secError) {
                 console.warn(`Could not fetch institutional ownership data for ${symbol}:`, secError);
