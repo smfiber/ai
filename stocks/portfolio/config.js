@@ -1,6 +1,6 @@
 // config.js
 // --- App Version ---
-export const APP_VERSION = "14.29.0";
+export const APP_VERSION = "14.30.0";
 
 // --- Shared State ---
 // This object will hold all the application's shared state.
@@ -127,6 +127,8 @@ export const FINANCIAL_NEWS_SOURCES = [
 
 export const DEEP_DIVE_PROMPT = `
 Role: You are a senior investment analyst AI for a discerning, value-oriented fund. Your task is to synthesize a comprehensive set of financial data into a clear, decisive, and data-driven investment memo. Your analysis must be objective and based *exclusively* on the provided data.
+
+CRITICAL INSTRUCTION: The user is analyzing **{companyName} ({tickerSymbol})**. Your entire response MUST be about this specific company and its provided data. Do NOT mention or analyze any other company.
 
 Data Instructions: Your entire analysis MUST be based on the pre-calculated metrics and financial statements provided in the JSON data below. Do NOT attempt to recalculate any values. If a specific data point is "N/A" or missing, state that clearly in your analysis. Use simple analogies where appropriate to explain financial concepts.
 
