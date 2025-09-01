@@ -131,7 +131,7 @@ export async function generateMorningBriefing(portfolioStocks) {
     const dataPromises = portfolioStocks.map(stock => getFmpStockData(stock.ticker));
     
     const tickersString = portfolioStocks.map(s => s.ticker).join(',');
-    const newsUrl = `https://financialmodelingprep.com/api/v3/stock_news?tickers=${tickersString}&limit=5&apikey=${state.fmpApiKey}`;
+    const newsUrl = `https://financialmodelingprep.com/stable/news/stock?symbols=${tickersString}&limit=20&apikey=${state.fmpApiKey}`;
     const newsPromise = callApi(newsUrl);
 
     const [allStockData, allNews] = await Promise.all([
@@ -512,7 +512,7 @@ export async function runOpportunityScanner(stocksToScan, updateProgress) {
             updateProgress(processedCount, stocksToScan.length, `Analyzing ${stock.ticker}...`);
             
             // --- Fetch and Save FMP News ---
-            const newsUrl = `https://financialmodelingprep.com/api/v3/stock_news?tickers=${stock.ticker}&limit=10&apikey=${state.fmpApiKey}`;
+            const newsUrl = `https://financialmodelingprep.com/stable/news/stock?symbols=${stock.ticker}&limit=20&apikey=${state.fmpApiKey}`;
             const newsData = await callApi(newsUrl);
             const newsDocRef = doc(state.db, CONSTANTS.DB_COLLECTION_FMP_NEWS_CACHE, stock.ticker);
             await setDoc(newsDocRef, {
@@ -698,7 +698,7 @@ export async function generateTrendAnalysis(ticker) {
  */
 export async function generateNewsSummary(ticker, companyName) {
     try {
-        const newsUrl = `https://financialmodelingprep.com/api/v3/stock_news?tickers=${ticker}&limit=10&apikey=${state.fmpApiKey}`;
+        const newsUrl = `https://financialmodelingprep.com/stable/news/stock?symbols=${ticker}&limit=20&apikey=${state.fmpApiKey}`;
         const newsData = await callApi(newsUrl);
         const validArticles = filterValidNews(newsData);
         if (validArticles.length === 0) return { dominant_narrative: "No recent news found.", overall_sentiment: "Neutral" };
