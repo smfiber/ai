@@ -1,6 +1,6 @@
 // config.js
 // --- App Version ---
-export const APP_VERSION = "14.33.0";
+export const APP_VERSION = "14.34.0";
 
 // --- Shared State ---
 // This object will hold all the application's shared state.
@@ -14,6 +14,7 @@ export const state = {
     geminiApiKey: "",
     searchApiKey: "",
     searchEngineId: "",
+    secApiKey: "", // New state for SEC-API.io key
     googleClientId: "",
     driveTokenClient: null,
     driveFolderId: null,
@@ -62,6 +63,7 @@ export const CONSTANTS = {
     INPUT_GOOGLE_CLIENT_ID: 'googleClientIdInput',
     INPUT_WEB_SEARCH_KEY: 'webSearchApiKeyInput',
     INPUT_SEARCH_ENGINE_ID: 'searchEngineIdInput',
+    INPUT_SEC_KEY: 'secApiKeyInput', // New constant for SEC API input
     // Containers & Elements
     CONTAINER_DYNAMIC_CONTENT: 'dynamic-content-container',
     CONTAINER_PORTFOLIO_LIST: 'portfolio-list-container',
@@ -155,10 +157,13 @@ Begin with a concise, one-paragraph summary. What is the most important takeaway
 - Review the list of recent analyst ratings. What is the prevailing sentiment? Is there a clear trend of upgrades, downgrades, or mixed opinions?
 ### Key News Narrative
 - Summarize the dominant news narrative. How does this recent story frame the company's current situation and potential future?
+### Key Stakeholder Analysis
+- **Insider Transactions:** Based on the 6-month transaction summary, are company insiders net buyers or sellers of the stock? What does this suggest about their confidence in the company's near-term prospects?
+- **Institutional Ownership:** Who are the top institutional holders? Does the ownership structure suggest a high level of conviction from sophisticated investors?
 
 ## 3. Business Quality & Competitive Moat
 ### Business Description
-In simple terms, describe the company's business based on the provided 'description', 'sector', and 'industry'.
+In simple terms, describe the company's business based on the provided 'description', 'sector', 'industry'.
 ### Moat Analysis
 - **Return on Equity (ROE):** Explain ROE as a "report card" for how well management uses shareholder money. Based on the ROE trend, how effective and consistent is the company at generating profits from its equity?
 - **Margin Stability:** Analyze the trends in Gross and Net Profit Margins. Are they stable, expanding, or contracting? What does this suggest about the company's pricing power and competitive position?
@@ -718,7 +723,7 @@ Your analysis must be structured as follows:
 - Compare your SOTP value to the current market cap. If there's a significant discount, summarize the activist thesis.
 - What are the **specific catalysts (e.g., spin-offs, divestitures, a new management team)** that could unlock this value for shareholders?
 
-When you mention a stock ticker, you MUST wrap it in a special tag like this: <stock-ticker>TICKER</stock-ticker>.
+When you mention a stock ticker, you MUST wrap it in a special tag like this: <stock-sticker>TICKER</stock-sticker>.
 `;
 
 export const UNTOUCHABLES_ANALYSIS_PROMPT = `
@@ -752,5 +757,5 @@ Your analysis must be structured as follows:
 ## 6. The Long-Term Investment Thesis
 - Conclude by explaining why this powerful brand—**validated by its financial performance and after considering the risks and valuation**—creates a durable competitive advantage that is extremely difficult to replicate, leading to predictable long-term profits.
 
-When you mention a stock ticker, you MUST wrap it in a special tag like this: <stock-ticker>TICKER</stock-ticker>.
+When you mention a stock ticker, you MUST wrap it in a special tag like this: <stock-sticker>TICKER</stock-sticker>.
 `;
