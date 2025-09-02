@@ -303,7 +303,7 @@ async function handleRefreshInstitutionalOwnership(symbol) {
     loadingMessage.textContent = `Fetching Institutional Ownership for ${symbol}...`;
 
     try {
-        const secUrl = `https://api.sec-api.io/form-13f-holdings?token=${state.secApiKey}`;
+        const secUrl = `https://api.sec-api.io/form-13f/holdings?token=${state.secApiKey}`;
         const queryPayload = {
             "query": { "query": `ticker:\"${symbol}\"` },
             "from": "0",
