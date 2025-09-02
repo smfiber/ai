@@ -261,10 +261,6 @@ async function handleRefreshExecutiveComp(symbol) {
         return;
     }
 
-    const originalModal = document.getElementById('rawDataViewerModal');
-    const wasOpen = originalModal.classList.contains('is-open');
-
-    if (wasOpen) closeModal('rawDataViewerModal'); // Close to prevent UI conflicts
     openModal(CONSTANTS.MODAL_LOADING);
     const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
     loadingMessage.textContent = `Fetching Executive Compensation for ${symbol}...`;
@@ -284,11 +280,7 @@ async function handleRefreshExecutiveComp(symbol) {
         displayMessageInModal(`Could not fetch compensation data: ${error.message}`, 'error');
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
-        // Re-open/refresh the modal to show the new data
-        if (wasOpen) {
-            await openRawDataViewer(symbol);
-			await handleSecApiTabRequest(symbol);
-        }
+        await handleSecApiTabRequest(symbol);
     }
 }
 
@@ -303,11 +295,17 @@ async function handleRefreshInstitutionalOwnership(symbol) {
     loadingMessage.textContent = `Fetching Institutional Ownership for ${symbol}...`;
 
     try {
+        const fmpData = await getFmpStockData(symbol);
+        const cusip = fmpData?.profile?.[0]?.cusip;
+
+        const queryString = cusip ? `cusip:\"${cusip}\"` : `ticker:\"${symbol}\"`;
+        loadingMessage.textContent = `Querying by ${cusip ? 'CUSIP' : 'Ticker'} for ${symbol}...`;
+
         const secUrl = `https://api.sec-api.io/form-13f/holdings?token=${state.secApiKey}`;
         const queryPayload = {
             "query": {
                 "query_string": {
-                    "query": `ticker:\"${symbol}\"`
+                    "query": queryString
                 }
             },
             "from": "0",
@@ -2398,9 +2396,12 @@ async function handleDeepDiveRequest(symbol, forceNew = false) {
         let institutionalHolders = null;
         if (state.secApiKey) {
             try {
+                const cusip = data?.profile?.[0]?.cusip;
+                const queryString = cusip ? `cusip:\"${cusip}\"` : `ticker:\"${symbol}\"`;
+
                 const secUrl = `https://api.sec-api.io/form-13f/holdings?token=${state.secApiKey}`;
                 const queryPayload = {
-                    "query": { "query_string": { "query": `ticker:\"${symbol}\"` } },
+                    "query": { "query_string": { "query": queryString } },
                     "from": "0",
                     "size": "50",
                     "sort": [{ "sortBy": "value", "order": "desc" }]
