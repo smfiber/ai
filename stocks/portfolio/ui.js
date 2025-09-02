@@ -255,6 +255,42 @@ async function handleRefreshFmpData(symbol) {
     }
 }
 
+async function handleRefreshExecutiveComp(symbol) {
+    if (!state.secApiKey) {
+        displayMessageInModal("SEC-API.io API Key is required for this feature.", "warning");
+        return;
+    }
+
+    const originalModal = document.getElementById('rawDataViewerModal');
+    const wasOpen = originalModal.classList.contains('is-open');
+
+    if (wasOpen) closeModal('rawDataViewerModal'); // Close to prevent UI conflicts
+    openModal(CONSTANTS.MODAL_LOADING);
+    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+    loadingMessage.textContent = `Fetching Executive Compensation for ${symbol}...`;
+
+    try {
+        const secUrl = `https://api.sec-api.io/compensation/${symbol}?token=${state.secApiKey}`;
+        const data = await callApi(secUrl);
+        if (data && (!Array.isArray(data) || data.length > 0)) {
+            const docRef = doc(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, symbol, 'endpoints', 'executive_compensation');
+            await setDoc(docRef, { cachedAt: Timestamp.now(), data: data });
+            displayMessageInModal('Executive compensation data refreshed successfully!', 'info');
+        } else {
+            throw new Error("No data returned from the API.");
+        }
+    } catch (error) {
+        console.error("Error refreshing executive compensation:", error);
+        displayMessageInModal(`Could not fetch compensation data: ${error.message}`, 'error');
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+        // Re-open/refresh the modal to show the new data
+        if (wasOpen) {
+            await openRawDataViewer(symbol);
+        }
+    }
+}
+
 
 // --- PORTFOLIO & DASHBOARD MANAGEMENT ---
 
@@ -894,7 +930,7 @@ async function openRawDataViewer(ticker) {
         const sector = profile.sector || profile.marketSector || 'N/A';
         const filingsUrl = profile.secFilingsUrl || '';
 
-        let profileHtml = '<div class="mt-6 border-t pt-4">';
+        let profileHtml = '';
         if (imageUrl) {
             profileHtml += `
                 <div class="flex flex-col md:flex-row gap-6 items-start">
@@ -914,8 +950,52 @@ async function openRawDataViewer(ticker) {
              profileHtml += `<div class="col-span-2"><p class="font-semibold text-gray-500">SEC Filings</p><a href="${sanitizeText(filingsUrl)}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:underline">${sanitizeText(filingsUrl)}</a></div>`;
         }
         
-        profileHtml += `</div></div></div>`;
-        profileDisplayContainer.innerHTML = profileHtml;
+        profileHtml += `</div></div>`;
+        
+        // Render executive compensation
+        const execCompData = fmpData.executive_compensation;
+        let execCompHtml = `
+            <div class="mt-6 border-t pt-4">
+                <div class="flex justify-between items-center mb-3">
+                     <h3 class="text-lg font-bold text-gray-700">Executive Compensation</h3>
+                     <button class="refresh-exec-comp-button text-sm bg-cyan-100 text-cyan-700 hover:bg-cyan-200 font-semibold py-1 px-3 rounded-lg" data-ticker="${ticker}">Refresh Comp</button>
+                </div>
+        `;
+
+        if (execCompData && Array.isArray(execCompData) && execCompData.length > 0) {
+            const latestYear = Math.max(...execCompData.map(e => e.year));
+            const latestComp = execCompData.filter(e => e.year === latestYear).slice(0, 5);
+
+            execCompHtml += `
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm text-left text-gray-500">
+                        <thead class="text-xs text-gray-700 uppercase bg-gray-100">
+                            <tr>
+                                <th scope="col" class="px-4 py-2">Executive</th>
+                                <th scope="col" class="px-4 py-2">Title</th>
+                                <th scope="col" class="px-4 py-2 text-right">Year</th>
+                                <th scope="col" class="px-4 py-2 text-right">Total Comp.</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+            latestComp.forEach(exec => {
+                execCompHtml += `
+                    <tr class="bg-white border-b">
+                        <td class="px-4 py-2 font-medium text-gray-900">${sanitizeText(exec.name)}</td>
+                        <td class="px-4 py-2">${sanitizeText(exec.title)}</td>
+                        <td class="px-4 py-2 text-right">${exec.year}</td>
+                        <td class="px-4 py-2 text-right font-semibold">${formatCurrency(exec.total)}</td>
+                    </tr>
+                `;
+            });
+            execCompHtml += `</tbody></table></div>`;
+        } else {
+            execCompHtml += '<p class="text-sm text-gray-500">No executive compensation data has been cached. Please use the refresh button.</p>';
+        }
+        execCompHtml += '</div>';
+
+        profileDisplayContainer.innerHTML = profileHtml + execCompHtml;
 
     } catch (error) {
         console.error('Error opening raw data viewer:', error);
@@ -2033,6 +2113,12 @@ export function setupEventListeners() {
         if (target.id === 'deep-dive-analysis-button') {
             if (activeSymbol) {
                 handleDeepDiveRequest(activeSymbol);
+            }
+        }
+
+        if (target.matches('.refresh-exec-comp-button')) {
+            if (activeSymbol) {
+                handleRefreshExecutiveComp(activeSymbol);
             }
         }
     });
