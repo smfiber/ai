@@ -150,6 +150,7 @@ async function handleRefreshFmpData(symbol) {
     try {
         const coreEndpoints = [
             { name: 'profile', path: 'profile', version: 'v3' },
+            { name: 'exchange_variants', path: 'search-exchange-variants', version: 'stable', symbolAsQuery: true },
             { name: 'income_statement_annual', path: 'income-statement', params: 'period=annual&limit=10', version: 'v3' },
             { name: 'income_statement_growth_annual', path: 'income-statement-growth', params: 'period=annual&limit=5', version: 'stable', symbolAsQuery: true },
             { name: 'balance_sheet_statement_annual', path: 'balance-sheet-statement', params: 'period=annual&limit=10', version: 'v3' },
@@ -296,10 +297,24 @@ async function handleRefreshInstitutionalOwnership(symbol) {
 
     try {
         const fmpData = await getFmpStockData(symbol);
-        const cusip = fmpData?.profile?.[0]?.cusip;
+        const cik = fmpData?.exchange_variants?.[0]?.cik || fmpData?.profile?.[0]?.cik;
+        const cusip = fmpData?.exchange_variants?.[0]?.cusip || fmpData?.profile?.[0]?.cusip;
 
-        const queryString = cusip ? `cusip:\"${cusip}\"` : `ticker:\"${symbol}\"`;
-        loadingMessage.textContent = `Querying by ${cusip ? 'CUSIP' : 'Ticker'} for ${symbol}...`;
+        let queryString;
+        let queryType;
+
+        if (cik) {
+            queryString = `cik:\"${cik}\"`;
+            queryType = 'CIK';
+        } else if (cusip) {
+            queryString = `cusip:\"${cusip}\"`;
+            queryType = 'CUSIP';
+        } else {
+            queryString = `ticker:\"${symbol}\"`;
+            queryType = 'Ticker';
+        }
+        
+        loadingMessage.textContent = `Querying by ${queryType} for ${symbol}...`;
 
         const secUrl = `https://api.sec-api.io/form-13f/holdings?token=${state.secApiKey}`;
         const queryPayload = {
@@ -2376,7 +2391,7 @@ async function handleDeepDiveRequest(symbol, forceNew = false) {
         const data = await getFmpStockData(symbol);
         if (!data) throw new Error(`No cached FMP data found for ${symbol}.`);
         
-        const requiredEndpoints = ['profile', 'ratios_annual', 'key_metrics_annual', 'income_statement_annual', 'cash_flow_statement_annual', 'analyst_estimates', 'stock_grade_news', 'insider_trading_stats'];
+        const requiredEndpoints = ['profile', 'ratios_annual', 'key_metrics_annual', 'income_statement_annual', 'cash_flow_statement_annual', 'analyst_estimates', 'stock_grade_news', 'insider_trading_stats', 'exchange_variants'];
         const missingEndpoints = requiredEndpoints.filter(ep => !data[ep] || data[ep].length === 0);
 
         if (missingEndpoints.length > 0) {
@@ -2396,8 +2411,17 @@ async function handleDeepDiveRequest(symbol, forceNew = false) {
         let institutionalHolders = null;
         if (state.secApiKey) {
             try {
-                const cusip = data?.profile?.[0]?.cusip;
-                const queryString = cusip ? `cusip:\"${cusip}\"` : `ticker:\"${symbol}\"`;
+                const cik = data?.exchange_variants?.[0]?.cik || data?.profile?.[0]?.cik;
+                const cusip = data?.exchange_variants?.[0]?.cusip || data?.profile?.[0]?.cusip;
+                
+                let queryString;
+                if (cik) {
+                    queryString = `cik:\"${cik}\"`;
+                } else if (cusip) {
+                    queryString = `cusip:\"${cusip}\"`;
+                } else {
+                    queryString = `ticker:\"${symbol}\"`;
+                }
 
                 const secUrl = `https://api.sec-api.io/form-13f/holdings?token=${state.secApiKey}`;
                 const queryPayload = {
