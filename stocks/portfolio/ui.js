@@ -20,7 +20,7 @@ function formatLargeNumber(value, precision = 2) {
         const formattedNum = (num / tier.value).toFixed(precision);
         return `${formattedNum}${tier.suffix}`;
     }
-    return num.toFixed(precision);
+    return num.toLocaleString();
 }
 
 function formatCurrency(value) {
@@ -287,7 +287,49 @@ async function handleRefreshExecutiveComp(symbol) {
         // Re-open/refresh the modal to show the new data
         if (wasOpen) {
             await openRawDataViewer(symbol);
+			await handleSecApiTabRequest(symbol);
         }
+    }
+}
+
+async function handleRefreshInstitutionalOwnership(symbol) {
+    if (!state.secApiKey) {
+        displayMessageInModal("SEC-API.io API Key is required for this feature.", "warning");
+        return;
+    }
+
+    openModal(CONSTANTS.MODAL_LOADING);
+    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+    loadingMessage.textContent = `Fetching Institutional Ownership for ${symbol}...`;
+
+    try {
+        const secUrl = `https://api.sec-api.io/form-13f-holdings?token=${state.secApiKey}`;
+        const queryPayload = {
+            "query": { "query": `ticker:\"${symbol}\"` },
+            "from": "0",
+            "size": "100",
+            "sort": [{ "sortBy": "value", "order": "desc" }]
+        };
+
+        const data = await callApi(secUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(queryPayload)
+        });
+
+        if (data && data.holdings) {
+            const docRef = doc(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, symbol, 'endpoints', 'institutional_ownership');
+            await setDoc(docRef, { cachedAt: Timestamp.now(), data: data });
+            displayMessageInModal('Institutional ownership data refreshed successfully!', 'info');
+        } else {
+            throw new Error("No holdings data returned from the API.");
+        }
+    } catch (error) {
+        console.error("Error refreshing institutional ownership:", error);
+        displayMessageInModal(`Could not fetch ownership data: ${error.message}`, 'error');
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+        await handleSecApiTabRequest(symbol); // Refresh the tab content
     }
 }
 
@@ -1741,57 +1783,56 @@ async function handleSecApiTabRequest(ticker) {
     const contentContainer = document.getElementById('sec-api-tab');
     if (!contentContainer) return;
 
-    if (contentContainer.innerHTML.trim() !== '') {
-        return; // Avoid re-fetching
-    }
-    
     contentContainer.innerHTML = '<div class="flex justify-center items-center h-full pt-16"><div class="loader"></div></div>';
 
     try {
         const fmpData = await getFmpStockData(ticker);
         const execCompData = fmpData.executive_compensation;
-        let execCompHtml = `
-            <div class="mt-6 border-t pt-4">
+        const ownershipData = fmpData.institutional_ownership;
+
+        let html = '';
+
+        // Executive Compensation Section
+        html += `
+            <div>
                 <div class="flex justify-between items-center mb-3">
                      <h3 class="text-lg font-bold text-gray-700">Executive Compensation</h3>
                      <button class="refresh-exec-comp-button text-sm bg-cyan-100 text-cyan-700 hover:bg-cyan-200 font-semibold py-1 px-3 rounded-lg" data-ticker="${ticker}">Refresh Comp</button>
                 </div>
         `;
-
         if (execCompData && Array.isArray(execCompData) && execCompData.length > 0) {
             const latestYear = Math.max(...execCompData.map(e => e.year));
             const latestComp = execCompData.filter(e => e.year === latestYear).slice(0, 5);
-
-            execCompHtml += `
-                <div class="overflow-x-auto">
-                    <table class="w-full text-sm text-left text-gray-500">
-                        <thead class="text-xs text-gray-700 uppercase bg-gray-100">
-                            <tr>
-                                <th scope="col" class="px-4 py-2">Executive</th>
-                                <th scope="col" class="px-4 py-2">Title</th>
-                                <th scope="col" class="px-4 py-2 text-right">Year</th>
-                                <th scope="col" class="px-4 py-2 text-right">Total Comp.</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-            `;
+            html += `<div class="overflow-x-auto"><table class="w-full text-sm text-left text-gray-500"><thead class="text-xs text-gray-700 uppercase bg-gray-100"><tr><th scope="col" class="px-4 py-2">Executive</th><th scope="col" class="px-4 py-2">Title</th><th scope="col" class="px-4 py-2 text-right">Year</th><th scope="col" class="px-4 py-2 text-right">Total Comp.</th></tr></thead><tbody>`;
             latestComp.forEach(exec => {
-                execCompHtml += `
-                    <tr class="bg-white border-b">
-                        <td class="px-4 py-2 font-medium text-gray-900">${sanitizeText(exec.name)}</td>
-                        <td class="px-4 py-2">${sanitizeText(exec.title)}</td>
-                        <td class="px-4 py-2 text-right">${exec.year}</td>
-                        <td class="px-4 py-2 text-right font-semibold">${formatCurrency(exec.total)}</td>
-                    </tr>
-                `;
+                html += `<tr class="bg-white border-b"><td class="px-4 py-2 font-medium text-gray-900">${sanitizeText(exec.name)}</td><td class="px-4 py-2">${sanitizeText(exec.title)}</td><td class="px-4 py-2 text-right">${exec.year}</td><td class="px-4 py-2 text-right font-semibold">${formatCurrency(exec.total)}</td></tr>`;
             });
-            execCompHtml += `</tbody></table></div>`;
+            html += `</tbody></table></div>`;
         } else {
-            execCompHtml += '<p class="text-sm text-gray-500">No executive compensation data has been cached. Please use the refresh button.</p>';
+            html += '<p class="text-sm text-gray-500">No executive compensation data has been cached. Please use the refresh button.</p>';
         }
-        execCompHtml += '</div>';
+        html += '</div>';
 
-        contentContainer.innerHTML = execCompHtml;
+        // Institutional Ownership Section
+        html += `
+            <div class="mt-8 border-t pt-6">
+                <div class="flex justify-between items-center mb-3">
+                     <h3 class="text-lg font-bold text-gray-700">Institutional Ownership</h3>
+                     <button class="refresh-ownership-button text-sm bg-cyan-100 text-cyan-700 hover:bg-cyan-200 font-semibold py-1 px-3 rounded-lg" data-ticker="${ticker}">Refresh Ownership</button>
+                </div>
+        `;
+        if (ownershipData && ownershipData.holdings && Array.isArray(ownershipData.holdings) && ownershipData.holdings.length > 0) {
+            html += `<div class="overflow-x-auto"><table class="w-full text-sm text-left text-gray-500"><thead class="text-xs text-gray-700 uppercase bg-gray-100"><tr><th scope="col" class="px-4 py-2">Investor</th><th scope="col" class="px-4 py-2 text-right">Shares</th><th scope="col" class="px-4 py-2 text-right">Value</th></tr></thead><tbody>`;
+            ownershipData.holdings.slice(0, 15).forEach(holder => {
+                html += `<tr class="bg-white border-b"><td class="px-4 py-2 font-medium text-gray-900">${sanitizeText(holder.investorName)}</td><td class="px-4 py-2 text-right">${formatLargeNumber(holder.shares)}</td><td class="px-4 py-2 text-right font-semibold">${formatCurrency(holder.value)}</td></tr>`;
+            });
+            html += `</tbody></table></div>`;
+        } else {
+            html += '<p class="text-sm text-gray-500">No institutional ownership data has been cached. Please use the refresh button.</p>';
+        }
+        html += '</div>';
+
+        contentContainer.innerHTML = html;
     } catch (error) {
         console.error("Error fetching SEC API data:", error);
         contentContainer.innerHTML = `<p class="text-red-500 text-center">Could not load SEC API data.</p>`;
@@ -2142,6 +2183,12 @@ export function setupEventListeners() {
         if (target.matches('.refresh-exec-comp-button')) {
             if (activeSymbol) {
                 handleRefreshExecutiveComp(activeSymbol);
+            }
+        }
+
+        if (target.matches('.refresh-ownership-button')) {
+            if (activeSymbol) {
+                handleRefreshInstitutionalOwnership(activeSymbol);
             }
         }
     });
