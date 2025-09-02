@@ -303,9 +303,8 @@ async function handleRefreshInstitutionalOwnership(symbol) {
     loadingMessage.textContent = `Fetching Institutional Ownership for ${symbol}...`;
 
     try {
-        const secUrl = `https://api.sec-api.io/form-13f/holdings`;
+        const secUrl = `https://api.sec-api.io/form-13f/holdings?token=${state.secApiKey}`;
         const queryPayload = {
-            "token": state.secApiKey,
             "query": { "query": `ticker:\"${symbol}\"` },
             "from": "0",
             "size": "100",
@@ -2395,9 +2394,8 @@ async function handleDeepDiveRequest(symbol, forceNew = false) {
         let institutionalHolders = null;
         if (state.secApiKey) {
             try {
-                const secUrl = `https://api.sec-api.io/form-13f/holdings`;
+                const secUrl = `https://api.sec-api.io/form-13f/holdings?token=${state.secApiKey}`;
                 const queryPayload = {
-                    "token": state.secApiKey,
                     "query": { "query": `ticker:\"${symbol}\"` },
                     "from": "0",
                     "size": "20",
