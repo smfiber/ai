@@ -311,7 +311,7 @@ async function handleRefreshInstitutionalOwnership(symbol) {
                 }
             },
             "from": "0",
-            "size": "100",
+            "size": "50",
             "sort": [{ "sortBy": "value", "order": "desc" }]
         };
 
@@ -2400,9 +2400,9 @@ async function handleDeepDiveRequest(symbol, forceNew = false) {
             try {
                 const secUrl = `https://api.sec-api.io/form-13f/holdings?token=${state.secApiKey}`;
                 const queryPayload = {
-                    "query": { "query": `ticker:\"${symbol}\"` },
+                    "query": { "query_string": { "query": `ticker:\"${symbol}\"` } },
                     "from": "0",
-                    "size": "20",
+                    "size": "50",
                     "sort": [{ "sortBy": "value", "order": "desc" }]
                 };
                 const secResponse = await callApi(secUrl, {
