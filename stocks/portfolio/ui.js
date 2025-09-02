@@ -855,6 +855,7 @@ async function openRawDataViewer(ticker) {
     const trendContentContainer = document.getElementById('trend-analysis-content');
     const newsContentContainer = document.getElementById('news-content-container');
     const scannerResultsContainer = document.getElementById('scanner-results-tab');
+    const secApiContentContainer = document.getElementById('sec-api-tab');
     
     titleEl.textContent = `Analyzing ${ticker}...`;
     rawDataContainer.innerHTML = '<div class="loader mx-auto"></div>';
@@ -864,6 +865,7 @@ async function openRawDataViewer(ticker) {
     if (trendContentContainer) trendContentContainer.innerHTML = ''; // Clear trend content on open
     if (newsContentContainer) newsContentContainer.innerHTML = ''; // Clear news content on open
     if (scannerResultsContainer) scannerResultsContainer.innerHTML = ''; // Clear scanner content on open
+    if (secApiContentContainer) secApiContentContainer.innerHTML = ''; // Clear SEC API content on open
 
 
     document.querySelectorAll('#rawDataViewerModal .tab-content').forEach(c => c.classList.add('hidden'));
@@ -952,50 +954,7 @@ async function openRawDataViewer(ticker) {
         
         profileHtml += `</div></div>`;
         
-        // Render executive compensation
-        const execCompData = fmpData.executive_compensation;
-        let execCompHtml = `
-            <div class="mt-6 border-t pt-4">
-                <div class="flex justify-between items-center mb-3">
-                     <h3 class="text-lg font-bold text-gray-700">Executive Compensation</h3>
-                     <button class="refresh-exec-comp-button text-sm bg-cyan-100 text-cyan-700 hover:bg-cyan-200 font-semibold py-1 px-3 rounded-lg" data-ticker="${ticker}">Refresh Comp</button>
-                </div>
-        `;
-
-        if (execCompData && Array.isArray(execCompData) && execCompData.length > 0) {
-            const latestYear = Math.max(...execCompData.map(e => e.year));
-            const latestComp = execCompData.filter(e => e.year === latestYear).slice(0, 5);
-
-            execCompHtml += `
-                <div class="overflow-x-auto">
-                    <table class="w-full text-sm text-left text-gray-500">
-                        <thead class="text-xs text-gray-700 uppercase bg-gray-100">
-                            <tr>
-                                <th scope="col" class="px-4 py-2">Executive</th>
-                                <th scope="col" class="px-4 py-2">Title</th>
-                                <th scope="col" class="px-4 py-2 text-right">Year</th>
-                                <th scope="col" class="px-4 py-2 text-right">Total Comp.</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-            `;
-            latestComp.forEach(exec => {
-                execCompHtml += `
-                    <tr class="bg-white border-b">
-                        <td class="px-4 py-2 font-medium text-gray-900">${sanitizeText(exec.name)}</td>
-                        <td class="px-4 py-2">${sanitizeText(exec.title)}</td>
-                        <td class="px-4 py-2 text-right">${exec.year}</td>
-                        <td class="px-4 py-2 text-right font-semibold">${formatCurrency(exec.total)}</td>
-                    </tr>
-                `;
-            });
-            execCompHtml += `</tbody></table></div>`;
-        } else {
-            execCompHtml += '<p class="text-sm text-gray-500">No executive compensation data has been cached. Please use the refresh button.</p>';
-        }
-        execCompHtml += '</div>';
-
-        profileDisplayContainer.innerHTML = profileHtml + execCompHtml;
+        profileDisplayContainer.innerHTML = profileHtml;
 
     } catch (error) {
         console.error('Error opening raw data viewer:', error);
@@ -1777,6 +1736,68 @@ async function handleNewsTabRequest(ticker) {
     }
 }
 
+// --- NEW SEC API TAB ---
+async function handleSecApiTabRequest(ticker) {
+    const contentContainer = document.getElementById('sec-api-tab');
+    if (!contentContainer) return;
+
+    if (contentContainer.innerHTML.trim() !== '') {
+        return; // Avoid re-fetching
+    }
+    
+    contentContainer.innerHTML = '<div class="flex justify-center items-center h-full pt-16"><div class="loader"></div></div>';
+
+    try {
+        const fmpData = await getFmpStockData(ticker);
+        const execCompData = fmpData.executive_compensation;
+        let execCompHtml = `
+            <div class="mt-6 border-t pt-4">
+                <div class="flex justify-between items-center mb-3">
+                     <h3 class="text-lg font-bold text-gray-700">Executive Compensation</h3>
+                     <button class="refresh-exec-comp-button text-sm bg-cyan-100 text-cyan-700 hover:bg-cyan-200 font-semibold py-1 px-3 rounded-lg" data-ticker="${ticker}">Refresh Comp</button>
+                </div>
+        `;
+
+        if (execCompData && Array.isArray(execCompData) && execCompData.length > 0) {
+            const latestYear = Math.max(...execCompData.map(e => e.year));
+            const latestComp = execCompData.filter(e => e.year === latestYear).slice(0, 5);
+
+            execCompHtml += `
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm text-left text-gray-500">
+                        <thead class="text-xs text-gray-700 uppercase bg-gray-100">
+                            <tr>
+                                <th scope="col" class="px-4 py-2">Executive</th>
+                                <th scope="col" class="px-4 py-2">Title</th>
+                                <th scope="col" class="px-4 py-2 text-right">Year</th>
+                                <th scope="col" class="px-4 py-2 text-right">Total Comp.</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+            latestComp.forEach(exec => {
+                execCompHtml += `
+                    <tr class="bg-white border-b">
+                        <td class="px-4 py-2 font-medium text-gray-900">${sanitizeText(exec.name)}</td>
+                        <td class="px-4 py-2">${sanitizeText(exec.title)}</td>
+                        <td class="px-4 py-2 text-right">${exec.year}</td>
+                        <td class="px-4 py-2 text-right font-semibold">${formatCurrency(exec.total)}</td>
+                    </tr>
+                `;
+            });
+            execCompHtml += `</tbody></table></div>`;
+        } else {
+            execCompHtml += '<p class="text-sm text-gray-500">No executive compensation data has been cached. Please use the refresh button.</p>';
+        }
+        execCompHtml += '</div>';
+
+        contentContainer.innerHTML = execCompHtml;
+    } catch (error) {
+        console.error("Error fetching SEC API data:", error);
+        contentContainer.innerHTML = `<p class="text-red-500 text-center">Could not load SEC API data.</p>`;
+    }
+}
+
 
 // --- EVENT LISTENER SETUP ---
 
@@ -2105,6 +2126,8 @@ export function setupEventListeners() {
                     handleNewsTabRequest(activeSymbol);
                 } else if (tabId === 'scanner-results') {
                     handleScannerResultsRequest(activeSymbol);
+                } else if (tabId === 'sec-api') {
+                    handleSecApiTabRequest(activeSymbol);
                 }
             }
             return;
