@@ -317,7 +317,7 @@ async function handleRefreshInstitutionalOwnership(symbol) {
         
         loadingMessage.textContent = `Querying by ${queryType} for ${symbol}...`;
 
-        const secUrl = `https://api.sec-api.io/form-13f/holdings?token=${state.secApiKey}`;
+        const secUrl = `https://api.sec-api.io/v1/query?token=${state.secApiKey}`;
         const queryPayload = {
             "query": {
                 "query_string": {
@@ -2425,7 +2425,7 @@ async function handleDeepDiveRequest(symbol, forceNew = false) {
                     queryString = `ticker:\"${symbol}\"`;
                 }
 
-                const secUrl = `https://api.sec-api.io/form-13f/holdings?token=${state.secApiKey}`;
+                const secUrl = `https://api.sec-api.io/v1/query?token=${state.secApiKey}`;
                 const queryPayload = {
                     "query": { "query_string": { "query": queryString } },
                     "from": "0",
