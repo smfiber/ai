@@ -1,5 +1,5 @@
 // ui.js
-import { CONSTANTS, SECTORS, SECTOR_ICONS, state, NEWS_SENTIMENT_PROMPT, DEEP_DIVE_PROMPT, ENABLE_STARTER_PLAN_MODE, STARTER_SYMBOLS } from './config.js';
+import { CONSTANTS, SECTORS, SECTOR_ICONS, state, NEWS_SENTIMENT_PROMPT, DEEP_DIVE_PROMPT } from './config.js';
 import { getFmpStockData, callApi, filterValidNews, callGeminiApi, generatePolishedArticle, getDriveToken, getOrCreateDriveFolder, createDriveFile, getGroupedFmpData, generateMorningBriefing, calculatePortfolioHealthScore, runOpportunityScanner, generatePortfolioAnalysis, generateTrendAnalysis, getCachedNews, getScannerResults, generateNewsSummary } from './api.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
@@ -159,18 +159,12 @@ async function handleRefreshFmpData(symbol) {
             { name: 'stock_grade_news', path: 'grade', version: 'v3' },
             { name: 'analyst_estimates', path: 'analyst-estimates', version: 'v3'},
             { name: 'company_core_information', path: 'company-core-information', version: 'v4', symbolAsQuery: true },
-            { name: 'executive_compensation', path: 'governance-executive-compensation', version: 'stable', symbolAsQuery: true },
             { name: 'insider_trading_stats', path: 'insider-trading/search', params: 'limit=100', version: 'stable', symbolAsQuery: true }
         ];
 
         let successfulFetches = 0;
 
         for (const endpoint of coreEndpoints) {
-            if (endpoint.name === 'executive_compensation' && ENABLE_STARTER_PLAN_MODE && !STARTER_SYMBOLS.includes(symbol)) {
-                console.log(`Skipping starter-plan-limited endpoint '${endpoint.name}' for non-starter symbol ${symbol}.`);
-                continue;
-            }
-
             loadingMessage.textContent = `Fetching FMP Data: ${endpoint.name.replace(/_/g, ' ')}...`;
             
             const version = endpoint.version || 'v3';
@@ -221,7 +215,24 @@ async function handleRefreshFmpData(symbol) {
             }
         }
         
-        displayMessageInModal(`Successfully fetched and updated data for ${successfulFetches} FMP endpoint(s).`, 'info');
+        // Fetch executive compensation from SEC-API.io
+        if (state.secApiKey) {
+            loadingMessage.textContent = `Fetching SEC Data: Executive Compensation...`;
+            const secUrl = `https://api.sec-api.io/compensation/${symbol}?token=${state.secApiKey}`;
+            try {
+                const data = await callApi(secUrl);
+                if (data && (!Array.isArray(data) || data.length > 0)) {
+                    const docRef = doc(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, symbol, 'endpoints', 'executive_compensation');
+                    await setDoc(docRef, { cachedAt: Timestamp.now(), data: data });
+                    successfulFetches++;
+                }
+            } catch (error) {
+                console.warn(`Could not fetch executive compensation from SEC-API.io for ${symbol}:`, error.message);
+                // Don't throw an error, just warn and continue, as it's supplemental data.
+            }
+        }
+
+        displayMessageInModal(`Successfully fetched and updated data for ${successfulFetches} endpoint(s).`, 'info');
         await fetchAndCachePortfolioData(); // Refresh portfolio cache
         
         // Refresh stock list modal if it's open
