@@ -35,8 +35,8 @@ export async function callApi(url, options = {}) {
             } catch {
                 errorBody = errorText;
             }
-            const errorMsg = typeof errorBody === 'object' ? (errorBody?.error?.message || errorBody?.Information) : errorBody;
-            throw new Error(`API request failed: ${response.statusText || errorMsg}`);
+            const errorMsg = typeof errorBody === 'object' ? (errorBody?.error?.message || errorBody?.Information || JSON.stringify(errorBody)) : errorBody;
+            throw new Error(`API request failed: ${errorMsg || 'No error message provided by API.'}`);
         }
         return await response.json();
     } catch (error) {
