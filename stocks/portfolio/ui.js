@@ -2172,7 +2172,7 @@ function _calculateDeepDiveMetrics(data, newsNarrative, institutionalHolders) {
                 return ['Institutional ownership data not available.'];
             }
             const sortedHolders = institutionalHolders.sort((a, b) => b.value - a.value);
-            return sortedHolders.slice(0, 5).map(h => h.name);
+            return sortedHolders.slice(0, 5).map(h => h.investorName);
         })(),
         roeTrend: formatTrend(ratios, 'returnOnEquity'),
         grossMarginTrend: formatTrend(ratios, 'grossProfitMargin'),
@@ -2238,10 +2238,20 @@ async function handleDeepDiveRequest(symbol, forceNew = false) {
         let institutionalHolders = null;
         if (state.secApiKey) {
             try {
-                const secUrl = `https://api.sec-api.io/filing/13f-hr?ticker=${symbol}&token=${state.secApiKey}`;
-                const secResponse = await callApi(secUrl); // This is a GET request by default in callApi
-                if (secResponse && Array.isArray(secResponse) && secResponse.length > 0) {
-                    institutionalHolders = secResponse;
+                const secUrl = `https://api.sec-api.io/form-13f-holdings?token=${state.secApiKey}`;
+                const queryPayload = {
+                    "query": { "query": `ticker:\"${symbol}\"` },
+                    "from": "0",
+                    "size": "20",
+                    "sort": [{ "sortBy": "value", "order": "desc" }]
+                };
+                const secResponse = await callApi(secUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(queryPayload)
+                });
+                if (secResponse && Array.isArray(secResponse.holdings) && secResponse.holdings.length > 0) {
+                    institutionalHolders = secResponse.holdings;
                 }
             } catch (secError) {
                 console.warn(`Could not fetch institutional ownership data for ${symbol}:`, secError);
