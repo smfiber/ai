@@ -297,7 +297,8 @@ async function handleRefreshInstitutionalOwnership(symbol) {
 
     try {
         const fmpData = await getFmpStockData(symbol);
-        const cik = fmpData?.exchange_variants?.[0]?.cik || fmpData?.profile?.[0]?.cik;
+        const cikFromFmp = fmpData?.exchange_variants?.[0]?.cik || fmpData?.profile?.[0]?.cik;
+        const cik = cikFromFmp ? parseInt(cikFromFmp, 10) : null;
         const cusip = fmpData?.exchange_variants?.[0]?.cusip || fmpData?.profile?.[0]?.cusip;
 
         let queryString;
@@ -2411,7 +2412,8 @@ async function handleDeepDiveRequest(symbol, forceNew = false) {
         let institutionalHolders = null;
         if (state.secApiKey) {
             try {
-                const cik = data?.exchange_variants?.[0]?.cik || data?.profile?.[0]?.cik;
+                const cikFromFmp = data?.exchange_variants?.[0]?.cik || data?.profile?.[0]?.cik;
+                const cik = cikFromFmp ? parseInt(cikFromFmp, 10) : null;
                 const cusip = data?.exchange_variants?.[0]?.cusip || data?.profile?.[0]?.cusip;
                 
                 let queryString;
