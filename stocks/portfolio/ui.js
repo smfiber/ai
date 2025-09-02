@@ -305,7 +305,11 @@ async function handleRefreshInstitutionalOwnership(symbol) {
     try {
         const secUrl = `https://api.sec-api.io/form-13f/holdings?token=${state.secApiKey}`;
         const queryPayload = {
-            "query": { "query": `ticker:\"${symbol}\"` },
+            "query": {
+                "query_string": {
+                    "query": `ticker:\"${symbol}\"`
+                }
+            },
             "from": "0",
             "size": "100",
             "sort": [{ "sortBy": "value", "order": "desc" }]
