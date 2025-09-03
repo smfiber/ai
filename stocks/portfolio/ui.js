@@ -158,8 +158,7 @@ async function handleRefreshFmpData(symbol) {
             { name: 'ratios_annual', path: 'ratios', params: 'period=annual&limit=10', version: 'v3' },
             { name: 'stock_grade_news', path: 'grade', version: 'v3' },
             { name: 'analyst_estimates', path: 'analyst-estimates', version: 'v3'},
-            { name: 'company_core_information', path: 'company-core-information', version: 'v4', symbolAsQuery: true },
-            { name: 'insider_trading_stats', path: 'insider-trading/search', params: 'limit=100', version: 'stable', symbolAsQuery: true }
+            { name: 'company_core_information', path: 'company-core-information', version: 'v4', symbolAsQuery: true }
         ];
 
         let successfulFetches = 0;
@@ -2218,7 +2217,7 @@ async function handleDeepDiveRequest(symbol, forceNew = false) {
         const data = await getFmpStockData(symbol);
         if (!data) throw new Error(`No cached FMP data found for ${symbol}.`);
         
-        const requiredEndpoints = ['profile', 'ratios_annual', 'key_metrics_annual', 'income_statement_annual', 'cash_flow_statement_annual', 'analyst_estimates', 'stock_grade_news', 'insider_trading_stats'];
+        const requiredEndpoints = ['profile', 'ratios_annual', 'key_metrics_annual', 'income_statement_annual', 'cash_flow_statement_annual', 'analyst_estimates', 'stock_grade_news'];
         const missingEndpoints = requiredEndpoints.filter(ep => !data[ep] || data[ep].length === 0);
 
         if (missingEndpoints.length > 0) {
