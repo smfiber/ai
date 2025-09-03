@@ -1,6 +1,6 @@
 import { CONSTANTS, SECTORS, SECTOR_ICONS, state, NEWS_SENTIMENT_PROMPT, promptMap, creativePromptMap, DISRUPTOR_ANALYSIS_PROMPT, MACRO_PLAYBOOK_PROMPT, INDUSTRY_CAPITAL_ALLOCATORS_PROMPT, INDUSTRY_DISRUPTOR_ANALYSIS_PROMPT, INDUSTRY_MACRO_PLAYBOOK_PROMPT, ONE_SHOT_INDUSTRY_TREND_PROMPT, FORTRESS_ANALYSIS_PROMPT, PHOENIX_ANALYSIS_PROMPT, PICK_AND_SHOVEL_PROMPT, LINCHPIN_ANALYSIS_PROMPT, HIDDEN_VALUE_PROMPT, UNTOUCHABLES_ANALYSIS_PROMPT, INVESTMENT_MEMO_PROMPT, ENABLE_STARTER_PLAN_MODE, STARTER_SYMBOLS } from './config.js';
 import { getFmpStockData, callApi, filterValidNews, callGeminiApi, generatePolishedArticle, getDriveToken, getOrCreateDriveFolder, createDriveFile, findStocksByIndustry, searchSectorNews, findStocksBySector, getGroupedFmpData, synthesizeAndRankCompanies, generateDeepDiveReport } from './api.js';
-import { getSecInsiderTrading, getSecInstitutionalOwnership, getSecMaterialEvents } from './sec-api.js';
+import { getSecInsiderTrading, getSecInstitutionalOwnership, getSecMaterialEvents, getSecAnnualReports, getSecQuarterlyReports } from './sec-api.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- PROMPT MAPPING ---
@@ -541,6 +541,8 @@ async function openRawDataViewer(ticker) {
     document.getElementById('insider-trading-container').innerHTML = `<h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Recent Insider Activity (Form 4)</h3><div class="content-placeholder text-center text-gray-500 py-8">Loading...</div>`;
     document.getElementById('institutional-ownership-container').innerHTML = `<h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Top Institutional Holders (13F)</h3><div class="content-placeholder text-center text-gray-500 py-8">Loading...</div>`;
     document.getElementById('material-events-container').innerHTML = `<h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Recent Material Events (8-K)</h3><div class="content-placeholder text-center text-gray-500 py-8">Loading...</div>`;
+    document.getElementById('annual-reports-container').innerHTML = `<h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Recent Annual Reports (10-K)</h3><div class="content-placeholder text-center text-gray-500 py-8">Loading...</div>`;
+    document.getElementById('quarterly-reports-container').innerHTML = `<h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Recent Quarterly Reports (10-Q)</h3><div class="content-placeholder text-center text-gray-500 py-8">Loading...</div>`;
 
     // Reset tabs to default state
     document.querySelectorAll('#rawDataViewerModal .tab-content').forEach(c => c.classList.add('hidden'));
@@ -1307,16 +1309,75 @@ function _renderMaterialEvents(filings) {
     container.innerHTML += listHtml;
 }
 
+function _renderAnnualReports(filings) {
+    const container = document.getElementById('annual-reports-container');
+    if (!container) return;
+
+    container.innerHTML = `<h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Recent Annual Reports (10-K)</h3>`;
+
+    if (!filings || filings.length === 0) {
+        container.innerHTML += `<p class="text-center text-gray-500 py-8">No recent annual reports found.</p>`;
+        return;
+    }
+
+    const listHtml = `
+        <ul class="divide-y divide-gray-200">
+            ${filings.map(f => `
+                <li class="p-3 hover:bg-gray-50">
+                    <a href="${sanitizeText(f.linkToFilingDetails)}" target="_blank" rel="noopener noreferrer" class="block">
+                        <p class="font-semibold text-indigo-600">Annual Report (Form 10-K)</p>
+                        <p class="text-xs text-gray-500">Filed: ${new Date(f.filedAt).toLocaleString()}</p>
+                    </a>
+                </li>
+            `).join('')}
+        </ul>
+    `;
+    container.innerHTML += listHtml;
+}
+
+function _renderQuarterlyReports(filings) {
+    const container = document.getElementById('quarterly-reports-container');
+    if (!container) return;
+
+    container.innerHTML = `<h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Recent Quarterly Reports (10-Q)</h3>`;
+
+    if (!filings || filings.length === 0) {
+        container.innerHTML += `<p class="text-center text-gray-500 py-8">No recent quarterly reports found.</p>`;
+        return;
+    }
+
+    const listHtml = `
+        <ul class="divide-y divide-gray-200">
+            ${filings.map(f => `
+                <li class="p-3 hover:bg-gray-50">
+                    <a href="${sanitizeText(f.linkToFilingDetails)}" target="_blank" rel="noopener noreferrer" class="block">
+                        <p class="font-semibold text-indigo-600">Quarterly Report (Form 10-Q)</p>
+                        <p class="text-xs text-gray-500">Filed: ${new Date(f.filedAt).toLocaleString()}</p>
+                    </a>
+                </li>
+            `).join('')}
+        </ul>
+    `;
+    container.innerHTML += listHtml;
+}
+
 async function renderSecFilings(ticker) {
     try {
         // Run requests sequentially to avoid rate limiting
         const insider = await getSecInsiderTrading(ticker);
-        const institutional = await getSecInstitutionalOwnership(ticker);
-        const events = await getSecMaterialEvents(ticker);
-
         _renderInsiderTrading(insider);
+        
+        const institutional = await getSecInstitutionalOwnership(ticker);
         _renderInstitutionalOwnership(institutional);
+
+        const events = await getSecMaterialEvents(ticker);
         _renderMaterialEvents(events);
+
+        const annual = await getSecAnnualReports(ticker);
+        _renderAnnualReports(annual);
+
+        const quarterly = await getSecQuarterlyReports(ticker);
+        _renderQuarterlyReports(quarterly);
 
     } catch (error) {
         console.error("Error rendering SEC filings:", error);
