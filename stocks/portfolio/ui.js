@@ -1747,142 +1747,168 @@ async function handleNewsTabRequest(ticker) {
 // --- SEC API TAB ---
 
 function _renderSecInsiderTrading(data) {
-    let html = `<h3 class="text-xl font-bold text-gray-800 mb-4">Recent Insider Trading (Form 4)</h3>`;
+    let contentHtml = '';
     if (!data || data.length === 0) {
-        return html + `<p class="text-sm text-gray-500">No recent insider transactions found.</p>`;
-    }
-    
-    html += `
-        <div class="overflow-x-auto">
-            <table class="min-w-full bg-white border rounded-lg text-sm">
-                <thead class="bg-gray-50">
-                    <tr>
-                        <th class="p-3 text-left font-semibold text-gray-600">Owner</th>
-                        <th class="p-3 text-left font-semibold text-gray-600">Date</th>
-                        <th class="p-3 text-left font-semibold text-gray-600">Type</th>
-                        <th class="p-3 text-right font-semibold text-gray-600">Shares</th>
-                        <th class="p-3 text-right font-semibold text-gray-600">Price/Share</th>
-                        <th class="p-3 text-center font-semibold text-gray-600">Filing</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-200">
-    `;
-    data.slice(0, 10).forEach(txn => {
-        const type = txn.transactionCode === 'P' ? '<span class="font-semibold text-green-600">Purchase</span>' :
-                     txn.transactionCode === 'S' ? '<span class="font-semibold text-red-600">Sale</span>' :
-                     'Other';
-        html += `
-            <tr>
-                <td class="p-3 text-gray-700">${sanitizeText(txn.reportingOwnerName)}</td>
-                <td class="p-3 text-gray-700">${new Date(txn.filedAt).toLocaleDateString()}</td>
-                <td class="p-3">${type}</td>
-                <td class="p-3 text-right text-gray-700">${txn.transactionShares?.toLocaleString() || 'N/A'}</td>
-                <td class="p-3 text-right text-gray-700">${txn.transactionPricePerShare ? formatCurrency(txn.transactionPricePerShare) : 'N/A'}</td>
-                <td class="p-3 text-center"><a href="${sanitizeText(txn.linkToFilingDetails)}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:underline">View</a></td>
-            </tr>
+        contentHtml = `<p class="text-sm text-gray-500 p-4">No recent insider transactions found.</p>`;
+    } else {
+        const tableRows = data.slice(0, 20).map(txn => {
+            const type = txn.transactionType.startsWith('P') ? '<span class="font-semibold text-green-600">Purchase</span>' :
+                         txn.transactionType.startsWith('S') ? '<span class="font-semibold text-red-600">Sale</span>' :
+                         'Other';
+            return `
+                <tr>
+                    <td class="p-3 text-gray-700">${sanitizeText(txn.reportingName)}</td>
+                    <td class="p-3 text-gray-700">${new Date(txn.transactionDate).toLocaleDateString()}</td>
+                    <td class="p-3">${type}</td>
+                    <td class="p-3 text-right text-gray-700">${txn.securitiesTransacted?.toLocaleString() || 'N/A'}</td>
+                    <td class="p-3 text-right text-gray-700">${txn.price ? formatCurrency(txn.price) : 'N/A'}</td>
+                    <td class="p-3 text-center"><a href="${sanitizeText(txn.url)}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:underline">View</a></td>
+                </tr>
+            `;
+        }).join('');
+
+        contentHtml = `
+            <div class="overflow-x-auto">
+                <table class="min-w-full bg-white text-sm">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="p-3 text-left font-semibold text-gray-600">Owner</th>
+                            <th class="p-3 text-left font-semibold text-gray-600">Date</th>
+                            <th class="p-3 text-left font-semibold text-gray-600">Type</th>
+                            <th class="p-3 text-right font-semibold text-gray-600">Shares</th>
+                            <th class="p-3 text-right font-semibold text-gray-600">Price/Share</th>
+                            <th class="p-3 text-center font-semibold text-gray-600">Filing</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">${tableRows}</tbody>
+                </table>
+            </div>
         `;
-    });
-    html += `</tbody></table></div>`;
-    return html;
+    }
+    return `
+        <details class="mb-2 bg-white rounded-lg border">
+            <summary class="p-3 font-semibold text-gray-700 cursor-pointer hover:bg-gray-50">Recent Insider Trading (Form 4)</summary>
+            ${contentHtml}
+        </details>
+    `;
 }
 
 function _renderSecInstitutionalOwnership(data) {
-    let html = `<h3 class="text-xl font-bold text-gray-800 mb-4 mt-8">Institutional Ownership (13F-HR)</h3>`;
+    let contentHtml = '';
     if (!data || data.length === 0) {
-        return html + `<p class="text-sm text-gray-500">No institutional ownership data found.</p>`;
-    }
-
-    html += `
-        <div class="overflow-x-auto">
-            <table class="min-w-full bg-white border rounded-lg text-sm">
-                <thead class="bg-gray-50">
-                    <tr>
-                        <th class="p-3 text-left font-semibold text-gray-600">Investor</th>
-                        <th class="p-3 text-right font-semibold text-gray-600">Shares</th>
-                        <th class="p-3 text-right font-semibold text-gray-600">Value</th>
-                        <th class="p-3 text-left font-semibold text-gray-600">Filed At</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-200">
-    `;
-    data.sort((a,b) => b.value - a.value).slice(0, 10).forEach(holder => {
-        html += `
+        contentHtml = `<p class="text-sm text-gray-500 p-4">No institutional ownership data found.</p>`;
+    } else {
+        const tableRows = data.sort((a, b) => b.value - a.value).slice(0, 10).map(holder => `
             <tr>
                 <td class="p-3 text-gray-700">${sanitizeText(holder.investorName)}</td>
                 <td class="p-3 text-right text-gray-700">${holder.shares?.toLocaleString() || 'N/A'}</td>
                 <td class="p-3 text-right text-gray-700">${formatCurrency(holder.value)}</td>
                 <td class="p-3 text-gray-700">${new Date(holder.filedAt).toLocaleDateString()}</td>
             </tr>
+        `).join('');
+        contentHtml = `
+            <div class="overflow-x-auto">
+                <table class="min-w-full bg-white text-sm">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="p-3 text-left font-semibold text-gray-600">Investor</th>
+                            <th class="p-3 text-right font-semibold text-gray-600">Shares</th>
+                            <th class="p-3 text-right font-semibold text-gray-600">Value</th>
+                            <th class="p-3 text-left font-semibold text-gray-600">Filed At</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">${tableRows}</tbody>
+                </table>
+            </div>
         `;
-    });
-    html += `</tbody></table></div>`;
-    return html;
+    }
+    return `
+        <details class="mb-2 bg-white rounded-lg border">
+            <summary class="p-3 font-semibold text-gray-700 cursor-pointer hover:bg-gray-50">Institutional Ownership (13F-HR)</summary>
+            ${contentHtml}
+        </details>
+    `;
 }
 
 function _renderSecMaterialEvents(data) {
-    let html = `<h3 class="text-xl font-bold text-gray-800 mb-4 mt-8">Material Events (8-K)</h3>`;
+    let contentHtml = '';
     if (!data || data.length === 0) {
-        return html + `<p class="text-sm text-gray-500">No recent material event filings found.</p>`;
+        contentHtml = `<p class="text-sm text-gray-500 p-4">No recent material event filings found.</p>`;
+    } else {
+        contentHtml = `<ul class="space-y-2 p-3">`;
+        data.slice(0, 10).forEach(event => {
+            contentHtml += `
+                <li class="p-3 bg-gray-50 border rounded-lg flex justify-between items-center text-sm">
+                    <span>
+                        <strong>Filed:</strong> ${new Date(event.filedAt).toLocaleDateString()} - 
+                        <span class="text-gray-600">${sanitizeText(event.formType)}</span>
+                    </span>
+                    <a href="${sanitizeText(event.linkToFilingDetails)}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:underline font-semibold">View Filing</a>
+                </li>
+            `;
+        });
+        contentHtml += `</ul>`;
     }
-
-    html += `<ul class="space-y-2">`;
-    data.slice(0, 10).forEach(event => {
-        html += `
-            <li class="p-3 bg-white border rounded-lg flex justify-between items-center text-sm">
-                <span>
-                    <strong>Filed:</strong> ${new Date(event.filedAt).toLocaleDateString()} - 
-                    <span class="text-gray-600">${sanitizeText(event.formType)}</span>
-                </span>
-                <a href="${sanitizeText(event.linkToFilingDetails)}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:underline font-semibold">View Filing</a>
-            </li>
-        `;
-    });
-    html += `</ul>`;
-    return html;
+     return `
+        <details class="mb-2 bg-white rounded-lg border">
+            <summary class="p-3 font-semibold text-gray-700 cursor-pointer hover:bg-gray-50">Material Events (8-K)</summary>
+            ${contentHtml}
+        </details>
+    `;
 }
 
 function _renderSecAnnualReports(data) {
-    let html = `<h3 class="text-xl font-bold text-gray-800 mb-4 mt-8">Recent Annual Reports (10-K)</h3>`;
+    let contentHtml = '';
     if (!data || data.length === 0) {
-        return html + `<p class="text-sm text-gray-500">No recent annual reports found.</p>`;
+        contentHtml = `<p class="text-sm text-gray-500 p-4">No recent annual reports found.</p>`;
+    } else {
+        contentHtml = `<ul class="space-y-2 p-3">`;
+        data.slice(0, 10).forEach(event => {
+            contentHtml += `
+                <li class="p-3 bg-gray-50 border rounded-lg flex justify-between items-center text-sm">
+                    <span>
+                        <strong>Filed:</strong> ${new Date(event.filedAt).toLocaleDateString()} - 
+                        <span class="text-gray-600">${sanitizeText(event.formType)}</span>
+                    </span>
+                    <a href="${sanitizeText(event.linkToFilingDetails)}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:underline font-semibold">View Filing</a>
+                </li>
+            `;
+        });
+        contentHtml += `</ul>`;
     }
-
-    html += `<ul class="space-y-2">`;
-    data.slice(0, 10).forEach(event => {
-        html += `
-            <li class="p-3 bg-white border rounded-lg flex justify-between items-center text-sm">
-                <span>
-                    <strong>Filed:</strong> ${new Date(event.filedAt).toLocaleDateString()} - 
-                    <span class="text-gray-600">${sanitizeText(event.formType)}</span>
-                </span>
-                <a href="${sanitizeText(event.linkToFilingDetails)}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:underline font-semibold">View Filing</a>
-            </li>
-        `;
-    });
-    html += `</ul>`;
-    return html;
+    return `
+        <details class="mb-2 bg-white rounded-lg border">
+            <summary class="p-3 font-semibold text-gray-700 cursor-pointer hover:bg-gray-50">Recent Annual Reports (10-K)</summary>
+            ${contentHtml}
+        </details>
+    `;
 }
 
 function _renderSecQuarterlyReports(data) {
-    let html = `<h3 class="text-xl font-bold text-gray-800 mb-4 mt-8">Recent Quarterly Reports (10-Q)</h3>`;
+    let contentHtml = '';
     if (!data || data.length === 0) {
-        return html + `<p class="text-sm text-gray-500">No recent quarterly reports found.</p>`;
+        contentHtml = `<p class="text-sm text-gray-500 p-4">No recent quarterly reports found.</p>`;
+    } else {
+        contentHtml = `<ul class="space-y-2 p-3">`;
+        data.slice(0, 10).forEach(event => {
+            contentHtml += `
+                <li class="p-3 bg-gray-50 border rounded-lg flex justify-between items-center text-sm">
+                    <span>
+                        <strong>Filed:</strong> ${new Date(event.filedAt).toLocaleDateString()} - 
+                        <span class="text-gray-600">${sanitizeText(event.formType)}</span>
+                    </span>
+                    <a href="${sanitizeText(event.linkToFilingDetails)}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:underline font-semibold">View Filing</a>
+                </li>
+            `;
+        });
+        contentHtml += `</ul>`;
     }
-
-    html += `<ul class="space-y-2">`;
-    data.slice(0, 10).forEach(event => {
-        html += `
-            <li class="p-3 bg-white border rounded-lg flex justify-between items-center text-sm">
-                <span>
-                    <strong>Filed:</strong> ${new Date(event.filedAt).toLocaleDateString()} - 
-                    <span class="text-gray-600">${sanitizeText(event.formType)}</span>
-                </span>
-                <a href="${sanitizeText(event.linkToFilingDetails)}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:underline font-semibold">View Filing</a>
-            </li>
-        `;
-    });
-    html += `</ul>`;
-    return html;
+    return `
+        <details class="mb-2 bg-white rounded-lg border" open>
+            <summary class="p-3 font-semibold text-gray-700 cursor-pointer hover:bg-gray-50">Recent Quarterly Reports (10-Q)</summary>
+            ${contentHtml}
+        </details>
+    `;
 }
 
 async function handleSecApiRequest(ticker) {
@@ -1901,15 +1927,17 @@ async function handleSecApiRequest(ticker) {
     }
     
     try {
-        const [insiderTrading, institutionalOwnership, materialEvents, annualReports, quarterlyReports] = await Promise.all([
-            getSecInsiderTrading(ticker),
+        const fmpData = await getFmpStockData(ticker);
+        const insiderTradingFmp = fmpData?.insider_trading || [];
+
+        const [institutionalOwnership, materialEvents, annualReports, quarterlyReports] = await Promise.all([
             getSecInstitutionalOwnership(ticker),
             getSecMaterialEvents(ticker),
             getSecAnnualReports(ticker),
             getSecQuarterlyReports(ticker)
         ]);
         
-        let html = _renderSecInsiderTrading(insiderTrading);
+        let html = _renderSecInsiderTrading(insiderTradingFmp);
         html += _renderSecInstitutionalOwnership(institutionalOwnership);
         html += _renderSecMaterialEvents(materialEvents);
         html += _renderSecAnnualReports(annualReports);
