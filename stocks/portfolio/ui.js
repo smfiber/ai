@@ -215,6 +215,21 @@ async function handleRefreshFmpData(symbol) {
             }
         }
         
+        // --- Fetch and Save FMP News ---
+        loadingMessage.textContent = `Fetching recent news for ${symbol}...`;
+        try {
+            const newsUrl = `https://financialmodelingprep.com/stable/news/stock?symbols=${symbol}&limit=20&apikey=${state.fmpApiKey}`;
+            const newsData = await callApi(newsUrl);
+            const newsDocRef = doc(state.db, CONSTANTS.DB_COLLECTION_FMP_NEWS_CACHE, symbol);
+            await setDoc(newsDocRef, {
+                cachedAt: Timestamp.now(),
+                articles: newsData
+            });
+            successfulFetches++;
+        } catch (error) {
+             console.warn(`Could not fetch news from FMP for ${symbol}:`, error.message);
+        }
+
         // Fetch supplemental SEC data
         if (state.secApiKey) {
             // Fetch executive compensation
