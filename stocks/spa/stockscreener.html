@@ -1418,7 +1418,7 @@ font-size: 0.75rem;
                 id: "market-summary",
                 requiresSymbol: false,
                 prompt: (exchange, articlesText) => `
-                    Act as an expert financial analyst. I will provide you with a list of recent news articles as JSON objects for the ${exchange.toUpperCase()} stock exchange from the last 30 days.
+                    Act as an expert financial analyst. I will provide you with a list of recent news articles for the ${exchange.toUpperCase()} stock exchange from the last 30 days.
                     Your task is to synthesize this information into a concise market briefing.
                     If the provided "NEWS ARTICLES" list is empty, you MUST respond with only this message: "No recent news was available to generate a market summary for this exchange."
                     If news is available, please structure your analysis into three parts:
@@ -1434,7 +1434,7 @@ font-size: 0.75rem;
                 id: "sector-sentiment",
                 requiresSymbol: false,
                 prompt: (exchange, articlesText) => `
-                    Act as a macro-focused financial analyst. Using the provided news (as JSON objects) from the ${exchange.toUpperCase()}, perform a sector-level sentiment analysis.
+                    Act as a macro-focused financial analyst. Using the provided news from the ${exchange.toUpperCase()}, perform a sector-level sentiment analysis.
                     If the provided "NEWS ARTICLES" list is empty, you MUST respond with only this message: "No recent news was available to perform a sector sentiment analysis."
                     If news is available:
                     1.  You will need to infer the sector for each company (e.g., technology, healthcare, financials, consumer discretionary), likely from the company name or your own knowledge.
@@ -1450,7 +1450,7 @@ font-size: 0.75rem;
                 id: "top-upside",
                 requiresSymbol: false,
                 prompt: (exchange, articlesText) => `
-                    Act as a financial analyst for a growth-focused fund. Your goal is to identify stocks with the highest potential upside based on recent analyst price targets from the ${exchange.toUpperCase()}, provided as JSON objects.
+                    Act as a financial analyst for a growth-focused fund. Your goal is to identify stocks with the highest potential upside based on recent analyst price targets from the ${exchange.toUpperCase()}.
                     First, examine the provided "NEWS ARTICLES". If the list is empty or contains no articles with both a 'priceTarget' and a 'priceWhenPosted' value, you MUST respond with only this message: "No articles with actionable price targets were found in the provided news data."
                     If such articles exist, perform the following:
                     1. For each article with the required data, calculate the potential upside: Upside % = (priceTarget - priceWhenPosted) / priceWhenPosted.
@@ -1475,7 +1475,7 @@ font-size: 0.75rem;
                 id: "battleground-stocks",
                 requiresSymbol: false,
                 prompt: (exchange, articlesText) => `
-                    Act as a quantitative financial analyst. Based on the provided news articles as JSON objects for the ${exchange.toUpperCase()} stock exchange, identify the top 2-3 "battleground stocks."
+                    Act as a quantitative financial analyst. Based on the provided news articles for the ${exchange.toUpperCase()} stock exchange, identify the top 2-3 "battleground stocks."
                     These are stocks with the widest disparity in analyst price targets, indicating significant debate about their future value.
                     If the provided "NEWS ARTICLES" list is empty or contains insufficient data to identify a clear price target range for any stock, you MUST respond with only this message: "Insufficient price target data was found to identify battleground stocks."
                     If data is available, for each identified battleground stock, provide:
@@ -1521,7 +1521,7 @@ font-size: 0.75rem;
                 id: "upgrades-downgrades",
                 requiresSymbol: false,
                 prompt: (exchange, articlesText) => `
-                    Act as an equity analyst. Your task is to track and summarize significant analyst rating changes from the provided news (as JSON objects) on the ${exchange.toUpperCase()}.
+                    Act as an equity analyst. Your task is to track and summarize significant analyst rating changes from the provided news on the ${exchange.toUpperCase()}.
                     First, scan all headlines for keywords indicating a change (e.g., "Upgrades," "Downgrades," "Initiates Coverage," "Lowers Rating").
                     If the provided news list is empty or no such rating changes are found, you MUST respond with only this message: "No significant analyst upgrades or downgrades were found in the recent news."
                     If changes are found, create two Markdown lists: **"Recent Upgrades"** and **"Recent Downgrades."**
@@ -1537,7 +1537,7 @@ font-size: 0.75rem;
                 id: "target-revisions",
                 requiresSymbol: false,
                 prompt: (exchange, articlesText) => `
-                    Act as an equity analyst tracking sentiment momentum. From the provided news articles (as JSON objects) on the ${exchange.toUpperCase()}, identify stocks that have received multiple price target revisions within the last 30 days.
+                    Act as an equity analyst tracking sentiment momentum. From the provided news articles on the ${exchange.toUpperCase()}, identify stocks that have received multiple price target revisions within the last 30 days.
                     If the provided news list is empty or no companies have multiple revisions, you MUST respond with only this message: "No stocks with multiple recent price target revisions were found."
                     If such companies are found, identify up to 3 with the most revisions and for each, describe the trend:
                     -   **Stock Symbol:** The ticker symbol.
@@ -1552,7 +1552,7 @@ font-size: 0.75rem;
                 id: "influential-analysts",
                 requiresSymbol: false,
                  prompt: (exchange, articlesText) => `
-                    Act as a financial markets commentator. From the list of news articles (as JSON objects) for the ${exchange.toUpperCase()}, identify the most influential analysts in the past 30 days.
+                    Act as a financial markets commentator. From the list of news articles for the ${exchange.toUpperCase()}, identify the most influential analysts in the past 30 days.
                     If the provided "NEWS ARTICLES" list is empty or too sparse to identify active analysts, you MUST respond with only this message: "Insufficient data to identify the most active analysts."
                     If data is available, your analysis should name the **Top 3 Most Active Analysts** based on the number of reports in the data.
                     For each of these three analysts, provide:
@@ -1568,7 +1568,7 @@ font-size: 0.75rem;
                 id: "firm-views",
                 requiresSymbol: false,
                 prompt: (exchange, articlesText) => `
-                    Act as a financial markets strategist. I have provided a list of analyst actions as JSON objects on the ${exchange.toUpperCase()} stock exchange.
+                    Act as a financial markets strategist. I have provided a list of analyst actions on the ${exchange.toUpperCase()} stock exchange.
                     Your task is to analyze the "house view" of the most active analyst firms.
                     If the provided "NEWS ARTICLES" list is empty or no single firm has published multiple reports, you MUST respond with only this message: "Insufficient data to determine the house view for any analyst firm."
                     If data is available:
@@ -1584,7 +1584,7 @@ font-size: 0.75rem;
                 id: "single-stock-deep-dive",
                 requiresSymbol: true,
                 prompt: (exchange, articlesText, symbol) => `
-                    Act as a senior equity research analyst. I will provide you with all recent news articles (as JSON objects) concerning the stock symbol ${symbol.toUpperCase()} from the last 30 days.
+                    Act as a senior equity research analyst. I will provide you with all recent news articles concerning the stock symbol ${symbol.toUpperCase()} from the last 30 days.
                     Synthesize all the provided information into a professional "Deep Dive" summary.
                     Your summary must include:
                     -   **Analyst Consensus:** What is the general consensus (Buy, Hold, Sell)? What is the average or consensus price target from the data?
@@ -1611,7 +1611,7 @@ font-size: 0.75rem;
                 id: "new-coverage",
                 requiresSymbol: false,
                 prompt: (exchange, articlesText) => `
-                    Act as a special situations analyst. Your specific task is to scan the provided news (as JSON objects) from the ${exchange.toUpperCase()} and identify all instances of **new analyst coverage initiations.**
+                    Act as a special situations analyst. Your specific task is to scan the provided news from the ${exchange.toUpperCase()} and identify all instances of **new analyst coverage initiations.**
                     Filter for headlines containing keywords like "Initiates," "Starts," or "Begins Coverage."
                     If the provided news list is empty or no new coverage initiations are found, you MUST respond with only this message: "No new analyst coverage initiations were found in the recent news."
                     If initiations are found, present your findings as a Markdown summary list. For each new coverage initiation, detail:
@@ -1651,6 +1651,12 @@ font-size: 0.75rem;
             `).join('');
 
             setupGenerativeTabs(exchange);
+
+            if (!newsData || newsData.length === 0) {
+                console.log(`No news data for ${exchange}, skipping AI analysis.`);
+                contentContainer.innerHTML = `<div class="p-4 text-gray-500">No recent news was available for this exchange, so a detailed analysis cannot be performed.</div>`;
+                return;
+            }
 
             const articlesText = newsData.map(n => JSON.stringify(n)).join('\n');
             const singleStockSymbol = screenerData.length > 0 ? screenerData[0].symbol : null;
