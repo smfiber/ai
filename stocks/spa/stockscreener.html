@@ -2299,7 +2299,8 @@ font-size: 0.75rem;
                 cashFlow: `https://financialmodelingprep.com/api/v3/cash-flow-statement/${symbol}?period=annual&limit=5&apikey=${apiKey}`,
                 generalNews: `https://financialmodelingprep.com/stable/news/stock?symbols=${symbol}&limit=20&apikey=${apiKey}`,
                 priceTargetNews: `https://financialmodelingprep.com/stable/price-target-news?symbol=${symbol}&limit=10&apikey=${apiKey}`,
-                stockGradeNews: `https://financialmodelingprep.com/stable/grades-news?symbol=${symbol}&limit=10&apikey=${apiKey}`
+                stockGradeNews: `https://financialmodelingprep.com/stable/grades-news?symbol=${symbol}&limit=10&apikey=${apiKey}`,
+                analyst_estimates: `https://financialmodelingprep.com/stable/analyst-estimates?symbol=${symbol}&period=annual&limit=10&apikey=${apiKey}`
             };
 
             try {
@@ -2361,7 +2362,9 @@ font-size: 0.75rem;
                     incomeStatement: data.incomeStatement,
                     balanceSheet: data.balanceSheet,
                     cashFlow: data.cashFlow,
-                    news: combinedNews
+                    news: combinedNews,
+                    stock_grade_news: data.stockGradeNews,
+                    analyst_estimates: data.analyst_estimates
                 };
 
             } catch (error) {
