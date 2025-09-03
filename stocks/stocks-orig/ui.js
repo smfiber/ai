@@ -2502,20 +2502,20 @@ function renderValuationHealthDashboard(container, ticker, fmpData) {
     }
 
     const metricsToDisplay = [
-        { name: 'P/E Ratio', key: 'peRatio', source: keyMetrics, isRatio: true, isPct: false, lowerIsBetter: true },
-        { name: 'P/S Ratio', key: 'priceToSalesRatio', source: keyMetrics, isRatio: true, isPct: false, lowerIsBetter: true },
-        { name: 'Debt/Equity', key: 'debtToEquity', source: keyMetrics, isRatio: false, isPct: false, lowerIsBetter: true },
-        { name: 'ROE', key: 'returnOnEquity', source: ratios, isRatio: false, isPct: true, lowerIsBetter: false },
-        { name: 'P/B Ratio', key: 'pbRatio', source: keyMetrics, isRatio: true, isPct: false, lowerIsBetter: true },
-        { name: 'EV/EBITDA', key: 'enterpriseValueOverEBITDA', source: keyMetrics, isRatio: true, isPct: false, lowerIsBetter: true },
-        { name: 'Current Ratio', key: 'currentRatio', source: keyMetrics, isRatio: false, isPct: false, lowerIsBetter: false },
-        { name: 'Net Margin', key: 'netProfitMargin', source: ratios, isRatio: false, isPct: true, lowerIsBetter: false },
+        { name: 'P/E Ratio', key: 'peRatio', source: keyMetrics, isRatio: true, isPct: false, lowerIsBetter: true, tooltip: 'Price-to-Earnings (P/E) Ratio: Measures how expensive a stock is relative to its annual earnings. A lower P/E may indicate a bargain.' },
+        { name: 'P/S Ratio', key: 'priceToSalesRatio', source: keyMetrics, isRatio: true, isPct: false, lowerIsBetter: true, tooltip: 'Price-to-Sales (P/S) Ratio: Compares the stock price to its revenue per share. Useful for valuing companies that are not yet profitable.' },
+        { name: 'Debt/Equity', key: 'debtToEquity', source: keyMetrics, isRatio: false, isPct: false, lowerIsBetter: true, tooltip: 'Debt/Equity Ratio: Measures a company\'s financial leverage by dividing its total liabilities by shareholder equity. A high ratio indicates more debt.' },
+        { name: 'ROE', key: 'returnOnEquity', source: ratios, isRatio: false, isPct: true, lowerIsBetter: false, tooltip: 'Return on Equity (ROE): A measure of profitability that calculates how many dollars of profit a company generates with each dollar of shareholders\' equity.' },
+        { name: 'P/B Ratio', key: 'pbRatio', source: keyMetrics, isRatio: true, isPct: false, lowerIsBetter: true, tooltip: 'Price-to-Book (P/B) Ratio: Compares a company\'s market capitalization to its book value. A ratio under 1.0 may indicate it\'s undervalued.' },
+        { name: 'EV/EBITDA', key: 'enterpriseValueOverEBITDA', source: keyMetrics, isRatio: true, isPct: false, lowerIsBetter: true, tooltip: 'EV/EBITDA Ratio: Compares a company\'s Enterprise Value to its Earnings Before Interest, Taxes, Depreciation, and Amortization. Often used to find attractive takeover candidates.' },
+        { name: 'Current Ratio', key: 'currentRatio', source: keyMetrics, isRatio: false, isPct: false, lowerIsBetter: false, tooltip: 'Current Ratio: A liquidity ratio that measures a company\'s ability to pay its short-term obligations or those due within one year.' },
+        { name: 'Net Margin', key: 'netProfitMargin', source: ratios, isRatio: false, isPct: true, lowerIsBetter: false, tooltip: 'Net Profit Margin: Represents the percentage of revenue that becomes profit. A higher margin indicates a more profitable company.' },
     ];
 
     const tilesHtml = metricsToDisplay.map(m => {
         const data = evaluateMetric(m.name, m.key, m.source, m.isRatio, m.isPct, m.lowerIsBetter);
         return `
-            <div class="metric-tile">
+            <div class="metric-tile" data-tooltip="${sanitizeText(m.tooltip)}">
                 <div>
                     <p class="metric-title">${m.name}</p>
                     <p class="metric-value">${data.value}</p>
