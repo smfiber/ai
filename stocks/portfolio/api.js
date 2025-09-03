@@ -1,4 +1,4 @@
-import { CONSTANTS, state, MORNING_BRIEFING_PROMPT, NEWS_SENTIMENT_PROMPT, OPPORTUNITY_SCANNER_PROMPT, PORTFOLIO_ANALYSIS_PROMPT, TREND_ANALYSIS_PROMPT } from './config.js';
+import { CONSTANTS, state, MORNING_BRIEFING_PROMPT, NEWS_SENTIMENT_PROMPT, OPPORTUNITY_SCANNER_PROMPT, PORTFOLIO_ANALYSIS_PROMPT, TREND_ANALYSIS_PROMPT, SEC_RISK_FACTOR_SUMMARY_PROMPT, SEC_MDA_SUMMARY_PROMPT } from './config.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- UTILITY & SECURITY HELPERS (Moved from ui.js) ---
@@ -116,7 +116,7 @@ export async function generatePolishedArticle(initialPrompt, loadingMessageEleme
     const flowedDraft = await callGeminiApi(flowPrompt);
 
     updateLoadingMessage("Adding final flair...");
-    const flairPrompt = `This final pass is about elevating the article from "correct" to "compelling." Is the intro boring? Is the conclusion weak? Is the language engaging? Rewrite the introduction to be more engaging. Strengthen the conclusion. Replace basic words with more dynamic ones. Return only the final, polished article.\n\nARTICLE:\n${flowedDraft}`;
+    const flairPrompt = `This final pass is about elevating the article from "correct" to "compelling." Is the intro boring? Is the conclusion weak? Is the language engaging? Rewrite the introduction to be more engaging. Strengthen the conclusion. Replace basic words with more dynamic ones. Return only the final, polished article.\n\nARTICLE:\n${flowDraft}`;
     const finalArticle = await callGeminiApi(flairPrompt);
 
     return finalArticle;
@@ -687,6 +687,26 @@ export async function generateTrendAnalysis(ticker) {
         .replace(/{tickerSymbol}/g, ticker)
         .replace('{jsonData}', JSON.stringify(dataForPrompt, null, 2));
     
+    return await callGeminiApi(prompt);
+}
+
+/**
+ * Generates a concise summary of a specific section from an SEC filing.
+ * @param {string} sectionName - The name of the section (e.g., 'Risk Factors', 'MD&A').
+ * @param {string} sectionText - The full text of the section to be summarized.
+ * @returns {Promise<string>} A promise that resolves to the AI-generated summary.
+ */
+export async function summarizeSecFilingSection(sectionName, sectionText) {
+    let promptTemplate;
+    if (sectionName === 'Risk Factors') {
+        promptTemplate = SEC_RISK_FACTOR_SUMMARY_PROMPT;
+    } else if (sectionName === 'MD&A') {
+        promptTemplate = SEC_MDA_SUMMARY_PROMPT;
+    } else {
+        throw new Error(`Unsupported SEC section for summarization: ${sectionName}`);
+    }
+
+    const prompt = promptTemplate.replace('{sectionText}', sectionText);
     return await callGeminiApi(prompt);
 }
 
