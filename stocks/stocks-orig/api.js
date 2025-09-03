@@ -259,6 +259,49 @@ export async function createDriveFile(folderId, fileName, content) {
     return response;
 }
 
+// --- SEC FILING FUNCTIONS ---
+async function callSecQueryApi(queryObject) {
+    if (!state.secApiKey) throw new Error("SEC API Key is not configured.");
+    const url = `https://api.sec-api.io?token=${state.secApiKey}`;
+    
+    const data = await callApi(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(queryObject)
+    });
+
+    return data;
+}
+
+export async function getSecInsiderTrading(ticker) {
+    const queryObject = {
+      "query": { "query_string": { "query": `formType:\"4\" AND ticker:\"${ticker}\"` } },
+      "from": "0",
+      "size": "25",
+      "sort": [{ "filedAt": { "order": "desc" } }]
+    };
+    const result = await callSecQueryApi(queryObject);
+    return result?.filings || [];
+}
+
+export async function getSecInstitutionalOwnership(ticker) {
+    if (!state.secApiKey) throw new Error("SEC API Key is not configured.");
+    const url = `https://api.sec-api.io/holding/search?ticker=${ticker}&token=${state.secApiKey}`;
+    const result = await callApi(url);
+    return result || [];
+}
+
+export async function getSecMaterialEvents(ticker) {
+    const queryObject = {
+      "query": { "query_string": { "query": `formType:\"8-K\" AND ticker:\"${ticker}\"` } },
+      "from": "0",
+      "size": "15",
+      "sort": [{ "filedAt": { "order": "desc" } }]
+    };
+    const result = await callSecQueryApi(queryObject);
+    return result?.filings || [];
+}
+
 // --- SECTOR ANALYSIS: AI AGENT WORKFLOW ---
 export async function searchSectorNews({ sectorName, sectorStocks }) {
     if (!state.fmpApiKey) {
