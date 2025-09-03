@@ -280,7 +280,7 @@ export async function getSecInsiderTrading(ticker) {
       "size": "25",
       "sort": [{ "filedAt": { "order": "desc" } }]
     };
-    const result = await callSecQueryai(queryObject);
+    const result = await callSecQueryApi(queryObject);
     const filings = result?.filings || [];
 
     // Filings contain nested transaction tables. We need to flatten them for the UI.
