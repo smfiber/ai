@@ -72,10 +72,11 @@ async function handleApiKeySubmit(e) {
     state.googleClientId = document.getElementById(CONSTANTS.INPUT_GOOGLE_CLIENT_ID).value.trim();
     state.searchApiKey = document.getElementById(CONSTANTS.INPUT_WEB_SEARCH_KEY).value.trim();
     state.searchEngineId = document.getElementById(CONSTANTS.INPUT_SEARCH_ENGINE_ID).value.trim();
+    state.secApiKey = document.getElementById(CONSTANTS.INPUT_SEC_KEY).value.trim();
     const tempFirebaseConfigText = document.getElementById('firebaseConfigInput').value.trim();
     let tempFirebaseConfig;
 
-    if (!state.fmpApiKey || !state.geminiApiKey || !state.googleClientId || !state.searchApiKey || !state.searchEngineId || !tempFirebaseConfigText) {
+    if (!state.fmpApiKey || !state.geminiApiKey || !state.googleClientId || !state.searchApiKey || !state.searchEngineId || !state.secApiKey || !tempFirebaseConfigText) {
         displayMessageInModal("All API Keys, Client ID, and the Firebase Config are required.", "warning");
         return;
     }
