@@ -1477,6 +1477,14 @@ export function setupEventListeners() {
         const target = e.target.closest('button');
         if (!target) return;
 
+        if (target.id === 'edit-thesis-button') {
+            const ticker = target.dataset.ticker;
+            if (ticker) {
+                openThesisTrackerModal(ticker);
+            }
+            return; 
+        }
+
         if (target.matches('.tab-button')) {
             const tabId = target.dataset.tab;
             document.querySelectorAll('#rawDataViewerModal .tab-content').forEach(c => c.classList.add('hidden'));
@@ -2142,6 +2150,97 @@ async function handleIndustryMacroPlaybookAnalysis(industryName) {
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
+}
+
+// --- THESIS TRACKER ---
+function openThesisTrackerModal(ticker) {
+    const modal = document.getElementById('thesisTrackerModal');
+    if (!modal) return;
+
+    const stock = state.portfolioCache.find(s => s.ticker === ticker);
+    if (!stock) {
+        displayMessageInModal(`Could not find ${ticker} in your portfolio.`, 'error');
+        return;
+    }
+
+    modal.querySelector('#thesis-tracker-ticker').value = ticker;
+    modal.querySelector('#thesis-tracker-modal-title').textContent = `Investment Thesis for ${ticker}`;
+    modal.querySelector('#thesis-tracker-content').value = stock.thesis || '';
+    
+    openModal('thesisTrackerModal');
+}
+
+function renderThesisTracker(container, ticker) {
+    if (!container) return;
+    
+    const stock = state.portfolioCache.find(s => s.ticker === ticker);
+    const thesisContent = stock?.thesis || '';
+
+    let contentHtml = '';
+    if (thesisContent) {
+        const preview = thesisContent.split('\n').slice(0, 5).join('\n');
+        contentHtml = `
+            <div class="prose prose-sm max-w-none bg-gray-50 p-4 rounded-md border">${marked.parse(preview)}</div>
+            ${thesisContent.split('\n').length > 5 ? '<p class="text-xs text-gray-500 mt-1">Showing a preview...</p>' : ''}
+        `;
+    } else {
+        contentHtml = `<p class="text-gray-500 italic">You haven't written an investment thesis for this stock yet.</p>`;
+    }
+    
+    container.innerHTML = `
+        <div class="flex justify-between items-center mb-4 border-b pb-2">
+             <h3 class="text-xl font-bold text-gray-800">My Investment Thesis</h3>
+             <button id="edit-thesis-button" data-ticker="${ticker}" class="bg-indigo-100 hover:bg-indigo-200 text-indigo-700 font-semibold py-1 px-4 rounded-lg text-sm">
+                ${thesisContent ? 'Edit Thesis' : 'Write Thesis'}
+             </button>
+        </div>
+        ${contentHtml}
+    `;
+}
+
+async function handleSaveThesis(e) {
+    e.preventDefault();
+    const ticker = document.getElementById('thesis-tracker-ticker').value;
+    const thesisContent = document.getElementById('thesis-tracker-content').value.trim();
+
+    if (!ticker) {
+        displayMessageInModal('Ticker is missing, cannot save thesis.', 'error');
+        return;
+    }
+
+    openModal(CONSTANTS.MODAL_LOADING);
+    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Saving thesis for ${ticker}...`;
+
+    try {
+        const docRef = doc(state.db, CONSTANTS.DB_COLLECTION_PORTFOLIO, ticker);
+        await updateDoc(docRef, {
+            thesis: thesisContent
+        });
+        
+        closeModal('thesisTrackerModal');
+        
+        await fetchAndCachePortfolioData();
+        const thesisContainer = document.getElementById('thesis-tracker-container');
+        if (thesisContainer && document.getElementById('rawDataViewerModal').dataset.activeTicker === ticker) {
+            renderThesisTracker(thesisContainer, ticker);
+        }
+
+        displayMessageInModal('Thesis saved successfully!', 'info');
+
+    } catch (error) {
+        console.error("Error saving thesis:", error);
+        displayMessageInModal(`Could not save thesis: ${error.message}`, 'error');
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
+// Placeholder for a missing function to prevent crashes
+function renderValuationHealthDashboard(container, ticker, fmpData) {
+    if (container) {
+        container.innerHTML = `<p class="text-center text-gray-400 italic">[Valuation Health Dashboard component is not yet implemented]</p>`;
+    }
+    console.warn('renderValuationHealthDashboard is not fully implemented.');
 }
 
 
