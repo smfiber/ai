@@ -116,7 +116,7 @@ export async function generatePolishedArticle(initialPrompt, loadingMessageEleme
     const flowedDraft = await callGeminiApi(flowPrompt);
 
     updateLoadingMessage("Adding final flair...");
-    const flairPrompt = `This final pass is about elevating the article from "correct" to "compelling." Is the intro boring? Is the conclusion weak? Is the language engaging? Rewrite the introduction to be more engaging. Strengthen the conclusion. Replace basic words with more dynamic ones. Return only the final, polished article.\n\nARTICLE:\n${flowDraft}`;
+    const flairPrompt = `This final pass is about elevating the article from "correct" to "compelling." Is the intro boring? Is the conclusion weak? Is the language engaging? Rewrite the introduction to be more engaging. Strengthen the conclusion. Replace basic words with more dynamic ones. Return only the final, polished article.\n\nARTICLE:\n${flowedDraft}`;
     const finalArticle = await callGeminiApi(flairPrompt);
 
     return finalArticle;
