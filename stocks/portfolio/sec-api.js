@@ -160,7 +160,7 @@ export async function getLatest10QMdaText(ticker) {
         if (!filings || filings.length === 0) return null;
 
         const latestFilingUrl = filings[0].linkToFilingDetails;
-        const extractorUrl = `https://api.sec-api.io/extractor?url=${latestFilingUrl}&item=2&type=text&token=${state.secApiKey}`;
+        const extractorUrl = `https://api.sec-api.io/extractor?url=${latestFilingUrl}&item=part2item2&type=text&token=${state.secApiKey}`;
         
         return await _callSecTextApi(extractorUrl);
     } catch (error) {
