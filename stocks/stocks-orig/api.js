@@ -289,15 +289,9 @@ export async function getSecInsiderTrading(ticker) {
         const allTransactions = [...nonDerivativeTxns, ...derivativeTxns];
 
         if (allTransactions.length === 0) {
-            // If there are no transactions, return a single placeholder row for the filing itself.
-            return [{
-                filedAt: filing.filedAt,
-                reportingOwnerName: filing.reportingOwnerName,
-                linkToFilingDetails: filing.linkToFilingDetails,
-                transactionCode: null,
-                transactionShares: 0,
-                transactionPricePerShare: 0
-            }];
+            // If a filing has no specific buy/sell transactions listed, it's often a grant, award, or other event
+            // not relevant to our insider trading view. We'll filter it out by returning an empty array.
+            return [];
         } else {
             // If there are transactions, map them to the format the UI expects.
             return allTransactions.map(txn => ({
