@@ -281,7 +281,22 @@ export async function getSecInsiderTrading(ticker) {
       "sort": [{ "filedAt": { "order": "desc" } }]
     };
     const result = await callSecQueryApi(queryObject);
-    return result?.filings || [];
+    const filings = result?.filings || [];
+
+    // Filings contain nested transaction tables. We need to flatten them for the UI.
+    return filings.flatMap(filing => {
+        const transactions = filing.transactionTable?.nonDerivativeTable || [];
+        return transactions.map(txn => ({
+            // Carry over filing-level info
+            filedAt: filing.filedAt,
+            reportingOwnerName: filing.reportingOwnerName,
+            linkToFilingDetails: filing.linkToFilingDetails,
+            // Extract transaction-level info
+            transactionCode: txn.transactionCoding?.transactionCode,
+            transactionShares: txn.transactionShares?.value,
+            transactionPricePerShare: txn.transactionPricePerShare?.value
+        }));
+    });
 }
 
 export async function getSecInstitutionalOwnership(ticker) {
@@ -304,7 +319,7 @@ export async function getSecInstitutionalOwnership(ticker) {
         const holdingInfo = filing.holdings.find(h => h.ticker === ticker);
         return {
             investorName: filing.companyName,
-            shares: holdingInfo?.shares,
+            shares: holdingInfo?.shrsOrPrnAmt?.sshPrnamt, // Correctly access nested share count
             value: holdingInfo?.value,
             filedAt: filing.filedAt
         };
