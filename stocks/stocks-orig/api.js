@@ -283,26 +283,32 @@ export async function getSecInsiderTrading(ticker) {
     const result = await callSecQueryApi(queryObject);
     const filings = result?.filings || [];
 
-    // Filings contain nested transaction tables. We need to flatten them for the UI.
     return filings.flatMap(filing => {
         const nonDerivativeTxns = filing.transactionTable?.nonDerivativeTable || [];
         const derivativeTxns = filing.transactionTable?.derivativeTable || [];
-        
-        // Combine both transaction tables into one array
         const allTransactions = [...nonDerivativeTxns, ...derivativeTxns];
 
-        return allTransactions.map(txn => {
-            return {
-                // Carry over filing-level info
+        if (allTransactions.length === 0) {
+            // If there are no transactions, return a single placeholder row for the filing itself.
+            return [{
                 filedAt: filing.filedAt,
                 reportingOwnerName: filing.reportingOwnerName,
                 linkToFilingDetails: filing.linkToFilingDetails,
-                // Extract transaction-level info
+                transactionCode: null,
+                transactionShares: 0,
+                transactionPricePerShare: 0
+            }];
+        } else {
+            // If there are transactions, map them to the format the UI expects.
+            return allTransactions.map(txn => ({
+                filedAt: filing.filedAt,
+                reportingOwnerName: filing.reportingOwnerName,
+                linkToFilingDetails: filing.linkToFilingDetails,
                 transactionCode: txn.transactionCoding?.transactionCode,
                 transactionShares: txn.transactionShares?.value,
                 transactionPricePerShare: txn.transactionPricePerShare?.value
-            };
-        });
+            }));
+        }
     });
 }
 
@@ -337,7 +343,7 @@ export async function getSecMaterialEvents(ticker) {
     const queryObject = {
       "query": { "query_string": { "query": `formType:\"8-K\" AND ticker:\"${ticker}\"` } },
       "from": "0",
-      "size": "15",
+      "size": "25",
       "sort": [{ "filedAt": { "order": "desc" } }]
     };
     const result = await callSecQueryApi(queryObject);
