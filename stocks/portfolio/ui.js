@@ -2,6 +2,7 @@
 import { CONSTANTS, SECTORS, SECTOR_ICONS, state, NEWS_SENTIMENT_PROMPT, DEEP_DIVE_PROMPT } from './config.js';
 import { getFmpStockData, callApi, filterValidNews, callGeminiApi, generatePolishedArticle, getDriveToken, getOrCreateDriveFolder, createDriveFile, getGroupedFmpData, generateMorningBriefing, calculatePortfolioHealthScore, runOpportunityScanner, generatePortfolioAnalysis, generateTrendAnalysis, getCachedNews, getScannerResults, generateNewsSummary } from './api.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getSecInsiderTrading, getSecInstitutionalOwnership, getSecMaterialEvents } from './sec-api.js';
 
 // --- CHART INSTANCES ---
 let allocationChartInstance = null;
@@ -818,6 +819,7 @@ async function openRawDataViewer(ticker) {
     const trendContentContainer = document.getElementById('trend-analysis-content');
     const newsContentContainer = document.getElementById('news-content-container');
     const scannerResultsContainer = document.getElementById('scanner-results-tab');
+    const secApiContainer = document.getElementById('sec-api-tab');
     
     titleEl.textContent = `Analyzing ${ticker}...`;
     rawDataContainer.innerHTML = '<div class="loader mx-auto"></div>';
@@ -827,6 +829,7 @@ async function openRawDataViewer(ticker) {
     if (trendContentContainer) trendContentContainer.innerHTML = ''; // Clear trend content on open
     if (newsContentContainer) newsContentContainer.innerHTML = ''; // Clear news content on open
     if (scannerResultsContainer) scannerResultsContainer.innerHTML = ''; // Clear scanner content on open
+    if (secApiContainer) secApiContainer.innerHTML = ''; // Clear sec-api content on open
 
 
     document.querySelectorAll('#rawDataViewerModal .tab-content').forEach(c => c.classList.add('hidden'));
@@ -1696,6 +1699,136 @@ async function handleNewsTabRequest(ticker) {
     }
 }
 
+// --- SEC API TAB ---
+
+function _renderSecInsiderTrading(data) {
+    let html = `<h3 class="text-xl font-bold text-gray-800 mb-4">Recent Insider Trading (Form 4)</h3>`;
+    if (!data || data.length === 0) {
+        return html + `<p class="text-sm text-gray-500">No recent insider transactions found.</p>`;
+    }
+    
+    html += `
+        <div class="overflow-x-auto">
+            <table class="min-w-full bg-white border rounded-lg text-sm">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="p-3 text-left font-semibold text-gray-600">Owner</th>
+                        <th class="p-3 text-left font-semibold text-gray-600">Date</th>
+                        <th class="p-3 text-left font-semibold text-gray-600">Type</th>
+                        <th class="p-3 text-right font-semibold text-gray-600">Shares</th>
+                        <th class="p-3 text-right font-semibold text-gray-600">Price/Share</th>
+                        <th class="p-3 text-center font-semibold text-gray-600">Filing</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+    `;
+    data.slice(0, 10).forEach(txn => {
+        const type = txn.transactionCode === 'P' ? '<span class="font-semibold text-green-600">Purchase</span>' :
+                     txn.transactionCode === 'S' ? '<span class="font-semibold text-red-600">Sale</span>' :
+                     'Other';
+        html += `
+            <tr>
+                <td class="p-3 text-gray-700">${sanitizeText(txn.reportingOwnerName)}</td>
+                <td class="p-3 text-gray-700">${new Date(txn.filedAt).toLocaleDateString()}</td>
+                <td class="p-3">${type}</td>
+                <td class="p-3 text-right text-gray-700">${txn.transactionShares?.toLocaleString() || 'N/A'}</td>
+                <td class="p-3 text-right text-gray-700">${txn.transactionPricePerShare ? formatCurrency(txn.transactionPricePerShare) : 'N/A'}</td>
+                <td class="p-3 text-center"><a href="${sanitizeText(txn.linkToFilingDetails)}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:underline">View</a></td>
+            </tr>
+        `;
+    });
+    html += `</tbody></table></div>`;
+    return html;
+}
+
+function _renderSecInstitutionalOwnership(data) {
+    let html = `<h3 class="text-xl font-bold text-gray-800 mb-4 mt-8">Institutional Ownership (13F-HR)</h3>`;
+    if (!data || data.length === 0) {
+        return html + `<p class="text-sm text-gray-500">No institutional ownership data found.</p>`;
+    }
+
+    html += `
+        <div class="overflow-x-auto">
+            <table class="min-w-full bg-white border rounded-lg text-sm">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="p-3 text-left font-semibold text-gray-600">Investor</th>
+                        <th class="p-3 text-right font-semibold text-gray-600">Shares</th>
+                        <th class="p-3 text-right font-semibold text-gray-600">Value</th>
+                        <th class="p-3 text-left font-semibold text-gray-600">Filed At</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+    `;
+    data.sort((a,b) => b.value - a.value).slice(0, 10).forEach(holder => {
+        html += `
+            <tr>
+                <td class="p-3 text-gray-700">${sanitizeText(holder.investorName)}</td>
+                <td class="p-3 text-right text-gray-700">${holder.shares?.toLocaleString() || 'N/A'}</td>
+                <td class="p-3 text-right text-gray-700">${formatCurrency(holder.value)}</td>
+                <td class="p-3 text-gray-700">${new Date(holder.filedAt).toLocaleDateString()}</td>
+            </tr>
+        `;
+    });
+    html += `</tbody></table></div>`;
+    return html;
+}
+
+function _renderSecMaterialEvents(data) {
+    let html = `<h3 class="text-xl font-bold text-gray-800 mb-4 mt-8">Material Events (8-K)</h3>`;
+    if (!data || data.length === 0) {
+        return html + `<p class="text-sm text-gray-500">No recent material event filings found.</p>`;
+    }
+
+    html += `<ul class="space-y-2">`;
+    data.slice(0, 10).forEach(event => {
+        html += `
+            <li class="p-3 bg-white border rounded-lg flex justify-between items-center text-sm">
+                <span>
+                    <strong>Filed:</strong> ${new Date(event.filedAt).toLocaleDateString()} - 
+                    <span class="text-gray-600">${sanitizeText(event.formType)}</span>
+                </span>
+                <a href="${sanitizeText(event.linkToFilingDetails)}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:underline font-semibold">View Filing</a>
+            </li>
+        `;
+    });
+    html += `</ul>`;
+    return html;
+}
+
+async function handleSecApiRequest(ticker) {
+    const contentContainer = document.getElementById('sec-api-tab');
+    if (!contentContainer) return;
+    
+    if (contentContainer.innerHTML.trim() !== '') {
+        return;
+    }
+
+    contentContainer.innerHTML = '<div class="flex justify-center items-center h-full pt-16"><div class="loader"></div></div>';
+
+    if (!state.secApiKey) {
+        contentContainer.innerHTML = `<div class="text-center p-4 text-yellow-700 bg-yellow-50 rounded-lg"><p class="font-semibold">SEC API Key Not Configured</p><p class="text-sm">Please add your SEC-API.io key in the settings to use this feature.</p></div>`;
+        return;
+    }
+    
+    try {
+        const [insiderTrading, institutionalOwnership, materialEvents] = await Promise.all([
+            getSecInsiderTrading(ticker),
+            getSecInstitutionalOwnership(ticker),
+            getSecMaterialEvents(ticker)
+        ]);
+        
+        let html = _renderSecInsiderTrading(insiderTrading);
+        html += _renderSecInstitutionalOwnership(institutionalOwnership);
+        html += _renderSecMaterialEvents(materialEvents);
+
+        contentContainer.innerHTML = html;
+    } catch (error) {
+        console.error("Error fetching SEC data:", error);
+        contentContainer.innerHTML = `<div class="text-center p-4 text-red-500 bg-red-50 rounded-lg"><p class="font-semibold">Could not load SEC data.</p><p class="text-sm">${error.message}</p></div>`;
+    }
+}
+
 
 // --- EVENT LISTENER SETUP ---
 
@@ -2024,6 +2157,8 @@ export function setupEventListeners() {
                     handleNewsTabRequest(activeSymbol);
                 } else if (tabId === 'scanner-results') {
                     handleScannerResultsRequest(activeSymbol);
+                } else if (tabId === 'sec-api') {
+                    handleSecApiRequest(activeSymbol);
                 }
             }
             return;
