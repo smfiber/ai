@@ -285,10 +285,30 @@ export async function getSecInsiderTrading(ticker) {
 }
 
 export async function getSecInstitutionalOwnership(ticker) {
-    if (!state.secApiKey) throw new Error("SEC API Key is not configured.");
-    const url = `https://api.sec-api.io/holding/search?ticker=${ticker}&token=${state.secApiKey}`;
-    const result = await callApi(url);
-    return result || [];
+    const queryObject = {
+        "query": {
+            "query_string": {
+                "query": `formType:\"13F-HR\" AND holdings.ticker:\"${ticker}\"`
+            }
+        },
+        "from": "0",
+        "size": "50",
+        "sort": [{ "filedAt": { "order": "desc" } }]
+    };
+    const result = await callSecQueryApi(queryObject);
+    const filings = result?.filings || [];
+
+    // Transform the filings data into the flat list of holders the UI expects
+    return filings.map(filing => {
+        // Find the specific holding information for the ticker within the filing
+        const holdingInfo = filing.holdings.find(h => h.ticker === ticker);
+        return {
+            investorName: filing.companyName,
+            shares: holdingInfo?.shares,
+            value: holdingInfo?.value,
+            filedAt: filing.filedAt
+        };
+    }).filter(h => h.value > 0); // Filter out cases where the holding might not be found or has no value
 }
 
 export async function getSecMaterialEvents(ticker) {
