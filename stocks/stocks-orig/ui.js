@@ -1308,11 +1308,10 @@ function _renderMaterialEvents(filings) {
 
 async function renderSecFilings(ticker) {
     try {
-        const [insider, institutional, events] = await Promise.all([
-            getSecInsiderTrading(ticker),
-            getSecInstitutionalOwnership(ticker),
-            getSecMaterialEvents(ticker)
-        ]);
+        // Run requests sequentially to avoid rate limiting
+        const insider = await getSecInsiderTrading(ticker);
+        const institutional = await getSecInstitutionalOwnership(ticker);
+        const events = await getSecMaterialEvents(ticker);
 
         _renderInsiderTrading(insider);
         _renderInstitutionalOwnership(institutional);
