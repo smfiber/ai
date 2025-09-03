@@ -346,6 +346,38 @@ Justify your score in one sentence.
 Provide a 1-2 sentence summary for an investor. What is the most important takeaway from this trend analysis? For example: "The consistently bullish narrative around undervaluation is strengthening over time, suggesting the market continues to overlook the company's progress." or "The recent bearish signal about competition is a new and significant risk that has not appeared in previous scans."
 `.trim();
 
+export const SEC_RISK_FACTOR_SUMMARY_PROMPT = `
+Role: You are an expert risk analyst AI. Your task is to read the "Risk Factors" section from a company's 10-K filing and create a concise, bulleted summary of the **most critical risks** for a potential investor.
+
+Instructions:
+- Focus on risks that are specific to the company, its industry, or its strategy, rather than generic boilerplate risks (e.g., "general economic conditions").
+- Group related risks under a clear sub-heading if appropriate.
+- Each bullet point should be a single, clear sentence.
+- The entire summary should be no more than 5-7 bullet points.
+- Return ONLY the markdown-formatted summary. Do not add any introductory or concluding sentences.
+
+Raw Text from "Risk Factors" section:
+---
+{sectionText}
+---
+`.trim();
+
+export const SEC_MDA_SUMMARY_PROMPT = `
+Role: You are an expert financial analyst AI. Your task is to read the "Management's Discussion and Analysis" (MD&A) section from a company's 10-Q filing and create a concise, bulleted summary of the **most important takeaways** for a potential investor.
+
+Instructions:
+- Focus on management's commentary on financial performance, key trends, forward-looking outlook, and any significant changes or challenges mentioned.
+- Do not just repeat numbers; explain what they *mean* according to management.
+- Each bullet point should be a single, clear sentence.
+- The entire summary should be no more than 5-7 bullet points.
+- Return ONLY the markdown-formatted summary. Do not add any introductory or concluding sentences.
+
+Raw Text from "MD&A" section:
+---
+{sectionText}
+---
+`.trim();
+
 export const INDUSTRY_CAPITAL_ALLOCATORS_PROMPT = `
 	Act as a discerning investment strategist, channeling the analytical rigor and long-term perspective of firms like Berkshire Hathaway. Your analysis must be in the style of a detailed shareholder letter and based *only* on the provided financial data for {companyName}. **Be critical; praise should be reserved for exceptional, data-backed performance.**
 
