@@ -1,5 +1,6 @@
 import { CONSTANTS, SECTORS, SECTOR_ICONS, state, NEWS_SENTIMENT_PROMPT, promptMap, creativePromptMap, DISRUPTOR_ANALYSIS_PROMPT, MACRO_PLAYBOOK_PROMPT, INDUSTRY_CAPITAL_ALLOCATORS_PROMPT, INDUSTRY_DISRUPTOR_ANALYSIS_PROMPT, INDUSTRY_MACRO_PLAYBOOK_PROMPT, ONE_SHOT_INDUSTRY_TREND_PROMPT, FORTRESS_ANALYSIS_PROMPT, PHOENIX_ANALYSIS_PROMPT, PICK_AND_SHOVEL_PROMPT, LINCHPIN_ANALYSIS_PROMPT, HIDDEN_VALUE_PROMPT, UNTOUCHABLES_ANALYSIS_PROMPT, INVESTMENT_MEMO_PROMPT, ENABLE_STARTER_PLAN_MODE, STARTER_SYMBOLS } from './config.js';
-import { getFmpStockData, callApi, filterValidNews, callGeminiApi, generatePolishedArticle, getDriveToken, getOrCreateDriveFolder, createDriveFile, findStocksByIndustry, searchSectorNews, findStocksBySector, getGroupedFmpData, synthesizeAndRankCompanies, generateDeepDiveReport, getSecInsiderTrading, getSecInstitutionalOwnership, getSecMaterialEvents } from './api.js';
+import { getFmpStockData, callApi, filterValidNews, callGeminiApi, generatePolishedArticle, getDriveToken, getOrCreateDriveFolder, createDriveFile, findStocksByIndustry, searchSectorNews, findStocksBySector, getGroupedFmpData, synthesizeAndRankCompanies, generateDeepDiveReport } from './api.js';
+import { getSecInsiderTrading, getSecInstitutionalOwnership, getSecMaterialEvents } from './sec-api.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- PROMPT MAPPING ---
@@ -3151,7 +3152,7 @@ function _calculateBullVsBearMetrics(data) {
     return {
         growth_trends: {
             revenue: formatTrend(income, 'revenue'),
-            net_income: formatTrend(income, 'netIncome')
+            net_income: formatTrend(income, 'net_income')
         },
         profitability_metrics: {
             roe_trend: formatPercentTrend(ratios, 'returnOnEquity'),
