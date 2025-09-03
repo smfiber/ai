@@ -280,22 +280,29 @@ export async function getSecInsiderTrading(ticker) {
       "size": "25",
       "sort": [{ "filedAt": { "order": "desc" } }]
     };
-    const result = await callSecQueryApi(queryObject);
+    const result = await callSecQueryai(queryObject);
     const filings = result?.filings || [];
 
     // Filings contain nested transaction tables. We need to flatten them for the UI.
     return filings.flatMap(filing => {
-        const transactions = filing.transactionTable?.nonDerivativeTable || [];
-        return transactions.map(txn => ({
-            // Carry over filing-level info
-            filedAt: filing.filedAt,
-            reportingOwnerName: filing.reportingOwnerName,
-            linkToFilingDetails: filing.linkToFilingDetails,
-            // Extract transaction-level info
-            transactionCode: txn.transactionCoding?.transactionCode,
-            transactionShares: txn.transactionShares?.value,
-            transactionPricePerShare: txn.transactionPricePerShare?.value
-        }));
+        const nonDerivativeTxns = filing.transactionTable?.nonDerivativeTable || [];
+        const derivativeTxns = filing.transactionTable?.derivativeTable || [];
+        
+        // Combine both transaction tables into one array
+        const allTransactions = [...nonDerivativeTxns, ...derivativeTxns];
+
+        return allTransactions.map(txn => {
+            return {
+                // Carry over filing-level info
+                filedAt: filing.filedAt,
+                reportingOwnerName: filing.reportingOwnerName,
+                linkToFilingDetails: filing.linkToFilingDetails,
+                // Extract transaction-level info
+                transactionCode: txn.transactionCoding?.transactionCode,
+                transactionShares: txn.transactionShares?.value,
+                transactionPricePerShare: txn.transactionPricePerShare?.value
+            };
+        });
     });
 }
 
