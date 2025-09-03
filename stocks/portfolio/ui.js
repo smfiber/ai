@@ -1,5 +1,5 @@
 import { CONSTANTS, SECTORS, SECTOR_ICONS, state, NEWS_SENTIMENT_PROMPT, promptMap, creativePromptMap, DISRUPTOR_ANALYSIS_PROMPT, MACRO_PLAYBOOK_PROMPT, INDUSTRY_CAPITAL_ALLOCATORS_PROMPT, INDUSTRY_DISRUPTOR_ANALYSIS_PROMPT, INDUSTRY_MACRO_PLAYBOOK_PROMPT, ONE_SHOT_INDUSTRY_TREND_PROMPT, FORTRESS_ANALYSIS_PROMPT, PHOENIX_ANALYSIS_PROMPT, PICK_AND_SHOVEL_PROMPT, LINCHPIN_ANALYSIS_PROMPT, HIDDEN_VALUE_PROMPT, UNTOUCHABLES_ANALYSIS_PROMPT, INVESTMENT_MEMO_PROMPT, ENABLE_STARTER_PLAN_MODE, STARTER_SYMBOLS } from './config.js';
-import { getFmpStockData, callApi, filterValidNews, callGeminiApi, generatePolishedArticle, getDriveToken, getOrCreateDriveFolder, createDriveFile, findStocksByIndustry, searchSectorNews, findStocksBySector, getGroupedFmpData, synthesizeAndRankCompanies, generateDeepDiveReport } from './api.js';
+import { getFmpStockData, callApi, filterValidNews, callGeminiApi, generatePolishedArticle, getDriveToken, getOrCreateDriveFolder, createDriveFile, findStocksByIndustry, searchSectorNews, findStocksBySector, getGroupedFmpData, synthesizeAndRankCompanies, generateDeepDiveReport, getSecInsiderTrading, getSecInstitutionalOwnership, getSecMaterialEvents } from './api.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- PROMPT MAPPING ---
@@ -220,10 +220,6 @@ async function handleRefreshFmpData(symbol) {
             const userEndpoints = endpointsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             for (const endpoint of userEndpoints) {
                  if (!endpoint.url_template || !endpoint.name) continue;
-                 if (endpoint.id === 'insider_trading_stats') {
-                    console.warn("Skipping problematic 'insider_trading_stats' endpoint as requested.");
-                    continue;
-                 }
                 loadingMessage.textContent = `Fetching FMP Data: ${endpoint.name}...`;
                 const url = endpoint.url_template.replace('${symbol}', symbol).replace('${fmpApiKey}', state.fmpApiKey);
                 const data = await callApi(url);
@@ -522,6 +518,9 @@ async function handleResearchSubmit(e) {
 async function openRawDataViewer(ticker) {
     const modalId = 'rawDataViewerModal';
     openModal(modalId);
+
+    const modal = document.getElementById(modalId);
+    modal.dataset.activeTicker = ticker; // Store ticker for later use
     
     const rawDataContainer = document.getElementById('raw-data-accordion-container');
     const aiButtonsContainer = document.getElementById('ai-buttons-container');
@@ -534,11 +533,19 @@ async function openRawDataViewer(ticker) {
     aiButtonsContainer.innerHTML = '';
     aiArticleContainer.innerHTML = '';
     profileDisplayContainer.innerHTML = '';
+    document.getElementById('valuation-health-container').innerHTML = '';
+    document.getElementById('thesis-tracker-container').innerHTML = '';
+    document.querySelector('#sec-filings-tab .content-placeholder')?.parentNode.replaceChildren(...[...document.querySelector('#sec-filings-tab').children].map(child => {
+        const placeholder = child.querySelector('.content-placeholder');
+        if (placeholder) placeholder.innerHTML = 'Loading...';
+        return child;
+    }));
+
 
     document.querySelectorAll('#rawDataViewerModal .tab-content').forEach(c => c.classList.add('hidden'));
     document.querySelectorAll('#rawDataViewerModal .tab-button').forEach(b => b.classList.remove('active'));
-    document.getElementById('company-profile-tab').classList.remove('hidden');
-    document.querySelector('.tab-button[data-tab="company-profile"]').classList.add('active');
+    document.getElementById('dashboard-tab').classList.remove('hidden');
+    document.querySelector('.tab-button[data-tab="dashboard"]').classList.add('active');
 
     try {
         const fmpDataPromise = getFmpStockData(ticker);
@@ -640,6 +647,11 @@ async function openRawDataViewer(ticker) {
         
         profileHtml += `</div></div></div>`;
         profileDisplayContainer.innerHTML = profileHtml;
+        
+        // Render Dashboard tab content
+        renderValuationHealthDashboard(document.getElementById('valuation-health-container'), ticker, fmpData);
+        renderThesisTracker(document.getElementById('thesis-tracker-container'), ticker);
+        // SEC Filings are lazy-loaded via tab click event
 
     } catch (error) {
         console.error('Error opening raw data viewer:', error);
@@ -1430,6 +1442,7 @@ export function setupEventListeners() {
         { modal: 'rawDataViewerModal', button: 'close-raw-data-viewer-modal' },
         { modal: CONSTANTS.MODAL_STOCK_LIST, button: 'close-stock-list-modal', bg: 'close-stock-list-modal-bg' },
         { modal: CONSTANTS.MODAL_SESSION_LOG, button: 'close-session-log-modal', bg: 'close-session-log-modal-bg' },
+        { modal: 'thesisTrackerModal', button: 'cancel-thesis-tracker-button', bg: 'close-thesis-tracker-modal-bg' },
     ];
 
     modalsToClose.forEach(item => {
@@ -1467,6 +1480,15 @@ export function setupEventListeners() {
             document.querySelectorAll('#rawDataViewerModal .tab-button').forEach(b => b.classList.remove('active'));
             document.getElementById(`${tabId}-tab`).classList.remove('hidden');
             target.classList.add('active');
+
+            // Lazy-load SEC data on first click
+            if (tabId === 'sec-filings' && !target.dataset.loaded) {
+                const ticker = document.getElementById('rawDataViewerModal').dataset.activeTicker;
+                if(ticker) {
+                    renderSecFilings(ticker);
+                    target.dataset.loaded = 'true'; // Prevent re-loading
+                }
+            }
             return;
         }
         
@@ -1497,6 +1519,8 @@ export function setupEventListeners() {
             handleDeleteBroadEndpoint(id);
         }
     });
+    
+    document.getElementById('thesis-tracker-form')?.addEventListener('submit', handleSaveThesis);
 
     setupGlobalEventListeners();
 }
