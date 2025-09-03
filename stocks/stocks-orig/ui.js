@@ -1,5 +1,5 @@
 import { CONSTANTS, SECTORS, SECTOR_ICONS, state, NEWS_SENTIMENT_PROMPT, promptMap, creativePromptMap, DISRUPTOR_ANALYSIS_PROMPT, MACRO_PLAYBOOK_PROMPT, INDUSTRY_CAPITAL_ALLOCATORS_PROMPT, INDUSTRY_DISRUPTOR_ANALYSIS_PROMPT, INDUSTRY_MACRO_PLAYBOOK_PROMPT, ONE_SHOT_INDUSTRY_TREND_PROMPT, FORTRESS_ANALYSIS_PROMPT, PHOENIX_ANALYSIS_PROMPT, PICK_AND_SHOVEL_PROMPT, LINCHPIN_ANALYSIS_PROMPT, HIDDEN_VALUE_PROMPT, UNTOUCHABLES_ANALYSIS_PROMPT, INVESTMENT_MEMO_PROMPT, ENABLE_STARTER_PLAN_MODE, STARTER_SYMBOLS } from './config.js';
-import { getFmpStockData, callApi, filterValidNews, callGeminiApi, generatePolishedArticle, getDriveToken, getOrCreateDriveFolder, createDriveFile, findStocksByIndustry, searchSectorNews, findStocksBySector, getGroupedFmpData, synthesizeAndRankCompanies, generateDeepDiveReport } from './api.js';
+import { getFmpStockData, callApi, filterValidNews, callGeminiApi, generatePolishedArticle, getDriveToken, getOrCreateDriveFolder, createDriveFile, findStocksByIndustry, searchSectorNews, findStocksBySector, getGroupedFmpData, synthesizeAndRankCompanies, generateDeepDiveReport, getSecInsiderTrading, getSecInstitutionalOwnership, getSecMaterialEvents } from './api.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- PROMPT MAPPING ---
@@ -518,6 +518,9 @@ async function handleResearchSubmit(e) {
 async function openRawDataViewer(ticker) {
     const modalId = 'rawDataViewerModal';
     openModal(modalId);
+
+    const modal = document.getElementById(modalId);
+    modal.dataset.activeTicker = ticker; // Store ticker for later use
     
     const rawDataContainer = document.getElementById('raw-data-accordion-container');
     const aiButtonsContainer = document.getElementById('ai-buttons-container');
@@ -530,11 +533,22 @@ async function openRawDataViewer(ticker) {
     aiButtonsContainer.innerHTML = '';
     aiArticleContainer.innerHTML = '';
     profileDisplayContainer.innerHTML = '';
+    document.getElementById('valuation-health-container').innerHTML = '';
+    document.getElementById('thesis-tracker-container').innerHTML = '';
+    
+    // Reset SEC tab content to loading placeholders
+    document.getElementById('insider-trading-container').innerHTML = `<h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Recent Insider Activity (Form 4)</h3><div class="content-placeholder text-center text-gray-500 py-8">Loading...</div>`;
+    document.getElementById('institutional-ownership-container').innerHTML = `<h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Top Institutional Holders (13F)</h3><div class="content-placeholder text-center text-gray-500 py-8">Loading...</div>`;
+    document.getElementById('material-events-container').innerHTML = `<h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Recent Material Events (8-K)</h3><div class="content-placeholder text-center text-gray-500 py-8">Loading...</div>`;
 
+    // Reset tabs to default state
     document.querySelectorAll('#rawDataViewerModal .tab-content').forEach(c => c.classList.add('hidden'));
-    document.querySelectorAll('#rawDataViewerModal .tab-button').forEach(b => b.classList.remove('active'));
-    document.getElementById('company-profile-tab').classList.remove('hidden');
-    document.querySelector('.tab-button[data-tab="company-profile"]').classList.add('active');
+    document.querySelectorAll('#rawDataViewerModal .tab-button').forEach(b => {
+        b.classList.remove('active');
+        b.removeAttribute('data-loaded'); // Clear loaded state for lazy loading
+    });
+    document.getElementById('dashboard-tab').classList.remove('hidden');
+    document.querySelector('.tab-button[data-tab="dashboard"]').classList.add('active');
 
     try {
         const fmpDataPromise = getFmpStockData(ticker);
@@ -636,6 +650,11 @@ async function openRawDataViewer(ticker) {
         
         profileHtml += `</div></div></div>`;
         profileDisplayContainer.innerHTML = profileHtml;
+        
+        // Render Dashboard tab content
+        renderValuationHealthDashboard(document.getElementById('valuation-health-container'), ticker, fmpData);
+        renderThesisTracker(document.getElementById('thesis-tracker-container'), ticker);
+        // SEC Filings are lazy-loaded via tab click event
 
     } catch (error) {
         console.error('Error opening raw data viewer:', error);
@@ -1426,6 +1445,7 @@ export function setupEventListeners() {
         { modal: 'rawDataViewerModal', button: 'close-raw-data-viewer-modal' },
         { modal: CONSTANTS.MODAL_STOCK_LIST, button: 'close-stock-list-modal', bg: 'close-stock-list-modal-bg' },
         { modal: CONSTANTS.MODAL_SESSION_LOG, button: 'close-session-log-modal', bg: 'close-session-log-modal-bg' },
+        { modal: 'thesisTrackerModal', button: 'cancel-thesis-tracker-button', bg: 'close-thesis-tracker-modal-bg' },
     ];
 
     modalsToClose.forEach(item => {
@@ -1457,12 +1477,29 @@ export function setupEventListeners() {
         const target = e.target.closest('button');
         if (!target) return;
 
+        if (target.id === 'edit-thesis-button') {
+            const ticker = target.dataset.ticker;
+            if (ticker) {
+                openThesisTrackerModal(ticker);
+            }
+            return; 
+        }
+
         if (target.matches('.tab-button')) {
             const tabId = target.dataset.tab;
             document.querySelectorAll('#rawDataViewerModal .tab-content').forEach(c => c.classList.add('hidden'));
             document.querySelectorAll('#rawDataViewerModal .tab-button').forEach(b => b.classList.remove('active'));
             document.getElementById(`${tabId}-tab`).classList.remove('hidden');
             target.classList.add('active');
+
+            // Lazy-load SEC data on first click
+            if (tabId === 'sec-filings' && !target.dataset.loaded) {
+                const ticker = document.getElementById('rawDataViewerModal').dataset.activeTicker;
+                if(ticker) {
+                    renderSecFilings(ticker);
+                    target.dataset.loaded = 'true'; // Prevent re-loading
+                }
+            }
             return;
         }
         
@@ -1493,6 +1530,8 @@ export function setupEventListeners() {
             handleDeleteBroadEndpoint(id);
         }
     });
+    
+    document.getElementById('thesis-tracker-form')?.addEventListener('submit', handleSaveThesis);
 
     setupGlobalEventListeners();
 }
@@ -2111,6 +2150,97 @@ async function handleIndustryMacroPlaybookAnalysis(industryName) {
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
+}
+
+// --- THESIS TRACKER ---
+function openThesisTrackerModal(ticker) {
+    const modal = document.getElementById('thesisTrackerModal');
+    if (!modal) return;
+
+    const stock = state.portfolioCache.find(s => s.ticker === ticker);
+    if (!stock) {
+        displayMessageInModal(`Could not find ${ticker} in your portfolio.`, 'error');
+        return;
+    }
+
+    modal.querySelector('#thesis-tracker-ticker').value = ticker;
+    modal.querySelector('#thesis-tracker-modal-title').textContent = `Investment Thesis for ${ticker}`;
+    modal.querySelector('#thesis-tracker-content').value = stock.thesis || '';
+    
+    openModal('thesisTrackerModal');
+}
+
+function renderThesisTracker(container, ticker) {
+    if (!container) return;
+    
+    const stock = state.portfolioCache.find(s => s.ticker === ticker);
+    const thesisContent = stock?.thesis || '';
+
+    let contentHtml = '';
+    if (thesisContent) {
+        const preview = thesisContent.split('\n').slice(0, 5).join('\n');
+        contentHtml = `
+            <div class="prose prose-sm max-w-none bg-gray-50 p-4 rounded-md border">${marked.parse(preview)}</div>
+            ${thesisContent.split('\n').length > 5 ? '<p class="text-xs text-gray-500 mt-1">Showing a preview...</p>' : ''}
+        `;
+    } else {
+        contentHtml = `<p class="text-gray-500 italic">You haven't written an investment thesis for this stock yet.</p>`;
+    }
+    
+    container.innerHTML = `
+        <div class="flex justify-between items-center mb-4 border-b pb-2">
+             <h3 class="text-xl font-bold text-gray-800">My Investment Thesis</h3>
+             <button id="edit-thesis-button" data-ticker="${ticker}" class="bg-indigo-100 hover:bg-indigo-200 text-indigo-700 font-semibold py-1 px-4 rounded-lg text-sm">
+                ${thesisContent ? 'Edit Thesis' : 'Write Thesis'}
+             </button>
+        </div>
+        ${contentHtml}
+    `;
+}
+
+async function handleSaveThesis(e) {
+    e.preventDefault();
+    const ticker = document.getElementById('thesis-tracker-ticker').value;
+    const thesisContent = document.getElementById('thesis-tracker-content').value.trim();
+
+    if (!ticker) {
+        displayMessageInModal('Ticker is missing, cannot save thesis.', 'error');
+        return;
+    }
+
+    openModal(CONSTANTS.MODAL_LOADING);
+    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Saving thesis for ${ticker}...`;
+
+    try {
+        const docRef = doc(state.db, CONSTANTS.DB_COLLECTION_PORTFOLIO, ticker);
+        await updateDoc(docRef, {
+            thesis: thesisContent
+        });
+        
+        closeModal('thesisTrackerModal');
+        
+        await fetchAndCachePortfolioData();
+        const thesisContainer = document.getElementById('thesis-tracker-container');
+        if (thesisContainer && document.getElementById('rawDataViewerModal').dataset.activeTicker === ticker) {
+            renderThesisTracker(thesisContainer, ticker);
+        }
+
+        displayMessageInModal('Thesis saved successfully!', 'info');
+
+    } catch (error) {
+        console.error("Error saving thesis:", error);
+        displayMessageInModal(`Could not save thesis: ${error.message}`, 'error');
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
+// Placeholder for a missing function to prevent crashes
+function renderValuationHealthDashboard(container, ticker, fmpData) {
+    if (container) {
+        container.innerHTML = `<p class="text-center text-gray-400 italic">[Valuation Health Dashboard component is not yet implemented]</p>`;
+    }
+    console.warn('renderValuationHealthDashboard is not fully implemented.');
 }
 
 
