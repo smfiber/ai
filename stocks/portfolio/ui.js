@@ -159,7 +159,8 @@ async function handleRefreshFmpData(symbol) {
             { name: 'ratios_annual', path: 'ratios', params: 'period=annual&limit=10', version: 'v3' },
             { name: 'stock_grade_news', path: 'grade', version: 'v3' },
             { name: 'analyst_estimates', path: 'analyst-estimates', version: 'v3'},
-            { name: 'company_core_information', path: 'company-core-information', version: 'v4', symbolAsQuery: true }
+            { name: 'company_core_information', path: 'company-core-information', version: 'v4', symbolAsQuery: true },
+            { name: 'insider_trading', path: 'insider-trading', version: 'v4', symbolAsQuery: true, params: 'page=0' }
         ];
 
         let successfulFetches = 0;
@@ -2310,7 +2311,6 @@ function _calculateDeepDiveMetrics(data, newsNarrative, institutionalHolders) {
     const ratios = (data.ratios_annual || []).slice().reverse();
     const analystEstimates = data.analyst_estimates || [];
     const analystGrades = data.stock_grade_news || [];
-    const insiderStats = data.insider_trading_stats || [];
     const secSummaries = data.sec_filing_summaries?.data || {};
 
     const latestMetrics = keyMetrics[keyMetrics.length - 1] || {};
@@ -2383,15 +2383,39 @@ function _calculateDeepDiveMetrics(data, newsNarrative, institutionalHolders) {
         recentAnalystRatings: recentRatings,
         recentNewsNarrative: newsNarrative,
         insiderTransactionSummary: (() => {
-            const stats6m = insiderStats.find(s => s.period === '6M');
-            if (!stats6m) return 'Insider transaction data for the last 6 months is not available.';
-            const netShares = stats6m.totalBought - stats6m.totalSold;
+            const rawInsiderTrades = data.insider_trading || [];
+            if (!rawInsiderTrades || rawInsiderTrades.length === 0) {
+                return 'No insider transaction data available for the last 6 months.';
+            }
+
+            const sixMonthsAgo = new Date();
+            sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+
+            let totalBought = 0;
+            let totalSold = 0;
+
+            rawInsiderTrades.forEach(trade => {
+                const tradeDate = new Date(trade.transactionDate);
+                if (tradeDate >= sixMonthsAgo) {
+                    if (trade.transactionType && trade.transactionType.startsWith('P')) { // P-Purchase
+                        totalBought += trade.securitiesTransacted;
+                    } else if (trade.transactionType && trade.transactionType.startsWith('S')) { // S-Sale
+                        totalSold += trade.securitiesTransacted;
+                    }
+                }
+            });
+            
+            if (totalBought === 0 && totalSold === 0) {
+                 return 'No open market insider buying or selling has been reported in the last 6 months.';
+            }
+
+            const netShares = totalBought - totalSold;
             if (netShares > 0) {
                 return `Over the last 6 months, insiders were net buyers of ${netShares.toLocaleString()} shares.`;
             } else if (netShares < 0) {
                 return `Over the last 6 months, insiders were net sellers of ${Math.abs(netShares).toLocaleString()} shares.`;
             } else {
-                return 'Over the last 6 months, there was no net buying or selling by insiders.';
+                return 'Over the last 6 months, insider buying and selling was balanced.';
             }
         })(),
         topInstitutionalHolders: (() => {
