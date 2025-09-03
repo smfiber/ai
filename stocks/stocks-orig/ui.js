@@ -2431,12 +2431,109 @@ async function handleSaveThesis(e) {
     }
 }
 
-// Placeholder for a missing function to prevent crashes
+// Renders the new Valuation & Health dashboard.
 function renderValuationHealthDashboard(container, ticker, fmpData) {
-    if (container) {
-        container.innerHTML = `<p class="text-center text-gray-400 italic">[Valuation Health Dashboard component is not yet implemented]</p>`;
+    if (!container) return;
+
+    // Helper to generate an SVG sparkline from an array of numbers
+    const createSparkline = (data, statusClass) => {
+        if (!data || data.length < 2) return '';
+        const validData = data.filter(d => typeof d === 'number' && isFinite(d));
+        if (validData.length < 2) return '';
+
+        const width = 100;
+        const height = 40;
+        const min = Math.min(...validData);
+        const max = Math.max(...validData);
+        const range = max - min === 0 ? 1 : max - min;
+
+        const points = validData.map((d, i) => {
+            const x = (i / (validData.length - 1)) * width;
+            const y = height - ((d - min) / range) * (height - 4) + 2; // -4 and +2 add padding
+            return `${x},${y}`;
+        }).join(' ');
+        
+        return `<svg viewBox="0 0 ${width} ${height}" class="sparkline-container"><polyline points="${points}" class="sparkline ${statusClass}" /></svg>`;
+    };
+    
+    // Helper to evaluate metrics and return consistent object
+    const evaluateMetric = (name, key, history, isRatio, isPercentage, lowerIsBetter) => {
+        const latest = history[history.length - 1]?.[key];
+        const dataPoints = history.map(h => h[key]).filter(v => typeof v === 'number');
+        if (typeof latest !== 'number') return { value: 'N/A', status: 'neutral', text: 'No Data', gaugePercent: 0, sparkline: '' };
+        
+        const avg = dataPoints.reduce((a, b) => a + b, 0) / dataPoints.length;
+        let status, text, gaugePercent, statusClass;
+
+        if (isRatio) { // For valuation ratios
+            const premium = ((latest / avg) - 1);
+            if (premium < -0.2) { statusClass = 'good'; text = 'Undervalued'; }
+            else if (premium > 0.2) { statusClass = 'bad'; text = 'Expensive'; }
+            else { statusClass = 'neutral'; text = 'Fair Value'; }
+            gaugePercent = Math.max(0, Math.min(100, 50 - (premium * 100))); // Centered at 50%
+        } else { // For health/profitability metrics
+            const thresholds = {
+                'Debt/Equity': [0.5, 1.5], 'Current Ratio': [2, 1], 'ROE': [0.15, 0.05], 'Net Margin': [0.10, 0]
+            };
+            const [good, bad] = thresholds[name];
+            if ((!lowerIsBetter && latest >= good) || (lowerIsBetter && latest <= good)) { statusClass = 'good'; text = name === 'Debt/Equity' ? 'Conservative' : (name === 'Current Ratio' ? 'Healthy' : 'High'); }
+            else if ((!lowerIsBetter && latest < bad) || (lowerIsBetter && latest > bad)) { statusClass = 'bad'; text = name === 'Debt/Equity' ? 'Aggressive' : (name === 'Current Ratio' ? 'Low' : 'Low'); }
+            else { statusClass = 'neutral'; text = 'Moderate'; }
+             gaugePercent = (latest - bad) / (good - bad) * 100;
+             if (lowerIsBetter) gaugePercent = 100 - gaugePercent;
+             gaugePercent = Math.max(0, Math.min(100, gaugePercent));
+        }
+
+        return {
+            value: isPercentage ? `${(latest * 100).toFixed(2)}%` : latest.toFixed(2),
+            status: statusClass,
+            text: text,
+            gaugePercent: gaugePercent,
+            sparkline: createSparkline(dataPoints, statusClass)
+        };
+    };
+
+    const keyMetrics = (fmpData.key_metrics_annual || []).slice().reverse().slice(0, 5).reverse();
+    const ratios = (fmpData.ratios_annual || []).slice().reverse().slice(0, 5).reverse();
+
+    if (keyMetrics.length < 2 || ratios.length < 2) {
+        container.innerHTML = `<h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Valuation & Health Dashboard</h3><p class="text-center text-gray-500 py-8">Not enough historical data to generate the dashboard.</p>`;
+        return;
     }
-    console.warn('renderValuationHealthDashboard is not fully implemented.');
+
+    const metricsToDisplay = [
+        { name: 'P/E Ratio', key: 'peRatio', source: keyMetrics, isRatio: true, isPct: false, lowerIsBetter: true },
+        { name: 'P/S Ratio', key: 'priceToSalesRatio', source: keyMetrics, isRatio: true, isPct: false, lowerIsBetter: true },
+        { name: 'Debt/Equity', key: 'debtToEquity', source: keyMetrics, isRatio: false, isPct: false, lowerIsBetter: true },
+        { name: 'ROE', key: 'returnOnEquity', source: ratios, isRatio: false, isPct: true, lowerIsBetter: false },
+        { name: 'P/B Ratio', key: 'pbRatio', source: keyMetrics, isRatio: true, isPct: false, lowerIsBetter: true },
+        { name: 'EV/EBITDA', key: 'enterpriseValueOverEBITDA', source: keyMetrics, isRatio: true, isPct: false, lowerIsBetter: true },
+        { name: 'Current Ratio', key: 'currentRatio', source: keyMetrics, isRatio: false, isPct: false, lowerIsBetter: false },
+        { name: 'Net Margin', key: 'netProfitMargin', source: ratios, isRatio: false, isPct: true, lowerIsBetter: false },
+    ];
+
+    const tilesHtml = metricsToDisplay.map(m => {
+        const data = evaluateMetric(m.name, m.key, m.source, m.isRatio, m.isPct, m.lowerIsBetter);
+        return `
+            <div class="metric-tile">
+                <div>
+                    <p class="metric-title">${m.name}</p>
+                    <p class="metric-value">${data.value}</p>
+                    <p class="metric-status ${data.status}">${data.text}</p>
+                    <div class="gauge-container">
+                        <div class="gauge-bar">
+                            <div class="gauge-fill ${data.status}" style="width: ${data.gaugePercent}%;"></div>
+                        </div>
+                    </div>
+                </div>
+                ${data.sparkline}
+            </div>
+        `;
+    }).join('');
+
+    container.innerHTML = `
+        <h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Valuation & Health Dashboard</h3>
+        <div class="health-dashboard-grid">${tilesHtml}</div>`;
 }
 
 
