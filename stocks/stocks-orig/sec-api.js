@@ -85,3 +85,25 @@ export async function getSecMaterialEvents(ticker) {
     const result = await callSecQueryApi(queryObject);
     return result?.filings || [];
 }
+
+export async function getSecAnnualReports(ticker) {
+    const queryObject = {
+      "query": { "query_string": { "query": `formType:\"10-K\" AND ticker:\"${ticker}\"` } },
+      "from": "0",
+      "size": "10",
+      "sort": [{ "filedAt": { "order": "desc" } }]
+    };
+    const result = await callSecQueryApi(queryObject);
+    return result?.filings || [];
+}
+
+export async function getSecQuarterlyReports(ticker) {
+    const queryObject = {
+      "query": { "query_string": { "query": `formType:\"10-Q\" AND ticker:\"${ticker}\"` } },
+      "from": "0",
+      "size": "10",
+      "sort": [{ "filedAt": { "order": "desc" } }]
+    };
+    const result = await callSecQueryApi(queryObject);
+    return result?.filings || [];
+}
