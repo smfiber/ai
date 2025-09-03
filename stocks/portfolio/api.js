@@ -1,12 +1,12 @@
-import { CONSTANTS, state } from './config.js';
-import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { CONSTANTS, state, MORNING_BRIEFING_PROMPT, NEWS_SENTIMENT_PROMPT, OPPORTUNITY_SCANNER_PROMPT, PORTFOLIO_ANALYSIS_PROMPT, TREND_ANALYSIS_PROMPT } from './config.js';
+import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- UTILITY & SECURITY HELPERS (Moved from ui.js) ---
 function isValidHttpUrl(urlString) {
     if (typeof urlString !== 'string' || !urlString) return false;
     try {
         const url = new URL(urlString);
-        return url.protocol === "http:" || url.protocol === "https:";
+        return url.protocol === "http:" || url.protocol === "https:"
     } catch (_) {
         return false;
     }
@@ -35,8 +35,8 @@ export async function callApi(url, options = {}) {
             } catch {
                 errorBody = errorText;
             }
-            const errorMsg = typeof errorBody === 'object' ? (errorBody?.error?.message || errorBody?.Information) : errorBody;
-            throw new Error(`API request failed: ${response.statusText || errorMsg}`);
+            const errorMsg = typeof errorBody === 'object' ? (errorBody?.error?.message || errorBody?.Information || JSON.stringify(errorBody)) : errorBody;
+            throw new Error(`API request failed: ${errorMsg || 'No error message provided by API.'}`);
         }
         return await response.json();
     } catch (error) {
@@ -78,7 +78,7 @@ export async function callGeminiApiWithTools(contents) {
 
     state.sessionLog.push({ type: 'prompt', timestamp: new Date(), content: JSON.stringify(contents, null, 2) });
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${state.geminiApiKey}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${state.geminiApiKey}`;
     const data = await callApi(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -121,6 +121,67 @@ export async function generatePolishedArticle(initialPrompt, loadingMessageEleme
 
     return finalArticle;
 }
+
+export async function generateMorningBriefing(portfolioStocks) {
+    if (!portfolioStocks || portfolioStocks.length === 0) {
+        return "Your portfolio is empty. Please add stocks to generate a briefing.";
+    }
+
+    // 1. Fetch all necessary data in parallel
+    const dataPromises = portfolioStocks.map(stock => getFmpStockData(stock.ticker));
+    
+    const tickersString = portfolioStocks.map(s => s.ticker).join(',');
+    const newsUrl = `https://financialmodelingprep.com/stable/news/stock?symbols=${tickersString}&limit=20&apikey=${state.fmpApiKey}`;
+    const newsPromise = callApi(newsUrl);
+
+    const [allStockData, allNews] = await Promise.all([
+        Promise.all(dataPromises),
+        newsPromise
+    ]);
+
+    // 2. Consolidate data for the prompt
+    const portfolioDataForPrompt = portfolioStocks.map((stock, index) => {
+        const stockData = allStockData[index];
+        const profile = stockData?.profile?.[0] || {};
+        const grades = stockData?.stock_grade_news?.slice(0, 3) || [];
+        
+        const stockNews = allNews.filter(n => n.symbol === stock.ticker).map(n => ({
+            headline: n.title,
+            source: n.site
+        }));
+
+        return {
+            ticker: stock.ticker,
+            companyName: stock.companyName,
+            profile: {
+                price: profile.price,
+                change: profile.change,
+                changesPercentage: profile.changesPercentage
+            },
+            news: stockNews,
+            analyst_grades: grades.map(g => ({
+                company: g.gradingCompany,
+                action: g.action,
+                from: g.previousGrade,
+                to: g.newGrade
+            }))
+        };
+    });
+
+    // 3. Prepare and call the AI
+    const currentDate = new Date().toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+    });
+
+    const prompt = MORNING_BRIEFING_PROMPT
+        .replace('{portfolioJson}', JSON.stringify({ portfolio_stocks: portfolioDataForPrompt }, null, 2))
+        .replace('{currentDate}', currentDate);
+
+    return await callGeminiApi(prompt);
+}
+
 
 export async function getFmpStockData(symbol) {
     const fmpCacheRef = collection(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, symbol, 'endpoints');
@@ -176,6 +237,15 @@ export async function getGroupedFmpData(symbol) {
     });
 
     return groupedData;
+}
+
+export async function getCachedNews(ticker) {
+    const newsDocRef = doc(state.db, CONSTANTS.DB_COLLECTION_FMP_NEWS_CACHE, ticker);
+    const newsDoc = await getDoc(newsDocRef);
+    if (newsDoc.exists()) {
+        return newsDoc.data().articles || [];
+    }
+    return [];
 }
 
 // --- GOOGLE DRIVE FUNCTIONS ---
@@ -259,174 +329,407 @@ export async function createDriveFile(folderId, fileName, content) {
     return response;
 }
 
-// --- SEC FILING FUNCTIONS ---
-async function callSecQueryApi(queryObject) {
-    if (!state.secApiKey) throw new Error("SEC API Key is not configured.");
-    const url = `https://api.sec-api.io?token=${state.secApiKey}`;
-    
-    const data = await callApi(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(queryObject)
-    });
-
-    return data;
-}
-
-export async function getSecInsiderTrading(ticker) {
-    const queryObject = {
-      "query": { "query_string": { "query": `formType:\"4\" AND ticker:\"${ticker}\"` } },
-      "from": "0",
-      "size": "25",
-      "sort": [{ "filedAt": { "order": "desc" } }]
-    };
-    const result = await callSecQueryApi(queryObject);
-    return result?.filings || [];
-}
-
-export async function getSecInstitutionalOwnership(ticker) {
-    if (!state.secApiKey) throw new Error("SEC API Key is not configured.");
-    const url = `https://api.sec-api.io/holding/search?ticker=${ticker}&token=${state.secApiKey}`;
-    const result = await callApi(url);
-    return result || [];
-}
-
-export async function getSecMaterialEvents(ticker) {
-    const queryObject = {
-      "query": { "query_string": { "query": `formType:\"8-K\" AND ticker:\"${ticker}\"` } },
-      "from": "0",
-      "size": "15",
-      "sort": [{ "filedAt": { "order": "desc" } }]
-    };
-    const result = await callSecQueryApi(queryObject);
-    return result?.filings || [];
-}
-
-// --- SECTOR ANALYSIS: AI AGENT WORKFLOW ---
-export async function searchSectorNews({ sectorName, sectorStocks }) {
-    if (!state.fmpApiKey) {
-        throw new Error("FMP API Key is required for news search.");
+// --- PORTFOLIO HEALTH SCORE ---
+/**
+ * Helper to get the most recent annual value for a given metric from FMP data.
+ * @param {object} fmpData The cached FMP data for a single stock.
+ * @param {string} endpoint The endpoint name (e.g., 'key_metrics_annual').
+ * @param {string} metric The metric key (e.g., 'debtToEquity').
+ * @returns {number|null} The latest value or null if not found.
+ */
+function _getLatestAnnualMetric(fmpData, endpoint, metric) {
+    if (!fmpData || !fmpData[endpoint] || !Array.isArray(fmpData[endpoint]) || fmpData[endpoint].length === 0) {
+        return null;
     }
-    const url = `https://financialmodelingprep.com/api/v3/stock_news?limit=100&apikey=${state.fmpApiKey}`;
-    
-    const newsData = await callApi(url);
-    const validArticles = filterValidNews(newsData || []);
+    // FMP data is usually ordered most recent first.
+    const latestRecord = fmpData[endpoint][0];
+    return latestRecord[metric] ?? null;
+}
 
-    if (validArticles.length === 0) {
-        return { error: "No relevant news articles found", detail: `Could not find any recent news.` };
+/**
+ * Calculates a health score for the entire portfolio.
+ * @param {Array<object>} portfolioStocks - Array of stock objects from the portfolio cache.
+ * @returns {Promise<number>} A score from 0 to 100.
+ */
+export async function calculatePortfolioHealthScore(portfolioStocks) {
+    if (!portfolioStocks || portfolioStocks.length === 0) {
+        return 0; // Return 0 if portfolio is empty
     }
 
-    return {
-        articles: validArticles.map((a, index) => ({
+    const dataPromises = portfolioStocks.map(stock => getFmpStockData(stock.ticker));
+    const allStockData = await Promise.all(dataPromises);
+
+    const stockScores = allStockData.map(fmpData => {
+        if (!fmpData) return 50; // Assign a neutral score if data is missing
+
+        // --- 1. Financial Health Score (50% weight) ---
+        let healthScore = 0;
+        let healthFactors = 0;
+
+        // Factor 1a: Debt-to-Equity (lower is better)
+        const debtToEquity = _getLatestAnnualMetric(fmpData, 'key_metrics_annual', 'debtToEquity');
+        if (debtToEquity !== null) {
+            healthFactors++;
+            if (debtToEquity < 0.5) healthScore += 100;      // Very low debt
+            else if (debtToEquity < 1.0) healthScore += 75; // Moderate debt
+            else if (debtToEquity < 2.0) healthScore += 50; // High debt
+            else healthScore += 25;                         // Very high debt
+        }
+
+        // Factor 1b: Current Ratio (higher is better)
+        const currentRatio = _getLatestAnnualMetric(fmpData, 'key_metrics_annual', 'currentRatio');
+        if (currentRatio !== null) {
+            healthFactors++;
+            if (currentRatio > 2.0) healthScore += 100;     // Very strong liquidity
+            else if (currentRatio > 1.5) healthScore += 80; // Strong liquidity
+            else if (currentRatio > 1.0) healthScore += 60; // Healthy liquidity
+            else healthScore += 30;                         // Potential risk
+        }
+
+        // Factor 1c: Return on Equity (ROE) (higher is better)
+        const roe = _getLatestAnnualMetric(fmpData, 'ratios_annual', 'returnOnEquity');
+        if (roe !== null) {
+            healthFactors++;
+            if (roe > 0.20) healthScore += 100; // Excellent
+            else if (roe > 0.15) healthScore += 85; // Very Good
+            else if (roe > 0.10) healthScore += 70; // Good
+            else if (roe > 0.0) healthScore += 50;  // Positive
+            else healthScore += 20;                 // Negative
+        }
+        
+        // Factor 1d: Net Profit Margin (higher is better)
+        const netProfitMargin = _getLatestAnnualMetric(fmpData, 'ratios_annual', 'netProfitMargin');
+         if (netProfitMargin !== null) {
+            healthFactors++;
+            if (netProfitMargin > 0.20) healthScore += 100; // Excellent
+            else if (netProfitMargin > 0.10) healthScore += 80; // Very Good
+            else if (netProfitMargin > 0.05) healthScore += 60; // Good
+            else if (netProfitMargin > 0.0) healthScore += 40;  // Profitable
+            else healthScore += 10;                  // Unprofitable
+        }
+
+        const finalHealthScore = healthFactors > 0 ? healthScore / healthFactors : 50;
+
+        // --- 2. Risk Score (Beta) (25% weight) ---
+        let riskScore = 50; // Default neutral score for missing beta
+        const beta = fmpData?.profile?.[0]?.beta;
+        if (typeof beta === 'number') {
+            if (beta < 0.8) riskScore = 100;      // Very Low Risk
+            else if (beta < 1.0) riskScore = 80;  // Low Risk
+            else if (beta < 1.2) riskScore = 60;  // Average Risk
+            else if (beta < 1.5) riskScore = 40;  // Moderate-High Risk
+            else riskScore = 20;                  // High Risk
+        }
+
+        // --- 3. Analyst Sentiment Score (25% weight) ---
+        let sentimentScore = 50; // Default neutral score
+        const grades = fmpData?.stock_grade_news?.slice(0, 10) || [];
+        if (grades.length > 0) {
+            let sentimentPoints = 0;
+            grades.forEach(grade => {
+                const action = grade.action?.toLowerCase() || '';
+                const newGrade = grade.newGrade?.toLowerCase() || '';
+                if (action.includes('upgrade')) {
+                    sentimentPoints += 2;
+                } else if (action.includes('downgrade')) {
+                    sentimentPoints -= 2;
+                } else if (action.includes('initiate') && ['buy', 'outperform', 'strong buy', 'overweight'].some(g => newGrade.includes(g))) {
+                    sentimentPoints += 1;
+                }
+            });
+            // Normalize score from a potential range of -20 to +20 -> 0 to 100
+            const normalized = ((sentimentPoints + 20) / 40) * 100;
+            sentimentScore = Math.max(0, Math.min(100, normalized)); // Clamp between 0 and 100
+        }
+
+        // --- Final Weighted Score for the stock ---
+        const finalScore = (finalHealthScore * 0.50) + (riskScore * 0.25) + (sentimentScore * 0.25);
+        return finalScore;
+
+    }).filter(score => score !== null);
+
+    if (stockScores.length === 0) {
+        return 50; // Return neutral score if no stocks could be scored
+    }
+
+    const totalScore = stockScores.reduce((acc, current) => acc + current, 0);
+    return Math.round(totalScore / stockScores.length);
+}
+
+/**
+ * Internal helper to get a structured news summary for a single stock.
+ * @param {string} ticker The stock ticker.
+ * @param {string} companyName The company name.
+ * @param {Array} newsData The raw news articles from FMP.
+ * @returns {Promise<object|null>} An object with the news summary or null on failure.
+ */
+async function _getNewsAnalysisForScanner(ticker, companyName, newsData) {
+    try {
+        const validArticles = filterValidNews(newsData);
+        if (validArticles.length === 0) return null;
+
+        const articlesForPrompt = validArticles.map(a => ({
             title: a.title,
             snippet: a.text,
-            link: a.url,
-            source: a.site,
-            symbol: a.symbol,
-            publicationDate: a.publishedDate ? a.publishedDate.split(' ')[0] : 'N/A',
-            articleIndex: index
-        })),
-        sectorStocks: sectorStocks
-    };
-}
+            publicationDate: a.publishedDate ? a.publishedDate.split(' ')[0] : 'N/A'
+        }));
 
-export async function synthesizeAndRankCompanies({ newsArticles, sectorStocks }) {
-    const prompt = `
-        Role: You are a quantitative financial analyst AI. Your task is to analyze a general list of financial news articles and identify the most noteworthy companies that belong to a specific sector.
+        const prompt = NEWS_SENTIMENT_PROMPT
+            .replace('{companyName}', companyName)
+            .replace('{tickerSymbol}', ticker)
+            .replace('{news_articles_json}', JSON.stringify(articlesForPrompt, null, 2));
 
-        Task:
-        1. You are given a list of stock tickers that belong to the target sector: [${sectorStocks.join(', ')}].
-        2. Read the provided JSON data of general news articles.
-        3. Filter these articles, considering only those where the article's "symbol" matches one of the tickers in the provided sector list.
-        4. From this filtered list, identify the Top 3-5 most favorably mentioned companies. Your ranking must be based on the significance (e.g., earnings reports > product updates) and positive sentiment of the news.
+        const rawResult = await callGeminiApi(prompt);
+        const summaryMatch = rawResult.match(/## News Narrative & Pulse([\s\S]*)/);
+        const summaryMarkdown = summaryMatch ? summaryMatch[1].trim() : "Could not parse summary.";
         
-        Output Format: Return ONLY a valid JSON object. The JSON should have a single key "topCompanies" which is an array of objects. Each object must contain "companyName", "ticker", and a "rankingJustification" that briefly explains why it was ranked highly based on its positive news mentions. Include the source article indices in the justification.
+        // Extract dominant narrative for a concise summary
+        const narrativeMatch = summaryMarkdown.match(/\*\*Dominant Narrative:\*\*\s*(.*)/);
+        const overallSentimentMatch = summaryMarkdown.match(/\*\*Overall Sentiment:\*\*\s*(.*)/);
 
-        News Articles JSON Data:
-        ${JSON.stringify(newsArticles, null, 2)}
-    `;
-
-    const resultText = await callGeminiApi(prompt);
-    try {
-        const cleanedJson = resultText.replace(/```json\n|```/g, '').trim();
-        return JSON.parse(cleanedJson);
+        return {
+            overall_sentiment: overallSentimentMatch ? overallSentimentMatch[1].trim() : "N/A",
+            dominant_narrative: narrativeMatch ? narrativeMatch[1].trim() : "N/A"
+        };
     } catch (error) {
-        console.error("Error parsing synthesis result:", error);
-        return { error: "Failed to parse analysis from AI", detail: error.message };
+        console.error(`Failed to get news analysis for ${ticker}:`, error);
+        return null;
     }
 }
 
-export async function generateDeepDiveReport({ companyAnalysis, sectorName, originalArticles }) {
-    const prompt = `
-        Role: You are an expert financial analyst AI. Your task is to write a detailed investment research report for a specific economic sector based on pre-analyzed news data.
-
-        Task: Use the provided "Top Companies" JSON to generate a comprehensive markdown report. For each company, create a detailed section including an investment thesis and a list of the positive catalysts mentioned in the news.
-
-        Output Format: Use professional markdown. For each catalyst, you MUST append a source placeholder at the end of the line, like this: \`[Source: X]\`, where X is the \`articleIndex\` from the original news data.
-
-        Top Ranked Companies JSON:
-        ${JSON.stringify(companyAnalysis, null, 2)}
-
-        ---
-        ## AI-Powered Market Analysis: ${sectorName} Sector
-        ### Overall Sector Outlook & Key Themes
-        Provide a 2-3 sentence summary of the overall outlook for the ${sectorName} sector based on the collective news represented in the ranked companies. Identify the most significant themes present.
-
-        ### Deeper Dive: Top Companies in the News
-        For each of the companies in the "Top Ranked Companies JSON", create a detailed section:
-        1. Use its name and ticker as a sub-header (e.g., "### 1. NVIDIA Corp (NVDA)").
-        2. **Investment Thesis:** Write a concise, 2-3 sentence investment thesis summarizing why this company is currently viewed favorably based on the provided justification.
-        3. **Positive Catalysts:** Create a bulleted list of the specific positive events mentioned in the news. Use the 'rankingJustification' to construct these points and append the source placeholder for verifiability.
-    `;
+/**
+ * Runs the opportunity scanner across a list of stocks.
+ * @param {Array<object>} stocksToScan - Array of stock objects from the portfolio cache.
+ * @param {function} updateProgress - Callback function to update UI with progress.
+ * @returns {Promise<Array<object>>} A promise that resolves to an array of significant opportunities.
+ */
+export async function runOpportunityScanner(stocksToScan, updateProgress) {
+    const opportunities = [];
+    let processedCount = 0;
     
-    let finalReport = await generatePolishedArticle(prompt);
+    for (const stock of stocksToScan) {
+        try {
+            updateProgress(processedCount, stocksToScan.length, `Analyzing ${stock.ticker}...`);
+            
+            // --- Fetch and Save FMP News ---
+            const newsUrl = `https://financialmodelingprep.com/stable/news/stock?symbols=${stock.ticker}&limit=20&apikey=${state.fmpApiKey}`;
+            const newsData = await callApi(newsUrl);
+            const newsDocRef = doc(state.db, CONSTANTS.DB_COLLECTION_FMP_NEWS_CACHE, stock.ticker);
+            await setDoc(newsDocRef, {
+                cachedAt: Timestamp.now(),
+                articles: newsData
+            });
 
-    finalReport = finalReport.replace(/\[Source: (?:Article )?(\d+)\]/g, (match, indexStr) => {
-        const index = parseInt(indexStr, 10);
-        const article = originalArticles.find(a => a.articleIndex === index);
-        if (article) {
-            const sourceParts = article.source.split('.');
-            const sourceName = sourceParts.length > 1 ? sourceParts[sourceParts.length - 2] : article.source;
-            return `[(Source: ${sourceName}, ${article.publicationDate})](${article.link})`;
+            // --- Fetch other data in parallel ---
+            const fmpDataPromise = getFmpStockData(stock.ticker);
+            const newsSummaryPromise = _getNewsAnalysisForScanner(stock.ticker, stock.companyName, newsData);
+            const [fmpData, newsSummary] = await Promise.all([fmpDataPromise, newsSummaryPromise]);
+
+            if (!fmpData || !fmpData.profile || !fmpData.profile[0]) {
+                console.warn(`Skipping ${stock.ticker} due to missing profile data.`);
+                processedCount++;
+                continue;
+            }
+
+            const profile = fmpData.profile[0];
+            const analystRatings = (fmpData.stock_grade_news || []).slice(0, 5).map(r => ({
+                date: r.date, action: r.action, from: r.previousGrade, to: r.newGrade, firm: r.gradingCompany
+            }));
+
+            const dataPacket = {
+                companyName: stock.companyName,
+                tickerSymbol: stock.ticker,
+                price_action: {
+                    current_price: profile.price,
+                    '50_day_ma': profile.priceAvg50,
+                    '200_day_ma': profile.priceAvg200,
+                    '52_week_high': profile.yearHigh,
+                    '52_week_low': profile.yearLow,
+                },
+                recent_analyst_ratings: analystRatings,
+                recent_news_summary: newsSummary || {
+                    overall_sentiment: "N/A",
+                    dominant_narrative: "No recent news found."
+                }
+            };
+
+            const prompt = OPPORTUNITY_SCANNER_PROMPT
+                .replace('{companyName}', stock.companyName)
+                .replace('{tickerSymbol}', stock.ticker)
+                .replace('{jsonData}', JSON.stringify(dataPacket, null, 2));
+
+            const resultStr = await callGeminiApi(prompt);
+            const resultJson = JSON.parse(resultStr.replace(/```json\n?|\n?```/g, ''));
+
+            if (resultJson && resultJson.is_significant) {
+                const reportData = {
+                    ticker: stock.ticker,
+                    companyName: stock.companyName,
+                    scannedAt: Timestamp.now(),
+                    ...resultJson
+                };
+                await addDoc(collection(state.db, CONSTANTS.DB_COLLECTION_SCANNER_RESULTS), reportData);
+                opportunities.push(reportData);
+            }
+        } catch (error) {
+            console.error(`Error processing ${stock.ticker} in opportunity scanner:`, error);
+        } finally {
+            processedCount++;
         }
-        return match;
-    });
-
-    return { report: finalReport };
+    }
+    
+    updateProgress(stocksToScan.length, stocksToScan.length, "Scan complete.");
+    return opportunities;
 }
 
-export async function findStocksByIndustry({ industryName }) {
-    if (!state.fmpApiKey) {
-        throw new Error("FMP API Key is required for this feature.");
-    }
-    const url = `https://financialmodelingprep.com/api/v3/stock-screener?industry=${encodeURIComponent(industryName)}&limit=50&apikey=${state.fmpApiKey}`;
-    
-    try {
-        const stocks = await callApi(url);
-        if (!stocks || stocks.length === 0) {
-            return { error: "No stocks found", detail: `Could not find any stocks for the ${industryName} industry.` };
-        }
-        return { stocks: stocks.map(s => s.symbol) };
-    } catch (error) {
-        console.error("Error fetching stocks by industry:", error);
-        return { error: "API call failed", detail: error.message };
-    }
+export async function getScannerResults(ticker) {
+    const scannerQuery = query(
+        collection(state.db, CONSTANTS.DB_COLLECTION_SCANNER_RESULTS),
+        where("ticker", "==", ticker),
+        orderBy("scannedAt", "desc")
+    );
+    const scannerSnapshot = await getDocs(scannerQuery);
+    return scannerSnapshot.docs.map(doc => doc.data());
 }
 
-export async function findStocksBySector({ sectorName }) {
-    if (!state.fmpApiKey) {
-        throw new Error("FMP API Key is required for this feature.");
+export async function generatePortfolioAnalysis(userQuestion) {
+    const portfolioStocks = state.portfolioCache.filter(s => s.status === 'Portfolio');
+    if (!portfolioStocks || portfolioStocks.length === 0) {
+        return "Your portfolio is empty. Please add stocks with the 'Portfolio' status to use this feature.";
     }
-    const url = `https://financialmodelingprep.com/api/v3/stock-screener?sector=${encodeURIComponent(sectorName)}&limit=100&apikey=${state.fmpApiKey}`;
+
+    // 1. Fetch all necessary data in parallel
+    const dataPromises = portfolioStocks.map(stock => getFmpStockData(stock.ticker));
+    const allStockData = await Promise.all(dataPromises);
+
+    // 2. Consolidate and simplify data for the prompt
+    const portfolioDataForPrompt = portfolioStocks.map((stock, index) => {
+        const fmpData = allStockData[index];
+        if (!fmpData) return null;
+
+        const profile = fmpData.profile?.[0] || {};
+        const latestMetrics = fmpData.key_metrics_annual?.[0] || {};
+        const grades = (fmpData.stock_grade_news || []).slice(0, 3);
+
+        return {
+            ticker: stock.ticker,
+            companyName: stock.companyName,
+            sector: profile.sector,
+            industry: profile.industry,
+            price: profile.price,
+            change: profile.change,
+            marketCap: profile.mktCap,
+            peRatio: latestMetrics.peRatio,
+            debtToEquity: latestMetrics.debtToEquity,
+            returnOnEquity: fmpData.ratios_annual?.[0]?.returnOnEquity,
+            analyst_grades_summary: grades.map(g => `${g.action} to ${g.newGrade} by ${g.gradingCompany}`).join('; ')
+        };
+    }).filter(Boolean);
+
+    if (portfolioDataForPrompt.length === 0) {
+        return "Could not retrieve sufficient data for the stocks in your portfolio. Please try refreshing their data.";
+    }
+
+    // 3. Prepare and call the AI
+    const prompt = PORTFOLIO_ANALYSIS_PROMPT
+        .replace('{userQuestion}', userQuestion)
+        .replace('{portfolioJson}', JSON.stringify(portfolioDataForPrompt, null, 2));
+
+    return await callGeminiApi(prompt);
+}
+
+export async function generateTrendAnalysis(ticker) {
+    // 1. Get latest and historical scanner results
+    const scannerQuery = query(
+        collection(state.db, CONSTANTS.DB_COLLECTION_SCANNER_RESULTS),
+        where("ticker", "==", ticker),
+        orderBy("scannedAt", "desc")
+    );
+    const scannerSnapshot = await getDocs(scannerQuery);
+    const allScanResults = scannerSnapshot.docs.map(doc => ({ ...doc.data(), scannedAt: doc.data().scannedAt.toDate().toISOString().split('T')[0] }));
     
+    if (allScanResults.length < 2) {
+        return "Not enough historical scanner data exists for this stock to perform a trend analysis. At least two past significant results are needed.";
+    }
+
+    const latestScanResult = allScanResults[0];
+    const historicalScanResults = allScanResults.slice(1);
+
+    // 2. Get historical news context
+    const newsDocRef = doc(state.db, CONSTANTS.DB_COLLECTION_FMP_NEWS_CACHE, ticker);
+    const newsDoc = await getDoc(newsDocRef);
+    let historicalNewsSummary = "No historical news context available.";
+    if (newsDoc.exists()) {
+        const articles = newsDoc.data().articles || [];
+        historicalNewsSummary = "Recent news headlines include: " + articles.slice(0, 5).map(a => `"${a.title}"`).join('; ');
+    }
+
+    // 3. Prepare payload for AI
+    const dataForPrompt = {
+        latest_scan_result: {
+            date: latestScanResult.scannedAt,
+            type: latestScanResult.type,
+            headline: latestScanResult.headline,
+            summary: latestScanResult.summary
+        },
+        historical_scan_results: historicalScanResults.map(r => ({
+            date: r.scannedAt,
+            type: r.type,
+            headline: r.headline
+        })),
+        historical_news_summary: historicalNewsSummary
+    };
+
+    // 4. Prepare and call the AI
+    const stockInfo = state.portfolioCache.find(s => s.ticker === ticker) || { companyName: ticker };
+    const prompt = TREND_ANALYSIS_PROMPT
+        .replace(/{companyName}/g, stockInfo.companyName)
+        .replace(/{tickerSymbol}/g, ticker)
+        .replace('{jsonData}', JSON.stringify(dataForPrompt, null, 2));
+    
+    return await callGeminiApi(prompt);
+}
+
+/**
+ * Generates a concise news summary and sentiment for a single stock.
+ * @param {string} ticker The stock ticker.
+ * @param {string} companyName The company name.
+ * @returns {Promise<object|null>} An object with the news summary or null on failure.
+ */
+export async function generateNewsSummary(ticker, companyName) {
     try {
-        const stocks = await callApi(url);
-        if (!stocks || stocks.length === 0) {
-            return { error: "No stocks found", detail: `Could not find any stocks for the ${sectorName} sector.` };
-        }
-        return { stocks: stocks.map(s => s.symbol) };
+        const newsUrl = `https://financialmodelingprep.com/stable/news/stock?symbols=${ticker}&limit=20&apikey=${state.fmpApiKey}`;
+        const newsData = await callApi(newsUrl);
+        const validArticles = filterValidNews(newsData);
+        if (validArticles.length === 0) return { dominant_narrative: "No recent news found.", overall_sentiment: "Neutral" };
+
+        const articlesForPrompt = validArticles.map(a => ({
+            title: a.title,
+            snippet: a.text,
+            publicationDate: a.publishedDate ? a.publishedDate.split(' ')[0] : 'N/A'
+        }));
+
+        const prompt = NEWS_SENTIMENT_PROMPT
+            .replace('{companyName}', companyName)
+            .replace('{tickerSymbol}', ticker)
+            .replace('{news_articles_json}', JSON.stringify(articlesForPrompt, null, 2));
+
+        const rawResult = await callGeminiApi(prompt);
+        
+        // Use regex to be more robust against small formatting changes from the AI
+        const summaryMatch = rawResult.match(/## News Narrative & Pulse([\s\S]*)/);
+        if (!summaryMatch) return { dominant_narrative: "Could not parse news summary.", overall_sentiment: "N/A" };
+        
+        const summaryMarkdown = summaryMatch[1].trim();
+        const narrativeMatch = summaryMarkdown.match(/\*\*Dominant Narrative:\*\*\s*(.*)/);
+        const overallSentimentMatch = summaryMarkdown.match(/\*\*Overall Sentiment:\*\*\s*(.*)/);
+
+        return {
+            overall_sentiment: overallSentimentMatch ? overallSentimentMatch[1].trim() : "N/A",
+            dominant_narrative: narrativeMatch ? narrativeMatch[1].trim() : "Could not parse dominant narrative."
+        };
     } catch (error) {
-        console.error("Error fetching stocks by sector:", error);
-        return { error: "API call failed", detail: error.message };
+        console.error(`Failed to generate news summary for ${ticker}:`, error);
+        return { dominant_narrative: `Error fetching news: ${error.message}`, overall_sentiment: "N/A" };
     }
 }
