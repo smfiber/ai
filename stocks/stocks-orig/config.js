@@ -14,6 +14,7 @@ export const state = {
     searchApiKey: "",
     searchEngineId: "",
     googleClientId: "",
+    secApiKey: "",
     driveTokenClient: null,
     driveFolderId: null,
     portfolioCache: [],
@@ -60,6 +61,7 @@ export const CONSTANTS = {
     INPUT_GOOGLE_CLIENT_ID: 'googleClientIdInput',
     INPUT_WEB_SEARCH_KEY: 'webSearchApiKeyInput',
     INPUT_SEARCH_ENGINE_ID: 'searchEngineIdInput',
+    INPUT_SEC_KEY: 'secApiKeyInput',
     // Containers & Elements
     CONTAINER_DYNAMIC_CONTENT: 'dynamic-content-container',
     CONTAINER_PORTFOLIO_LIST: 'portfolio-list-container',
