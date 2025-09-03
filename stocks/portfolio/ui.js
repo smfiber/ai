@@ -1,8 +1,8 @@
 // ui.js
 import { CONSTANTS, SECTORS, SECTOR_ICONS, state, NEWS_SENTIMENT_PROMPT, DEEP_DIVE_PROMPT } from './config.js';
-import { getFmpStockData, callApi, filterValidNews, callGeminiApi, generatePolishedArticle, getDriveToken, getOrCreateDriveFolder, createDriveFile, getGroupedFmpData, generateMorningBriefing, calculatePortfolioHealthScore, runOpportunityScanner, generatePortfolioAnalysis, generateTrendAnalysis, getCachedNews, getScannerResults, generateNewsSummary } from './api.js';
+import { getFmpStockData, callApi, filterValidNews, callGeminiApi, generatePolishedArticle, getDriveToken, getOrCreateDriveFolder, createDriveFile, getGroupedFmpData, generateMorningBriefing, calculatePortfolioHealthScore, runOpportunityScanner, generatePortfolioAnalysis, generateTrendAnalysis, getCachedNews, getScannerResults, generateNewsSummary, summarizeSecFilingSection } from './api.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { getSecInsiderTrading, getSecInstitutionalOwnership, getSecMaterialEvents, getSecAnnualReports, getSecQuarterlyReports } from './sec-api.js';
+import { getSecInsiderTrading, getSecInstitutionalOwnership, getSecMaterialEvents, getSecAnnualReports, getSecQuarterlyReports, getLatest10KRiskFactorsText, getLatest10QMdaText } from './sec-api.js';
 
 // --- CHART INSTANCES ---
 let allocationChartInstance = null;
@@ -215,8 +215,9 @@ async function handleRefreshFmpData(symbol) {
             }
         }
         
-        // Fetch executive compensation from SEC-API.io
+        // Fetch supplemental SEC data
         if (state.secApiKey) {
+            // Fetch executive compensation
             loadingMessage.textContent = `Fetching SEC Data: Executive Compensation...`;
             const secUrl = `https://api.sec-api.io/compensation/${symbol}?token=${state.secApiKey}`;
             try {
@@ -228,7 +229,35 @@ async function handleRefreshFmpData(symbol) {
                 }
             } catch (error) {
                 console.warn(`Could not fetch executive compensation from SEC-API.io for ${symbol}:`, error.message);
-                // Don't throw an error, just warn and continue, as it's supplemental data.
+            }
+
+            // Fetch and summarize key SEC filings
+            loadingMessage.textContent = `Fetching & Summarizing SEC Filings for ${symbol}...`;
+            try {
+                const riskFactorsText = await getLatest10KRiskFactorsText(symbol);
+                const mdaText = await getLatest10QMdaText(symbol);
+
+                let riskFactorsSummary = 'Not available or not applicable.';
+                if (riskFactorsText && riskFactorsText.length > 100) {
+                    riskFactorsSummary = await summarizeSecFilingSection('Risk Factors', riskFactorsText);
+                }
+                
+                let mdaSummary = 'Not available or not applicable.';
+                if (mdaText && mdaText.length > 100) {
+                    mdaSummary = await summarizeSecFilingSection('MD&A', mdaText);
+                }
+
+                const secSummariesData = {
+                    cachedAt: Timestamp.now(),
+                    data: { riskFactorsSummary, mdaSummary }
+                };
+
+                const docRef = doc(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, symbol, 'endpoints', 'sec_filing_summaries');
+                await setDoc(docRef, secSummariesData);
+                successfulFetches++;
+
+            } catch (error) {
+                console.warn(`Could not fetch or summarize SEC filings for ${symbol}:`, error.message);
             }
         }
 
@@ -2267,6 +2296,7 @@ function _calculateDeepDiveMetrics(data, newsNarrative, institutionalHolders) {
     const analystEstimates = data.analyst_estimates || [];
     const analystGrades = data.stock_grade_news || [];
     const insiderStats = data.insider_trading_stats || [];
+    const secSummaries = data.sec_filing_summaries?.data || {};
 
     const latestMetrics = keyMetrics[keyMetrics.length - 1] || {};
     const latestCashFlow = cashFlow[cashFlow.length - 1] || {};
@@ -2368,7 +2398,9 @@ function _calculateDeepDiveMetrics(data, newsNarrative, institutionalHolders) {
         pe_valuation: valuation('peRatio', 'P/E'),
         ps_valuation: valuation('priceToSalesRatio', 'P/S'),
         pb_valuation: valuation('pbRatio', 'P/B'),
-        grahamNumber: latestMetrics.grahamNumber ? latestMetrics.grahamNumber.toFixed(2) : 'N/A'
+        grahamNumber: latestMetrics.grahamNumber ? latestMetrics.grahamNumber.toFixed(2) : 'N/A',
+        latestRiskFactorsSummary: secSummaries.riskFactorsSummary || 'Not available.',
+        latestMdaSummary: secSummaries.mdaSummary || 'Not available.'
     };
 }
 
