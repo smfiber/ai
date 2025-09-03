@@ -1451,12 +1451,12 @@ font-size: 0.75rem;
                 requiresSymbol: false,
                 prompt: (exchange, articlesText) => `
                     Act as a financial analyst for a growth-focused fund. Your goal is to identify stocks with the highest potential upside based on recent analyst price targets from the ${exchange.toUpperCase()}, provided as JSON objects.
-                    First, examine the provided "NEWS ARTICLES (JSON)". If the list is empty or contains no articles with both a 'priceTarget' and a 'priceWhenPosted' value, you MUST respond with only this message: "No articles with actionable price targets were found in the provided news data."
+                    First, examine the provided "NEWS ARTICLES". If the list is empty or contains no articles with both a 'priceTarget' and a 'priceWhenPosted' value, you MUST respond with only this message: "No articles with actionable price targets were found in the provided news data."
                     If such articles exist, perform the following:
                     1. For each article with the required data, calculate the potential upside: Upside % = (priceTarget - priceWhenPosted) / priceWhenPosted.
                     2. Identify the top 5 stocks with the highest calculated potential upside.
                     3. Present the results in a Markdown numbered list, including the **stock symbol**, the **highest price target**, the **analyst firm** that set it, and the **calculated upside percentage**.
-                    NEWS ARTICLES (JSON):
+                    NEWS ARTICLES:
                     ${articlesText}`
             },
             {
@@ -1477,7 +1477,7 @@ font-size: 0.75rem;
                 prompt: (exchange, articlesText) => `
                     Act as a quantitative financial analyst. Based on the provided news articles as JSON objects for the ${exchange.toUpperCase()} stock exchange, identify the top 2-3 "battleground stocks."
                     These are stocks with the widest disparity in analyst price targets, indicating significant debate about their future value.
-                    If the provided "NEWS ARTICLES (JSON)" list is empty or contains insufficient data to identify a clear price target range for any stock, you MUST respond with only this message: "Insufficient price target data was found to identify battleground stocks."
+                    If the provided "NEWS ARTICLES" list is empty or contains insufficient data to identify a clear price target range for any stock, you MUST respond with only this message: "Insufficient price target data was found to identify battleground stocks."
                     If data is available, for each identified battleground stock, provide:
                     -   **Stock Symbol:** The ticker symbol.
                     -   **Price Target Range:** The highest and lowest price target issued in the provided data.
@@ -1529,7 +1529,7 @@ font-size: 0.75rem;
                     -   The stock symbol.
                     -   The analyst firm making the change.
                     -   A 1-sentence summary of the new rating and price target (e.g., "Upgraded to Outperform with a $120 price target.").
-                    NEWS ARTICLES (JSON):
+                    NEWS ARTICLES:
                     ${articlesText}`
             },
             {
@@ -1544,7 +1544,7 @@ font-size: 0.75rem;
                     -   **Trend Direction:** Is the consensus price target trending Upward, Downward, or is it Mixed?
                     -   **Summary of Revisions:** Briefly explain the changes. For example: "Morgan Stanley raised its target from $150 to $175, followed by Goldman Sachs increasing its target to $180, indicating a strengthening positive outlook."
                     Format using Markdown.
-                    NEWS ARTICLES (JSON):
+                    NEWS ARTICLES:
                     ${articlesText}`
             },
             {
@@ -1553,14 +1553,14 @@ font-size: 0.75rem;
                 requiresSymbol: false,
                  prompt: (exchange, articlesText) => `
                     Act as a financial markets commentator. From the list of news articles (as JSON objects) for the ${exchange.toUpperCase()}, identify the most influential analysts in the past 30 days.
-                    If the provided "NEWS ARTICLES (JSON)" list is empty or too sparse to identify active analysts, you MUST respond with only this message: "Insufficient data to identify the most active analysts."
+                    If the provided "NEWS ARTICLES" list is empty or too sparse to identify active analysts, you MUST respond with only this message: "Insufficient data to identify the most active analysts."
                     If data is available, your analysis should name the **Top 3 Most Active Analysts** based on the number of reports in the data.
                     For each of these three analysts, provide:
                     -   **Analyst Name and Firm:** e.g., "Akash Tewari (Wolfe Research)".
                     -   **General Stance:** A brief description of their recent activity (e.g., "Appears bullish on the biotech sector, reiterating multiple 'Outperform' ratings.").
                     -   **Highlight Call:** Mention their most optimistic or notable call from the dataset.
                     Format using Markdown.
-                    NEWS ARTICLES (JSON):
+                    NEWS ARTICLES:
                     ${articlesText}`
             },
             {
@@ -1570,12 +1570,12 @@ font-size: 0.75rem;
                 prompt: (exchange, articlesText) => `
                     Act as a financial markets strategist. I have provided a list of analyst actions as JSON objects on the ${exchange.toUpperCase()} stock exchange.
                     Your task is to analyze the "house view" of the most active analyst firms.
-                    If the provided "NEWS ARTICLES (JSON)" list is empty or no single firm has published multiple reports, you MUST respond with only this message: "Insufficient data to determine the house view for any analyst firm."
+                    If the provided "NEWS ARTICLES" list is empty or no single firm has published multiple reports, you MUST respond with only this message: "Insufficient data to determine the house view for any analyst firm."
                     If data is available:
                     1.  Identify the 3 firms (e.g., "Wolfe Research", "Goldman Sachs") with the highest number of published ratings in the dataset.
                     2.  For each of these top 3 firms, provide a 2-3 sentence summary of their overall stance.
                     3.  Note whether they appear generally bullish, bearish, or focused on a specific sector. Mention one stock they are particularly positive or negative on, if the data shows a clear example. Format using Markdown.
-                    NEWS ARTICLES (JSON):
+                    NEWS ARTICLES:
                     ${articlesText}`
             },
             // Phase 4: Final Thesis
@@ -1619,7 +1619,7 @@ font-size: 0.75rem;
                     -   **Analyst Firm:** The firm initiating coverage.
                     -   **Initial Rating:** The starting rating (e.g., Buy, Hold, Outperform).
                     -   **Initial Price Target:** The new price target assigned to the stock.
-                    NEWS ARTICLES (JSON):
+                    NEWS ARTICLES:
                     ${articlesText}`
             }
         ];
