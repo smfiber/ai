@@ -2,7 +2,7 @@
 import { CONSTANTS, SECTORS, SECTOR_ICONS, state, NEWS_SENTIMENT_PROMPT, DEEP_DIVE_PROMPT } from './config.js';
 import { getFmpStockData, callApi, filterValidNews, callGeminiApi, generatePolishedArticle, getDriveToken, getOrCreateDriveFolder, createDriveFile, getGroupedFmpData, generateMorningBriefing, calculatePortfolioHealthScore, runOpportunityScanner, generatePortfolioAnalysis, generateTrendAnalysis, getCachedNews, getScannerResults, generateNewsSummary } from './api.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { getSecInsiderTrading, getSecInstitutionalOwnership, getSecMaterialEvents } from './sec-api.js';
+import { getSecInsiderTrading, getSecInstitutionalOwnership, getSecMaterialEvents, getSecAnnualReports, getSecQuarterlyReports } from './sec-api.js';
 
 // --- CHART INSTANCES ---
 let allocationChartInstance = null;
@@ -1796,6 +1796,50 @@ function _renderSecMaterialEvents(data) {
     return html;
 }
 
+function _renderSecAnnualReports(data) {
+    let html = `<h3 class="text-xl font-bold text-gray-800 mb-4 mt-8">Recent Annual Reports (10-K)</h3>`;
+    if (!data || data.length === 0) {
+        return html + `<p class="text-sm text-gray-500">No recent annual reports found.</p>`;
+    }
+
+    html += `<ul class="space-y-2">`;
+    data.slice(0, 10).forEach(event => {
+        html += `
+            <li class="p-3 bg-white border rounded-lg flex justify-between items-center text-sm">
+                <span>
+                    <strong>Filed:</strong> ${new Date(event.filedAt).toLocaleDateString()} - 
+                    <span class="text-gray-600">${sanitizeText(event.formType)}</span>
+                </span>
+                <a href="${sanitizeText(event.linkToFilingDetails)}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:underline font-semibold">View Filing</a>
+            </li>
+        `;
+    });
+    html += `</ul>`;
+    return html;
+}
+
+function _renderSecQuarterlyReports(data) {
+    let html = `<h3 class="text-xl font-bold text-gray-800 mb-4 mt-8">Recent Quarterly Reports (10-Q)</h3>`;
+    if (!data || data.length === 0) {
+        return html + `<p class="text-sm text-gray-500">No recent quarterly reports found.</p>`;
+    }
+
+    html += `<ul class="space-y-2">`;
+    data.slice(0, 10).forEach(event => {
+        html += `
+            <li class="p-3 bg-white border rounded-lg flex justify-between items-center text-sm">
+                <span>
+                    <strong>Filed:</strong> ${new Date(event.filedAt).toLocaleDateString()} - 
+                    <span class="text-gray-600">${sanitizeText(event.formType)}</span>
+                </span>
+                <a href="${sanitizeText(event.linkToFilingDetails)}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:underline font-semibold">View Filing</a>
+            </li>
+        `;
+    });
+    html += `</ul>`;
+    return html;
+}
+
 async function handleSecApiRequest(ticker) {
     const contentContainer = document.getElementById('sec-api-tab');
     if (!contentContainer) return;
@@ -1812,15 +1856,19 @@ async function handleSecApiRequest(ticker) {
     }
     
     try {
-        const [insiderTrading, institutionalOwnership, materialEvents] = await Promise.all([
+        const [insiderTrading, institutionalOwnership, materialEvents, annualReports, quarterlyReports] = await Promise.all([
             getSecInsiderTrading(ticker),
             getSecInstitutionalOwnership(ticker),
-            getSecMaterialEvents(ticker)
+            getSecMaterialEvents(ticker),
+            getSecAnnualReports(ticker),
+            getSecQuarterlyReports(ticker)
         ]);
         
         let html = _renderSecInsiderTrading(insiderTrading);
         html += _renderSecInstitutionalOwnership(institutionalOwnership);
         html += _renderSecMaterialEvents(materialEvents);
+        html += _renderSecAnnualReports(annualReports);
+        html += _renderSecQuarterlyReports(quarterlyReports);
 
         contentContainer.innerHTML = html;
     } catch (error) {
