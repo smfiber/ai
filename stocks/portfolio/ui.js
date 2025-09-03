@@ -535,15 +535,18 @@ async function openRawDataViewer(ticker) {
     profileDisplayContainer.innerHTML = '';
     document.getElementById('valuation-health-container').innerHTML = '';
     document.getElementById('thesis-tracker-container').innerHTML = '';
-    document.querySelector('#sec-filings-tab .content-placeholder')?.parentNode.replaceChildren(...[...document.querySelector('#sec-filings-tab').children].map(child => {
-        const placeholder = child.querySelector('.content-placeholder');
-        if (placeholder) placeholder.innerHTML = 'Loading...';
-        return child;
-    }));
+    
+    // Reset SEC tab content to loading placeholders
+    document.getElementById('insider-trading-container').innerHTML = `<h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Recent Insider Activity (Form 4)</h3><div class="content-placeholder text-center text-gray-500 py-8">Loading...</div>`;
+    document.getElementById('institutional-ownership-container').innerHTML = `<h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Top Institutional Holders (13F)</h3><div class="content-placeholder text-center text-gray-500 py-8">Loading...</div>`;
+    document.getElementById('material-events-container').innerHTML = `<h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Recent Material Events (8-K)</h3><div class="content-placeholder text-center text-gray-500 py-8">Loading...</div>`;
 
-
+    // Reset tabs to default state
     document.querySelectorAll('#rawDataViewerModal .tab-content').forEach(c => c.classList.add('hidden'));
-    document.querySelectorAll('#rawDataViewerModal .tab-button').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('#rawDataViewerModal .tab-button').forEach(b => {
+        b.classList.remove('active');
+        b.removeAttribute('data-loaded'); // Clear loaded state for lazy loading
+    });
     document.getElementById('dashboard-tab').classList.remove('hidden');
     document.querySelector('.tab-button[data-tab="dashboard"]').classList.add('active');
 
