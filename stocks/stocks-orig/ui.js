@@ -1193,6 +1193,141 @@ function handleDeleteBroadEndpoint(id) {
 }
 
 
+// --- SEC FILINGS RENDERING ---
+function _renderInsiderTrading(filings) {
+    const container = document.getElementById('insider-trading-container');
+    if (!container) return;
+    
+    container.innerHTML = `<h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Recent Insider Activity (Form 4)</h3>`;
+
+    if (!filings || filings.length === 0) {
+        container.innerHTML += `<p class="text-center text-gray-500 py-8">No recent insider activity found.</p>`;
+        return;
+    }
+    
+    const tableHtml = `
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200 text-sm">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th scope="col" class="px-4 py-2 text-left font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                        <th scope="col" class="px-4 py-2 text-left font-medium text-gray-500 uppercase tracking-wider">Filer</th>
+                        <th scope="col" class="px-4 py-2 text-left font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                        <th scope="col" class="px-4 py-2 text-right font-medium text-gray-500 uppercase tracking-wider">Shares</th>
+                        <th scope="col" class="px-4 py-2 text-right font-medium text-gray-500 uppercase tracking-wider">Value</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    ${filings.map(f => {
+                        const transactionType = f.transactionCode === 'P' ? 'Buy' : (f.transactionCode === 'S' ? 'Sell' : 'Other');
+                        const typeClass = f.transactionCode === 'P' ? 'text-green-600 font-semibold' : (f.transactionCode === 'S' ? 'text-red-600 font-semibold' : '');
+                        const value = (f.transactionPricePerShare || 0) * (f.transactionShares || 0);
+
+                        return `
+                            <tr>
+                                <td class="px-4 py-2 whitespace-nowrap">${new Date(f.filedAt).toLocaleDateString()}</td>
+                                <td class="px-4 py-2 whitespace-nowrap"><a href="${sanitizeText(f.linkToFilingDetails)}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:underline">${sanitizeText(f.reportingOwnerName)}</a></td>
+                                <td class="px-4 py-2 whitespace-nowrap ${typeClass}">${transactionType}</td>
+                                <td class="px-4 py-2 whitespace-nowrap text-right">${(f.transactionShares || 0).toLocaleString()}</td>
+                                <td class="px-4 py-2 whitespace-nowrap text-right">$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                            </tr>
+                        `;
+                    }).join('')}
+                </tbody>
+            </table>
+        </div>
+    `;
+    container.innerHTML += tableHtml;
+}
+
+function _renderInstitutionalOwnership(holdings) {
+    const container = document.getElementById('institutional-ownership-container');
+    if (!container) return;
+
+    container.innerHTML = `<h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Top Institutional Holders (13F)</h3>`;
+
+    if (!holdings || holdings.length === 0) {
+        container.innerHTML += `<p class="text-center text-gray-500 py-8">No institutional ownership data found.</p>`;
+        return;
+    }
+
+    const sortedHoldings = holdings.sort((a, b) => b.value - a.value).slice(0, 15); // Top 15
+
+    const tableHtml = `
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200 text-sm">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th scope="col" class="px-4 py-2 text-left font-medium text-gray-500 uppercase tracking-wider">Holder</th>
+                        <th scope="col" class="px-4 py-2 text-right font-medium text-gray-500 uppercase tracking-wider">Shares</th>
+                        <th scope="col" class="px-4 py-2 text-right font-medium text-gray-500 uppercase tracking-wider">Value</th>
+                        <th scope="col" class="px-4 py-2 text-left font-medium text-gray-500 uppercase tracking-wider">Report Date</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    ${sortedHoldings.map(h => `
+                        <tr>
+                            <td class="px-4 py-2 whitespace-nowrap">${sanitizeText(h.investorName)}</td>
+                            <td class="px-4 py-2 whitespace-nowrap text-right">${(h.shares || 0).toLocaleString()}</td>
+                            <td class="px-4 py-2 whitespace-nowrap text-right">$${(h.value || 0).toLocaleString()}</td>
+                            <td class="px-4 py-2 whitespace-nowrap">${new Date(h.filedAt).toLocaleDateString()}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        </div>
+    `;
+    container.innerHTML += tableHtml;
+}
+
+function _renderMaterialEvents(filings) {
+    const container = document.getElementById('material-events-container');
+    if (!container) return;
+
+    container.innerHTML = `<h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Recent Material Events (8-K)</h3>`;
+
+    if (!filings || filings.length === 0) {
+        container.innerHTML += `<p class="text-center text-gray-500 py-8">No recent material events found.</p>`;
+        return;
+    }
+
+    const listHtml = `
+        <ul class="divide-y divide-gray-200">
+            ${filings.map(f => `
+                <li class="p-3 hover:bg-gray-50">
+                    <a href="${sanitizeText(f.linkToFilingDetails)}" target="_blank" rel="noopener noreferrer" class="block">
+                        <p class="font-semibold text-indigo-600">${sanitizeText(f.description)}</p>
+                        <p class="text-xs text-gray-500">Filed: ${new Date(f.filedAt).toLocaleString()}</p>
+                    </a>
+                </li>
+            `).join('')}
+        </ul>
+    `;
+    container.innerHTML += listHtml;
+}
+
+async function renderSecFilings(ticker) {
+    try {
+        const [insider, institutional, events] = await Promise.all([
+            getSecInsiderTrading(ticker),
+            getSecInstitutionalOwnership(ticker),
+            getSecMaterialEvents(ticker)
+        ]);
+
+        _renderInsiderTrading(insider);
+        _renderInstitutionalOwnership(institutional);
+        _renderMaterialEvents(events);
+
+    } catch (error) {
+        console.error("Error rendering SEC filings:", error);
+        const secTab = document.getElementById('sec-filings-tab');
+        if (secTab) {
+            secTab.innerHTML = `<div class="p-4 text-center text-red-500">Could not load SEC Filings: ${error.message}</div>`;
+        }
+    }
+}
+
+
 // --- EVENT LISTENER SETUP ---
 
 function setupGlobalEventListeners() {
