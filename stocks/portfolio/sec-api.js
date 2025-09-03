@@ -107,3 +107,64 @@ export async function getSecQuarterlyReports(ticker) {
     const result = await callSecQueryApi(queryObject);
     return result?.filings || [];
 }
+
+/**
+ * Helper to call SEC API endpoints that return plain text.
+ * @param {string} url The full URL to fetch.
+ * @returns {Promise<string>} The response as a plain text string.
+ */
+async function _callSecTextApi(url) {
+    try {
+        const response = await fetch(url);
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`SEC Text API request failed: ${errorText}`);
+        }
+        return await response.text();
+    } catch (error) {
+        console.error("Error in _callSecTextApi:", error);
+        throw error;
+    }
+}
+
+/**
+ * Fetches the raw text of "Item 1A. Risk Factors" from the latest 10-K filing.
+ * @param {string} ticker The stock ticker.
+ * @returns {Promise<string|null>} The text of the section or null if not found.
+ */
+export async function getLatest10KRiskFactorsText(ticker) {
+    if (!state.secApiKey) return null;
+    try {
+        const filings = await getSecAnnualReports(ticker);
+        if (!filings || filings.length === 0) return null;
+
+        const latestFilingUrl = filings[0].linkToFilingDetails;
+        const extractorUrl = `https://api.sec-api.io/extractor?url=${latestFilingUrl}&item=1A&type=text&token=${state.secApiKey}`;
+        
+        return await _callSecTextApi(extractorUrl);
+    } catch (error) {
+        console.warn(`Could not fetch 10-K risk factors for ${ticker}:`, error.message);
+        return null;
+    }
+}
+
+/**
+ * Fetches the raw text of "Item 2. MD&A" from the latest 10-Q filing.
+ * @param {string} ticker The stock ticker.
+ * @returns {Promise<string|null>} The text of the section or null if not found.
+ */
+export async function getLatest10QMdaText(ticker) {
+    if (!state.secApiKey) return null;
+    try {
+        const filings = await getSecQuarterlyReports(ticker);
+        if (!filings || filings.length === 0) return null;
+
+        const latestFilingUrl = filings[0].linkToFilingDetails;
+        const extractorUrl = `https://api.sec-api.io/extractor?url=${latestFilingUrl}&item=2&type=text&token=${state.secApiKey}`;
+        
+        return await _callSecTextApi(extractorUrl);
+    } catch (error) {
+        console.warn(`Could not fetch 10-Q MD&A for ${ticker}:`, error.message);
+        return null;
+    }
+}
