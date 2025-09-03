@@ -2384,7 +2384,7 @@ function _calculateDeepDiveMetrics(data, newsNarrative, institutionalHolders) {
                 return ['Institutional ownership data not available.'];
             }
             const sortedHolders = institutionalHolders.sort((a, b) => b.value - a.value);
-            return sortedHolders.slice(0, 5).map(h => h.name);
+            return sortedHolders.slice(0, 5).map(h => h.investorName);
         })(),
         roeTrend: formatTrend(ratios, 'returnOnEquity'),
         grossMarginTrend: formatTrend(ratios, 'grossProfitMargin'),
@@ -2452,11 +2452,7 @@ async function handleDeepDiveRequest(symbol, forceNew = false) {
         let institutionalHolders = null;
         if (state.secApiKey) {
             try {
-                const secUrl = `https://api.sec-api.io/filing/13f-hr?ticker=${symbol}&token=${state.secApiKey}`;
-                const secResponse = await callApi(secUrl); // This is a GET request by default in callApi
-                if (secResponse && Array.isArray(secResponse) && secResponse.length > 0) {
-                    institutionalHolders = secResponse;
-                }
+                institutionalHolders = await getSecInstitutionalOwnership(symbol);
             } catch (secError) {
                 console.warn(`Could not fetch institutional ownership data for ${symbol}:`, secError);
             }
