@@ -326,7 +326,7 @@ async function handleRefreshInstitutionalOwnership(symbol) {
             },
             "from": "0",
             "size": "50",
-            "sort": [{ "sortBy": "value", "order": "desc" }]
+            "sort": [{ "value": { "order": "desc" } }]
         };
 
         const data = await callApi(secUrl, {
@@ -2430,7 +2430,7 @@ async function handleDeepDiveRequest(symbol, forceNew = false) {
                     "query": { "query_string": { "query": queryString } },
                     "from": "0",
                     "size": "50",
-                    "sort": [{ "sortBy": "value", "order": "desc" }]
+                    "sort": [{ "value": { "order": "desc" } }]
                 };
                 const secResponse = await callApi(secUrl, {
                     method: 'POST',
