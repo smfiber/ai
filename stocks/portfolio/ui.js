@@ -1,10 +1,28 @@
-// ui.js
-import { CONSTANTS, SECTORS, SECTOR_ICONS, state, NEWS_SENTIMENT_PROMPT, DEEP_DIVE_PROMPT } from './config.js';
-import { getFmpStockData, callApi, filterValidNews, callGeminiApi, generatePolishedArticle, getDriveToken, getOrCreateDriveFolder, createDriveFile, getGroupedFmpData, generateMorningBriefing, calculatePortfolioHealthScore, runOpportunityScanner, generatePortfolioAnalysis, generateTrendAnalysis, getCachedNews, getScannerResults, generateNewsSummary } from './api.js';
+import { CONSTANTS, SECTORS, SECTOR_ICONS, state, NEWS_SENTIMENT_PROMPT, promptMap, creativePromptMap, DISRUPTOR_ANALYSIS_PROMPT, MACRO_PLAYBOOK_PROMPT, INDUSTRY_CAPITAL_ALLOCATORS_PROMPT, INDUSTRY_DISRUPTOR_ANALYSIS_PROMPT, INDUSTRY_MACRO_PLAYBOOK_PROMPT, ONE_SHOT_INDUSTRY_TREND_PROMPT, FORTRESS_ANALYSIS_PROMPT, PHOENIX_ANALYSIS_PROMPT, PICK_AND_SHOVEL_PROMPT, LINCHPIN_ANALYSIS_PROMPT, HIDDEN_VALUE_PROMPT, UNTOUCHABLES_ANALYSIS_PROMPT, INVESTMENT_MEMO_PROMPT, ENABLE_STARTER_PLAN_MODE, STARTER_SYMBOLS } from './config.js';
+import { getFmpStockData, callApi, filterValidNews, callGeminiApi, generatePolishedArticle, getDriveToken, getOrCreateDriveFolder, createDriveFile, findStocksByIndustry, searchSectorNews, findStocksBySector, getGroupedFmpData, synthesizeAndRankCompanies, generateDeepDiveReport } from './api.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// --- CHART INSTANCES ---
-let allocationChartInstance = null;
+// --- PROMPT MAPPING ---
+// The main promptMap is now imported directly from config.js
+
+// Map specific AI analysis types to the FMP endpoints they require.
+const ANALYSIS_REQUIREMENTS = {
+    'ManagementScorecard': ['executive_compensation']
+};
+
+// v13.1.0: Icons for stock-specific analysis tiles
+const ANALYSIS_ICONS = {
+    'FinancialAnalysis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6a7.5 7.5 0 100 15 7.5 7.5 0 000-15z" /><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.2-5.2" /><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 10.5H10.5v.008H10.5V10.5zm.008 0h.008v4.502h-.008V10.5z" /></svg>`,
+    'UndervaluedAnalysis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0l.879-.659M7.5 14.25l6-6M4.5 12l6-6m6 6l-6 6" /></svg>`,
+    'BullVsBear': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 15.75l-2.489-2.489m0 0a3.375 3.375 0 10-4.773-4.773 3.375 3.375 0 004.774 4.774zM21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`,
+    'MoatAnalysis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.286zm0 13.036h.008v.008h-.008v-.008z" /></svg>`,
+    'DividendSafety': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a2.25 2.25 0 00-2.25-2.25H15a3 3 0 11-6 0H5.25A2.25 2.25 0 003 12m18 0v6a2.25 2.25 0 01-2.25-2.25H5.25A2.25 2.25 0 013 18v-6m18 0V9M3 12V9m18 3a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 12m15 0a2.25 2.25 0 01-2.25 2.25H12a2.25 2.25 0 01-2.25-2.25" /></svg>`,
+    'GrowthOutlook': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941" /></svg>`,
+    'RiskAssessment': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" /></svg>`,
+    'CapitalAllocators': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15.91 15.91a2.25 2.25 0 01-3.182 0l-3.03-3.03a.75.75 0 011.06-1.061l2.47 2.47 2.47-2.47a.75.75 0 011.06 1.06l-3.03 3.03z" /></svg>`,
+    'NarrativeCatalyst': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.362 5.214A8.252 8.252 0 0112 21 8.25 8.25 0 016.038 7.048 8.287 8.287 0 009 9.62a8.983 8.983 0 013.362-3.867 8.262 8.262 0 013 2.456z" /><path stroke-linecap="round" stroke-linejoin="round" d="M12 18a3.75 3.75 0 00.495-7.467 5.99 5.99 0 00-1.925 3.546 5.974 5.974 0 01-2.133-1A3.75 3.75 0 0012 18z" /></svg>`,
+    'InvestmentMemo': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>`
+};
 
 // --- UTILITY & SECURITY HELPERS ---
 
@@ -20,12 +38,7 @@ function formatLargeNumber(value, precision = 2) {
         const formattedNum = (num / tier.value).toFixed(precision);
         return `${formattedNum}${tier.suffix}`;
     }
-    return num.toLocaleString();
-}
-
-function formatCurrency(value) {
-    if (typeof value !== 'number') return '$--';
-    return value.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+    return num.toFixed(precision);
 }
 
 function sanitizeText(text) {
@@ -150,7 +163,6 @@ async function handleRefreshFmpData(symbol) {
     try {
         const coreEndpoints = [
             { name: 'profile', path: 'profile', version: 'v3' },
-            { name: 'exchange_variants', path: 'search-exchange-variants', version: 'stable', symbolAsQuery: true },
             { name: 'income_statement_annual', path: 'income-statement', params: 'period=annual&limit=10', version: 'v3' },
             { name: 'income_statement_growth_annual', path: 'income-statement-growth', params: 'period=annual&limit=5', version: 'stable', symbolAsQuery: true },
             { name: 'balance_sheet_statement_annual', path: 'balance-sheet-statement', params: 'period=annual&limit=10', version: 'v3' },
@@ -160,12 +172,17 @@ async function handleRefreshFmpData(symbol) {
             { name: 'stock_grade_news', path: 'grade', version: 'v3' },
             { name: 'analyst_estimates', path: 'analyst-estimates', version: 'v3'},
             { name: 'company_core_information', path: 'company-core-information', version: 'v4', symbolAsQuery: true },
-            { name: 'insider_trading_stats', path: 'insider-trading/search', params: 'limit=100', version: 'stable', symbolAsQuery: true }
+            { name: 'executive_compensation', path: 'governance-executive-compensation', version: 'stable', symbolAsQuery: true }
         ];
 
         let successfulFetches = 0;
 
         for (const endpoint of coreEndpoints) {
+            if (endpoint.name === 'executive_compensation' && ENABLE_STARTER_PLAN_MODE && !STARTER_SYMBOLS.includes(symbol)) {
+                console.log(`Skipping starter-plan-limited endpoint '${endpoint.name}' for non-starter symbol ${symbol}.`);
+                continue;
+            }
+
             loadingMessage.textContent = `Fetching FMP Data: ${endpoint.name.replace(/_/g, ' ')}...`;
             
             const version = endpoint.version || 'v3';
@@ -203,6 +220,10 @@ async function handleRefreshFmpData(symbol) {
             const userEndpoints = endpointsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             for (const endpoint of userEndpoints) {
                  if (!endpoint.url_template || !endpoint.name) continue;
+                 if (endpoint.id === 'insider_trading_stats') {
+                    console.warn("Skipping problematic 'insider_trading_stats' endpoint as requested.");
+                    continue;
+                 }
                 loadingMessage.textContent = `Fetching FMP Data: ${endpoint.name}...`;
                 const url = endpoint.url_template.replace('${symbol}', symbol).replace('${fmpApiKey}', state.fmpApiKey);
                 const data = await callApi(url);
@@ -216,37 +237,8 @@ async function handleRefreshFmpData(symbol) {
             }
         }
         
-        // Fetch executive compensation from SEC-API.io
-        if (state.secApiKey) {
-            loadingMessage.textContent = `Fetching SEC Data: Executive Compensation...`;
-            const secUrl = `https://api.sec-api.io/compensation/${symbol}?token=${state.secApiKey}`;
-            try {
-                const data = await callApi(secUrl);
-                if (data && (!Array.isArray(data) || data.length > 0)) {
-                    const docRef = doc(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, symbol, 'endpoints', 'executive_compensation');
-                    await setDoc(docRef, { cachedAt: Timestamp.now(), data: data });
-                    successfulFetches++;
-                }
-            } catch (error) {
-                console.warn(`Could not fetch executive compensation from SEC-API.io for ${symbol}:`, error.message);
-                // Don't throw an error, just warn and continue, as it's supplemental data.
-            }
-        }
-
-        displayMessageInModal(`Successfully fetched and updated data for ${successfulFetches} endpoint(s).`, 'info');
-        await fetchAndCachePortfolioData(); // Refresh portfolio cache
-        
-        // Refresh stock list modal if it's open
-        if (document.getElementById(CONSTANTS.MODAL_STOCK_LIST).classList.contains(CONSTANTS.CLASS_MODAL_OPEN)) {
-            const modal = document.getElementById(CONSTANTS.MODAL_STOCK_LIST);
-            const activeTabButton = modal.querySelector('.modal-tab-button.active');
-            if (activeTabButton) {
-                const listType = activeTabButton.dataset.tab === 'portfolio' ? 'Portfolio' : 'Watchlist';
-                const containerId = listType === 'Portfolio' ? 'portfolio-tab-pane' : 'watchlist-tab-pane';
-                document.getElementById(containerId).innerHTML = ''; // Clear to force reload
-                await _renderStockListForTab(listType);
-            }
-        }
+        displayMessageInModal(`Successfully fetched and updated data for ${successfulFetches} FMP endpoint(s).`, 'info');
+        await fetchAndCachePortfolioData(); // Refresh portfolio cache which might contain new FMP data references
 
     } catch (error) {
         console.error("Error fetching FMP data:", error);
@@ -256,331 +248,8 @@ async function handleRefreshFmpData(symbol) {
     }
 }
 
-async function handleRefreshExecutiveComp(symbol) {
-    if (!state.secApiKey) {
-        displayMessageInModal("SEC-API.io API Key is required for this feature.", "warning");
-        return;
-    }
-
-    openModal(CONSTANTS.MODAL_LOADING);
-    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
-    loadingMessage.textContent = `Fetching Executive Compensation for ${symbol}...`;
-
-    try {
-        const secUrl = `https://api.sec-api.io/compensation/${symbol}?token=${state.secApiKey}`;
-        const data = await callApi(secUrl);
-        if (data && (!Array.isArray(data) || data.length > 0)) {
-            const docRef = doc(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, symbol, 'endpoints', 'executive_compensation');
-            await setDoc(docRef, { cachedAt: Timestamp.now(), data: data });
-            displayMessageInModal('Executive compensation data refreshed successfully!', 'info');
-        } else {
-            throw new Error("No data returned from the API.");
-        }
-    } catch (error) {
-        console.error("Error refreshing executive compensation:", error);
-        displayMessageInModal(`Could not fetch compensation data: ${error.message}`, 'error');
-    } finally {
-        closeModal(CONSTANTS.MODAL_LOADING);
-        await handleSecApiTabRequest(symbol);
-    }
-}
-
-async function handleRefreshInstitutionalOwnership(symbol) {
-    if (!state.secApiKey) {
-        displayMessageInModal("SEC-API.io API Key is required for this feature.", "warning");
-        return;
-    }
-
-    openModal(CONSTANTS.MODAL_LOADING);
-    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
-    loadingMessage.textContent = `Fetching Institutional Ownership for ${symbol}...`;
-
-    try {
-        const fmpData = await getFmpStockData(symbol);
-        const cikFromFmp = fmpData?.exchange_variants?.[0]?.cik || fmpData?.profile?.[0]?.cik;
-        const cik = cikFromFmp ? parseInt(cikFromFmp, 10) : null;
-        const cusip = fmpData?.exchange_variants?.[0]?.cusip || fmpData?.profile?.[0]?.cusip;
-
-        let queryString;
-        let queryType;
-
-        if (cik) {
-            queryString = `cik:\"${cik}\"`;
-            queryType = 'CIK';
-        } else if (cusip) {
-            queryString = `cusip:\"${cusip}\"`;
-            queryType = 'CUSIP';
-        } else {
-            queryString = `ticker:\"${symbol}\"`;
-            queryType = 'Ticker';
-        }
-        
-        loadingMessage.textContent = `Querying by ${queryType} for ${symbol}...`;
-
-        const secUrl = `https://api.sec-api.io/v1/query?token=${state.secApiKey}`;
-        const queryPayload = {
-            "query": {
-                "query_string": {
-                    "query": queryString
-                }
-            },
-            "from": "0",
-            "size": "50",
-            "sort": [{ "value": { "order": "desc" } }]
-        };
-
-        const data = await callApi(secUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(queryPayload)
-        });
-
-        if (data && data.holdings) {
-            const docRef = doc(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, symbol, 'endpoints', 'institutional_ownership');
-            await setDoc(docRef, { cachedAt: Timestamp.now(), data: data });
-            displayMessageInModal('Institutional ownership data refreshed successfully!', 'info');
-        } else {
-            throw new Error("No holdings data returned from the API.");
-        }
-    } catch (error) {
-        console.error("Error refreshing institutional ownership:", error);
-        displayMessageInModal(`Could not fetch ownership data: ${error.message}`, 'error');
-    } finally {
-        closeModal(CONSTANTS.MODAL_LOADING);
-        await handleSecApiTabRequest(symbol); // Refresh the tab content
-    }
-}
-
 
 // --- PORTFOLIO & DASHBOARD MANAGEMENT ---
-
-export async function renderMorningBriefing() {
-    const briefingContainer = document.getElementById('morning-briefing-content');
-    if (!briefingContainer) return;
-
-    try {
-        const portfolioStocks = state.portfolioCache.filter(s => s.status === 'Portfolio');
-
-        if (portfolioStocks.length === 0) {
-            briefingContainer.innerHTML = `<div class="text-center p-8 text-gray-500">Add stocks to your portfolio to see your morning briefing.</div>`;
-            return;
-        }
-
-        const briefingMarkdown = await generateMorningBriefing(portfolioStocks);
-        briefingContainer.innerHTML = marked.parse(briefingMarkdown);
-
-    } catch (error) {
-        console.error("Error generating morning briefing:", error);
-        briefingContainer.innerHTML = `<div class="text-center p-4 text-red-500 bg-red-50 rounded-lg">
-            <p class="font-semibold">Could not generate briefing.</p>
-            <p class="text-sm">${error.message}</p>
-        </div>`;
-    }
-}
-
-export async function renderPortfolioHealthScore() {
-    const scoreDisplay = document.getElementById('health-score-display');
-    if (!scoreDisplay) return;
-
-    try {
-        const portfolioStocks = state.portfolioCache.filter(s => s.status === 'Portfolio');
-        if (portfolioStocks.length === 0) {
-            scoreDisplay.textContent = '--';
-            return;
-        }
-        
-        const score = await calculatePortfolioHealthScore(portfolioStocks);
-        scoreDisplay.textContent = score;
-        
-        // Update color based on score
-        scoreDisplay.classList.remove('text-green-500', 'text-yellow-500', 'text-red-500');
-        if (score >= 75) {
-            scoreDisplay.classList.add('text-green-500');
-        } else if (score >= 50) {
-            scoreDisplay.classList.add('text-yellow-500');
-        } else {
-            scoreDisplay.classList.add('text-red-500');
-        }
-
-    } catch (error) {
-        console.error("Error calculating portfolio health score:", error);
-        scoreDisplay.textContent = '--';
-    }
-}
-
-export async function renderPortfolioValue() {
-    const valueDisplay = document.getElementById('portfolio-value-display');
-    const breakdownDisplay = document.getElementById('portfolio-value-breakdown');
-    if (!valueDisplay || !breakdownDisplay) return;
-
-    valueDisplay.textContent = '--';
-    breakdownDisplay.innerHTML = `<p>Stocks: $--</p><p>Cash: $--</p>`;
-
-    try {
-        const portfolioStocks = state.portfolioCache.filter(s => s.status === 'Portfolio' && s.shares > 0);
-        
-        const dataPromises = portfolioStocks.map(stock => getFmpStockData(stock.ticker));
-        const allStockData = await Promise.all(dataPromises);
-
-        let totalStockValue = 0;
-        allStockData.forEach((fmpData, index) => {
-            const stock = portfolioStocks[index];
-            const price = fmpData?.profile?.[0]?.price;
-            if (price && stock.shares) {
-                totalStockValue += price * stock.shares;
-            }
-        });
-
-        const cashBalance = state.cashBalance || 0;
-        const totalPortfolioValue = totalStockValue + cashBalance;
-
-        valueDisplay.textContent = formatCurrency(totalPortfolioValue);
-        breakdownDisplay.innerHTML = `
-            <p>Stocks: ${formatCurrency(totalStockValue)}</p>
-            <p>Cash: ${formatCurrency(cashBalance)}</p>
-        `;
-    } catch (error) {
-        console.error("Error rendering portfolio value:", error);
-        valueDisplay.textContent = 'Error';
-    }
-}
-
-export async function renderAllocationChart() {
-    const container = document.getElementById('allocation-chart-container');
-    if (!container) return;
-
-    if (allocationChartInstance) {
-        allocationChartInstance.destroy();
-        allocationChartInstance = null;
-    }
-    container.innerHTML = '<canvas id="allocation-chart"></canvas>';
-    const ctx = document.getElementById('allocation-chart').getContext('2d');
-
-    try {
-        const portfolioStocks = state.portfolioCache.filter(s => s.status === 'Portfolio' && s.shares > 0);
-        const cashBalance = state.cashBalance || 0;
-
-        if (portfolioStocks.length === 0 && cashBalance <= 0) {
-            container.innerHTML = `<p class="text-center text-sm text-gray-500">Add stocks to your portfolio to see allocation.</p>`;
-            return;
-        }
-
-        container.innerHTML = '<div class="loader"></div>';
-
-        const dataPromises = portfolioStocks.map(stock => getFmpStockData(stock.ticker));
-        const allStockData = await Promise.all(dataPromises);
-
-        let totalPortfolioValue = 0;
-        const chartData = [];
-
-        allStockData.forEach((fmpData, index) => {
-            const stock = portfolioStocks[index];
-            const price = fmpData?.profile?.[0]?.price;
-            const sector = stock.sector || 'Uncategorized';
-            if (price && stock.shares) {
-                const value = price * stock.shares;
-                totalPortfolioValue += value;
-                chartData.push({ value, ticker: stock.ticker, sector });
-            }
-        });
-        
-        if (cashBalance > 0) {
-            chartData.push({ value: cashBalance, ticker: 'Cash', sector: 'Cash' });
-            totalPortfolioValue += cashBalance;
-        }
-
-        if (chartData.length === 0) {
-             container.innerHTML = `<p class="text-center text-sm text-gray-500">Could not calculate portfolio values.</p>`;
-             return;
-        }
-
-        container.innerHTML = '<canvas id="allocation-chart"></canvas>';
-        const finalCtx = document.getElementById('allocation-chart').getContext('2d');
-
-        const sectorColors = {};
-        const sectors = [...new Set(chartData.map(d => d.sector))];
-        sectors.forEach(sector => {
-            if (sector === 'Cash') {
-                sectorColors['Cash'] = '#6b7280'; // Gray for cash
-                return;
-            }
-            let hash = 0;
-            for (let i = 0; i < sector.length; i++) {
-                hash = sector.charCodeAt(i) + ((hash << 5) - hash);
-            }
-            const color = (hash & 0x00FFFFFF).toString(16).toUpperCase();
-            sectorColors[sector] = "#" + "00000".substring(0, 6 - color.length) + color;
-        });
-
-        allocationChartInstance = new Chart(finalCtx, {
-            type: 'treemap',
-            data: {
-                datasets: [{
-                    tree: chartData,
-                    key: 'value',
-                    groups: ['sector'],
-                    captions: {
-                        display: true,
-                        color: 'rgba(255, 255, 255, 0.8)',
-                        font: { size: 16, weight: 'bold' },
-                        padding: 6,
-                    },
-                    labels: {
-                        display: true,
-                        formatter: (ctx) => ctx.raw._data.ticker,
-                        color: 'white',
-                        font: { weight: 'bold', size: 14 }
-                    },
-                    backgroundColor: (ctx) => {
-                        if (ctx.type === 'data') {
-                            const sector = ctx.raw._data.sector;
-                            const baseColor = sectorColors[sector] || '#CCCCCC';
-                            return Chart.helpers.color(baseColor).darken(0.2).rgbString();
-                        }
-                        if (ctx.type === 'group') {
-                            return sectorColors[ctx.raw.g] || '#CCCCCC';
-                        }
-                        return 'transparent';
-                    },
-                    borderColor: 'white',
-                    borderWidth: 2,
-                    spacing: 1
-                }]
-            },
-            options: {
-                maintainAspectRatio: false,
-                plugins: {
-                    title: { display: false },
-                    legend: { display: false },
-                    tooltip: {
-                        callbacks: {
-                            title: (items) => {
-                                const item = items[0];
-                                const raw = item.raw;
-                                return raw.g ? raw.g : raw._data.sector;
-                            },
-                            label: (item) => {
-                                const raw = item.raw;
-                                const value = raw.v;
-                                const percentage = totalPortfolioValue > 0 ? ((value / totalPortfolioValue) * 100).toFixed(2) : 0;
-                                if (raw.g) {
-                                    return `${formatCurrency(value)} (${percentage}%)`;
-                                } else {
-                                    const stock = raw._data;
-                                    return `${stock.ticker}: ${formatCurrency(value)} (${percentage}%)`;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        });
-
-    } catch (error) {
-        console.error("Error rendering allocation chart:", error);
-        container.innerHTML = `<p class="text-center text-xs text-red-500">Could not load chart: ${error.message}</p>`;
-    }
-}
 
 async function _renderGroupedStockList(container, stocksWithData, listType) {
     container.innerHTML = ''; 
@@ -641,45 +310,44 @@ export async function fetchAndCachePortfolioData() {
     document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = "Loading dashboard data...";
     
     try {
-        // Fetch portfolio stocks
-        const portfolioQuery = await getDocs(collection(state.db, CONSTANTS.DB_COLLECTION_PORTFOLIO));
-        state.portfolioCache = portfolioQuery.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const querySnapshot = await getDocs(collection(state.db, CONSTANTS.DB_COLLECTION_PORTFOLIO));
+        state.portfolioCache = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-        // Fetch cash balance
-        if (state.userId) {
-            const cashDocRef = doc(state.db, CONSTANTS.DB_COLLECTION_USER_DATA, state.userId);
-            const cashDoc = await getDoc(cashDocRef);
-            if (cashDoc.exists()) {
-                state.cashBalance = cashDoc.data().cashBalance || 0;
-            } else {
-                state.cashBalance = 0;
-            }
-        }
+        const portfolioStocks = state.portfolioCache.filter(s => s.status === 'Portfolio');
+        const watchlistStocks = state.portfolioCache.filter(s => s.status === 'Watchlist');
+
+        document.getElementById('portfolio-count').textContent = portfolioStocks.length;
+        document.getElementById('watchlist-count').textContent = watchlistStocks.length;
 
     } catch (error) {
         console.error("Error loading dashboard data:", error);
         displayMessageInModal(`Failed to load dashboard data: ${error.message}`, 'error');
+        document.getElementById('portfolio-count').textContent = 'E';
+        document.getElementById('watchlist-count').textContent = 'E';
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
 }
 
-async function _renderStockListForTab(listType) {
-    const containerId = listType === 'Portfolio' ? 'portfolio-tab-pane' : 'watchlist-tab-pane';
-    const container = document.getElementById(containerId);
-    if (!container) return;
+async function openStockListModal(listType) {
+    const modalId = CONSTANTS.MODAL_STOCK_LIST;
+    const modal = document.getElementById(modalId);
+    if (!modal) return;
 
-    // Prevent re-rendering if content already exists
-    if (container.innerHTML.trim() !== '') {
-        return;
-    }
-    
-    container.innerHTML = `<div class="flex justify-center p-8"><div class="loader"></div></div>`;
+    openModal(CONSTANTS.MODAL_LOADING);
+    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Loading ${listType}...`;
+
+    const title = modal.querySelector('#stock-list-modal-title');
+    const container = modal.querySelector('#stock-list-modal-content');
+    title.textContent = listType === 'Portfolio' ? 'My Portfolio' : 'My Watchlist';
+    container.innerHTML = '';
 
     try {
         const stocksToFetch = state.portfolioCache.filter(s => s.status === listType);
         if (stocksToFetch.length === 0) {
             container.innerHTML = `<p class="text-center text-gray-500 py-8">No stocks in your ${listType}.</p>`;
+            openModal(modalId);
+            closeModal(CONSTANTS.MODAL_LOADING);
             return;
         }
 
@@ -694,38 +362,18 @@ async function _renderStockListForTab(listType) {
         }).filter(stock => stock.fmpData);
 
         await _renderGroupedStockList(container, stocksWithData, listType);
+        openModal(modalId);
     } catch (error) {
-        console.error(`Error loading ${listType} list:`, error);
-        container.innerHTML = `<p class="text-red-500 text-center">Failed to load ${listType}: ${error.message}</p>`;
+        console.error(`Error loading ${listType} modal:`, error);
+        displayMessageInModal(`Failed to load ${listType}: ${error.message}`, 'error');
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
     }
-}
-
-
-async function handleOpenStockListViewer() {
-    openModal(CONSTANTS.MODAL_STOCK_LIST);
-    // Reset tabs to default state on open
-    const modal = document.getElementById(CONSTANTS.MODAL_STOCK_LIST);
-    modal.querySelectorAll('.modal-tab-button').forEach(btn => btn.classList.remove('active'));
-    modal.querySelectorAll('.modal-tab-pane').forEach(pane => {
-        pane.classList.remove('active');
-        pane.innerHTML = ''; // Clear content to ensure it reloads
-    });
-
-    // Set portfolio as the default active tab
-    modal.querySelector('.modal-tab-button[data-tab="portfolio"]').classList.add('active');
-    modal.querySelector('#portfolio-tab-pane').classList.add('active');
-    
-    // Load the default tab's content
-    await _renderStockListForTab('Portfolio');
 }
 
 async function openManageStockModal(stockData = {}) {
     const form = document.getElementById('manage-stock-form');
     form.reset();
-
-    const sharesContainer = document.getElementById('manage-stock-shares-container');
-    const sharesInput = document.getElementById('manage-stock-shares');
-    const statusSelect = document.getElementById('manage-stock-status');
     
     if (stockData.isEditMode) {
         document.getElementById('manage-stock-modal-title').textContent = `Edit ${stockData.ticker}`;
@@ -733,8 +381,7 @@ async function openManageStockModal(stockData = {}) {
         document.getElementById('manage-stock-ticker').value = stockData.ticker;
         document.getElementById('manage-stock-name').value = stockData.companyName;
         document.getElementById('manage-stock-exchange').value = stockData.exchange;
-        statusSelect.value = stockData.status || 'Watchlist';
-        sharesInput.value = stockData.shares || '';
+        document.getElementById('manage-stock-status').value = stockData.status || 'Watchlist';
         document.getElementById('manage-stock-sector').value = stockData.sector || '';
         document.getElementById('manage-stock-industry').value = stockData.industry || '';
     } else {
@@ -743,18 +390,10 @@ async function openManageStockModal(stockData = {}) {
         document.getElementById('manage-stock-ticker').value = stockData.ticker || '';
         document.getElementById('manage-stock-name').value = stockData.companyName || '';
         document.getElementById('manage-stock-exchange').value = stockData.exchange || '';
-        statusSelect.value = 'Watchlist';
-        sharesInput.value = '';
+        document.getElementById('manage-stock-status').value = 'Watchlist';
         document.getElementById('manage-stock-sector').value = stockData.sector || '';
         document.getElementById('manage-stock-industry').value = stockData.industry || '';
     }
-
-    if (statusSelect.value === 'Portfolio') {
-        sharesContainer.classList.remove('hidden');
-    } else {
-        sharesContainer.classList.add('hidden');
-    }
-
     openModal(CONSTANTS.MODAL_MANAGE_STOCK);
 }
 
@@ -768,16 +407,11 @@ async function handleSaveStock(e) {
         return;
     }
 
-    const status = document.getElementById('manage-stock-status').value;
-    const sharesInput = document.getElementById('manage-stock-shares').value;
-    const shares = status === 'Portfolio' ? parseFloat(sharesInput) || 0 : 0;
-
     const stockData = {
         ticker: newTicker,
         companyName: document.getElementById('manage-stock-name').value.trim(),
         exchange: document.getElementById('manage-stock-exchange').value.trim(),
-        status: status,
-        shares: shares,
+        status: document.getElementById('manage-stock-status').value.trim(),
         sector: document.getElementById('manage-stock-sector').value.trim(),
         industry: document.getElementById('manage-stock-industry').value.trim(),
     };
@@ -801,9 +435,6 @@ async function handleSaveStock(e) {
 
         closeModal(CONSTANTS.MODAL_MANAGE_STOCK);
         await fetchAndCachePortfolioData();
-        renderPortfolioManagerList(); // Refresh the list in the manager modal
-        renderPortfolioValue(); // Refresh dashboard value
-
     } catch(error) {
         console.error("Error saving stock:", error);
         displayMessageInModal(`Could not save stock: ${error.message}`, 'error');
@@ -825,18 +456,6 @@ async function handleDeleteStock(ticker) {
                 if(document.getElementById(CONSTANTS.MODAL_PORTFOLIO_MANAGER).classList.contains(CONSTANTS.CLASS_MODAL_OPEN)) {
                     renderPortfolioManagerList();
                 }
-                // Refresh stock list modal if it's open
-                if (document.getElementById(CONSTANTS.MODAL_STOCK_LIST).classList.contains(CONSTANTS.CLASS_MODAL_OPEN)) {
-                    const modal = document.getElementById(CONSTANTS.MODAL_STOCK_LIST);
-                    const activeTabButton = modal.querySelector('.modal-tab-button.active');
-                    if (activeTabButton) {
-                        const listType = activeTabButton.dataset.tab === 'portfolio' ? 'Portfolio' : 'Watchlist';
-                        const containerId = listType === 'Portfolio' ? 'portfolio-tab-pane' : 'watchlist-tab-pane';
-                        document.getElementById(containerId).innerHTML = ''; // Clear to force reload
-                        await _renderStockListForTab(listType);
-                    }
-                }
-                renderPortfolioValue(); // Refresh dashboard value
             } catch (error) {
                 console.error("Error deleting stock:", error);
                 displayMessageInModal(`Could not delete ${ticker}: ${error.message}`, 'error');
@@ -847,7 +466,7 @@ async function handleDeleteStock(ticker) {
     );
 }
 
-// --- CORE STOCK RESEARCH LOGIC (Now used for adding stocks in the modal) ---
+// --- CORE STOCK RESEARCH LOGIC ---
 
 async function handleResearchSubmit(e) {
     e.preventDefault();
@@ -902,9 +521,6 @@ async function handleResearchSubmit(e) {
 
 async function openRawDataViewer(ticker) {
     const modalId = 'rawDataViewerModal';
-    const modal = document.getElementById(modalId);
-    if (!modal) return;
-    modal.dataset.activeSymbol = ticker; // Store the active symbol
     openModal(modalId);
     
     const rawDataContainer = document.getElementById('raw-data-accordion-container');
@@ -912,21 +528,12 @@ async function openRawDataViewer(ticker) {
     const aiArticleContainer = document.getElementById('ai-article-container');
     const profileDisplayContainer = document.getElementById('company-profile-display-container');
     const titleEl = document.getElementById('raw-data-viewer-modal-title');
-    const trendContentContainer = document.getElementById('trend-analysis-content');
-    const newsContentContainer = document.getElementById('news-content-container');
-    const scannerResultsContainer = document.getElementById('scanner-results-tab');
-    const secApiContentContainer = document.getElementById('sec-api-tab');
     
     titleEl.textContent = `Analyzing ${ticker}...`;
     rawDataContainer.innerHTML = '<div class="loader mx-auto"></div>';
     aiButtonsContainer.innerHTML = '';
     aiArticleContainer.innerHTML = '';
     profileDisplayContainer.innerHTML = '';
-    if (trendContentContainer) trendContentContainer.innerHTML = ''; // Clear trend content on open
-    if (newsContentContainer) newsContentContainer.innerHTML = ''; // Clear news content on open
-    if (scannerResultsContainer) scannerResultsContainer.innerHTML = ''; // Clear scanner content on open
-    if (secApiContentContainer) secApiContentContainer.innerHTML = ''; // Clear SEC API content on open
-
 
     document.querySelectorAll('#rawDataViewerModal .tab-content').forEach(c => c.classList.add('hidden'));
     document.querySelectorAll('#rawDataViewerModal .tab-button').forEach(b => b.classList.remove('active'));
@@ -938,10 +545,7 @@ async function openRawDataViewer(ticker) {
         const groupedDataPromise = getGroupedFmpData(ticker);
         const savedReportsPromise = getDocs(query(collection(state.db, CONSTANTS.DB_COLLECTION_AI_REPORTS), where("ticker", "==", ticker)));
 
-        const results = await Promise.all([fmpDataPromise, groupedDataPromise, savedReportsPromise]);
-        const fmpData = results[0];
-        const groupedFmpData = results[1];
-        const savedReportsSnapshot = results[2];
+        const [fmpData, groupedFmpData, savedReportsSnapshot] = await Promise.all([fmpDataPromise, groupedDataPromise, savedReportsPromise]);
 
         if (!fmpData || !fmpData.profile || fmpData.profile.length === 0) {
             closeModal(modalId);
@@ -975,13 +579,35 @@ async function openRawDataViewer(ticker) {
              rawDataContainer.innerHTML = '<p class="text-center text-gray-500 py-8">Could not load grouped raw data.</p>';
         }
 
-        // Build the single "Deep Dive" button
-        aiButtonsContainer.innerHTML = `
-            <button data-symbol="${ticker}" id="deep-dive-analysis-button" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-all duration-200 hover:shadow-lg">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 10.5a.5.5 0 01.5-.5h3a.5.5 0 010 1h-3a.5.5 0 01-.5-.5z" />
-                </svg>
-                Generate Deep Dive Analysis
+
+        // Build AI buttons
+        const buttons = [
+            { reportType: 'FinancialAnalysis', text: 'Financial Analysis', tooltip: 'Deep dive into financial statements, ratios, and health.' },
+            { reportType: 'UndervaluedAnalysis', text: 'Undervalued', tooltip: 'Assess if the stock is a potential bargain based on valuation metrics.' },
+            { reportType: 'BullVsBear', text: 'Bull vs. Bear', tooltip: 'Presents both the positive and negative investment arguments.' },
+            { reportType: 'MoatAnalysis', text: 'Moat Analysis', tooltip: 'Evaluates the company\'s competitive advantages.' },
+            { reportType: 'DividendSafety', text: 'Dividend Safety', tooltip: 'Checks the sustainability of the company\'s dividend payments.' },
+            { reportType: 'GrowthOutlook', text: 'Growth Outlook', tooltip: 'Analyzes the company\'s future growth potential.' },
+            { reportType: 'RiskAssessment', text: 'Risk Assessment', tooltip: 'Identifies potential financial, market, and business risks.' },
+            { reportType: 'CapitalAllocators', text: 'Capital Allocators', tooltip: 'Assesses management\'s skill in deploying capital.' },
+            { reportType: 'NarrativeCatalyst', text: 'Catalysts', tooltip: 'Identifies the investment story and future catalysts.' }
+        ];
+        
+        aiButtonsContainer.innerHTML = buttons.map(btn => {
+            const hasSaved = savedReportTypes.has(btn.reportType) ? 'has-saved-report' : '';
+            const icon = ANALYSIS_ICONS[btn.reportType] || '';
+            return `<button data-symbol="${ticker}" data-report-type="${btn.reportType}" class="ai-analysis-button analysis-tile ${hasSaved}" data-tooltip="${btn.tooltip}">
+                        ${icon}
+                        <span class="tile-name">${btn.text}</span>
+                    </button>`
+        }).join('');
+        
+        // Add the special Investment Memo button
+        aiButtonsContainer.innerHTML += `
+            <div class="w-full border-t my-4"></div>
+            <button data-symbol="${ticker}" id="investment-memo-button" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-all duration-200 hover:shadow-lg" data-tooltip="Synthesizes all other reports into a final verdict. Requires all other analyses to be saved first.">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                Generate Investment Committee Memo
             </button>
         `;
 
@@ -992,7 +618,7 @@ async function openRawDataViewer(ticker) {
         const sector = profile.sector || profile.marketSector || 'N/A';
         const filingsUrl = profile.secFilingsUrl || '';
 
-        let profileHtml = '';
+        let profileHtml = '<div class="mt-6 border-t pt-4">';
         if (imageUrl) {
             profileHtml += `
                 <div class="flex flex-col md:flex-row gap-6 items-start">
@@ -1012,8 +638,7 @@ async function openRawDataViewer(ticker) {
              profileHtml += `<div class="col-span-2"><p class="font-semibold text-gray-500">SEC Filings</p><a href="${sanitizeText(filingsUrl)}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:underline">${sanitizeText(filingsUrl)}</a></div>`;
         }
         
-        profileHtml += `</div></div>`;
-        
+        profileHtml += `</div></div></div>`;
         profileDisplayContainer.innerHTML = profileHtml;
 
     } catch (error) {
@@ -1179,6 +804,40 @@ async function handleFetchNews(symbol) {
 
 // --- UI RENDERING ---
 
+async function getScreenerInteractions() {
+    const interactions = {};
+    if (!state.db) return interactions;
+    try {
+        const querySnapshot = await getDocs(collection(state.db, CONSTANTS.DB_COLLECTION_SCREENER_INTERACTIONS));
+        querySnapshot.forEach(doc => {
+            interactions[doc.id] = doc.data();
+        });
+    } catch (error) {
+        console.error("Error fetching screener interactions:", error);
+    }
+    return interactions;
+}
+
+export async function renderSectorButtons() {
+    const container = document.getElementById('sector-buttons-container');
+    if (!container) return;
+    
+    const interactions = await getScreenerInteractions();
+
+    container.innerHTML = SECTORS.map(sector => {
+        const icon = SECTOR_ICONS[sector] || '';
+        const interaction = interactions[sector];
+        const lastClickedDate = interaction?.lastClicked ? interaction.lastClicked.toDate().toLocaleDateString() : 'Never';
+        return `
+            <button class="flex flex-col items-center justify-center p-4 text-center bg-sky-100 text-sky-800 hover:bg-sky-200 rounded-lg shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-1" data-sector="${sanitizeText(sector)}">
+                ${icon}
+                <span class="mt-2 font-semibold text-sm">${sanitizeText(sector)}</span>
+                <span class="mt-1 text-xs text-sky-600 last-clicked-date">Last Clicked: ${lastClickedDate}</span>
+            </button>
+        `
+    }).join('');
+}
+
 function renderOverviewCard(data, symbol, status) {
     const profile = data.profile?.[0] || {};
     if (!profile.symbol) return '';
@@ -1230,7 +889,7 @@ function renderOverviewCard(data, symbol, status) {
             <div class="mt-6 border-t pt-4 flex items-center flex-wrap gap-x-4 gap-y-2 justify-center">
                 <button data-symbol="${symbol}" class="refresh-fmp-button text-sm bg-cyan-100 text-cyan-700 hover:bg-cyan-200 font-semibold py-2 px-4 rounded-lg">Refresh FMP</button>
                 <button data-symbol="${symbol}" class="view-fmp-data-button text-sm bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg">View FMP Data</button>
-                <button data-symbol="${symbol}" class.fetch-news-button text-sm bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg">Fetch News</button>
+                <button data-symbol="${symbol}" class="fetch-news-button text-sm bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg">Fetch News</button>
             </div>
             <div class="text-right text-xs text-gray-400 mt-4">
                 <div>${fmpTimestampString}</div>
@@ -1239,130 +898,57 @@ function renderOverviewCard(data, symbol, status) {
 }
 
 // --- PORTFOLIO MANAGER MODAL ---
-async function renderPortfolioManagerList() {
-    const portfolioContainer = document.getElementById('manager-portfolio-tab-pane');
-    const watchlistContainer = document.getElementById('manager-watchlist-tab-pane');
-    if (!portfolioContainer || !watchlistContainer) return;
+function renderPortfolioManagerList() {
+    const container = document.getElementById('portfolio-manager-list-container');
+    if (!container) return;
 
-    const cashInput = document.getElementById('manage-cash-amount');
-    if (cashInput) {
-        cashInput.value = state.cashBalance > 0 ? state.cashBalance : '';
+    if (state.portfolioCache.length === 0) {
+        container.innerHTML = `<p class="text-center text-gray-500 p-8">No stocks in your portfolio or watchlist.</p>`;
+        return;
     }
 
-    portfolioContainer.innerHTML = '<div class="flex justify-center p-8"><div class="loader"></div></div>';
-    watchlistContainer.innerHTML = '<div class="flex justify-center p-8"><div class="loader"></div></div>';
+    const groupedBySector = state.portfolioCache.reduce((acc, stock) => {
+        const sector = stock.sector || 'Uncategorized';
+        if (!acc[sector]) {
+            acc[sector] = [];
+        }
+        acc[sector].push(stock);
+        return acc;
+    }, {});
 
-    const fmpDataPromises = state.portfolioCache.map(stock => getFmpStockData(stock.ticker));
-    const fmpDataResults = await Promise.all(fmpDataPromises);
-    const fmpDataMap = new Map();
-    state.portfolioCache.forEach((stock, index) => {
-        if (fmpDataResults[index]) {
-            fmpDataMap.set(stock.ticker, fmpDataResults[index]);
-        }
-    });
+    let html = '';
+    const sortedSectors = Object.keys(groupedBySector).sort();
+    
+    for (const sector of sortedSectors) {
+        html += `<div class="portfolio-exchange-header">${sanitizeText(sector)}</div>`;
+        html += '<ul class="divide-y divide-gray-200">';
+        groupedBySector[sector].sort((a,b) => a.companyName.localeCompare(b.companyName)).forEach(stock => {
+            const statusBadge = stock.status === 'Portfolio'
+                ? '<span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-green-100 text-green-800">Portfolio</span>'
+                : '<span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800">Watchlist</span>';
 
-    function _generateHtmlForList(stocks) {
-        if (stocks.length === 0) {
-            return `<p class="text-center text-gray-500 p-8">No stocks in this list.</p>`;
-        }
-        const groupedBySector = stocks.reduce((acc, stock) => {
-            const sector = stock.sector || 'Uncategorized';
-            if (!acc[sector]) acc[sector] = [];
-            acc[sector].push(stock);
-            return acc;
-        }, {});
-        let html = '';
-        const sortedSectors = Object.keys(groupedBySector).sort();
-        for (const sector of sortedSectors) {
-            html += `<div class="portfolio-exchange-header">${sanitizeText(sector)}</div>`;
-            html += '<ul class="divide-y divide-gray-200">';
-            groupedBySector[sector].sort((a, b) => a.companyName.localeCompare(b.companyName)).forEach(stock => {
-                const statusBadge = stock.status === 'Portfolio'
-                    ? '<span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-green-100 text-green-800">Portfolio</span>'
-                    : '<span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800">Watchlist</span>';
-                const sharesDisplay = stock.status === 'Portfolio' && stock.shares > 0
-                    ? `<p class="text-sm text-gray-500">${stock.shares} Shares</p>`: '';
-                const fmpData = fmpDataMap.get(stock.ticker);
-                const price = fmpData?.profile?.[0]?.price;
-                const totalValue = (price && stock.shares) ? price * stock.shares : 0;
-                html += `
-                    <li class="p-4 flex justify-between items-center hover:bg-gray-50">
-                        <div>
-                            <p class="font-semibold text-gray-800">${sanitizeText(stock.companyName)} (${sanitizeText(stock.ticker)})</p>
-                            <div class="flex items-center gap-2 mt-1">${statusBadge}${sharesDisplay}</div>
-                        </div>
-                        <div class="flex items-center gap-4">
-                            <div class="text-right">
-                                <p class="font-semibold text-gray-800">${totalValue > 0 ? formatCurrency(totalValue) : ''}</p>
-                                <p class="text-sm text-gray-500">${price ? `${formatCurrency(price)}/share` : ''}</p>
-                            </div>
-                            <div class="flex gap-2">
-                                <button class="edit-stock-btn text-sm font-medium text-indigo-600 hover:text-indigo-800" data-ticker="${sanitizeText(stock.ticker)}">Edit</button>
-                                <button class="delete-stock-btn text-sm font-medium text-red-600 hover:text-red-800" data-ticker="${sanitizeText(stock.ticker)}">Delete</button>
-                            </div>
-                        </div>
-                    </li>`;
-            });
-            html += '</ul>';
-        }
-        return html;
+            html += `
+                <li class="p-4 flex justify-between items-center hover:bg-gray-50">
+                    <div>
+                        <p class="font-semibold text-gray-800">${sanitizeText(stock.companyName)} (${sanitizeText(stock.ticker)})</p>
+                        <p class="text-sm text-gray-500">${statusBadge}</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button class="edit-stock-btn text-sm font-medium text-indigo-600 hover:text-indigo-800" data-ticker="${sanitizeText(stock.ticker)}">Edit</button>
+                        <button class="delete-stock-btn text-sm font-medium text-red-600 hover:text-red-800" data-ticker="${sanitizeText(stock.ticker)}">Delete</button>
+                    </div>
+                </li>
+            `;
+        });
+        html += '</ul>';
     }
-
-    const portfolioStocks = state.portfolioCache.filter(s => s.status === 'Portfolio');
-    const watchlistStocks = state.portfolioCache.filter(s => s.status === 'Watchlist');
-    portfolioContainer.innerHTML = _generateHtmlForList(portfolioStocks);
-    watchlistContainer.innerHTML = _generateHtmlForList(watchlistStocks);
+    container.innerHTML = html;
 }
 
 
 function openPortfolioManagerModal() {
-    const modal = document.getElementById(CONSTANTS.MODAL_PORTFOLIO_MANAGER);
-    modal.querySelectorAll('.modal-tab-button').forEach(btn => btn.classList.remove('active'));
-    modal.querySelectorAll('.modal-tab-pane').forEach(pane => pane.classList.remove('active'));
-
-    modal.querySelector('.modal-tab-button[data-tab="manager-portfolio"]').classList.add('active');
-    document.getElementById('manager-portfolio-tab-pane').classList.add('active');
-
     renderPortfolioManagerList();
     openModal(CONSTANTS.MODAL_PORTFOLIO_MANAGER);
-}
-
-async function handleSaveCash(e) {
-    e.preventDefault();
-    if (!state.userId) {
-        displayMessageInModal("You must be logged in to save data.", "error");
-        return;
-    }
-
-    const cashInput = document.getElementById('manage-cash-amount');
-    const cashValue = parseFloat(cashInput.value);
-
-    if (isNaN(cashValue) || cashValue < 0) {
-        displayMessageInModal("Please enter a valid, non-negative number for your cash balance.", "warning");
-        return;
-    }
-
-    const saveButton = e.target.querySelector('button[type="submit"]');
-    saveButton.disabled = true;
-    saveButton.textContent = 'Saving...';
-
-    try {
-        const docRef = doc(state.db, CONSTANTS.DB_COLLECTION_USER_DATA, state.userId);
-        await setDoc(docRef, { cashBalance: cashValue }, { merge: true });
-        state.cashBalance = cashValue;
-        
-        // Refresh dashboard widgets
-        await renderPortfolioValue();
-
-        displayMessageInModal("Cash balance updated successfully!", "info");
-
-    } catch (error) {
-        console.error("Error saving cash balance:", error);
-        displayMessageInModal(`Could not save cash balance: ${error.message}`, 'error');
-    } finally {
-        saveButton.disabled = false;
-        saveButton.textContent = 'Save Cash';
-    }
 }
 
 async function handleViewFmpData(symbol) {
@@ -1591,291 +1177,27 @@ function handleDeleteBroadEndpoint(id) {
     });
 }
 
-// --- OPPORTUNITY SCANNER ---
-
-function renderScannerResults(container, results) {
-    if (!results || results.length === 0) {
-        container.innerHTML = `<div class="text-center text-gray-500 py-16">
-            <svg xmlns="http://www.w3.org/2000/svg" class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-            <h3 class="mt-2 text-lg font-medium text-gray-900">No Significant Shifts Detected</h3>
-            <p class="mt-1 text-sm text-gray-500">The scanner didn't find any notable divergences in your portfolio or watchlist at this time.</p>
-        </div>`;
-        return;
-    }
-
-    const bullishResults = results.filter(r => r.type === 'Bullish');
-    const bearishResults = results.filter(r => r.type === 'Bearish');
-    
-    let html = '';
-
-    if (bullishResults.length > 0) {
-        html += `<h3 class="text-xl font-bold text-green-600 mb-3">Potential Bullish Shifts 🟢</h3>`;
-        html += '<div class="space-y-4">';
-        bullishResults.forEach(item => {
-            html += `<div class="bg-green-50 border border-green-200 rounded-lg p-4">
-                <h4 class="font-bold text-green-800">${sanitizeText(item.companyName)} (${sanitizeText(item.ticker)})</h4>
-                <p class="text-sm font-semibold text-green-700 mt-1">"${sanitizeText(item.headline)}"</p>
-                <p class="text-sm text-green-900 mt-2">${sanitizeText(item.summary)}</p>
-                 <button class="scanner-item-view-button text-sm font-semibold text-indigo-600 hover:underline mt-3" data-ticker="${sanitizeText(item.ticker)}">Perform Deep Dive →</button>
-            </div>`;
-        });
-        html += '</div>';
-    }
-
-    if (bearishResults.length > 0) {
-        html += `<h3 class="text-xl font-bold text-red-600 mt-6 mb-3">Potential Bearish Shifts 🔴</h3>`;
-        html += '<div class="space-y-4">';
-        bearishResults.forEach(item => {
-            html += `<div class="bg-red-50 border border-red-200 rounded-lg p-4">
-                <h4 class="font-bold text-red-800">${sanitizeText(item.companyName)} (${sanitizeText(item.ticker)})</h4>
-                <p class="text-sm font-semibold text-red-700 mt-1">"${sanitizeText(item.headline)}"</p>
-                <p class="text-sm text-red-900 mt-2">${sanitizeText(item.summary)}</p>
-                <button class="scanner-item-view-button text-sm font-semibold text-indigo-600 hover:underline mt-3" data-ticker="${sanitizeText(item.ticker)}">Perform Deep Dive →</button>
-            </div>`;
-        });
-        html += '</div>';
-    }
-
-    container.innerHTML = html;
-}
-
-async function handleRunOpportunityScanner() {
-    const stocksToScan = state.portfolioCache;
-    if (!stocksToScan || stocksToScan.length === 0) {
-        displayMessageInModal("Please add stocks to your portfolio or watchlist before running the scanner.", "info");
-        return;
-    }
-
-    const modalId = 'opportunityScannerModal';
-    const modal = document.getElementById(modalId);
-    const contentContainer = modal.querySelector('#opportunity-scanner-content');
-    const statusBar = modal.querySelector('#scanner-progress-bar');
-    const statusBarContainer = modal.querySelector('#scanner-progress-bar-container');
-    const statusText = modal.querySelector('#scanner-status-text');
-
-    contentContainer.innerHTML = '<div class="loader mx-auto mt-16"></div>';
-    statusBar.style.width = '0%';
-    statusBarContainer.classList.remove('hidden');
-    statusText.textContent = 'Starting scan...';
-    openModal(modalId);
-
-    const updateProgress = (completed, total, message) => {
-        const percentage = total > 0 ? (completed / total) * 100 : 0;
-        statusBar.style.width = `${percentage}%`;
-        statusText.textContent = `(${completed}/${total}) ${message}`;
-    };
-
-    try {
-        const results = await runOpportunityScanner(stocksToScan, updateProgress);
-        renderScannerResults(contentContainer, results);
-        statusBarContainer.classList.add('hidden');
-    } catch (error) {
-        console.error("Error running opportunity scanner:", error);
-        contentContainer.innerHTML = `<p class="text-red-500 text-center">The scan failed: ${error.message}</p>`;
-    }
-}
-
-// --- NEW TREND ANALYSIS ---
-async function handleTrendAnalysisRequest(ticker) {
-    const contentContainer = document.getElementById('trend-analysis-content');
-    if (!contentContainer) return;
-
-    // Check if the content is already generated to avoid re-fetching on simple tab clicks
-    if (contentContainer.innerHTML.trim() !== '') {
-        return;
-    }
-
-    contentContainer.innerHTML = '<div class="flex justify-center items-center h-full pt-16"><div class="loader"></div></div>';
-
-    try {
-        const markdownResponse = await generateTrendAnalysis(ticker);
-        contentContainer.innerHTML = marked.parse(markdownResponse);
-    } catch (error) {
-        console.error("Error generating trend analysis:", error);
-        contentContainer.innerHTML = `<div class="text-center p-4 text-red-500 bg-red-50 rounded-lg"><p class="font-semibold">Could not generate trend analysis.</p><p class="text-sm">${error.message}</p></div>`;
-    }
-}
-
-// --- NEW SCANNER RESULTS TAB ---
-function renderScannerResultsForStock(container, results, ticker) {
-    if (!results || results.length === 0) {
-        container.innerHTML = `<div class="text-center text-gray-500 py-16">
-            <h3 class="mt-2 text-lg font-medium text-gray-900">No Scanner Results Found</h3>
-            <p class="mt-1 text-sm text-gray-500">No significant narrative shifts have been recorded for ${ticker}. Run the 'Scan for Opportunities' on the dashboard to generate data.</p>
-        </div>`;
-        return;
-    }
-
-    const resultsHtml = results.map(item => {
-        const date = item.scannedAt && item.scannedAt.toDate ? item.scannedAt.toDate().toLocaleDateString() : 'N/A';
-        const isBullish = item.type === 'Bullish';
-        const badgeClass = isBullish ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
-        const icon = isBullish ? '🟢' : '🔴';
-
-        return `
-            <div class="border border-gray-200 rounded-lg p-4 mb-4 bg-white shadow-sm">
-                <div class="flex justify-between items-start">
-                    <div>
-                        <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full ${badgeClass}">${icon} ${item.type}</span>
-                        <h4 class="font-bold text-gray-800 mt-2">"${sanitizeText(item.headline)}"</h4>
-                    </div>
-                    <span class="text-sm text-gray-500 flex-shrink-0 ml-4">${date}</span>
-                </div>
-                <p class="text-sm text-gray-700 mt-2">${sanitizeText(item.summary)}</p>
-            </div>
-        `;
-    }).join('');
-
-    container.innerHTML = `<h3 class="text-xl font-bold text-gray-800 mb-4">Historical Scanner Results for ${ticker}</h3><div class="space-y-4">${resultsHtml}</div>`;
-}
-
-
-async function handleScannerResultsRequest(ticker) {
-    const contentContainer = document.getElementById('scanner-results-tab');
-    if (!contentContainer) return;
-
-    if (contentContainer.innerHTML.trim() !== '') {
-        return; // Avoid re-fetching
-    }
-
-    contentContainer.innerHTML = '<div class="flex justify-center items-center h-full pt-16"><div class="loader"></div></div>';
-
-    try {
-        const results = await getScannerResults(ticker);
-        renderScannerResultsForStock(contentContainer, results, ticker);
-    } catch (error) {
-        console.error("Error fetching scanner results:", error);
-        contentContainer.innerHTML = `<div class="text-center p-4 text-red-500 bg-red-50 rounded-lg"><p class="font-semibold">Could not load scanner results.</p><p class="text-sm">${error.message}</p></div>`;
-    }
-}
-
-// --- NEW CACHED NEWS TAB ---
-function renderCachedNews(container, articles, ticker) {
-    if (!articles || articles.length === 0) {
-        container.innerHTML = `<div class="text-center text-gray-500 py-16">
-            <h3 class="mt-2 text-lg font-medium text-gray-900">No Cached News Found</h3>
-            <p class="mt-1 text-sm text-gray-500">No news for ${ticker} has been stored in the database. Run the Opportunity Scanner to cache the latest news.</p>
-        </div>`;
-        return;
-    }
-
-    const articlesHtml = articles.map(article => {
-        const publishedDate = article.publishedDate ? new Date(article.publishedDate).toLocaleDateString() : 'No Date';
-        return `
-            <div class="mb-4 p-4 rounded-lg border border-gray-200 bg-white shadow-sm">
-                <a href="${sanitizeText(article.url)}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:underline font-semibold block mb-2">${sanitizeText(article.title)}</a>
-                <p class="text-sm text-gray-700 mb-3">${sanitizeText(article.text)}</p>
-                <div class="flex flex-wrap items-center gap-2 text-xs font-medium">
-                    <span class="px-2 py-1 rounded-full bg-gray-200 text-gray-800">${sanitizeText(article.site)}</span>
-                    <span class="px-2 py-1 rounded-full bg-gray-200 text-gray-800">${sanitizeText(publishedDate)}</span>
-                </div>
-            </div>
-        `;
-    }).join('');
-    container.innerHTML = `<h3 class="text-xl font-bold text-gray-800 mb-4">Cached News for ${ticker}</h3>${articlesHtml}`;
-}
-
-async function handleNewsTabRequest(ticker) {
-    const contentContainer = document.getElementById('news-content-container');
-    if (!contentContainer) return;
-
-    if (contentContainer.innerHTML.trim() !== '') {
-        return;
-    }
-
-    contentContainer.innerHTML = '<div class="flex justify-center items-center h-full pt-16"><div class="loader"></div></div>';
-
-    try {
-        const articles = await getCachedNews(ticker);
-        renderCachedNews(contentContainer, articles, ticker);
-    } catch (error) {
-        console.error("Error fetching cached news:", error);
-        contentContainer.innerHTML = '<p class="text-red-500 text-center">Could not load cached news.</p>';
-    }
-}
-
-// --- NEW SEC API TAB ---
-async function handleSecApiTabRequest(ticker) {
-    const contentContainer = document.getElementById('sec-api-tab');
-    if (!contentContainer) return;
-
-    contentContainer.innerHTML = '<div class="flex justify-center items-center h-full pt-16"><div class="loader"></div></div>';
-
-    try {
-        const fmpData = await getFmpStockData(ticker);
-        const execCompData = fmpData.executive_compensation;
-        const ownershipData = fmpData.institutional_ownership;
-
-        let html = '';
-
-        // Executive Compensation Section
-        html += `
-            <div>
-                <div class="flex justify-between items-center mb-3">
-                     <h3 class="text-lg font-bold text-gray-700">Executive Compensation</h3>
-                     <button class="refresh-exec-comp-button text-sm bg-cyan-100 text-cyan-700 hover:bg-cyan-200 font-semibold py-1 px-3 rounded-lg" data-ticker="${ticker}">Refresh Comp</button>
-                </div>
-        `;
-        if (execCompData && Array.isArray(execCompData) && execCompData.length > 0) {
-            const latestYear = Math.max(...execCompData.map(e => e.year));
-            const latestComp = execCompData.filter(e => e.year === latestYear).slice(0, 5);
-            html += `<div class="overflow-x-auto"><table class="w-full text-sm text-left text-gray-500"><thead class="text-xs text-gray-700 uppercase bg-gray-100"><tr><th scope="col" class="px-4 py-2">Executive</th><th scope="col" class="px-4 py-2">Title</th><th scope="col" class="px-4 py-2 text-right">Year</th><th scope="col" class="px-4 py-2 text-right">Total Comp.</th></tr></thead><tbody>`;
-            latestComp.forEach(exec => {
-                html += `<tr class="bg-white border-b"><td class="px-4 py-2 font-medium text-gray-900">${sanitizeText(exec.name)}</td><td class="px-4 py-2">${sanitizeText(exec.title)}</td><td class="px-4 py-2 text-right">${exec.year}</td><td class="px-4 py-2 text-right font-semibold">${formatCurrency(exec.total)}</td></tr>`;
-            });
-            html += `</tbody></table></div>`;
-        } else {
-            html += '<p class="text-sm text-gray-500">No executive compensation data has been cached. Please use the refresh button.</p>';
-        }
-        html += '</div>';
-
-        // Institutional Ownership Section
-        html += `
-            <div class="mt-8 border-t pt-6">
-                <div class="flex justify-between items-center mb-3">
-                     <h3 class="text-lg font-bold text-gray-700">Institutional Ownership</h3>
-                     <button class="refresh-ownership-button text-sm bg-cyan-100 text-cyan-700 hover:bg-cyan-200 font-semibold py-1 px-3 rounded-lg" data-ticker="${ticker}">Refresh Ownership</button>
-                </div>
-        `;
-        if (ownershipData && ownershipData.holdings && Array.isArray(ownershipData.holdings) && ownershipData.holdings.length > 0) {
-            html += `<div class="overflow-x-auto"><table class="w-full text-sm text-left text-gray-500"><thead class="text-xs text-gray-700 uppercase bg-gray-100"><tr><th scope="col" class="px-4 py-2">Investor</th><th scope="col" class="px-4 py-2 text-right">Shares</th><th scope="col" class="px-4 py-2 text-right">Value</th></tr></thead><tbody>`;
-            ownershipData.holdings.slice(0, 15).forEach(holder => {
-                html += `<tr class="bg-white border-b"><td class="px-4 py-2 font-medium text-gray-900">${sanitizeText(holder.investorName)}</td><td class="px-4 py-2 text-right">${formatLargeNumber(holder.shares)}</td><td class="px-4 py-2 text-right font-semibold">${formatCurrency(holder.value)}</td></tr>`;
-            });
-            html += `</tbody></table></div>`;
-        } else {
-            html += '<p class="text-sm text-gray-500">No institutional ownership data has been cached. Please use the refresh button.</p>';
-        }
-        html += '</div>';
-
-        contentContainer.innerHTML = html;
-    } catch (error) {
-        console.error("Error fetching SEC API data:", error);
-        contentContainer.innerHTML = `<p class="text-red-500 text-center">Could not load SEC API data.</p>`;
-    }
-}
-
 
 // --- EVENT LISTENER SETUP ---
 
 function setupGlobalEventListeners() {
-    // This function will be expanded to handle the new "Add Stock" button in the manager modal
-    document.getElementById('dashboard-section').addEventListener('click', async (e) => {
+    document.getElementById('dashboard-section').addEventListener('click', (e) => {
         const refreshButton = e.target.closest('.dashboard-refresh-button');
         if (refreshButton) {
-            await fetchAndCachePortfolioData();
-            await renderPortfolioValue();
-            await renderMorningBriefing();
-            await renderPortfolioHealthScore();
-            await renderAllocationChart();
+            fetchAndCachePortfolioData();
+            return;
+        }
+        
+        const portfolioButton = e.target.closest('#open-portfolio-modal-button');
+        if (portfolioButton) {
+            openStockListModal('Portfolio');
             return;
         }
 
-        const viewAllButton = e.target.closest('#view-all-stocks-button');
-        if (viewAllButton) {
-            handleOpenStockListViewer();
+        const watchlistButton = e.target.closest('#open-watchlist-modal-button');
+        if (watchlistButton) {
+            openStockListModal('Watchlist');
+            return;
         }
     });
 
@@ -1883,27 +1205,12 @@ function setupGlobalEventListeners() {
         const target = e.target.closest('button');
         if (!target) return;
 
-        if (target.classList.contains('modal-tab-button')) {
-            const tabId = target.dataset.tab;
-            const modal = target.closest('.modal');
-
-            modal.querySelectorAll('.modal-tab-button').forEach(btn => btn.classList.remove('active'));
-            modal.querySelectorAll('.modal-tab-pane').forEach(pane => pane.classList.remove('active'));
-
-            target.classList.add('active');
-            document.getElementById(`${tabId}-tab-pane`).classList.add('active');
-
-            const listType = tabId === 'portfolio' ? 'Portfolio' : 'Watchlist';
-            _renderStockListForTab(listType);
-            return;
-        }
-
         if (target.id === 'expand-all-button') {
-            document.querySelectorAll('#stockListModal .modal-tab-pane.active .sector-group').forEach(d => d.open = true);
+            document.querySelectorAll('#stock-list-modal-content .sector-group').forEach(d => d.open = true);
             return;
         }
         if (target.id === 'collapse-all-button') {
-            document.querySelectorAll('#stockListModal .modal-tab-pane.active .sector-group').forEach(d => d.open = false);
+            document.querySelectorAll('#stock-list-modal-content .sector-group').forEach(d => d.open = false);
             return;
         }
         
@@ -1934,38 +1241,56 @@ function setupGlobalEventListeners() {
         if (target.classList.contains('view-fmp-data-button')) handleViewFmpData(symbol);
     });
 
+    document.getElementById('customAnalysisModal').addEventListener('click', (e) => {
+        const button = e.target.closest('button[data-prompt-name]');
+        if (button) {
+            const sector = button.dataset.sector;
+            const promptName = button.dataset.promptName;
+            const analysisName = button.querySelector('.tile-name')?.textContent || promptName;
+
+            const modal = document.getElementById('customAnalysisModal');
+            modal.dataset.analysisName = analysisName;
+            modal.dataset.contextName = sector;
+            modal.dataset.contextType = 'sector';
+            modal.dataset.reportType = promptName;
+            
+            // FIX: Always call with forceNew = false when a user clicks a tile.
+            // The handleBroadAnalysisRequest function will correctly check for saved reports.
+            handleBroadAnalysisRequest(sector, 'sector', promptName, false);
+        }
+    });
+
+    document.getElementById('industryAnalysisModal').addEventListener('click', (e) => {
+        const button = e.target.closest('button[data-prompt-name]');
+        if (button) {
+            const industry = button.dataset.industry;
+            const promptName = button.dataset.promptName;
+            const analysisName = button.querySelector('.tile-name')?.textContent || promptName;
+            
+            const modal = document.getElementById('industryAnalysisModal');
+            modal.dataset.analysisName = analysisName;
+            modal.dataset.contextName = industry;
+            modal.dataset.contextType = 'industry';
+            modal.dataset.reportType = promptName;
+
+            // FIX: Always call with forceNew = false when a user clicks a tile.
+            handleBroadAnalysisRequest(industry, 'industry', promptName, false);
+        }
+    });
+
     document.getElementById('portfolioManagerModal').addEventListener('click', (e) => {
         const target = e.target.closest('button');
         if (!target) return;
-
-        if (target.id === 'add-new-stock-button') {
-            openManageStockModal({});
-            return;
-        }
-
-        if (target.id === 'refresh-manager-list-button') {
-            renderPortfolioManagerList();
-            return;
-        }
-
-        if (target.classList.contains('modal-tab-button')) {
-            const tabId = target.dataset.tab;
-            const modal = target.closest('.modal');
-            modal.querySelectorAll('.modal-tab-button').forEach(btn => btn.classList.remove('active'));
-            modal.querySelectorAll('.modal-tab-pane').forEach(pane => pane.classList.remove('active'));
-            target.classList.add('active');
-            document.getElementById(`${tabId}-tab-pane`).classList.add('active');
-            return;
-        }
-
         const ticker = target.dataset.ticker;
+        if (!ticker) return;
+
         if (target.classList.contains('edit-stock-btn')) {
             const stockData = state.portfolioCache.find(s => s.ticker === ticker);
             if (stockData) {
                 openManageStockModal({ ...stockData, isEditMode: true });
             }
         } else if (target.classList.contains('delete-stock-btn')) {
-            if (ticker) handleDeleteStock(ticker);
+            handleDeleteStock(ticker);
         }
     });
     
@@ -2046,38 +1371,9 @@ function initializeTooltips() {
     }
 }
 
-async function handlePortfolioChatSubmit(e) {
-    e.preventDefault();
-    const form = document.getElementById('portfolio-chat-form');
-    const input = document.getElementById('portfolio-chat-input');
-    const button = form.querySelector('button[type="submit"]');
-    const responseContainer = document.getElementById('portfolio-chat-response');
-    const userQuestion = input.value.trim();
-
-    if (!userQuestion) {
-        displayMessageInModal("Please enter a question.", "warning");
-        return;
-    }
-
-    input.disabled = true;
-    button.disabled = true;
-    responseContainer.innerHTML = '<div class="flex justify-center items-center h-full"><div class="loader"></div></div>';
-
-    try {
-        const markdownResponse = await generatePortfolioAnalysis(userQuestion);
-        responseContainer.innerHTML = marked.parse(markdownResponse);
-    } catch (error) {
-        console.error("Error during portfolio chat analysis:", error);
-        responseContainer.innerHTML = `<p class="text-red-500"><strong>Error:</strong> ${error.message}</p>`;
-    } finally {
-        input.disabled = false;
-        button.disabled = false;
-        input.value = '';
-    }
-}
-
 export function setupEventListeners() {
     initializeTooltips();
+    document.getElementById(CONSTANTS.FORM_STOCK_RESEARCH)?.addEventListener('submit', handleResearchSubmit);
     
     document.getElementById('manage-stock-form')?.addEventListener('submit', handleSaveStock);
     document.getElementById('cancel-manage-stock-button')?.addEventListener('click', () => closeModal(CONSTANTS.MODAL_MANAGE_STOCK));
@@ -2089,25 +1385,11 @@ export function setupEventListeners() {
         }
     });
 
-    // Listener for the status dropdown to toggle shares input
-    document.getElementById('manage-stock-status')?.addEventListener('change', (e) => {
-        const sharesContainer = document.getElementById('manage-stock-shares-container');
-        if (e.target.value === 'Portfolio') {
-            sharesContainer.classList.remove('hidden');
-        } else {
-            sharesContainer.classList.add('hidden');
-        }
-    });
-    
-    document.getElementById('manage-cash-form')?.addEventListener('submit', handleSaveCash);
-
     document.getElementById('manage-fmp-endpoint-form')?.addEventListener('submit', handleSaveFmpEndpoint);
     document.getElementById('cancel-fmp-endpoint-edit')?.addEventListener('click', cancelFmpEndpointEdit);
 
     document.getElementById('manage-broad-endpoint-form')?.addEventListener('submit', handleSaveBroadEndpoint);
     document.getElementById('cancel-broad-endpoint-edit')?.addEventListener('click', cancelBroadEndpointEdit);
-
-    document.getElementById('portfolio-chat-form')?.addEventListener('submit', handlePortfolioChatSubmit);
 
     document.querySelectorAll('.save-to-drive-button').forEach(button => {
         button.addEventListener('click', (e) => {
@@ -2121,6 +1403,8 @@ export function setupEventListeners() {
             const modalId = e.target.dataset.modalId;
             if (modalId === 'rawDataViewerModal') {
                 handleSaveReportToDb();
+            } else {
+                handleSaveBroadReportToDb(modalId);
             }
         });
     });
@@ -2132,10 +1416,8 @@ export function setupEventListeners() {
     document.getElementById('manage-fmp-endpoints-button')?.addEventListener('click', openManageFmpEndpointsModal);
     document.getElementById('manage-broad-endpoints-button')?.addEventListener('click', openManageBroadEndpointsModal);
     document.getElementById('session-log-button')?.addEventListener('click', openSessionLogModal);
-    document.getElementById('opportunity-scanner-button')?.addEventListener('click', handleRunOpportunityScanner);
 
     const modalsToClose = [
-        { modal: 'opportunityScannerModal', button: 'close-opportunity-scanner-modal', bg: 'close-opportunity-scanner-modal-bg' },
         { modal: CONSTANTS.MODAL_CUSTOM_ANALYSIS, button: 'close-custom-analysis-modal', bg: 'close-custom-analysis-modal-bg' },
         { modal: CONSTANTS.MODAL_INDUSTRY_ANALYSIS, button: 'close-industry-analysis-modal', bg: 'close-industry-analysis-modal-bg' },
         { modal: CONSTANTS.MODAL_MANAGE_STOCK, bg: 'close-manage-stock-modal-bg'},
@@ -2160,54 +1442,47 @@ export function setupEventListeners() {
         const btn = document.getElementById(CONSTANTS.BUTTON_SCROLL_TOP);
         if (btn) btn.classList.toggle(CONSTANTS.CLASS_HIDDEN, window.scrollY <= 300);
     });
+    
+    document.getElementById('sector-buttons-container')?.addEventListener('click', (e) => {
+        const target = e.target.closest('button');
+        if (target && target.dataset.sector) {
+            handleSectorSelection(target.dataset.sector, target);
+        }
+    });
+
+    document.getElementById('industry-buttons-container')?.addEventListener('click', (e) => {
+        const target = e.target.closest('button');
+        if (target && target.dataset.industry) {
+            handleIndustrySelection(target.dataset.industry, target);
+        }
+    });
 
     document.getElementById('rawDataViewerModal').addEventListener('click', (e) => {
-        const modal = document.getElementById('rawDataViewerModal');
-        const activeSymbol = modal.dataset.activeSymbol;
         const target = e.target.closest('button');
         if (!target) return;
-    
+
         if (target.matches('.tab-button')) {
             const tabId = target.dataset.tab;
-            document.querySelectorAll('#rawDataViewerModal .tab-content').forEach(c => {
-                c.classList.add('hidden');
-            });
+            document.querySelectorAll('#rawDataViewerModal .tab-content').forEach(c => c.classList.add('hidden'));
             document.querySelectorAll('#rawDataViewerModal .tab-button').forEach(b => b.classList.remove('active'));
-            
-            const activeTabContent = document.getElementById(`${tabId}-tab`);
-            activeTabContent.classList.remove('hidden');
+            document.getElementById(`${tabId}-tab`).classList.remove('hidden');
             target.classList.add('active');
-    
-            if (activeSymbol) {
-                if (tabId === 'trend-analysis') {
-                    handleTrendAnalysisRequest(activeSymbol);
-                } else if (tabId === 'news') {
-                    handleNewsTabRequest(activeSymbol);
-                } else if (tabId === 'scanner-results') {
-                    handleScannerResultsRequest(activeSymbol);
-                } else if (tabId === 'sec-api') {
-                    handleSecApiTabRequest(activeSymbol);
-                }
-            }
             return;
         }
         
-        if (target.id === 'deep-dive-analysis-button') {
-            if (activeSymbol) {
-                handleDeepDiveRequest(activeSymbol);
+        const symbol = target.dataset.symbol;
+        if (!symbol) return;
+
+        if (target.matches('.ai-analysis-button')) {
+            const reportType = target.dataset.reportType;
+            const promptConfig = promptMap[reportType];
+            if (promptConfig) {
+                handleAnalysisRequest(symbol, reportType, promptConfig);
             }
         }
-
-        if (target.matches('.refresh-exec-comp-button')) {
-            if (activeSymbol) {
-                handleRefreshExecutiveComp(activeSymbol);
-            }
-        }
-
-        if (target.matches('.refresh-ownership-button')) {
-            if (activeSymbol) {
-                handleRefreshInstitutionalOwnership(activeSymbol);
-            }
+        
+        if (target.id === 'investment-memo-button') {
+            handleInvestmentMemoRequest(symbol);
         }
     });
 	
@@ -2223,16 +1498,625 @@ export function setupEventListeners() {
         }
     });
 
-    document.getElementById('opportunityScannerModal')?.addEventListener('click', (e) => {
-        const button = e.target.closest('.scanner-item-view-button');
-        if (button && button.dataset.ticker) {
-            closeModal('opportunityScannerModal');
-            openRawDataViewer(button.dataset.ticker);
-        }
-    });
-
     setupGlobalEventListeners();
 }
+
+// --- NEW SECTOR DEEP DIVE WORKFLOW (v7.2.0) ---
+
+async function handleMarketTrendsAnalysis(sectorName) {
+    openModal(CONSTANTS.MODAL_LOADING);
+    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+    const contentArea = document.getElementById('custom-analysis-content');
+
+    try {
+        loadingMessage.textContent = `Finding companies for the ${sectorName} sector...`;
+        contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">${loadingMessage.textContent}</div>`;
+        
+        const stocksResult = await findStocksBySector({ sectorName });
+        if (stocksResult.error || !stocksResult.stocks || stocksResult.stocks.length === 0) {
+            throw new Error(stocksResult.detail || `Could not find any companies for the ${sectorName} sector.`);
+        }
+        const sectorStocks = stocksResult.stocks;
+
+        loadingMessage.textContent = `Searching news for up to ${sectorStocks.length} companies...`;
+        contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">${loadingMessage.textContent}</div>`;
+        const newsResult = await searchSectorNews({ sectorName, sectorStocks });
+
+        if (newsResult.error || !newsResult.articles || newsResult.articles.length === 0) {
+            throw new Error(newsResult.detail || `Could not find any recent news for the ${sectorName} sector.`);
+        }
+        const validArticles = newsResult.articles;
+
+        loadingMessage.textContent = `AI is analyzing news and ranking companies...`;
+        contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">${loadingMessage.textContent}</div>`;
+        const synthesisResult = await synthesizeAndRankCompanies({ newsArticles: validArticles, sectorStocks });
+        
+        if (synthesisResult.error || !synthesisResult.topCompanies || synthesisResult.topCompanies.length === 0) {
+            throw new Error(synthesisResult.detail || "AI could not identify top companies from the news.");
+        }
+
+        loadingMessage.textContent = `AI is generating the final deep dive report...`;
+        contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">${loadingMessage.textContent}</div>`;
+        const reportResult = await generateDeepDiveReport({
+            companyAnalysis: synthesisResult,
+            sectorName: sectorName,
+            originalArticles: validArticles
+        });
+
+        contentArea.innerHTML = marked.parse(reportResult.report);
+
+    } catch (error) {
+        console.error("Error during AI agent sector analysis:", error);
+        displayMessageInModal(`Could not complete AI analysis: ${error.message}`, 'error');
+        contentArea.innerHTML = `<div class="p-4 text-center text-red-500">Error: ${error.message}</div>`;
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
+async function handleSectorSelection(sectorName, buttonElement) {
+    const modal = document.getElementById(CONSTANTS.MODAL_CUSTOM_ANALYSIS);
+    const modalTitle = modal.querySelector('#custom-analysis-modal-title');
+    const selectorContainer = modal.querySelector('#custom-analysis-selector-container');
+    const contentArea = modal.querySelector('#custom-analysis-content');
+    const statusContainer = modal.querySelector('#report-status-container-sector');
+
+    modalTitle.textContent = `Sector Deep Dive | ${sectorName}`;
+    contentArea.innerHTML = `<div class="text-center text-gray-500 pt-16">Please select an analysis type above to begin.</div>`;
+    statusContainer.classList.add('hidden');
+    modal.dataset.analysisName = 'Sector_Deep_Dive'; // Reset on new selection
+    
+    const savedReports = await getSavedBroadReports(sectorName, 'sector');
+    const savedReportTypes = new Set(savedReports.map(doc => doc.reportType));
+
+    const analysisTypes = [
+        {
+            name: 'Market Trends',
+            promptName: 'MarketTrends',
+            description: 'AI agent searches news, finds top companies in your portfolio for this sector, and generates a market summary.',
+            svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941" /></svg>`
+        },
+        {
+            name: 'The Disruptor',
+            promptName: 'DisruptorAnalysis',
+            description: "VC-style report on a high-growth, innovative company with potential to disrupt its industry.",
+            svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" /></svg>`
+        },
+        {
+            name: 'The Fortress',
+            promptName: 'FortressAnalysis',
+            description: 'Identifies a resilient, "all-weather" business with strong pricing power and a rock-solid balance sheet, built to withstand economic downturns.',
+            svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.286zm0 13.036h.008v.008h-.008v-.008z" /></svg>`
+        },
+        {
+            name: 'The Phoenix',
+            promptName: 'PhoenixAnalysis',
+            description: 'Analyzes a "fallen angel" company that has stumbled badly but is now showing credible, quantifiable signs of a fundamental business turnaround.',
+            svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.362 5.214A8.252 8.252 0 0112 21 8.25 8.25 0 016.038 7.048 8.287 8.287 0 009 9.62a8.983 8.983 0 013.362-3.867 8.262 8.262 0 013 2.456z" /><path stroke-linecap="round" stroke-linejoin="round" d="M12 18a3.75 3.75 0 00.495-7.467 5.99 5.99 0 00-1.925 3.546 5.974 5.974 0 01-2.133-1A3.75 3.75 0 0012 18z" /></svg>`
+        },
+        {
+            name: 'Pick & Shovel',
+            promptName: 'PickAndShovel',
+            description: 'Identifies essential suppliers that power an entire industry, a lower-risk way to invest in a trend.',
+            svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 17.25v-.228a4.5 4.5 0 00-.12-1.03l-2.268-9.64a3.375 3.375 0 00-3.285-2.602H7.923a3.375 3.375 0 00-3.285 2.602l-2.268 9.64a4.5 4.5 0 00-.12 1.03v.228m19.5 0a3 3 0 01-3 3H5.25a3 3 0 01-3-3m19.5 0a3 3 0 00-3-3H5.25a3 3 0 00-3 3m16.5 0h.008v.008h-.008v-.008zm-3 0h.008v.008h-.008v-.008z" /></svg>`
+        },
+        {
+            name: 'The Linchpin',
+            promptName: 'Linchpin',
+            description: 'Focuses on companies that control a vital, irreplaceable choke point in an industry’s value chain.',
+            svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.192 7.027a5.25 5.25 0 017.423 0L21 7.402a5.25 5.25 0 010 7.423l-.385.385a5.25 5.25 0 01-7.423 0L13.192 7.027zm-6.384 0a5.25 5.25 0 017.423 0L15 7.402a5.25 5.25 0 010 7.423l-5.385 5.385a5.25 5.25 0 01-7.423 0L2 19.973a5.25 5.25 0 010-7.423l.385-.385z" /><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6" /></svg>`
+        },
+        {
+            name: 'Hidden Value',
+            promptName: 'HiddenValue',
+            description: 'A sum-of-the-parts investigation to find complex companies the market may be undervaluing.',
+            svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3v11.25A2.25 2.25 0 006 16.5h12v-1.5M3.75 3h16.5v13.5A2.25 2.25 0 0118 18.75h-9.75A2.25 2.25 0 016 16.5v-1.5" /><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6h1.5m-1.5 3h1.5m-1.5 3h1.5" /></svg>`
+        },
+        {
+            name: 'The Untouchables',
+            promptName: 'Untouchables',
+            description: 'Deconstructs the "cult" brand moat of a company with fanatical customer loyalty, analyzing how that translates into durable pricing power and long-term profits.',
+            svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" /></svg>`
+        }
+    ];
+
+    let html = `
+        <div class="text-center w-full">
+            <span class="block text-sm font-bold text-gray-500 uppercase mb-4">AI Analysis</span>
+            <div class="flex flex-wrap justify-center gap-4">`;
+
+    analysisTypes.forEach(type => {
+        const hasSaved = savedReportTypes.has(type.promptName) ? 'has-saved-report' : '';
+        html += `
+            <button class="analysis-tile ${hasSaved}" data-sector="${sectorName}" data-prompt-name="${type.promptName}" data-tooltip="${type.description}">
+                ${type.svgIcon}
+                <span class="tile-name">${type.name}</span>
+            </button>
+        `;
+    });
+
+    html += `</div></div>`;
+    selectorContainer.innerHTML = html;
+    openModal(CONSTANTS.MODAL_CUSTOM_ANALYSIS);
+    
+    try {
+        const docRef = doc(state.db, CONSTANTS.DB_COLLECTION_SCREENER_INTERACTIONS, sectorName);
+        await setDoc(docRef, { lastClicked: Timestamp.now(), contextType: 'sector' });
+        if (buttonElement) {
+            const dateElement = buttonElement.querySelector('.last-clicked-date');
+            if (dateElement) {
+                dateElement.textContent = `Last Clicked: ${new Date().toLocaleDateString()}`;
+            }
+        }
+    } catch (error) {
+        console.error(`Error updating last clicked for ${sectorName}:`, error);
+    }
+}
+
+async function handleCreativeSectorAnalysis(contextName, promptNameKey) {
+    const promptData = creativePromptMap[contextName];
+    if (!promptData) {
+        displayMessageInModal(`No creative analysis prompt found for: ${contextName}`, 'error');
+        return;
+    }
+    
+    openModal(CONSTANTS.MODAL_LOADING);
+    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+    
+    const contentArea = document.getElementById('custom-analysis-content');
+    contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">Generating AI article: "${promptData.label}"...</div>`;
+
+    try {
+        const report = await generatePolishedArticle(promptData.prompt, loadingMessage);
+        contentArea.innerHTML = marked.parse(report);
+    } catch (error) {
+        console.error(`Error generating creative analysis for ${contextName}:`, error);
+        displayMessageInModal(`Could not generate AI article: ${error.message}`, 'error');
+        contentArea.innerHTML = `<div class="p-4 text-center text-red-500">Error: ${error.message}</div>`;
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
+async function handleDisruptorAnalysis(contextName) {
+    openModal(CONSTANTS.MODAL_LOADING);
+    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+
+    const contentArea = document.getElementById('custom-analysis-content');
+    contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">Generating AI article: "Disruptor Analysis"...</div>`;
+
+    try {
+        const prompt = DISRUPTOR_ANALYSIS_PROMPT.replace(/{sectorName}/g, contextName);
+        const report = await generatePolishedArticle(prompt, loadingMessage);
+        contentArea.innerHTML = marked.parse(report);
+    } catch (error) {
+        console.error(`Error generating disruptor analysis for ${contextName}:`, error);
+        displayMessageInModal(`Could not generate AI article: ${error.message}`, 'error');
+        contentArea.innerHTML = `<div class="p-4 text-center text-red-500">Error: ${error.message}</div>`;
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
+async function handleMacroPlaybookAnalysis(contextName) {
+    openModal(CONSTANTS.MODAL_LOADING);
+    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+
+    const contentArea = document.getElementById('custom-analysis-content');
+    contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">Generating AI article: "Macro Playbook"...</div>`;
+
+    try {
+        const standardDisclaimer = "This article is for informational purposes only and should not be considered financial advice. Readers should consult with a qualified financial professional before making any investment decisions.";
+        const prompt = MACRO_PLAYBOOK_PROMPT
+            .replace(/{sectorName}/g, contextName)
+            .replace(/\[Include standard disclaimer\]/g, standardDisclaimer);
+        const report = await generatePolishedArticle(prompt, loadingMessage);
+        contentArea.innerHTML = marked.parse(report);
+    } catch (error) {
+        console.error(`Error generating macro playbook analysis for ${contextName}:`, error);
+        displayMessageInModal(`Could not generate AI article: ${error.message}`, 'error');
+        contentArea.innerHTML = `<div class="p-4 text-center text-red-500">Error: ${error.message}</div>`;
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
+async function handleFortressAnalysis(contextName, contextType) {
+    openModal(CONSTANTS.MODAL_LOADING);
+    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+
+    const modalId = contextType === 'sector' ? 'customAnalysisModal' : 'industryAnalysisModal';
+    const contentArea = document.getElementById(modalId).querySelector(contextType === 'sector' ? '#custom-analysis-content' : '#industry-analysis-content');
+    contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">Generating AI article: "The Fortress"...</div>`;
+
+    try {
+        const prompt = FORTRESS_ANALYSIS_PROMPT
+            .replace(/{contextName}/g, contextName)
+            .replace(/{contextType}/g, contextType);
+        const report = await generatePolishedArticle(prompt, loadingMessage);
+        contentArea.innerHTML = marked.parse(report);
+    } catch (error) {
+        console.error(`Error generating fortress analysis for ${contextName}:`, error);
+        displayMessageInModal(`Could not generate AI article: ${error.message}`, 'error');
+        contentArea.innerHTML = `<div class="p-4 text-center text-red-500">Error: ${error.message}</div>`;
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
+async function handlePhoenixAnalysis(contextName, contextType) {
+    openModal(CONSTANTS.MODAL_LOADING);
+    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+    
+    const modalId = contextType === 'sector' ? 'customAnalysisModal' : 'industryAnalysisModal';
+    const contentArea = document.getElementById(modalId).querySelector(contextType === 'sector' ? '#custom-analysis-content' : '#industry-analysis-content');
+    contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">Generating AI article: "The Phoenix"...</div>`;
+
+    try {
+        const prompt = PHOENIX_ANALYSIS_PROMPT
+            .replace(/{contextName}/g, contextName)
+            .replace(/{contextType}/g, contextType);
+        const report = await generatePolishedArticle(prompt, loadingMessage);
+        contentArea.innerHTML = marked.parse(report);
+    } catch (error) {
+        console.error(`Error generating phoenix analysis for ${contextName}:`, error);
+        displayMessageInModal(`Could not generate AI article: ${error.message}`, 'error');
+        contentArea.innerHTML = `<div class="p-4 text-center text-red-500">Error: ${error.message}</div>`;
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
+async function handlePickAndShovelAnalysis(contextName, contextType) {
+    openModal(CONSTANTS.MODAL_LOADING);
+    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+    const modalId = contextType === 'sector' ? 'customAnalysisModal' : 'industryAnalysisModal';
+    const contentArea = document.getElementById(modalId).querySelector(contextType === 'sector' ? '#custom-analysis-content' : '#industry-analysis-content');
+    contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">Generating AI article: "The Pick and Shovel Play"...</div>`;
+
+    try {
+        const prompt = PICK_AND_SHOVEL_PROMPT
+            .replace(/{contextName}/g, contextName)
+            .replace(/{contextType}/g, contextType);
+        const report = await generatePolishedArticle(prompt, loadingMessage);
+        contentArea.innerHTML = marked.parse(report);
+    } catch (error) {
+        console.error(`Error generating Pick and Shovel analysis for ${contextName}:`, error);
+        displayMessageInModal(`Could not generate AI article: ${error.message}`, 'error');
+        contentArea.innerHTML = `<div class="p-4 text-center text-red-500">Error: ${error.message}</div>`;
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
+async function handleLinchpinAnalysis(contextName, contextType) {
+    openModal(CONSTANTS.MODAL_LOADING);
+    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+    const modalId = contextType === 'sector' ? 'customAnalysisModal' : 'industryAnalysisModal';
+    const contentArea = document.getElementById(modalId).querySelector(contextType === 'sector' ? '#custom-analysis-content' : '#industry-analysis-content');
+    contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">Generating AI article: "The Linchpin"...</div>`;
+
+    try {
+        const prompt = LINCHPIN_ANALYSIS_PROMPT
+            .replace(/{contextName}/g, contextName)
+            .replace(/{contextType}/g, contextType);
+        const report = await generatePolishedArticle(prompt, loadingMessage);
+        contentArea.innerHTML = marked.parse(report);
+    } catch (error) {
+        console.error(`Error generating Linchpin analysis for ${contextName}:`, error);
+        displayMessageInModal(`Could not generate AI article: ${error.message}`, 'error');
+        contentArea.innerHTML = `<div class="p-4 text-center text-red-500">Error: ${error.message}</div>`;
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
+async function handleHiddenValueAnalysis(contextName, contextType) {
+    openModal(CONSTANTS.MODAL_LOADING);
+    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+    const modalId = contextType === 'sector' ? 'customAnalysisModal' : 'industryAnalysisModal';
+    const contentArea = document.getElementById(modalId).querySelector(contextType === 'sector' ? '#custom-analysis-content' : '#industry-analysis-content');
+    contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">Generating AI article: "Hidden Value"...</div>`;
+
+    try {
+        const prompt = HIDDEN_VALUE_PROMPT
+            .replace(/{contextName}/g, contextName)
+            .replace(/{contextType}/g, contextType);
+        const report = await generatePolishedArticle(prompt, loadingMessage);
+        contentArea.innerHTML = marked.parse(report);
+    } catch (error) {
+        console.error(`Error generating Hidden Value analysis for ${contextName}:`, error);
+        displayMessageInModal(`Could not generate AI article: ${error.message}`, 'error');
+        contentArea.innerHTML = `<div class="p-4 text-center text-red-500">Error: ${error.message}</div>`;
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
+async function handleUntouchablesAnalysis(contextName, contextType) {
+    openModal(CONSTANTS.MODAL_LOADING);
+    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+    const modalId = contextType === 'sector' ? 'customAnalysisModal' : 'industryAnalysisModal';
+    const contentArea = document.getElementById(modalId).querySelector(contextType === 'sector' ? '#custom-analysis-content' : '#industry-analysis-content');
+    contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">Generating AI article: "The Untouchables"...</div>`;
+
+    try {
+        const prompt = UNTOUCHABLES_ANALYSIS_PROMPT
+            .replace(/{contextName}/g, contextName)
+            .replace(/{contextType}/g, contextType);
+        const report = await generatePolishedArticle(prompt, loadingMessage);
+        contentArea.innerHTML = marked.parse(report);
+    } catch (error) {
+        console.error(`Error generating Untouchables analysis for ${contextName}:`, error);
+        displayMessageInModal(`Could not generate AI article: ${error.message}`, 'error');
+        contentArea.innerHTML = `<div class="p-4 text-center text-red-500">Error: ${error.message}</div>`;
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
+
+
+export async function displayIndustryScreener() {
+    try {
+        const url = `https://financialmodelingprep.com/api/v3/industries-list?apikey=${state.fmpApiKey}`;
+        const industryData = await callApi(url);
+        if (Array.isArray(industryData)) {
+            // FIX: Handle both object array and string array formats from the API.
+            state.availableIndustries = industryData.map(item => (typeof item === 'object' && item.industry) ? item.industry : item).filter(Boolean).sort();
+            await renderIndustryButtons();
+        }
+    } catch (error) {
+        console.error("Error fetching available industries:", error);
+        const container = document.getElementById('industry-buttons-container');
+        if (container) {
+            container.innerHTML = `<p class="text-red-500 col-span-full">Could not load industry data.</p>`;
+        }
+    }
+}
+
+async function renderIndustryButtons() {
+    const container = document.getElementById('industry-buttons-container');
+    if (!container) return;
+    
+    const interactions = await getScreenerInteractions();
+    const genericIcon = `<svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>`; // Using Industrials icon as generic
+
+    container.innerHTML = state.availableIndustries.map(industry => {
+        const interaction = interactions[industry];
+        const lastClickedDate = interaction?.lastClicked ? interaction.lastClicked.toDate().toLocaleDateString() : 'Never';
+        return `
+        <button class="flex flex-col items-center justify-center p-4 text-center bg-teal-100 text-teal-800 hover:bg-teal-200 rounded-lg shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-1" data-industry="${sanitizeText(industry)}">
+            ${genericIcon}
+            <span class="mt-2 font-semibold text-sm">${sanitizeText(industry)}</span>
+            <span class="mt-1 text-xs text-teal-600 last-clicked-date">Last Clicked: ${lastClickedDate}</span>
+        </button>
+    `}).join('');
+}
+
+
+async function handleIndustrySelection(industryName, buttonElement) {
+    const modal = document.getElementById(CONSTANTS.MODAL_INDUSTRY_ANALYSIS);
+    const modalTitle = modal.querySelector('#industry-analysis-modal-title');
+    const selectorContainer = modal.querySelector('#industry-analysis-selector-container');
+    const contentArea = modal.querySelector('#industry-analysis-content');
+    const statusContainer = modal.querySelector('#report-status-container-industry');
+
+    modalTitle.textContent = `Industry Deep Dive | ${industryName}`;
+    contentArea.innerHTML = `<div class="text-center text-gray-500 pt-16">Please select an analysis type above to begin.</div>`;
+    statusContainer.classList.add('hidden');
+    modal.dataset.analysisName = 'Industry_Deep_Dive'; // Reset on new selection
+    
+    const savedReports = await getSavedBroadReports(industryName, 'industry');
+    const savedReportTypes = new Set(savedReports.map(doc => doc.reportType));
+
+    const analysisTypes = [
+        {
+            name: 'Market Trends',
+            promptName: 'MarketTrends',
+            description: 'AI agent finds companies in this industry, searches news, and generates a market summary.',
+            svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941" /></svg>`
+        },
+        {
+            name: 'The Disruptor',
+            promptName: 'DisruptorAnalysis',
+            description: "VC-style report on a high-growth, innovative company with potential to disrupt its industry.",
+            svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" /></svg>`
+        },
+        {
+            name: 'The Fortress',
+            promptName: 'FortressAnalysis',
+            description: 'Identifies a resilient, "all-weather" business with strong pricing power and a rock-solid balance sheet, built to withstand economic downturns.',
+            svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.286zm0 13.036h.008v.008h-.008v-.008z" /></svg>`
+        },
+        {
+            name: 'The Phoenix',
+            promptName: 'PhoenixAnalysis',
+            description: 'Analyzes a "fallen angel" company that has stumbled badly but is now showing credible, quantifiable signs of a fundamental business turnaround.',
+            svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.362 5.214A8.252 8.252 0 0112 21 8.25 8.25 0 016.038 7.048 8.287 8.287 0 009 9.62a8.983 8.983 0 013.362-3.867 8.262 8.262 0 013 2.456z" /><path stroke-linecap="round" stroke-linejoin="round" d="M12 18a3.75 3.75 0 00.495-7.467 5.99 5.99 0 00-1.925 3.546 5.974 5.974 0 01-2.133-1A3.75 3.75 0 0012 18z" /></svg>`
+        },
+        {
+            name: 'Pick & Shovel',
+            promptName: 'PickAndShovel',
+            description: 'Identifies essential suppliers that power an entire industry, a lower-risk way to invest in a trend.',
+            svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 17.25v-.228a4.5 4.5 0 00-.12-1.03l-2.268-9.64a3.375 3.375 0 00-3.285-2.602H7.923a3.375 3.375 0 00-3.285 2.602l-2.268 9.64a4.5 4.5 0 00-.12 1.03v.228m19.5 0a3 3 0 01-3 3H5.25a3 3 0 01-3-3m19.5 0a3 3 0 00-3-3H5.25a3 3 0 00-3 3m16.5 0h.008v.008h-.008v-.008zm-3 0h.008v.008h-.008v-.008z" /></svg>`
+        },
+        {
+            name: 'The Linchpin',
+            promptName: 'Linchpin',
+            description: 'Focuses on companies that control a vital, irreplaceable choke point in an industry’s value chain.',
+            svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.192 7.027a5.25 5.25 0 017.423 0L21 7.402a5.25 5.25 0 010 7.423l-.385.385a5.25 5.25 0 01-7.423 0L13.192 7.027zm-6.384 0a5.25 5.25 0 017.423 0L15 7.402a5.25 5.25 0 010 7.423l-5.385 5.385a5.25 5.25 0 01-7.423 0L2 19.973a5.25 5.25 0 010-7.423l.385-.385z" /><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6" /></svg>`
+        },
+        {
+            name: 'Hidden Value',
+            promptName: 'HiddenValue',
+            description: 'A sum-of-the-parts investigation to find complex companies the market may be undervaluing.',
+            svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3v11.25A2.25 2.25 0 006 16.5h12v-1.5M3.75 3h16.5v13.5A2.25 2.25 0 0118 18.75h-9.75A2.25 2.25 0 016 16.5v-1.5" /><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6h1.5m-1.5 3h1.5m-1.5 3h1.5" /></svg>`
+        },
+        {
+            name: 'The Untouchables',
+            promptName: 'Untouchables',
+            description: 'Deconstructs the "cult" brand moat of a company with fanatical customer loyalty, analyzing how that translates into durable pricing power and long-term profits.',
+            svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" /></svg>`
+        }
+    ];
+
+    let html = `
+        <div class="text-center w-full">
+            <span class="block text-sm font-bold text-gray-500 uppercase mb-4">AI Analysis</span>
+            <div class="flex flex-wrap justify-center gap-4">`;
+
+    analysisTypes.forEach(type => {
+        const hasSaved = savedReportTypes.has(type.promptName) ? 'has-saved-report' : '';
+        html += `
+            <button class="analysis-tile ${hasSaved}" data-industry="${industryName}" data-prompt-name="${type.promptName}" data-tooltip="${type.description}">
+                ${type.svgIcon}
+                <span class="tile-name">${type.name}</span>
+            </button>
+        `;
+    });
+
+    html += `</div></div>`;
+    selectorContainer.innerHTML = html;
+    openModal(CONSTANTS.MODAL_INDUSTRY_ANALYSIS);
+
+    try {
+        const docRef = doc(state.db, CONSTANTS.DB_COLLECTION_SCREENER_INTERACTIONS, industryName);
+        await setDoc(docRef, { lastClicked: Timestamp.now(), contextType: 'industry' });
+        if (buttonElement) {
+            const dateElement = buttonElement.querySelector('.last-clicked-date');
+            if (dateElement) {
+                dateElement.textContent = `Last Clicked: ${new Date().toLocaleDateString()}`;
+            }
+        }
+    } catch (error) {
+        console.error(`Error updating last clicked for ${industryName}:`, error);
+    }
+}
+
+// --- NEW INDUSTRY DEEP DIVE WORKFLOW ---
+async function handleIndustryMarketTrendsAnalysis(industryName) {
+    openModal(CONSTANTS.MODAL_LOADING);
+    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+    const contentArea = document.getElementById('industry-analysis-content');
+
+    try {
+        loadingMessage.textContent = `Finding companies in the ${industryName} industry...`;
+        contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">${loadingMessage.textContent}</div>`;
+
+        const stocksResult = await findStocksByIndustry({ industryName });
+        if (stocksResult.error || !stocksResult.stocks || stocksResult.stocks.length === 0) {
+            throw new Error(`Could not find any companies for the ${industryName} industry.`);
+        }
+        const industryStocks = stocksResult.stocks;
+
+        loadingMessage.textContent = `Searching news for up to ${industryStocks.length} companies...`;
+        contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">${loadingMessage.textContent}</div>`;
+        const newsResult = await searchSectorNews({ sectorName: industryName, sectorStocks: industryStocks });
+        if (newsResult.error || !newsResult.articles || newsResult.articles.length === 0) {
+            throw new Error(`Could not find any recent news for the ${industryName} industry.`);
+        }
+        const validArticles = newsResult.articles;
+
+        loadingMessage.textContent = `AI is analyzing news and generating the report...`;
+        contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">${loadingMessage.textContent}</div>`;
+
+        const prompt = ONE_SHOT_INDUSTRY_TREND_PROMPT
+            .replace(/{industryName}/g, industryName)
+            .replace('${industryStocks}', industryStocks.join(', '))
+            .replace('{newsArticlesJson}', JSON.stringify(validArticles, null, 2));
+
+        let finalReport = await generatePolishedArticle(prompt, loadingMessage);
+
+        finalReport = finalReport.replace(/\[Source: (?:Article )?(\d+)\]/g, (match, indexStr) => {
+            const index = parseInt(indexStr, 10);
+            const article = validArticles.find(a => a.articleIndex === index);
+            if (article) {
+                const sourceParts = article.source.split('.');
+                const sourceName = sourceParts.length > 1 ? sourceParts[sourceParts.length - 2] : article.source;
+                return `[(Source: ${sourceName}, ${article.publicationDate})](${article.link})`;
+            }
+            return match;
+        });
+
+        contentArea.innerHTML = marked.parse(finalReport);
+
+    } catch (error) {
+        console.error("Error during AI agent industry analysis:", error);
+        displayMessageInModal(`Could not complete AI analysis: ${error.message}`, 'error');
+        contentArea.innerHTML = `<div class="p-4 text-center text-red-500">Error: ${error.message}</div>`;
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
+
+async function handleIndustryPlaybookAnalysis(industryName) {
+    openModal(CONSTANTS.MODAL_LOADING);
+    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+
+    const contentArea = document.getElementById('industry-analysis-content');
+    contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">Generating AI article: "Playbook"...</div>`;
+
+    try {
+        const prompt = INDUSTRY_CAPITAL_ALLOCATORS_PROMPT
+            .replace(/{industryName}/g, industryName)
+            .replace(/{companyName}/g, 'a Key Company'); 
+
+        const report = await generatePolishedArticle(prompt, loadingMessage);
+        contentArea.innerHTML = marked.parse(report);
+    } catch (error) {
+        console.error(`Error generating creative analysis for ${industryName}:`, error);
+        displayMessageInModal(`Could not generate AI article: ${error.message}`, 'error');
+        contentArea.innerHTML = `<div class="p-4 text-center text-red-500">Error: ${error.message}</div>`;
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
+async function handleIndustryDisruptorAnalysis(industryName) {
+    openModal(CONSTANTS.MODAL_LOADING);
+    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+
+    const contentArea = document.getElementById('industry-analysis-content');
+    contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">Generating AI article: "Disruptor Analysis"...</div>`;
+
+    try {
+        const prompt = INDUSTRY_DISRUPTOR_ANALYSIS_PROMPT.replace(/{industryName}/g, industryName);
+        const report = await generatePolishedArticle(prompt, loadingMessage);
+        contentArea.innerHTML = marked.parse(report);
+    } catch (error) {
+        console.error(`Error generating disruptor analysis for ${industryName}:`, error);
+        displayMessageInModal(`Could not generate AI article: ${error.message}`, 'error');
+        contentArea.innerHTML = `<div class="p-4 text-center text-red-500">Error: ${error.message}</div>`;
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
+async function handleIndustryMacroPlaybookAnalysis(industryName) {
+    openModal(CONSTANTS.MODAL_LOADING);
+    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+
+    const contentArea = document.getElementById('industry-analysis-content');
+    contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">Generating AI article: "Macro Playbook"...</div>`;
+
+    try {
+        const standardDisclaimer = "This article is for informational purposes only and should not be considered financial advice. Readers should consult with a qualified financial professional before making any investment decisions.";
+        const prompt = INDUSTRY_MACRO_PLAYBOOK_PROMPT
+            .replace(/{industryName}/g, industryName)
+            .replace(/\[Include standard disclaimer\]/g, standardDisclaimer);
+        const report = await generatePolishedArticle(prompt, loadingMessage);
+        contentArea.innerHTML = marked.parse(report);
+    } catch (error) {
+        console.error(`Error generating macro playbook analysis for ${industryName}:`, error);
+        displayMessageInModal(`Could not generate AI article: ${error.message}`, 'error');
+        contentArea.innerHTML = `<div class="p-4 text-center text-red-500">Error: ${error.message}</div>`;
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
 
 // --- AI ANALYSIS REPORT GENERATORS ---
 
@@ -2243,130 +2127,25 @@ async function getSavedReports(ticker, reportType) {
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
 
-/**
- * Calculates a comprehensive summary of metrics for the "Deep Dive" prompt.
- * @param {object} data - The full FMP data object for a stock.
- * @param {string} newsNarrative - A concise summary of the recent news narrative.
- * @param {Array|null} institutionalHolders - Data from SEC-API.io.
- * @returns {object} A summary object with pre-calculated metrics and trends.
- */
-function _calculateDeepDiveMetrics(data, newsNarrative, institutionalHolders) {
-    const profile = data.profile?.[0] || {};
-    const income = (data.income_statement_annual || []).slice().reverse(); // Oldest to newest
-    const keyMetrics = (data.key_metrics_annual || []).slice().reverse();
-    const cashFlow = (data.cash_flow_statement_annual || []).slice().reverse();
-    const ratios = (data.ratios_annual || []).slice().reverse();
-    const analystEstimates = data.analyst_estimates || [];
-    const analystGrades = data.stock_grade_news || [];
-    const insiderStats = data.insider_trading_stats || [];
+async function getSavedBroadReports(contextName, contextType) {
+    const reportsRef = collection(state.db, CONSTANTS.DB_COLLECTION_BROAD_REPORTS);
+    const q = query(reportsRef, where("contextName", "==", contextName), where("contextType", "==", contextType), orderBy("savedAt", "desc"));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+}
 
-    const latestMetrics = keyMetrics[keyMetrics.length - 1] || {};
-    const latestCashFlow = cashFlow[cashFlow.length - 1] || {};
-    const latestIncome = income[income.length - 1] || {};
-    const lastYearIncome = income[income.length - 2] || {};
-
-    const formatTrend = (series, key, lookback = 5) => {
-        if (!series) return [];
-        return series.slice(-lookback).map(item => ({
-            year: item.calendarYear,
-            value: typeof item[key] === 'number' ? item[key].toFixed(2) : 'N/A'
-        }));
-    };
-    
-    const formatLargeNumberTrend = (series, key, lookback = 5) => {
-         if (!series) return [];
-        return series.slice(-lookback).map(item => ({
-            year: item.calendarYear,
-            value: typeof item[key] === 'number' ? formatLargeNumber(item[key]) : 'N/A'
-        }));
-    };
-
-    const calculateAverage = (data, key, lookback = 5) => {
-        const values = data.slice(-lookback).map(d => d[key]).filter(v => typeof v === 'number');
-        if (values.length === 0) return null;
-        return values.reduce((a, b) => a + b, 0) / values.length;
-    };
-    
-    const valuation = (metricKey, ratioKey) => {
-        const current = latestMetrics[metricKey];
-        const historical = calculateAverage(keyMetrics, metricKey);
-        if (current && historical) {
-            const status = current > historical ? 'at a premium' : 'at a discount';
-            return `Current ${ratioKey} of ${current.toFixed(2)} is ${status} to its 5-year average of ${historical.toFixed(2)}.`;
+function buildAnalysisPayload(fullData, requiredEndpoints) {
+    const payload = {};
+    for (const endpointName of requiredEndpoints) {
+        if (fullData.hasOwnProperty(endpointName)) {
+            payload[endpointName] = fullData[endpointName];
         }
-        return `Current ${ratioKey} is ${current ? current.toFixed(2) : 'N/A'}.`;
-    };
-
-    const nextYearEstimate = analystEstimates[0] || {};
-    const lastActualRevenue = latestIncome.revenue;
-    let revenueGrowthForecast = 'N/A';
-    if (nextYearEstimate.estimatedRevenueAvg && lastActualRevenue) {
-        revenueGrowthForecast = `${(((nextYearEstimate.estimatedRevenueAvg / lastActualRevenue) - 1) * 100).toFixed(2)}%`;
     }
-    
-    const recentRatings = analystGrades.slice(0, 5).map(grade => {
-        const action = grade.action?.toLowerCase();
-        const from = grade.previousGrade;
-        const to = grade.newGrade;
-        const firm = grade.gradingCompany;
-        const date = grade.date;
-
-        if (action === 'initiate' || !from || from.toLowerCase() === 'undefined') {
-            return `Initiated coverage with '${to}' rating by ${firm} on ${date}`;
-        }
-        return `${grade.action} from '${from}' to '${to}' by ${firm} on ${date}`;
-    });
-
-    return {
-        description: profile.description,
-        sector: profile.sector,
-        industry: profile.industry,
-        currentPrice: profile.price || 'N/A',
-        analystConsensus: {
-            nextYearRevenueForecast: formatLargeNumber(nextYearEstimate.estimatedRevenueAvg),
-            nextYearEpsForecast: nextYearEstimate.estimatedEpsAvg ? nextYearEstimate.estimatedEpsAvg.toFixed(2) : 'N/A',
-            estimatedRevenueGrowth: revenueGrowthForecast
-        },
-        recentAnalystRatings: recentRatings,
-        recentNewsNarrative: newsNarrative,
-        insiderTransactionSummary: (() => {
-            const stats6m = insiderStats.find(s => s.period === '6M');
-            if (!stats6m) return 'Insider transaction data for the last 6 months is not available.';
-            const netShares = stats6m.totalBought - stats6m.totalSold;
-            if (netShares > 0) {
-                return `Over the last 6 months, insiders were net buyers of ${netShares.toLocaleString()} shares.`;
-            } else if (netShares < 0) {
-                return `Over the last 6 months, insiders were net sellers of ${Math.abs(netShares).toLocaleString()} shares.`;
-            } else {
-                return 'Over the last 6 months, there was no net buying or selling by insiders.';
-            }
-        })(),
-        topInstitutionalHolders: (() => {
-            if (!institutionalHolders || institutionalHolders.length === 0) {
-                return ['Institutional ownership data not available.'];
-            }
-            const sortedHolders = institutionalHolders.sort((a, b) => b.value - a.value);
-            return sortedHolders.slice(0, 5).map(h => h.investorName);
-        })(),
-        roeTrend: formatTrend(ratios, 'returnOnEquity'),
-        grossMarginTrend: formatTrend(ratios, 'grossProfitMargin'),
-        netMarginTrend: formatTrend(ratios, 'netProfitMargin'),
-        revenueTrend: formatLargeNumberTrend(income, 'revenue'),
-        netIncomeTrend: formatLargeNumberTrend(income, 'netIncome'),
-        debtToEquityTrend: formatTrend(ratios, 'debtEquityRatio'),
-        cashFlowVsNetIncome: `Operating Cash Flow (${formatLargeNumber(latestCashFlow.operatingCashFlow)}) vs. Net Income (${formatLargeNumber(latestIncome.netIncome)}).`,
-        dividendYield: latestMetrics.dividendYield ? `${(latestMetrics.dividendYield * 100).toFixed(2)}%` : 'N/A',
-        fcfPayoutRatio: (latestCashFlow.freeCashFlow > 0) ? `${(Math.abs(latestCashFlow.dividendsPaid || 0) / latestCashFlow.freeCashFlow * 100).toFixed(2)}%` : 'N/A',
-        pe_valuation: valuation('peRatio', 'P/E'),
-        ps_valuation: valuation('priceToSalesRatio', 'P/S'),
-        pb_valuation: valuation('pbRatio', 'P/B'),
-        grahamNumber: latestMetrics.grahamNumber ? latestMetrics.grahamNumber.toFixed(2) : 'N/A'
-    };
+    return payload;
 }
 
 
-async function handleDeepDiveRequest(symbol, forceNew = false) {
-    const reportType = 'DeepDive';
+async function handleAnalysisRequest(symbol, reportType, promptConfig, forceNew = false) {
     const contentContainer = document.getElementById('ai-article-container');
     const statusContainer = document.getElementById('report-status-container-ai');
     
@@ -2381,80 +2160,67 @@ async function handleDeepDiveRequest(symbol, forceNew = false) {
             displayReport(contentContainer, latestReport.content, latestReport.prompt);
             contentContainer.dataset.currentPrompt = latestReport.prompt || '';
             contentContainer.dataset.rawMarkdown = latestReport.content;
-            updateReportStatus(statusContainer, savedReports, latestReport.id, { symbol, reportType });
+            updateReportStatus(statusContainer, savedReports, latestReport.id, { symbol, reportType, promptConfig });
             return; 
         }
 
         openModal(CONSTANTS.MODAL_LOADING);
         const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
         
-        loadingMessage.textContent = `Fetching financial data for ${symbol}...`;
         const data = await getFmpStockData(symbol);
         if (!data) throw new Error(`No cached FMP data found for ${symbol}.`);
         
-        const requiredEndpoints = ['profile', 'ratios_annual', 'key_metrics_annual', 'income_statement_annual', 'cash_flow_statement_annual', 'analyst_estimates', 'stock_grade_news', 'insider_trading_stats', 'exchange_variants'];
-        const missingEndpoints = requiredEndpoints.filter(ep => !data[ep] || data[ep].length === 0);
+        const requiredEndpoints = promptConfig.requires || [];
+        const missingEndpoints = requiredEndpoints.filter(ep => !data[ep]);
 
         if (missingEndpoints.length > 0) {
-            closeModal(CONSTANTS.MODAL_LOADING);
-            openConfirmationModal(
-                'Data Refresh Required',
-                `This analysis requires data that is not yet cached for ${symbol} (${missingEndpoints.join(', ')}). Would you like to refresh all FMP data now? This may take a moment.`,
-                async () => {
-                    await handleRefreshFmpData(symbol);
-                    await handleDeepDiveRequest(symbol, true);
-                }
-            );
-            return;
-        }
+            const specialReqs = ANALYSIS_REQUIREMENTS[reportType] || [];
+            const isSpecialMissing = specialReqs.some(req => missingEndpoints.includes(req));
 
-        loadingMessage.textContent = `Fetching institutional ownership for ${symbol}...`;
-        let institutionalHolders = null;
-        if (state.secApiKey) {
-            try {
-                const cikFromFmp = data?.exchange_variants?.[0]?.cik || data?.profile?.[0]?.cik;
-                const cik = cikFromFmp ? parseInt(cikFromFmp, 10) : null;
-                const cusip = data?.exchange_variants?.[0]?.cusip || data?.profile?.[0]?.cusip;
-                
-                let queryString;
-                if (cik) {
-                    queryString = `cik:\"${cik}\"`;
-                } else if (cusip) {
-                    queryString = `cusip:\"${cusip}\"`;
-                } else {
-                    queryString = `ticker:\"${symbol}\"`;
-                }
-
-                const secUrl = `https://api.sec-api.io/v1/query?token=${state.secApiKey}`;
-                const queryPayload = {
-                    "query": { "query_string": { "query": queryString } },
-                    "from": "0",
-                    "size": "50",
-                    "sort": [{ "value": { "order": "desc" } }]
-                };
-                const secResponse = await callApi(secUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(queryPayload)
-                });
-                if (secResponse && Array.isArray(secResponse.holdings) && secResponse.holdings.length > 0) {
-                    institutionalHolders = secResponse.holdings;
-                }
-            } catch (secError) {
-                console.warn(`Could not fetch institutional ownership data for ${symbol}:`, secError);
+            if (isSpecialMissing) {
+                closeModal(CONSTANTS.MODAL_LOADING);
+                openConfirmationModal(
+                    'Data Refresh Required',
+                    `This analysis requires specific data that is not yet cached for ${symbol} (${missingEndpoints.join(', ')}). Would you like to refresh all FMP data now? This may take a moment.`,
+                    async () => {
+                        await handleRefreshFmpData(symbol);
+                        // After refresh, re-run the request forcing a new generation
+                        await handleAnalysisRequest(symbol, reportType, promptConfig, true);
+                    }
+                );
+                return;
             }
         }
         
-        loadingMessage.textContent = `Analyzing recent news for ${symbol}...`;
+        let payloadData;
+        if (reportType === 'UndervaluedAnalysis') {
+            payloadData = _calculateUndervaluedMetrics(data);
+        } else if (reportType === 'FinancialAnalysis') {
+            payloadData = _calculateFinancialAnalysisMetrics(data);
+        } else if (reportType === 'BullVsBear') {
+            payloadData = _calculateBullVsBearMetrics(data);
+        } else if (reportType === 'MoatAnalysis') {
+            payloadData = _calculateMoatAnalysisMetrics(data);
+        } else if (reportType === 'DividendSafety') {
+            payloadData = _calculateDividendSafetyMetrics(data);
+        } else if (reportType === 'GrowthOutlook') {
+            payloadData = _calculateGrowthOutlookMetrics(data);
+        } else if (reportType === 'RiskAssessment') {
+            payloadData = _calculateRiskAssessmentMetrics(data);
+        } else if (reportType === 'CapitalAllocators') {
+            payloadData = _calculateCapitalAllocatorsMetrics(data);
+        } else if (reportType === 'NarrativeCatalyst') {
+            payloadData = _calculateNarrativeCatalystMetrics(data);
+        } else {
+            payloadData = buildAnalysisPayload(data, requiredEndpoints);
+        }
+
         const profile = data.profile?.[0] || {};
         const companyName = profile.companyName || 'the company';
         const tickerSymbol = profile.symbol || symbol;
-        
-        const newsSummary = await generateNewsSummary(tickerSymbol, companyName);
 
-        const payloadData = _calculateDeepDiveMetrics(data, newsSummary.dominant_narrative, institutionalHolders);
-
-        const prompt = DEEP_DIVE_PROMPT
+        const promptTemplate = promptConfig.prompt;
+        const prompt = promptTemplate
             .replace(/{companyName}/g, companyName)
             .replace(/{tickerSymbol}/g, tickerSymbol)
             .replace('{jsonData}', JSON.stringify(payloadData, null, 2));
@@ -2464,7 +2230,7 @@ async function handleDeepDiveRequest(symbol, forceNew = false) {
         const newReportContent = await generatePolishedArticle(prompt, loadingMessage);
         contentContainer.dataset.rawMarkdown = newReportContent;
         displayReport(contentContainer, newReportContent, prompt);
-        updateReportStatus(statusContainer, [], null, { symbol, reportType });
+        updateReportStatus(statusContainer, [], null, { symbol, reportType, promptConfig });
 
     } catch (error) {
         displayMessageInModal(`Could not generate or load analysis: ${error.message}`, 'error');
@@ -2476,10 +2242,69 @@ async function handleDeepDiveRequest(symbol, forceNew = false) {
     }
 }
 
+async function handleInvestmentMemoRequest(symbol) {
+    const contentContainer = document.getElementById('ai-article-container');
+    const statusContainer = document.getElementById('report-status-container-ai');
+    contentContainer.innerHTML = '';
+    statusContainer.classList.add('hidden');
+
+    openModal(CONSTANTS.MODAL_LOADING);
+    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+
+    try {
+        loadingMessage.textContent = "Gathering all latest analysis reports from the database...";
+        const reportTypes = [
+            'FinancialAnalysis', 'UndervaluedAnalysis', 'BullVsBear', 'MoatAnalysis', 
+            'DividendSafety', 'GrowthOutlook', 'RiskAssessment', 'CapitalAllocators',
+            'NarrativeCatalyst'
+        ];
+
+        const reportPromises = reportTypes.map(type => getSavedReports(symbol, type).then(reports => reports[0])); // Get only the latest
+        const allLatestReports = await Promise.all(reportPromises);
+
+        const foundReports = allLatestReports.filter(Boolean); // Filter out any undefined/null reports
+        const missingReports = reportTypes.filter((type, index) => !allLatestReports[index]);
+
+        if (missingReports.length > 0) {
+            throw new Error(`Cannot generate memo. Please generate and save the following reports first: ${missingReports.join(', ')}`);
+        }
+
+        loadingMessage.textContent = "Synthesizing reports into a final memo...";
+        
+        let allAnalysesData = foundReports.map(report => {
+            const reportTitle = report.content.match(/#\s*(.*)/)?.[1] || report.reportType;
+            return `--- REPORT: ${reportTitle} ---\n\n${report.content}\n\n`;
+        }).join('\n');
+        
+        const data = await getFmpStockData(symbol);
+        const profile = data.profile?.[0] || {};
+        const companyName = profile.companyName || 'the company';
+
+        const prompt = INVESTMENT_MEMO_PROMPT
+            .replace(/{companyName}/g, companyName)
+            .replace(/{tickerSymbol}/g, symbol)
+            .replace('{allAnalysesData}', allAnalysesData);
+
+        const memoContent = await generatePolishedArticle(prompt, loadingMessage);
+        displayReport(contentContainer, memoContent);
+        
+        // Since this is a unique, synthesized report, we don't show versioning for it.
+        statusContainer.innerHTML = `<span class="text-sm font-semibold text-green-800">Investment Memo generated successfully.</span>`;
+        statusContainer.classList.remove('hidden');
+
+    } catch (error) {
+        console.error("Error generating investment memo:", error);
+        displayMessageInModal(`Could not generate memo: ${error.message}`, 'error');
+        contentContainer.innerHTML = `<p class="text-red-500">Failed to generate memo: ${error.message}</p>`;
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
 
 async function handleSaveReportToDb() {
     const modal = document.getElementById('rawDataViewerModal');
-    const symbol = modal.dataset.activeSymbol;
+    const symbol = modal.querySelector('.ai-analysis-button')?.dataset.symbol;
     const contentContainer = document.getElementById('ai-article-container');
     const statusContainer = document.getElementById('report-status-container-ai');
     const reportType = statusContainer.dataset.activeReportType;
@@ -2505,7 +2330,8 @@ async function handleSaveReportToDb() {
         
         const savedReports = await getSavedReports(symbol, reportType);
         const latestReport = savedReports[0];
-        updateReportStatus(document.getElementById('report-status-container-ai'), savedReports, latestReport.id, { symbol, reportType });
+        const promptConfig = promptMap[reportType];
+        updateReportStatus(document.getElementById('report-status-container-ai'), savedReports, latestReport.id, { symbol, reportType, promptConfig });
 
     } catch (error) {
         console.error("Error saving report to DB:", error);
@@ -2575,10 +2401,145 @@ function updateReportStatus(statusContainer, reports, activeReportId, analysisPa
     const generateNewBtn = document.getElementById(`generate-new-${analysisParams.reportType}`);
     if (generateNewBtn) {
         generateNewBtn.addEventListener('click', () => {
-            handleDeepDiveRequest(analysisParams.symbol, true);
+            handleAnalysisRequest(analysisParams.symbol, analysisParams.reportType, analysisParams.promptConfig, true);
         });
     }
 }
+
+function updateBroadReportStatus(statusContainer, reports, activeReportId, analysisParams) {
+    statusContainer.classList.remove('hidden');
+    statusContainer.dataset.activeReportType = analysisParams.reportType;
+    let statusHtml = '';
+
+    if (reports.length > 0) {
+        const activeReport = reports.find(r => r.id === activeReportId) || reports[0];
+        const savedDate = activeReport.savedAt.toDate().toLocaleString();
+        
+        statusHtml = `
+            <div class="flex items-center gap-2">
+                <span class="text-sm font-semibold text-blue-800">Displaying report from: ${savedDate}</span>
+                <select id="broad-version-selector-${analysisParams.reportType}" class="text-sm border-gray-300 rounded-md">
+                    ${reports.map(r => `<option value="${r.id}" ${r.id === activeReport.id ? 'selected' : ''}>${r.savedAt.toDate().toLocaleString()}</option>`).join('')}
+                </select>
+            </div>
+            <button id="broad-generate-new-${analysisParams.reportType}" class="bg-green-500 hover:bg-green-600 text-white text-xs font-semibold py-1 px-3 rounded-full">Generate New Report</button>
+        `;
+    } else {
+        statusHtml = `<span class="text-sm font-semibold text-green-800">Displaying newly generated report.</span>`;
+    }
+    
+    statusContainer.innerHTML = statusHtml;
+
+    const versionSelector = document.getElementById(`broad-version-selector-${analysisParams.reportType}`);
+    if (versionSelector) {
+        versionSelector.addEventListener('change', (e) => {
+            const selectedReport = reports.find(r => r.id === e.target.value);
+            if (selectedReport) {
+                const contentContainer = statusContainer.parentElement.querySelector('.prose');
+                displayReport(contentContainer, selectedReport.content);
+                updateBroadReportStatus(statusContainer, reports, selectedReport.id, analysisParams);
+            }
+        });
+    }
+
+    const generateNewBtn = document.getElementById(`broad-generate-new-${analysisParams.reportType}`);
+    if (generateNewBtn) {
+        generateNewBtn.addEventListener('click', () => {
+            handleBroadAnalysisRequest(analysisParams.contextName, analysisParams.contextType, analysisParams.reportType, true);
+        });
+    }
+}
+
+async function handleSaveBroadReportToDb(modalId) {
+    const modal = document.getElementById(modalId);
+    const contextName = modal.dataset.contextName;
+    const contextType = modal.dataset.contextType;
+    const reportType = modal.dataset.reportType;
+    
+    const contentContainer = modal.querySelector('.prose');
+    if (!contentContainer || !contentContainer.innerHTML.trim() || contentContainer.textContent.includes('Please select an analysis type')) {
+        displayMessageInModal("Please generate an analysis before saving.", "warning");
+        return;
+    }
+
+    const contentToSave = contentContainer.innerHTML;
+
+    openModal(CONSTANTS.MODAL_LOADING);
+    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Saving ${reportType} report for ${contextName}...`;
+
+    try {
+        const reportData = {
+            contextName,
+            contextType,
+            reportType,
+            content: contentToSave,
+            savedAt: Timestamp.now()
+        };
+        await addDoc(collection(state.db, CONSTANTS.DB_COLLECTION_BROAD_REPORTS), reportData);
+        displayMessageInModal("Report saved successfully!", "info");
+        
+        // Refresh the status to show the new version
+        const savedReports = await getSavedBroadReports(contextName, contextType);
+        const latestReport = savedReports.find(r => r.reportType === reportType);
+        const statusContainer = modal.querySelector('[id^="report-status-container"]');
+        if (latestReport && statusContainer) {
+            updateBroadReportStatus(statusContainer, savedReports.filter(r => r.reportType === reportType), latestReport.id, { contextName, contextType, reportType });
+        }
+
+    } catch (error) {
+        console.error("Error saving broad report to DB:", error);
+        displayMessageInModal(`Could not save report: ${error.message}`, 'error');
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
+async function handleBroadAnalysisRequest(contextName, contextType, promptName, forceNew = false) {
+    const modalId = contextType === 'sector' ? CONSTANTS.MODAL_CUSTOM_ANALYSIS : CONSTANTS.MODAL_INDUSTRY_ANALYSIS;
+    const modal = document.getElementById(modalId);
+    const contentArea = modal.querySelector('.prose');
+    const statusContainer = modal.querySelector('[id^="report-status-container"]');
+
+    contentArea.innerHTML = '';
+    statusContainer.classList.add('hidden');
+
+    try {
+        const savedReports = (await getSavedBroadReports(contextName, contextType)).filter(r => r.reportType === promptName);
+
+        if (savedReports.length > 0 && !forceNew) {
+            const latestReport = savedReports[0];
+            displayReport(contentArea, latestReport.content);
+            updateBroadReportStatus(statusContainer, savedReports, latestReport.id, { contextName, contextType, reportType: promptName });
+            return;
+        }
+
+        // Map promptName to the correct handler function
+        const analysisHandlers = {
+            'MarketTrends': contextType === 'sector' ? handleMarketTrendsAnalysis : handleIndustryMarketTrendsAnalysis,
+            'DisruptorAnalysis': contextType === 'sector' ? handleDisruptorAnalysis : handleIndustryDisruptorAnalysis,
+            'FortressAnalysis': handleFortressAnalysis,
+            'PhoenixAnalysis': handlePhoenixAnalysis,
+            'PickAndShovel': handlePickAndShovelAnalysis,
+            'Linchpin': handleLinchpinAnalysis,
+            'HiddenValue': handleHiddenValueAnalysis,
+            'Untouchables': handleUntouchablesAnalysis,
+        };
+
+        const handler = analysisHandlers[promptName];
+        if (handler) {
+            await handler(contextName, contextType); // Pass contextType for relevant handlers
+            updateBroadReportStatus(statusContainer, [], null, { contextName, contextType, reportType: promptName });
+        } else {
+            throw new Error(`No handler found for analysis type: ${promptName}`);
+        }
+
+    } catch (error) {
+        console.error(`Error during broad analysis for ${contextName}:`, error);
+        displayMessageInModal(`Could not complete analysis: ${error.message}`, 'error');
+        contentArea.innerHTML = `<p class="text-red-500">Failed to generate report: ${error.message}</p>`;
+    }
+}
+
 
 async function handleSaveToDrive(modalId) {
     if (!state.auth.currentUser || state.auth.currentUser.isAnonymous) {
@@ -2651,4 +2612,519 @@ async function handleSaveToDrive(modalId) {
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
+}
+
+/**
+ * Calculates a summary of metrics for the "Undervalued Analysis" prompt.
+ * @param {object} data - The full FMP data object for a stock.
+ * @returns {object} A summary object with pre-calculated metrics.
+ */
+function _calculateUndervaluedMetrics(data) {
+    const profile = data.profile?.[0] || {};
+    const incomeStatements = (data.income_statement_annual || []).slice().reverse(); // Oldest to newest
+    const keyMetrics = (data.key_metrics_annual || []).slice().reverse(); // Oldest to newest
+    const cashFlows = (data.cash_flow_statement_annual || []).slice().reverse();
+    const ratios = (data.ratios_annual || []).slice().reverse(); // Oldest to newest
+
+    const latestMetrics = keyMetrics[keyMetrics.length - 1] || {};
+    const latestCashFlow = cashFlows[cashFlows.length - 1] || {};
+    const latestRatios = ratios[ratios.length - 1] || {};
+    
+    // Helper to calculate YoY Growth
+    const calculateYoyGrowth = (data, key) => {
+        const trends = [];
+        for (let i = 1; i < data.length; i++) {
+            const prev = data[i - 1][key];
+            const curr = data[i][key];
+            if (prev && curr && prev !== 0) {
+                const growth = ((curr - prev) / prev) * 100;
+                trends.push({ year: data[i].calendarYear, growth: `${growth.toFixed(2)}%` });
+            }
+        }
+        return trends.slice(-6); // Last 6 years of growth
+    };
+
+    // Helper to get last N years of a metric
+    const getTrend = (data, key, formatFn = (v) => v) => {
+        return data.slice(-6).map(d => ({ year: d.calendarYear, value: formatFn(d[key]) }));
+    };
+    
+    // Helper to calculate historical average
+    const calculateAverage = (data, key) => {
+        const values = data.slice(-5).map(d => d[key]).filter(v => typeof v === 'number');
+        if (values.length === 0) return null;
+        return values.reduce((a, b) => a + b, 0) / values.length;
+    };
+
+    // 1. Growth & Profitability
+    const revenueGrowthTrend = calculateYoyGrowth(incomeStatements, 'revenue');
+    const profitabilityTrend = getTrend(ratios, 'netProfitMargin', v => typeof v === 'number' ? `${(v * 100).toFixed(2)}%` : 'N/A');
+
+    // 2. Financial Health
+    const roeTrend = getTrend(ratios, 'returnOnEquity', v => typeof v === 'number' ? `${(v * 100).toFixed(2)}%` : 'N/A');
+    const debtToEquity = latestRatios.debtToEquityRatio ? latestRatios.debtToEquityRatio.toFixed(2) : 'N/A';
+    
+    // 3. Dividend Analysis
+    const dividendYield = latestMetrics.dividendYield ? `${(latestMetrics.dividendYield * 100).toFixed(2)}%` : 'N/A';
+    let cashFlowPayoutRatio = 'N/A';
+    if (latestCashFlow.operatingCashFlow && latestCashFlow.dividendsPaid) {
+        if (latestCashFlow.operatingCashFlow > 0) {
+            const ratio = (Math.abs(latestCashFlow.dividendsPaid) / latestCashFlow.operatingCashFlow) * 100;
+            cashFlowPayoutRatio = `${ratio.toFixed(2)}%`;
+        }
+    }
+
+    // 4. Valuation Multiples
+    const peRatio = latestMetrics.peRatio ? latestMetrics.peRatio.toFixed(2) : 'N/A';
+    const psRatio = latestMetrics.priceToSalesRatio ? latestMetrics.priceToSalesRatio.toFixed(2) : 'N/A';
+    const pbRatio = latestMetrics.pbRatio ? latestMetrics.pbRatio.toFixed(2) : 'N/A';
+
+    // 5. Valuation in Context
+    const historicalPe = calculateAverage(keyMetrics, 'peRatio');
+    const historicalPs = calculateAverage(keyMetrics, 'priceToSalesRatio');
+    const historicalPb = calculateAverage(keyMetrics, 'pbRatio');
+
+    const valuationRelativeToHistory = {
+        pe: {
+            current: peRatio,
+            historicalAverage: historicalPe ? historicalPe.toFixed(2) : 'N/A',
+            status: historicalPe && peRatio !== 'N/A' ? (peRatio > historicalPe ? 'Premium' : 'Discount') : 'N/A'
+        },
+        ps: {
+            current: psRatio,
+            historicalAverage: historicalPs ? historicalPs.toFixed(2) : 'N/A',
+            status: historicalPs && psRatio !== 'N/A' ? (psRatio > historicalPs ? 'Premium' : 'Discount') : 'N/A'
+        },
+        pb: {
+            current: pbRatio,
+            historicalAverage: historicalPb ? historicalPb.toFixed(2) : 'N/A',
+            status: historicalPb && pbRatio !== 'N/A' ? (pbRatio > historicalPb ? 'Premium' : 'Discount') : 'N/A'
+        }
+    };
+    
+    // 6. Graham Number
+    const grahamNumber = latestMetrics.grahamNumber;
+    const currentPrice = profile.price;
+    let grahamVerdict = 'N/A';
+    if (grahamNumber && currentPrice) {
+        grahamVerdict = currentPrice < grahamNumber ? 'UNDERVALUED' : 'OVERVALUED';
+    }
+
+    // 7. Analyst Consensus & Estimates
+    const analystConsensus = (data.stock_grade_news || []).slice(0, 5).map(g => `${g.gradingCompany}: ${g.newGrade}`).join(', ');
+    const latestEstimate = (data.analyst_estimates || []).find(e => new Date(e.date).getFullYear() === new Date().getFullYear() + 1);
+
+    return {
+        summary: {
+            industry: profile.industry || 'N/A',
+        },
+        revenueGrowthTrend,
+        profitabilityTrend,
+        roeTrend,
+        debtToEquity,
+        dividendYield,
+        cashFlowPayoutRatio,
+        peRatio,
+        psRatio,
+        pbRatio,
+        valuationRelativeToHistory,
+        grahamNumberAnalysis: {
+            grahamNumber: grahamNumber ? grahamNumber.toFixed(2) : 'N/A',
+            currentPrice: currentPrice || 'N/A',
+            verdict: grahamVerdict
+        },
+        analystConsensus: analystConsensus || 'No recent ratings.',
+        analystEstimatesSummary: latestEstimate ? `Avg. estimated revenue for next year is ${formatLargeNumber(latestEstimate.estimatedRevenueAvg)}.` : 'No estimates available.'
+    };
+}
+
+/**
+ * Calculates a comprehensive summary of metrics for the "Financial Analysis" prompt.
+ * @param {object} data - The full FMP data object for a stock.
+ * @returns {object} A summary object with pre-calculated metrics and trends.
+ */
+function _calculateFinancialAnalysisMetrics(data) {
+    // 1. Helpers
+    const getTrendStatus = (series, lookback = 5, isPercentage = true) => {
+        if (!series || series.length < 3) return "Not enough data for a trend.";
+        const recentSeries = series.slice(-lookback);
+        if (recentSeries.length < 3) return "Not enough data for a trend.";
+
+        const firstHalf = recentSeries.slice(0, Math.floor(recentSeries.length / 2));
+        const secondHalf = recentSeries.slice(Math.ceil(recentSeries.length / 2));
+        
+        const avg = (arr) => arr.reduce((a, b) => a + b, 0) / arr.length;
+        const firstAvg = avg(firstHalf);
+        const secondAvg = avg(secondHalf);
+
+        const change = ((secondAvg - firstAvg) / Math.abs(firstAvg)) * 100;
+        
+        if (change > (isPercentage ? 5 : 10)) return 'is improving';
+        if (change < -(isPercentage ? 5 : 10)) return 'is declining';
+        return 'has been stable';
+    };
+    
+    const calculateAverage = (data, key, lookback = 5) => {
+        const values = data.slice(-lookback).map(d => d[key]).filter(v => typeof v === 'number');
+        if (values.length === 0) return null;
+        return values.reduce((a, b) => a + b, 0) / values.length;
+    };
+
+    // 2. Data Preparation
+    const profile = data.profile?.[0] || {};
+    const incomeStatements = (data.income_statement_annual || []).slice().reverse();
+    const keyMetrics = (data.key_metrics_annual || []).slice().reverse();
+    const cashFlows = (data.cash_flow_statement_annual || []).slice().reverse();
+    const grades = (data.stock_grade_news || []).slice(0, 15);
+
+    const latestIncome = incomeStatements[incomeStatements.length - 1] || {};
+    const latestMetrics = keyMetrics[keyMetrics.length - 1] || {};
+    const latestCashFlow = cashFlows[cashFlows.length - 1] || {};
+
+    // 3. Calculations
+    // Summary
+    const analystConsensus = (() => {
+        if (grades.length === 0) return "No recent analyst ratings available.";
+        const buys = grades.filter(g => ['buy', 'outperform', 'overweight', 'strong buy'].includes(g.newGrade.toLowerCase())).length;
+        const sells = grades.filter(g => ['sell', 'underperform', 'underweight'].includes(g.newGrade.toLowerCase())).length;
+        const holds = grades.length - buys - sells;
+        return `Generally ${buys > sells ? 'positive' : 'neutral'}, with ${buys} buys, ${holds} holds, and ${sells} sells in the last ${grades.length} ratings.`;
+    })();
+    const summary = {
+        companyName: profile.companyName,
+        tickerSymbol: profile.symbol,
+        description: profile.description,
+        sector: profile.sector,
+        industry: profile.industry,
+        marketCap: formatLargeNumber(profile.mktCap),
+        priceRange: profile.range || 'N/A',
+        analystConsensus: analystConsensus,
+        insiderOwnership: 'N/A' // This field is not in the provided profile data
+    };
+
+    // Performance
+    const performance = {
+        revenueTrend: `Revenue ${getTrendStatus(incomeStatements.map(i=>i.revenue), 5, false)}.`,
+        netIncomeTrend: `Net income ${getTrendStatus(incomeStatements.map(i=>i.netIncome), 5, false)}.`,
+        grossProfitMargin: { status: getTrendStatus(keyMetrics.map(k=>k.grossProfitMargin)) },
+        operatingProfitMargin: { status: getTrendStatus(keyMetrics.map(k=>k.operatingProfitMargin)) },
+        netProfitMargin: { status: getTrendStatus(keyMetrics.map(k=>k.netProfitMargin)) },
+        returnOnEquity: { quality: latestMetrics.returnOnEquity > 0.15 ? 'High' : (latestMetrics.returnOnEquity > 0.05 ? 'Moderate' : 'Low') }
+    };
+    
+    // Health
+    const health = {
+        currentRatio: { status: latestMetrics.currentRatio > 2 ? 'Strong' : (latestMetrics.currentRatio > 1 ? 'Healthy' : 'a potential risk') },
+        debtToEquity: { status: latestMetrics.debtToEquity > 1 ? 'Aggressive' : (latestMetrics.debtToEquity > 0.5 ? 'Moderate' : 'Conservative') },
+        interestCoverage: { status: latestMetrics.interestCoverage > 5 ? 'Very strong' : (latestMetrics.interestCoverage > 2 ? 'Healthy' : 'a potential concern') }
+    };
+
+    // Cash Flow
+    const capitalAllocationStory = (() => {
+        const recentFlows = cashFlows.slice(-3);
+        if (recentFlows.length === 0) return "Not enough data.";
+        const total = (key) => recentFlows.reduce((sum, cf) => sum + Math.abs(cf[key] || 0), 0);
+        const capex = total('capitalExpenditure');
+        const dividends = total('dividendsPaid');
+        const buybacks = total('commonStockRepurchased');
+        const debtRepay = total('debtRepayment');
+        const allocations = { 'investing in growth (CapEx)': capex, 'paying dividends': dividends, 'buying back stock': buybacks, 'paying down debt': debtRepay };
+        const largest = Object.keys(allocations).reduce((a, b) => allocations[a] > allocations[b] ? a : b);
+        return `The company is primarily in return/deleveraging mode, with its largest use of cash over the last few years being ${largest}.`;
+    })();
+    const cashFlow = {
+        qualityOfEarnings: latestCashFlow.operatingCashFlow > latestIncome.netIncome ? "Strong, as operating cash flow exceeds net income." : "A potential concern, as net income is higher than operating cash flow.",
+        capitalAllocationStory
+    };
+
+    // Valuation
+    const valuationMetrics = ['peRatio', 'priceToSalesRatio', 'pbRatio', 'enterpriseValueOverEBITDA'];
+    const valuation = valuationMetrics.map(metric => {
+        const current = latestMetrics[metric];
+        const historicalAverage = calculateAverage(keyMetrics, metric);
+        let status = 'N/A';
+        if (current && historicalAverage) {
+            status = current > historicalAverage ? 'trading at a premium to its historical average' : 'trading at a discount to its historical average';
+        }
+        return { metric, status };
+    });
+
+    // Thesis
+    const bullCasePoints = [];
+    if (performance.revenueTrend.includes('growing')) bullCasePoints.push("Consistent or growing revenue.");
+    if (cashFlow.qualityOfEarnings.includes('Strong')) bullCasePoints.push("Strong operating cash flow that exceeds net income.");
+    if (health.debtToEquity.status === 'Conservative') bullCasePoints.push("A strong balance sheet with a conservative debt load.");
+    if (performance.returnOnEquity.quality === 'High') bullCasePoints.push("High return on equity, indicating efficient use of shareholder capital.");
+
+    const bearCasePoints = [];
+    if (performance.revenueTrend.includes('declining')) bearCasePoints.push("Declining or stagnant revenue.");
+    if (performance.netIncomeTrend.includes('declining')) bearCasePoints.push("Declining profitability.");
+    if (health.debtToEquity.status === 'Aggressive') bearCasePoints.push("High debt load, which adds financial risk.");
+    if (health.currentRatio.status === 'a potential risk') bearCasePoints.push("Low liquidity, which could be a short-term risk.");
+    
+    const moatIndicator = (() => {
+        const highRoe = keyMetrics.slice(-5).every(k => k.returnOnEquity > 0.15);
+        const stableMargins = !performance.netProfitMargin.status.includes('declining');
+        if (highRoe && stableMargins) return "The data, showing consistently high ROE and stable margins, suggests the presence of a strong competitive moat.";
+        if (stableMargins) return "The data suggests a potential moat, indicated by stable profit margins.";
+        return "The data does not strongly indicate a durable competitive moat, due to fluctuating margins or returns.";
+    })();
+
+    const thesis = { bullCasePoints, bearCasePoints, moatIndicator };
+    
+    return { summary, performance, health, cashFlow, valuation, thesis };
+}
+
+/**
+ * NEW: Calculates metrics for the "Bull Vs Bear" prompt.
+ */
+function _calculateBullVsBearMetrics(data) {
+    const income = (data.income_statement_annual || []).slice(-5);
+    const metrics = (data.key_metrics_annual || []).slice(-5);
+    const cashFlow = (data.cash_flow_statement_annual || []).slice(-5);
+    const grades = (data.stock_grade_news || []).slice(0, 10);
+    const ratios = (data.ratios_annual || []).slice(-5);
+
+    const formatTrend = (arr, key) => arr.map(item => ({ year: item.calendarYear, value: formatLargeNumber(item[key]) }));
+    const formatPercentTrend = (arr, key) => arr.map(item => ({ year: item.calendarYear, value: item[key] ? `${(item[key] * 100).toFixed(2)}%` : 'N/A' }));
+
+    return {
+        growth_trends: {
+            revenue: formatTrend(income, 'revenue'),
+            net_income: formatTrend(income, 'netIncome')
+        },
+        profitability_metrics: {
+            roe_trend: formatPercentTrend(ratios, 'returnOnEquity'),
+            net_profit_margin_trend: formatPercentTrend(ratios, 'netProfitMargin'),
+            operating_margin_trend: formatPercentTrend(metrics, 'operatingMargin')
+        },
+        cash_flow_trends: {
+            operating_cash_flow: formatTrend(cashFlow, 'operatingCashFlow')
+        },
+        valuation_metrics: {
+            pe_ratio_trend: metrics.map(m => ({ year: m.calendarYear, value: m.peRatio?.toFixed(2) })),
+            pb_ratio_trend: metrics.map(m => ({ year: m.calendarYear, value: m.pbRatio?.toFixed(2) }))
+        },
+        balance_sheet_health: {
+            debt_to_equity_trend: metrics.map(m => ({ year: m.calendarYear, value: m.debtToEquity?.toFixed(2) }))
+        },
+        analyst_ratings: grades.map(g => ({ company: g.gradingCompany, from: g.previousGrade, to: g.newGrade }))
+    };
+}
+
+/**
+ * NEW: Calculates metrics for the "Moat Analysis" prompt.
+ */
+function _calculateMoatAnalysisMetrics(data) {
+    const profile = data.profile?.[0] || {};
+    const metrics = (data.key_metrics_annual || []).slice(-10);
+    const income = (data.income_statement_annual || []).slice(-10);
+    const cashFlow = (data.cash_flow_statement_annual || []).slice(-10);
+
+    const formatPercentTrend = (arr, key) => arr.map(item => ({ year: item.calendarYear, value: item[key] ? `${(item[key] * 100).toFixed(2)}%` : 'N/A' }));
+
+    return {
+        description: profile.description,
+        trends: {
+            returnOnInvestedCapital: formatPercentTrend(metrics, 'returnOnInvestedCapital'),
+            netProfitMargin: formatPercentTrend(metrics, 'netProfitMargin'),
+            operatingIncome: income.map(i => ({ year: i.calendarYear, value: formatLargeNumber(i.operatingIncome) })),
+            grossProfitMargin: formatPercentTrend(metrics, 'grossProfitMargin'),
+            capitalExpenditure: cashFlow.map(cf => ({ year: cf.calendarYear, value: formatLargeNumber(cf.capitalExpenditure) })),
+            researchAndDevelopment: income.map(i => ({ year: i.calendarYear, value: formatLargeNumber(i.researchAndDevelopmentExpenses) }))
+        },
+        latest_health: {
+            debtToEquity: metrics[metrics.length - 1]?.debtToEquity?.toFixed(2) || 'N/A'
+        }
+    };
+}
+
+/**
+ * NEW: Calculates metrics for the "Dividend Safety" prompt.
+ */
+function _calculateDividendSafetyMetrics(data) {
+    const metrics = (data.key_metrics_annual || []).slice(-10);
+    const cashFlow = (data.cash_flow_statement_annual || []).slice(-10);
+    const income = (data.income_statement_annual || []).slice(-10);
+    const balanceSheet = (data.balance_sheet_statement_annual || []).slice(-10);
+
+    const latestMetrics = metrics[metrics.length - 1] || {};
+    
+    // Create a map for easy lookup by year
+    const incomeMap = new Map(income.map(i => [i.calendarYear, i]));
+
+    const payoutRatios = cashFlow.map(cf => {
+        const correspondingIncome = incomeMap.get(cf.calendarYear);
+        const dividends = Math.abs(cf.dividendsPaid || 0);
+        const fcf = cf.freeCashFlow;
+        const netIncome = correspondingIncome?.netIncome;
+
+        return {
+            year: cf.calendarYear,
+            fcf_payout_ratio: (fcf && fcf > 0) ? `${((dividends / fcf) * 100).toFixed(2)}%` : 'N/A',
+            earnings_payout_ratio: (netIncome && netIncome > 0) ? `${((dividends / netIncome) * 100).toFixed(2)}%` : 'N/A'
+        };
+    });
+
+    return {
+        current_yield: latestMetrics.dividendYield ? `${(latestMetrics.dividendYield * 100).toFixed(2)}%` : 'N/A',
+        payout_ratios: payoutRatios,
+        dividend_growth_trend: cashFlow.map(cf => ({ year: cf.calendarYear, dividends_paid: formatLargeNumber(cf.dividendsPaid) })),
+        balance_sheet_trends: {
+            debt_to_equity: metrics.map(m => ({ year: m.calendarYear, value: m.debtToEquity?.toFixed(2) })),
+            cash_cushion: balanceSheet.map(bs => ({ year: bs.calendarYear, value: formatLargeNumber(bs.cashAndCashEquivalents) }))
+        }
+    };
+}
+
+/**
+ * NEW: Calculates metrics for the "Growth Outlook" prompt.
+ */
+function _calculateGrowthOutlookMetrics(data) {
+    const income = (data.income_statement_annual || []).slice(-5);
+    const metrics = (data.key_metrics_annual || []).slice(-5);
+    const grades = (data.stock_grade_news || []).slice(0, 10);
+    const estimates = (data.analyst_estimates || []).slice(0, 5);
+
+    const latestMetrics = metrics[metrics.length - 1] || {};
+
+    return {
+        historical_growth: {
+            revenue_trend: income.map(i => ({ year: i.calendarYear, value: formatLargeNumber(i.revenue) })),
+            net_income_trend: income.map(i => ({ year: i.calendarYear, value: formatLargeNumber(i.netIncome) }))
+        },
+        valuation: {
+            pe_ratio: latestMetrics.peRatio?.toFixed(2) || 'N/A',
+            ev_to_sales: latestMetrics.evToSales?.toFixed(2) || 'N/A'
+        },
+        reinvestment: {
+            rd_as_percent_of_revenue: latestMetrics.researchAndDevelopementToRevenue ? `${(latestMetrics.researchAndDevelopementToRevenue * 100).toFixed(2)}%` : 'N/A',
+            capex_as_percent_of_revenue: latestMetrics.capexToRevenue ? `${(latestMetrics.capexToRevenue * 100).toFixed(2)}%` : 'N/A'
+        },
+        market_expectations: {
+            analyst_grades: grades.map(g => ({ date: g.date, company: g.gradingCompany, action: g.action, from: g.previousGrade, to: g.newGrade })),
+            future_estimates: estimates.map(e => ({
+                date: e.date,
+                revenue_avg: formatLargeNumber(e.estimatedRevenueAvg),
+                eps_avg: e.estimatedEpsAvg?.toFixed(2)
+            }))
+        }
+    };
+}
+
+/**
+ * NEW: Calculates metrics for the "Risk Assessment" prompt.
+ */
+function _calculateRiskAssessmentMetrics(data) {
+    const profile = data.profile?.[0] || {};
+    const metrics = (data.key_metrics_annual || []).slice(-5);
+    const cashFlow = (data.cash_flow_statement_annual || []).slice(-5);
+    const income = (data.income_statement_annual || []).slice(-5);
+    const grades = (data.stock_grade_news || []).slice(0, 10);
+
+    const latestMetrics = metrics[metrics.length - 1] || {};
+    const latestCashFlow = cashFlow[cashFlow.length - 1] || {};
+    const latestIncome = income[income.length - 1] || {};
+
+    return {
+        financial_risks: {
+            debt_to_equity: latestMetrics.debtToEquity?.toFixed(2) || 'N/A',
+            current_ratio: latestMetrics.currentRatio?.toFixed(2) || 'N/A',
+            earnings_quality: {
+                operating_cash_flow: formatLargeNumber(latestCashFlow.operatingCashFlow),
+                net_income: formatLargeNumber(latestIncome.netIncome)
+            },
+            dividend_sustainability: {
+                dividends_paid: formatLargeNumber(Math.abs(latestCashFlow.dividendsPaid)),
+                net_income: formatLargeNumber(latestIncome.netIncome)
+            }
+        },
+        market_risks: {
+            beta: profile.beta?.toFixed(2) || 'N/A',
+            valuation: {
+                pe_ratio: latestMetrics.peRatio?.toFixed(2) || 'N/A',
+                ps_ratio: latestMetrics.priceToSalesRatio?.toFixed(2) || 'N/A'
+            },
+            analyst_pessimism: grades.filter(g => ['sell', 'underperform', 'underweight'].includes(g.newGrade.toLowerCase()))
+                                    .map(g => `${g.gradingCompany} rated ${g.newGrade}`)
+        },
+        business_risks: {
+            recession_sensitivity_sector: profile.sector,
+            margin_trend: metrics.map(m => ({ year: m.calendarYear, net_profit_margin: m.netProfitMargin ? `${(m.netProfitMargin * 100).toFixed(2)}%` : 'N/A' })),
+            net_interest_margin_trend: (profile.sector === 'Financial Services') ? metrics.map(m => ({ year: m.calendarYear, net_interest_margin: m.netInterestMargin ? `${(m.netInterestMargin * 100).toFixed(2)}%` : 'N/A' })) : 'N/A for this sector'
+        }
+    };
+}
+
+/**
+ * NEW: Calculates metrics for the "Capital Allocators" prompt.
+ */
+function _calculateCapitalAllocatorsMetrics(data) {
+    const cashFlow = (data.cash_flow_statement_annual || []).slice(-10);
+    const metrics = (data.key_metrics_annual || []).slice(-10);
+    const income = (data.income_statement_annual || []).slice(-10);
+    const balanceSheet = (data.balance_sheet_statement_annual || []).slice(-10);
+
+    // Create a map for easy lookup by year
+    const metricsMap = new Map(metrics.map(m => [m.calendarYear, m]));
+
+    const buyback_vs_valuation = cashFlow.map(cf => {
+        const correspondingMetrics = metricsMap.get(cf.calendarYear);
+        return {
+            year: cf.calendarYear,
+            common_stock_repurchased: formatLargeNumber(cf.commonStockRepurchased),
+            pe_ratio_that_year: correspondingMetrics?.peRatio?.toFixed(2) || 'N/A',
+            pb_ratio_that_year: correspondingMetrics?.priceToBookRatio?.toFixed(2) || 'N/A'
+        };
+    });
+
+    return {
+        cash_flow_statement_annual: cashFlow,
+        key_metrics_annual: metrics,
+        income_statement_annual: income,
+        balance_sheet_statement_annual: balanceSheet,
+        buyback_vs_valuation // Add the correlated data directly
+    };
+}
+
+/**
+ * NEW: Calculates metrics for the "Narrative & Catalyst" prompt.
+ */
+function _calculateNarrativeCatalystMetrics(data) {
+    const profile = data.profile?.[0] || {};
+    const metrics = (data.key_metrics_annual || []).slice(-5);
+    const cashFlow = (data.cash_flow_statement_annual || []).slice(-5);
+    const income = (data.income_statement_annual || []).slice(-5);
+    const grades = (data.stock_grade_news || []).slice(0, 10);
+
+    const latestMetrics = metrics[metrics.length - 1] || {};
+    const latestCashFlow = cashFlow[cashFlow.length - 1] || {};
+    const latestIncome = income[income.length - 1] || {};
+
+    const isGrowthAccelerating = () => {
+        if (income.length < 3) return false;
+        const yoy = (arr, key) => ((arr[arr.length - 1][key] / arr[arr.length - 2][key]) - 1);
+        const latestGrowth = yoy(income, 'revenue');
+        const prevGrowth = yoy(income.slice(0, -1), 'revenue');
+        return latestGrowth > prevGrowth;
+    };
+
+    const isMarginExpanding = () => {
+        if (metrics.length < 2) return false;
+        return metrics[metrics.length - 1].operatingMargin > metrics[metrics.length - 2].operatingMargin;
+    };
+
+    return {
+        profile: { description: profile.description, industry: profile.industry },
+        financial_health: {
+            is_profitable: (latestIncome.netIncome || 0) > 0,
+            is_cash_flow_positive: (latestCashFlow.freeCashFlow || 0) > 0,
+            debt_to_equity: latestMetrics.debtToEquity?.toFixed(2) || 'N/A'
+        },
+        catalysts: {
+            is_growth_accelerating: isGrowthAccelerating(),
+            is_margin_expanding: isMarginExpanding(),
+            has_recent_upgrades: grades.filter(g => g.action.toLowerCase() === 'upgrade').length > 0
+        }
+    };
 }
