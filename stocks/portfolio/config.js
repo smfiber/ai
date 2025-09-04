@@ -75,6 +75,7 @@ export const CONSTANTS = {
     DB_COLLECTION_SCANNER_RESULTS: 'scanner_results',
     DB_COLLECTION_SECTOR_ANALYSIS: 'sector_analysis_runs',
     DB_COLLECTION_USER_DATA: 'user_data', // v14.18.0: New collection for user-specific data like cash
+    DB_DOC_ID_USER_MDA: 'user_mda_summary',
 };
 
 export const SECTOR_ICONS = {
