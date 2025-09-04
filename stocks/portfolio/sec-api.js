@@ -15,9 +15,9 @@ async function callSecQueryApi(queryObject) {
     return data;
 }
 
-export async function getSecInsiderTrading(ticker) {
+export async function getSecInsiderTrading(cik) {
     const queryObject = {
-      "query": { "query_string": { "query": `formType:\"4\" AND ticker:\"${ticker}\"` } },
+      "query": { "query_string": { "query": `formType:\"4\" AND cik:\"${cik}\"` } },
       "from": "0",
       "size": "25",
       "sort": [{ "filedAt": { "order": "desc" } }]
@@ -75,9 +75,9 @@ export async function getSecInstitutionalOwnership(ticker) {
     }).filter(h => h.value > 0); // Filter out cases where the holding might not be found or has no value
 }
 
-export async function getSecMaterialEvents(ticker) {
+export async function getSecMaterialEvents(cik) {
     const queryObject = {
-      "query": { "query_string": { "query": `formType:\"8-K\" AND ticker:\"${ticker}\"` } },
+      "query": { "query_string": { "query": `formType:\"8-K\" AND cik:\"${cik}\"` } },
       "from": "0",
       "size": "25",
       "sort": [{ "filedAt": { "order": "desc" } }]
@@ -86,9 +86,9 @@ export async function getSecMaterialEvents(ticker) {
     return result?.filings || [];
 }
 
-export async function getSecAnnualReports(ticker) {
+export async function getSecAnnualReports(cik) {
     const queryObject = {
-      "query": { "query_string": { "query": `formType:\"10-K\" AND ticker:\"${ticker}\"` } },
+      "query": { "query_string": { "query": `formType:\"10-K\" AND cik:\"${cik}\"` } },
       "from": "0",
       "size": "10",
       "sort": [{ "filedAt": { "order": "desc" } }]
@@ -97,9 +97,9 @@ export async function getSecAnnualReports(ticker) {
     return result?.filings || [];
 }
 
-export async function getSecQuarterlyReports(ticker) {
+export async function getSecQuarterlyReports(cik) {
     const queryObject = {
-      "query": { "query_string": { "query": `formType:\"10-Q\" AND ticker:\"${ticker}\"` } },
+      "query": { "query_string": { "query": `formType:\"10-Q\" AND cik:\"${cik}\"` } },
       "from": "0",
       "size": "10",
       "sort": [{ "filedAt": { "order": "desc" } }]
@@ -129,13 +129,13 @@ async function _callSecTextApi(url) {
 
 /**
  * Fetches the raw text of "Item 1A. Risk Factors" from the latest 10-K filing.
- * @param {string} ticker The stock ticker.
+ * @param {string} cik The company's CIK number.
  * @returns {Promise<string|null>} The text of the section or null if not found.
  */
-export async function getLatest10KRiskFactorsText(ticker) {
+export async function getLatest10KRiskFactorsText(cik) {
     if (!state.secApiKey) return null;
     try {
-        const filings = await getSecAnnualReports(ticker);
+        const filings = await getSecAnnualReports(cik);
         if (!filings || filings.length === 0) return null;
 
         const latestFilingUrl = filings[0].linkToFilingDetails;
@@ -143,20 +143,20 @@ export async function getLatest10KRiskFactorsText(ticker) {
         
         return await _callSecTextApi(extractorUrl);
     } catch (error) {
-        console.warn(`Could not fetch 10-K risk factors for ${ticker}:`, error.message);
+        console.warn(`Could not fetch 10-K risk factors for ${cik}:`, error.message);
         return null;
     }
 }
 
 /**
  * Fetches the raw text of "Item 2. MD&A" from the latest 10-Q filing.
- * @param {string} ticker The stock ticker.
+ * @param {string} cik The company's CIK number.
  * @returns {Promise<string|null>} The text of the section or null if not found.
  */
-export async function getLatest10QMdaText(ticker) {
+export async function getLatest10QMdaText(cik) {
     if (!state.secApiKey) return null;
     try {
-        const filings = await getSecQuarterlyReports(ticker);
+        const filings = await getSecQuarterlyReports(cik);
         if (!filings || filings.length === 0) return null;
 
         const latestFilingUrl = filings[0].linkToFilingDetails;
@@ -164,7 +164,7 @@ export async function getLatest10QMdaText(ticker) {
         
         return await _callSecTextApi(extractorUrl);
     } catch (error) {
-        console.warn(`Could not fetch 10-Q MD&A for ${ticker}:`, error.message);
+        console.warn(`Could not fetch 10-Q MD&A for ${cik}:`, error.message);
         return null;
     }
 }
