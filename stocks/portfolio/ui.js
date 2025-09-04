@@ -246,31 +246,6 @@ async function handleRefreshFmpData(symbol) {
             } catch (error) {
                 console.warn(`Could not fetch executive compensation from SEC-API.io for ${symbol}:`, error.message);
             }
-
-            // Fetch and summarize key SEC filings
-            loadingMessage.textContent = `Fetching & Summarizing SEC Filings for ${symbol}...`;
-            try {
-                const riskFactorsText = await getLatest10KRiskFactorsText(symbol);
-
-                let riskFactorsSummary = 'Not available or not applicable.';
-                if (riskFactorsText && riskFactorsText.length > 100) {
-                    riskFactorsSummary = await summarizeSecFilingSection('Risk Factors', riskFactorsText);
-                }
-                
-                let mdaSummary = 'Not available or not applicable.';
-
-                const secSummariesData = {
-                    cachedAt: Timestamp.now(),
-                    data: { riskFactorsSummary, mdaSummary }
-                };
-
-                const docRef = doc(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, symbol, 'endpoints', 'sec_filing_summaries');
-                await setDoc(docRef, secSummariesData);
-                successfulFetches++;
-
-            } catch (error) {
-                console.warn(`Could not fetch or summarize SEC filings for ${symbol}:`, error.message);
-            }
         }
 
         displayMessageInModal(`Successfully fetched and updated data for ${successfulFetches} endpoint(s).`, 'info');
@@ -862,6 +837,7 @@ async function openRawDataViewer(ticker) {
     const scannerResultsContainer = document.getElementById('scanner-results-tab');
     const secApiContainer = document.getElementById('sec-api-tab');
     const tenQContainer = document.getElementById('ten-q-tab');
+    const tenKContainer = document.getElementById('ten-k-tab');
     
     titleEl.textContent = `Analyzing ${ticker}...`;
     rawDataContainer.innerHTML = '<div class="loader mx-auto"></div>';
@@ -874,6 +850,10 @@ async function openRawDataViewer(ticker) {
     if (secApiContainer) secApiContainer.innerHTML = ''; // Clear sec-api content on open
     if (tenQContainer) {
         const form = tenQContainer.querySelector('form');
+        if (form) form.reset();
+    }
+    if (tenKContainer) {
+        const form = tenKContainer.querySelector('form');
         if (form) form.reset();
     }
 
@@ -2013,6 +1993,70 @@ async function handle10QRequest(ticker) {
     }
 }
 
+// --- USER-PROVIDED 10-K RISK FACTORS ---
+
+async function handleSaveUser10KRisks(e) {
+    e.preventDefault();
+    const modal = document.getElementById('rawDataViewerModal');
+    const ticker = modal.dataset.activeSymbol;
+    if (!ticker) {
+        displayMessageInModal("Could not determine the active stock ticker.", "error");
+        return;
+    }
+
+    const riskDate = document.getElementById('risk-factors-date').value;
+    const riskText = document.getElementById('risk-factors-text').value.trim();
+
+    if (!riskDate || !riskText) {
+        displayMessageInModal("Please provide both a filing date and the Risk Factors text.", "warning");
+        return;
+    }
+
+    openModal(CONSTANTS.MODAL_LOADING);
+    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Saving Risk Factors for ${ticker}...`;
+
+    try {
+        const dataToSave = {
+            date: riskDate,
+            text: riskText
+        };
+
+        const docRef = doc(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, ticker, 'endpoints', CONSTANTS.DB_DOC_ID_USER_10K_RISKS);
+        await setDoc(docRef, {
+            cachedAt: Timestamp.now(),
+            data: dataToSave
+        });
+
+        displayMessageInModal("Custom Risk Factors text saved successfully!", "info");
+    } catch (error) {
+        console.error("Error saving user Risk Factors:", error);
+        displayMessageInModal(`Could not save Risk Factors: ${error.message}`, 'error');
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
+async function handle10KRequest(ticker) {
+    const form = document.getElementById('ten-k-form');
+    if (!form) return;
+    form.reset();
+
+    try {
+        const docRef = doc(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, ticker, 'endpoints', CONSTANTS.DB_DOC_ID_USER_10K_RISKS);
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+            const data = docSnap.data().data;
+            if (data) {
+                document.getElementById('risk-factors-date').value = data.date || '';
+                document.getElementById('risk-factors-text').value = data.text || '';
+            }
+        }
+    } catch (error) {
+        console.warn(`Could not load existing user-provided Risk Factors for ${ticker}:`, error.message);
+    }
+}
+
 
 // --- EVENT LISTENER SETUP ---
 
@@ -2266,6 +2310,7 @@ export function setupEventListeners() {
     document.getElementById('portfolio-chat-form')?.addEventListener('submit', handlePortfolioChatSubmit);
     
     document.getElementById('ten-q-form')?.addEventListener('submit', handleSaveUserMda);
+    document.getElementById('ten-k-form')?.addEventListener('submit', handleSaveUser10KRisks);
 
     document.querySelectorAll('.save-to-drive-button').forEach(button => {
         button.addEventListener('click', (e) => {
@@ -2347,6 +2392,8 @@ export function setupEventListeners() {
                     handleSecApiRequest(activeSymbol);
                 } else if (tabId === 'ten-q') {
                     handle10QRequest(activeSymbol);
+                } else if (tabId === 'ten-k') {
+                    handle10KRequest(activeSymbol);
                 }
             }
             return;
@@ -2397,9 +2444,10 @@ async function getSavedReports(ticker, reportType) {
  * @param {string} newsNarrative - A concise summary of the recent news narrative.
  * @param {Array|null} institutionalHolders - Data from SEC-API.io.
  * @param {string} finalMdaSummary - The definitive MD&A summary to use.
+ * @param {string} finalRiskFactorsSummary - The definitive Risk Factors summary to use.
  * @returns {object} A summary object with pre-calculated metrics and trends.
  */
-function _calculateDeepDiveMetrics(data, newsNarrative, institutionalHolders, finalMdaSummary) {
+function _calculateDeepDiveMetrics(data, newsNarrative, institutionalHolders, finalMdaSummary, finalRiskFactorsSummary) {
     const profile = data.profile?.[0] || {};
     const income = (data.income_statement_annual || []).slice().reverse(); // Oldest to newest
     const keyMetrics = (data.key_metrics_annual || []).slice().reverse();
@@ -2407,7 +2455,6 @@ function _calculateDeepDiveMetrics(data, newsNarrative, institutionalHolders, fi
     const ratios = (data.ratios_annual || []).slice().reverse();
     const analystEstimates = data.analyst_estimates || [];
     const analystGrades = data.stock_grade_news || [];
-    const secSummaries = data.sec_filing_summaries?.data || {};
 
     const latestMetrics = keyMetrics[keyMetrics.length - 1] || {};
     const latestCashFlow = cashFlow[cashFlow.length - 1] || {};
@@ -2534,7 +2581,7 @@ function _calculateDeepDiveMetrics(data, newsNarrative, institutionalHolders, fi
         ps_valuation: valuation('priceToSalesRatio', 'P/S'),
         pb_valuation: valuation('pbRatio', 'P/B'),
         grahamNumber: latestMetrics.grahamNumber ? latestMetrics.grahamNumber.toFixed(2) : 'N/A',
-        latestRiskFactorsSummary: secSummaries.riskFactorsSummary || 'Not available.',
+        latestRiskFactorsSummary: finalRiskFactorsSummary,
         latestMdaSummary: finalMdaSummary
     };
 }
@@ -2601,16 +2648,20 @@ async function handleDeepDiveRequest(symbol, forceNew = false) {
         const newsSummary = await generateNewsSummary(tickerSymbol, companyName);
 
         loadingMessage.textContent = `Analyzing SEC filings...`;
-        const secSummaries = data.sec_filing_summaries?.data || {};
-        let finalMdaSummary = secSummaries.mdaSummary || 'Not available.';
-
-        // Check for and summarize user-provided MD&A if it exists
-        if (data.user_mda_summary?.text) {
-            loadingMessage.textContent = `Summarizing custom MD&A text...`;
-            finalMdaSummary = await summarizeSecFilingSection('MD&A', data.user_mda_summary.text);
+        
+        let finalRiskFactorsSummary = 'Risk factors have not been provided by the user.';
+        if (data.user_10k_risks?.data?.text) {
+            loadingMessage.textContent = `Summarizing custom Risk Factors text...`;
+            finalRiskFactorsSummary = await summarizeSecFilingSection('Risk Factors', data.user_10k_risks.data.text);
         }
 
-        const payloadData = _calculateDeepDiveMetrics(data, newsSummary.dominant_narrative, institutionalHolders, finalMdaSummary);
+        let finalMdaSummary = 'MD&A has not been provided by the user.';
+        if (data.user_mda_summary?.data?.text) {
+            loadingMessage.textContent = `Summarizing custom MD&A text...`;
+            finalMdaSummary = await summarizeSecFilingSection('MD&A', data.user_mda_summary.data.text);
+        }
+
+        const payloadData = _calculateDeepDiveMetrics(data, newsSummary.dominant_narrative, institutionalHolders, finalMdaSummary, finalRiskFactorsSummary);
 
         const prompt = DEEP_DIVE_PROMPT
             .replace(/{companyName}/g, companyName)
