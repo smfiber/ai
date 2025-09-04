@@ -1817,7 +1817,7 @@ function _renderSecMaterialEvents(data) {
         contentHtml = `<p class="text-sm text-gray-500 p-4">No recent material event filings found.</p>`;
     } else {
         contentHtml = `<ul class="space-y-2 p-3">`;
-        data.slice(0, 10).forEach(event => {
+        data.slice(0, 2).forEach(event => {
             contentHtml += `
                 <li class="p-3 bg-gray-50 border rounded-lg flex justify-between items-center text-sm">
                     <span>
@@ -1844,7 +1844,7 @@ function _renderSecAnnualReports(data) {
         contentHtml = `<p class="text-sm text-gray-500 p-4">No recent annual reports found.</p>`;
     } else {
         contentHtml = `<ul class="space-y-2 p-3">`;
-        data.slice(0, 10).forEach(event => {
+        data.slice(0, 2).forEach(event => {
             contentHtml += `
                 <li class="p-3 bg-gray-50 border rounded-lg flex justify-between items-center text-sm">
                     <span>
@@ -1871,7 +1871,7 @@ function _renderSecQuarterlyReports(data) {
         contentHtml = `<p class="text-sm text-gray-500 p-4">No recent quarterly reports found.</p>`;
     } else {
         contentHtml = `<ul class="space-y-2 p-3">`;
-        data.slice(0, 10).forEach(event => {
+        data.slice(0, 2).forEach(event => {
             contentHtml += `
                 <li class="p-3 bg-gray-50 border rounded-lg flex justify-between items-center text-sm">
                     <span>
@@ -1908,13 +1908,18 @@ async function handleSecApiRequest(ticker) {
     }
     
     try {
-        const [insiderTrading, institutionalOwnership, materialEvents, annualReports, quarterlyReports] = await Promise.all([
+        let [insiderTrading, institutionalOwnership, materialEvents, annualReports, quarterlyReports] = await Promise.all([
             getSecInsiderTrading(ticker),
             getSecInstitutionalOwnership(ticker),
             getSecMaterialEvents(ticker),
             getSecAnnualReports(ticker),
             getSecQuarterlyReports(ticker)
         ]);
+        
+        // Failsafe client-side sorting for affected report types
+        materialEvents.sort((a, b) => new Date(b.filedAt) - new Date(a.filedAt));
+        annualReports.sort((a, b) => new Date(b.filedAt) - new Date(a.filedAt));
+        quarterlyReports.sort((a, b) => new Date(b.filedAt) - new Date(a.filedAt));
         
         let html = _renderSecInsiderTrading(insiderTrading);
         html += _renderSecInstitutionalOwnership(institutionalOwnership);
