@@ -1916,10 +1916,14 @@ async function handleSecApiRequest(ticker) {
             getSecQuarterlyReports(ticker)
         ]);
         
-        // Failsafe client-side sorting for affected report types
-        materialEvents.sort((a, b) => new Date(b.filedAt) - new Date(a.filedAt));
-        annualReports.sort((a, b) => new Date(b.filedAt) - new Date(a.filedAt));
-        quarterlyReports.sort((a, b) => new Date(b.filedAt) - new Date(a.filedAt));
+        // Failsafe client-side sorting to ensure newest filings are always first.
+        const sortByFiledAtDesc = (a, b) => new Date(b.filedAt) - new Date(a.filedAt);
+
+        insiderTrading.sort(sortByFiledAtDesc);
+        institutionalOwnership.sort(sortByFiledAtDesc);
+        materialEvents.sort(sortByFiledAtDesc);
+        annualReports.sort(sortByFiledAtDesc);
+        quarterlyReports.sort(sortByFiledAtDesc);
         
         let html = _renderSecInsiderTrading(insiderTrading);
         html += _renderSecInstitutionalOwnership(institutionalOwnership);
