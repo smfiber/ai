@@ -1767,7 +1767,7 @@ function _renderSecInsiderTrading(data) {
         `;
     }
     return `
-        <details class="mb-2 bg-white rounded-lg border">
+        <details class="mb-2 bg-white rounded-lg border" open>
             <summary class="p-3 font-semibold text-gray-700 cursor-pointer hover:bg-gray-50">Recent Insider Trading (Form 4)</summary>
             ${contentHtml}
         </details>
@@ -1804,7 +1804,7 @@ function _renderSecInstitutionalOwnership(data) {
         `;
     }
     return `
-        <details class="mb-2 bg-white rounded-lg border">
+        <details class="mb-2 bg-white rounded-lg border" open>
             <summary class="p-3 font-semibold text-gray-700 cursor-pointer hover:bg-gray-50">Institutional Ownership (13F-HR)</summary>
             ${contentHtml}
         </details>
@@ -1852,7 +1852,7 @@ function _renderSecAnnualReports(data) {
         </ul>`;
     }
     return `
-        <details class="mb-2 bg-white rounded-lg border">
+        <details class="mb-2 bg-white rounded-lg border" open>
             <summary class="p-3 font-semibold text-gray-700 cursor-pointer hover:bg-gray-50">Latest Annual Report (10-K)</summary>
             ${contentHtml}
         </details>
@@ -1899,18 +1899,29 @@ async function handleSecApiRequest(ticker) {
     }
     
     try {
+        const fmpData = await getFmpStockData(ticker);
+        const cik = fmpData?.profile?.[0]?.cik;
+
+        if (!cik) {
+            contentContainer.innerHTML = `<div class="text-center p-4 text-yellow-700 bg-yellow-50 rounded-lg"><p class="font-semibold">CIK Not Found</p><p class="text-sm">Could not find a CIK for ${ticker} in the cached FMP data. SEC filings cannot be reliably retrieved without it.</p></div>`;
+            return;
+        }
+
         let [insiderTrading, institutionalOwnership, materialEvents, annualReports, quarterlyReports] = await Promise.all([
-            getSecInsiderTrading(ticker),
+            getSecInsiderTrading(cik),
             getSecInstitutionalOwnership(ticker),
-            getSecMaterialEvents(ticker),
-            getSecAnnualReports(ticker),
-            getSecQuarterlyReports(ticker)
+            getSecMaterialEvents(cik),
+            getSecAnnualReports(cik),
+            getSecQuarterlyReports(cik)
         ]);
         
-        // Failsafe client-side sorting for insider trading and institutional ownership
         const sortByFiledAtDesc = (a, b) => new Date(b.filedAt) - new Date(a.filedAt);
-        insiderTrading.sort(sortByFiledAtDesc);
-        institutionalOwnership.sort(sortByFiledAtDesc);
+        if (Array.isArray(insiderTrading)) {
+            insiderTrading.sort(sortByFiledAtDesc);
+        }
+        if (Array.isArray(institutionalOwnership)) {
+            institutionalOwnership.sort(sortByFiledAtDesc);
+        }
         
         let html = _renderSecInsiderTrading(insiderTrading);
         html += _renderSecInstitutionalOwnership(institutionalOwnership);
