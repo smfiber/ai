@@ -56,7 +56,7 @@ export async function getSecInstitutionalOwnership(ticker) {
             }
         },
         "from": "0",
-        "size": "100",
+        "size": "50",
         "sort": [{ "filedAt": { "order": "desc" } }]
     };
     const result = await callSecQueryApi(queryObject);
@@ -79,7 +79,7 @@ export async function getSecMaterialEvents(ticker) {
     const queryObject = {
       "query": { "query_string": { "query": `formType:\"8-K\" AND ticker:\"${ticker}\"` } },
       "from": "0",
-      "size": "1",
+      "size": "25",
       "sort": [{ "filedAt": { "order": "desc" } }]
     };
     const result = await callSecQueryApi(queryObject);
@@ -90,7 +90,7 @@ export async function getSecAnnualReports(ticker) {
     const queryObject = {
       "query": { "query_string": { "query": `formType:\"10-K\" AND ticker:\"${ticker}\"` } },
       "from": "0",
-      "size": "1",
+      "size": "10",
       "sort": [{ "filedAt": { "order": "desc" } }]
     };
     const result = await callSecQueryApi(queryObject);
@@ -101,7 +101,7 @@ export async function getSecQuarterlyReports(ticker) {
     const queryObject = {
       "query": { "query_string": { "query": `formType:\"10-Q\" AND ticker:\"${ticker}\"` } },
       "from": "0",
-      "size": "1",
+      "size": "10",
       "sort": [{ "filedAt": { "order": "desc" } }]
     };
     const result = await callSecQueryApi(queryObject);
