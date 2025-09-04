@@ -1779,7 +1779,7 @@ function _renderSecInstitutionalOwnership(data) {
     if (!data || data.length === 0) {
         contentHtml = `<p class="text-sm text-gray-500 p-4">No institutional ownership data found.</p>`;
     } else {
-        const tableRows = data.slice(0, 10).map(holder => `
+        const tableRows = data.slice(0, 100).map(holder => `
             <tr>
                 <td class="p-3 text-gray-700">${sanitizeText(holder.investorName)}</td>
                 <td class="p-3 text-right text-gray-700">${holder.shares?.toLocaleString() || 'N/A'}</td>
@@ -2445,9 +2445,10 @@ async function getSavedReports(ticker, reportType) {
  * @param {Array|null} institutionalHolders - Data from SEC-API.io.
  * @param {string} finalMdaSummary - The definitive MD&A summary to use.
  * @param {string} finalRiskFactorsSummary - The definitive Risk Factors summary to use.
+ * @param {string} institutionalOwnershipTimeframe - The calculated timeframe of the filings.
  * @returns {object} A summary object with pre-calculated metrics and trends.
  */
-function _calculateDeepDiveMetrics(data, newsNarrative, institutionalHolders, finalMdaSummary, finalRiskFactorsSummary) {
+function _calculateDeepDiveMetrics(data, newsNarrative, institutionalHolders, finalMdaSummary, finalRiskFactorsSummary, institutionalOwnershipTimeframe = 'Recent filings data.') {
     const profile = data.profile?.[0] || {};
     const income = (data.income_statement_annual || []).slice().reverse(); // Oldest to newest
     const keyMetrics = (data.key_metrics_annual || []).slice().reverse();
@@ -2568,6 +2569,7 @@ function _calculateDeepDiveMetrics(data, newsNarrative, institutionalHolders, fi
             const sortedHolders = institutionalHolders.sort((a, b) => b.value - a.value);
             return sortedHolders.slice(0, 5).map(h => `${h.investorName} (holding value: ${formatLargeNumber(h.value)})`);
         })(),
+        institutionalOwnershipTimeframe: institutionalOwnershipTimeframe,
         roeTrend: formatTrend(ratios, 'returnOnEquity'),
         grossMarginTrend: formatTrend(ratios, 'grossProfitMargin'),
         netMarginTrend: formatTrend(ratios, 'netProfitMargin'),
@@ -2661,7 +2663,21 @@ async function handleDeepDiveRequest(symbol, forceNew = false) {
             finalMdaSummary = await summarizeSecFilingSection('MD&A', data.user_mda_summary.data.text);
         }
 
-        const payloadData = _calculateDeepDiveMetrics(data, newsSummary.dominant_narrative, institutionalHolders, finalMdaSummary, finalRiskFactorsSummary);
+        let institutionalOwnershipTimeframe = 'Recent filings data.';
+        if (institutionalHolders && institutionalHolders.length > 1) {
+            const newestDate = new Date(institutionalHolders[0].filedAt);
+            const oldestDate = new Date(institutionalHolders[institutionalHolders.length - 1].filedAt);
+            const months = (newestDate.getFullYear() - oldestDate.getFullYear()) * 12 + (newestDate.getMonth() - oldestDate.getMonth());
+            if (months <= 1) {
+                institutionalOwnershipTimeframe = 'Filings from the last month.';
+            } else {
+                institutionalOwnershipTimeframe = `Filings from the last ${months} months.`;
+            }
+        } else if (institutionalHolders && institutionalHolders.length === 1) {
+            institutionalOwnershipTimeframe = 'A single recent filing.';
+        }
+
+        const payloadData = _calculateDeepDiveMetrics(data, newsSummary.dominant_narrative, institutionalHolders, finalMdaSummary, finalRiskFactorsSummary, institutionalOwnershipTimeframe);
 
         const prompt = DEEP_DIVE_PROMPT
             .replace(/{companyName}/g, companyName)
