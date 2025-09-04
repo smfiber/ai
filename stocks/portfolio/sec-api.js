@@ -75,9 +75,9 @@ export async function getSecInstitutionalOwnership(ticker) {
     }).filter(h => h.value > 0); // Filter out cases where the holding might not be found or has no value
 }
 
-export async function getSecMaterialEvents(cik) {
+export async function getSecMaterialEvents(ticker) {
     const queryObject = {
-      "query": { "query_string": { "query": `formType:\"8-K\" AND cik:\"${cik}\"` } },
+      "query": { "query_string": { "query": `formType:\"8-K\" AND ticker:\"${ticker}\"` } },
       "from": "0",
       "size": "25",
       "sort": [{ "filedAt": { "order": "desc" } }]
@@ -86,9 +86,9 @@ export async function getSecMaterialEvents(cik) {
     return result?.filings || [];
 }
 
-export async function getSecAnnualReports(cik) {
+export async function getSecAnnualReports(ticker) {
     const queryObject = {
-      "query": { "query_string": { "query": `formType:\"10-K\" AND cik:\"${cik}\"` } },
+      "query": { "query_string": { "query": `formType:\"10-K\" AND ticker:\"${ticker}\"` } },
       "from": "0",
       "size": "10",
       "sort": [{ "filedAt": { "order": "desc" } }]
@@ -97,9 +97,9 @@ export async function getSecAnnualReports(cik) {
     return result?.filings || [];
 }
 
-export async function getSecQuarterlyReports(cik) {
+export async function getSecQuarterlyReports(ticker) {
     const queryObject = {
-      "query": { "query_string": { "query": `formType:\"10-Q\" AND cik:\"${cik}\"` } },
+      "query": { "query_string": { "query": `formType:\"10-Q\" AND ticker:\"${ticker}\"` } },
       "from": "0",
       "size": "10",
       "sort": [{ "filedAt": { "order": "desc" } }]
