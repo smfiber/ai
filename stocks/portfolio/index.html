@@ -412,7 +412,8 @@
                     <button class="tab-button" data-tab="trend-analysis">Trend Analysis</button>
                     <button class="tab-button" data-tab="scanner-results">Scanner Results</button>
                     <button class="tab-button" data-tab="sec-api">SEC API</button>
-                    <button class="tab-button" data-tab="ten-q">10 Q</button>
+                    <button class="tab-button" data-tab="ten-q">10-Q</button>
+                    <button class="tab-button" data-tab="ten-k">10-K</button>
                 </nav>
             </div>
 
@@ -456,12 +457,35 @@
                                 <input type="date" id="mda-date" name="mda-date" class="mt-1 block w-full max-w-sm border border-gray-300 rounded-md shadow-sm p-2" required>
                             </div>
                             <div>
-                                <label for="mda-text" class="block text-sm font-medium text-gray-700">MANAGEMENT’S DISCUSSION</label>
+                                <label for="mda-text" class="block text-sm font-medium text-gray-700">MD&A Text</label>
                                 <textarea id="mda-text" name="mda-text" rows="15" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 font-mono text-sm" placeholder="Paste the full MD&A text here..."></textarea>
                             </div>
                         </div>
                         <div class="mt-6 flex justify-end">
                             <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg">Save MD&A</button>
+                        </div>
+                    </form>
+                </div>
+                
+                <div id="ten-k-tab" class="tab-content hidden p-6">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4">User-Provided 10-K Risk Factors</h3>
+                    <p class="text-sm text-gray-500 mb-6">
+                        You can manually provide the "Risk Factors" section from a 10-K filing here.
+                        This text will be used to generate the risk summary in the "AI Analysis" tab.
+                    </p>
+                    <form id="ten-k-form">
+                        <div class="space-y-4">
+                            <div>
+                                <label for="risk-factors-date" class="block text-sm font-medium text-gray-700">Filing Date</label>
+                                <input type="date" id="risk-factors-date" name="risk-factors-date" class="mt-1 block w-full max-w-sm border border-gray-300 rounded-md shadow-sm p-2" required>
+                            </div>
+                            <div>
+                                <label for="risk-factors-text" class="block text-sm font-medium text-gray-700">Risk Factors Text</label>
+                                <textarea id="risk-factors-text" name="risk-factors-text" rows="15" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 font-mono text-sm" placeholder="Paste the full Risk Factors text here..."></textarea>
+                            </div>
+                        </div>
+                        <div class="mt-6 flex justify-end">
+                            <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg">Save Risk Factors</button>
                         </div>
                     </form>
                 </div>
