@@ -1814,25 +1814,22 @@ function _renderSecInstitutionalOwnership(data) {
 function _renderSecMaterialEvents(data) {
     let contentHtml = '';
     if (!data || data.length === 0) {
-        contentHtml = `<p class="text-sm text-gray-500 p-4">No recent material event filings found.</p>`;
+        contentHtml = `<p class="text-sm text-gray-500 p-4">No recent material event filing found.</p>`;
     } else {
-        contentHtml = `<ul class="space-y-2 p-3">`;
-        data.slice(0, 2).forEach(event => {
-            contentHtml += `
-                <li class="p-3 bg-gray-50 border rounded-lg flex justify-between items-center text-sm">
-                    <span>
-                        <strong>Filed:</strong> ${new Date(event.filedAt).toLocaleDateString()} - 
-                        <span class="text-gray-600">${sanitizeText(event.formType)}</span>
-                    </span>
-                    <a href="${sanitizeText(event.linkToFilingDetails)}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:underline font-semibold">View Filing</a>
-                </li>
-            `;
-        });
-        contentHtml += `</ul>`;
+        const event = data[0];
+        contentHtml = `<ul class="space-y-2 p-3">
+            <li class="p-3 bg-gray-50 border rounded-lg flex justify-between items-center text-sm">
+                <span>
+                    <strong>Filed:</strong> ${new Date(event.filedAt).toLocaleDateString()} - 
+                    <span class="text-gray-600">${sanitizeText(event.formType)}</span>
+                </span>
+                <a href="${sanitizeText(event.linkToFilingDetails)}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:underline font-semibold">View Filing</a>
+            </li>
+        </ul>`;
     }
      return `
-        <details class="mb-2 bg-white rounded-lg border">
-            <summary class="p-3 font-semibold text-gray-700 cursor-pointer hover:bg-gray-50">Material Events (8-K)</summary>
+        <details class="mb-2 bg-white rounded-lg border" open>
+            <summary class="p-3 font-semibold text-gray-700 cursor-pointer hover:bg-gray-50">Latest Material Event (8-K)</summary>
             ${contentHtml}
         </details>
     `;
@@ -1841,25 +1838,22 @@ function _renderSecMaterialEvents(data) {
 function _renderSecAnnualReports(data) {
     let contentHtml = '';
     if (!data || data.length === 0) {
-        contentHtml = `<p class="text-sm text-gray-500 p-4">No recent annual reports found.</p>`;
+        contentHtml = `<p class="text-sm text-gray-500 p-4">No recent annual report found.</p>`;
     } else {
-        contentHtml = `<ul class="space-y-2 p-3">`;
-        data.slice(0, 2).forEach(event => {
-            contentHtml += `
-                <li class="p-3 bg-gray-50 border rounded-lg flex justify-between items-center text-sm">
-                    <span>
-                        <strong>Filed:</strong> ${new Date(event.filedAt).toLocaleDateString()} - 
-                        <span class="text-gray-600">${sanitizeText(event.formType)}</span>
-                    </span>
-                    <a href="${sanitizeText(event.linkToFilingDetails)}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:underline font-semibold">View Filing</a>
-                </li>
-            `;
-        });
-        contentHtml += `</ul>`;
+        const event = data[0];
+        contentHtml = `<ul class="space-y-2 p-3">
+            <li class="p-3 bg-gray-50 border rounded-lg flex justify-between items-center text-sm">
+                <span>
+                    <strong>Filed:</strong> ${new Date(event.filedAt).toLocaleDateString()} - 
+                    <span class="text-gray-600">${sanitizeText(event.formType)}</span>
+                </span>
+                <a href="${sanitizeText(event.linkToFilingDetails)}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:underline font-semibold">View Filing</a>
+            </li>
+        </ul>`;
     }
     return `
         <details class="mb-2 bg-white rounded-lg border">
-            <summary class="p-3 font-semibold text-gray-700 cursor-pointer hover:bg-gray-50">Recent Annual Reports (10-K)</summary>
+            <summary class="p-3 font-semibold text-gray-700 cursor-pointer hover:bg-gray-50">Latest Annual Report (10-K)</summary>
             ${contentHtml}
         </details>
     `;
@@ -1868,25 +1862,22 @@ function _renderSecAnnualReports(data) {
 function _renderSecQuarterlyReports(data) {
     let contentHtml = '';
     if (!data || data.length === 0) {
-        contentHtml = `<p class="text-sm text-gray-500 p-4">No recent quarterly reports found.</p>`;
+        contentHtml = `<p class="text-sm text-gray-500 p-4">No recent quarterly report found.</p>`;
     } else {
-        contentHtml = `<ul class="space-y-2 p-3">`;
-        data.slice(0, 2).forEach(event => {
-            contentHtml += `
-                <li class="p-3 bg-gray-50 border rounded-lg flex justify-between items-center text-sm">
-                    <span>
-                        <strong>Filed:</strong> ${new Date(event.filedAt).toLocaleDateString()} - 
-                        <span class="text-gray-600">${sanitizeText(event.formType)}</span>
-                    </span>
-                    <a href="${sanitizeText(event.linkToFilingDetails)}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:underline font-semibold">View Filing</a>
-                </li>
-            `;
-        });
-        contentHtml += `</ul>`;
+        const event = data[0];
+        contentHtml = `<ul class="space-y-2 p-3">
+            <li class="p-3 bg-gray-50 border rounded-lg flex justify-between items-center text-sm">
+                <span>
+                    <strong>Filed:</strong> ${new Date(event.filedAt).toLocaleDateString()} - 
+                    <span class="text-gray-600">${sanitizeText(event.formType)}</span>
+                </span>
+                <a href="${sanitizeText(event.linkToFilingDetails)}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:underline font-semibold">View Filing</a>
+            </li>
+        </ul>`;
     }
     return `
         <details class="mb-2 bg-white rounded-lg border" open>
-            <summary class="p-3 font-semibold text-gray-700 cursor-pointer hover:bg-gray-50">Recent Quarterly Reports (10-Q)</summary>
+            <summary class="p-3 font-semibold text-gray-700 cursor-pointer hover:bg-gray-50">Latest Quarterly Report (10-Q)</summary>
             ${contentHtml}
         </details>
     `;
@@ -1916,14 +1907,10 @@ async function handleSecApiRequest(ticker) {
             getSecQuarterlyReports(ticker)
         ]);
         
-        // Failsafe client-side sorting to ensure newest filings are always first.
+        // Failsafe client-side sorting for insider trading and institutional ownership
         const sortByFiledAtDesc = (a, b) => new Date(b.filedAt) - new Date(a.filedAt);
-
         insiderTrading.sort(sortByFiledAtDesc);
         institutionalOwnership.sort(sortByFiledAtDesc);
-        materialEvents.sort(sortByFiledAtDesc);
-        annualReports.sort(sortByFiledAtDesc);
-        quarterlyReports.sort(sortByFiledAtDesc);
         
         let html = _renderSecInsiderTrading(insiderTrading);
         html += _renderSecInstitutionalOwnership(institutionalOwnership);
