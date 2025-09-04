@@ -865,6 +865,7 @@ async function openRawDataViewer(ticker) {
     const newsContentContainer = document.getElementById('news-content-container');
     const scannerResultsContainer = document.getElementById('scanner-results-tab');
     const secApiContainer = document.getElementById('sec-api-tab');
+    const tenQContainer = document.getElementById('ten-q-tab');
     
     titleEl.textContent = `Analyzing ${ticker}...`;
     rawDataContainer.innerHTML = '<div class="loader mx-auto"></div>';
@@ -875,6 +876,10 @@ async function openRawDataViewer(ticker) {
     if (newsContentContainer) newsContentContainer.innerHTML = ''; // Clear news content on open
     if (scannerResultsContainer) scannerResultsContainer.innerHTML = ''; // Clear scanner content on open
     if (secApiContainer) secApiContainer.innerHTML = ''; // Clear sec-api content on open
+    if (tenQContainer) {
+        const form = tenQContainer.querySelector('form');
+        if (form) form.reset();
+    }
 
 
     document.querySelectorAll('#rawDataViewerModal .tab-content').forEach(c => c.classList.add('hidden'));
@@ -1950,6 +1955,70 @@ async function handleSecApiRequest(ticker) {
     }
 }
 
+// --- USER-PROVIDED 10-Q MD&A ---
+
+async function handleSaveUserMda(e) {
+    e.preventDefault();
+    const modal = document.getElementById('rawDataViewerModal');
+    const ticker = modal.dataset.activeSymbol;
+    if (!ticker) {
+        displayMessageInModal("Could not determine the active stock ticker.", "error");
+        return;
+    }
+
+    const mdaDate = document.getElementById('mda-date').value;
+    const mdaText = document.getElementById('mda-text').value.trim();
+
+    if (!mdaDate || !mdaText) {
+        displayMessageInModal("Please provide both a filing date and the MD&A text.", "warning");
+        return;
+    }
+
+    openModal(CONSTANTS.MODAL_LOADING);
+    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Saving MD&A for ${ticker}...`;
+
+    try {
+        const dataToSave = {
+            date: mdaDate,
+            text: mdaText
+        };
+
+        const docRef = doc(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, ticker, 'endpoints', CONSTANTS.DB_DOC_ID_USER_MDA);
+        await setDoc(docRef, {
+            cachedAt: Timestamp.now(),
+            data: dataToSave
+        });
+
+        displayMessageInModal("Custom MD&A text saved successfully!", "info");
+    } catch (error) {
+        console.error("Error saving user MD&A:", error);
+        displayMessageInModal(`Could not save MD&A: ${error.message}`, 'error');
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
+async function handle10QRequest(ticker) {
+    const form = document.getElementById('ten-q-form');
+    if (!form) return;
+    form.reset();
+
+    try {
+        const docRef = doc(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, ticker, 'endpoints', CONSTANTS.DB_DOC_ID_USER_MDA);
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+            const data = docSnap.data().data;
+            if (data) {
+                document.getElementById('mda-date').value = data.date || '';
+                document.getElementById('mda-text').value = data.text || '';
+            }
+        }
+    } catch (error) {
+        console.warn(`Could not load existing user-provided MD&A for ${ticker}:`, error.message);
+    }
+}
+
 
 // --- EVENT LISTENER SETUP ---
 
@@ -2201,6 +2270,8 @@ export function setupEventListeners() {
     document.getElementById('cancel-broad-endpoint-edit')?.addEventListener('click', cancelBroadEndpointEdit);
 
     document.getElementById('portfolio-chat-form')?.addEventListener('submit', handlePortfolioChatSubmit);
+    
+    document.getElementById('ten-q-form')?.addEventListener('submit', handleSaveUserMda);
 
     document.querySelectorAll('.save-to-drive-button').forEach(button => {
         button.addEventListener('click', (e) => {
@@ -2280,6 +2351,8 @@ export function setupEventListeners() {
                     handleScannerResultsRequest(activeSymbol);
                 } else if (tabId === 'sec-api') {
                     handleSecApiRequest(activeSymbol);
+                } else if (tabId === 'ten-q') {
+                    handle10QRequest(activeSymbol);
                 }
             }
             return;
@@ -2329,9 +2402,10 @@ async function getSavedReports(ticker, reportType) {
  * @param {object} data - The full FMP data object for a stock.
  * @param {string} newsNarrative - A concise summary of the recent news narrative.
  * @param {Array|null} institutionalHolders - Data from SEC-API.io.
+ * @param {string} finalMdaSummary - The definitive MD&A summary to use.
  * @returns {object} A summary object with pre-calculated metrics and trends.
  */
-function _calculateDeepDiveMetrics(data, newsNarrative, institutionalHolders) {
+function _calculateDeepDiveMetrics(data, newsNarrative, institutionalHolders, finalMdaSummary) {
     const profile = data.profile?.[0] || {};
     const income = (data.income_statement_annual || []).slice().reverse(); // Oldest to newest
     const keyMetrics = (data.key_metrics_annual || []).slice().reverse();
@@ -2467,7 +2541,7 @@ function _calculateDeepDiveMetrics(data, newsNarrative, institutionalHolders) {
         pb_valuation: valuation('pbRatio', 'P/B'),
         grahamNumber: latestMetrics.grahamNumber ? latestMetrics.grahamNumber.toFixed(2) : 'N/A',
         latestRiskFactorsSummary: secSummaries.riskFactorsSummary || 'Not available.',
-        latestMdaSummary: secSummaries.mdaSummary || 'Not available.'
+        latestMdaSummary: finalMdaSummary
     };
 }
 
@@ -2532,7 +2606,17 @@ async function handleDeepDiveRequest(symbol, forceNew = false) {
         
         const newsSummary = await generateNewsSummary(tickerSymbol, companyName);
 
-        const payloadData = _calculateDeepDiveMetrics(data, newsSummary.dominant_narrative, institutionalHolders);
+        loadingMessage.textContent = `Analyzing SEC filings...`;
+        const secSummaries = data.sec_filing_summaries?.data || {};
+        let finalMdaSummary = secSummaries.mdaSummary || 'Not available.';
+
+        // Check for and summarize user-provided MD&A if it exists
+        if (data.user_mda_summary?.data?.text) {
+            loadingMessage.textContent = `Summarizing custom MD&A text...`;
+            finalMdaSummary = await summarizeSecFilingSection('MD&A', data.user_mda_summary.data.text);
+        }
+
+        const payloadData = _calculateDeepDiveMetrics(data, newsSummary.dominant_narrative, institutionalHolders, finalMdaSummary);
 
         const prompt = DEEP_DIVE_PROMPT
             .replace(/{companyName}/g, companyName)
