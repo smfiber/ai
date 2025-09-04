@@ -251,7 +251,6 @@ async function handleRefreshFmpData(symbol) {
             loadingMessage.textContent = `Fetching & Summarizing SEC Filings for ${symbol}...`;
             try {
                 const riskFactorsText = await getLatest10KRiskFactorsText(symbol);
-                const mdaText = await getLatest10QMdaText(symbol);
 
                 let riskFactorsSummary = 'Not available or not applicable.';
                 if (riskFactorsText && riskFactorsText.length > 100) {
@@ -259,9 +258,6 @@ async function handleRefreshFmpData(symbol) {
                 }
                 
                 let mdaSummary = 'Not available or not applicable.';
-                if (mdaText && mdaText.length > 100) {
-                    mdaSummary = await summarizeSecFilingSection('MD&A', mdaText);
-                }
 
                 const secSummariesData = {
                     cachedAt: Timestamp.now(),
@@ -2611,9 +2607,9 @@ async function handleDeepDiveRequest(symbol, forceNew = false) {
         let finalMdaSummary = secSummaries.mdaSummary || 'Not available.';
 
         // Check for and summarize user-provided MD&A if it exists
-        if (data.user_mda_summary?.data?.text) {
+        if (data.user_mda_summary?.text) {
             loadingMessage.textContent = `Summarizing custom MD&A text...`;
-            finalMdaSummary = await summarizeSecFilingSection('MD&A', data.user_mda_summary.data.text);
+            finalMdaSummary = await summarizeSecFilingSection('MD&A', data.user_mda_summary.text);
         }
 
         const payloadData = _calculateDeepDiveMetrics(data, newsSummary.dominant_narrative, institutionalHolders, finalMdaSummary);
