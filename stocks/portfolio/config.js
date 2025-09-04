@@ -147,7 +147,7 @@ Begin with a concise, one-paragraph summary. What is the most important takeaway
 - Summarize the dominant news narrative. How does this recent story frame the company's current situation and potential future?
 ### Key Stakeholder Analysis
 - **Insider Transactions:** Based on the 6-month transaction summary, are company insiders net buyers or sellers of the stock? What does this suggest about their confidence in the company's near-term prospects?
-- **Institutional Ownership:** Who are the top institutional holders? Does the ownership structure suggest a high level of conviction from sophisticated investors?
+- **Institutional Ownership:** Based on recent 13F filings, who are some of the largest institutional holders? Does this snapshot of ownership suggest a high level of conviction from sophisticated investors?
 
 ## 3. Business Quality & Competitive Moat
 ### Business Description
