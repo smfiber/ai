@@ -1910,9 +1910,9 @@ async function handleSecApiRequest(ticker) {
         let [insiderTrading, institutionalOwnership, materialEvents, annualReports, quarterlyReports] = await Promise.all([
             getSecInsiderTrading(cik),
             getSecInstitutionalOwnership(ticker),
-            getSecMaterialEvents(cik),
-            getSecAnnualReports(cik),
-            getSecQuarterlyReports(cik)
+            getSecMaterialEvents(ticker),
+            getSecAnnualReports(ticker),
+            getSecQuarterlyReports(ticker)
         ]);
         
         const sortByFiledAtDesc = (a, b) => new Date(b.filedAt) - new Date(a.filedAt);
