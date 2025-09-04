@@ -1753,17 +1753,17 @@ function _renderSecInsiderTrading(data) {
         contentHtml = `<p class="text-sm text-gray-500 p-4">No recent insider transactions found.</p>`;
     } else {
         const tableRows = data.slice(0, 20).map(txn => {
-            const type = txn.transactionType.startsWith('P') ? '<span class="font-semibold text-green-600">Purchase</span>' :
-                         txn.transactionType.startsWith('S') ? '<span class="font-semibold text-red-600">Sale</span>' :
+            const type = txn.transactionCode === 'P' ? '<span class="font-semibold text-green-600">Purchase</span>' :
+                         txn.transactionCode === 'S' ? '<span class="font-semibold text-red-600">Sale</span>' :
                          'Other';
             return `
                 <tr>
-                    <td class="p-3 text-gray-700">${sanitizeText(txn.reportingName)}</td>
-                    <td class="p-3 text-gray-700">${new Date(txn.transactionDate).toLocaleDateString()}</td>
+                    <td class="p-3 text-gray-700">${sanitizeText(txn.reportingOwnerName)}</td>
+                    <td class="p-3 text-gray-700">${new Date(txn.filedAt).toLocaleDateString()}</td>
                     <td class="p-3">${type}</td>
-                    <td class="p-3 text-right text-gray-700">${txn.securitiesTransacted?.toLocaleString() || 'N/A'}</td>
-                    <td class="p-3 text-right text-gray-700">${txn.price ? formatCurrency(txn.price) : 'N/A'}</td>
-                    <td class="p-3 text-center"><a href="${sanitizeText(txn.url)}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:underline">View</a></td>
+                    <td class="p-3 text-right text-gray-700">${txn.transactionShares?.toLocaleString() || 'N/A'}</td>
+                    <td class="p-3 text-right text-gray-700">${txn.transactionPricePerShare ? formatCurrency(txn.transactionPricePerShare) : 'N/A'}</td>
+                    <td class="p-3 text-center"><a href="${sanitizeText(txn.linkToFilingDetails)}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:underline">View</a></td>
                 </tr>
             `;
         }).join('');
@@ -1799,7 +1799,7 @@ function _renderSecInstitutionalOwnership(data) {
     if (!data || data.length === 0) {
         contentHtml = `<p class="text-sm text-gray-500 p-4">No institutional ownership data found.</p>`;
     } else {
-        const tableRows = data.sort((a, b) => b.value - a.value).slice(0, 10).map(holder => `
+        const tableRows = data.slice(0, 10).map(holder => `
             <tr>
                 <td class="p-3 text-gray-700">${sanitizeText(holder.investorName)}</td>
                 <td class="p-3 text-right text-gray-700">${holder.shares?.toLocaleString() || 'N/A'}</td>
@@ -1928,17 +1928,15 @@ async function handleSecApiRequest(ticker) {
     }
     
     try {
-        const fmpData = await getFmpStockData(ticker);
-        const insiderTradingFmp = fmpData?.insider_trading || [];
-
-        const [institutionalOwnership, materialEvents, annualReports, quarterlyReports] = await Promise.all([
+        const [insiderTrading, institutionalOwnership, materialEvents, annualReports, quarterlyReports] = await Promise.all([
+            getSecInsiderTrading(ticker),
             getSecInstitutionalOwnership(ticker),
             getSecMaterialEvents(ticker),
             getSecAnnualReports(ticker),
             getSecQuarterlyReports(ticker)
         ]);
         
-        let html = _renderSecInsiderTrading(insiderTradingFmp);
+        let html = _renderSecInsiderTrading(insiderTrading);
         html += _renderSecInstitutionalOwnership(institutionalOwnership);
         html += _renderSecMaterialEvents(materialEvents);
         html += _renderSecAnnualReports(annualReports);
