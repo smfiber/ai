@@ -2451,7 +2451,7 @@ function _calculateDeepDiveMetrics(data, newsNarrative, institutionalHolders) {
                 return ['Institutional ownership data not available.'];
             }
             const sortedHolders = institutionalHolders.sort((a, b) => b.value - a.value);
-            return sortedHolders.slice(0, 5).map(h => h.investorName);
+            return sortedHolders.slice(0, 5).map(h => `${h.investorName} (holding value: ${formatLargeNumber(h.value)})`);
         })(),
         roeTrend: formatTrend(ratios, 'returnOnEquity'),
         grossMarginTrend: formatTrend(ratios, 'grossProfitMargin'),
