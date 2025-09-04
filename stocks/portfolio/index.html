@@ -412,6 +412,7 @@
                     <button class="tab-button" data-tab="trend-analysis">Trend Analysis</button>
                     <button class="tab-button" data-tab="scanner-results">Scanner Results</button>
                     <button class="tab-button" data-tab="sec-api">SEC API</button>
+                    <button class="tab-button" data-tab="ten-q">10 Q</button>
                 </nav>
             </div>
 
@@ -441,6 +442,29 @@
                 <div id="scanner-results-tab" class="tab-content hidden p-6"></div>
                 
                 <div id="sec-api-tab" class="tab-content hidden p-6"></div>
+
+                <div id="ten-q-tab" class="tab-content hidden p-6">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4">User-Provided 10-Q MD&A</h3>
+                    <p class="text-sm text-gray-500 mb-6">
+                        You can manually provide the "Management's Discussion and Analysis" section from a 10-Q filing here.
+                        This text will be used to generate the MD&A summary in the "AI Analysis" tab, overriding the automated summary.
+                    </p>
+                    <form id="ten-q-form">
+                        <div class="space-y-4">
+                            <div>
+                                <label for="mda-date" class="block text-sm font-medium text-gray-700">Filing Date</label>
+                                <input type="date" id="mda-date" name="mda-date" class="mt-1 block w-full max-w-sm border border-gray-300 rounded-md shadow-sm p-2" required>
+                            </div>
+                            <div>
+                                <label for="mda-text" class="block text-sm font-medium text-gray-700">MANAGEMENT’S DISCUSSION</label>
+                                <textarea id="mda-text" name="mda-text" rows="15" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 font-mono text-sm" placeholder="Paste the full MD&A text here..."></textarea>
+                            </div>
+                        </div>
+                        <div class="mt-6 flex justify-end">
+                            <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg">Save MD&A</button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
         <div class="p-4 bg-gray-50 border-t flex justify-end gap-4">
