@@ -56,7 +56,7 @@ export async function getSecInstitutionalOwnership(ticker) {
             }
         },
         "from": "0",
-        "size": "50",
+        "size": "100",
         "sort": [{ "filedAt": { "order": "desc" } }]
     };
     const result = await callSecQueryApi(queryObject);
