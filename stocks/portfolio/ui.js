@@ -2727,7 +2727,13 @@ function _calculateDeepDiveMetrics(data, newsNarrative, institutionalHolders, fi
     const lastActualRevenue = latestIncome.revenue;
     let revenueGrowthForecast = 'N/A';
     if (nextYearEstimate.estimatedRevenueAvg && lastActualRevenue) {
-        revenueGrowthForecast = `${(((nextYearEstimate.estimatedRevenueAvg / lastActualRevenue) - 1) * 100).toFixed(2)}%`;
+        const growthRate = ((nextYearEstimate.estimatedRevenueAvg / lastActualRevenue) - 1) * 100;
+        const formattedGrowth = `${growthRate.toFixed(2)}%`;
+        if (growthRate > 50) { // Sanity check for extreme growth
+            revenueGrowthForecast = `${formattedGrowth} (Note: This unusually high growth rate may be based on analyst forecasts for a different period than the latest annual revenue figure and should be viewed with caution.)`;
+        } else {
+            revenueGrowthForecast = formattedGrowth;
+        }
     }
     
     const recentRatings = analystGrades.slice(0, 5).map(grade => {
@@ -2742,6 +2748,17 @@ function _calculateDeepDiveMetrics(data, newsNarrative, institutionalHolders, fi
         }
         return `${grade.action} from '${from}' to '${to}' by ${firm} on ${date}`;
     });
+
+    const currentPrice = profile.price;
+    const grahamNum = latestMetrics.grahamNumber;
+    let grahamVerdict = 'Graham Number calculation not available.';
+    if (typeof grahamNum === 'number' && grahamNum > 0 && typeof currentPrice === 'number') {
+        if (currentPrice < grahamNum) {
+            grahamVerdict = `The current price of ${currentPrice.toFixed(2)} is below the Graham Number of ${grahamNum.toFixed(2)}, suggesting the stock is undervalued by this metric.`;
+        } else {
+            grahamVerdict = `The current price of ${currentPrice.toFixed(2)} is significantly above the Graham Number of ${grahamNum.toFixed(2)}, suggesting the stock is overvalued by this metric.`;
+        }
+    }
 
     return {
         description: profile.description,
@@ -2812,6 +2829,7 @@ function _calculateDeepDiveMetrics(data, newsNarrative, institutionalHolders, fi
         ps_valuation: valuation('priceToSalesRatio', 'P/S'),
         pb_valuation: valuation('pbRatio', 'P/B'),
         grahamNumber: latestMetrics.grahamNumber ? latestMetrics.grahamNumber.toFixed(2) : 'N/A',
+        grahamVerdict: grahamVerdict,
         latestRiskFactorsSummaries: finalRiskFactorsSummaries,
         latestMdaSummary: finalMdaSummary,
         latest8KSummary: final8KSummary,
