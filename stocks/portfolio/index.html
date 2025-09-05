@@ -411,7 +411,7 @@
                     <button class="tab-button" data-tab="news">News</button>
                     <button class="tab-button" data-tab="trend-analysis">Trend Analysis</button>
                     <button class="tab-button" data-tab="scanner-results">Scanner Results</button>
-                    <button class="tab-button" data-tab="sec-api">SEC API</button>
+                    <button class="tab-button" data-tab="eight-k">8-K</button>
                     <button class="tab-button" data-tab="ten-q">10-Q</button>
                     <button class="tab-button" data-tab="ten-k">10-K</button>
                 </nav>
@@ -442,15 +442,38 @@
 
                 <div id="scanner-results-tab" class="tab-content hidden p-6"></div>
                 
-                <div id="sec-api-tab" class="tab-content hidden p-6"></div>
+                <div id="eight-k-tab" class="tab-content hidden p-6">
+                    <div id="eight-k-filing-container" class="mb-6"></div>
+                    <h3 class="text-xl font-bold text-gray-800 mb-4">User-Provided 8-K Events</h3>
+                    <p class="text-sm text-gray-500 mb-6">
+                        You can manually provide the text from a recent 8-K filing here.
+                        This text will be used to generate the material events summary in the "AI Analysis" tab.
+                    </p>
+                    <form id="eight-k-form">
+                        <div class="space-y-4">
+                            <div>
+                                <label for="8k-date" class="block text-sm font-medium text-gray-700">Filing Date</label>
+                                <input type="date" id="8k-date" name="8k-date" class="mt-1 block w-full max-w-sm border border-gray-300 rounded-md shadow-sm p-2" required>
+                            </div>
+                            <div>
+                                <label for="8k-text" class="block text-sm font-medium text-gray-700">8-K Text</label>
+                                <textarea id="8k-text" name="8k-text" rows="15" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 font-mono text-sm" placeholder="Paste the relevant text from the 8-K here..."></textarea>
+                            </div>
+                        </div>
+                        <div class="mt-6 flex justify-end">
+                            <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg">Save 8-K</button>
+                        </div>
+                    </form>
+                </div>
 
                 <div id="ten-q-tab" class="tab-content hidden p-6">
+                    <div id="ten-q-filing-container" class="mb-6"></div>
                     <h3 class="text-xl font-bold text-gray-800 mb-4">User-Provided 10-Q MD&A</h3>
                     <p class="text-sm text-gray-500 mb-6">
                         You can manually provide the "Management's Discussion and Analysis" section from a 10-Q filing here.
                         This text will be used to generate the MD&A summary in the "AI Analysis" tab, overriding the automated summary.
                     </p>
-                    <form id="ten-q-form">
+                    <form id="ten-q-mda-form">
                         <div class="space-y-4">
                             <div>
                                 <label for="mda-date" class="block text-sm font-medium text-gray-700">Filing Date</label>
@@ -465,9 +488,32 @@
                             <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg">Save MD&A</button>
                         </div>
                     </form>
+
+                    <hr class="my-8">
+
+                    <h3 class="text-xl font-bold text-gray-800 mb-4">User-Provided 10-Q Risk Factors</h3>
+                    <p class="text-sm text-gray-500 mb-6">
+                        You can manually provide the "Risk Factors" section from a 10-Q filing. This is often an update to the 10-K.
+                    </p>
+                    <form id="ten-q-risk-factors-form">
+                        <div class="space-y-4">
+                            <div>
+                                <label for="10q-risk-factors-date" class="block text-sm font-medium text-gray-700">Filing Date</label>
+                                <input type="date" id="10q-risk-factors-date" name="10q-risk-factors-date" class="mt-1 block w-full max-w-sm border border-gray-300 rounded-md shadow-sm p-2" required>
+                            </div>
+                            <div>
+                                <label for="10q-risk-factors-text" class="block text-sm font-medium text-gray-700">10-Q Risk Factors Text</label>
+                                <textarea id="10q-risk-factors-text" name="10q-risk-factors-text" rows="15" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 font-mono text-sm" placeholder="Paste the full Risk Factors text from the 10-Q here..."></textarea>
+                            </div>
+                        </div>
+                        <div class="mt-6 flex justify-end">
+                            <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg">Save 10-Q Risks</button>
+                        </div>
+                    </form>
                 </div>
                 
                 <div id="ten-k-tab" class="tab-content hidden p-6">
+                    <div id="ten-k-filing-container" class="mb-6"></div>
                     <h3 class="text-xl font-bold text-gray-800 mb-4">User-Provided 10-K Risk Factors</h3>
                     <p class="text-sm text-gray-500 mb-6">
                         You can manually provide the "Risk Factors" section from a 10-K filing here.
