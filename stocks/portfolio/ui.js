@@ -345,7 +345,7 @@ export async function renderPortfolioValue() {
         let totalStockValue = 0;
         allStockData.forEach((fmpData, index) => {
             const stock = portfolioStocks[index];
-            const price = fmpData?.profile?.[0]?.price;
+            const price = fmpData?.profile?.data?.[0]?.price;
             if (price && stock.shares) {
                 totalStockValue += price * stock.shares;
             }
@@ -395,7 +395,7 @@ export async function renderAllocationChart() {
 
         allStockData.forEach((fmpData, index) => {
             const stock = portfolioStocks[index];
-            const price = fmpData?.profile?.[0]?.price;
+            const price = fmpData?.profile?.data?.[0]?.price;
             const sector = stock.sector || 'Uncategorized';
             if (price && stock.shares) {
                 const value = price * stock.shares;
@@ -531,7 +531,7 @@ async function _renderGroupedStockList(container, stocksWithData, listType) {
                     <ul class="divide-y divide-gray-200">`;
         
         stocks.forEach(stock => {
-            const profile = stock.fmpData?.profile?.[0] || {};
+            const profile = stock.fmpData?.profile?.data?.[0] || {};
             const refreshedAt = stock.fmpData?.cachedAt ? stock.fmpData.cachedAt.toDate().toLocaleString() : 'N/A';
 
             html += `
@@ -879,7 +879,7 @@ async function openRawDataViewer(ticker) {
         const groupedFmpData = results[1];
         const savedReportsSnapshot = results[2];
 
-        if (!fmpData || !fmpData.profile || fmpData.profile.length === 0) {
+        if (!fmpData || !fmpData.profile || !fmpData.profile.data || fmpData.profile.data.length === 0) {
             closeModal(modalId);
             displayMessageInModal(
                 `Crucial data is missing for ${ticker}. This usually means it needs to be fetched from the FMP service.\n\nPlease go to the stock list and use the "Refresh" button for this stock, then try viewing it again.`,
@@ -889,7 +889,7 @@ async function openRawDataViewer(ticker) {
         }
 
         const savedReportTypes = new Set(savedReportsSnapshot.docs.map(doc => doc.data().reportType));
-        const profile = fmpData.profile[0];
+        const profile = fmpData.profile.data[0] || {};
         
         titleEl.textContent = `Analysis for ${ticker}`;
 
@@ -1061,7 +1061,7 @@ async function handleFetchNews(symbol) {
 
     try {
         const stockData = await getFmpStockData(symbol);
-        const profile = stockData?.profile?.[0] || {};
+        const profile = stockData?.profile?.data?.[0] || {};
         const companyName = profile.companyName || symbol;
         const url = `https://financialmodelingprep.com/api/v3/stock_news?tickers=${symbol}&limit=50&apikey=${state.fmpApiKey}`;
         
@@ -1115,7 +1115,7 @@ async function handleFetchNews(symbol) {
 // --- UI RENDERING ---
 
 function renderOverviewCard(data, symbol, status) {
-    const profile = data.profile?.[0] || {};
+    const profile = data.profile?.data?.[0] || {};
     if (!profile.symbol) return '';
 
     const price = profile.price || 0;
@@ -1132,7 +1132,7 @@ function renderOverviewCard(data, symbol, status) {
     }
 
     const marketCap = formatLargeNumber(profile.mktCap);
-    const keyMetricsLatest = data.key_metrics_annual?.[0] || {};
+    const keyMetricsLatest = data.key_metrics_annual?.data?.[0] || {};
     const peRatio = keyMetricsLatest.peRatio ? keyMetricsLatest.peRatio.toFixed(2) : 'N/A';
     
     const sma50 = profile.priceAvg50 || 'N/A';
@@ -1218,7 +1218,7 @@ async function renderPortfolioManagerList() {
                 const sharesDisplay = stock.status === 'Portfolio' && stock.shares > 0
                     ? `<p class="text-sm text-gray-500">${stock.shares} Shares</p>`: '';
                 const fmpData = fmpDataMap.get(stock.ticker);
-                const price = fmpData?.profile?.[0]?.price;
+                const price = fmpData?.profile?.data?.[0]?.price;
                 const totalValue = (price && stock.shares) ? price * stock.shares : 0;
                 html += `
                     <li class="p-4 flex justify-between items-center hover:bg-gray-50">
@@ -2678,13 +2678,13 @@ async function getSavedReports(ticker, reportType) {
  * @returns {object} A summary object with pre-calculated metrics and trends.
  */
 function _calculateDeepDiveMetrics(data, newsNarrative, institutionalHolders, finalMdaSummary, finalRiskFactorsSummaries, final8KSummary, institutionalOwnershipTimeframe = 'Recent filings data.') {
-    const profile = data.profile?.[0] || {};
-    const income = (data.income_statement_annual || []).slice().reverse(); // Oldest to newest
-    const keyMetrics = (data.key_metrics_annual || []).slice().reverse();
-    const cashFlow = (data.cash_flow_statement_annual || []).slice().reverse();
-    const ratios = (data.ratios_annual || []).slice().reverse();
-    const analystEstimates = data.analyst_estimates || [];
-    const analystGrades = data.stock_grade_news || [];
+    const profile = data.profile?.data?.[0] || {};
+    const income = (data.income_statement_annual?.data || []).slice().reverse(); // Oldest to newest
+    const keyMetrics = (data.key_metrics_annual?.data || []).slice().reverse();
+    const cashFlow = (data.cash_flow_statement_annual?.data || []).slice().reverse();
+    const ratios = (data.ratios_annual?.data || []).slice().reverse();
+    const analystEstimates = data.analyst_estimates?.data || [];
+    const analystGrades = data.stock_grade_news?.data || [];
 
     const latestMetrics = keyMetrics[keyMetrics.length - 1] || {};
     const latestCashFlow = cashFlow[cashFlow.length - 1] || {};
@@ -2756,7 +2756,7 @@ function _calculateDeepDiveMetrics(data, newsNarrative, institutionalHolders, fi
         recentAnalystRatings: recentRatings,
         recentNewsNarrative: newsNarrative,
         insiderTransactionSummary: (() => {
-            const rawInsiderTrades = data.insider_trading || [];
+            const rawInsiderTrades = data.insider_trading?.data || [];
             if (!rawInsiderTrades || rawInsiderTrades.length === 0) {
                 return 'No insider transaction data available for the last 6 months.';
             }
@@ -2847,7 +2847,7 @@ async function handleDeepDiveRequest(symbol, forceNew = false) {
         if (!data) throw new Error(`No cached FMP data found for ${symbol}.`);
         
         const requiredEndpoints = ['profile', 'ratios_annual', 'key_metrics_annual', 'income_statement_annual', 'cash_flow_statement_annual', 'analyst_estimates', 'stock_grade_news'];
-        const missingEndpoints = requiredEndpoints.filter(ep => !data[ep] || data[ep].length === 0);
+        const missingEndpoints = requiredEndpoints.filter(ep => !data[ep] || !data[ep].data || data[ep].data.length === 0);
 
         if (missingEndpoints.length > 0) {
             closeModal(CONSTANTS.MODAL_LOADING);
@@ -2879,7 +2879,7 @@ async function handleDeepDiveRequest(symbol, forceNew = false) {
         }
         
         loadingMessage.textContent = `Analyzing recent news for ${symbol}...`;
-        const profile = data.profile?.[0] || {};
+        const profile = data.profile?.data?.[0] || {};
         const companyName = profile.companyName || 'the company';
         const tickerSymbol = profile.symbol || symbol;
         
