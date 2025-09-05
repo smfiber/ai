@@ -177,7 +177,7 @@ In simple terms, describe the company's business based on the provided 'descript
 - For each key multiple (P/E, P/S, P/B), compare its current value to its historical average.
 - **Overall Verdict:** Based on this comparison, is the stock currently trading at a premium, a discount, or in line with its own history?
 ### Deep Value Check
-- **Graham Number:** If available, compare the current price to the Graham Number. Does this classic value investing metric suggest the stock is over or undervalued?
+- **Graham Number:** State the pre-calculated 'grahamVerdict'. This classic value investing metric provides a strict, conservative measure of a stock's intrinsic value.
 
 ## 6. Bull & Bear Case (Strengths & Risks)
 ### The Bull Case (Key Strengths)
@@ -710,7 +710,7 @@ Your analysis must be structured as follows:
 ## 5. The Price of Power: Valuation
 - Does the market already recognize this company's dominant position? Briefly comment on its valuation. **Is it trading at a premium multiple, and is that premium justified by its strategic importance and financial superiority?**
 
-## 6. The Investment Case
+## 6. The The Investment Case
 - Conclude by explaining why this "linchpin" status—**supported by strong financial metrics and after considering the risks**—translates into predictable, long-term profitability, making it a potential cornerstone holding for a patient investor.
 
 When you mention a stock ticker, you MUST wrap it in a special tag like this: <stock-ticker>TICKER</stock-ticker>.
