@@ -836,7 +836,6 @@ async function openRawDataViewer(ticker) {
     const newsContentContainer = document.getElementById('news-content-container');
     const scannerResultsContainer = document.getElementById('scanner-results-tab');
     
-    const institutionalContainer = document.getElementById('institutional-tab');
     const eightKContainer = document.getElementById('eight-k-tab');
     const tenQContainer = document.getElementById('ten-q-tab');
     const tenKContainer = document.getElementById('ten-k-tab');
@@ -849,7 +848,6 @@ async function openRawDataViewer(ticker) {
     if (trendContentContainer) trendContentContainer.innerHTML = '';
     if (newsContentContainer) newsContentContainer.innerHTML = '';
     if (scannerResultsContainer) scannerResultsContainer.innerHTML = '';
-    if (institutionalContainer) institutionalContainer.innerHTML = '';
     if (eightKContainer) eightKContainer.querySelector('#eight-k-filing-container').innerHTML = '';
     if (tenQContainer) tenQContainer.querySelector('#ten-q-filing-container').innerHTML = '';
     if (tenKContainer) tenKContainer.querySelector('#ten-k-filing-container').innerHTML = '';
@@ -1905,8 +1903,8 @@ async function handleSaveUser10KRisks(e) {
     const ticker = modal.dataset.activeSymbol;
     if (!ticker) return;
 
-    const riskDate = document.getElementById('10k-risk-factors-date').value;
-    const riskText = document.getElementById('10k-risk-factors-text').value.trim();
+    const riskDate = document.getElementById('risk-factors-date').value;
+    const riskText = document.getElementById('risk-factors-text').value.trim();
 
     if (!riskDate || !riskText) {
         displayMessageInModal("Please provide both a filing date and the Risk Factors text.", "warning");
@@ -2015,8 +2013,8 @@ async function handle10KRequest(ticker) {
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
             const data = docSnap.data().data;
-            document.getElementById('10k-risk-factors-date').value = data.date || '';
-            document.getElementById('10k-risk-factors-text').value = data.text || '';
+            document.getElementById('risk-factors-date').value = data.date || '';
+            document.getElementById('risk-factors-text').value = data.text || '';
         }
     } catch (error) {
         console.warn(`Could not load existing user-provided Risk Factors for ${ticker}:`, error.message);
@@ -2351,7 +2349,6 @@ export function setupEventListeners() {
                 if (tabId === 'trend-analysis') handleTrendAnalysisRequest(activeSymbol);
                 else if (tabId === 'news') handleNewsTabRequest(activeSymbol);
                 else if (tabId === 'scanner-results') handleScannerResultsRequest(activeSymbol);
-                else if (tabId === 'institutional') handleInstitutionalRequest(activeSymbol);
                 else if (tabId === 'eight-k') handle8KRequest(activeSymbol);
                 else if (tabId === 'ten-q') handle10QRequest(activeSymbol);
                 else if (tabId === 'ten-k') handle10KRequest(activeSymbol);
