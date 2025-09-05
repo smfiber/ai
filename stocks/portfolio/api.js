@@ -215,7 +215,7 @@ export async function getFmpStockData(symbol) {
     fmpCacheSnapshot.forEach(docSnap => {
         const docData = docSnap.data();
         // Use the document ID (e.g., 'profile', 'income_statement_annual') as the key
-        stockData[docSnap.id] = docData.data;
+        stockData[docSnap.id] = docData;
 
         if (docData.cachedAt && typeof docData.cachedAt.toMillis === 'function') {
             if (!latestTimestamp || docData.cachedAt.toMillis() > latestTimestamp.toMillis()) {
