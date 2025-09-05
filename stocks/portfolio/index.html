@@ -443,7 +443,13 @@
 
                 <div id="scanner-results-tab" class="tab-content hidden p-6"></div>
                 
-                <div id="institutional-tab" class="tab-content hidden p-6"></div>
+                <div id="institutional-tab" class="tab-content hidden p-6">
+                    <div id="institutional-controls" class="p-3 mb-4 bg-gray-50 border rounded-lg flex items-center justify-between gap-4">
+                        <p id="institutional-timestamp" class="text-sm text-gray-600">Cached: N/A</p>
+                        <button id="refresh-institutional-button" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-1 px-3 text-sm rounded-lg shadow-sm">Refresh Data</button>
+                    </div>
+                    <div id="institutional-content-container"></div>
+                </div>
 
                 <div id="eight-k-tab" class="tab-content hidden p-6">
                     <div id="eight-k-filing-container" class="mb-6"></div>
