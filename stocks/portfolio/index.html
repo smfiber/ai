@@ -411,6 +411,7 @@
                     <button class="tab-button" data-tab="news">News</button>
                     <button class="tab-button" data-tab="trend-analysis">Trend Analysis</button>
                     <button class="tab-button" data-tab="scanner-results">Scanner Results</button>
+                    <button class="tab-button" data-tab="institutional">Institutional</button>
                     <button class="tab-button" data-tab="eight-k">8-K</button>
                     <button class="tab-button" data-tab="ten-q">10-Q</button>
                     <button class="tab-button" data-tab="ten-k">10-K</button>
@@ -442,6 +443,8 @@
 
                 <div id="scanner-results-tab" class="tab-content hidden p-6"></div>
                 
+                <div id="institutional-tab" class="tab-content hidden p-6"></div>
+
                 <div id="eight-k-tab" class="tab-content hidden p-6">
                     <div id="eight-k-filing-container" class="mb-6"></div>
                     <h3 class="text-xl font-bold text-gray-800 mb-4">User-Provided 8-K Events</h3>
@@ -457,10 +460,15 @@
                             </div>
                             <div>
                                 <label for="8k-text" class="block text-sm font-medium text-gray-700">8-K Text</label>
-                                <textarea id="8k-text" name="8k-text" rows="15" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 font-mono text-sm" placeholder="Paste the relevant text from the 8-K here..."></textarea>
+                                <textarea id="8k-text" name="8k-text" rows="10" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 font-mono text-sm" placeholder="Paste the relevant text from the 8-K here..."></textarea>
+                            </div>
+                            <div>
+                                <label for="8k-summary-output" class="block text-sm font-medium text-gray-700">AI-Generated Summary</label>
+                                <textarea id="8k-summary-output" name="8k-summary-output" rows="5" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 bg-gray-100 font-mono text-sm" readonly placeholder="Click 'Summarize with AI' to generate..."></textarea>
                             </div>
                         </div>
-                        <div class="mt-6 flex justify-end">
+                        <div class="mt-6 flex justify-end items-center gap-4">
+                            <button type="button" id="summarize-8k-btn" class="bg-cyan-600 hover:bg-cyan-700 text-white font-semibold py-2 px-4 rounded-lg">Summarize with AI</button>
                             <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg">Save 8-K</button>
                         </div>
                     </form>
@@ -481,10 +489,15 @@
                             </div>
                             <div>
                                 <label for="mda-text" class="block text-sm font-medium text-gray-700">MD&A Text</label>
-                                <textarea id="mda-text" name="mda-text" rows="15" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 font-mono text-sm" placeholder="Paste the full MD&A text here..."></textarea>
+                                <textarea id="mda-text" name="mda-text" rows="10" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 font-mono text-sm" placeholder="Paste the full MD&A text here..."></textarea>
+                            </div>
+                            <div>
+                                <label for="mda-summary-output" class="block text-sm font-medium text-gray-700">AI-Generated Summary</label>
+                                <textarea id="mda-summary-output" name="mda-summary-output" rows="5" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 bg-gray-100 font-mono text-sm" readonly placeholder="Click 'Summarize with AI' to generate..."></textarea>
                             </div>
                         </div>
-                        <div class="mt-6 flex justify-end">
+                        <div class="mt-6 flex justify-end items-center gap-4">
+                            <button type="button" id="summarize-mda-btn" class="bg-cyan-600 hover:bg-cyan-700 text-white font-semibold py-2 px-4 rounded-lg">Summarize with AI</button>
                             <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg">Save MD&A</button>
                         </div>
                     </form>
@@ -503,10 +516,15 @@
                             </div>
                             <div>
                                 <label for="10q-risk-factors-text" class="block text-sm font-medium text-gray-700">10-Q Risk Factors Text</label>
-                                <textarea id="10q-risk-factors-text" name="10q-risk-factors-text" rows="15" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 font-mono text-sm" placeholder="Paste the full Risk Factors text from the 10-Q here..."></textarea>
+                                <textarea id="10q-risk-factors-text" name="10q-risk-factors-text" rows="10" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 font-mono text-sm" placeholder="Paste the full Risk Factors text from the 10-Q here..."></textarea>
+                            </div>
+                            <div>
+                                <label for="10q-risks-summary-output" class="block text-sm font-medium text-gray-700">AI-Generated Summary</label>
+                                <textarea id="10q-risks-summary-output" name="10q-risks-summary-output" rows="5" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 bg-gray-100 font-mono text-sm" readonly placeholder="Click 'Summarize with AI' to generate..."></textarea>
                             </div>
                         </div>
-                        <div class="mt-6 flex justify-end">
+                        <div class="mt-6 flex justify-end items-center gap-4">
+                            <button type="button" id="summarize-10q-risks-btn" class="bg-cyan-600 hover:bg-cyan-700 text-white font-semibold py-2 px-4 rounded-lg">Summarize with AI</button>
                             <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg">Save 10-Q Risks</button>
                         </div>
                     </form>
@@ -527,10 +545,15 @@
                             </div>
                             <div>
                                 <label for="risk-factors-text" class="block text-sm font-medium text-gray-700">Risk Factors Text</label>
-                                <textarea id="risk-factors-text" name="risk-factors-text" rows="15" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 font-mono text-sm" placeholder="Paste the full Risk Factors text here..."></textarea>
+                                <textarea id="risk-factors-text" name="risk-factors-text" rows="10" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 font-mono text-sm" placeholder="Paste the full Risk Factors text here..."></textarea>
+                            </div>
+                            <div>
+                                <label for="10k-risks-summary-output" class="block text-sm font-medium text-gray-700">AI-Generated Summary</label>
+                                <textarea id="10k-risks-summary-output" name="10k-risks-summary-output" rows="5" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 bg-gray-100 font-mono text-sm" readonly placeholder="Click 'Summarize with AI' to generate..."></textarea>
                             </div>
                         </div>
-                        <div class="mt-6 flex justify-end">
+                        <div class="mt-6 flex justify-end items-center gap-4">
+                            <button type="button" id="summarize-10k-risks-btn" class="bg-cyan-600 hover:bg-cyan-700 text-white font-semibold py-2 px-4 rounded-lg">Summarize with AI</button>
                             <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg">Save Risk Factors</button>
                         </div>
                     </form>
