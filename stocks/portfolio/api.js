@@ -159,8 +159,8 @@ export async function generateMorningBriefing(portfolioStocks) {
     // 2. Consolidate data for the prompt
     const portfolioDataForPrompt = portfolioStocks.map((stock, index) => {
         const stockData = allStockData[index];
-        const profile = stockData?.profile?.[0] || {};
-        const grades = stockData?.stock_grade_news?.slice(0, 3) || [];
+        const profile = stockData?.profile?.data?.[0] || {};
+        const grades = stockData?.stock_grade_news?.data?.slice(0, 3) || [];
         
         const stockNews = allNews.filter(n => n.symbol === stock.ticker).map(n => ({
             headline: n.title,
@@ -355,11 +355,12 @@ export async function createDriveFile(folderId, fileName, content) {
  * @returns {number|null} The latest value or null if not found.
  */
 function _getLatestAnnualMetric(fmpData, endpoint, metric) {
-    if (!fmpData || !fmpData[endpoint] || !Array.isArray(fmpData[endpoint]) || fmpData[endpoint].length === 0) {
+    const endpointData = fmpData?.[endpoint]?.data;
+    if (!endpointData || !Array.isArray(endpointData) || endpointData.length === 0) {
         return null;
     }
     // FMP data is usually ordered most recent first.
-    const latestRecord = fmpData[endpoint][0];
+    const latestRecord = endpointData[0];
     return latestRecord[metric] ?? null;
 }
 
@@ -429,7 +430,7 @@ export async function calculatePortfolioHealthScore(portfolioStocks) {
 
         // --- 2. Risk Score (Beta) (25% weight) ---
         let riskScore = 50; // Default neutral score for missing beta
-        const beta = fmpData?.profile?.[0]?.beta;
+        const beta = fmpData?.profile?.data?.[0]?.beta;
         if (typeof beta === 'number') {
             if (beta < 0.8) riskScore = 100;      // Very Low Risk
             else if (beta < 1.0) riskScore = 80;  // Low Risk
@@ -440,7 +441,7 @@ export async function calculatePortfolioHealthScore(portfolioStocks) {
 
         // --- 3. Analyst Sentiment Score (25% weight) ---
         let sentimentScore = 50; // Default neutral score
-        const grades = fmpData?.stock_grade_news?.slice(0, 10) || [];
+        const grades = fmpData?.stock_grade_news?.data?.slice(0, 10) || [];
         if (grades.length > 0) {
             let sentimentPoints = 0;
             grades.forEach(grade => {
@@ -542,14 +543,14 @@ export async function runOpportunityScanner(stocksToScan, updateProgress) {
             const newsSummaryPromise = _getNewsAnalysisForScanner(stock.ticker, stock.companyName, newsData);
             const [fmpData, newsSummary] = await Promise.all([fmpDataPromise, newsSummaryPromise]);
 
-            if (!fmpData || !fmpData.profile || !fmpData.profile[0]) {
+            if (!fmpData || !fmpData.profile || !fmpData.profile.data || !fmpData.profile.data[0]) {
                 console.warn(`Skipping ${stock.ticker} due to missing profile data.`);
                 processedCount++;
                 continue;
             }
 
-            const profile = fmpData.profile[0];
-            const analystRatings = (fmpData.stock_grade_news || []).slice(0, 5).map(r => ({
+            const profile = fmpData.profile.data[0];
+            const analystRatings = (fmpData.stock_grade_news?.data || []).slice(0, 5).map(r => ({
                 date: r.date, action: r.action, from: r.previousGrade, to: r.newGrade, firm: r.gradingCompany
             }));
 
@@ -624,9 +625,9 @@ export async function generatePortfolioAnalysis(userQuestion) {
         const fmpData = allStockData[index];
         if (!fmpData) return null;
 
-        const profile = fmpData.profile?.[0] || {};
-        const latestMetrics = fmpData.key_metrics_annual?.[0] || {};
-        const grades = (fmpData.stock_grade_news || []).slice(0, 3);
+        const profile = fmpData.profile?.data?.[0] || {};
+        const latestMetrics = fmpData.key_metrics_annual?.data?.[0] || {};
+        const grades = (fmpData.stock_grade_news?.data || []).slice(0, 3);
 
         return {
             ticker: stock.ticker,
@@ -638,7 +639,7 @@ export async function generatePortfolioAnalysis(userQuestion) {
             marketCap: profile.mktCap,
             peRatio: latestMetrics.peRatio,
             debtToEquity: latestMetrics.debtToEquity,
-            returnOnEquity: fmpData.ratios_annual?.[0]?.returnOnEquity,
+            returnOnEquity: fmpData.ratios_annual?.data?.[0]?.returnOnEquity,
             analyst_grades_summary: grades.map(g => `${g.action} to ${g.newGrade} by ${g.gradingCompany}`).join('; ')
         };
     }).filter(Boolean);
