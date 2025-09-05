@@ -77,6 +77,8 @@ export const CONSTANTS = {
     DB_COLLECTION_USER_DATA: 'user_data', // v14.18.0: New collection for user-specific data like cash
     DB_DOC_ID_USER_MDA: 'user_mda_summary',
     DB_DOC_ID_USER_10K_RISKS: 'user_10k_risks',
+    DB_DOC_ID_USER_10Q_RISKS: 'user_10q_risks',
+    DB_DOC_ID_USER_8K: 'user_8k_summary',
 };
 
 export const SECTOR_ICONS = {
@@ -134,7 +136,7 @@ Based on the provided data, generate the following multi-faceted investment memo
 # Investment Memo: {companyName} ({tickerSymbol})
 
 ## 1. Executive Summary & Investment Thesis
-Begin with a concise, one-paragraph summary. What is the most important takeaway about this company's quality, valuation, and overall story as a potential investment? Synthesize the key findings from the report below, including the forward-looking analyst consensus, **management's outlook from the MD&A, and key risks from the 10-K,** into a coherent investment thesis.
+Begin with a concise, one-paragraph summary. What is the most important takeaway about this company's quality, valuation, and overall story as a potential investment? Synthesize the key findings from the report below, including the forward-looking analyst consensus, **management's outlook from the MD&A, material events from the 8-K, and key risks from the 10-K/10-Q,** into a coherent investment thesis.
 
 ## 2. Forward-Looking Outlook & Recent Events
 ### Analyst Consensus
@@ -142,6 +144,8 @@ Begin with a concise, one-paragraph summary. What is the most important takeaway
 - What does the estimated revenue growth rate suggest about the company's future trajectory?
 ### Management's Discussion & Analysis (from latest 10-Q)
 - **Based on the provided MD&A summary, what is management's narrative regarding recent performance and future outlook?**
+### Material Events (from latest 8-K)
+- **Based on the provided 8-K summary, what recent material events has the company disclosed?**
 ### Recent Analyst Actions
 - Review the list of recent analyst ratings. What is the prevailing sentiment? Is there a clear trend of upgrades, downgrades, or mixed opinions?
 ### Key News Narrative
@@ -179,10 +183,10 @@ In simple terms, describe the company's business based on the provided 'descript
 - Create a bulleted list summarizing the most compelling positive data points from your analysis (e.g., strong ROE, positive analyst revisions, favorable news narrative, attractive valuation).
 ### The Bear Case (Potential Risks)
 - Create a bulleted list summarizing the most significant risks or red flags identified in the data (e.g., high debt, declining margins, negative news, high valuation).
-- **Incorporate the key points from the "Risk Factors" summary (from the latest 10-K) into this section.**
+- **Incorporate the key points from the provided "Risk Factors" summaries (from the latest 10-K and 10-Q filings), noting which is more recent.**
 
 ## 7. Final Verdict & Recommendation
-Conclude with a final, decisive paragraph. Weigh the strengths against the risks, incorporating both the historical financial data and the forward-looking context **from the MD&A and Risk Factor summaries**. Based *only* on this quantitative and qualitative analysis, classify the stock's profile (e.g., "High-Quality Compounder," "Classic Value Play," "Speculative Turnaround," "Potential Value Trap") and state a clear recommendation.
+Conclude with a final, decisive paragraph. Weigh the strengths against the risks, incorporating both the historical financial data and the forward-looking context **from the MD&A, 8-K, and Risk Factor summaries**. Based *only* on this quantitative and qualitative analysis, classify the stock's profile (e.g., "High-Quality Compounder," "Classic Value Play," "Speculative Turnaround," "Potential Value Trap") and state a clear recommendation.
 `.trim();
 
 export const MORNING_BRIEFING_PROMPT = `
