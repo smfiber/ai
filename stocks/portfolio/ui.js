@@ -835,28 +835,31 @@ async function openRawDataViewer(ticker) {
     const trendContentContainer = document.getElementById('trend-analysis-content');
     const newsContentContainer = document.getElementById('news-content-container');
     const scannerResultsContainer = document.getElementById('scanner-results-tab');
-    const secApiContainer = document.getElementById('sec-api-tab');
+    
+    const institutionalContainer = document.getElementById('institutional-tab');
+    const eightKContainer = document.getElementById('eight-k-tab');
     const tenQContainer = document.getElementById('ten-q-tab');
     const tenKContainer = document.getElementById('ten-k-tab');
-    
+
     titleEl.textContent = `Analyzing ${ticker}...`;
     rawDataContainer.innerHTML = '<div class="loader mx-auto"></div>';
     aiButtonsContainer.innerHTML = '';
     aiArticleContainer.innerHTML = '';
     profileDisplayContainer.innerHTML = '';
-    if (trendContentContainer) trendContentContainer.innerHTML = ''; // Clear trend content on open
-    if (newsContentContainer) newsContentContainer.innerHTML = ''; // Clear news content on open
-    if (scannerResultsContainer) scannerResultsContainer.innerHTML = ''; // Clear scanner content on open
-    if (secApiContainer) secApiContainer.innerHTML = ''; // Clear sec-api content on open
-    if (tenQContainer) {
-        const form = tenQContainer.querySelector('form');
-        if (form) form.reset();
-    }
-    if (tenKContainer) {
-        const form = tenKContainer.querySelector('form');
-        if (form) form.reset();
-    }
+    if (trendContentContainer) trendContentContainer.innerHTML = '';
+    if (newsContentContainer) newsContentContainer.innerHTML = '';
+    if (scannerResultsContainer) scannerResultsContainer.innerHTML = '';
+    if (institutionalContainer) institutionalContainer.innerHTML = '';
+    if (eightKContainer) eightKContainer.querySelector('#eight-k-filing-container').innerHTML = '';
+    if (tenQContainer) tenQContainer.querySelector('#ten-q-filing-container').innerHTML = '';
+    if (tenKContainer) tenKContainer.querySelector('#ten-k-filing-container').innerHTML = '';
 
+    // Reset forms
+    const formsToReset = ['eight-k-form', 'ten-q-mda-form', 'ten-q-risk-factors-form', 'ten-k-form'];
+    formsToReset.forEach(formId => {
+        const form = document.getElementById(formId);
+        if (form) form.reset();
+    });
 
     document.querySelectorAll('#rawDataViewerModal .tab-content').forEach(c => c.classList.add('hidden'));
     document.querySelectorAll('#rawDataViewerModal .tab-button').forEach(b => b.classList.remove('active'));
@@ -1725,69 +1728,44 @@ async function handleNewsTabRequest(ticker) {
     }
 }
 
-// --- SEC API TAB ---
+// --- SEC TABS ---
 
-function _renderSecInsiderTrading(data) {
+function _renderSecFilingLink(container, data, filingType) {
     let contentHtml = '';
     if (!data || data.length === 0) {
-        contentHtml = `<p class="text-sm text-gray-500 p-4">No recent insider transactions found.</p>`;
+        contentHtml = `<p class="text-sm text-gray-500 p-4">No recent ${filingType} filing found.</p>`;
     } else {
-        const tableRows = data.slice(0, 20).map(txn => {
-            const type = txn.transactionCode === 'P' ? '<span class="font-semibold text-green-600">Purchase</span>' :
-                         txn.transactionCode === 'S' ? '<span class="font-semibold text-red-600">Sale</span>' :
-                         'Other';
-            return `
-                <tr>
-                    <td class="p-3 text-gray-700">${sanitizeText(txn.reportingOwnerName)}</td>
-                    <td class="p-3 text-gray-700">${new Date(txn.filedAt).toLocaleDateString()}</td>
-                    <td class="p-3">${type}</td>
-                    <td class="p-3 text-right text-gray-700">${txn.transactionShares?.toLocaleString() || 'N/A'}</td>
-                    <td class="p-3 text-right text-gray-700">${txn.transactionPricePerShare ? formatCurrency(txn.transactionPricePerShare) : 'N/A'}</td>
-                    <td class="p-3 text-center"><a href="${sanitizeText(txn.linkToFilingDetails)}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:underline">View</a></td>
-                </tr>
-            `;
-        }).join('');
-
-        contentHtml = `
-            <div class="overflow-x-auto">
-                <table class="min-w-full bg-white text-sm">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th class="p-3 text-left font-semibold text-gray-600">Owner</th>
-                            <th class="p-3 text-left font-semibold text-gray-600">Date</th>
-                            <th class="p-3 text-left font-semibold text-gray-600">Type</th>
-                            <th class="p-3 text-right font-semibold text-gray-600">Shares</th>
-                            <th class="p-3 text-right font-semibold text-gray-600">Price/Share</th>
-                            <th class="p-3 text-center font-semibold text-gray-600">Filing</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-200">${tableRows}</tbody>
-                </table>
-            </div>
-        `;
+        const event = data[0];
+        contentHtml = `<ul class="space-y-2 p-3">
+            <li class="p-3 bg-gray-50 border rounded-lg flex justify-between items-center text-sm">
+                <span>
+                    <strong>Latest Filing:</strong> ${new Date(event.filedAt).toLocaleDateString()}
+                </span>
+                <a href="${sanitizeText(event.linkToFilingDetails)}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:underline font-semibold">View on SEC.gov</a>
+            </li>
+        </ul>`;
     }
-    return `
-        <details class="mb-2 bg-white rounded-lg border" open>
-            <summary class="p-3 font-semibold text-gray-700 cursor-pointer hover:bg-gray-50">Recent Insider Trading (Form 4)</summary>
-            ${contentHtml}
-        </details>
-    `;
+    container.innerHTML = contentHtml;
 }
 
-function _renderSecInstitutionalOwnership(data) {
-    let contentHtml = '';
+function _renderSecInstitutionalOwnership(container, data) {
     if (!data || data.length === 0) {
-        contentHtml = `<p class="text-sm text-gray-500 p-4">No institutional ownership data found.</p>`;
-    } else {
-        const tableRows = data.slice(0, 100).map(holder => `
-            <tr>
-                <td class="p-3 text-gray-700">${sanitizeText(holder.investorName)}</td>
-                <td class="p-3 text-right text-gray-700">${holder.shares?.toLocaleString() || 'N/A'}</td>
-                <td class="p-3 text-right text-gray-700">${formatCurrency(holder.value)}</td>
-                <td class="p-3 text-gray-700">${new Date(holder.filedAt).toLocaleDateString()}</td>
-            </tr>
-        `).join('');
-        contentHtml = `
+        container.innerHTML = `<p class="text-sm text-gray-500 p-4">No institutional ownership data found.</p>`;
+        return;
+    }
+
+    const tableRows = data.slice(0, 100).map(holder => `
+        <tr>
+            <td class="p-3 text-gray-700">${sanitizeText(holder.investorName)}</td>
+            <td class="p-3 text-right text-gray-700">${holder.shares?.toLocaleString() || 'N/A'}</td>
+            <td class="p-3 text-right text-gray-700">${formatCurrency(holder.value)}</td>
+            <td class="p-3 text-gray-700">${new Date(holder.filedAt).toLocaleDateString()}</td>
+        </tr>
+    `).join('');
+
+    container.innerHTML = `
+        <details class="mb-2 bg-white rounded-lg border" open>
+            <summary class="p-3 font-semibold text-gray-700 cursor-pointer hover:bg-gray-50">Institutional Ownership (13F-HR)</summary>
             <div class="overflow-x-auto">
                 <table class="min-w-full bg-white text-sm">
                     <thead class="bg-gray-50">
@@ -1801,151 +1779,73 @@ function _renderSecInstitutionalOwnership(data) {
                     <tbody class="divide-y divide-gray-200">${tableRows}</tbody>
                 </table>
             </div>
-        `;
-    }
-    return `
-        <details class="mb-2 bg-white rounded-lg border" open>
-            <summary class="p-3 font-semibold text-gray-700 cursor-pointer hover:bg-gray-50">Institutional Ownership (13F-HR)</summary>
-            ${contentHtml}
         </details>
     `;
 }
 
-function _renderSecMaterialEvents(data) {
-    let contentHtml = '';
-    if (!data || data.length === 0) {
-        contentHtml = `<p class="text-sm text-gray-500 p-4">No recent material event filing found.</p>`;
-    } else {
-        const event = data[0];
-        contentHtml = `<ul class="space-y-2 p-3">
-            <li class="p-3 bg-gray-50 border rounded-lg flex justify-between items-center text-sm">
-                <span>
-                    <strong>Filed:</strong> ${new Date(event.filedAt).toLocaleDateString()} - 
-                    <span class="text-gray-600">${sanitizeText(event.formType)}</span>
-                </span>
-                <a href="${sanitizeText(event.linkToFilingDetails)}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:underline font-semibold">View Filing</a>
-            </li>
-        </ul>`;
-    }
-     return `
-        <details class="mb-2 bg-white rounded-lg border" open>
-            <summary class="p-3 font-semibold text-gray-700 cursor-pointer hover:bg-gray-50">Latest Material Event (8-K)</summary>
-            ${contentHtml}
-        </details>
-    `;
-}
-
-function _renderSecAnnualReports(data) {
-    let contentHtml = '';
-    if (!data || data.length === 0) {
-        contentHtml = `<p class="text-sm text-gray-500 p-4">No recent annual report found.</p>`;
-    } else {
-        const event = data[0];
-        contentHtml = `<ul class="space-y-2 p-3">
-            <li class="p-3 bg-gray-50 border rounded-lg flex justify-between items-center text-sm">
-                <span>
-                    <strong>Filed:</strong> ${new Date(event.filedAt).toLocaleDateString()} - 
-                    <span class="text-gray-600">${sanitizeText(event.formType)}</span>
-                </span>
-                <a href="${sanitizeText(event.linkToFilingDetails)}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:underline font-semibold">View Filing</a>
-            </li>
-        </ul>`;
-    }
-    return `
-        <details class="mb-2 bg-white rounded-lg border" open>
-            <summary class="p-3 font-semibold text-gray-700 cursor-pointer hover:bg-gray-50">Latest Annual Report (10-K)</summary>
-            ${contentHtml}
-        </details>
-    `;
-}
-
-function _renderSecQuarterlyReports(data) {
-    let contentHtml = '';
-    if (!data || data.length === 0) {
-        contentHtml = `<p class="text-sm text-gray-500 p-4">No recent quarterly report found.</p>`;
-    } else {
-        const event = data[0];
-        contentHtml = `<ul class="space-y-2 p-3">
-            <li class="p-3 bg-gray-50 border rounded-lg flex justify-between items-center text-sm">
-                <span>
-                    <strong>Filed:</strong> ${new Date(event.filedAt).toLocaleDateString()} - 
-                    <span class="text-gray-600">${sanitizeText(event.formType)}</span>
-                </span>
-                <a href="${sanitizeText(event.linkToFilingDetails)}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:underline font-semibold">View Filing</a>
-            </li>
-        </ul>`;
-    }
-    return `
-        <details class="mb-2 bg-white rounded-lg border" open>
-            <summary class="p-3 font-semibold text-gray-700 cursor-pointer hover:bg-gray-50">Latest Quarterly Report (10-Q)</summary>
-            ${contentHtml}
-        </details>
-    `;
-}
-
-async function handleSecApiRequest(ticker) {
-    const contentContainer = document.getElementById('sec-api-tab');
-    if (!contentContainer) return;
-    
-    if (contentContainer.innerHTML.trim() !== '') {
-        return;
-    }
-
-    contentContainer.innerHTML = '<div class="flex justify-center items-center h-full pt-16"><div class="loader"></div></div>';
+async function handleInstitutionalRequest(ticker) {
+    const contentContainer = document.getElementById('institutional-tab');
+    if (!contentContainer || contentContainer.innerHTML.trim() !== '') return;
+    contentContainer.innerHTML = '<div class="loader-container"><div class="loader"></div></div>';
 
     if (!state.secApiKey) {
-        contentContainer.innerHTML = `<div class="text-center p-4 text-yellow-700 bg-yellow-50 rounded-lg"><p class="font-semibold">SEC API Key Not Configured</p><p class="text-sm">Please add your SEC-API.io key in the settings to use this feature.</p></div>`;
+        contentContainer.innerHTML = `<div class="warning-box">SEC API Key Not Configured</div>`;
         return;
     }
     
     try {
         const fmpData = await getFmpStockData(ticker);
-        const cik = fmpData?.profile?.[0]?.cik;
-
-        if (!cik) {
-            contentContainer.innerHTML = `<div class="text-center p-4 text-yellow-700 bg-yellow-50 rounded-lg"><p class="font-semibold">CIK Not Found</p><p class="text-sm">Could not find a CIK for ${ticker} in the cached FMP data. SEC filings cannot be reliably retrieved without it.</p></div>`;
+        if (!fmpData?.profile?.[0]?.cik) {
+            contentContainer.innerHTML = `<div class="warning-box">CIK Not Found for ${ticker}</div>`;
             return;
         }
 
-        let [insiderTrading, institutionalOwnership, materialEvents, annualReports, quarterlyReports] = await Promise.all([
-            getSecInsiderTrading(cik),
-            getSecInstitutionalOwnership(ticker),
-            getSecMaterialEvents(ticker),
-            getSecAnnualReports(ticker),
-            getSecQuarterlyReports(ticker)
-        ]);
-        
-        const sortByFiledAtDesc = (a, b) => new Date(b.filedAt) - new Date(a.filedAt);
-        if (Array.isArray(insiderTrading)) {
-            insiderTrading.sort(sortByFiledAtDesc);
-        }
-        if (Array.isArray(institutionalOwnership)) {
-            institutionalOwnership.sort(sortByFiledAtDesc);
-        }
-        
-        let html = _renderSecInsiderTrading(insiderTrading);
-        html += _renderSecInstitutionalOwnership(institutionalOwnership);
-        html += _renderSecMaterialEvents(materialEvents);
-        html += _renderSecAnnualReports(annualReports);
-        html += _renderSecQuarterlyReports(quarterlyReports);
+        const institutionalOwnership = await getSecInstitutionalOwnership(ticker);
+        institutionalOwnership.sort((a, b) => new Date(b.filedAt) - new Date(a.filedAt));
+        _renderSecInstitutionalOwnership(contentContainer, institutionalOwnership);
 
-        contentContainer.innerHTML = html;
     } catch (error) {
-        console.error("Error fetching SEC data:", error);
-        contentContainer.innerHTML = `<div class="text-center p-4 text-red-500 bg-red-50 rounded-lg"><p class="font-semibold">Could not load SEC data.</p><p class="text-sm">${error.message}</p></div>`;
+        console.error("Error fetching SEC institutional data:", error);
+        contentContainer.innerHTML = `<div class="error-box">Could not load SEC data: ${error.message}</div>`;
     }
 }
 
-// --- USER-PROVIDED 10-Q MD&A ---
+// --- USER-PROVIDED SEC FILING HANDLERS ---
+
+async function handleSaveUser8K(e) {
+    e.preventDefault();
+    const modal = document.getElementById('rawDataViewerModal');
+    const ticker = modal.dataset.activeSymbol;
+    if (!ticker) return;
+
+    const filingDate = document.getElementById('8k-date').value;
+    const filingText = document.getElementById('8k-text').value.trim();
+
+    if (!filingDate || !filingText) {
+        displayMessageInModal("Please provide both a filing date and the 8-K text.", "warning");
+        return;
+    }
+    
+    openModal(CONSTANTS.MODAL_LOADING);
+    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Saving 8-K for ${ticker}...`;
+    
+    try {
+        const docRef = doc(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, ticker, 'endpoints', CONSTANTS.DB_DOC_ID_USER_8K);
+        await setDoc(docRef, { cachedAt: Timestamp.now(), data: { date: filingDate, text: filingText } });
+        displayMessageInModal("Custom 8-K text saved successfully!", "info");
+    } catch (error) {
+        console.error("Error saving user 8-K:", error);
+        displayMessageInModal(`Could not save 8-K: ${error.message}`, 'error');
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
 
 async function handleSaveUserMda(e) {
     e.preventDefault();
     const modal = document.getElementById('rawDataViewerModal');
     const ticker = modal.dataset.activeSymbol;
-    if (!ticker) {
-        displayMessageInModal("Could not determine the active stock ticker.", "error");
-        return;
-    }
+    if (!ticker) return;
 
     const mdaDate = document.getElementById('mda-date').value;
     const mdaText = document.getElementById('mda-text').value.trim();
@@ -1959,17 +1859,8 @@ async function handleSaveUserMda(e) {
     document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Saving MD&A for ${ticker}...`;
 
     try {
-        const dataToSave = {
-            date: mdaDate,
-            text: mdaText
-        };
-
         const docRef = doc(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, ticker, 'endpoints', CONSTANTS.DB_DOC_ID_USER_MDA);
-        await setDoc(docRef, {
-            cachedAt: Timestamp.now(),
-            data: dataToSave
-        });
-
+        await setDoc(docRef, { cachedAt: Timestamp.now(), data: { date: mdaDate, text: mdaText } });
         displayMessageInModal("Custom MD&A text saved successfully!", "info");
     } catch (error) {
         console.error("Error saving user MD&A:", error);
@@ -1979,40 +1870,43 @@ async function handleSaveUserMda(e) {
     }
 }
 
-async function handle10QRequest(ticker) {
-    const form = document.getElementById('ten-q-form');
-    if (!form) return;
-    form.reset();
+async function handleSaveUser10QRisks(e) {
+    e.preventDefault();
+    const modal = document.getElementById('rawDataViewerModal');
+    const ticker = modal.dataset.activeSymbol;
+    if (!ticker) return;
+
+    const riskDate = document.getElementById('10q-risk-factors-date').value;
+    const riskText = document.getElementById('10q-risk-factors-text').value.trim();
+
+    if (!riskDate || !riskText) {
+        displayMessageInModal("Please provide both a filing date and the 10-Q Risk Factors text.", "warning");
+        return;
+    }
+
+    openModal(CONSTANTS.MODAL_LOADING);
+    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Saving 10-Q Risk Factors for ${ticker}...`;
 
     try {
-        const docRef = doc(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, ticker, 'endpoints', CONSTANTS.DB_DOC_ID_USER_MDA);
-        const docSnap = await getDoc(docRef);
-
-        if (docSnap.exists()) {
-            const data = docSnap.data().data;
-            if (data) {
-                document.getElementById('mda-date').value = data.date || '';
-                document.getElementById('mda-text').value = data.text || '';
-            }
-        }
+        const docRef = doc(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, ticker, 'endpoints', CONSTANTS.DB_DOC_ID_USER_10Q_RISKS);
+        await setDoc(docRef, { cachedAt: Timestamp.now(), data: { date: riskDate, text: riskText } });
+        displayMessageInModal("Custom 10-Q Risk Factors saved successfully!", "info");
     } catch (error) {
-        console.warn(`Could not load existing user-provided MD&A for ${ticker}:`, error.message);
+        console.error("Error saving user 10-Q Risk Factors:", error);
+        displayMessageInModal(`Could not save 10-Q Risk Factors: ${error.message}`, 'error');
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
     }
 }
-
-// --- USER-PROVIDED 10-K RISK FACTORS ---
 
 async function handleSaveUser10KRisks(e) {
     e.preventDefault();
     const modal = document.getElementById('rawDataViewerModal');
     const ticker = modal.dataset.activeSymbol;
-    if (!ticker) {
-        displayMessageInModal("Could not determine the active stock ticker.", "error");
-        return;
-    }
+    if (!ticker) return;
 
-    const riskDate = document.getElementById('risk-factors-date').value;
-    const riskText = document.getElementById('risk-factors-text').value.trim();
+    const riskDate = document.getElementById('10k-risk-factors-date').value;
+    const riskText = document.getElementById('10k-risk-factors-text').value.trim();
 
     if (!riskDate || !riskText) {
         displayMessageInModal("Please provide both a filing date and the Risk Factors text.", "warning");
@@ -2023,17 +1917,8 @@ async function handleSaveUser10KRisks(e) {
     document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Saving Risk Factors for ${ticker}...`;
 
     try {
-        const dataToSave = {
-            date: riskDate,
-            text: riskText
-        };
-
         const docRef = doc(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, ticker, 'endpoints', CONSTANTS.DB_DOC_ID_USER_10K_RISKS);
-        await setDoc(docRef, {
-            cachedAt: Timestamp.now(),
-            data: dataToSave
-        });
-
+        await setDoc(docRef, { cachedAt: Timestamp.now(), data: { date: riskDate, text: riskText } });
         displayMessageInModal("Custom Risk Factors text saved successfully!", "info");
     } catch (error) {
         console.error("Error saving user Risk Factors:", error);
@@ -2043,27 +1928,100 @@ async function handleSaveUser10KRisks(e) {
     }
 }
 
+// --- SEC TAB CONTENT LOADERS ---
+
+async function handle8KRequest(ticker) {
+    const filingContainer = document.getElementById('eight-k-filing-container');
+    if (!filingContainer || filingContainer.innerHTML.trim() !== '') return;
+    filingContainer.innerHTML = '<div class="loader-container"><div class="loader"></div></div>';
+    
+    try {
+        // Load API filing link
+        if (state.secApiKey) {
+            const materialEvents = await getSecMaterialEvents(ticker);
+            _renderSecFilingLink(filingContainer, materialEvents, '8-K');
+        } else {
+            filingContainer.innerHTML = '<p class="text-xs text-gray-500 text-center">SEC API Key not configured.</p>';
+        }
+        
+        // Load user-provided data
+        const docRef = doc(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, ticker, 'endpoints', CONSTANTS.DB_DOC_ID_USER_8K);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+            const data = docSnap.data().data;
+            document.getElementById('8k-date').value = data.date || '';
+            document.getElementById('8k-text').value = data.text || '';
+        }
+    } catch (error) {
+        console.warn(`Could not load 8-K data for ${ticker}:`, error.message);
+    }
+}
+
+async function handle10QRequest(ticker) {
+    const filingContainer = document.getElementById('ten-q-filing-container');
+    if (filingContainer && filingContainer.innerHTML.trim() === '') {
+        filingContainer.innerHTML = '<div class="loader-container"><div class="loader"></div></div>';
+        try {
+            if (state.secApiKey) {
+                const quarterlyReports = await getSecQuarterlyReports(ticker);
+                _renderSecFilingLink(filingContainer, quarterlyReports, '10-Q');
+            } else {
+                 filingContainer.innerHTML = '<p class="text-xs text-gray-500 text-center">SEC API Key not configured.</p>';
+            }
+        } catch (error) {
+             console.warn(`Could not load 10-Q filing link for ${ticker}:`, error.message);
+        }
+    }
+
+    try {
+        const mdaDocRef = doc(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, ticker, 'endpoints', CONSTANTS.DB_DOC_ID_USER_MDA);
+        const mdaDocSnap = await getDoc(mdaDocRef);
+        if (mdaDocSnap.exists()) {
+            const data = mdaDocSnap.data().data;
+            document.getElementById('mda-date').value = data.date || '';
+            document.getElementById('mda-text').value = data.text || '';
+        }
+        
+        const riskDocRef = doc(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, ticker, 'endpoints', CONSTANTS.DB_DOC_ID_USER_10Q_RISKS);
+        const riskDocSnap = await getDoc(riskDocRef);
+        if (riskDocSnap.exists()) {
+            const data = riskDocSnap.data().data;
+            document.getElementById('10q-risk-factors-date').value = data.date || '';
+            document.getElementById('10q-risk-factors-text').value = data.text || '';
+        }
+    } catch (error) {
+        console.warn(`Could not load existing user-provided 10-Q data for ${ticker}:`, error.message);
+    }
+}
+
 async function handle10KRequest(ticker) {
-    const form = document.getElementById('ten-k-form');
-    if (!form) return;
-    form.reset();
+    const filingContainer = document.getElementById('ten-k-filing-container');
+    if (filingContainer && filingContainer.innerHTML.trim() === '') {
+         filingContainer.innerHTML = '<div class="loader-container"><div class="loader"></div></div>';
+        try {
+            if (state.secApiKey) {
+                const annualReports = await getSecAnnualReports(ticker);
+                _renderSecFilingLink(filingContainer, annualReports, '10-K');
+            } else {
+                 filingContainer.innerHTML = '<p class="text-xs text-gray-500 text-center">SEC API Key not configured.</p>';
+            }
+        } catch (error) {
+            console.warn(`Could not load 10-K filing link for ${ticker}:`, error.message);
+        }
+    }
 
     try {
         const docRef = doc(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, ticker, 'endpoints', CONSTANTS.DB_DOC_ID_USER_10K_RISKS);
         const docSnap = await getDoc(docRef);
-
         if (docSnap.exists()) {
             const data = docSnap.data().data;
-            if (data) {
-                document.getElementById('risk-factors-date').value = data.date || '';
-                document.getElementById('risk-factors-text').value = data.text || '';
-            }
+            document.getElementById('10k-risk-factors-date').value = data.date || '';
+            document.getElementById('10k-risk-factors-text').value = data.text || '';
         }
     } catch (error) {
         console.warn(`Could not load existing user-provided Risk Factors for ${ticker}:`, error.message);
     }
 }
-
 
 // --- EVENT LISTENER SETUP ---
 
@@ -2316,7 +2274,10 @@ export function setupEventListeners() {
 
     document.getElementById('portfolio-chat-form')?.addEventListener('submit', handlePortfolioChatSubmit);
     
-    document.getElementById('ten-q-form')?.addEventListener('submit', handleSaveUserMda);
+    // New/updated SEC form listeners
+    document.getElementById('eight-k-form')?.addEventListener('submit', handleSaveUser8K);
+    document.getElementById('ten-q-mda-form')?.addEventListener('submit', handleSaveUserMda);
+    document.getElementById('ten-q-risk-factors-form')?.addEventListener('submit', handleSaveUser10QRisks);
     document.getElementById('ten-k-form')?.addEventListener('submit', handleSaveUser10KRisks);
 
     document.querySelectorAll('.save-to-drive-button').forEach(button => {
@@ -2379,9 +2340,7 @@ export function setupEventListeners() {
     
         if (target.matches('.tab-button')) {
             const tabId = target.dataset.tab;
-            document.querySelectorAll('#rawDataViewerModal .tab-content').forEach(c => {
-                c.classList.add('hidden');
-            });
+            document.querySelectorAll('#rawDataViewerModal .tab-content').forEach(c => c.classList.add('hidden'));
             document.querySelectorAll('#rawDataViewerModal .tab-button').forEach(b => b.classList.remove('active'));
             
             const activeTabContent = document.getElementById(`${tabId}-tab`);
@@ -2389,19 +2348,13 @@ export function setupEventListeners() {
             target.classList.add('active');
     
             if (activeSymbol) {
-                if (tabId === 'trend-analysis') {
-                    handleTrendAnalysisRequest(activeSymbol);
-                } else if (tabId === 'news') {
-                    handleNewsTabRequest(activeSymbol);
-                } else if (tabId === 'scanner-results') {
-                    handleScannerResultsRequest(activeSymbol);
-                } else if (tabId === 'sec-api') {
-                    handleSecApiRequest(activeSymbol);
-                } else if (tabId === 'ten-q') {
-                    handle10QRequest(activeSymbol);
-                } else if (tabId === 'ten-k') {
-                    handle10KRequest(activeSymbol);
-                }
+                if (tabId === 'trend-analysis') handleTrendAnalysisRequest(activeSymbol);
+                else if (tabId === 'news') handleNewsTabRequest(activeSymbol);
+                else if (tabId === 'scanner-results') handleScannerResultsRequest(activeSymbol);
+                else if (tabId === 'institutional') handleInstitutionalRequest(activeSymbol);
+                else if (tabId === 'eight-k') handle8KRequest(activeSymbol);
+                else if (tabId === 'ten-q') handle10QRequest(activeSymbol);
+                else if (tabId === 'ten-k') handle10KRequest(activeSymbol);
             }
             return;
         }
@@ -2451,11 +2404,12 @@ async function getSavedReports(ticker, reportType) {
  * @param {string} newsNarrative - A concise summary of the recent news narrative.
  * @param {Array|null} institutionalHolders - Data from SEC-API.io.
  * @param {string} finalMdaSummary - The definitive MD&A summary to use.
- * @param {string} finalRiskFactorsSummary - The definitive Risk Factors summary to use.
+ * @param {Array<object>} finalRiskFactorsSummaries - Array of dated risk factor summaries.
+ * @param {string} final8KSummary - The definitive 8-K summary to use.
  * @param {string} institutionalOwnershipTimeframe - The calculated timeframe of the filings.
  * @returns {object} A summary object with pre-calculated metrics and trends.
  */
-function _calculateDeepDiveMetrics(data, newsNarrative, institutionalHolders, finalMdaSummary, finalRiskFactorsSummary, institutionalOwnershipTimeframe = 'Recent filings data.') {
+function _calculateDeepDiveMetrics(data, newsNarrative, institutionalHolders, finalMdaSummary, finalRiskFactorsSummaries, final8KSummary, institutionalOwnershipTimeframe = 'Recent filings data.') {
     const profile = data.profile?.[0] || {};
     const income = (data.income_statement_annual || []).slice().reverse(); // Oldest to newest
     const keyMetrics = (data.key_metrics_annual || []).slice().reverse();
@@ -2590,8 +2544,9 @@ function _calculateDeepDiveMetrics(data, newsNarrative, institutionalHolders, fi
         ps_valuation: valuation('priceToSalesRatio', 'P/S'),
         pb_valuation: valuation('pbRatio', 'P/B'),
         grahamNumber: latestMetrics.grahamNumber ? latestMetrics.grahamNumber.toFixed(2) : 'N/A',
-        latestRiskFactorsSummary: finalRiskFactorsSummary,
-        latestMdaSummary: finalMdaSummary
+        latestRiskFactorsSummaries: finalRiskFactorsSummaries,
+        latestMdaSummary: finalMdaSummary,
+        latest8KSummary: final8KSummary,
     };
 }
 
@@ -2658,16 +2613,31 @@ async function handleDeepDiveRequest(symbol, forceNew = false) {
 
         loadingMessage.textContent = `Analyzing SEC filings...`;
         
-        let finalRiskFactorsSummary = 'Risk factors have not been provided by the user.';
-        if (data.user_10k_risks?.data?.text) {
-            loadingMessage.textContent = `Summarizing custom Risk Factors text...`;
-            finalRiskFactorsSummary = await summarizeSecFilingSection('Risk Factors', data.user_10k_risks.data.text);
+        const finalRiskFactorsSummaries = [];
+        if (data.user_10k_risks?.data) {
+            loadingMessage.textContent = `Summarizing custom 10-K Risk Factors...`;
+            const summary = await summarizeSecFilingSection('Risk Factors', data.user_10k_risks.data.text);
+            finalRiskFactorsSummaries.push({ source: '10-K', date: data.user_10k_risks.data.date, summary });
+        }
+        if (data.user_10q_risks?.data) {
+            loadingMessage.textContent = `Summarizing custom 10-Q Risk Factors...`;
+            const summary = await summarizeSecFilingSection('Risk Factors', data.user_10q_risks.data.text);
+            finalRiskFactorsSummaries.push({ source: '10-Q', date: data.user_10q_risks.data.date, summary });
+        }
+        if (finalRiskFactorsSummaries.length === 0) {
+            finalRiskFactorsSummaries.push({ source: 'N/A', date: 'N/A', summary: 'Risk factors have not been provided by the user.' });
         }
 
         let finalMdaSummary = 'MD&A has not been provided by the user.';
         if (data.user_mda_summary?.data?.text) {
             loadingMessage.textContent = `Summarizing custom MD&A text...`;
             finalMdaSummary = await summarizeSecFilingSection('MD&A', data.user_mda_summary.data.text);
+        }
+        
+        let final8KSummary = 'No material events summary has been provided by the user.';
+        if (data.user_8k_summary?.data?.text) {
+            loadingMessage.textContent = `Summarizing custom 8-K text...`;
+            final8KSummary = await summarizeSecFilingSection('8-K', data.user_8k_summary.data.text);
         }
 
         let institutionalOwnershipTimeframe = 'Recent filings data.';
@@ -2684,7 +2654,7 @@ async function handleDeepDiveRequest(symbol, forceNew = false) {
             institutionalOwnershipTimeframe = 'A single recent filing.';
         }
 
-        const payloadData = _calculateDeepDiveMetrics(data, newsSummary.dominant_narrative, institutionalHolders, finalMdaSummary, finalRiskFactorsSummary, institutionalOwnershipTimeframe);
+        const payloadData = _calculateDeepDiveMetrics(data, newsSummary.dominant_narrative, institutionalHolders, finalMdaSummary, finalRiskFactorsSummaries, final8KSummary, institutionalOwnershipTimeframe);
 
         const prompt = DEEP_DIVE_PROMPT
             .replace(/{companyName}/g, companyName)
