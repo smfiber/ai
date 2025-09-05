@@ -1,6 +1,23 @@
 import { CONSTANTS, state, MORNING_BRIEFING_PROMPT, NEWS_SENTIMENT_PROMPT, OPPORTUNITY_SCANNER_PROMPT, PORTFOLIO_ANALYSIS_PROMPT, TREND_ANALYSIS_PROMPT, SEC_RISK_FACTOR_SUMMARY_PROMPT, SEC_MDA_SUMMARY_PROMPT } from './config.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+// --- PROMPTS (Moved from config.js for better organization) ---
+export const SEC_8K_SUMMARY_PROMPT = `
+Role: You are an expert financial analyst AI. Your task is to read the text from a company's 8-K filing and create a concise, bulleted summary of the **most important material events** for a potential investor.
+
+Instructions:
+- Focus on the key events being disclosed (e.g., executive changes, financial results, mergers, bankruptcy, delisting).
+- Do not just repeat boilerplate; explain what the event *means* for the company.
+- Each bullet point should be a single, clear sentence summarizing one key event.
+- The entire summary should be no more than 3-5 bullet points.
+- Return ONLY the markdown-formatted summary. Do not add any introductory or concluding sentences.
+
+Raw Text from "8-K" filing:
+---
+{sectionText}
+---
+`.trim();
+
 // --- UTILITY & SECURITY HELPERS (Moved from ui.js) ---
 function isValidHttpUrl(urlString) {
     if (typeof urlString !== 'string' || !urlString) return false;
@@ -51,7 +68,7 @@ export async function callGeminiApi(prompt) {
     
     state.sessionLog.push({ type: 'prompt', timestamp: new Date(), content: prompt });
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${state.geminiApiKey}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${state.geminiApiKey}`;
     const body = { contents: [{ parts: [{ "text": prompt }] }] };
     const data = await callApi(url, {
         method: 'POST',
@@ -78,7 +95,7 @@ export async function callGeminiApiWithTools(contents) {
 
     state.sessionLog.push({ type: 'prompt', timestamp: new Date(), content: JSON.stringify(contents, null, 2) });
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${state.geminiApiKey}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${state.geminiApiKey}`;
     const data = await callApi(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -702,6 +719,8 @@ export async function summarizeSecFilingSection(sectionName, sectionText) {
         promptTemplate = SEC_RISK_FACTOR_SUMMARY_PROMPT;
     } else if (sectionName === 'MD&A') {
         promptTemplate = SEC_MDA_SUMMARY_PROMPT;
+    } else if (sectionName === '8-K') {
+        promptTemplate = SEC_8K_SUMMARY_PROMPT;
     } else {
         throw new Error(`Unsupported SEC section for summarization: ${sectionName}`);
     }
