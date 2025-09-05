@@ -849,7 +849,10 @@ async function openRawDataViewer(ticker) {
     if (trendContentContainer) trendContentContainer.innerHTML = '';
     if (newsContentContainer) newsContentContainer.innerHTML = '';
     if (scannerResultsContainer) scannerResultsContainer.innerHTML = '';
-    if (institutionalContainer) institutionalContainer.innerHTML = '';
+    if (institutionalContainer) {
+        institutionalContainer.querySelector('#institutional-content-container').innerHTML = '';
+        institutionalContainer.querySelector('#institutional-timestamp').textContent = 'Cached: N/A';
+    }
     if (eightKContainer) eightKContainer.querySelector('#eight-k-filing-container').innerHTML = '';
     if (tenQContainer) tenQContainer.querySelector('#ten-q-filing-container').innerHTML = '';
     if (tenKContainer) tenKContainer.querySelector('#ten-k-filing-container').innerHTML = '';
@@ -1748,7 +1751,10 @@ function _renderSecFilingLink(container, data, filingType) {
     container.innerHTML = contentHtml;
 }
 
-function _renderSecInstitutionalOwnership(container, data) {
+function _renderSecInstitutionalOwnership(container, data, cachedAt) {
+    const timestampEl = document.getElementById('institutional-timestamp');
+    timestampEl.textContent = cachedAt ? `Cached: ${cachedAt.toDate().toLocaleString()}` : 'Cached: N/A';
+
     if (!data || data.length === 0) {
         container.innerHTML = `<p class="text-sm text-gray-500 p-4">No institutional ownership data found.</p>`;
         return;
@@ -1783,8 +1789,32 @@ function _renderSecInstitutionalOwnership(container, data) {
     `;
 }
 
+async function handleRefreshInstitutionalData(ticker) {
+    const contentContainer = document.getElementById('institutional-content-container');
+    const button = document.getElementById('refresh-institutional-button');
+    const originalButtonText = button.textContent;
+    button.disabled = true;
+    button.textContent = 'Refreshing...';
+    contentContainer.innerHTML = '<div class="loader-container"><div class="loader"></div></div>';
+
+    try {
+        const data = await getSecInstitutionalOwnership(ticker);
+        const docRef = doc(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, ticker, 'endpoints', CONSTANTS.DB_DOC_ID_INSTITUTIONAL_OWNERSHIP);
+        const cachedAt = Timestamp.now();
+        await setDoc(docRef, { cachedAt, data });
+        _renderSecInstitutionalOwnership(contentContainer, data, cachedAt);
+    } catch (error) {
+        console.error("Error refreshing institutional ownership:", error);
+        contentContainer.innerHTML = `<div class="error-box">Could not refresh data: ${error.message}</div>`;
+    } finally {
+        button.disabled = false;
+        button.textContent = originalButtonText;
+    }
+}
+
+
 async function handleInstitutionalRequest(ticker) {
-    const contentContainer = document.getElementById('institutional-tab');
+    const contentContainer = document.getElementById('institutional-content-container');
     if (!contentContainer || contentContainer.innerHTML.trim() !== '') return;
     contentContainer.innerHTML = '<div class="loader-container"><div class="loader"></div></div>';
 
@@ -1794,16 +1824,16 @@ async function handleInstitutionalRequest(ticker) {
     }
     
     try {
-        const fmpData = await getFmpStockData(ticker);
-        if (!fmpData?.profile?.[0]?.cik) {
-            contentContainer.innerHTML = `<div class="warning-box">CIK Not Found for ${ticker}</div>`;
-            return;
+        const docRef = doc(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, ticker, 'endpoints', CONSTANTS.DB_DOC_ID_INSTITUTIONAL_OWNERSHIP);
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+            const { data, cachedAt } = docSnap.data();
+            _renderSecInstitutionalOwnership(contentContainer, data, cachedAt);
+        } else {
+            // If no cache, fetch for the first time
+            await handleRefreshInstitutionalData(ticker);
         }
-
-        const institutionalOwnership = await getSecInstitutionalOwnership(ticker);
-        institutionalOwnership.sort((a, b) => new Date(b.filedAt) - new Date(a.filedAt));
-        _renderSecInstitutionalOwnership(contentContainer, institutionalOwnership);
-
     } catch (error) {
         console.error("Error fetching SEC institutional data:", error);
         contentContainer.innerHTML = `<div class="error-box">Could not load SEC data: ${error.message}</div>`;
@@ -2430,6 +2460,12 @@ export function setupEventListeners() {
                 handleDeepDiveRequest(activeSymbol);
             }
         }
+        
+        if (target.id === 'refresh-institutional-button') {
+            if (activeSymbol) {
+                handleRefreshInstitutionalData(activeSymbol);
+            }
+        }
     });
 	
 	document.getElementById('manageBroadEndpointsModal')?.addEventListener('click', (e) => {
@@ -2664,7 +2700,13 @@ async function handleDeepDiveRequest(symbol, forceNew = false) {
         let institutionalHolders = null;
         if (state.secApiKey) {
             try {
-                institutionalHolders = await getSecInstitutionalOwnership(symbol);
+                const institutionalDocRef = doc(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, symbol, 'endpoints', CONSTANTS.DB_DOC_ID_INSTITUTIONAL_OWNERSHIP);
+                const institutionalDoc = await getDoc(institutionalDocRef);
+                if (institutionalDoc.exists()) {
+                    institutionalHolders = institutionalDoc.data().data;
+                } else {
+                    institutionalHolders = await getSecInstitutionalOwnership(symbol);
+                }
             } catch (secError) {
                 console.warn(`Could not fetch institutional ownership data for ${symbol}:`, secError);
             }
@@ -2690,8 +2732,9 @@ async function handleDeepDiveRequest(symbol, forceNew = false) {
             finalRiskFactorsSummaries.push({ source: 'N/A', date: 'N/A', summary: 'Risk factors have not been provided by the user.' });
         }
         
-        const finalMdaSummary = data.user_mda_summary?.data?.summary || 'MD&A has not been provided by the user.';
-        const final8KSummary = data.user_8k_summary?.data?.summary || 'No material events summary has been provided by the user.';
+        const finalMdaSummary = data.user_mda_summary?.data?.summary ? `(Filed on ${data.user_mda_summary.data.date}) ${data.user_mda_summary.data.summary}` : 'MD&A has not been provided by the user.';
+        const final8KSummary = data.user_8k_summary?.data?.summary ? `(Filed on ${data.user_8k_summary.data.date}) ${data.user_8k_summary.data.summary}` : 'No material events summary has been provided by the user.';
+
 
         let institutionalOwnershipTimeframe = 'Recent filings data.';
         if (institutionalHolders && institutionalHolders.length > 1) {
