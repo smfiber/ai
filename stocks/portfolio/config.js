@@ -117,40 +117,8 @@ export const FINANCIAL_NEWS_SOURCES = [
     'spglobal.com', 'nytimes.com', 'gurufocus.com', 'streetinsider.com', 'moodys.com'
 ];
 
-export const COMPETITOR_ANALYSIS_PROMPT = `
-Role: You are a concise financial data analyst.
-Task: Compare the provided financial metrics for two companies: the primary company and its competitor. Your analysis must be strictly quantitative and based only on the data given.
-Output Format: Return a markdown-formatted summary. Start with a "Head-to-Head" comparison table, followed by brief, bulleted "Key Takeaways".
-
-JSON Data for Comparison:
-{comparisonData}
-
----
-
-Generate the following output:
-### Peer Benchmark: {companyName} vs. {competitorName}
-
-| Metric | {companySymbol} | {competitorSymbol} | Leader |
-| :--- | :---: | :---: | :---: |
-| **Valuation** | | | |
-| P/E Ratio | [P/E of company] | [P/E of competitor] | [Lower is better] |
-| P/S Ratio | [P/S of company] | [P/S of competitor] | [Lower is better] |
-| **Profitability** | | | |
-| Gross Margin | [Gross Margin of company] | [Gross Margin of competitor] | [Higher is better] |
-| Net Margin | [Net Margin of company] | [Net Margin of competitor] | [Higher is better] |
-| Return on Equity (ROE) | [ROE of company] | [ROE of competitor] | [Higher is better] |
-| **Growth & Health** | | | |
-| Revenue Growth (YoY) | [Revenue Growth of company] | [Revenue Growth of competitor] | [Higher is better] |
-| Debt-to-Equity | [Debt/Equity of company] | [Debt/Equity of competitor] | [Lower is better] |
-
-### Key Takeaways
-- **Valuation:** [1-sentence summary of who appears cheaper based on the multiples.]
-- **Profitability:** [1-sentence summary of who is more profitable and efficient based on margins and ROE.]
-- **Growth & Health:** [1-sentence summary of who has stronger growth and a healthier balance sheet.]
-`.trim();
-
 export const DEEP_DIVE_PROMPT = `
-Role: You are a senior investment analyst AI for a pragmatic, growth-oriented investment fund. Your goal is to identify compelling investment opportunities by balancing a company's strengths and growth potential against its risks and valuation. Your analysis must be objective and based *exclusively* on the provided data.
+Role: You are a senior investment analyst AI for a discerning, value-oriented fund. Your task is to synthesize a comprehensive set of financial data into a clear, decisive, and data-driven investment memo. Your analysis must be objective and based *exclusively* on the provided data.
 
 CRITICAL INSTRUCTION: The user is analyzing **{companyName} ({tickerSymbol})**. Your entire response MUST be about this specific company and its provided data. Do NOT mention or analyze any other company.
 
@@ -169,12 +137,13 @@ Based on the provided data, generate the following multi-faceted investment memo
 # Investment Memo: {companyName} ({tickerSymbol})
 
 ## 1. Executive Summary & Investment Thesis
-Begin with a concise, one-paragraph summary. What is the core investment narrative that emerges from balancing the company's growth drivers, business quality, primary risks, and current valuation? Synthesize the key findings into a clear investment thesis that states the overall opportunity or lack thereof.
+Begin with a concise, one-paragraph summary. What is the most important takeaway about this company's quality, valuation, and overall story as a potential investment? Synthesize the key findings from the report below, including the forward-looking analyst consensus, **management's outlook from the provided MD&A summary, material events from the provided 8-K summary, and key risks from the provided 10-K/10-Q filing summaries,** into a coherent investment thesis.
 
 ## 2. Forward-Looking Outlook & Recent Events
 ### Analyst Consensus
 - Based on the provided forecasts, what is the market's expectation for next year's revenue and EPS?
 - What does the estimated revenue growth rate suggest about the company's future trajectory?
+- What is the consensus analyst price target and the implied upside/downside from the current price?
 ### Management's Discussion & Analysis (from latest 10-Q)
 - **Based on the provided MD&A summary (filing date: [date]), what is management's narrative regarding recent performance and future outlook?**
 ### Material Events (from latest 8-K)
@@ -184,15 +153,15 @@ Begin with a concise, one-paragraph summary. What is the core investment narrati
 ### Key News Narrative
 - Summarize the dominant news narrative. How does this recent story frame the company's current situation and potential future?
 ### Key Stakeholder Analysis
-- **Insider Transactions:** Analyze the 6-month summary. Are insiders primarily buying, selling, or inactive? What does this pattern imply about their forward-looking confidence in the business?
-- **Institutional Ownership:** Who are the top 3-5 institutional holders listed? What does the presence of these large, sophisticated investors suggest about the perceived quality and stability of the business?
+- **Insider Transactions:** Based on the 6-month transaction summary, are company insiders net buyers or sellers of the stock? What does this suggest about their confidence in the company's near-term prospects?
+- **Institutional Ownership:** Reference the 'institutionalOwnershipTimeframe' from the data. Based on filings from this period, who are some of the largest institutional holders listed? Does this snapshot of recent ownership suggest a high level of conviction from sophisticated investors?
 
 ## 3. Business Quality & Competitive Moat
 ### Business Description
 In simple terms, describe the company's business based on the provided 'description', 'sector', 'industry'.
 ### Moat Analysis
-- **Return on Equity (ROE):** Explain ROE as a "report card" for how well management uses shareholder money. Based on the ROE trend, how effective and consistent is the company at generating profits from its equity? **Reference the peer comparison data to contextualize its performance.**
-- **Margin Stability:** Analyze the trends in Gross and Net Profit Margins. Are they stable, expanding, or contracting? What does this suggest about the company's pricing power? **How do these margins stack up against its main competitor?**
+- **Return on Equity (ROE):** Explain ROE as a "report card" for how well management uses shareholder money. Based on the ROE trend, how effective and consistent is the company at generating profits from its equity?
+- **Margin Stability:** Analyze the trends in Gross and Net Profit Margins. Are they stable, expanding, or contracting? What does this suggest about the company's pricing power and competitive position?
 
 ## 4. Financial Health & Performance
 ### Performance Trends
@@ -205,27 +174,21 @@ In simple terms, describe the company's business based on the provided 'descript
 - **Dividend Safety:** If applicable, analyze the dividend yield and cash flow payout ratio. Is the dividend well-covered by actual cash?
 
 ## 5. Valuation Analysis
-### Peer Comparison
-{peerComparisonSummary}
 ### Key Multiples vs. History
 - For each key multiple (P/E, P/S, P/B), compare its current value to its historical average.
-- **Overall Verdict:** Based on its own history and its valuation relative to its peer, is the stock currently trading at a premium, a discount, or in line with the market's expectations?
+- **Overall Verdict:** Based on this comparison and considering the analyst price target consensus, is the stock currently trading at a premium, a discount, or in line with its own history?
 ### Deep Value Check
 - **Graham Number:** State the pre-calculated 'grahamVerdict'. This classic value investing metric provides a strict, conservative measure of a stock's intrinsic value.
 
-## 6. The Investment Case: Balancing Opportunity and Risk
-### The Bull Case (Key Strengths & Opportunities)
-- Synthesize the most compelling strengths into a clear, bulleted list. Specifically draw from:
-    - **Growth Drivers:** (e.g., Analyst Consensus, Management's Outlook from MD&A, positive news narrative).
-    - **Business Quality:** (e.g., High ROE, expanding margins, strong competitive moat).
-    - **Financial Strength:** (e.g., Low debt, strong cash flow, attractive valuation).
-    - **Stakeholder Conviction:** (e.g., significant recent insider buying, high-quality institutional ownership).
-### Primary Risks & Mitigating Factors
-- Identify the most material risks based on the data and the provided 'Risk Factors' summaries from the 10-K and 10-Q. Also consider any 'red flags' from stakeholder actions, such as heavy or consistent insider selling.
-- For each major risk identified, **briefly assess if there are any mitigating factors or strengths present in the data** (e.g., "While competition is a key risk, the company's stable gross margins suggest it has maintained pricing power," or "Regulatory risk is significant, but a strong balance sheet provides a cushion to absorb potential fines.").
+## 6. Bull & Bear Case (Strengths & Risks)
+### The Bull Case (Key Strengths)
+- Create a bulleted list summarizing the most compelling positive data points from your analysis (e.g., strong ROE, positive analyst revisions, favorable news narrative, attractive valuation).
+### The Bear Case (Potential Risks)
+- Create a bulleted list summarizing the most significant risks or red flags identified in the data (e.g., high debt, declining margins, negative news, high valuation).
+- **Incorporate the key points from the provided "Risk Factors" summaries. For each summary, note its source (e.g., 10-K or 10-Q) and its filing date to determine which is most recent and relevant.**
 
 ## 7. Final Verdict & Recommendation
-Conclude with a final, decisive paragraph. Based on the entire analysis, answer the core investment question: **Does the company's current valuation offer a compelling risk/reward profile?** Weigh the opportunities identified in the bull case against the materiality of the risks. Classify the stock's profile (e.g., "High-Quality Compounder at a Fair Price," "Deep Value with Catalyst," "Speculative Turnaround," "Fairly Valued, Lacks Catalyst," "High-Quality but Overpriced") and state a clear recommendation that explicitly justifies *why* the current price is (or is not) an attractive entry point.
+Conclude with a final, decisive paragraph. Weigh the strengths against the risks, incorporating both the historical financial data and the forward-looking context **from the provided MD&A, 8-K, and Risk Factor summaries**. Based *only* on this quantitative and qualitative analysis, classify the stock's profile (e.g., "High-Quality Compounder," "Classic Value Play," "Speculative Turnaround," "Potential Value Trap") and state a clear recommendation.
 `.trim();
 
 export const MORNING_BRIEFING_PROMPT = `
@@ -719,7 +682,7 @@ Your analysis must be structured as follows:
     - **Technological Risk:** Could a new technology make their "picks and shovels" obsolete?
     - **Valuation Risk:** Is the company's strategic position already fully priced into the stock?
 
-## 6. The Investment Outlook
+## 6. Investment Outlook
 - Conclude with the thesis for why owning this "arms dealer" is a potentially safer and more durable way to invest in the theme, after considering the risks and valuation. **Crucially, your conclusion must explicitly state the logical link between the {contextName} {contextType}, the identified 'gold rush' trend, and the chosen 'pick and shovel' company.**
 
 When you mention a stock ticker, you MUST wrap it in a special tag like this: <stock-ticker>TICKER</stock-ticker>.
