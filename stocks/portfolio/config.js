@@ -801,7 +801,7 @@ Your analysis must be structured as follows:
     - **Low Sales & Marketing spend as a % of revenue** (the brand does the selling for them).
     - **High rates of recurring or repeat revenue.**
 
-## 4. The Achilles' Heel: Risks to the Brand
+## 4. The Achilles' Heel: Risks to Brand
 - Even the strongest brands are not invincible. What are the primary threats to this company's brand moat? Consider risks like:
     - **Reputational Damage:** Could a major scandal or product failure break customer trust?
     - **Cultural Shifts:** Could the brand fall out of touch with the next generation?
@@ -839,7 +839,7 @@ Provide 3-4 key bullet points that summarize the most critical findings from you
 ---
 
 ## 1. Competitive Landscape
-Based on the provided list, who are the key competitors for {companyName}? Briefly mention which company is the largest by market capitalization to set the context.
+Based on the provided list, who are the key competitors for {companyName}? The largest company in the peer group by market cap is {largestCompetitor}.
 
 ---
 
@@ -851,7 +851,7 @@ Create a markdown table comparing the target company and its peers. Calculate an
 - **ROE (Return on Equity):** Net Income / Shareholder's Equity. Measures profitability relative to shareholder investment.
 - **ROA (Return on Assets):** Net Income / Total Assets. Measures how efficiently a company uses its assets to generate profit.
 
-| Company | Market Cap | P/E Ratio | EV/EBITDA | P/S Ratio | Gross Margin | Net Margin | ROE | ROA | Revenue Growth | Debt-to-Equity |
+| Company | Market Cap (B) | P/E Ratio | EV/EBITDA | P/S Ratio | Gross Margin | Net Margin | ROE | ROA | Revenue Growth | Debt-to-Equity |
 |---|---|---|---|---|---|---|---|---|---|---|
 | **{companySymbol} (Target)** | ... | ... | ... | ... | ... | ... | ... | ... | ... | ... |
 | Peer 1 Symbol | ... | ... | ... | ... | ... | ... | ... | ... | ... | ... |
