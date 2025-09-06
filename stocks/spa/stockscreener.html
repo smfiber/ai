@@ -727,24 +727,47 @@ font-size: 0.75rem;
             };
         }
 
-        // --- MODIFIED: NEW, CONCISE PROMPT FOR AI SUMMARY ---
-        
+        // --- MODIFIED: NEW, ADVANCED PROMPT FOR AI SUMMARY ---
         const AI_SUMMARY_PROMPT = `
-        Act as a seasoned investment analyst. I will provide you with a company's description, its key 5-year financial trends, and the latest news headlines. Your task is to synthesize ALL this information into a holistic valuation assessment.
+        Act as a pragmatic, data-driven investment analyst, channeling the mindset of a value investor. Your goal is to produce a balanced, clear-eyed assessment of a stock's investment potential, grounded *only* in the provided data.
+
+        Critically analyze the provided company information, financial summary, and recent news headlines. Your task is to weigh the pros and cons to arrive at a comprehensive investment thesis. You must follow these steps in your reasoning:
+        1.  Identify the key strengths and positive catalysts from the data (the bull case).
+        2.  Identify the key weaknesses, risks, and negative catalysts (the bear case).
+        3.  Weigh the bull case against the bear case to form a final, synthesized investment thesis.
+        4.  Assign a final valuation category based on your thesis.
 
         Company: {companyName} ({tickerSymbol})
         Industry: {industry}
         Sector: {sector}
-        
-        Financial Summary JSON (if a value is "N/A" or an array is empty, it means the data was not available):
+
+        Financial Summary JSON:
         {jsonData}
 
         Latest News Headlines (last 10 days):
         {newsHeadlines}
 
-        Based on a synthesis of the financial summary AND the news headlines, provide your analysis in a valid JSON format with two keys:
-        1. "rating": A single valuation assessment. Choose ONE from the following list: "Undervalued", "Fairly Valued", "Overvalued", "Speculative Growth", "Caution Advised". Your choice must be directly supported by the data and news.
-        2. "rationale": A concise, 2-3 sentence justification for your rating. Your rationale MUST integrate insights from both the financial data (e.g., revenue growth, valuation, Graham Number, ROE) and the sentiment from the news headlines to support your chosen rating.
+        Your final output MUST be a single, valid JSON object with no other text before or after it. The JSON object must contain these four keys:
+        - "valuation_category": A single valuation assessment. Choose ONE: "Undervalued", "Fairly Valued", "Overvalued", "Speculative Growth", "Potential Value Trap".
+        - "investment_thesis": A concise, 2-4 sentence paragraph that summarizes your final assessment, explaining the core reason for the valuation category.
+        - "bull_case_points": A JSON array of strings. Each string is a specific, data-supported reason to be optimistic.
+        - "bear_case_points": A JSON array of strings. Each string is a specific, data-supported risk or reason for caution.
+
+        --- EXAMPLE OUTPUT ---
+        {
+            "valuation_category": "Fairly Valued",
+            "investment_thesis": "While the company shows strong profitability with a high ROE, its revenue growth is decelerating and it trades at a premium to its historical averages. The positive analyst sentiment is counterbalanced by a high debt load, suggesting the current price appropriately reflects both its strengths and risks.",
+            "bull_case_points": [
+                "Consistently high Return on Equity (ROE) trend suggests efficient management.",
+                "Positive analyst sentiment with multiple recent 'Buy' ratings.",
+                "Strong cash flow easily covers dividend payments."
+            ],
+            "bear_case_points": [
+                "Revenue growth has slowed in the most recent year.",
+                "P/E ratio is currently at a premium compared to its 5-year historical average.",
+                "Debt-to-Equity ratio is elevated, indicating higher financial risk."
+            ]
+        }
         `;
 
         // --- 3. Initialization Logic ---
@@ -2415,6 +2438,14 @@ font-size: 0.75rem;
                 
                 const match = rawText.match(/```json\n([\s\S]*?)\n```/);
                 if (!match || !match[1]) {
+                    // Fallback for responses that might not have the markdown block
+                    const jsonStartIndex = rawText.indexOf('{');
+                    const jsonEndIndex = rawText.lastIndexOf('}');
+                    if (jsonStartIndex !== -1 && jsonEndIndex !== -1) {
+                         const jsonText = rawText.substring(jsonStartIndex, jsonEndIndex + 1);
+                         const summary = JSON.parse(jsonText);
+                         return { summary, prompt };
+                    }
                     throw new Error("Failed to extract JSON from Gemini response.");
                 }
 
@@ -2545,25 +2576,56 @@ font-size: 0.75rem;
         // --- MODIFIED: UI function for the new summary format ---
          function populateAiSummary(summary, prompt) {
             const contentEl = document.getElementById('modal-ai-summary-content');
-            if (!summary) {
-                contentEl.innerHTML = '<p class="text-center text-red-500">Could not generate AI summary.</p>';
+            if (!summary || !summary.valuation_category) {
+                contentEl.innerHTML = '<p class="text-center text-red-500">Could not generate a valid AI summary. The response from the model was malformed.</p>';
                 return;
             }
             
             let ratingColor = 'text-gray-800';
-            if (summary.rating === 'Undervalued') ratingColor = 'text-green-600';
-            if (summary.rating === 'Overvalued' || summary.rating === 'Caution Advised') ratingColor = 'text-red-600';
-            if (summary.rating === 'Fairly Valued') ratingColor = 'text-blue-600';
-            if (summary.rating === 'Speculative Growth') ratingColor = 'text-purple-600';
+            switch (summary.valuation_category) {
+                case 'Undervalued':
+                    ratingColor = 'text-green-600';
+                    break;
+                case 'Overvalued':
+                case 'Potential Value Trap':
+                    ratingColor = 'text-red-600';
+                    break;
+                case 'Fairly Valued':
+                    ratingColor = 'text-blue-600';
+                    break;
+                case 'Speculative Growth':
+                    ratingColor = 'text-purple-600';
+                    break;
+            }
+
+            const bullPointsHtml = summary.bull_case_points && summary.bull_case_points.length > 0
+                ? summary.bull_case_points.map(point => `<li class="flex items-start"><span class="text-green-500 mr-2">▲</span><span>${point}</span></li>`).join('')
+                : '<li>No specific bull case points were identified.</li>';
+
+            const bearPointsHtml = summary.bear_case_points && summary.bear_case_points.length > 0
+                ? summary.bear_case_points.map(point => `<li class="flex items-start"><span class="text-red-500 mr-2">▼</span><span>${point}</span></li>`).join('')
+                : '<li>No specific bear case points were identified.</li>';
 
             const escapedPrompt = (prompt || 'Prompt not available.').replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
             contentEl.innerHTML = `
-                <div class="bg-indigo-50 p-4 rounded-lg">
-                    <h3 class="text-xl font-bold ${ratingColor}">${summary.rating || 'N/A'}</h3>
-                    <p class="text-gray-600 mt-2 leading-relaxed">${summary.rationale || 'No rationale provided.'}</p>
+                <div class="bg-gray-50 p-4 rounded-lg border">
+                    <h3 class="text-xl font-bold ${ratingColor}">${summary.valuation_category}</h3>
+                    <p class="text-gray-600 mt-2 leading-relaxed text-sm">${summary.investment_thesis || 'No thesis provided.'}</p>
                 </div>
-                <div class="mt-4 border-t pt-4">
+                
+                <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <h4 class="font-semibold text-gray-800 mb-2 border-b pb-1">Bull Case (Reasons for Optimism)</h4>
+                        <ul class="space-y-2 text-sm text-gray-700">${bullPointsHtml}</ul>
+                    </div>
+                    <div>
+                        <h4 class="font-semibold text-gray-800 mb-2 border-b pb-1">Bear Case (Risks & Concerns)</h4>
+                        <ul class="space-y-2 text-sm text-gray-700">${bearPointsHtml}</ul>
+                    </div>
+                </div>
+
+                <div class="mt-6 border-t pt-4">
                     <button id="prompt-accordion-button" class="w-full flex justify-between items-center text-left font-semibold text-sm text-gray-600 hover:text-gray-800 focus:outline-none">
                         <span>View Gemini API Prompt</span>
                         <svg id="prompt-accordion-icon" class="w-5 h-5 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
