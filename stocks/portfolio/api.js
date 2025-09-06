@@ -822,6 +822,56 @@ function _getCompetitorMetricsFromCache(fmpData) {
     };
 }
 
+/**
+ * [NEW] Fetches live FMP data for a list of peer tickers.
+ * @param {Array<string>} peerTickers - An array of ticker symbols.
+ * @returns {Promise<object>} A promise that resolves to an object mapping tickers to their live data.
+ */
+async function _fetchLivePeerData(peerTickers) {
+    if (!peerTickers || peerTickers.length === 0) return {};
+
+    const peersString = peerTickers.join(',');
+    const apiKey = state.fmpApiKey;
+
+    // Define URLs for batch fetching
+    const profileUrl = `https://financialmodelingprep.com/api/v3/profile/${peersString}?apikey=${apiKey}`;
+    const ratiosTtmUrl = `https://financialmodelingprep.com/api/v3/ratios-ttm/${peersString}?apikey=${apiKey}`;
+    const keyMetricsAnnualUrl = `https://financialmodelingprep.com/api/v3/key-metrics-annual/${peersString}?apikey=${apiKey}`;
+
+    // Define promises for endpoints that may need individual calls
+    const growthPromises = peerTickers.map(ticker => {
+        const url = `https://financialmodelingprep.com/stable/income-statement-growth?symbol=${ticker}&period=annual&limit=5&apikey=${apiKey}`;
+        return callApi(url).catch(e => {
+            console.warn(`Failed to fetch income growth data for peer ${ticker}:`, e);
+            return []; // Return an empty array on failure for this specific peer
+        });
+    });
+
+    const [profiles, ratiosTtm, keyMetricsAnnual, allGrowthData] = await Promise.all([
+        callApi(profileUrl),
+        callApi(ratiosTtmUrl),
+        callApi(keyMetricsAnnualUrl),
+        Promise.all(growthPromises)
+    ]);
+
+    // Map the flat arrays of results back to their respective tickers
+    const liveData = {};
+    peerTickers.forEach((ticker, index) => {
+        const profileData = Array.isArray(profiles) ? profiles.find(p => p.symbol === ticker) : null;
+        const ratiosTtmData = Array.isArray(ratiosTtm) ? ratiosTtm.find(r => r.symbol === ticker) : null;
+        const keyMetricsAnnualData = Array.isArray(keyMetricsAnnual) ? keyMetricsAnnual.find(k => k.symbol === ticker) : null;
+        
+        liveData[ticker] = {
+            profile: { data: profileData ? [profileData] : [] },
+            ratios_ttm: { data: ratiosTtmData ? [ratiosTtmData] : [] },
+            key_metrics_annual: { data: keyMetricsAnnualData ? [keyMetricsAnnualData] : [] },
+            income_statement_growth_annual: { data: allGrowthData[index] || [] }
+        };
+    });
+
+    return liveData;
+}
+
 
 /**
  * Finds competitors for a given stock, fetches comparative data,
@@ -849,19 +899,12 @@ export async function getCompetitorAnalysis(targetSymbol) {
         
         const limitedPeers = peerTickers.slice(0, 10); // Limit to 10 peers for efficiency
         
-        // 2. Fetch all necessary CACHED data in parallel for all companies
-        const allTickers = [targetSymbol, ...limitedPeers];
-        const dataPromises = allTickers.map(ticker => getFmpStockData(ticker));
-        const allFmpData = await Promise.all(dataPromises);
-
-        const dataMap = new Map();
-        allTickers.forEach((ticker, index) => {
-            if (allFmpData[index]) {
-                dataMap.set(ticker, allFmpData[index]);
-            }
-        });
+        // 2. Fetch CACHED data for the target and LIVE data for peers in parallel
+        const targetFmpDataPromise = getFmpStockData(targetSymbol);
+        const livePeerDataPromise = _fetchLivePeerData(limitedPeers);
         
-        const targetFmpData = dataMap.get(targetSymbol);
+        const [targetFmpData, livePeerDataMap] = await Promise.all([targetFmpDataPromise, livePeerDataPromise]);
+
         if (!targetFmpData || !targetFmpData.profile?.data?.[0]) {
             throw new Error(`Could not retrieve cached profile data for target stock ${targetSymbol}. Please refresh its data.`);
         }
@@ -872,10 +915,10 @@ export async function getCompetitorAnalysis(targetSymbol) {
             return (value / 1e9).toFixed(2);
         };
 
-        // 3. Assemble the data for the AI prompt using cached data
+        // 3. Assemble the data for the AI prompt
         const peerData = [];
         limitedPeers.forEach(peerSymbol => {
-            const fmpData = dataMap.get(peerSymbol);
+            const fmpData = livePeerDataMap[peerSymbol];
             const profile = fmpData?.profile?.data?.[0];
             
             if (profile && fmpData) {
@@ -884,15 +927,15 @@ export async function getCompetitorAnalysis(targetSymbol) {
                     name: profile.companyName,
                     market_cap_raw: profile.mktCap,
                     market_cap: formatMarketCap(profile.mktCap),
-                    ..._getCompetitorMetricsFromCache(fmpData)
+                    ..._getCompetitorMetricsFromCache(fmpData) // This function can be reused
                 });
             } else {
-                 console.warn(`Skipping peer ${peerSymbol} due to missing cached data or profile.`);
+                 console.warn(`Skipping peer ${peerSymbol} due to missing live data or profile.`);
             }
         });
 
         if (peerData.length === 0) {
-            throw new Error("Failed to gather sufficient financial data for comparison.");
+            throw new Error("Failed to gather sufficient live financial data for peer comparison.");
         }
 
         // Find the largest competitor by raw market cap
@@ -903,9 +946,9 @@ export async function getCompetitorAnalysis(targetSymbol) {
             target: {
                 name: targetProfile.companyName,
                 market_cap: formatMarketCap(targetProfile.mktCap),
-                ..._getCompetitorMetricsFromCache(targetFmpData)
+                ..._getCompetitorMetricsFromCache(targetFmpData) // Use cached data for target
             },
-            peers: peerData,
+            peers: peerData, // Use live data for peers
             largest_competitor: largestCompetitor.name || 'N/A'
         };
 
