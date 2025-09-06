@@ -816,15 +816,20 @@ async function _fetchCompetitorMetrics(symbol) {
 
     const formatMetric = (value, isPercentage = false) => {
         if (typeof value !== 'number') return 'N/A';
-        return isPercentage ? `${(value * 100).toFixed(2)}%` : value.toFixed(2);
+        const num = Number(value);
+        if (isPercentage) return `${(num * 100).toFixed(2)}%`;
+        // Avoid excessive decimal places for large ratios
+        return Math.abs(num) > 100 ? num.toFixed(0) : num.toFixed(2);
     };
 
     return {
         pe_ratio: formatMetric(ratios.peRatioTTM),
         ps_ratio: formatMetric(ratios.priceToSalesRatioTTM),
+        ev_ebitda: formatMetric(ratios.enterpriseValueOverEBITDATTM),
         gross_margin: formatMetric(ratios.grossProfitMarginTTM, true),
         net_margin: formatMetric(ratios.netProfitMarginTTM, true),
         roe: formatMetric(ratios.returnOnEquityTTM, true),
+        roa: formatMetric(ratios.returnOnAssetsTTM, true),
         revenue_growth: formatMetric(growth.revenueGrowth, true),
         debt_to_equity: formatMetric(ratios.debtEquityRatioTTM)
     };
@@ -841,10 +846,17 @@ export async function getCompetitorAnalysis(targetSymbol) {
         // 1. Fetch the list of peer tickers from FMP
         const peersUrl = `https://financialmodelingprep.com/api/v4/stock_peers?symbol=${targetSymbol}&apikey=${state.fmpApiKey}`;
         const peersResponse = await callApi(peersUrl);
-        const peerTickers = peersResponse[0]?.peersList;
+        let peerTickers = peersResponse[0]?.peersList;
         if (!peerTickers || peerTickers.length === 0) {
             console.warn(`No peers found for ${targetSymbol}`);
             return "No peer data could be found for comparison.";
+        }
+        
+        // Logic to prevent GOOG vs GOOGL comparison
+        if (targetSymbol === 'GOOG') {
+            peerTickers = peerTickers.filter(p => p !== 'GOOGL');
+        } else if (targetSymbol === 'GOOGL') {
+            peerTickers = peerTickers.filter(p => p !== 'GOOG');
         }
         
         const limitedPeers = peerTickers.slice(0, 10); // Limit to 10 peers for efficiency
@@ -877,6 +889,7 @@ export async function getCompetitorAnalysis(targetSymbol) {
             if (peerProfile && peerMetrics) {
                 peerData.push({
                     name: peerProfile.companyName,
+                    market_cap: peerProfile.mktCap,
                     ...peerMetrics 
                 });
             } else {
@@ -891,6 +904,7 @@ export async function getCompetitorAnalysis(targetSymbol) {
         const comparisonData = {
             target: {
                 name: targetProfile.companyName,
+                market_cap: targetProfile.mktCap,
                 ...targetMetrics
             },
             peers: peerData
