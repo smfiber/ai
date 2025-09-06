@@ -362,14 +362,26 @@ Provide a 1-2 sentence summary for an investor. What is the most important takea
 `.trim();
 
 export const SEC_RISK_FACTOR_SUMMARY_PROMPT = `
-Role: You are an expert risk analyst AI. Your task is to read the "Risk Factors" section from a company's 10-K filing and create a concise, bulleted summary of the **most critical risks** for a potential investor.
+Role: You are an expert risk analyst AI. Your task is to read the "Risk Factors" section from a company's filing and create a prioritized, categorized, and concise summary of the most critical risks for a potential investor.
 
 Instructions:
-- Focus on risks that are specific to the company, its industry, or its strategy, rather than generic boilerplate risks (e.g., "general economic conditions").
-- Group related risks under a clear sub-heading if appropriate.
-- Each bullet point should be a single, clear sentence.
-- The entire summary should be no more than 5-7 bullet points.
-- Return ONLY the markdown-formatted summary. Do not add any introductory or concluding sentences.
+
+Prioritize: Identify the top 5-7 most material risks. Rank them with the most severe first.
+
+Categorize: Assign each risk to one of the following categories: Strategic, Operational, Financial, or Regulatory/Legal.
+
+Focus: Filter out generic, boilerplate risks (e.g., "general economic conditions") and concentrate on risks specific to the company's strategy, products, or market position.
+
+Format: For each risk, create a single bullet point in the format: **[Category]:** [Description of the risk and its potential impact on the business.]
+
+Constraints: The entire summary must be 5-7 bullet points. Return ONLY the markdown summary without any introductory or concluding text.
+
+Example of Desired Output:
+**Strategic:** Failure to innovate and compete with new technologies could lead to significant loss of market share.
+
+**Regulatory/Legal:** Increased government scrutiny in key international markets may result in costly fines or restrictions on business operations.
+
+**Financial:** A high level of debt exposes the company to interest rate fluctuations, which could negatively impact profitability.
 
 Raw Text from "Risk Factors" section:
 ---
@@ -378,14 +390,26 @@ Raw Text from "Risk Factors" section:
 `.trim();
 
 export const SEC_MDA_SUMMARY_PROMPT = `
-Role: You are an expert financial analyst AI. Your task is to read the "Management's Discussion and Analysis" (MD&A) section from a company's 10-Q filing and create a concise, bulleted summary of the **most important takeaways** for a potential investor.
+Role: You are an expert financial analyst AI. Your task is to read the "Management's Discussion and Analysis" (MD&A) section from a company's filing and create a prioritized, categorized, and concise summary of the most critical takeaways for a potential investor.
 
 Instructions:
-- Focus on management's commentary on financial performance, key trends, forward-looking outlook, and any significant changes or challenges mentioned.
-- Do not just repeat numbers; explain what they *mean* according to management.
-- Each bullet point should be a single, clear sentence.
-- The entire summary should be no more than 5-7 bullet points.
-- Return ONLY the markdown-formatted summary. Do not add any introductory or concluding sentences.
+
+Prioritize: Identify the top 5-7 most material takeaways. Rank them with the most significant first.
+
+Categorize: Assign each takeaway to one of the following categories: Performance, Outlook, Catalysts, or Risks.
+
+Focus: Filter out generic, boilerplate language and concentrate on specific commentary regarding financial results, future guidance, strategic initiatives, or challenges.
+
+Format: For each takeaway, create a single bullet point in the format: **[Category]:** [Description of the takeaway and its potential impact on the business.]
+
+Constraints: The entire summary must be 5-7 bullet points. Return ONLY the markdown summary without any introductory or concluding text.
+
+Example of Desired Output:
+**Performance:** Revenue growth was primarily driven by strong demand in the international segment, though margins were slightly compressed due to rising input costs.
+
+**Outlook:** Management has raised full-year earnings guidance based on a positive outlook for the second half of the year.
+
+**Risks:** The company identified ongoing supply chain disruptions as a key operational risk that could impact inventory levels.
 
 Raw Text from "MD&A" section:
 ---
