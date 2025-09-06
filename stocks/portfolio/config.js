@@ -206,7 +206,7 @@ In simple terms, describe the company's business based on the provided 'descript
 
 ## 5. Valuation Analysis
 ### Peer Comparison
-- **Incorporate the entire 'Peer Benchmark' summary here.** This provides essential context for the company's valuation and performance relative to its closest rival.
+{peerComparisonSummary}
 ### Key Multiples vs. History
 - For each key multiple (P/E, P/S, P/B), compare its current value to its historical average.
 - **Overall Verdict:** Based on its own history and its valuation relative to its peer, is the stock currently trading at a premium, a discount, or in line with the market's expectations?
