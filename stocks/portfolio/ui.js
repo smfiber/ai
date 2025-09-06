@@ -2672,7 +2672,7 @@ export function setupEventListeners() {
 
 async function getSavedReports(ticker, reportType) {
     const reportsRef = collection(state.db, CONSTANTS.DB_COLLECTION_AI_REPORTS);
-    const q = query(reportsRef, where("ticker", "==", ticker), where("reportType", "==", "==", reportType), orderBy("savedAt", "desc"));
+    const q = query(reportsRef, where("ticker", "==", ticker), where("reportType", "==", reportType), orderBy("savedAt", "desc"));
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
@@ -3013,18 +3013,25 @@ async function handleSaveReportToDb() {
     document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Saving ${reportType} report to database...`;
 
     try {
+        const previousReports = await getSavedReports(symbol, reportType);
+        
         const reportData = {
             ticker: symbol,
             reportType: reportType,
             content: contentToSave,
             savedAt: Timestamp.now()
         };
-        await addDoc(collection(state.db, CONSTANTS.DB_COLLECTION_AI_REPORTS), reportData);
+        const docRef = await addDoc(collection(state.db, CONSTANTS.DB_COLLECTION_AI_REPORTS), reportData);
+        
         displayMessageInModal("Report saved successfully!", "info");
         
-        const savedReports = await getSavedReports(symbol, reportType);
-        const latestReport = savedReports[0];
-        updateReportStatus(document.getElementById('report-status-container-ai'), savedReports, latestReport.id, { symbol, reportType });
+        const newReport = {
+            id: docRef.id,
+            ...reportData
+        };
+        const allReports = [newReport, ...previousReports];
+
+        updateReportStatus(document.getElementById('report-status-container-ai'), allReports, newReport.id, { symbol, reportType });
 
     } catch (error) {
         console.error("Error saving report to DB:", error);
