@@ -1762,12 +1762,14 @@ function _renderSecInstitutionalOwnership(container, data, cachedAt) {
     const timestampEl = document.getElementById('institutional-timestamp');
     timestampEl.textContent = cachedAt ? `Cached: ${cachedAt.toDate().toLocaleString()}` : 'Cached: N/A';
 
-    if (!data || data.length === 0) {
+    const holders = data?.holders;
+
+    if (!holders || holders.length === 0) {
         container.innerHTML = `<p class="text-sm text-gray-500 p-4">No institutional ownership data found.</p>`;
         return;
     }
 
-    const tableRows = data.slice(0, 100).map(holder => `
+    const tableRows = holders.slice(0, 100).map(holder => `
         <tr>
             <td class="p-3 text-gray-700">${sanitizeText(holder.investorName)}</td>
             <td class="p-3 text-right text-gray-700">${holder.shares?.toLocaleString() || 'N/A'}</td>
