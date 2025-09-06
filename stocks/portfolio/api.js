@@ -782,8 +782,8 @@ export async function generateNewsSummary(ticker, companyName) {
 async function _fetchCompetitorMetrics(symbol) {
     if (!state.fmpApiKey) throw new Error("FMP API Key is not configured.");
 
-    const ratiosUrl = `https://financialmodelingprep.com/stable/ratios-ttm?symbol=${symbol}&apikey=${state.fmpApiKey}`;
-    const growthUrl = `https://financialmodelingprep.com/stable/financial-growth?symbol=${symbol}&limit=1&apikey=${state.fmpApiKey}`;
+    const ratiosUrl = `https://financialmodelingprep.com/api/v3/ratios-ttm/${symbol}?apikey=${state.fmpApiKey}`;
+    const growthUrl = `https://financialmodelingprep.com/api/v3/financial-growth/${symbol}?limit=1&apikey=${state.fmpApiKey}`;
 
     const [ratiosResponse, growthResponse] = await Promise.all([
         callApi(ratiosUrl),
@@ -832,8 +832,7 @@ export async function getCompetitorAnalysis(targetSymbol) {
 
         // 2. Fetch profiles for the target and all peers to get market caps
         const allTickers = [targetSymbol, ...peerTickers.slice(0, 10)]; // Limit to 10 peers for efficiency
-        const profilesUrl = `https://financialmodelingprep.com/api/v3/profile/${allTickers.join(',')
-}?apikey=${state.fmpApiKey}`;
+        const profilesUrl = `https://financialmodelingprep.com/api/v3/profile/${allTickers.join(',')}?apikey=${state.fmpApiKey}`;
         const profiles = await callApi(profilesUrl);
 
         // 3. Find the target's profile and the best competitor by closest market cap
