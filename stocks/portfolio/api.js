@@ -1,4 +1,4 @@
-import { CONSTANTS, state, MORNING_BRIEFING_PROMPT, NEWS_SENTIMENT_PROMPT, OPPORTUNITY_SCANNER_PROMPT, PORTFOLIO_ANALYSIS_PROMPT, TREND_ANALYSIS_PROMPT, SEC_RISK_FACTOR_SUMMARY_PROMPT, SEC_MDA_SUMMARY_PROMPT } from './config.js';
+import { CONSTANTS, state, MORNING_BRIEFING_PROMPT, NEWS_SENTIMENT_PROMPT, OPPORTUNITY_SCANNER_PROMPT, PORTFOLIO_ANALYSIS_PROMPT, TREND_ANALYSIS_PROMPT, SEC_RISK_FACTOR_SUMMARY_PROMPT, SEC_MDA_SUMMARY_PROMPT, COMPETITOR_ANALYSIS_PROMPT } from './config.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- PROMPTS (Moved from config.js for better organization) ---
@@ -771,5 +771,107 @@ export async function generateNewsSummary(ticker, companyName) {
     } catch (error) {
         console.error(`Failed to generate news summary for ${ticker}:`, error);
         return { dominant_narrative: `Error fetching news: ${error.message}`, overall_sentiment: "N/A" };
+    }
+}
+
+/**
+ * Finds the best competitor for a given stock, fetches comparative data,
+ * and generates a head-to-head summary using an AI.
+ * @param {string} targetSymbol The ticker symbol of the company to analyze.
+ * @returns {Promise<string|null>} A markdown string of the competitor analysis, or null if it fails.
+ */
+export async function getCompetitorAnalysis(targetSymbol) {
+    try {
+        // 1. Fetch the list of peer tickers from FMP
+        const peersUrl = `https://financialmodelingprep.com/api/v4/stock_peers?symbol=${targetSymbol}&apikey=${state.fmpApiKey}`;
+        const peersResponse = await callApi(peersUrl);
+        const peerTickers = peersResponse[0]?.peersList;
+        if (!peerTickers || peerTickers.length === 0) {
+            console.warn(`No peers found for ${targetSymbol}`);
+            return "No peer data could be found for comparison.";
+        }
+
+        // 2. Fetch profiles for the target and all peers to get market caps
+        const allTickers = [targetSymbol, ...peerTickers.slice(0, 10)]; // Limit to 10 peers for efficiency
+        const profilesUrl = `https://financialmodelingprep.com/api/v3/profile/${allTickers.join(',')
+}?apikey=${state.fmpApiKey}`;
+        const profiles = await callApi(profilesUrl);
+
+        // 3. Find the target's profile and the best competitor by closest market cap
+        const targetProfile = profiles.find(p => p.symbol === targetSymbol);
+        if (!targetProfile) throw new Error("Could not retrieve profile for target stock.");
+        
+        let closestCompetitor = null;
+        let smallestDiff = Infinity;
+
+        profiles.forEach(peerProfile => {
+            if (peerProfile.symbol !== targetSymbol && peerProfile.mktCap > 0) {
+                const diff = Math.abs(targetProfile.mktCap - peerProfile.mktCap);
+                if (diff < smallestDiff) {
+                    smallestDiff = diff;
+                    closestCompetitor = peerProfile;
+                }
+            }
+        });
+
+        if (!closestCompetitor) {
+            console.warn(`Could not find a suitable competitor for ${targetSymbol}`);
+            return "Could not identify a suitable competitor for comparison.";
+        }
+        const competitorSymbol = closestCompetitor.symbol;
+
+        // 4. Fetch detailed financial metrics for both companies
+        const targetDataPromise = getFmpStockData(targetSymbol);
+        const competitorDataPromise = getFmpStockData(competitorSymbol);
+        const [targetData, competitorData] = await Promise.all([targetDataPromise, competitorDataPromise]);
+
+        // Helper to extract the latest metric
+        const getMetric = (data, endpoint, metric, isGrowth = false) => {
+            const record = data?.[endpoint]?.data?.[0];
+            if (!record) return 'N/A';
+            const value = record[metric];
+            if (typeof value !== 'number') return 'N/A';
+            return isGrowth ? `${(value * 100).toFixed(2)}%` : value.toFixed(2);
+        };
+        
+        // 5. Assemble the data for the AI prompt
+        const comparisonData = {
+            company: {
+                name: targetProfile.companyName,
+                symbol: targetSymbol,
+                pe_ratio: getMetric(targetData, 'key_metrics_annual', 'peRatio'),
+                ps_ratio: getMetric(targetData, 'key_metrics_annual', 'priceToSalesRatio'),
+                gross_margin: getMetric(targetData, 'ratios_annual', 'grossProfitMargin'),
+                net_margin: getMetric(targetData, 'ratios_annual', 'netProfitMargin'),
+                roe: getMetric(targetData, 'ratios_annual', 'returnOnEquity'),
+                revenue_growth: getMetric(targetData, 'income_statement_growth_annual', 'growthRevenue', true),
+                debt_to_equity: getMetric(targetData, 'key_metrics_annual', 'debtToEquity')
+            },
+            competitor: {
+                name: closestCompetitor.companyName,
+                symbol: competitorSymbol,
+                pe_ratio: getMetric(competitorData, 'key_metrics_annual', 'peRatio'),
+                ps_ratio: getMetric(competitorData, 'key_metrics_annual', 'priceToSalesRatio'),
+                gross_margin: getMetric(competitorData, 'ratios_annual', 'grossProfitMargin'),
+                net_margin: getMetric(competitorData, 'ratios_annual', 'netProfitMargin'),
+                roe: getMetric(competitorData, 'ratios_annual', 'returnOnEquity'),
+                revenue_growth: getMetric(competitorData, 'income_statement_growth_annual', 'growthRevenue', true),
+                debt_to_equity: getMetric(competitorData, 'key_metrics_annual', 'debtToEquity')
+            }
+        };
+
+        // 6. Generate the AI summary
+        const prompt = COMPETITOR_ANALYSIS_PROMPT
+            .replace('{comparisonData}', JSON.stringify(comparisonData, null, 2))
+            .replace(/{companyName}/g, targetProfile.companyName)
+            .replace(/{competitorName}/g, closestCompetitor.companyName)
+            .replace(/{companySymbol}/g, targetSymbol)
+            .replace(/{competitorSymbol}/g, competitorSymbol);
+
+        return await callGeminiApi(prompt);
+
+    } catch (error) {
+        console.error(`Failed to get competitor analysis for ${targetSymbol}:`, error);
+        return `*Error generating peer comparison: ${error.message}*`;
     }
 }
