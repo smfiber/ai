@@ -775,6 +775,45 @@ export async function generateNewsSummary(ticker, companyName) {
 }
 
 /**
+ * [NEW INTERNAL HELPER] Fetches live TTM financial metrics for a single stock.
+ * @param {string} symbol The stock ticker.
+ * @returns {Promise<object>} An object containing key financial metrics.
+ */
+async function _fetchCompetitorMetrics(symbol) {
+    if (!state.fmpApiKey) throw new Error("FMP API Key is not configured.");
+
+    const ratiosUrl = `https://financialmodelingprep.com/stable/ratios-ttm?symbol=${symbol}&apikey=${state.fmpApiKey}`;
+    const growthUrl = `https://financialmodelingprep.com/stable/financial-growth?symbol=${symbol}&limit=1&apikey=${state.fmpApiKey}`;
+
+    const [ratiosResponse, growthResponse] = await Promise.all([
+        callApi(ratiosUrl),
+        callApi(growthUrl)
+    ]);
+
+    const ratios = ratiosResponse?.[0];
+    const growth = growthResponse?.[0];
+
+    if (!ratios || !growth) {
+        throw new Error(`Could not fetch complete financial metrics for ${symbol}. Check the ticker and FMP API.`);
+    }
+
+    const formatMetric = (value, isPercentage = false) => {
+        if (typeof value !== 'number') return 'N/A';
+        return isPercentage ? `${(value * 100).toFixed(2)}%` : value.toFixed(2);
+    };
+
+    return {
+        pe_ratio: formatMetric(ratios.peRatioTTM),
+        ps_ratio: formatMetric(ratios.priceToSalesRatioTTM),
+        gross_margin: formatMetric(ratios.grossProfitMarginTTM, true),
+        net_margin: formatMetric(ratios.netProfitMarginTTM, true),
+        roe: formatMetric(ratios.returnOnEquityTTM, true),
+        revenue_growth: formatMetric(growth.revenueGrowth, true),
+        debt_to_equity: formatMetric(ratios.debtEquityRatioTTM)
+    };
+}
+
+/**
  * Finds the best competitor for a given stock, fetches comparative data,
  * and generates a head-to-head summary using an AI.
  * @param {string} targetSymbol The ticker symbol of the company to analyze.
@@ -820,43 +859,23 @@ export async function getCompetitorAnalysis(targetSymbol) {
         }
         const competitorSymbol = closestCompetitor.symbol;
 
-        // 4. Fetch detailed financial metrics for both companies
-        const targetDataPromise = getFmpStockData(targetSymbol);
-        const competitorDataPromise = getFmpStockData(competitorSymbol);
-        const [targetData, competitorData] = await Promise.all([targetDataPromise, competitorDataPromise]);
-
-        // Helper to extract the latest metric
-        const getMetric = (data, endpoint, metric, isGrowth = false) => {
-            const record = data?.[endpoint]?.data?.[0];
-            if (!record) return 'N/A';
-            const value = record[metric];
-            if (typeof value !== 'number') return 'N/A';
-            return isGrowth ? `${(value * 100).toFixed(2)}%` : value.toFixed(2);
-        };
+        // 4. Fetch detailed financial metrics for both companies using the new live helper
+        const [targetMetrics, competitorMetrics] = await Promise.all([
+            _fetchCompetitorMetrics(targetSymbol),
+            _fetchCompetitorMetrics(competitorSymbol)
+        ]);
         
-        // 5. Assemble the data for the AI prompt
+        // 5. Assemble the data for the AI prompt from the live metrics
         const comparisonData = {
             company: {
                 name: targetProfile.companyName,
                 symbol: targetSymbol,
-                pe_ratio: getMetric(targetData, 'key_metrics_annual', 'peRatio'),
-                ps_ratio: getMetric(targetData, 'key_metrics_annual', 'priceToSalesRatio'),
-                gross_margin: getMetric(targetData, 'ratios_annual', 'grossProfitMargin'),
-                net_margin: getMetric(targetData, 'ratios_annual', 'netProfitMargin'),
-                roe: getMetric(targetData, 'ratios_annual', 'returnOnEquity'),
-                revenue_growth: getMetric(targetData, 'income_statement_growth_annual', 'growthRevenue', true),
-                debt_to_equity: getMetric(targetData, 'key_metrics_annual', 'debtToEquity')
+                ...targetMetrics
             },
             competitor: {
                 name: closestCompetitor.companyName,
                 symbol: competitorSymbol,
-                pe_ratio: getMetric(competitorData, 'key_metrics_annual', 'peRatio'),
-                ps_ratio: getMetric(competitorData, 'key_metrics_annual', 'priceToSalesRatio'),
-                gross_margin: getMetric(competitorData, 'ratios_annual', 'grossProfitMargin'),
-                net_margin: getMetric(competitorData, 'ratios_annual', 'netProfitMargin'),
-                roe: getMetric(competitorData, 'ratios_annual', 'returnOnEquity'),
-                revenue_growth: getMetric(competitorData, 'income_statement_growth_annual', 'growthRevenue', true),
-                debt_to_equity: getMetric(competitorData, 'key_metrics_annual', 'debtToEquity')
+                ...competitorMetrics
             }
         };
 
