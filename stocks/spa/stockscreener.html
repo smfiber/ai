@@ -1420,8 +1420,13 @@ font-size: 0.75rem;
                 if (snapshot.exists()) {
                     const allDetails = snapshot.val();
                     for (const symbol in allDetails) {
-                        if (allDetails[symbol].aiSummary && allDetails[symbol].aiSummary.rating && allDetails[symbol].timestamp) {
-                            appConfig.cachedStockInfo[symbol] = { rating: allDetails[symbol].aiSummary.rating, timestamp: allDetails[symbol].timestamp };
+                        if (allDetails[symbol].aiSummary && allDetails[symbol].timestamp) {
+                            // Check for the new key first, then fall back to the old key for backward compatibility
+                            const rating = allDetails[symbol].aiSummary.valuation_category || allDetails[symbol].aiSummary.rating;
+                            if (rating) {
+                                // Always store it under the consistent 'rating' key in the app's memory for simplicity
+                                appConfig.cachedStockInfo[symbol] = { rating: rating, timestamp: allDetails[symbol].timestamp };
+                            }
                         }
                     }
                     console.log("Successfully loaded all cached stock info (ratings and timestamps).");
@@ -1997,7 +2002,7 @@ font-size: 0.75rem;
             
             let ratingColor = 'text-gray-700';
             if (rating === 'Undervalued') ratingColor = 'text-green-600';
-            if (rating === 'Overvalued' || rating === 'Caution Advised') ratingColor = 'text-red-600';
+            if (rating === 'Overvalued' || rating === 'Caution Advised' || rating === 'Potential Value Trap') ratingColor = 'text-red-600';
             if (rating === 'Fairly Valued') ratingColor = 'text-blue-600';
             if (rating === 'Speculative Growth') ratingColor = 'text-purple-600';
 
@@ -2238,7 +2243,7 @@ font-size: 0.75rem;
                          populateAiSummary(aiSummary, aiPrompt);
                          const dataToSave = { ...liveData, aiSummary, timestamp: new Date().toISOString() };
                          await saveTickerDetailsToFirebase(symbol, dataToSave);
-                         appConfig.cachedStockInfo[symbol] = { rating: aiSummary.rating, timestamp: dataToSave.timestamp };
+                         appConfig.cachedStockInfo[symbol] = { rating: aiSummary.valuation_category, timestamp: dataToSave.timestamp };
                          updateRatingDisplayForSymbol(symbol);
                     } else {
                         document.getElementById('modal-key-metrics-content').innerHTML = '<p class="text-center text-red-500">Could not refresh data.</p>';
@@ -2289,7 +2294,7 @@ font-size: 0.75rem;
                     const { summary: aiSummary, prompt: aiPrompt } = await generateAiRating(cachedData);
                     populateAiSummary(aiSummary, aiPrompt);
                     await saveTickerDetailsToFirebase(symbol, { ...cachedData, aiSummary });
-                    appConfig.cachedStockInfo[symbol] = { rating: aiSummary.rating, timestamp: new Date().toISOString() };
+                    appConfig.cachedStockInfo[symbol] = { rating: aiSummary.valuation_category, timestamp: new Date().toISOString() };
                     updateRatingDisplayForSymbol(symbol);
                 }
             } else {
@@ -2303,7 +2308,7 @@ font-size: 0.75rem;
                     populateAiSummary(aiSummary, aiPrompt);
                     const dataToSave = { ...liveData, aiSummary, timestamp: new Date().toISOString() };
                     await saveTickerDetailsToFirebase(symbol, dataToSave);
-                    appConfig.cachedStockInfo[symbol] = { rating: aiSummary.rating, timestamp: dataToSave.timestamp };
+                    appConfig.cachedStockInfo[symbol] = { rating: aiSummary.valuation_category, timestamp: dataToSave.timestamp };
                     updateRatingDisplayForSymbol(symbol);
                 } else {
                      document.getElementById('modal-key-metrics-content').innerHTML = '<p class="text-center text-red-500">Could not fetch financial data.</p>';
@@ -2405,7 +2410,7 @@ font-size: 0.75rem;
         // --- MODIFIED: AI Rating Generation with Robust JSON Parsing ---
         async function generateAiRating(financialData) {
             if (!appConfig.geminiApiKey || !financialData) {
-                return { summary: { rating: 'Error', rationale: 'API key or financial data missing.' }, prompt: "Prompt could not be generated." };
+                return { summary: { valuation_category: 'Error', rationale: 'API key or financial data missing.' }, prompt: "Prompt could not be generated." };
             }
             
             const structuredMetrics = _calculateUndervaluedMetrics(financialData);
