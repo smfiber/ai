@@ -773,7 +773,7 @@ Your analysis must be structured as follows:
 - What could prevent this "hidden value" from being realized? Discuss the primary risks:
     - **Catalyst Risk:** Is management entrenched and unlikely to pursue spin-offs?
     - **Execution Risk:** Could a breakup be messy, costly, or destroy hidden synergies?
-    - **Valuation Risk:** Are the chosen peer multiples at a cyclical peak, potentially inflating the SOTP value?
+    - **Valuation Risk:** Are the chosen peer multiples at a cyclical peak, a-potentially inflating the SOTP value?
 
 ## 6. The Activist Playbook: Unlocking Value
 - Compare your SOTP value to the current market cap. If there's a significant discount, summarize the activist thesis.
@@ -817,12 +817,12 @@ When you mention a stock ticker, you MUST wrap it in a special tag like this: <s
 `;
 
 export const COMPETITOR_ANALYSIS_PROMPT = `
-Role: You are an expert financial analyst. Your task is to conduct a head-to-head comparison between two companies based on the provided live financial data and provide a definitive "winner" for each key category.
+Role: You are an expert financial analyst. Your task is to conduct a comprehensive peer analysis for a target company against its competitors using the provided live financial data. Your analysis should be clear, insightful, and strictly data-driven.
 
 Data Instructions:
-- Your analysis MUST be based *only* on the provided JSON data.
-- The data contains live, trailing-twelve-month (TTM) metrics for two companies.
-- For each metric, explicitly state the values for both companies before declaring a winner.
+- Your analysis MUST be based *only* on the provided JSON data. Do not use outside knowledge.
+- The data contains live, trailing-twelve-month (TTM) metrics.
+- You must calculate the Peer Group Average and Peer Group Median for all relevant metrics. The median is crucial to account for outliers.
 
 JSON Data for Comparison:
 {comparisonData}
@@ -831,24 +831,60 @@ JSON Data for Comparison:
 
 Generate the following report in markdown format:
 
-# Head-to-Head: {companyName} ({companySymbol}) vs. {competitorName} ({competitorSymbol})
+# Peer Analysis: {companyName} ({companySymbol})
 
-## 1. Valuation
-- **Price-to-Earnings (P/E Ratio):** Compare the P/E ratios. A lower P/E is generally cheaper.
-- **Price-to-Sales (P/S Ratio):** Compare the P/S ratios. A lower P/S suggests the market is valuing each dollar of sales less.
-- **Category Winner:** Based on these metrics, which stock appears more attractively valued?
+## 📊 Executive Summary: At a Glance
+Provide 3-4 key bullet points that summarize the most critical findings from your analysis. This should be a high-level overview of the company's valuation, profitability, and competitive standing.
 
-## 2. Profitability
-- **Gross Margin:** Compare the gross margins. Higher is better, indicating more profit on each sale.
-- **Net Margin:** Compare the net profit margins. This shows the ultimate profitability after all expenses.
-- **Return on Equity (ROE):** Compare the ROE. Higher is better, showing more effective use of shareholder capital.
-- **Category Winner:** Which company is more profitable and efficient?
+---
 
-## 3. Growth & Health
-- **Revenue Growth (YoY):** Compare the year-over-year revenue growth rates. Higher is better.
-- **Debt-to-Equity:** Compare the debt-to-equity ratios. Lower is generally safer.
-- **Category Winner:** Which company has a better combination of growth and balance sheet health?
+## 1. Competitive Landscape
+Based on the provided list, who are the key competitors for {companyName}? Briefly mention which company is the largest by market capitalization to set the context.
 
-## 4. The Verdict
-Provide a final, one-paragraph summary. Synthesize the findings from the three categories above to declare an overall winner. Justify your choice by highlighting the most significant advantages (e.g., "{companyName} wins due to its superior profitability and much lower valuation, despite {competitorName}'s faster growth.").
+---
+
+## 2. Quantitative Peer Benchmark
+Create a markdown table comparing the target company and its peers. Calculate and include both the **Peer Group Average** and **Peer Group Median** for each metric.
+
+*Definitions:*
+- **EV/EBITDA:** Enterprise Value to Earnings Before Interest, Taxes, Depreciation, and Amortization. A valuation metric that is capital structure-neutral.
+- **ROE (Return on Equity):** Net Income / Shareholder's Equity. Measures profitability relative to shareholder investment.
+- **ROA (Return on Assets):** Net Income / Total Assets. Measures how efficiently a company uses its assets to generate profit.
+
+| Company | Market Cap | P/E Ratio | EV/EBITDA | P/S Ratio | Gross Margin | Net Margin | ROE | ROA | Revenue Growth | Debt-to-Equity |
+|---|---|---|---|---|---|---|---|---|---|---|
+| **{companySymbol} (Target)** | ... | ... | ... | ... | ... | ... | ... | ... | ... | ... |
+| Peer 1 Symbol | ... | ... | ... | ... | ... | ... | ... | ... | ... | ... |
+| Peer 2 Symbol | ... | ... | ... | ... | ... | ... | ... | ... | ... | ... |
+| ... | ... | ... | ... | ... | ... | ... | ... | ... | ... | ... |
+| **Peer Average** | ... | ... | ... | ... | ... | ... | ... | ... | ... | ... |
+| **Peer Median** | ... | ... | ... | ... | ... | ... | ... | ... | ... | ... |
+
+---
+
+## 3. In-Depth Analysis vs. Peers
+For each category below, provide a brief analysis of how {companyName} compares to the **peer group median**.
+
+### 밸류에이션 (Valuation)
+- Is {companyName} trading at a premium or a discount to its peers based on P/E, P/S, and EV/EBITDA ratios?
+- Does its growth and profitability profile seem to justify its current valuation multiple relative to the group?
+
+### 수익성 및 효율성 (Profitability & Efficiency)
+- How do the company's margins (Gross, Net) and returns (ROE, ROA) stack up?
+- Does this suggest superior operational efficiency, pricing power, or a different business model compared to its peers?
+
+### 성장 및 재무 건전성 (Growth & Financial Health)
+- Is the company growing faster or slower than its peers?
+- How does its balance sheet leverage (Debt-to-Equity) compare? Does its growth appear to be financed responsibly?
+
+---
+
+## 4. Investment Thesis Summary
+Synthesize the findings into a balanced, data-driven summary. Frame the conclusion as a "Bull Case" and a "Bear Case" based *only* on the provided metrics.
+
+###🐂 The Bull Case
+- Based on the data, what are the strongest quantitative arguments for {companyName}'s competitive position? Highlight its most significant strengths (e.g., "superior profitability at a reasonable valuation").
+
+###🐻 The Bear Case
+- Based on the data, what are the most significant quantitative weaknesses or risks for {companyName} relative to its peers? (e.g., "slower growth and higher leverage").
 `.trim();
