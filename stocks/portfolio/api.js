@@ -792,48 +792,36 @@ export async function generateNewsSummary(ticker, companyName) {
 }
 
 /**
- * [NEW INTERNAL HELPER] Fetches live TTM financial metrics for a single stock.
- * @param {string} symbol The stock ticker.
- * @returns {Promise<object>} An object containing key financial metrics.
+ * [NEW] Extracts and formats key metrics for a single competitor from cached FMP data.
+ * @param {object} fmpData The full cached FMP data object for a single stock.
+ * @returns {object} An object containing key financial metrics for the peer analysis.
  */
-async function _fetchCompetitorMetrics(symbol) {
-    if (!state.fmpApiKey) throw new Error("FMP API Key is not configured.");
-
-    const ratiosUrl = `https://financialmodelingprep.com/api/v3/ratios-ttm/${symbol}?apikey=${state.fmpApiKey}`;
-    const growthUrl = `https://financialmodelingprep.com/api/v3/financial-growth/${symbol}?limit=1&apikey=${state.fmpApiKey}`;
-
-    const [ratiosResponse, growthResponse] = await Promise.all([
-        callApi(ratiosUrl),
-        callApi(growthUrl)
-    ]);
-
-    const ratios = ratiosResponse?.[0];
-    const growth = growthResponse?.[0];
-
-    if (!ratios || !growth) {
-        throw new Error(`Could not fetch complete financial metrics for ${symbol}. Check the ticker and FMP API.`);
-    }
-
+function _getCompetitorMetricsFromCache(fmpData) {
+    // Helper to format numbers consistently for the AI prompt
     const formatMetric = (value, isPercentage = false) => {
         if (typeof value !== 'number') return 'N/A';
         const num = Number(value);
         if (isPercentage) return `${(num * 100).toFixed(2)}%`;
-        // Avoid excessive decimal places for large ratios
         return Math.abs(num) > 100 ? num.toFixed(0) : num.toFixed(2);
     };
 
+    const ratiosTTM = fmpData.ratios_ttm?.data?.[0] || {};
+    const growthAnnual = fmpData.income_statement_growth_annual?.data?.[0] || {};
+    const keyMetricsAnnual = fmpData.key_metrics_annual?.data?.[0] || {};
+    
     return {
-        pe_ratio: formatMetric(ratios.peRatioTTM),
-        ps_ratio: formatMetric(ratios.priceToSalesRatioTTM),
-        ev_ebitda: formatMetric(ratios.enterpriseValueOverEBITDATTM),
-        gross_margin: formatMetric(ratios.grossProfitMarginTTM, true),
-        net_margin: formatMetric(ratios.netProfitMarginTTM, true),
-        roe: formatMetric(ratios.returnOnEquityTTM, true),
-        roa: formatMetric(ratios.returnOnAssetsTTM, true),
-        revenue_growth: formatMetric(growth.revenueGrowth, true),
-        debt_to_equity: formatMetric(ratios.debtEquityRatioTTM)
+        pe_ratio: formatMetric(ratiosTTM.peRatioTTM),
+        ps_ratio: formatMetric(ratiosTTM.priceToSalesRatioTTM),
+        ev_ebitda: formatMetric(keyMetricsAnnual.enterpriseValueOverEBITDA),
+        gross_margin: formatMetric(ratiosTTM.grossProfitMarginTTM, true),
+        net_margin: formatMetric(ratiosTTM.netProfitMarginTTM, true),
+        roe: formatMetric(ratiosTTM.returnOnEquityTTM, true),
+        roa: formatMetric(ratiosTTM.returnOnAssetsTTM, true),
+        revenue_growth: formatMetric(growthAnnual.growthRevenue, true),
+        debt_to_equity: formatMetric(ratiosTTM.debtEquityRatioTTM),
     };
 }
+
 
 /**
  * Finds competitors for a given stock, fetches comparative data,
@@ -861,60 +849,72 @@ export async function getCompetitorAnalysis(targetSymbol) {
         
         const limitedPeers = peerTickers.slice(0, 10); // Limit to 10 peers for efficiency
         
-        // 2. Fetch profiles for the target and all peers
-        const allTickersForProfile = [targetSymbol, ...limitedPeers];
-        const profilesUrl = `https://financialmodelingprep.com/api/v3/profile/${allTickersForProfile.join(',')}?apikey=${state.fmpApiKey}`;
-        const profiles = await callApi(profilesUrl);
-        const profileMap = new Map(profiles.map(p => [p.symbol, p]));
+        // 2. Fetch all necessary CACHED data in parallel for all companies
+        const allTickers = [targetSymbol, ...limitedPeers];
+        const dataPromises = allTickers.map(ticker => getFmpStockData(ticker));
+        const allFmpData = await Promise.all(dataPromises);
 
-        const targetProfile = profileMap.get(targetSymbol);
-        if (!targetProfile) throw new Error("Could not retrieve profile for target stock.");
+        const dataMap = new Map();
+        allTickers.forEach((ticker, index) => {
+            if (allFmpData[index]) {
+                dataMap.set(ticker, allFmpData[index]);
+            }
+        });
         
-        // 3. Fetch detailed financial metrics for all companies in parallel
-        const allTickersForMetrics = [targetSymbol, ...limitedPeers];
-        const metricPromises = allTickersForMetrics.map(ticker => 
-            _fetchCompetitorMetrics(ticker)
-                .then(metrics => ({ ...metrics, symbol: ticker })) // Add symbol on success
-                .catch(e => ({ symbol: ticker, error: true, message: e.message })) // Add symbol on failure
-        );
-        const metricResults = await Promise.all(metricPromises);
+        const targetFmpData = dataMap.get(targetSymbol);
+        if (!targetFmpData || !targetFmpData.profile?.data?.[0]) {
+            throw new Error(`Could not retrieve cached profile data for target stock ${targetSymbol}. Please refresh its data.`);
+        }
         
-        // 4. Assemble the data for the AI prompt
-        const targetMetrics = metricResults.find(m => m.symbol === targetSymbol && !m.error);
-        
+        // Helper to format market cap into billions
+        const formatMarketCap = (value) => {
+            if (typeof value !== 'number') return 'N/A';
+            return (value / 1e9).toFixed(2);
+        };
+
+        // 3. Assemble the data for the AI prompt using cached data
         const peerData = [];
         limitedPeers.forEach(peerSymbol => {
-            const peerProfile = profileMap.get(peerSymbol);
-            const peerMetrics = metricResults.find(m => m.symbol === peerSymbol && !m.error);
-            if (peerProfile && peerMetrics) {
+            const fmpData = dataMap.get(peerSymbol);
+            const profile = fmpData?.profile?.data?.[0];
+            
+            if (profile && fmpData) {
                 peerData.push({
-                    name: peerProfile.companyName,
-                    market_cap: peerProfile.mktCap,
-                    ...peerMetrics 
+                    symbol: peerSymbol,
+                    name: profile.companyName,
+                    market_cap_raw: profile.mktCap,
+                    market_cap: formatMarketCap(profile.mktCap),
+                    ..._getCompetitorMetricsFromCache(fmpData)
                 });
             } else {
-                 console.warn(`Skipping peer ${peerSymbol} due to missing profile or metrics.`);
+                 console.warn(`Skipping peer ${peerSymbol} due to missing cached data or profile.`);
             }
         });
 
-        if (!targetMetrics || peerData.length === 0) {
+        if (peerData.length === 0) {
             throw new Error("Failed to gather sufficient financial data for comparison.");
         }
 
+        // Find the largest competitor by raw market cap
+        const largestCompetitor = peerData.reduce((max, p) => (p.market_cap_raw > max.market_cap_raw ? p : max), peerData[0]);
+
+        const targetProfile = targetFmpData.profile.data[0];
         const comparisonData = {
             target: {
                 name: targetProfile.companyName,
-                market_cap: targetProfile.mktCap,
-                ...targetMetrics
+                market_cap: formatMarketCap(targetProfile.mktCap),
+                ..._getCompetitorMetricsFromCache(targetFmpData)
             },
-            peers: peerData
+            peers: peerData,
+            largest_competitor: largestCompetitor.name || 'N/A'
         };
 
         // 5. Generate the AI summary using the new prompt
         const prompt = COMPETITOR_ANALYSIS_PROMPT
             .replace('{comparisonData}', JSON.stringify(comparisonData, null, 2))
             .replace(/{companyName}/g, targetProfile.companyName)
-            .replace(/{companySymbol}/g, targetSymbol);
+            .replace(/{companySymbol}/g, targetSymbol)
+            .replace('{largestCompetitor}', comparisonData.largest_competitor);
 
         return await callGeminiApi(prompt);
 
