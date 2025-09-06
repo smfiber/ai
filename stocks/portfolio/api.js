@@ -846,62 +846,61 @@ export async function getCompetitorAnalysis(targetSymbol) {
             console.warn(`No peers found for ${targetSymbol}`);
             return "No peer data could be found for comparison.";
         }
-
-        // 2. Fetch profiles for the target and all peers to get market caps
-        const allTickers = [targetSymbol, ...peerTickers.slice(0, 10)]; // Limit to 10 peers for efficiency
-        const profilesUrl = `https://financialmodelingprep.com/api/v3/profile/${allTickers.join(',')}?apikey=${state.fmpApiKey}`;
+        
+        const limitedPeers = peerTickers.slice(0, 10); // Limit to 10 peers for efficiency
+        
+        // 2. Fetch profiles for the target and all peers
+        const allTickersForProfile = [targetSymbol, ...limitedPeers];
+        const profilesUrl = `https://financialmodelingprep.com/api/v3/profile/${allTickersForProfile.join(',')}?apikey=${state.fmpApiKey}`;
         const profiles = await callApi(profilesUrl);
+        const profileMap = new Map(profiles.map(p => [p.symbol, p]));
 
-        // 3. Find the target's profile and the best competitor by closest market cap
-        const targetProfile = profiles.find(p => p.symbol === targetSymbol);
+        const targetProfile = profileMap.get(targetSymbol);
         if (!targetProfile) throw new Error("Could not retrieve profile for target stock.");
         
-        let closestCompetitor = null;
-        let smallestDiff = Infinity;
-
-        profiles.forEach(peerProfile => {
-            if (peerProfile.symbol !== targetSymbol && peerProfile.mktCap > 0) {
-                const diff = Math.abs(targetProfile.mktCap - peerProfile.mktCap);
-                if (diff < smallestDiff) {
-                    smallestDiff = diff;
-                    closestCompetitor = peerProfile;
-                }
+        // 3. Fetch detailed financial metrics for all companies in parallel
+        const allTickersForMetrics = [targetSymbol, ...limitedPeers];
+        const metricPromises = allTickersForMetrics.map(ticker => 
+            _fetchCompetitorMetrics(ticker).catch(e => ({ ticker, error: true, message: e.message }))
+        );
+        const metricResults = await Promise.all(metricPromises);
+        
+        // 4. Assemble the data for the AI prompt
+        const targetMetrics = metricResults.find(m => m.symbol === targetSymbol && !m.error);
+        
+        const peerData = [];
+        limitedPeers.forEach(peerSymbol => {
+            const peerProfile = profileMap.get(peerSymbol);
+            const peerMetrics = metricResults.find(m => m.symbol === peerSymbol && !m.error);
+            if (peerProfile && peerMetrics) {
+                peerData.push({
+                    name: peerProfile.companyName,
+                    symbol: peerSymbol,
+                    ...peerMetrics
+                });
+            } else {
+                 console.warn(`Skipping peer ${peerSymbol} due to missing profile or metrics.`);
             }
         });
 
-        if (!closestCompetitor) {
-            console.warn(`Could not find a suitable competitor for ${targetSymbol}`);
-            return "Could not identify a suitable competitor for comparison.";
+        if (!targetMetrics || peerData.length === 0) {
+            throw new Error("Failed to gather sufficient financial data for comparison.");
         }
-        const competitorSymbol = closestCompetitor.symbol;
 
-        // 4. Fetch detailed financial metrics for both companies using the new live helper
-        const [targetMetrics, competitorMetrics] = await Promise.all([
-            _fetchCompetitorMetrics(targetSymbol),
-            _fetchCompetitorMetrics(competitorSymbol)
-        ]);
-        
-        // 5. Assemble the data for the AI prompt from the live metrics
         const comparisonData = {
-            company: {
+            target: {
                 name: targetProfile.companyName,
                 symbol: targetSymbol,
                 ...targetMetrics
             },
-            competitor: {
-                name: closestCompetitor.companyName,
-                symbol: competitorSymbol,
-                ...competitorMetrics
-            }
+            peers: peerData
         };
 
-        // 6. Generate the AI summary
+        // 5. Generate the AI summary using the new prompt
         const prompt = COMPETITOR_ANALYSIS_PROMPT
             .replace('{comparisonData}', JSON.stringify(comparisonData, null, 2))
             .replace(/{companyName}/g, targetProfile.companyName)
-            .replace(/{competitorName}/g, closestCompetitor.companyName)
-            .replace(/{companySymbol}/g, targetSymbol)
-            .replace(/{competitorSymbol}/g, competitorSymbol);
+            .replace(/{companySymbol}/g, targetSymbol);
 
         return await callGeminiApi(prompt);
 
