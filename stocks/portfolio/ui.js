@@ -3010,6 +3010,8 @@ async function handlePeerComparisonRequest(symbol) {
 
     try {
         const markdownResponse = await getCompetitorAnalysis(symbol);
+        contentContainer.dataset.rawMarkdown = markdownResponse;
+        statusContainer.dataset.activeReportType = 'PeerComparison';
         contentContainer.innerHTML = marked.parse(markdownResponse);
     } catch (error) {
         console.error("Error generating peer comparison:", error);
