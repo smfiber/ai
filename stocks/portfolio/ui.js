@@ -2314,6 +2314,7 @@ function setupGlobalEventListeners() {
                 }
             } else if (target.classList.contains('dashboard-item-view')) {
                 openRawDataViewer(ticker);
+                closeModal(CONSTANTS.MODAL_STOCK_LIST);
             } else if (target.classList.contains('dashboard-item-refresh')) {
                 handleRefreshFmpData(ticker);
             }
