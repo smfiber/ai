@@ -2682,13 +2682,16 @@ async function getSavedReports(ticker, reportType) {
  * @param {object} data - The full FMP data object for a stock.
  * @param {string} newsNarrative - A concise summary of the recent news narrative.
  * @param {Array|null} institutionalHolders - Data from SEC-API.io.
+ * @param {number|null} totalInstitutionalShares - Sum of shares from 13F filings.
+ * @param {number|null} totalSharesOutstanding - Total shares outstanding for the company.
+ * @param {number|null} marketCap - The company's market capitalization.
  * @param {string} finalMdaSummary - The definitive MD&A summary to use.
  * @param {Array<object>} finalRiskFactorsSummaries - Array of dated risk factor summaries.
  * @param {string} final8KSummary - The definitive 8-K summary to use.
  * @param {string} institutionalOwnershipTimeframe - The calculated timeframe of the filings.
  * @returns {object} A summary object with pre-calculated metrics and trends.
  */
-function _calculateDeepDiveMetrics(data, newsNarrative, institutionalHolders, finalMdaSummary, finalRiskFactorsSummaries, final8KSummary, institutionalOwnershipTimeframe = 'Recent filings data.') {
+function _calculateDeepDiveMetrics(data, newsNarrative, institutionalHolders, totalInstitutionalShares, totalSharesOutstanding, marketCap, finalMdaSummary, finalRiskFactorsSummaries, final8KSummary, institutionalOwnershipTimeframe = 'Recent filings data.') {
     const profile = data.profile?.data?.[0] || {};
     const income = (data.income_statement_annual?.data || []).slice().reverse(); // Oldest to newest
     const keyMetrics = (data.key_metrics_annual?.data || []).slice().reverse();
@@ -2780,11 +2783,16 @@ function _calculateDeepDiveMetrics(data, newsNarrative, institutionalHolders, fi
         }
     }
 
+    const ownershipPercentage = (totalSharesOutstanding > 0 && totalInstitutionalShares > 0)
+        ? (totalInstitutionalShares / totalSharesOutstanding) * 100
+        : 0;
+
     return {
         description: profile.description,
         sector: profile.sector,
         industry: profile.industry,
         currentPrice: profile.price || 'N/A',
+        marketCap: marketCap ? formatLargeNumber(marketCap) : 'N/A',
         analystConsensus: {
             nextYearRevenueForecast: formatLargeNumber(nextYearEstimate.estimatedRevenueAvg),
             nextYearEpsForecast: nextYearEstimate.estimatedEpsAvg ? nextYearEstimate.estimatedEpsAvg.toFixed(2) : 'N/A',
@@ -2793,6 +2801,7 @@ function _calculateDeepDiveMetrics(data, newsNarrative, institutionalHolders, fi
         },
         recentAnalystRatings: recentRatings,
         recentNewsNarrative: newsNarrative,
+        institutionalOwnershipPercentage: ownershipPercentage > 0 ? `${ownershipPercentage.toFixed(2)}%` : 'N/A',
         insiderTransactionSummary: (() => {
             const rawInsiderTrades = data.insider_trading?.data || [];
             if (!rawInsiderTrades || rawInsiderTrades.length === 0) {
@@ -2902,15 +2911,15 @@ async function handleDeepDiveRequest(symbol, forceNew = false) {
         }
 
         loadingMessage.textContent = `Fetching institutional ownership for ${symbol}...`;
-        let institutionalHolders = null;
+        let institutionalData = null;
         if (state.secApiKey) {
             try {
                 const institutionalDocRef = doc(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, symbol, 'endpoints', CONSTANTS.DB_DOC_ID_INSTITUTIONAL_OWNERSHIP);
                 const institutionalDoc = await getDoc(institutionalDocRef);
                 if (institutionalDoc.exists()) {
-                    institutionalHolders = institutionalDoc.data().data;
+                    institutionalData = institutionalDoc.data().data;
                 } else {
-                    institutionalHolders = await getSecInstitutionalOwnership(symbol);
+                    institutionalData = await getSecInstitutionalOwnership(symbol);
                 }
             } catch (secError) {
                 console.warn(`Could not fetch institutional ownership data for ${symbol}:`, secError);
@@ -2942,20 +2951,31 @@ async function handleDeepDiveRequest(symbol, forceNew = false) {
 
 
         let institutionalOwnershipTimeframe = 'Recent filings data.';
-        if (institutionalHolders && institutionalHolders.length > 1) {
-            const newestDate = new Date(institutionalHolders[0].filedAt);
-            const oldestDate = new Date(institutionalHolders[institutionalHolders.length - 1].filedAt);
+        if (institutionalData && institutionalData.holders && institutionalData.holders.length > 1) {
+            const newestDate = new Date(institutionalData.holders[0].filedAt);
+            const oldestDate = new Date(institutionalData.holders[institutionalData.holders.length - 1].filedAt);
             const months = (newestDate.getFullYear() - oldestDate.getFullYear()) * 12 + (newestDate.getMonth() - oldestDate.getMonth());
             if (months <= 1) {
                 institutionalOwnershipTimeframe = 'Filings from the last month.';
             } else {
                 institutionalOwnershipTimeframe = `Filings from the last ${months} months.`;
             }
-        } else if (institutionalHolders && institutionalHolders.length === 1) {
+        } else if (institutionalData && institutionalData.holders && institutionalData.holders.length === 1) {
             institutionalOwnershipTimeframe = 'A single recent filing.';
         }
 
-        const payloadData = _calculateDeepDiveMetrics(data, newsSummary.dominant_narrative, institutionalHolders, finalMdaSummary, finalRiskFactorsSummaries, final8KSummary, institutionalOwnershipTimeframe);
+        const payloadData = _calculateDeepDiveMetrics(
+            data, 
+            newsSummary.dominant_narrative, 
+            institutionalData?.holders, 
+            institutionalData?.totalShares,
+            profile.sharesOutstanding,
+            profile.mktCap,
+            finalMdaSummary, 
+            finalRiskFactorsSummaries, 
+            final8KSummary, 
+            institutionalOwnershipTimeframe
+        );
 
         const prompt = DEEP_DIVE_PROMPT
             .replace(/{companyName}/g, companyName)
