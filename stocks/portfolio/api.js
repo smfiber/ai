@@ -831,8 +831,8 @@ async function _fetchCompetitorMetrics(symbol) {
 }
 
 /**
- * Finds the best competitor for a given stock, fetches comparative data,
- * and generates a head-to-head summary using an AI.
+ * Finds competitors for a given stock, fetches comparative data,
+ * and generates a group analysis summary using an AI.
  * @param {string} targetSymbol The ticker symbol of the company to analyze.
  * @returns {Promise<string|null>} A markdown string of the competitor analysis, or null if it fails.
  */
@@ -861,7 +861,9 @@ export async function getCompetitorAnalysis(targetSymbol) {
         // 3. Fetch detailed financial metrics for all companies in parallel
         const allTickersForMetrics = [targetSymbol, ...limitedPeers];
         const metricPromises = allTickersForMetrics.map(ticker => 
-            _fetchCompetitorMetrics(ticker).catch(e => ({ ticker, error: true, message: e.message }))
+            _fetchCompetitorMetrics(ticker)
+                .then(metrics => ({ ...metrics, symbol: ticker })) // Add symbol on success
+                .catch(e => ({ symbol: ticker, error: true, message: e.message })) // Add symbol on failure
         );
         const metricResults = await Promise.all(metricPromises);
         
@@ -875,8 +877,7 @@ export async function getCompetitorAnalysis(targetSymbol) {
             if (peerProfile && peerMetrics) {
                 peerData.push({
                     name: peerProfile.companyName,
-                    symbol: peerSymbol,
-                    ...peerMetrics
+                    ...peerMetrics 
                 });
             } else {
                  console.warn(`Skipping peer ${peerSymbol} due to missing profile or metrics.`);
@@ -890,7 +891,6 @@ export async function getCompetitorAnalysis(targetSymbol) {
         const comparisonData = {
             target: {
                 name: targetProfile.companyName,
-                symbol: targetSymbol,
                 ...targetMetrics
             },
             peers: peerData
