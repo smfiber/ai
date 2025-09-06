@@ -1974,6 +1974,15 @@ font-size: 0.75rem;
             if (num >= 1e9) return (num / 1e9).toFixed(2) + 'B';
             return num.toLocaleString();
         };
+
+        function formatDate(timestamp) {
+            if (!timestamp) return 'N/A';
+            const date = new Date(timestamp);
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const year = date.getFullYear();
+            return `${month}/${day}/${year}`;
+        }
         
         function updateViewedIndicatorForSymbol(symbol) {
             const indicators = document.querySelectorAll(`.viewed-indicator[data-indicator-symbol="${symbol}"]`);
@@ -2089,7 +2098,7 @@ font-size: 0.75rem;
                      <td class="px-4 py-3 whitespace-nowrap text-sm text-center" data-rating-symbol="${stock.symbol}">${getRatingHtml(stock.symbol)}</td>
                      <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-right">${stock.price ? '$'+stock.price.toFixed(2) : 'N/A'}</td>
                      <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-right">${stock.lastAnnualDividend ? '$'+stock.lastAnnualDividend.toFixed(2) : 'N/A'}</td>
-                     <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${stock.cachedTimestamp ? new Date(stock.cachedTimestamp).toLocaleString() : 'N/A'}</td>
+                     <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${formatDate(stock.cachedTimestamp)}</td>
                 </tr>`;
             }).join('');
             container.innerHTML = `<div class="overflow-y-auto max-h-[60vh]"><table class="w-full table-fixed divide-y divide-gray-200"><thead class="bg-gray-50 sticky top-0"><tr>${headers}</tr></thead><tbody class="bg-white divide-y divide-gray-200">${tableRows}</tbody></table></div>`;
@@ -2469,6 +2478,7 @@ font-size: 0.75rem;
             const profile = data.profile?.[0] || {};
             const metrics = data.keyMetrics?.[0] || {};
             const ratios = data.ratios?.[0] || {};
+            const income = data.incomeStatement?.[0] || {};
             const { timestamp } = data;
             
             const format = (value, prefix = '', suffix = '', digits = 2) => {
@@ -2485,7 +2495,7 @@ font-size: 0.75rem;
             document.getElementById('modal-company-name').textContent = `${profile.companyName || 'N/A'} (${profile.symbol || ''})`;
             document.getElementById('modal-stock-price').textContent = format(profile.price, '$');
             if (timestamp) {
-                document.getElementById('modal-last-updated').textContent = `Cached: ${new Date(timestamp).toLocaleString()}`;
+                document.getElementById('modal-last-updated').textContent = `Cached: ${formatDate(timestamp)}`;
             } else {
                  document.getElementById('modal-last-updated').textContent = `Live Data (just now)`;
             }
@@ -2505,7 +2515,7 @@ font-size: 0.75rem;
                         <h4 class="font-semibold text-gray-700 border-b pb-2">Financial Health (Annual)</h4>
                         <div class="flex justify-between text-sm"><span class="text-gray-500">Debt to Equity</span><span class="font-medium">${format(metrics.debtToEquity)}</span></div>
                         <div class="flex justify-between text-sm"><span class="text-gray-500">Return on Equity (ROE)</span><span class="font-medium">${format(metrics.roe * 100, '', '%')}</span></div>
-                         <div class="flex justify-between text-sm"><span class="text-gray-500">Operating Margin</span><span class="font-medium">${format(ratios.operatingMargin * 100, '', '%')}</span></div>
+                         <div class="flex justify-between text-sm"><span class="text-gray-500">Operating Margin</span><span class="font-medium">${format((ratios.operatingMargin || (income.operatingIncome / income.revenue)) * 100, '', '%')}</span></div>
                         <div class="flex justify-between text-sm"><span class="text-gray-500">Net Profit Margin</span><span class="font-medium">${format(ratios.netProfitMargin * 100, '', '%')}</span></div>
                     </div>
                     <div class="space-y-3">
@@ -2660,7 +2670,7 @@ font-size: 0.75rem;
                 return;
             }
 
-            const timeString = timestamp ? `Last Fetched: ${new Date(timestamp).toLocaleString()}` : 'Live Data (just now)';
+            const timeString = timestamp ? `Last Fetched: ${formatDate(timestamp)}` : 'Live Data (just now)';
             let newsHtml = `<p class="text-xs text-gray-400 mb-3">${timeString}</p><div class="space-y-3 max-h-96 overflow-y-auto pr-2">`;
             
             newsHtml += newsData.map(news => {
