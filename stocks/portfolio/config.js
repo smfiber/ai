@@ -185,8 +185,9 @@ In simple terms, describe the company's business based on the provided 'descript
     - **Growth Drivers:** (e.g., Analyst Consensus, Management's Outlook from MD&A, positive news narrative).
     - **Business Quality:** (e.g., High ROE, expanding margins, strong competitive moat).
     - **Financial Strength:** (e.g., Low debt, strong cash flow, attractive valuation).
+    - **Stakeholder Conviction:** (e.g., significant recent insider buying, high-quality institutional ownership).
 ### Primary Risks & Mitigating Factors
-- Identify the most material risks based on the data and the provided 'Risk Factors' summaries from the 10-K and 10-Q.
+- Identify the most material risks based on the data and the provided 'Risk Factors' summaries from the 10-K and 10-Q. Also consider any 'red flags' from stakeholder actions, such as heavy or consistent insider selling.
 - For each major risk identified, **briefly assess if there are any mitigating factors or strengths present in the data** (e.g., "While competition is a key risk, the company's stable gross margins suggest it has maintained pricing power," or "Regulatory risk is significant, but a strong balance sheet provides a cushion to absorb potential fines.").
 
 ## 7. Final Verdict & Recommendation
