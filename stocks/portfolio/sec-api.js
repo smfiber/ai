@@ -62,18 +62,27 @@ export async function getSecInstitutionalOwnership(ticker) {
     const result = await callSecQueryApi(queryObject);
     const filings = result?.filings || [];
 
-    // Transform the filings data into the flat list of holders the UI expects
-    return filings.map(filing => {
+    let totalShares = 0;
+    const holders = filings.map(filing => {
         // Find the specific holding information for the ticker within the filing
         const holdingInfo = filing.holdings.find(h => h.ticker === ticker);
+        const shares = holdingInfo?.shrsOrPrnAmt?.sshPrnamt;
+        
+        if (typeof shares === 'number') {
+            totalShares += shares;
+        }
+
         return {
             investorName: filing.companyName,
-            shares: holdingInfo?.shrsOrPrnAmt?.sshPrnamt, // Correctly access nested share count
+            shares: shares, // Correctly access nested share count
             value: holdingInfo?.value,
             filedAt: filing.filedAt
         };
     }).filter(h => h.value > 0); // Filter out cases where the holding might not be found or has no value
+
+    return { holders, totalShares };
 }
+
 
 export async function getSecMaterialEvents(ticker) {
     const queryObject = {
