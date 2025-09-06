@@ -2402,7 +2402,7 @@ font-size: 0.75rem;
             }
         }
         
-        // --- MODIFIED: AI Rating Generation ---
+        // --- MODIFIED: AI Rating Generation with Robust JSON Parsing ---
         async function generateAiRating(financialData) {
             if (!appConfig.geminiApiKey || !financialData) {
                 return { summary: { rating: 'Error', rationale: 'API key or financial data missing.' }, prompt: "Prompt could not be generated." };
@@ -2436,26 +2436,26 @@ font-size: 0.75rem;
                 const result = await response.json();
                 const rawText = result.candidates[0].content.parts[0].text;
                 
-                const match = rawText.match(/```json\n([\s\S]*?)\n```/);
-                if (!match || !match[1]) {
-                    // Fallback for responses that might not have the markdown block
+                let jsonText = '';
+                const markdownMatch = rawText.match(/```json\n([\s\S]*?)\n```/);
+                if (markdownMatch && markdownMatch[1]) {
+                    jsonText = markdownMatch[1];
+                } else {
                     const jsonStartIndex = rawText.indexOf('{');
                     const jsonEndIndex = rawText.lastIndexOf('}');
-                    if (jsonStartIndex !== -1 && jsonEndIndex !== -1) {
-                         const jsonText = rawText.substring(jsonStartIndex, jsonEndIndex + 1);
-                         const summary = JSON.parse(jsonText);
-                         return { summary, prompt };
+                    if (jsonStartIndex !== -1 && jsonEndIndex > jsonStartIndex) {
+                        jsonText = rawText.substring(jsonStartIndex, jsonEndIndex + 1);
+                    } else {
+                        throw new Error("No valid JSON object found in the model's response.");
                     }
-                    throw new Error("Failed to extract JSON from Gemini response.");
                 }
-
-                const jsonText = match[1];
+                
                 const summary = JSON.parse(jsonText);
                 return { summary, prompt };
 
             } catch (error) {
                 console.error("Error generating AI rating:", error);
-                const errorSummary = { rating: 'Error', rationale: 'Failed to generate AI analysis. The model may be unavailable or the response was malformed.' };
+                const errorSummary = { valuation_category: 'Error', investment_thesis: 'Failed to generate AI analysis. The model may be unavailable or the response was malformed.' };
                 return { summary: errorSummary, prompt };
             }
         }
