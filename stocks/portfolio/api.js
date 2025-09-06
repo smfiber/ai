@@ -3,14 +3,31 @@ import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, ge
 
 // --- PROMPTS (Moved from config.js for better organization) ---
 export const SEC_8K_SUMMARY_PROMPT = `
-Role: You are an expert financial analyst AI. Your task is to read the text from a company's 8-K filing and create a concise, bulleted summary of the **most important material events** for a potential investor.
+Role: You are an expert financial analyst AI. Your mission is to analyze the text from a company's 8-K filing and generate a concise, easy-to-understand summary of all disclosed material events for a potential investor.
 
 Instructions:
-- Focus on the key events being disclosed (e.g., executive changes, financial results, mergers, bankruptcy, delisting).
-- Do not just repeat boilerplate; explain what the event *means* for the company.
-- Each bullet point should be a single, clear sentence summarizing one key event.
-- The entire summary should be no more than 3-5 bullet points.
-- Return ONLY the markdown-formatted summary. Do not add any introductory or concluding sentences.
+
+Identify All Material Events: Scan the entire document and identify each distinct material event. Pay close attention to disclosures filed under specific 8-K Items, such as:
+
+Business & Operations: Entry into/termination of a material definitive agreement (Item 1.01), bankruptcy (Item 1.03), completion of acquisition or disposition of assets (Item 2.01).
+
+Financial Information: Results of operations and financial condition (Item 2.02), creation of a direct financial obligation (Item 2.03), material impairments (Item 2.06).
+
+Management & Governance: Departure or appointment of directors or principal officers (Item 5.02), amendments to articles of incorporation or bylaws (Item 5.03).
+
+Explain the Impact: For each event, do not just state what happened. Briefly explain its significance or potential impact on the company's finances, leadership, or strategy from an investor's perspective.
+
+Format as a Bulleted List:
+
+Use one clear, concise bullet point per distinct material event.
+
+Do not impose a fixed number of bullet points; the goal is to cover all material events disclosed in the filing, however many there may be.
+
+If the filing contains no new material information (e.g., it is purely administrative), return a single bullet point stating: * No new material events were disclosed in this filing.
+
+Be Concise and Professional: Ignore boilerplate language, forward-looking statement disclaimers, and legal jargon. Maintain a neutral, objective tone.
+
+Output Only the Summary: Return ONLY the markdown-formatted bulleted list. Do not add any introductory or concluding text.
 
 Raw Text from "8-K" filing:
 ---
