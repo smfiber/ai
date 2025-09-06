@@ -157,6 +157,7 @@ async function handleRefreshFmpData(symbol) {
             { name: 'cash_flow_statement_annual', path: 'cash-flow-statement', params: 'period=annual&limit=10', version: 'v3' },
             { name: 'key_metrics_annual', path: 'key-metrics', params: 'period=annual&limit=10', version: 'v3' },
             { name: 'ratios_annual', path: 'ratios', params: 'period=annual&limit=10', version: 'v3' },
+            { name: 'ratios_ttm', path: 'ratios-ttm', version: 'v3' },
             { name: 'stock_grade_news', path: 'grade', version: 'v3' },
             { name: 'analyst_estimates', path: 'analyst-estimates', version: 'v3'},
             { name: 'company_core_information', path: 'company-core-information', version: 'v4', symbolAsQuery: true },
