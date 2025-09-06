@@ -865,15 +865,15 @@ Create a markdown table comparing the target company and its peers. Calculate an
 ## 3. In-Depth Analysis vs. Peers
 For each category below, provide a brief analysis of how {companyName} compares to the **peer group median**.
 
-### 밸류에이션 (Valuation)
+### Valuation
 - Is {companyName} trading at a premium or a discount to its peers based on P/E, P/S, and EV/EBITDA ratios?
 - Does its growth and profitability profile seem to justify its current valuation multiple relative to the group?
 
-### 수익성 및 효율성 (Profitability & Efficiency)
+### Profitability & Efficiency
 - How do the company's margins (Gross, Net) and returns (ROE, ROA) stack up?
 - Does this suggest superior operational efficiency, pricing power, or a different business model compared to its peers?
 
-### 성장 및 재무 건전성 (Growth & Financial Health)
+### Growth & Financial Health
 - Is the company growing faster or slower than its peers?
 - How does its balance sheet leverage (Debt-to-Equity) compare? Does its growth appear to be financed responsibly?
 
