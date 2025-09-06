@@ -117,6 +117,38 @@ export const FINANCIAL_NEWS_SOURCES = [
     'spglobal.com', 'nytimes.com', 'gurufocus.com', 'streetinsider.com', 'moodys.com'
 ];
 
+export const COMPETITOR_ANALYSIS_PROMPT = `
+Role: You are a concise financial data analyst.
+Task: Compare the provided financial metrics for two companies: the primary company and its competitor. Your analysis must be strictly quantitative and based only on the data given.
+Output Format: Return a markdown-formatted summary. Start with a "Head-to-Head" comparison table, followed by brief, bulleted "Key Takeaways".
+
+JSON Data for Comparison:
+{comparisonData}
+
+---
+
+Generate the following output:
+### Peer Benchmark: {companyName} vs. {competitorName}
+
+| Metric | {companySymbol} | {competitorSymbol} | Leader |
+| :--- | :---: | :---: | :---: |
+| **Valuation** | | | |
+| P/E Ratio | [P/E of company] | [P/E of competitor] | [Lower is better] |
+| P/S Ratio | [P/S of company] | [P/S of competitor] | [Lower is better] |
+| **Profitability** | | | |
+| Gross Margin | [Gross Margin of company] | [Gross Margin of competitor] | [Higher is better] |
+| Net Margin | [Net Margin of company] | [Net Margin of competitor] | [Higher is better] |
+| Return on Equity (ROE) | [ROE of company] | [ROE of competitor] | [Higher is better] |
+| **Growth & Health** | | | |
+| Revenue Growth (YoY) | [Revenue Growth of company] | [Revenue Growth of competitor] | [Higher is better] |
+| Debt-to-Equity | [Debt/Equity of company] | [Debt/Equity of competitor] | [Lower is better] |
+
+### Key Takeaways
+- **Valuation:** [1-sentence summary of who appears cheaper based on the multiples.]
+- **Profitability:** [1-sentence summary of who is more profitable and efficient based on margins and ROE.]
+- **Growth & Health:** [1-sentence summary of who has stronger growth and a healthier balance sheet.]
+`.trim();
+
 export const DEEP_DIVE_PROMPT = `
 Role: You are a senior investment analyst AI for a pragmatic, growth-oriented investment fund. Your goal is to identify compelling investment opportunities by balancing a company's strengths and growth potential against its risks and valuation. Your analysis must be objective and based *exclusively* on the provided data.
 
@@ -152,15 +184,15 @@ Begin with a concise, one-paragraph summary. What is the core investment narrati
 ### Key News Narrative
 - Summarize the dominant news narrative. How does this recent story frame the company's current situation and potential future?
 ### Key Stakeholder Analysis
-- **Insider Transactions:** Based on the 6-month transaction summary, are company insiders net buyers or sellers of the stock? What does this suggest about their confidence in the company's near-term prospects?
-- **Institutional Ownership:** Reference the 'institutionalOwnershipTimeframe' from the data. Based on filings from this period, who are some of the largest institutional holders listed? Does this snapshot of recent ownership suggest a high level of conviction from sophisticated investors?
+- **Insider Transactions:** Analyze the 6-month summary. Are insiders primarily buying, selling, or inactive? What does this pattern imply about their forward-looking confidence in the business?
+- **Institutional Ownership:** Who are the top 3-5 institutional holders listed? What does the presence of these large, sophisticated investors suggest about the perceived quality and stability of the business?
 
 ## 3. Business Quality & Competitive Moat
 ### Business Description
 In simple terms, describe the company's business based on the provided 'description', 'sector', 'industry'.
 ### Moat Analysis
-- **Return on Equity (ROE):** Explain ROE as a "report card" for how well management uses shareholder money. Based on the ROE trend, how effective and consistent is the company at generating profits from its equity?
-- **Margin Stability:** Analyze the trends in Gross and Net Profit Margins. Are they stable, expanding, or contracting? What does this suggest about the company's pricing power and competitive position?
+- **Return on Equity (ROE):** Explain ROE as a "report card" for how well management uses shareholder money. Based on the ROE trend, how effective and consistent is the company at generating profits from its equity? **Reference the peer comparison data to contextualize its performance.**
+- **Margin Stability:** Analyze the trends in Gross and Net Profit Margins. Are they stable, expanding, or contracting? What does this suggest about the company's pricing power? **How do these margins stack up against its main competitor?**
 
 ## 4. Financial Health & Performance
 ### Performance Trends
@@ -173,9 +205,11 @@ In simple terms, describe the company's business based on the provided 'descript
 - **Dividend Safety:** If applicable, analyze the dividend yield and cash flow payout ratio. Is the dividend well-covered by actual cash?
 
 ## 5. Valuation Analysis
+### Peer Comparison
+- **Incorporate the entire 'Peer Benchmark' summary here.** This provides essential context for the company's valuation and performance relative to its closest rival.
 ### Key Multiples vs. History
 - For each key multiple (P/E, P/S, P/B), compare its current value to its historical average.
-- **Overall Verdict:** Based on this comparison, is the stock currently trading at a premium, a discount, or in line with its own history?
+- **Overall Verdict:** Based on its own history and its valuation relative to its peer, is the stock currently trading at a premium, a discount, or in line with the market's expectations?
 ### Deep Value Check
 - **Graham Number:** State the pre-calculated 'grahamVerdict'. This classic value investing metric provides a strict, conservative measure of a stock's intrinsic value.
 
@@ -685,7 +719,7 @@ Your analysis must be structured as follows:
     - **Technological Risk:** Could a new technology make their "picks and shovels" obsolete?
     - **Valuation Risk:** Is the company's strategic position already fully priced into the stock?
 
-## 6. Investment Outlook
+## 6. The Investment Outlook
 - Conclude with the thesis for why owning this "arms dealer" is a potentially safer and more durable way to invest in the theme, after considering the risks and valuation. **Crucially, your conclusion must explicitly state the logical link between the {contextName} {contextType}, the identified 'gold rush' trend, and the chosen 'pick and shovel' company.**
 
 When you mention a stock ticker, you MUST wrap it in a special tag like this: <stock-ticker>TICKER</stock-ticker>.
