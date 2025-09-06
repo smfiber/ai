@@ -833,33 +833,45 @@ async function _fetchLivePeerData(peerTickers) {
     const peersString = peerTickers.join(',');
     const apiKey = state.fmpApiKey;
 
-    // Define URLs for batch fetching
+    // Profile can usually be fetched in bulk reliably
     const profileUrl = `https://financialmodelingprep.com/api/v3/profile/${peersString}?apikey=${apiKey}`;
-    const ratiosTtmUrl = `https://financialmodelingprep.com/api/v3/ratios-ttm/${peersString}?apikey=${apiKey}`;
-    const keyMetricsAnnualUrl = `https://financialmodelingprep.com/api/v3/key-metrics-annual/${peersString}?apikey=${apiKey}`;
 
-    // Define promises for endpoints that may need individual calls
-    const growthPromises = peerTickers.map(ticker => {
-        const url = `https://financialmodelingprep.com/stable/income-statement-growth?symbol=${ticker}&period=annual&limit=5&apikey=${apiKey}`;
-        return callApi(url).catch(e => {
-            console.warn(`Failed to fetch income growth data for peer ${ticker}:`, e);
-            return []; // Return an empty array on failure for this specific peer
-        });
+    // Helper to create promises that catch their own errors
+    const makePromise = (url, ticker, type) => callApi(url).catch(e => {
+        console.warn(`Failed to fetch ${type} data for peer ${ticker}:`, e);
+        return []; // Return empty array on failure for this specific peer
     });
 
-    const [profiles, ratiosTtm, keyMetricsAnnual, allGrowthData] = await Promise.all([
-        callApi(profileUrl),
-        callApi(ratiosTtmUrl),
-        callApi(keyMetricsAnnualUrl),
+    // Define promises for endpoints that are more reliable when called individually
+    const ratiosTtmPromises = peerTickers.map(ticker => {
+        const url = `https://financialmodelingprep.com/api/v3/ratios-ttm/${ticker}?apikey=${apiKey}`;
+        return makePromise(url, ticker, 'ratios TTM');
+    });
+
+    const keyMetricsAnnualPromises = peerTickers.map(ticker => {
+        const url = `https://financialmodelingprep.com/api/v3/key-metrics-annual/${ticker}?limit=1&apikey=${apiKey}`;
+        return makePromise(url, ticker, 'key metrics annual');
+    });
+
+    const growthPromises = peerTickers.map(ticker => {
+        const url = `https://financialmodelingprep.com/stable/income-statement-growth?symbol=${ticker}&period=annual&limit=5&apikey=${apiKey}`;
+        return makePromise(url, ticker, 'income growth');
+    });
+
+    const [profiles, allRatiosTtm, allKeyMetricsAnnual, allGrowthData] = await Promise.all([
+        callApi(profileUrl), // Keep bulk profile fetch
+        Promise.all(ratiosTtmPromises),
+        Promise.all(keyMetricsAnnualPromises),
         Promise.all(growthPromises)
     ]);
 
-    // Map the flat arrays of results back to their respective tickers
+    // Map the arrays of results back to their respective tickers
     const liveData = {};
     peerTickers.forEach((ticker, index) => {
         const profileData = Array.isArray(profiles) ? profiles.find(p => p.symbol === ticker) : null;
-        const ratiosTtmData = Array.isArray(ratiosTtm) ? ratiosTtm.find(r => r.symbol === ticker) : null;
-        const keyMetricsAnnualData = Array.isArray(keyMetricsAnnual) ? keyMetricsAnnual.find(k => k.symbol === ticker) : null;
+        // Individual FMP calls often return an array with a single object. Get the first element.
+        const ratiosTtmData = Array.isArray(allRatiosTtm[index]) ? allRatiosTtm[index][0] : null;
+        const keyMetricsAnnualData = Array.isArray(allKeyMetricsAnnual[index]) ? allKeyMetricsAnnual[index][0] : null;
         
         liveData[ticker] = {
             profile: { data: profileData ? [profileData] : [] },
