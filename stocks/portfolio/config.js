@@ -868,8 +868,8 @@ Create a markdown table comparing the target company and its peers. For the **Pe
 - **Valuation ratios like P/E or EV/EBITDA that are negative or "N/M" (Not Meaningful) indicate the company is unprofitable. This makes the metric not meaningful for direct valuation comparison. DO NOT describe a company with a negative P/E as 'undervalued' based on that metric; instead, state that it is unprofitable.**
 
 ### Valuation
-- Directly compare the company's P/E, P/S, and EV/EBITDA ratios against the **peer median**. State clearly whether it trades at a premium or discount. If a valuation metric is 'N/M', explain that it's not meaningful because the company is unprofitable.
-- Based on its growth and profitability relative to peers, is any valuation premium/discount justified?
+- Directly compare the company's P/S ratio against the **peer median**. If the P/E or EV/EBITDA ratios are 'N/M', explicitly state this is because the company is operationally unprofitable. In this case, explain that the EV/Revenue (P/S) multiple is a more appropriate metric for comparing growth companies that are not yet profitable.
+- Based on its P/S ratio and revenue growth relative to peers, is the company valued at a premium or a discount? Is this valuation justified?
 
 ### Profitability & Efficiency
 - Compare Gross Margin, Net Margin, ROE, and ROA against the **peer median**. 
