@@ -184,8 +184,10 @@ In simple terms, describe the company's business based on the provided 'descript
 ## 5. Valuation Analysis
 ### Key Multiples vs. History & Peers
 - For each key multiple (P/E, P/S, P/B), compare its current value to its historical average.
-- **Next, compare these same multiples against the provided 'peerMedians'.**
-- **Overall Verdict:** Based on this dual comparison, is the stock currently trading at a premium or a discount to its own history AND its peers? Is any premium/discount justified by its profitability and growth relative to the peer group?
+- Next, perform a step-by-step peer comparison for each multiple:
+  - **P/S Ratio:** First, state the company's P/S ratio. Second, state the peer median P/S ratio. Third, explicitly state whether the company's ratio is higher or lower than the median. Finally, conclude if this represents a premium or a discount to its peers.
+  - **P/E and P/B Ratios:** Follow the same step-by-step comparison logic. For negative or 'N/A' P/E ratios, state they are not meaningful for direct comparison.
+- **Overall Verdict:** Based *only* on the comparisons you just made, is the stock currently trading at a premium or a discount to its own history AND its peers? Is this valuation justified by its profitability and growth relative to the peer group?
 ### Deep Value Check
 - **Graham Number:** State the pre-calculated 'grahamVerdict'. This classic value investing metric provides a strict, conservative measure of a stock's intrinsic value.
 
