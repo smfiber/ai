@@ -890,3 +890,65 @@ Synthesize the findings into a balanced, data-driven summary. Frame the conclusi
 ###🐻 The Bear Case
 - Based on the data, what are the most significant quantitative weaknesses or risks for {companyName} relative to its peers? (e.g., "slower growth and higher leverage").
 `.trim();
+
+export const FINANCIAL_STATEMENT_ANALYSIS_PROMPT = `
+Role: You are a meticulous forensic accountant and senior financial analyst. Your task is to perform a thorough, data-driven analysis of a company's financial statements based *only* on the provided structured JSON data from a 10-K filing. Your tone must be objective, critical, and insightful.
+
+Data Instructions:
+- Your entire analysis MUST be based exclusively on the provided JSON data from the company's 10-K filing.
+- The data contains multiple years of financial statements. Your analysis should focus on trends and changes over time.
+- Do not use any external knowledge. If the data is missing a specific line item, state that it's not available.
+
+JSON Data from 10-K XBRL:
+{jsonData}
+
+---
+
+Generate the following professional analysis report in markdown format:
+
+# Financial Statement Analysis: {companyName} ({tickerSymbol})
+*Based on the latest 10-K filing.*
+
+## 📊 Executive Summary
+Provide 3-4 critical, high-level bullet points summarizing the company's overall financial health, profitability trends, and any major red flags identified in your analysis below.
+
+---
+
+## 1. Income Statement Analysis
+### Revenue & Profitability Trends
+- Analyze the year-over-year trend in **Total Revenues**. Is growth accelerating, decelerating, or stable?
+- Analyze the trends in **Gross Profit Margin**, **Operating Margin**, and **Net Margin**. Are margins expanding or contracting? What does this imply about the company's pricing power and operational efficiency?
+
+### Quality of Earnings
+- Compare the growth of **Net Income** to the growth of **Operating Cash Flow** (from the Cash Flow Statement). Are earnings being converted into actual cash? A significant divergence can be a red flag.
+
+---
+
+## 2. Balance Sheet Analysis
+### Liquidity & Solvency
+- Analyze the **Current Ratio** (Current Assets / Current Liabilities). Does the company have a strong ability to meet its short-term obligations?
+- Analyze the **Debt-to-Equity** ratio trend. How is the company's leverage changing over time? Does it appear to be conservatively or aggressively financed?
+
+### Asset Composition
+- Are there any significant year-over-year changes in major asset accounts like **Goodwill**, **Intangible Assets**, or **Inventories**? A large, unexplained increase in Goodwill, for example, could indicate an expensive acquisition.
+
+---
+
+## 3. Cash Flow Statement Analysis
+*This is often the most revealing statement, as "cash is king."*
+### Operational Cash Flow
+- Is **Net Cash Flow from Operating Activities** consistently positive and growing? This is a primary indicator of a healthy core business.
+
+### Free Cash Flow (FCF)
+- Analyze the trend in **Free Cash Flow** (Operating Cash Flow - Capital Expenditures). Is the company generating surplus cash after reinvesting in itself?
+- How is the company using its FCF? Look at the "Financing Activities" section. Is it primarily paying down debt, repurchasing shares, or issuing dividends?
+
+---
+
+## ⚠️ Potential Red Flags & Areas for Scrutiny
+Based on your analysis of all three statements, identify any potential accounting or operational red flags.
+- **Example 1:** "Accounts receivable are growing significantly faster than revenue, which could suggest aggressive revenue recognition practices."
+- **Example 2:** "Despite rising net income, operating cash flow has been declining for two consecutive years, warranting a deeper look into working capital changes."
+- **Example 3:** "A large, one-time gain from an asset sale significantly boosted net income, masking weakness in the core operating business."
+If no significant red flags are apparent, state that the financial statements appear straightforward.
+`.trim();
