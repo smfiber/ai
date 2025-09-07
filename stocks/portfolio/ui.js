@@ -2921,21 +2921,40 @@ async function handleDeepDiveRequest(symbol, forceNew = false) {
     }
 }
 
-async function handlePeerComparisonRequest(symbol) {
+async function handlePeerComparisonRequest(symbol, forceNew = false) {
+    const reportType = 'PeerComparison';
     const contentContainer = document.getElementById('ai-article-container');
     const statusContainer = document.getElementById('report-status-container-ai');
-    
+
     contentContainer.innerHTML = '<div class="flex justify-center items-center h-full pt-16"><div class="loader"></div></div>';
-    statusContainer.classList.add('hidden'); // This is a one-off analysis, no saving/versioning
+    statusContainer.classList.add('hidden');
 
     try {
+        const savedReports = await getSavedReports(symbol, reportType);
+        if (savedReports.length > 0 && !forceNew) {
+            const latestReport = savedReports[0];
+            displayReport(contentContainer, latestReport.content, latestReport.prompt);
+            contentContainer.dataset.rawMarkdown = latestReport.content;
+            updateReportStatus(statusContainer, savedReports, latestReport.id, { symbol, reportType });
+            return;
+        }
+
+        openModal(CONSTANTS.MODAL_LOADING);
+        document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Running peer comparison for ${symbol}...`;
+        
         const markdownResponse = await getCompetitorAnalysis(symbol);
         contentContainer.dataset.rawMarkdown = markdownResponse;
-        statusContainer.dataset.activeReportType = 'PeerComparison';
-        contentContainer.innerHTML = marked.parse(markdownResponse);
+        
+        displayReport(contentContainer, markdownResponse, null);
+        updateReportStatus(statusContainer, [], null, { symbol, reportType });
+
     } catch (error) {
         console.error("Error generating peer comparison:", error);
         contentContainer.innerHTML = `<div class="text-center p-4 text-red-500 bg-red-50 rounded-lg"><p class="font-semibold">Could not generate peer comparison.</p><p class="text-sm">${error.message}</p></div>`;
+    } finally {
+        if (document.getElementById(CONSTANTS.MODAL_LOADING).classList.contains('is-open')) {
+            closeModal(CONSTANTS.MODAL_LOADING);
+        }
     }
 }
 
@@ -3045,7 +3064,11 @@ function updateReportStatus(statusContainer, reports, activeReportId, analysisPa
     const generateNewBtn = document.getElementById(`generate-new-${analysisParams.reportType}`);
     if (generateNewBtn) {
         generateNewBtn.addEventListener('click', () => {
-            handleDeepDiveRequest(analysisParams.symbol, true);
+            if (analysisParams.reportType === 'PeerComparison') {
+                handlePeerComparisonRequest(analysisParams.symbol, true);
+            } else { // Default or 'DeepDive'
+                handleDeepDiveRequest(analysisParams.symbol, true);
+            }
         });
     }
 }
