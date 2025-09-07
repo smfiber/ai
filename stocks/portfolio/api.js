@@ -46,6 +46,16 @@ function isValidHttpUrl(urlString) {
     }
 }
 
+function calculateMedian(arr) {
+    if (!arr || arr.length === 0) return null;
+    const sorted = arr.slice().sort((a, b) => a - b);
+    const mid = Math.floor(sorted.length / 2);
+    if (sorted.length % 2 === 0) {
+        return (sorted[mid - 1] + sorted[mid]) / 2;
+    }
+    return sorted[mid];
+}
+
 export function filterValidNews(articles) {
     if (!Array.isArray(articles)) return [];
     return articles.filter(article => 
@@ -975,5 +985,74 @@ export async function getCompetitorAnalysis(targetSymbol) {
     } catch (error) {
         console.error(`Failed to get competitor analysis for ${targetSymbol}:`, error);
         return `*Error generating peer comparison: ${error.message}*`;
+    }
+}
+
+/**
+ * [NEW] Fetches live data for a stock's peers and calculates the median for key metrics.
+ * @param {string} targetSymbol The ticker symbol of the company.
+ * @returns {Promise<object|null>} An object with median metrics or null if data is insufficient.
+ */
+export async function getPeerMedianMetrics(targetSymbol) {
+    try {
+        const peersUrl = `https://financialmodelingprep.com/api/v4/stock_peers?symbol=${targetSymbol}&apikey=${state.fmpApiKey}`;
+        const peersResponse = await callApi(peersUrl);
+        let peerTickers = peersResponse[0]?.peersList;
+
+        if (!peerTickers || peerTickers.length === 0) {
+            console.warn(`No peers found for ${targetSymbol} to calculate medians.`);
+            return null;
+        }
+        
+        // Logic to prevent GOOG vs GOOGL comparison
+        if (targetSymbol === 'GOOG') {
+            peerTickers = peerTickers.filter(p => p !== 'GOOGL');
+        } else if (targetSymbol === 'GOOGL') {
+            peerTickers = peerTickers.filter(p => p !== 'GOOG');
+        }
+
+        const limitedPeers = peerTickers.slice(0, 10);
+        const livePeerDataMap = await _fetchLivePeerData(limitedPeers);
+        
+        const metrics = {
+            peRatio: [],
+            psRatio: [],
+            netMargin: [],
+            roe: [],
+            debtToEquity: []
+        };
+        
+        limitedPeers.forEach(peerSymbol => {
+            const fmpData = livePeerDataMap[peerSymbol];
+            if (!fmpData) return;
+
+            const ratiosTTM = fmpData.ratios_ttm?.data?.[0];
+            if (!ratiosTTM) return;
+            
+            // Push valid, numeric data into arrays for median calculation
+            if (typeof ratiosTTM.peRatioTTM === 'number') metrics.peRatio.push(ratiosTTM.peRatioTTM);
+            if (typeof ratiosTTM.priceToSalesRatioTTM === 'number') metrics.psRatio.push(ratiosTTM.priceToSalesRatioTTM);
+            if (typeof ratiosTTM.netProfitMarginTTM === 'number') metrics.netMargin.push(ratiosTTM.netProfitMarginTTM);
+            if (typeof ratiosTTM.returnOnEquityTTM === 'number') metrics.roe.push(ratiosTTM.returnOnEquityTTM);
+            if (typeof ratiosTTM.debtEquityRatioTTM === 'number') metrics.debtToEquity.push(ratiosTTM.debtEquityRatioTTM);
+        });
+
+        // Format the final results nicely for the prompt.
+        const formatMedian = (value, isPercentage = false) => {
+            if (value === null) return 'N/A';
+            return isPercentage ? `${(value * 100).toFixed(2)}%` : value.toFixed(2);
+        };
+        
+        return {
+            peRatio: formatMedian(calculateMedian(metrics.peRatio)),
+            psRatio: formatMedian(calculateMedian(metrics.psRatio)),
+            netMargin: formatMedian(calculateMedian(metrics.netMargin), true),
+            roe: formatMedian(calculateMedian(metrics.roe), true),
+            debtToEquity: formatMedian(calculateMedian(metrics.debtToEquity))
+        };
+
+    } catch (error) {
+        console.error(`Could not calculate peer medians for ${targetSymbol}:`, error);
+        return null; // Return null on failure so the deep dive can proceed without it.
     }
 }
