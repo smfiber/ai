@@ -901,7 +901,7 @@ async function _fetchLivePeerData(peerTickers) {
     const [profiles, allRatiosTtm, allKeyMetricsAnnual, allGrowthData] = await Promise.all([
         callApi(profileUrl), // Keep bulk profile fetch
         Promise.all(ratiosTtmPromises),
-        Promise.all(allKeyMetricsAnnual),
+        Promise.all(keyMetricsAnnualPromises),
         Promise.all(growthPromises)
     ]);
 
