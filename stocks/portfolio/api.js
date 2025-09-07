@@ -847,12 +847,13 @@ function _getCompetitorMetricsFromCache(fmpData) {
     };
 
     const ratiosTTM = fmpData.ratios_ttm?.data?.[0] || {};
+    const keyMetricsTTM = fmpData.key_metrics_ttm?.data?.[0] || {};
     const growthAnnual = fmpData.income_statement_growth_annual?.data?.[0] || {};
     
     return {
         pe_ratio: formatMetric(ratiosTTM.peRatioTTM),
         ps_ratio: formatMetric(ratiosTTM.priceToSalesRatioTTM),
-        ev_ebitda: formatMetric(ratiosTTM.enterpriseValueOverEBITDATTM),
+        ev_ebitda: formatMetric(keyMetricsTTM.evToEBITDATTM),
         gross_margin: formatMetric(ratiosTTM.grossProfitMarginTTM, true),
         net_margin: formatMetric(ratiosTTM.netProfitMarginTTM, true),
         roe: formatMetric(ratiosTTM.returnOnEquityTTM, true),
@@ -893,15 +894,21 @@ async function _fetchLivePeerData(peerTickers) {
         return makePromise(url, ticker, 'key metrics annual');
     });
 
+    const keyMetricsTtmPromises = peerTickers.map(ticker => {
+        const url = `https://financialmodelingprep.com/stable/key-metrics-ttm?symbol=${ticker}&apikey=${apiKey}`;
+        return makePromise(url, ticker, 'key metrics TTM');
+    });
+
     const growthPromises = peerTickers.map(ticker => {
         const url = `https://financialmodelingprep.com/stable/income-statement-growth?symbol=${ticker}&period=annual&limit=5&apikey=${apiKey}`;
         return makePromise(url, ticker, 'income growth');
     });
 
-    const [profiles, allRatiosTtm, allKeyMetricsAnnual, allGrowthData] = await Promise.all([
+    const [profiles, allRatiosTtm, allKeyMetricsAnnual, allKeyMetricsTtm, allGrowthData] = await Promise.all([
         callApi(profileUrl), // Keep bulk profile fetch
         Promise.all(ratiosTtmPromises),
         Promise.all(keyMetricsAnnualPromises),
+        Promise.all(keyMetricsTtmPromises),
         Promise.all(growthPromises)
     ]);
 
@@ -912,11 +919,13 @@ async function _fetchLivePeerData(peerTickers) {
         // Individual FMP calls often return an array with a single object. Get the first element.
         const ratiosTtmData = Array.isArray(allRatiosTtm[index]) ? allRatiosTtm[index][0] : null;
         const keyMetricsAnnualData = Array.isArray(allKeyMetricsAnnual[index]) ? allKeyMetricsAnnual[index][0] : null;
+        const keyMetricsTtmData = Array.isArray(allKeyMetricsTtm[index]) ? allKeyMetricsTtm[index][0] : null;
         
         liveData[ticker] = {
             profile: { data: profileData ? [profileData] : [] },
             ratios_ttm: { data: ratiosTtmData ? [ratiosTtmData] : [] },
             key_metrics_annual: { data: keyMetricsAnnualData ? [keyMetricsAnnualData] : [] },
+            key_metrics_ttm: { data: keyMetricsTtmData ? [keyMetricsTtmData] : [] },
             income_statement_growth_annual: { data: allGrowthData[index] || [] }
         };
     });
@@ -954,11 +963,21 @@ export async function getCompetitorAnalysis(targetSymbol) {
         // 2. Fetch CACHED data for the target and LIVE data for peers in parallel
         const targetFmpDataPromise = getFmpStockData(targetSymbol);
         const livePeerDataPromise = _fetchLivePeerData(limitedPeers);
+        const targetKeyMetricsTtmUrl = `https://financialmodelingprep.com/stable/key-metrics-ttm?symbol=${targetSymbol}&apikey=${state.fmpApiKey}`;
+        const targetKeyMetricsTtmPromise = callApi(targetKeyMetricsTtmUrl);
         
-        const [targetFmpData, livePeerDataMap] = await Promise.all([targetFmpDataPromise, livePeerDataPromise]);
+        const [targetFmpData, livePeerDataMap, targetKeyMetricsTtm] = await Promise.all([
+            targetFmpDataPromise,
+            livePeerDataPromise,
+            targetKeyMetricsTtmPromise
+        ]);
 
         if (!targetFmpData || !targetFmpData.profile?.data?.[0]) {
             throw new Error(`Could not retrieve cached profile data for target stock ${targetSymbol}. Please refresh its data.`);
+        }
+
+        if (targetKeyMetricsTtm && targetKeyMetricsTtm[0]) {
+            targetFmpData.key_metrics_ttm = { data: [targetKeyMetricsTtm[0]] };
         }
         
         // Helper to format market cap into billions
