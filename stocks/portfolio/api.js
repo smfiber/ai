@@ -807,12 +807,11 @@ function _getCompetitorMetricsFromCache(fmpData) {
 
     const ratiosTTM = fmpData.ratios_ttm?.data?.[0] || {};
     const growthAnnual = fmpData.income_statement_growth_annual?.data?.[0] || {};
-    const keyMetricsAnnual = fmpData.key_metrics_annual?.data?.[0] || {};
     
     return {
         pe_ratio: formatMetric(ratiosTTM.peRatioTTM),
         ps_ratio: formatMetric(ratiosTTM.priceToSalesRatioTTM),
-        ev_ebitda: formatMetric(keyMetricsAnnual.enterpriseValueOverEBITDA),
+        ev_ebitda: formatMetric(ratiosTTM.enterpriseValueOverEBITDATTM),
         gross_margin: formatMetric(ratiosTTM.grossProfitMarginTTM, true),
         net_margin: formatMetric(ratiosTTM.netProfitMarginTTM, true),
         roe: formatMetric(ratiosTTM.returnOnEquityTTM, true),
