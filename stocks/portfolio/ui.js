@@ -1,6 +1,6 @@
 // ui.js
 import { CONSTANTS, SECTORS, SECTOR_ICONS, state, NEWS_SENTIMENT_PROMPT, DEEP_DIVE_PROMPT } from './config.js';
-import { getFmpStockData, callApi, filterValidNews, callGeminiApi, generatePolishedArticle, getDriveToken, getOrCreateDriveFolder, createDriveFile, getGroupedFmpData, generateMorningBriefing, calculatePortfolioHealthScore, runOpportunityScanner, generatePortfolioAnalysis, generateTrendAnalysis, getCachedNews, getScannerResults, generateNewsSummary, summarizeSecFilingSection, getCompetitorAnalysis } from './api.js';
+import { getFmpStockData, callApi, filterValidNews, callGeminiApi, generatePolishedArticle, getDriveToken, getOrCreateDriveFolder, createDriveFile, getGroupedFmpData, generateMorningBriefing, calculatePortfolioHealthScore, runOpportunityScanner, generatePortfolioAnalysis, generateTrendAnalysis, getCachedNews, getScannerResults, generateNewsSummary, summarizeSecFilingSection, getCompetitorAnalysis, getPeerMedianMetrics } from './api.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getSecInsiderTrading, getSecInstitutionalOwnership, getSecMaterialEvents, getSecAnnualReports, getSecQuarterlyReports, getLatest10KRiskFactorsText, getLatest10QMdaText } from './sec-api.js';
 
@@ -2692,9 +2692,10 @@ async function getSavedReports(ticker, reportType) {
  * @param {Array<object>} finalRiskFactorsSummaries - Array of dated risk factor summaries.
  * @param {string} final8KSummary - The definitive 8-K summary to use.
  * @param {string} institutionalOwnershipTimeframe - The calculated timeframe of the filings.
+ * @param {object|null} peerMedians - An object containing median metrics of peer companies.
  * @returns {object} A summary object with pre-calculated metrics and trends.
  */
-function _calculateDeepDiveMetrics(data, newsNarrative, institutionalHolders, totalInstitutionalShares, totalSharesOutstanding, marketCap, finalMdaSummary, finalRiskFactorsSummaries, final8KSummary, institutionalOwnershipTimeframe = 'Recent filings data.') {
+function _calculateDeepDiveMetrics(data, newsNarrative, institutionalHolders, totalInstitutionalShares, totalSharesOutstanding, marketCap, finalMdaSummary, finalRiskFactorsSummaries, final8KSummary, institutionalOwnershipTimeframe = 'Recent filings data.', peerMedians = null) {
     const profile = data.profile?.data?.[0] || {};
     const income = (data.income_statement_annual?.data || []).slice().reverse(); // Oldest to newest
     const keyMetrics = (data.key_metrics_annual?.data || []).slice().reverse();
@@ -2796,6 +2797,7 @@ function _calculateDeepDiveMetrics(data, newsNarrative, institutionalHolders, to
         industry: profile.industry,
         currentPrice: profile.price || 'N/A',
         marketCap: marketCap ? formatLargeNumber(marketCap) : 'N/A',
+        peerMedians: peerMedians,
         analystConsensus: {
             nextYearRevenueForecast: formatLargeNumber(nextYearEstimate.estimatedRevenueAvg),
             nextYearEpsForecast: nextYearEstimate.estimatedEpsAvg ? nextYearEstimate.estimatedEpsAvg.toFixed(2) : 'N/A',
@@ -2967,6 +2969,9 @@ async function handleDeepDiveRequest(symbol, forceNew = false) {
             institutionalOwnershipTimeframe = 'A single recent filing.';
         }
 
+        loadingMessage.textContent = `Fetching peer data for context...`;
+        const peerMedians = await getPeerMedianMetrics(symbol);
+
         const payloadData = _calculateDeepDiveMetrics(
             data, 
             newsSummary.dominant_narrative, 
@@ -2977,7 +2982,8 @@ async function handleDeepDiveRequest(symbol, forceNew = false) {
             finalMdaSummary, 
             finalRiskFactorsSummaries, 
             final8KSummary, 
-            institutionalOwnershipTimeframe
+            institutionalOwnershipTimeframe,
+            peerMedians
         );
 
         const prompt = DEEP_DIVE_PROMPT
