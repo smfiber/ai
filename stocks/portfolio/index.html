@@ -483,57 +483,29 @@
 
                 <div id="ten-q-tab" class="tab-content hidden p-6">
                     <div id="ten-q-filing-container" class="mb-6"></div>
-                    <h3 class="text-xl font-bold text-gray-800 mb-4">User-Provided 10-Q MD&A</h3>
+                    <h3 class="text-xl font-bold text-gray-800 mb-4">User-Provided 10-Q Filing</h3>
                     <p class="text-sm text-gray-500 mb-6">
-                        You can manually provide the "Management's Discussion and Analysis" section from a 10-Q filing here.
-                        This text will be used to generate the MD&A summary in the "AI Analysis" tab, overriding the automated summary.
+                        You can manually provide the text from a 10-Q filing here.
+                        This text will be used to generate the MD&A and Risk Factor summaries in the "AI Analysis" tab.
                     </p>
-                    <form id="ten-q-mda-form">
+                    <form id="ten-q-form">
                         <div class="space-y-4">
                             <div>
-                                <label for="mda-date" class="block text-sm font-medium text-gray-700">Filing Date</label>
-                                <input type="date" id="mda-date" name="mda-date" class="mt-1 block w-full max-w-sm border border-gray-300 rounded-md shadow-sm p-2" required>
+                                <label for="10q-date" class="block text-sm font-medium text-gray-700">Filing Date</label>
+                                <input type="date" id="10q-date" name="10q-date" class="mt-1 block w-full max-w-sm border border-gray-300 rounded-md shadow-sm p-2" required>
                             </div>
                             <div>
-                                <label for="mda-text" class="block text-sm font-medium text-gray-700">MD&A Text</label>
-                                <textarea id="mda-text" name="mda-text" rows="10" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 font-mono text-sm" placeholder="Paste the full MD&A text here..."></textarea>
+                                <label for="10q-text" class="block text-sm font-medium text-gray-700">10-Q Text</label>
+                                <textarea id="10q-text" name="10q-text" rows="10" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 font-mono text-sm" placeholder="Paste the full 10-Q text here..."></textarea>
                             </div>
                             <div>
-                                <label for="mda-summary-output" class="block text-sm font-medium text-gray-700">AI-Generated Summary</label>
-                                <textarea id="mda-summary-output" name="mda-summary-output" rows="5" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 bg-gray-100 font-mono text-sm" readonly placeholder="Click 'Summarize with AI' to generate..."></textarea>
+                                <label for="10q-summary-output" class="block text-sm font-medium text-gray-700">AI-Generated Summary</label>
+                                <textarea id="10q-summary-output" name="10q-summary-output" rows="5" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 bg-gray-100 font-mono text-sm" readonly placeholder="Click 'Summarize with AI' to generate..."></textarea>
                             </div>
                         </div>
                         <div class="mt-6 flex justify-end items-center gap-4">
-                            <button type="button" id="summarize-mda-btn" class="bg-cyan-600 hover:bg-cyan-700 text-white font-semibold py-2 px-4 rounded-lg">Summarize with AI</button>
-                            <button type="button" id="save-mda-summary-btn" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg">Save Summary Only</button>
-                            <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg">Save Full Text</button>
-                        </div>
-                    </form>
-
-                    <hr class="my-8">
-
-                    <h3 class="text-xl font-bold text-gray-800 mb-4">User-Provided 10-Q Risk Factors</h3>
-                    <p class="text-sm text-gray-500 mb-6">
-                        You can manually provide the "Risk Factors" section from a 10-Q filing. This is often an update to the 10-K.
-                    </p>
-                    <form id="ten-q-risk-factors-form">
-                        <div class="space-y-4">
-                            <div>
-                                <label for="10q-risk-factors-date" class="block text-sm font-medium text-gray-700">Filing Date</label>
-                                <input type="date" id="10q-risk-factors-date" name="10q-risk-factors-date" class="mt-1 block w-full max-w-sm border border-gray-300 rounded-md shadow-sm p-2" required>
-                            </div>
-                            <div>
-                                <label for="10q-risk-factors-text" class="block text-sm font-medium text-gray-700">10-Q Risk Factors Text</label>
-                                <textarea id="10q-risk-factors-text" name="10q-risk-factors-text" rows="10" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 font-mono text-sm" placeholder="Paste the full Risk Factors text from the 10-Q here..."></textarea>
-                            </div>
-                            <div>
-                                <label for="10q-risks-summary-output" class="block text-sm font-medium text-gray-700">AI-Generated Summary</label>
-                                <textarea id="10q-risks-summary-output" name="10q-risks-summary-output" rows="5" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 bg-gray-100 font-mono text-sm" readonly placeholder="Click 'Summarize with AI' to generate..."></textarea>
-                            </div>
-                        </div>
-                        <div class="mt-6 flex justify-end items-center gap-4">
-                            <button type="button" id="summarize-10q-risks-btn" class="bg-cyan-600 hover:bg-cyan-700 text-white font-semibold py-2 px-4 rounded-lg">Summarize with AI</button>
-                            <button type="button" id="save-10q-risks-summary-btn" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg">Save Summary Only</button>
+                            <button type="button" id="summarize-10q-btn" class="bg-cyan-600 hover:bg-cyan-700 text-white font-semibold py-2 px-4 rounded-lg">Summarize with AI</button>
+                            <button type="button" id="save-10q-summary-btn" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg">Save Summary Only</button>
                             <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg">Save Full Text</button>
                         </div>
                     </form>
