@@ -179,7 +179,7 @@ In simple terms, describe the company's business based on the provided 'descript
 
 ### Cash Flow Analysis (Crucial)
 - **Quality of Earnings:** For each of the last 3-5 years, compare **netIncome** to **operatingCashFlow**. Is the company consistently converting its accounting profits into real cash? A significant and persistent gap is a major red flag.
-- **Free Cash Flow:** Analyze the trend in **freeCashFlow**. Is the company generating a growing amount of cash after its capital expenditures? How does it use this cash (e.g., for `commonStockRepurchased`, `dividendsPaid`, or `debtRepayment`)?
+- **Free Cash Flow:** Analyze the trend in **freeCashFlow**. Is the company generating a growing amount of cash after its capital expenditures? How does it use this cash (e.g., for 'commonStockRepurchased', 'dividendsPaid', or 'debtRepayment')?
 
 ## 5. Valuation Analysis
 ### Key Multiples vs. History & Peers
