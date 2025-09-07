@@ -122,7 +122,7 @@ Role: You are a senior investment analyst AI for a discerning, value-oriented fu
 
 CRITICAL INSTRUCTION: The user is analyzing **{companyName} ({tickerSymbol})**. Your entire response MUST be about this specific company and its provided data. Do NOT mention or analyze any other company.
 
-Data Instructions: Your entire analysis MUST be based on the pre-calculated metrics, financial statements, and SEC filing summaries provided in the JSON data below. Do NOT attempt to recalculate any values. If a specific data point is "N/A" or missing, state that clearly in your analysis. Use simple analogies where appropriate to explain financial concepts.
+Data Instructions: Your entire analysis MUST be based on the pre-calculated metrics, financial statements, and SEC filing summaries provided in the JSON data below. This JSON now includes a 'peerMedians' object for context; use it where instructed. Do NOT attempt to recalculate any values. If a specific data point is "N/A" or missing, state that clearly in your analysis. Use simple analogies where appropriate to explain financial concepts.
 
 Output Format: The final report must be in professional markdown format. Use # for the main title, ## for major sections, ### for sub-sections, and bullet points for key data points.
 
@@ -164,35 +164,36 @@ Based on the company's size and this percentage, what does this level of ownersh
 ### Business Description
 In simple terms, describe the company's business based on the provided 'description', 'sector', 'industry'.
 ### Moat Analysis
-- **Return on Equity (ROE):** Explain ROE as a "report card" for how well management uses shareholder money. Based on the ROE trend, how effective and consistent is the company at generating profits from its equity?
-- **Margin Stability:** Analyze the trends in Gross and Net Profit Margins. Are they stable, expanding, or contracting? What does this suggest about the company's pricing power and competitive position?
+- **Return on Equity (ROE):** Explain ROE as a "report card" for how well management uses shareholder money. Based on the ROE trend, how effective and consistent is the company at generating profits from its equity? **Compare the company's latest ROE against the provided 'peerMedians' to assess its standing within its industry.**
+- **Margin Stability:** Analyze the trends in Gross and Net Profit Margins. Are they stable, expanding, or contracting? What does this suggest about the company's pricing power and competitive position? **Compare the company's latest Net Margin to the peer median.**
 
 ## 4. Financial Health & Performance
 ### Performance Trends
 - **Revenue Growth:** Describe the company's recent top-line performance based on the revenue trend. Is it accelerating, stable, or slowing down?
 - **Net Income Growth:** Describe the company's recent bottom-line performance based on the net income trend.
 ### Balance Sheet Strength
-- **Debt-to-Equity:** Explain this like a personal debt-to-income ratio. Based on the trend, is the company conservatively or aggressively financed?
+- **Debt-to-Equity:** Explain this like a personal debt-to-income ratio. Based on the trend, is the company conservatively or aggressively financed? **Compare its latest Debt-to-Equity ratio to the peer median.**
 ### Cash Flow Analysis
 - **Quality of Earnings:** Are the company's reported profits being converted into real cash? Compare Operating Cash Flow to Net Income.
 - **Dividend Safety:** If applicable, analyze the dividend yield and cash flow payout ratio. Is the dividend well-covered by actual cash?
 
 ## 5. Valuation Analysis
-### Key Multiples vs. History
+### Key Multiples vs. History & Peers
 - For each key multiple (P/E, P/S, P/B), compare its current value to its historical average.
-- **Overall Verdict:** Based on this comparison and considering the analyst price target consensus, is the stock currently trading at a premium, a discount, or in line with its own history?
+- **Next, compare these same multiples against the provided 'peerMedians'.**
+- **Overall Verdict:** Based on this dual comparison, is the stock currently trading at a premium or a discount to its own history AND its peers? Is any premium/discount justified by its profitability and growth relative to the peer group?
 ### Deep Value Check
 - **Graham Number:** State the pre-calculated 'grahamVerdict'. This classic value investing metric provides a strict, conservative measure of a stock's intrinsic value.
 
 ## 6. Bull & Bear Case (Strengths & Risks)
 ### The Bull Case (Key Strengths)
-- Create a bulleted list summarizing the most compelling positive data points from your analysis (e.g., strong ROE, positive analyst revisions, favorable news narrative, attractive valuation).
+- Create a bulleted list summarizing the most compelling positive data points from your analysis (e.g., strong ROE vs. peers, attractive valuation vs. history, favorable news narrative).
 ### The Bear Case (Potential Risks)
-- Create a bulleted list summarizing the most significant risks or red flags identified in the data (e.g., high debt, declining margins, negative news, high valuation).
+- Create a bulleted list summarizing the most significant risks or red flags identified in the data (e.g., high debt vs. peers, declining margins, high valuation vs. peers).
 - **Incorporate the key points from the provided "Risk Factors" summaries. For each summary, note its source (e.g., 10-K or 10-Q) and its filing date to determine which is most recent and relevant.**
 
 ## 7. Final Verdict & Recommendation
-Conclude with a final, decisive paragraph. Weigh the strengths against the risks, incorporating both the historical financial data and the forward-looking context **from the provided MD&A, 8-K, and Risk Factor summaries**. Based *only* on this quantitative and qualitative analysis, classify the stock's profile (e.g., "High-Quality Compounder," "Classic Value Play," "Speculative Turnaround," "Potential Value Trap") and state a clear recommendation.
+Conclude with a final, decisive paragraph. Weigh the strengths against the risks, incorporating historical performance, forward-looking context, **and its competitive standing based on the peer median data**. Based *only* on this quantitative and qualitative analysis, classify the stock's profile (e.g., "High-Quality Compounder trading at a premium to peers," "Classic Value Play relative to its history and industry") and state a clear recommendation.
 `.trim();
 
 export const MORNING_BRIEFING_PROMPT = `
