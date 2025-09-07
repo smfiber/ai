@@ -198,8 +198,8 @@ export async function getFinancialStatementsFromXBRL(ticker) {
         throw new Error(`Could not find filing URL for the latest 10-K of ${ticker}.`);
     }
 
-    // 2. Use the filing URL to call the XBRL-to-JSON converter API.
-    const xbrlApiUrl = `https://api.sec-api.io/xbrl-to-json?url=${filingUrl}&token=${state.secApiKey}`;
+    // 2. Use the filing URL, properly encoded, to call the XBRL-to-JSON converter API.
+    const xbrlApiUrl = `https://api.sec-api.io/xbrl-to-json?url=${encodeURIComponent(filingUrl)}&token=${state.secApiKey}`;
     
     const financialStatements = await callApi(xbrlApiUrl);
     
