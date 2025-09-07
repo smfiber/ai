@@ -285,6 +285,35 @@ body.modal-open {
     margin-bottom: 1rem;
 }
 
+.prose table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1.5rem;
+    margin-bottom: 1.5rem;
+    font-size: 0.875rem;
+}
+
+.prose th, .prose td {
+    border: 1px solid #e5e7eb;
+    padding: 0.75rem 1rem;
+    text-align: right;
+}
+
+.prose th {
+    background-color: #f9fafb;
+    font-weight: 600;
+    text-align: left;
+}
+
+.prose th:first-child, .prose td:first-child {
+    text-align: left;
+    font-weight: 600;
+}
+
+.prose tbody tr:nth-child(even) {
+    background-color: #f9fafb;
+}
+
 /*
  * =================================================================
  * ANALYSIS TILES (v13.1.0)
