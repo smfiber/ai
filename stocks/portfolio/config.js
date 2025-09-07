@@ -822,7 +822,7 @@ Role: You are an expert financial analyst. Your task is to conduct a comprehensi
 Data Instructions:
 - Your analysis MUST be based *only* on the provided JSON data. Do not use outside knowledge.
 - The data contains live, trailing-twelve-month (TTM) metrics.
-- You must calculate the Peer Group Average and Peer Group Median for all relevant metrics. The median is crucial to account for outliers.
+- The JSON data now includes a \`calculated_medians\` object. You MUST use these pre-calculated values for the 'Peer Median' row in your table and for all textual analysis. Do NOT calculate the medians yourself.
 
 JSON Data for Comparison:
 {comparisonData}
@@ -844,7 +844,7 @@ Based on the provided list, who are the key competitors for {companyName}? The l
 ---
 
 ## 2. Quantitative Peer Benchmark
-Create a markdown table comparing the target company and its peers. Calculate and include both the **Peer Group Average** and **Peer Group Median** for each metric.
+Create a markdown table comparing the target company and its peers. For the **Peer Median** row, you MUST use the values provided in the \`calculated_medians\` object within the JSON data. For the **Peer Average** row, you must still calculate the average from the individual peer data.
 
 *Definitions:*
 - **EV/EBITDA:** Enterprise Value to Earnings Before Interest, Taxes, Depreciation, and Amortization. A valuation metric that is capital structure-neutral.
@@ -863,20 +863,20 @@ Create a markdown table comparing the target company and its peers. Calculate an
 ---
 
 ## 3. In-Depth Analysis vs. Peers
-Crucial Analysis Rules: Your entire analysis in this section must directly compare the target company's metrics to the Peer Group Median. For metrics that can be negative (like Net Margin or ROE), remember that a value closer to zero (i.e., less negative) is superior.
+Crucial Analysis Rules: Your entire analysis in this section must directly compare the target company's metrics to the Peer Group Median, using the provided \`calculated_medians\` values. For metrics that can be negative (like Net Margin or ROE), remember that a value closer to zero (i.e., less negative) is superior.
 
 ### Valuation
-- Directly compare the company's P/E, P/S, and EV/EBITDA ratios against the peer median. State clearly whether it trades at a premium or discount.
+- Directly compare the company's P/E, P/S, and EV/EBITDA ratios against the **peer median**. State clearly whether it trades at a premium or discount.
 - Based on its growth and profitability, is this valuation premium/discount justified?
 
 ### Profitability & Efficiency
-- Compare Gross Margin, Net Margin, ROE, and ROA against the peer median. 
+- Compare Gross Margin, Net Margin, ROE, and ROA against the **peer median**. 
 - For the negative metrics, explicitly state whether the company's performance is superior (less negative) or inferior (more negative).
 - Does this data suggest better or worse profitability and efficiency than its peers?
 
 ### Growth & Financial Health
-- Compare the company's Revenue Growth against the peer median and state clearly if it is faster or slower.
-- Then, compare the Debt-to-Equity ratio against the peer median to assess its financial health.
+- Compare the company's Revenue Growth against the **peer median** and state clearly if it is faster or slower.
+- Then, compare the Debt-to-Equity ratio against the **peer median** to assess its financial health.
 
 ---
 
