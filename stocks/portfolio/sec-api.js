@@ -192,13 +192,16 @@ export async function getFinancialStatementsFromXBRL(ticker) {
         throw new Error(`No 10-K filings found for ${ticker}.`);
     }
     const latestReport = annualReports[0];
-    const accessionNo = latestReport.accessionNo;
+    const accessionNoWithDashes = latestReport.accessionNo;
 
-    if (!accessionNo) {
+    if (!accessionNoWithDashes) {
         throw new Error(`Could not find accession number for the latest 10-K of ${ticker}.`);
     }
 
-    // 2. Use the accession number to call the XBRL-to-JSON converter API.
+    // 2. Remove dashes from the accession number as required by the XBRL-to-JSON API.
+    const accessionNo = accessionNoWithDashes.replace(/-/g, '');
+
+    // 3. Use the accession number to call the XBRL-to-JSON converter API.
     const xbrlApiUrl = `https://api.sec-api.io/xbrl-to-json?accessionNo=${accessionNo}&token=${state.secApiKey}`;
     
     const financialStatements = await callApi(xbrlApiUrl);
