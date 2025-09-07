@@ -2223,6 +2223,27 @@ font-size: 0.75rem;
         }
 
         // --- 17. Financials Modal Logic ---
+        function updateScreenerAndRerender(symbol, newTimestamp) {
+            const stockInScreener = advancedScreenerData.find(s => s.symbol === symbol);
+            if (stockInScreener) {
+                stockInScreener.cachedTimestamp = newTimestamp;
+            }
+
+            const tableContainerParent = document.getElementById('advanced-screener-data-container');
+            if (tableContainerParent) {
+                const tableContainer = tableContainerParent.querySelector('.overflow-y-auto');
+                const scrollPos = tableContainer ? tableContainer.scrollTop : 0;
+                
+                sortAndRerenderAdvancedTable();
+
+                if (tableContainer) {
+                    setTimeout(() => {
+                        tableContainer.scrollTop = scrollPos;
+                    }, 0);
+                }
+            }
+        }
+
         function setupFinancialsModalListeners() {
             financialsModalOverlay.addEventListener('click', hideFinancialsModal);
             financialsModalCloseBtn.addEventListener('click', hideFinancialsModal);
@@ -2253,7 +2274,7 @@ font-size: 0.75rem;
                          const dataToSave = { ...liveData, aiSummary, timestamp: new Date().toISOString() };
                          await saveTickerDetailsToFirebase(symbol, dataToSave);
                          appConfig.cachedStockInfo[symbol] = { rating: aiSummary.valuation_category, timestamp: dataToSave.timestamp };
-                         updateRatingDisplayForSymbol(symbol);
+                         updateScreenerAndRerender(symbol, new Date(dataToSave.timestamp).getTime());
                     } else {
                         document.getElementById('modal-key-metrics-content').innerHTML = '<p class="text-center text-red-500">Could not refresh data.</p>';
                     }
@@ -2302,9 +2323,10 @@ font-size: 0.75rem;
                 } else {
                     const { summary: aiSummary, prompt: aiPrompt } = await generateAiRating(cachedData);
                     populateAiSummary(aiSummary, aiPrompt);
-                    await saveTickerDetailsToFirebase(symbol, { ...cachedData, aiSummary });
-                    appConfig.cachedStockInfo[symbol] = { rating: aiSummary.valuation_category, timestamp: new Date().toISOString() };
-                    updateRatingDisplayForSymbol(symbol);
+                    const newTimestamp = new Date().toISOString();
+                    await saveTickerDetailsToFirebase(symbol, { ...cachedData, aiSummary, timestamp: newTimestamp });
+                    appConfig.cachedStockInfo[symbol] = { rating: aiSummary.valuation_category, timestamp: newTimestamp };
+                    updateScreenerAndRerender(symbol, new Date(newTimestamp).getTime());
                 }
             } else {
                 const liveData = await fetchTickerDetails(symbol);
@@ -2318,7 +2340,7 @@ font-size: 0.75rem;
                     const dataToSave = { ...liveData, aiSummary, timestamp: new Date().toISOString() };
                     await saveTickerDetailsToFirebase(symbol, dataToSave);
                     appConfig.cachedStockInfo[symbol] = { rating: aiSummary.valuation_category, timestamp: dataToSave.timestamp };
-                    updateRatingDisplayForSymbol(symbol);
+                    updateScreenerAndRerender(symbol, new Date(dataToSave.timestamp).getTime());
                 } else {
                      document.getElementById('modal-key-metrics-content').innerHTML = '<p class="text-center text-red-500">Could not fetch financial data.</p>';
                      document.getElementById('modal-ai-summary-content').innerHTML = '';
