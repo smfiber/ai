@@ -115,7 +115,7 @@ export function openSessionLogModal() {
             const headerBg = isPrompt ? 'bg-indigo-100' : 'bg-emerald-100';
             const headerText = isPrompt ? 'text-indigo-800' : 'text-emerald-800';
             const icon = isPrompt 
-                ? `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>`
+                ? `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2-2h-5l-5 5v-5z" /></svg>`
                 : `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>`;
 
             return `
@@ -2857,11 +2857,8 @@ async function handleDeepDiveRequest(symbol, forceNew = false) {
         loadingMessage.textContent = `Collating pre-summarized SEC filings...`;
         
         const finalRiskFactorsSummaries = [];
-        if (data.user_10k_risks?.data?.summary) {
-            finalRiskFactorsSummaries.push({ source: '10-K', date: data.user_10k_risks.data.date, summary: data.user_10k_risks.data.summary });
-        }
-        if (data.user_10q_risks?.data?.summary) {
-            finalRiskFactorsSummaries.push({ source: '10-Q', date: data.user_10q_risks.data.date, summary: data.user_10q_risks.data.summary });
+        if (data.user_10k_summary?.data?.summary) {
+            finalRiskFactorsSummaries.push({ source: '10-K', date: data.user_10k_summary.data.date, summary: data.user_10k_summary.data.summary });
         }
         if (finalRiskFactorsSummaries.length === 0) {
             finalRiskFactorsSummaries.push({ source: 'N/A', date: 'N/A', summary: 'Risk factors have not been provided by the user.' });
