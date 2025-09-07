@@ -177,3 +177,35 @@ export async function getLatest10QMdaText(cik) {
         return null;
     }
 }
+
+/**
+ * Fetches the latest 10-K filing for a ticker and converts its XBRL data to JSON.
+ * @param {string} ticker The company's ticker symbol.
+ * @returns {Promise<object>} The parsed financial statements as a JSON object.
+ */
+export async function getFinancialStatementsFromXBRL(ticker) {
+    if (!state.secApiKey) throw new Error("SEC API Key is not configured.");
+
+    // 1. Find the most recent 10-K filing to get its accession number.
+    const annualReports = await getSecAnnualReports(ticker);
+    if (!annualReports || annualReports.length === 0) {
+        throw new Error(`No 10-K filings found for ${ticker}.`);
+    }
+    const latestReport = annualReports[0];
+    const accessionNo = latestReport.accessionNo;
+
+    if (!accessionNo) {
+        throw new Error(`Could not find accession number for the latest 10-K of ${ticker}.`);
+    }
+
+    // 2. Use the accession number to call the XBRL-to-JSON converter API.
+    const xbrlApiUrl = `https://api.sec-api.io/xbrl-to-json?accessionNo=${accessionNo}&token=${state.secApiKey}`;
+    
+    const financialStatements = await callApi(xbrlApiUrl);
+    
+    if (!financialStatements) {
+        throw new Error(`Failed to retrieve or parse financial statements from XBRL for ${accessionNo}.`);
+    }
+
+    return financialStatements;
+}
