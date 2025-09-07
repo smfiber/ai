@@ -186,28 +186,25 @@ export async function getLatest10QMdaText(cik) {
 export async function getFinancialStatementsFromXBRL(ticker) {
     if (!state.secApiKey) throw new Error("SEC API Key is not configured.");
 
-    // 1. Find the most recent 10-K filing to get its accession number.
+    // 1. Find the most recent 10-K filing to get its URL.
     const annualReports = await getSecAnnualReports(ticker);
     if (!annualReports || annualReports.length === 0) {
         throw new Error(`No 10-K filings found for ${ticker}.`);
     }
     const latestReport = annualReports[0];
-    const accessionNoWithDashes = latestReport.accessionNo;
+    const filingUrl = latestReport.linkToFilingDetails;
 
-    if (!accessionNoWithDashes) {
-        throw new Error(`Could not find accession number for the latest 10-K of ${ticker}.`);
+    if (!filingUrl) {
+        throw new Error(`Could not find filing URL for the latest 10-K of ${ticker}.`);
     }
 
-    // 2. Remove dashes from the accession number as required by the XBRL-to-JSON API.
-    const accessionNo = accessionNoWithDashes.replace(/-/g, '');
-
-    // 3. Use the accession number to call the XBRL-to-JSON converter API.
-    const xbrlApiUrl = `https://api.sec-api.io/xbrl-to-json?accessionNo=${accessionNo}&token=${state.secApiKey}`;
+    // 2. Use the filing URL to call the XBRL-to-JSON converter API.
+    const xbrlApiUrl = `https://api.sec-api.io/xbrl-to-json?url=${filingUrl}&token=${state.secApiKey}`;
     
     const financialStatements = await callApi(xbrlApiUrl);
     
     if (!financialStatements) {
-        throw new Error(`Failed to retrieve or parse financial statements from XBRL for ${accessionNo}.`);
+        throw new Error(`Failed to retrieve or parse financial statements from XBRL for ${filingUrl}.`);
     }
 
     return financialStatements;
