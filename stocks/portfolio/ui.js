@@ -1,8 +1,8 @@
 // ui.js
-import { CONSTANTS, SECTORS, SECTOR_ICONS, state, NEWS_SENTIMENT_PROMPT, DEEP_DIVE_PROMPT } from './config.js';
+import { CONSTANTS, SECTORS, SECTOR_ICONS, state, NEWS_SENTIMENT_PROMPT, DEEP_DIVE_PROMPT, FINANCIAL_STATEMENT_ANALYSIS_PROMPT } from './config.js';
 import { getFmpStockData, callApi, filterValidNews, callGeminiApi, generatePolishedArticle, getDriveToken, getOrCreateDriveFolder, createDriveFile, getGroupedFmpData, generateMorningBriefing, calculatePortfolioHealthScore, runOpportunityScanner, generatePortfolioAnalysis, generateTrendAnalysis, getCachedNews, getScannerResults, generateNewsSummary, summarizeSecFilingSection, getCompetitorAnalysis, getPeerMedianMetrics } from './api.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { getSecInsiderTrading, getSecInstitutionalOwnership, getSecMaterialEvents, getSecAnnualReports, getSecQuarterlyReports, getLatest10KRiskFactorsText, getLatest10QMdaText } from './sec-api.js';
+import { getSecInsiderTrading, getSecInstitutionalOwnership, getSecMaterialEvents, getSecAnnualReports, getSecQuarterlyReports, getLatest10KRiskFactorsText, getLatest10QMdaText, getFinancialStatementsFromXBRL } from './sec-api.js';
 
 // --- CHART INSTANCES ---
 let allocationChartInstance = null;
@@ -913,18 +913,24 @@ async function openRawDataViewer(ticker) {
         }
 
         aiButtonsContainer.innerHTML = `
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <button data-symbol="${ticker}" id="deep-dive-analysis-button" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-all duration-200 hover:shadow-lg">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 10.5a.5.5 0 01.5-.5h3a.5.5 0 010 1h-3a.5.5 0 01-.5-.5z" />
                     </svg>
-                    Generate Deep Dive Analysis
+                    Deep Dive Analysis
                 </button>
                 <button data-symbol="${ticker}" id="peer-comparison-button" class="w-full bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-all duration-200 hover:shadow-lg">
                      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                     </svg>
-                    Run Peer Comparison
+                    Peer Comparison
+                </button>
+                <button data-symbol="${ticker}" id="financial-statement-analysis-button" class="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-all duration-200 hover:shadow-lg">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    10-K Statement Analysis
                 </button>
             </div>
         `;
@@ -2555,6 +2561,10 @@ export function setupEventListeners() {
             if (activeSymbol) {
                 handlePeerComparisonRequest(activeSymbol);
             }
+        } else if (target.id === 'financial-statement-analysis-button') {
+            if (activeSymbol) {
+                handleFinancialStatementAnalysis(activeSymbol);
+            }
         }
         
         if (target.id === 'refresh-institutional-button') {
@@ -2958,6 +2968,56 @@ async function handlePeerComparisonRequest(symbol, forceNew = false) {
     }
 }
 
+async function handleFinancialStatementAnalysis(symbol, forceNew = false) {
+    const reportType = 'FinancialStatementAnalysis';
+    const contentContainer = document.getElementById('ai-article-container');
+    const statusContainer = document.getElementById('report-status-container-ai');
+
+    contentContainer.innerHTML = '<div class="flex justify-center items-center h-full pt-16"><div class="loader"></div></div>';
+    statusContainer.classList.add('hidden');
+
+    try {
+        const savedReports = await getSavedReports(symbol, reportType);
+        if (savedReports.length > 0 && !forceNew) {
+            const latestReport = savedReports[0];
+            displayReport(contentContainer, latestReport.content, latestReport.prompt);
+            contentContainer.dataset.rawMarkdown = latestReport.content;
+            updateReportStatus(statusContainer, savedReports, latestReport.id, { symbol, reportType });
+            return;
+        }
+
+        openModal(CONSTANTS.MODAL_LOADING);
+        const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+        
+        loadingMessage.textContent = `Fetching 10-K financial statements for ${symbol}...`;
+        const financialData = await getFinancialStatementsFromXBRL(symbol);
+
+        const companyInfo = state.portfolioCache.find(s => s.ticker === symbol) || { companyName: symbol };
+
+        const prompt = FINANCIAL_STATEMENT_ANALYSIS_PROMPT
+            .replace('{companyName}', companyInfo.companyName)
+            .replace('{tickerSymbol}', symbol)
+            .replace('{jsonData}', JSON.stringify(financialData, null, 2));
+        
+        contentContainer.dataset.currentPrompt = prompt;
+
+        loadingMessage.textContent = `AI is analyzing the financial statements...`;
+        const markdownResponse = await callGeminiApi(prompt);
+        
+        contentContainer.dataset.rawMarkdown = markdownResponse;
+        displayReport(contentContainer, markdownResponse, prompt);
+        updateReportStatus(statusContainer, [], null, { symbol, reportType });
+
+    } catch (error) {
+        console.error("Error generating financial statement analysis:", error);
+        contentContainer.innerHTML = `<div class="text-center p-4 text-red-500 bg-red-50 rounded-lg"><p class="font-semibold">Could not generate analysis.</p><p class="text-sm">${error.message}</p></div>`;
+    } finally {
+        if (document.getElementById(CONSTANTS.MODAL_LOADING).classList.contains('is-open')) {
+            closeModal(CONSTANTS.MODAL_LOADING);
+        }
+    }
+}
+
 
 async function handleSaveReportToDb() {
     const modal = document.getElementById('rawDataViewerModal');
@@ -3066,6 +3126,8 @@ function updateReportStatus(statusContainer, reports, activeReportId, analysisPa
         generateNewBtn.addEventListener('click', () => {
             if (analysisParams.reportType === 'PeerComparison') {
                 handlePeerComparisonRequest(analysisParams.symbol, true);
+            } else if (analysisParams.reportType === 'FinancialStatementAnalysis') {
+                handleFinancialStatementAnalysis(analysisParams.symbol, true);
             } else { // Default or 'DeepDive'
                 handleDeepDiveRequest(analysisParams.symbol, true);
             }
