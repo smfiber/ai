@@ -76,7 +76,7 @@ export const CONSTANTS = {
     DB_COLLECTION_SECTOR_ANALYSIS: 'sector_analysis_runs',
     DB_COLLECTION_USER_DATA: 'user_data', // v14.18.0: New collection for user-specific data like cash
     DB_DOC_ID_USER_10Q: 'user_10q_summary',
-    DB_DOC_ID_USER_10K_RISKS: 'user_10k_risks',
+    DB_DOC_ID_USER_10K: 'user_10k_summary',
     DB_DOC_ID_USER_8K: 'user_8k_summary',
     DB_DOC_ID_INSTITUTIONAL_OWNERSHIP: 'institutional_ownership',
 };
