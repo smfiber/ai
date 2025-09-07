@@ -172,8 +172,7 @@ async function handleRefreshFmpData(symbol) {
             { name: 'ratios_annual', path: 'ratios', params: 'period=annual&limit=10', version: 'v3' },
             { name: 'stock_grade_news', path: 'grade', version: 'v3' },
             { name: 'analyst_estimates', path: 'analyst-estimates', version: 'v3'},
-            { name: 'company_core_information', path: 'company-core-information', version: 'v4', symbolAsQuery: true },
-            { name: 'executive_compensation', path: 'governance-executive-compensation', version: 'stable', symbolAsQuery: true }
+            { name: 'company_core_information', path: 'company-core-information', version: 'v4', symbolAsQuery: true }
         ];
 
         let successfulFetches = 0;
@@ -3543,7 +3542,7 @@ function _calculateNarrativeCatalystMetrics(data) {
         catalysts: {
             is_growth_accelerating: isGrowthAccelerating(),
             is_margin_expanding: isMarginExpanding(),
-            has_recent_upgrades: grades.filter(g => g.action.toLowerCase() === 'upgrade').length > 0
+            has_recent_upgrades: grades.filter(g => g.action && g.action.toLowerCase() === 'upgrade').length > 0
         }
     };
 }
