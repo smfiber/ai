@@ -863,19 +863,20 @@ Create a markdown table comparing the target company and its peers. Calculate an
 ---
 
 ## 3. In-Depth Analysis vs. Peers
-For each category below, provide a brief analysis of how {companyName} compares to the **peer group median**.
+Crucial Analysis Rules: Your entire analysis in this section must directly compare the target company's metrics to the Peer Group Median. For metrics that can be negative (like Net Margin or ROE), remember that a value closer to zero (i.e., less negative) is superior.
 
 ### Valuation
-- Is {companyName} trading at a premium or a discount to its peers based on P/E, P/S, and EV/EBITDA ratios?
-- Does its growth and profitability profile seem to justify its current valuation multiple relative to the group?
+- Directly compare the company's P/E, P/S, and EV/EBITDA ratios against the peer median. State clearly whether it trades at a premium or discount.
+- Based on its growth and profitability, is this valuation premium/discount justified?
 
 ### Profitability & Efficiency
-- How do the company's margins (Gross, Net) and returns (ROE, ROA) stack up?
-- Does this suggest superior operational efficiency, pricing power, or a different business model compared to its peers?
+- Compare Gross Margin, Net Margin, ROE, and ROA against the peer median. 
+- For the negative metrics, explicitly state whether the company's performance is superior (less negative) or inferior (more negative).
+- Does this data suggest better or worse profitability and efficiency than its peers?
 
 ### Growth & Financial Health
-- Is the company growing faster or slower than its peers?
-- How does its balance sheet leverage (Debt-to-Equity) compare? Does its growth appear to be financed responsibly?
+- Compare the company's Revenue Growth against the peer median and state clearly if it is faster or slower.
+- Then, compare the Debt-to-Equity ratio against the peer median to assess its financial health.
 
 ---
 
