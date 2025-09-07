@@ -166,15 +166,20 @@ In simple terms, describe the company's business based on the provided 'descript
 - **Return on Equity (ROE):** Explain ROE as a "report card" for how well management uses shareholder money. Based on the ROE trend, how effective and consistent is the company at generating profits from its equity? **Compare the company's latest ROE against the provided 'peerMedians' to assess its standing within its industry.**
 - **Margin Stability:** Analyze the trends in Gross and Net Profit Margins. Are they stable, expanding, or contracting? What does this suggest about the company's pricing power and competitive position? **Compare the company's latest Net Margin to the peer median.**
 
-## 4. Financial Health & Performance
-### Performance Trends
-- **Revenue Growth:** Describe the company's recent top-line performance based on the revenue trend. Is it accelerating, stable, or slowing down?
-- **Net Income Growth:** Describe the company's recent bottom-line performance based on the net income trend.
+## 4. Financial Health & Performance Analysis
+*Your analysis in this section MUST be derived directly from the multi-year financial statements provided in the JSON payload (`incomeStatementAnnual`, `balanceSheetAnnual`, `cashFlowStatementAnnual`).*
+
+### Income Statement Trends
+- Analyze the year-over-year growth of **revenue**. Is it accelerating or decelerating?
+- Analyze the trends of **grossProfitMargin**, **operatingIncomeMargin**, and **netIncomeMargin** over the last several years. Are margins expanding, contracting, or stable? What does this imply about pricing power and efficiency?
+
 ### Balance Sheet Strength
-- **Debt-to-Equity:** Explain this like a personal debt-to-income ratio. Based on the trend, is the company conservatively or aggressively financed? **Compare its latest Debt-to-Equity ratio to the peer median.**
-### Cash Flow Analysis
-- **Quality of Earnings:** Are the company's reported profits being converted into real cash? Compare Operating Cash Flow to Net Income.
-- **Dividend Safety:** If applicable, analyze the dividend yield and cash flow payout ratio. Is the dividend well-covered by actual cash?
+- Analyze the trend in **totalDebt** and the **debtToEquity** ratio. How has the company's leverage profile changed?
+- Look at the trend in **cashAndCashEquivalents**. Is the company building a strong cash position?
+
+### Cash Flow Analysis (Crucial)
+- **Quality of Earnings:** For each of the last 3-5 years, compare **netIncome** to **operatingCashFlow**. Is the company consistently converting its accounting profits into real cash? A significant and persistent gap is a major red flag.
+- **Free Cash Flow:** Analyze the trend in **freeCashFlow**. Is the company generating a growing amount of cash after its capital expenditures? How does it use this cash (e.g., for `commonStockRepurchased`, `dividendsPaid`, or `debtRepayment`)?
 
 ## 5. Valuation Analysis
 ### Key Multiples vs. History & Peers
@@ -917,7 +922,7 @@ Provide 3-4 critical, high-level bullet points summarizing the company's overall
 ## 1. Income Statement Analysis
 ### Revenue & Profitability Trends
 - Analyze the year-over-year trend in **Total Revenues**. Is growth accelerating, decelerating, or stable?
-- Analyze the trends in **Gross Profit Margin**, **Operating Margin**, and **Net Margin**. Are margins expanding or contracting? What does this imply about the company's pricing power and operational efficiency?
+- Analyze the trends in **Gross Profit Margin**, **Operating Margin**, and **Net Margin**. Are margins expanding, contracting, or stable? What does this imply about the company's pricing power and operational efficiency?
 
 ### Quality of Earnings
 - Compare the growth of **Net Income** to the growth of **Operating Cash Flow** (from the Cash Flow Statement). Are earnings being converted into actual cash? A significant divergence can be a red flag.
