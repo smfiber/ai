@@ -985,6 +985,69 @@ export async function getCompetitorAnalysis(targetSymbol) {
             if (typeof value !== 'number') return 'N/A';
             return (value / 1e9).toFixed(2);
         };
+        
+        // --- [NEW LOGIC START] Calculate medians programmatically ---
+        const peerMetricsForMedian = {
+            peRatioTTM: [], priceToSalesRatioTTM: [], evToEBITDATTM: [],
+            grossProfitMarginTTM: [], netProfitMarginTTM: [], returnOnEquityTTM: [],
+            returnOnAssetsTTM: [], growthRevenue: [], debtEquityRatioTTM: []
+        };
+
+        limitedPeers.forEach(peerSymbol => {
+            const fmpData = livePeerDataMap[peerSymbol];
+            if (!fmpData) return;
+
+            const ratiosTTM = fmpData.ratios_ttm?.data?.[0];
+            const keyMetricsTTM = fmpData.key_metrics_ttm?.data?.[0];
+            const growthAnnual = fmpData.income_statement_growth_annual?.data?.[0];
+
+            if (ratiosTTM) {
+                if (typeof ratiosTTM.peRatioTTM === 'number') peerMetricsForMedian.peRatioTTM.push(ratiosTTM.peRatioTTM);
+                if (typeof ratiosTTM.priceToSalesRatioTTM === 'number') peerMetricsForMedian.priceToSalesRatioTTM.push(ratiosTTM.priceToSalesRatioTTM);
+                if (typeof ratiosTTM.grossProfitMarginTTM === 'number') peerMetricsForMedian.grossProfitMarginTTM.push(ratiosTTM.grossProfitMarginTTM);
+                if (typeof ratiosTTM.netProfitMarginTTM === 'number') peerMetricsForMedian.netProfitMarginTTM.push(ratiosTTM.netProfitMarginTTM);
+                if (typeof ratiosTTM.returnOnEquityTTM === 'number') peerMetricsForMedian.returnOnEquityTTM.push(ratiosTTM.returnOnEquityTTM);
+                if (typeof ratiosTTM.returnOnAssetsTTM === 'number') peerMetricsForMedian.returnOnAssetsTTM.push(ratiosTTM.returnOnAssetsTTM);
+                if (typeof ratiosTTM.debtEquityRatioTTM === 'number') peerMetricsForMedian.debtEquityRatioTTM.push(ratiosTTM.debtEquityRatioTTM);
+            }
+            if (keyMetricsTTM && typeof keyMetricsTTM.evToEBITDATTM === 'number') {
+                peerMetricsForMedian.evToEBITDATTM.push(keyMetricsTTM.evToEBITDATTM);
+            }
+            if (growthAnnual && typeof growthAnnual.growthRevenue === 'number') {
+                peerMetricsForMedian.growthRevenue.push(growthAnnual.growthRevenue);
+            }
+        });
+
+        const calculatedMedians = {
+            pe_ratio: calculateMedian(peerMetricsForMedian.peRatioTTM),
+            ps_ratio: calculateMedian(peerMetricsForMedian.priceToSalesRatioTTM),
+            ev_ebitda: calculateMedian(peerMetricsForMedian.evToEBITDATTM),
+            gross_margin: calculateMedian(peerMetricsForMedian.grossProfitMarginTTM),
+            net_margin: calculateMedian(peerMetricsForMedian.netProfitMarginTTM),
+            roe: calculateMedian(peerMetricsForMedian.returnOnEquityTTM),
+            roa: calculateMedian(peerMetricsForMedian.returnOnAssetsTTM),
+            revenue_growth: calculateMedian(peerMetricsForMedian.growthRevenue),
+            debt_to_equity: calculateMedian(peerMetricsForMedian.debtEquityRatioTTM),
+        };
+
+        const formatMedianMetric = (value, isPercentage = false) => {
+            if (value === null || typeof value !== 'number') return 'N/A';
+            if (isPercentage) return `${(value * 100).toFixed(2)}%`;
+            return Math.abs(value) > 100 ? value.toFixed(0) : value.toFixed(2);
+        };
+
+        const formattedMedians = {
+            pe_ratio: formatMedianMetric(calculatedMedians.pe_ratio),
+            ps_ratio: formatMedianMetric(calculatedMedians.ps_ratio),
+            ev_ebitda: formatMedianMetric(calculatedMedians.ev_ebitda),
+            gross_margin: formatMedianMetric(calculatedMedians.gross_margin, true),
+            net_margin: formatMedianMetric(calculatedMedians.net_margin, true),
+            roe: formatMedianMetric(calculatedMedians.roe, true),
+            roa: formatMedianMetric(calculatedMedians.roa, true),
+            revenue_growth: formatMedianMetric(calculatedMedians.revenue_growth, true),
+            debt_to_equity: formatMedianMetric(calculatedMedians.debt_to_equity),
+        };
+        // --- [NEW LOGIC END] ---
 
         // 3. Assemble the data for the AI prompt
         const peerData = [];
@@ -1017,13 +1080,14 @@ export async function getCompetitorAnalysis(targetSymbol) {
             target: {
                 name: targetProfile.companyName,
                 market_cap: formatMarketCap(targetProfile.mktCap),
-                ..._getCompetitorMetricsFromCache(targetFmpData) // Use cached data for target
+                ..._getCompetitorMetricsFromCache(targetFmpData)
             },
-            peers: peerData, // Use live data for peers
-            largest_competitor: largestCompetitor.name || 'N/A'
+            peers: peerData,
+            largest_competitor: largestCompetitor.name || 'N/A',
+            calculated_medians: formattedMedians // Add the correctly calculated medians
         };
 
-        // 5. Generate the AI summary using the new prompt
+        // 5. Generate the AI summary using the prompt
         const prompt = COMPETITOR_ANALYSIS_PROMPT
             .replace('{comparisonData}', JSON.stringify(comparisonData, null, 2))
             .replace(/{companyName}/g, targetProfile.companyName)
