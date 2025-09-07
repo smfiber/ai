@@ -863,16 +863,17 @@ Create a markdown table comparing the target company and its peers. For the **Pe
 ---
 
 ## 3. In-Depth Analysis vs. Peers
-Crucial Analysis Rules: Your entire analysis in this section must directly compare the target company's metrics to the Peer Group Median, using the provided \`calculated_medians\` values. For metrics that can be negative (like Net Margin or ROE), remember that a value closer to zero (i.e., less negative) is superior.
+**Crucial Analysis Rules:** Your entire analysis in this section must directly compare the target company's metrics to the **Peer Group Median**, using the provided \`calculated_medians\` values.
+- For metrics that can be negative (like Net Margin or ROE), a value closer to zero (i.e., less negative) is superior. State this clearly.
+- **Valuation ratios like P/E or EV/EBITDA that are negative or "N/M" (Not Meaningful) indicate the company is unprofitable. This makes the metric not meaningful for direct valuation comparison. DO NOT describe a company with a negative P/E as 'undervalued' based on that metric; instead, state that it is unprofitable.**
 
 ### Valuation
-- Directly compare the company's P/E, P/S, and EV/EBITDA ratios against the **peer median**. State clearly whether it trades at a premium or discount.
-- Based on its growth and profitability, is this valuation premium/discount justified?
+- Directly compare the company's P/E, P/S, and EV/EBITDA ratios against the **peer median**. State clearly whether it trades at a premium or discount. If a valuation metric is 'N/M', explain that it's not meaningful because the company is unprofitable.
+- Based on its growth and profitability relative to peers, is any valuation premium/discount justified?
 
 ### Profitability & Efficiency
 - Compare Gross Margin, Net Margin, ROE, and ROA against the **peer median**. 
-- For the negative metrics, explicitly state whether the company's performance is superior (less negative) or inferior (more negative).
-- Does this data suggest better or worse profitability and efficiency than its peers?
+- Does this data suggest better or worse profitability and efficiency than its peers? For negative metrics, explicitly state whether the company's performance is superior (less negative) or inferior (more negative).
 
 ### Growth & Financial Health
 - Compare the company's Revenue Growth against the **peer median** and state clearly if it is faster or slower.
