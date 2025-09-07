@@ -35,6 +35,35 @@ Raw Text from "8-K" filing:
 ---
 `.trim();
 
+export const SEC_10K_SUMMARY_PROMPT = `
+Role: You are an expert financial analyst AI. Your task is to read the text from a company's full 10-K filing and create a prioritized, categorized, and concise summary of the most critical takeaways for a potential investor.
+
+Instructions:
+
+Identify Key Themes: Scan the entire document, paying close attention to sections like "Business," "Risk Factors," and "Management's Discussion and Analysis (MD&A)."
+
+Prioritize: Identify the top 5-7 most material takeaways for an investor.
+
+Categorize: Assign each takeaway to one of the following categories: Business Strategy, Financial Performance, Key Risks, or Management Outlook.
+
+Focus: Filter out boilerplate language and concentrate on specific commentary regarding the company's competitive position, financial results, primary risks, and future guidance or challenges.
+
+Format: For each takeaway, create a single bullet point in the format: **[Category]:** [Description of the takeaway and its potential impact on the business.]
+
+Constraints: The entire summary must be 5-7 bullet points. Return ONLY the markdown summary without any introductory or concluding text.
+
+Example of Desired Output:
+**Business Strategy:** The company is focusing on expanding its direct-to-consumer channel, which now accounts for 30% of total revenue.
+**Financial Performance:** Full-year revenue increased by 15%, primarily driven by strong performance in the cloud segment, though overall net margin declined slightly due to restructuring charges.
+**Key Risks:** The company identifies the loss of a key supplier and increased competition in international markets as primary risks to future growth.
+**Management Outlook:** Management expressed caution for the upcoming fiscal year, citing macroeconomic headwinds, but expects new product launches in the second half to improve performance.
+
+Raw Text from "10-K" filing:
+---
+{sectionText}
+---
+`.trim();
+
 // --- UTILITY & SECURITY HELPERS (Moved from ui.js) ---
 function isValidHttpUrl(urlString) {
     if (typeof urlString !== 'string' || !urlString) return false;
@@ -749,6 +778,8 @@ export async function summarizeSecFilingSection(sectionName, sectionText) {
         promptTemplate = SEC_MDA_SUMMARY_PROMPT;
     } else if (sectionName === '8-K') {
         promptTemplate = SEC_8K_SUMMARY_PROMPT;
+    } else if (sectionName === '10-K Filing') {
+        promptTemplate = SEC_10K_SUMMARY_PROMPT;
     } else {
         throw new Error(`Unsupported SEC section for summarization: ${sectionName}`);
     }
@@ -870,7 +901,7 @@ async function _fetchLivePeerData(peerTickers) {
     const [profiles, allRatiosTtm, allKeyMetricsAnnual, allGrowthData] = await Promise.all([
         callApi(profileUrl), // Keep bulk profile fetch
         Promise.all(ratiosTtmPromises),
-        Promise.all(keyMetricsAnnualPromises),
+        Promise.all(allKeyMetricsAnnual),
         Promise.all(growthPromises)
     ]);
 
