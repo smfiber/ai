@@ -167,7 +167,7 @@ In simple terms, describe the company's business based on the provided 'descript
 - **Margin Stability:** Analyze the trends in Gross and Net Profit Margins. Are they stable, expanding, or contracting? What does this suggest about the company's pricing power and competitive position? **Compare the company's latest Net Margin to the peer median.**
 
 ## 4. Financial Health & Performance Analysis
-*Your analysis in this section MUST be derived directly from the multi-year financial statements provided in the JSON payload (`incomeStatementAnnual`, `balanceSheetAnnual`, `cashFlowStatementAnnual`).*
+*Your analysis in this section MUST be derived directly from the multi-year financial statements provided in the JSON payload ('incomeStatementAnnual', 'balanceSheetAnnual', 'cashFlowStatementAnnual').*
 
 ### Income Statement Trends
 - Analyze the year-over-year growth of **revenue**. Is it accelerating or decelerating?
