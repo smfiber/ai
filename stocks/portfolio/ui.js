@@ -859,7 +859,7 @@ async function openRawDataViewer(ticker) {
     if (tenKContainer) tenKContainer.querySelector('#ten-k-filing-container').innerHTML = '';
 
     // Reset forms
-    const formsToReset = ['eight-k-form', 'ten-q-mda-form', 'ten-q-risk-factors-form', 'ten-k-form'];
+    const formsToReset = ['eight-k-form', 'ten-q-form', 'ten-k-form'];
     formsToReset.forEach(formId => {
         const form = document.getElementById(formId);
         if (form) form.reset();
@@ -1958,144 +1958,74 @@ async function handleSaveUser8KSummary() {
     }
 }
 
-async function handleSaveUserMdaText(e) {
+async function handleSaveUser10QText(e) {
     e.preventDefault();
     const modal = document.getElementById('rawDataViewerModal');
     const ticker = modal.dataset.activeSymbol;
     if (!ticker) return;
 
-    const mdaDate = document.getElementById('mda-date').value;
-    const mdaText = document.getElementById('mda-text').value.trim();
+    const filingDate = document.getElementById('10q-date').value;
+    const filingText = document.getElementById('10q-text').value.trim();
 
-    if (!mdaDate || !mdaText) {
-        displayMessageInModal("Please provide both a filing date and the MD&A text.", "warning");
+    if (!filingDate || !filingText) {
+        displayMessageInModal("Please provide both a filing date and the 10-Q text.", "warning");
         return;
     }
 
     openModal(CONSTANTS.MODAL_LOADING);
-    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Saving MD&A text for ${ticker}...`;
+    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Saving 10-Q text for ${ticker}...`;
 
     try {
-        const docRef = doc(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, ticker, 'endpoints', CONSTANTS.DB_DOC_ID_USER_MDA);
+        const docRef = doc(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, ticker, 'endpoints', CONSTANTS.DB_DOC_ID_USER_10Q);
         const docSnap = await getDoc(docRef);
         const existingData = docSnap.exists() ? docSnap.data().data : {};
 
         await setDoc(docRef, {
             cachedAt: Timestamp.now(),
-            data: { ...existingData, date: mdaDate, text: mdaText }
+            data: { ...existingData, date: filingDate, text: filingText }
         });
-        displayMessageInModal("Custom MD&A text saved successfully!", "info");
+        displayMessageInModal("Custom 10-Q text saved successfully!", "info");
     } catch (error) {
-        console.error("Error saving user MD&A text:", error);
-        displayMessageInModal(`Could not save MD&A text: ${error.message}`, 'error');
+        console.error("Error saving user 10-Q text:", error);
+        displayMessageInModal(`Could not save 10-Q text: ${error.message}`, 'error');
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
 }
 
-async function handleSaveUserMdaSummary() {
+async function handleSaveUser10QSummary() {
     const modal = document.getElementById('rawDataViewerModal');
     const ticker = modal.dataset.activeSymbol;
     if (!ticker) return;
 
-    const mdaDate = document.getElementById('mda-date').value;
-    const summaryText = document.getElementById('mda-summary-output').value.trim();
+    const filingDate = document.getElementById('10q-date').value;
+    const summaryText = document.getElementById('10q-summary-output').value.trim();
 
-    if (!mdaDate || !summaryText) {
+    if (!filingDate || !summaryText) {
         displayMessageInModal("Please provide a filing date and ensure a summary has been generated.", "warning");
         return;
     }
 
     openModal(CONSTANTS.MODAL_LOADING);
-    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Saving MD&A summary for ${ticker}...`;
+    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Saving 10-Q summary for ${ticker}...`;
 
     try {
-        const docRef = doc(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, ticker, 'endpoints', CONSTANTS.DB_DOC_ID_USER_MDA);
+        const docRef = doc(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, ticker, 'endpoints', CONSTANTS.DB_DOC_ID_USER_10Q);
         const docSnap = await getDoc(docRef);
         const existingData = docSnap.exists() ? docSnap.data().data : {};
 
         await setDoc(docRef, {
             cachedAt: Timestamp.now(),
-            data: { ...existingData, date: mdaDate, summary: summaryText }
+            data: { ...existingData, date: filingDate, summary: summaryText }
         });
-        displayMessageInModal("Custom MD&A summary saved successfully!", "info");
+        displayMessageInModal("Custom 10-Q summary saved successfully!", "info");
     } catch (error) {
-        console.error("Error saving user MD&A summary:", error);
-        displayMessageInModal(`Could not save MD&A summary: ${error.message}`, 'error');
+        console.error("Error saving user 10-Q summary:", error);
+        displayMessageInModal(`Could not save 10-Q summary: ${error.message}`, 'error');
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
 }
-
-async function handleSaveUser10QRisksText(e) {
-    e.preventDefault();
-    const modal = document.getElementById('rawDataViewerModal');
-    const ticker = modal.dataset.activeSymbol;
-    if (!ticker) return;
-
-    const riskDate = document.getElementById('10q-risk-factors-date').value;
-    const riskText = document.getElementById('10q-risk-factors-text').value.trim();
-
-    if (!riskDate || !riskText) {
-        displayMessageInModal("Please provide both a filing date and the 10-Q Risk Factors text.", "warning");
-        return;
-    }
-
-    openModal(CONSTANTS.MODAL_LOADING);
-    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Saving 10-Q Risk Factors text for ${ticker}...`;
-
-    try {
-        const docRef = doc(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, ticker, 'endpoints', CONSTANTS.DB_DOC_ID_USER_10Q_RISKS);
-        const docSnap = await getDoc(docRef);
-        const existingData = docSnap.exists() ? docSnap.data().data : {};
-        
-        await setDoc(docRef, {
-            cachedAt: Timestamp.now(),
-            data: { ...existingData, date: riskDate, text: riskText }
-        });
-        displayMessageInModal("Custom 10-Q Risk Factors text saved successfully!", "info");
-    } catch (error) {
-        console.error("Error saving user 10-Q Risk Factors text:", error);
-        displayMessageInModal(`Could not save 10-Q Risk Factors text: ${error.message}`, 'error');
-    } finally {
-        closeModal(CONSTANTS.MODAL_LOADING);
-    }
-}
-
-async function handleSaveUser10QRisksSummary() {
-    const modal = document.getElementById('rawDataViewerModal');
-    const ticker = modal.dataset.activeSymbol;
-    if (!ticker) return;
-
-    const riskDate = document.getElementById('10q-risk-factors-date').value;
-    const summaryText = document.getElementById('10q-risks-summary-output').value.trim();
-
-    if (!riskDate || !summaryText) {
-        displayMessageInModal("Please provide a filing date and ensure a summary has been generated.", "warning");
-        return;
-    }
-
-    openModal(CONSTANTS.MODAL_LOADING);
-    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Saving 10-Q Risk Factors summary for ${ticker}...`;
-
-    try {
-        const docRef = doc(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, ticker, 'endpoints', CONSTANTS.DB_DOC_ID_USER_10Q_RISKS);
-        const docSnap = await getDoc(docRef);
-        const existingData = docSnap.exists() ? docSnap.data().data : {};
-
-        await setDoc(docRef, {
-            cachedAt: Timestamp.now(),
-            data: { ...existingData, date: riskDate, summary: summaryText }
-        });
-        displayMessageInModal("Custom 10-Q Risk Factors summary saved successfully!", "info");
-    } catch (error) {
-        console.error("Error saving user 10-Q Risk Factors summary:", error);
-        displayMessageInModal(`Could not save 10-Q Risk Factors summary: ${error.message}`, 'error');
-    } finally {
-        closeModal(CONSTANTS.MODAL_LOADING);
-    }
-}
-
 
 async function handleSaveUser10KRisksText(e) {
     e.preventDefault();
@@ -2214,22 +2144,13 @@ async function handle10QRequest(ticker) {
     }
 
     try {
-        const mdaDocRef = doc(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, ticker, 'endpoints', CONSTANTS.DB_DOC_ID_USER_MDA);
-        const mdaDocSnap = await getDoc(mdaDocRef);
-        if (mdaDocSnap.exists()) {
-            const data = mdaDocSnap.data().data;
-            document.getElementById('mda-date').value = data.date || '';
-            document.getElementById('mda-text').value = data.text || '';
-            document.getElementById('mda-summary-output').value = data.summary || '';
-        }
-        
-        const riskDocRef = doc(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, ticker, 'endpoints', CONSTANTS.DB_DOC_ID_USER_10Q_RISKS);
-        const riskDocSnap = await getDoc(riskDocRef);
-        if (riskDocSnap.exists()) {
-            const data = riskDocSnap.data().data;
-            document.getElementById('10q-risk-factors-date').value = data.date || '';
-            document.getElementById('10q-risk-factors-text').value = data.text || '';
-            document.getElementById('10q-risks-summary-output').value = data.summary || '';
+        const docRef = doc(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, ticker, 'endpoints', CONSTANTS.DB_DOC_ID_USER_10Q);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+            const data = docSnap.data().data;
+            document.getElementById('10q-date').value = data.date || '';
+            document.getElementById('10q-text').value = data.text || '';
+            document.getElementById('10q-summary-output').value = data.summary || '';
         }
     } catch (error) {
         console.warn(`Could not load existing user-provided 10-Q data for ${ticker}:`, error.message);
@@ -2521,11 +2442,8 @@ export function setupEventListeners() {
     document.getElementById('eight-k-form')?.addEventListener('submit', handleSaveUser8KText);
     document.getElementById('save-8k-summary-btn')?.addEventListener('click', handleSaveUser8KSummary);
 
-    document.getElementById('ten-q-mda-form')?.addEventListener('submit', handleSaveUserMdaText);
-    document.getElementById('save-mda-summary-btn')?.addEventListener('click', handleSaveUserMdaSummary);
-
-    document.getElementById('ten-q-risk-factors-form')?.addEventListener('submit', handleSaveUser10QRisksText);
-    document.getElementById('save-10q-risks-summary-btn')?.addEventListener('click', handleSaveUser10QRisksSummary);
+    document.getElementById('ten-q-form')?.addEventListener('submit', handleSaveUser10QText);
+    document.getElementById('save-10q-summary-btn')?.addEventListener('click', handleSaveUser10QSummary);
 
     document.getElementById('ten-k-form')?.addEventListener('submit', handleSaveUser10KRisksText);
     document.getElementById('save-10k-risks-summary-btn')?.addEventListener('click', handleSaveUser10KRisksSummary);
@@ -2540,11 +2458,8 @@ export function setupEventListeners() {
             case 'summarize-8k-btn':
                 handleSummarizeSecText('8-K', '8k-text', '8k-summary-output', 'summarize-8k-btn');
                 break;
-            case 'summarize-mda-btn':
-                handleSummarizeSecText('MD&A', 'mda-text', 'mda-summary-output', 'summarize-mda-btn');
-                break;
-            case 'summarize-10q-risks-btn':
-                handleSummarizeSecText('Risk Factors', '10q-risk-factors-text', '10q-risks-summary-output', 'summarize-10q-risks-btn');
+            case 'summarize-10q-btn':
+                handleSummarizeSecText('MD&A', '10q-text', '10q-summary-output', 'summarize-10q-btn');
                 break;
             case 'summarize-10k-risks-btn':
                 handleSummarizeSecText('Risk Factors', 'risk-factors-text', '10k-risks-summary-output', 'summarize-10k-risks-btn');
