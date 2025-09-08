@@ -635,7 +635,7 @@ export async function runOpportunityScanner(stocksToScan, updateProgress) {
             const resultStr = await callGeminiApi(prompt);
             const resultJson = JSON.parse(resultStr.replace(/```json\n?|\n?```/g, ''));
 
-            if (resultJson && resultJson.is_significant) {
+            if (resultJson) {
                 const reportData = {
                     ticker: stock.ticker,
                     companyName: stock.companyName,
@@ -643,7 +643,10 @@ export async function runOpportunityScanner(stocksToScan, updateProgress) {
                     ...resultJson
                 };
                 await addDoc(collection(state.db, CONSTANTS.DB_COLLECTION_SCANNER_RESULTS), reportData);
-                opportunities.push(reportData);
+                
+                if (resultJson.is_significant) {
+                    opportunities.push(reportData);
+                }
             }
         } catch (error) {
             console.error(`Error processing ${stock.ticker} in opportunity scanner:`, error);
