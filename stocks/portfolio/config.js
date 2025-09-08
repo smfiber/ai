@@ -747,7 +747,7 @@ Your analysis must be structured as follows:
 - Does the market already recognize this company's dominant position? Briefly comment on its valuation. **Is it trading at a premium multiple, and is that premium justified by its strategic importance and financial superiority?**
 
 ## 6. The The Investment Case
-- Conclude by explaining why this "linchpin" status—**supported by strong financial metrics and after considering the risks**—translates into predictable, long-term profitability, making it a potential cornerstone holding for a patient investor.
+- Conclude by explaining why this "linchpin" status—**supported by its financial performance and after considering the risks**—translates into predictable, long-term profitability, making it a potential cornerstone holding for a patient investor.
 
 When you mention a stock ticker, you MUST wrap it in a special tag like this: <stock-ticker>TICKER</stock-ticker>.
 `;
@@ -878,7 +878,7 @@ Create a markdown table comparing the target company and its peers. For the **Pe
 
 ### Valuation
 - Directly compare the company's P/S ratio against the **peer median**. If the P/E or EV/EBITDA ratios are 'N/M', explicitly state this is because the company is operationally unprofitable. In this case, explain that the EV/Revenue (P/S) multiple is a more appropriate metric for comparing growth companies that are not yet profitable.
-- Based on its P/S ratio and revenue growth relative to peers, is the company valued at a premium or a discount? Is this valuation justified?
+- Based on its P/S ratio and revenue growth relative to peers, is the company valued at a premium or a discount? **Justify this conclusion explicitly.**
 
 ### Profitability & Efficiency
 - Compare Gross Margin, Net Margin, ROE, and ROA against the **peer median**. 
@@ -995,7 +995,7 @@ First, present a clear, scannable summary of the company's operational health an
 - **vs. Industry Peers:** The stock's current P/E of **{current_pe}** is [above/below] the industry median of **{peer_pe}**. Its current P/S of **{current_ps}** is [above/below] the industry median of **{peer_ps}**. This suggests the stock is valued at a [premium/discount] compared to its peers.
 
 ### Conservative Deep Value Check
-- **Graham Number:** The current price of **{currentPrice}** is significantly [above/below] the conservative Graham Number of **{grahamNumber}**.
+- **Graham Number:** If the '{grahamNumber}' is 'N/A', state that a deep value check using the Graham Number could not be performed for this company. Otherwise, compare the current price of **{currentPrice}** to the Graham Number of **{grahamNumber}**.
 - **Context:** The Graham Number is a very strict, asset-and-earnings-focused metric. For companies with significant intangible assets (like brand or technology) or high growth, it can often appear artificially low. It serves as a useful, conservative floor for valuation but may not capture the full picture.
 
 ## 3. Synthesized Investment Thesis
@@ -1008,7 +1008,7 @@ Construct the forward-looking investment thesis. What is the most likely catalys
 Outline the primary risks that could cause the stock to remain a 'value trap' or decline further. Focus on weaknesses from the Quality Scorecard and the negative valuation signals. What is the most significant hurdle to the bull case?
 
 ## 4. Final Verdict & Recommendation
-Based on your synthesis of the quality, valuation, and potential for a narrative shift, you must make a decisive recommendation. Justify why the Bull or Bear case is more compelling at the current price, and then classify the stock into ONE of the following categories.
+Based on your synthesis of the quality, valuation, and potential for a narrative shift, you must make a decisive recommendation. Your final verdict MUST be consistent with the Quality & Catalyst Scorecard. For example, do not claim 'strong financial health' or 'a solid balance sheet' if the 'Balance Sheet' scorecard is negative or indicates high risk. Justify why the Bull or Bear case is more compelling at the current price, and then classify the stock into ONE of the following categories.
 
 -   **High-Quality Compounder at a Fair Price:** The company scores highly on the quality checklist and its valuation is reasonable relative to its history and/or peers. The thesis is based on long-term execution.
 -   **Potential Value Play:** The company exhibits a discount to its historical valuation and/or peers, and there are sufficient quality factors to suggest the discount is unwarranted.
