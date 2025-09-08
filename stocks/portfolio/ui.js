@@ -3050,12 +3050,12 @@ async function handleInvestmentThesisRequest(symbol, forceNew = false) {
         
         const [data, peerMedians] = await Promise.all([dataPromise, peerMediansPromise]);
 
-        if (!data?.profile?.data?.[0] || !data?.key_metrics_annual?.data?.[0]) {
-             throw new Error(`Required live profile or key metrics data could not be fetched for ${symbol}. Please check the ticker and API key.`);
+        if (!data?.profile?.data?.[0] || !data?.ratios_ttm?.data?.[0]) {
+             throw new Error(`Required live profile or TTM ratio data could not be fetched for ${symbol}. Please check the ticker and API key.`);
         }
 
         const profile = data.profile.data[0];
-        const keyMetricsAnnual = data.key_metrics_annual.data;
+        const keyMetricsAnnual = data.key_metrics_annual?.data || [];
         const ratiosTTM = data.ratios_ttm.data[0] || {};
         const incomeStatements = data.income_statement_annual?.data;
         const cashFlows = data.cash_flow_statement_annual?.data;
