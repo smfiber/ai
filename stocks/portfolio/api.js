@@ -1140,7 +1140,7 @@ export async function getPeerMedianMetrics(targetSymbol) {
             if (!ratiosTTM) return;
             
             // Push valid, numeric data into arrays for median calculation
-            if (typeof ratiosTTM.peRatioTTM === 'number') metrics.peRatio.push(ratiosTTM.peRatioTTM);
+            if (typeof ratiosTTM.peRatioTTM === 'number' && ratiosTTM.peRatioTTM > 0) metrics.peRatio.push(ratiosTTM.peRatioTTM);
             if (typeof ratiosTTM.priceToSalesRatioTTM === 'number') metrics.psRatio.push(ratiosTTM.priceToSalesRatioTTM);
             if (typeof ratiosTTM.netProfitMarginTTM === 'number') metrics.netMargin.push(ratiosTTM.netProfitMarginTTM);
             if (typeof ratiosTTM.returnOnEquityTTM === 'number') metrics.roe.push(ratiosTTM.returnOnEquityTTM);
@@ -1165,4 +1165,15 @@ export async function getPeerMedianMetrics(targetSymbol) {
         console.error(`Could not calculate peer medians for ${targetSymbol}:`, error);
         return null; // Return null on failure so the deep dive can proceed without it.
     }
+}
+
+/**
+ * [NEW] Fetches live TTM data for a single symbol.
+ * @param {string} symbol The ticker symbol.
+ * @returns {Promise<object|null>} The live data object for the symbol, or null.
+ */
+export async function getLiveMetricsForSymbol(symbol) {
+    if (!symbol) return null;
+    const liveDataMap = await _fetchLivePeerData([symbol]);
+    return liveDataMap[symbol] || null;
 }
