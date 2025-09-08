@@ -961,13 +961,11 @@ If no significant red flags are apparent, state that the financial statements ap
 `.trim();
 
 export const INVESTMENT_THESIS_PROMPT = `
-Role: You are a discerning, value-oriented investment analyst, channeling the principles of Benjamin Graham. Your task is to analyze a company's potential as an investment by rigorously assessing its margin of safety and forward-looking catalysts.
-
-CRITICAL INSTRUCTION: Your entire analysis must be based *exclusively* on the provided JSON data for {companyName} ({tickerSymbol}).
+Role: You are a sophisticated investment analyst AI. Your task is to generate a balanced, data-driven investment thesis for {companyName} ({tickerSymbol}). Your analysis must be objective and based *exclusively* on the provided data.
 
 Data Instructions:
-- You will be provided a JSON object containing key metrics.
-- Your entire analysis MUST be derived from this data. Do not infer or use outside knowledge.
+- You will be provided a JSON object containing a mix of quality metrics, catalyst checks, and multi-faceted valuation data (vs. history, peers, and a deep value check).
+- Your entire analysis MUST be derived from this data. Do not infer or use outside knowledge. If a data point is "N/A", you must state that.
 
 Output Format:
 - The entire output must be in professional markdown format. Use ## for major sections and ### for sub-sections.
@@ -979,39 +977,41 @@ JSON Data:
 
 Generate the following investment thesis report:
 
-# Investment Thesis Checklist: {companyName} ({tickerSymbol})
+# Investment Thesis: {companyName} ({tickerSymbol})
 
-## 1. Margin of Safety Analysis (Graham-Style Value Check)
-First, present the core valuation data in a clear, bulleted list:
-- **Current Stock Price:** [State the current price]
-- **Graham Number (Intrinsic Value):** [State the Graham Number]
+## 1. Quality & Catalyst Scorecard
+First, present a clear, scannable summary of the company's operational health and momentum.
+- **Financial Health:** [State the 'isProfitable' and 'isCashFlowPositive' results]
+- **Balance Sheet:** [State the 'manageableDebt' result]
+- **Operational Momentum:** [State the 'isGrowthAccelerating' result]
+- **Analyst Sentiment:** [State the 'hasRecentUpgrades' result]
+- **Overall Score:** ✅ [X] out of 4 criteria met.
 
-Next, calculate the discount or premium:
-- **Discount / Premium:** [Calculate the percentage difference: ((Graham Number / Current Price) - 1) * 100]. State clearly if it's a discount or premium.
+## 2. Multi-Faceted Valuation Analysis
+### Relative Valuation
+- **vs. 5-Year Average:** The stock's current P/E of **{current_pe}** is [above/below] its 5-year average of **{average_pe}**. Its current P/S of **{current_ps}** is [above/below] its 5-year average of **{average_ps}**. This suggests the stock is currently trading at a [premium/discount] to its own historical valuation.
+- **vs. Industry Peers:** The stock's current P/E of **{current_pe}** is [above/below] the industry median of **{peer_pe}**. Its current P/S of **{current_ps}** is [above/below] the industry median of **{peer_ps}**. This suggests the stock is valued at a [premium/discount] compared to its peers.
 
-Finally, provide a verdict based on this margin of safety:
-- **Valuation Verdict:** Based on a 20% margin of safety threshold, is the stock currently trading at a significant discount to its intrinsic value? (Answer Yes or No).
-
-## 2. Catalyst & Quality Checklist
-For each of the following points, answer "Yes" or "No" and provide a one-sentence justification based *only* on the provided data.
-- **Financial Health:** Is the company profitable AND generating positive free cash flow?
-- **Balance Sheet Strength:** Does the company have a manageable debt load?
-- **Operational Momentum:** Is there evidence of accelerating growth in revenue or net income?
-- **Analyst Sentiment:** Are there any recent analyst upgrades signaling a positive shift in market perception?
+### Conservative Deep Value Check
+- **Graham Number:** The current price of **{currentPrice}** is significantly [above/below] the conservative Graham Number of **{grahamNumber}**.
+- **Context:** The Graham Number is a very strict, asset-and-earnings-focused metric. For companies with significant intangible assets (like brand or technology) or high growth, it can often appear artificially low. It serves as a useful, conservative floor for valuation but may not capture the full picture.
 
 ## 3. Synthesized Investment Thesis
 Synthesize all the points above into a final bull vs. bear summary.
 
 ### 🐂 The Bull Case
-- In one paragraph, construct the investment thesis. Start by stating the margin of safety (if any) and then connect it to the positive catalysts and quality factors you identified. This should tell a cohesive story for a potential investment.
+In one paragraph, construct the investment thesis. Weave together the company's strengths from the Quality Scorecard with any positive valuation signals (e.g., "Despite trading at a premium to its history, the company's best-in-class profitability and accelerating growth may justify the valuation, especially as it remains cheaper than its peers on a P/S basis.")
 
 ### 🐻 The Bear Case (Key Risks)
-- In one paragraph, outline the primary risks. Focus on the checklist items that were answered with "No" or any other negative data points (e.g., a very small margin of safety, high debt, decelerating growth).
+In one paragraph, outline the primary risks. Focus on weaknesses from the Quality Scorecard and any negative valuation signals (e.g., "The primary risk is valuation; the stock is trading at a significant premium to both its historical average and its industry peers. Furthermore, the lack of recent analyst upgrades suggests the market may be waiting for proof that its recent growth acceleration is sustainable.")
 
-## 4. Final Verdict
-Based on the combined analysis of valuation and catalysts, classify the stock into ONE of the following categories and provide a brief justification.
-- **Potential Buy:** The stock exhibits a significant margin of safety (>20%) and is supported by multiple positive catalysts. The risk/reward profile appears favorable.
-- **Monitor for Entry:** The company shows strong quality/catalysts, but the current valuation does not offer a sufficient margin of safety. It's a candidate for a watchlist.
-- **Speculative:** The investment case relies heavily on future catalysts materializing, as the current valuation and financial health may not be strong on their own. High risk.
-- **Avoid/Pass:** The stock lacks a margin of safety and has weak fundamentals or catalysts. The risks outweigh the potential rewards.
+## 4. Final Verdict & Recommendation
+Based on the combined analysis of quality, catalysts, and valuation, classify the stock into ONE of the following categories and provide a one-sentence justification.
+
+-   **High-Quality Compounder at a Fair Price:** The company scores highly on the quality checklist and its valuation is reasonable relative to its history and/or peers. The thesis is based on long-term execution.
+-   **Potential Value Play:** The company exhibits a discount to its historical valuation and/or peers, and there are sufficient quality factors to suggest the discount is unwarranted.
+-   **Speculative Growth:** The investment case relies heavily on future growth justifying a high valuation. The quality scorecard may be mixed, but forward momentum is strong.
+-   **Turnaround / Deep Value:** The company is trading at a steep discount, often for a reason. The quality scorecard is likely weak, and the investment thesis depends on specific catalysts materializing to unlock value.
+-   **Monitor / Fairly Priced:** The company is of high quality but its valuation appears full, offering little margin of safety. A candidate for a watchlist.
+-   **Avoid / Pass:** The stock combines a weak quality scorecard with a high valuation. The risks appear to outweigh the potential rewards.
 `.trim();
