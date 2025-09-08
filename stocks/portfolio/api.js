@@ -882,7 +882,7 @@ async function _fetchLivePeerData(peerTickers) {
     const apiKey = state.fmpApiKey;
 
     // Profile can usually be fetched in bulk reliably
-    const profileUrl = `https://financialmodelingprep.com/api/v3/profile/${peersString}?apikey=${apiKey}`;
+    const profileUrl = `https://financialmodelingprep.com/stable/profile?symbol=${peersString}&apikey=${apiKey}`;
 
     // Helper to create promises that catch their own errors
     const makePromise = (url, ticker, type) => callApi(url).catch(e => {
@@ -892,12 +892,12 @@ async function _fetchLivePeerData(peerTickers) {
 
     // Define promises for endpoints that are more reliable when called individually
     const ratiosTtmPromises = peerTickers.map(ticker => {
-        const url = `https://financialmodelingprep.com/api/v3/ratios-ttm/${ticker}?apikey=${apiKey}`;
+        const url = `https://financialmodelingprep.com/stable/ratios-ttm?symbol=${ticker}&apikey=${apiKey}`;
         return makePromise(url, ticker, 'ratios TTM');
     });
 
     const ratiosAnnualPromises = peerTickers.map(ticker => {
-        const url = `https://financialmodelingprep.com/api/v3/ratios/${ticker}?period=annual&limit=5&apikey=${apiKey}`;
+        const url = `https://financialmodelingprep.com/stable/ratios?symbol=${ticker}&period=annual&limit=5&apikey=${apiKey}`;
         return makePromise(url, ticker, 'ratios annual');
     });
 
@@ -917,17 +917,17 @@ async function _fetchLivePeerData(peerTickers) {
     });
     
     const incomePromises = peerTickers.map(ticker => {
-        const url = `https://financialmodelingprep.com/api/v3/income-statement/${ticker}?period=annual&limit=5&apikey=${apiKey}`;
+        const url = `https://financialmodelingprep.com/stable/income-statement?symbol=${ticker}&period=annual&limit=5&apikey=${apiKey}`;
         return makePromise(url, ticker, 'income statement annual');
     });
 
     const cashflowPromises = peerTickers.map(ticker => {
-        const url = `https://financialmodelingprep.com/api/v3/cash-flow-statement/${ticker}?period=annual&limit=5&apikey=${apiKey}`;
+        const url = `https://financialmodelingprep.com/stable/cashflow-statement?symbol=${ticker}&period=annual&limit=5&apikey=${apiKey}`;
         return makePromise(url, ticker, 'cash flow annual');
     });
 
     const gradePromises = peerTickers.map(ticker => {
-        const url = `https://financialmodelingprep.com/api/v3/grade/${ticker}?limit=20&apikey=${apiKey}`;
+        const url = `https://financialmodelingprep.com/stable/grade?symbol=${ticker}&limit=20&apikey=${apiKey}`;
         return makePromise(url, ticker, 'grades');
     });
 
@@ -978,7 +978,7 @@ async function _fetchLivePeerData(peerTickers) {
 export async function getCompetitorAnalysis(targetSymbol) {
     try {
         // 1. Fetch the target company's profile to get its industry for context.
-        const targetProfileUrl = `https://financialmodelingprep.com/api/v3/profile/${targetSymbol}?apikey=${state.fmpApiKey}`;
+        const targetProfileUrl = `https://financialmodelingprep.com/stable/profile?symbol=${targetSymbol}&apikey=${state.fmpApiKey}`;
         const targetProfileResponse = await callApi(targetProfileUrl);
         if (!targetProfileResponse || targetProfileResponse.length === 0) {
             throw new Error(`Could not fetch profile for target symbol ${targetSymbol} to determine industry.`);
