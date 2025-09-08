@@ -922,12 +922,12 @@ async function _fetchLivePeerData(peerTickers) {
     });
 
     const cashflowPromises = peerTickers.map(ticker => {
-        const url = `https://financialmodelingprep.com/stable/cashflow-statement?symbol=${ticker}&period=annual&limit=5&apikey=${apiKey}`;
+        const url = `https://financialmodelingprep.com/stable/cash-flow-statement?symbol=${ticker}&period=annual&limit=5&apikey=${apiKey}`;
         return makePromise(url, ticker, 'cash flow annual');
     });
 
     const gradePromises = peerTickers.map(ticker => {
-        const url = `https://financialmodelingprep.com/stable/grade?symbol=${ticker}&limit=20&apikey=${apiKey}`;
+        const url = `https://financialmodelingprep.com/stable/stock/grade?symbol=${ticker}&limit=20&apikey=${apiKey}`;
         return makePromise(url, ticker, 'grades');
     });
 
