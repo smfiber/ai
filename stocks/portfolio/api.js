@@ -927,7 +927,7 @@ async function _fetchLivePeerData(peerTickers) {
     });
 
     const gradePromises = peerTickers.map(ticker => {
-        const url = `https://financialmodelingprep.com/stable/stock/grade?symbol=${ticker}&limit=20&apikey=${apiKey}`;
+        const url = `https://financialmodelingprep.com/stable/grades-historical?symbol=${ticker}&limit=20&apikey=${apiKey}`;
         return makePromise(url, ticker, 'grades');
     });
 
