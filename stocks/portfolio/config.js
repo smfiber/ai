@@ -872,7 +872,7 @@ Create a markdown table comparing the target company and its peers. For the **Pe
 ## 3. In-Depth Analysis vs. Peers
 **Crucial Analysis Rules:** Your entire analysis in this section must directly compare the target company's metrics to the **Peer Group Median**, using the provided \`calculated_medians\` values.
 
-- **Negative P/E & EV/EBITDA:** Ratios that are negative or "N/M" (Not Meaningful) indicate the company is unprofitable. You MUST state this and not use these metrics for direct valuation comparison. A high Price-to-Sales (P/S) ratio should be used instead to gauge valuation for unprofitable companies.
+- **Valuation for Unprofitable Companies:** If a company's P/E or EV/EBITDA is 'N/M' or negative, you MUST state that this is because the company is unprofitable. In this specific case, do not use P/E for comparison and instead focus on the P/S ratio.
 - **Negative ROE:** A negative Return on Equity indicates the company is destroying shareholder value. When comparing negative ROE values, a value closer to zero is superior (less destructive).
 - **Negative Debt-to-Equity:** A negative Debt-to-Equity ratio indicates **negative shareholder equity** (total liabilities exceed total assets). You MUST state this clearly, explain that it's an unconventional balance sheet structure often resulting from large share buybacks, and treat it as a significant point of scrutiny or risk. **DO NOT describe it as "low debt" or "manageable."**
 
