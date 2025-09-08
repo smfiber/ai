@@ -998,7 +998,7 @@ export async function getCompetitorAnalysis(targetSymbol) {
             const growthAnnual = fmpData.income_statement_growth_annual?.data?.[0];
 
             if (ratiosTTM) {
-                if (typeof ratiosTTM.peRatioTTM === 'number') peerMetricsForMedian.peRatioTTM.push(ratiosTTM.peRatioTTM);
+                if (typeof ratiosTTM.peRatioTTM === 'number' && ratiosTTM.peRatioTTM > 0) peerMetricsForMedian.peRatioTTM.push(ratiosTTM.peRatioTTM);
                 if (typeof ratiosTTM.priceToSalesRatioTTM === 'number') peerMetricsForMedian.priceToSalesRatioTTM.push(ratiosTTM.priceToSalesRatioTTM);
                 if (typeof ratiosTTM.grossProfitMarginTTM === 'number') peerMetricsForMedian.grossProfitMarginTTM.push(ratiosTTM.grossProfitMarginTTM);
                 if (typeof ratiosTTM.netProfitMarginTTM === 'number') peerMetricsForMedian.netProfitMarginTTM.push(ratiosTTM.netProfitMarginTTM);
@@ -1006,7 +1006,7 @@ export async function getCompetitorAnalysis(targetSymbol) {
                 if (typeof ratiosTTM.returnOnAssetsTTM === 'number') peerMetricsForMedian.returnOnAssetsTTM.push(ratiosTTM.returnOnAssetsTTM);
                 if (typeof ratiosTTM.debtEquityRatioTTM === 'number') peerMetricsForMedian.debtEquityRatioTTM.push(ratiosTTM.debtEquityRatioTTM);
             }
-            if (keyMetricsTTM && typeof keyMetricsTTM.evToEBITDATTM === 'number') {
+            if (keyMetricsTTM && typeof keyMetricsTTM.evToEBITDATTM === 'number' && keyMetricsTTM.evToEBITDATTM > 0) {
                 peerMetricsForMedian.evToEBITDATTM.push(keyMetricsTTM.evToEBITDATTM);
             }
             if (growthAnnual && typeof growthAnnual.growthRevenue === 'number') {
