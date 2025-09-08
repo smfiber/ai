@@ -3175,13 +3175,13 @@ async function handleForwardLookingAnalysis(symbol, forceNew = false) {
         loadingMessage.textContent = `Gathering data for Forward-Looking Analysis on ${symbol}...`;
         
         const data = await getFmpStockData(symbol);
-        if (!data?.profile?.data?.[0] || !data?.analyst_estimates?.data?.[0] || !data?.ratios_annual?.data?.[0]) {
-             throw new Error(`Required data (profile, analyst estimates, or annual ratios) could not be found in the cache for ${symbol}. Please refresh the stock's FMP data.`);
+        if (!data?.profile?.data?.[0] || !data?.analyst_estimates?.data?.[0] || !data?.key_metrics_annual?.data?.[0]) {
+             throw new Error(`Required data (profile, analyst estimates, or annual key metrics) could not be found in the cache for ${symbol}. Please refresh the stock's FMP data.`);
         }
 
         const profile = data.profile.data[0];
         const analystEstimates = data.analyst_estimates.data;
-        const ratiosAnnual = data.ratios_annual.data;
+        const keyMetricsAnnual = data.key_metrics_annual?.data || [];
         const incomeAnnual = data.income_statement_annual?.data;
 
         // --- Calculations ---
@@ -3208,7 +3208,7 @@ async function handleForwardLookingAnalysis(symbol, forceNew = false) {
             return values.length ? values.reduce((a, b) => a + b, 0) / values.length : null;
         };
 
-        const averagePe = calculateAverage(ratiosAnnual, 'peRatio');
+        const averagePe = calculateAverage(keyMetricsAnnual, 'peRatio');
         const forwardPe = (currentPrice && forwardEps > 0) ? (currentPrice / forwardEps) : null;
         const pegRatio = (forwardPe && typeof estimatedEpsGrowth === 'number' && estimatedEpsGrowth > 0) ? (forwardPe / (estimatedEpsGrowth * 100)) : null;
         const projectedPrice = (forwardEps && averagePe) ? (forwardEps * averagePe) : null;
