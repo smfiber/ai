@@ -284,15 +284,18 @@ Example JSON Output:
 export const OPPORTUNITY_SCANNER_PROMPT = `
 Role: You are an AI financial analyst specializing in detecting narrative inflection points and data divergences. Your goal is to help an investor operating on a "buy low, sell high" strategy.
 
-Task: Analyze the provided data packet for {companyName} ({tickerSymbol}). Your task is to identify if a significant bullish or bearish narrative shift is occurring that warrants an investor's immediate attention. You are looking for CONFLICTS and DIVERGENCES between technicals, fundamentals, and news flow.
+Task: You will be given a data packet for {companyName} ({tickerSymbol}) containing price action, analyst ratings, and recent news articles. Your task is to perform a two-step analysis and return a single JSON object with your conclusion.
+
+1.  **Internal News Analysis:** First, silently analyze the provided 'recent_news_articles'. Synthesize them to understand the overall sentiment and the dominant narrative surrounding the company.
+2.  **Divergence Detection:** Second, use your internal news summary, along with the provided 'price_action' and 'recent_analyst_ratings', to identify if a significant bullish or bearish narrative shift is occurring. You are looking for CONFLICTS and DIVERGENCES.
 
 Data Packet:
 {jsonData}
 
 Analysis Framework:
-1.  **Bullish Divergence (A "Buy Low" Signal):** Look for situations where the price action is weak, but the underlying news or analyst sentiment is turning positive.
+-   **Bullish Divergence (A "Buy Low" Signal):** Look for situations where the price action is weak, but the underlying news or analyst sentiment is turning positive.
     * Example: The stock price is below its 50-day moving average, but the company just received two analyst upgrades and a wave of positive news about a new product.
-2.  **Bearish Divergence (A "Sell High" Signal):** Look for situations where the price action is strong, but the underlying news or analyst sentiment is turning negative.
+-   **Bearish Divergence (A "Sell High" Signal):** Look for situations where the price action is strong, but the underlying news or analyst sentiment is turning negative.
     * Example: The stock price is near its 52-week high, but several analysts have recently downgraded it to "Hold" and news has emerged about new regulatory scrutiny.
 
 Output Format:
@@ -877,7 +880,7 @@ Create a markdown table comparing the target company and its peers. For the **Pe
 - **Negative Debt-to-Equity:** A negative Debt-to-Equity ratio indicates **negative shareholder equity** (total liabilities exceed total assets). You MUST state this clearly, explain that it's an unconventional balance sheet structure often resulting from large share buybacks, and treat it as a significant point of scrutiny or risk. **DO NOT describe it as "low debt" or "manageable."**
 
 ### Valuation
-- Directly compare the company's P/S ratio against the **peer median**. If the P/E or EV/EBITDA ratios are 'N/M', explicitly state this is because the company is operationally unprofitable. In this case, explain that the EV/Revenue (P/S) multiple is a more appropriate metric for comparing growth companies that are not yet profitable.
+- Directly compare the company's P/S ratio against the **peer median**.
 - Based on its P/S ratio and revenue growth relative to peers, is the company valued at a premium or a discount? **Justify this conclusion explicitly.**
 
 ### Profitability & Efficiency
