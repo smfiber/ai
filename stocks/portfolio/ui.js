@@ -3031,6 +3031,15 @@ async function handleInvestmentThesisRequest(symbol, forceNew = false) {
     statusContainer.classList.add('hidden');
 
     try {
+        const savedReports = await getSavedReports(symbol, reportType);
+        if (savedReports.length > 0 && !forceNew) {
+            const latestReport = savedReports[0];
+            displayReport(contentContainer, latestReport.content, latestReport.prompt);
+            contentContainer.dataset.rawMarkdown = latestReport.content;
+            updateReportStatus(statusContainer, savedReports, latestReport.id, { symbol, reportType });
+            return;
+        }
+
         openModal(CONSTANTS.MODAL_LOADING);
         const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
         
