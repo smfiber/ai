@@ -896,6 +896,11 @@ async function _fetchLivePeerData(peerTickers) {
         return makePromise(url, ticker, 'ratios TTM');
     });
 
+    const ratiosAnnualPromises = peerTickers.map(ticker => {
+        const url = `https://financialmodelingprep.com/api/v3/ratios/${ticker}?period=annual&limit=5&apikey=${apiKey}`;
+        return makePromise(url, ticker, 'ratios annual');
+    });
+
     const keyMetricsAnnualPromises = peerTickers.map(ticker => {
         const url = `https://financialmodelingprep.com/stable/key-metrics?symbol=${ticker}&period=annual&limit=5&apikey=${apiKey}`;
         return makePromise(url, ticker, 'key metrics annual');
@@ -927,9 +932,10 @@ async function _fetchLivePeerData(peerTickers) {
     });
 
 
-    const [profiles, allRatiosTtm, allKeyMetricsAnnual, allKeyMetricsTtm, allGrowthData, allIncomeData, allCashflowData, allGradeData] = await Promise.all([
+    const [profiles, allRatiosTtm, allRatiosAnnual, allKeyMetricsAnnual, allKeyMetricsTtm, allGrowthData, allIncomeData, allCashflowData, allGradeData] = await Promise.all([
         callApi(profileUrl), // Keep bulk profile fetch
         Promise.all(ratiosTtmPromises),
+        Promise.all(ratiosAnnualPromises),
         Promise.all(keyMetricsAnnualPromises),
         Promise.all(keyMetricsTtmPromises),
         Promise.all(growthPromises),
@@ -949,6 +955,7 @@ async function _fetchLivePeerData(peerTickers) {
         liveData[ticker] = {
             profile: { data: profileData ? [profileData] : [] },
             ratios_ttm: { data: ratiosTtmData ? [ratiosTtmData] : [] },
+            ratios_annual: { data: allRatiosAnnual[index] || [] },
             key_metrics_annual: { data: allKeyMetricsAnnual[index] || [] },
             key_metrics_ttm: { data: keyMetricsTtmData ? [keyMetricsTtmData] : [] },
             income_statement_growth_annual: { data: allGrowthData[index] || [] },
