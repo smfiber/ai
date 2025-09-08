@@ -966,24 +966,14 @@ export async function getCompetitorAnalysis(targetSymbol) {
         
         const limitedPeers = peerTickers.slice(0, 10); // Limit to 10 peers for efficiency
         
-        // 2. Fetch CACHED data for the target and LIVE data for peers in parallel
-        const targetFmpDataPromise = getFmpStockData(targetSymbol);
-        const livePeerDataPromise = _fetchLivePeerData(limitedPeers);
-        const targetKeyMetricsTtmUrl = `https://financialmodelingprep.com/stable/key-metrics-ttm?symbol=${targetSymbol}&apikey=${state.fmpApiKey}`;
-        const targetKeyMetricsTtmPromise = callApi(targetKeyMetricsTtmUrl);
+        // 2. Fetch LIVE data for the target and all peers in parallel
+        const allTickersToFetch = [targetSymbol, ...limitedPeers];
+        const liveDataMap = await _fetchLivePeerData(allTickersToFetch);
+
+        const targetFmpData = liveDataMap[targetSymbol];
         
-        const [targetFmpData, livePeerDataMap, targetKeyMetricsTtm] = await Promise.all([
-            targetFmpDataPromise,
-            livePeerDataPromise,
-            targetKeyMetricsTtmPromise
-        ]);
-
         if (!targetFmpData || !targetFmpData.profile?.data?.[0]) {
-            throw new Error(`Could not retrieve cached profile data for target stock ${targetSymbol}. Please refresh its data.`);
-        }
-
-        if (targetKeyMetricsTtm && targetKeyMetricsTtm[0]) {
-            targetFmpData.key_metrics_ttm = { data: [targetKeyMetricsTtm[0]] };
+            throw new Error(`Could not retrieve live profile data for target stock ${targetSymbol}. Please check the ticker and API key.`);
         }
         
         // Helper to format market cap into billions
@@ -1000,7 +990,7 @@ export async function getCompetitorAnalysis(targetSymbol) {
         };
 
         limitedPeers.forEach(peerSymbol => {
-            const fmpData = livePeerDataMap[peerSymbol];
+            const fmpData = liveDataMap[peerSymbol];
             if (!fmpData) return;
 
             const ratiosTTM = fmpData.ratios_ttm?.data?.[0];
@@ -1058,7 +1048,7 @@ export async function getCompetitorAnalysis(targetSymbol) {
         // 3. Assemble the data for the AI prompt
         const peerData = [];
         limitedPeers.forEach(peerSymbol => {
-            const fmpData = livePeerDataMap[peerSymbol];
+            const fmpData = liveDataMap[peerSymbol];
             const profile = fmpData?.profile?.data?.[0];
             
             if (profile && fmpData) {
