@@ -3036,7 +3036,11 @@ async function handleInvestmentThesisRequest(symbol, forceNew = false) {
         
         loadingMessage.textContent = `Gathering data for Investment Thesis on ${symbol}...`;
         
-        const data = await getFmpStockData(symbol);
+        const dataPromise = getFmpStockData(symbol);
+        const peerMediansPromise = getPeerMedianMetrics(symbol);
+        
+        const [data, peerMedians] = await Promise.all([dataPromise, peerMediansPromise]);
+
         if (!data?.profile?.data?.[0] || !data?.key_metrics_annual?.data?.[0]) {
              throw new Error(`Required profile or key metrics data is missing for ${symbol}. Please refresh FMP data.`);
         }
@@ -3048,42 +3052,52 @@ async function handleInvestmentThesisRequest(symbol, forceNew = false) {
         const incomeGrowth = data.income_statement_growth_annual?.data;
         const analystGrades = data.stock_grade_news?.data;
 
-        // --- Calculate Checklist Metrics ---
+        // --- Calculate Checklist & Valuation Metrics ---
         const latestMetrics = keyMetrics[0] || {};
         const latestIncome = incomeStatements?.[0] || {};
         const latestCashFlow = cashFlows?.[0] || {};
 
-        const isProfitable = latestIncome.netIncome > 0;
-        const isCashFlowPositive = latestCashFlow.freeCashFlow > 0;
-        const manageableDebt = latestMetrics.debtToEquity < 1.5;
+        const isProfitable = latestIncome.netIncome > 0 ? "Yes, the company is profitable." : "No, the company is not profitable.";
+        const isCashFlowPositive = latestCashFlow.freeCashFlow > 0 ? "Yes, it generates positive free cash flow." : "No, it does not generate positive free cash flow.";
+        const manageableDebt = latestMetrics.debtToEquity < 1.5 ? "Yes, the debt-to-equity ratio is manageable." : "No, the debt load is considerable.";
 
-        let isGrowthAccelerating = false;
+        let isGrowthAccelerating = "No, revenue growth is not accelerating.";
         if (incomeGrowth && incomeGrowth.length > 1) {
-            const latestGrowth = incomeGrowth[0].growthRevenue;
-            const previousGrowth = incomeGrowth[1].growthRevenue;
-            if (latestGrowth > previousGrowth) {
-                isGrowthAccelerating = true;
+            if (incomeGrowth[0].growthRevenue > incomeGrowth[1].growthRevenue) {
+                isGrowthAccelerating = "Yes, there is evidence of accelerating revenue growth.";
             }
         }
         
-        let hasRecentUpgrades = false;
+        let hasRecentUpgrades = "No, there are no recent analyst upgrades.";
         if(analystGrades && analystGrades.length > 0) {
             const sixMonthsAgo = new Date();
             sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-            hasRecentUpgrades = analystGrades.some(grade => {
-                const gradeDate = new Date(grade.date);
-                return grade.action?.toLowerCase().includes('upgrade') && gradeDate > sixMonthsAgo;
-            });
+            if (analystGrades.some(g => new Date(g.date) > sixMonthsAgo && g.action?.toLowerCase().includes('upgrade'))) {
+                hasRecentUpgrades = "Yes, there has been at least one analyst upgrade in the last 6 months.";
+            }
         }
+
+        const calculateAverage = (items, key) => {
+            const values = items.slice(0, 5).map(i => i[key]).filter(v => typeof v === 'number' && v > 0);
+            return values.length ? values.reduce((a, b) => a + b, 0) / values.length : 'N/A';
+        };
         
+        const formatVal = (val) => (typeof val === 'number' ? val.toFixed(2) : 'N/A');
+
         const payloadData = {
-            currentPrice: profile.price,
-            grahamNumber: latestMetrics.grahamNumber,
-            isProfitable: isProfitable,
-            isCashFlowPositive: isCashFlowPositive,
-            manageableDebt: manageableDebt,
-            isGrowthAccelerating: isGrowthAccelerating,
-            hasRecentUpgrades: hasRecentUpgrades
+            currentPrice: formatVal(profile.price),
+            grahamNumber: formatVal(latestMetrics.grahamNumber),
+            isProfitable,
+            isCashFlowPositive,
+            manageableDebt,
+            isGrowthAccelerating,
+            hasRecentUpgrades,
+            current_pe: formatVal(latestMetrics.peRatio),
+            average_pe: formatVal(calculateAverage(keyMetrics, 'peRatio')),
+            peer_pe: peerMedians?.peRatio || 'N/A',
+            current_ps: formatVal(latestMetrics.priceToSalesRatio),
+            average_ps: formatVal(calculateAverage(keyMetrics, 'priceToSalesRatio')),
+            peer_ps: peerMedians?.psRatio || 'N/A'
         };
 
         const companyInfo = state.portfolioCache.find(s => s.ticker === symbol) || { companyName: symbol };
