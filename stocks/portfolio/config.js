@@ -1020,3 +1020,47 @@ Based on your synthesis of the quality, valuation, and potential for a narrative
 -   **Monitor / Fairly Priced:** The company is of high quality but its valuation appears full, offering little margin of safety. A candidate for a watchlist.
 -   **Avoid / Pass:** The stock combines a weak quality scorecard with a high valuation. The risks appear to outweigh the potential rewards.
 `.trim();
+
+export const FORWARD_LOOKING_ANALYSIS_PROMPT = `
+Role: You are a quantitative investment analyst AI. Your task is to generate a concise, forward-looking valuation analysis for {companyName} ({tickerSymbol}). Your analysis must be objective and based *exclusively* on the provided data.
+
+Data Instructions:
+- You will be provided a JSON object containing analyst estimates and historical valuation multiples.
+- Your entire analysis MUST be derived from this data. Do not infer or use outside knowledge. If a data point is "N/A", you must state that clearly.
+
+Output Format:
+- The entire output must be in professional markdown format. Use ## for major sections and ### for sub-sections.
+
+JSON Data:
+{jsonData}
+
+---
+
+Generate the following forward-looking analysis report:
+
+# Forward-Looking Analysis: {companyName} ({tickerSymbol})
+
+## 1. Analyst Growth Expectations
+- **EPS Growth:** Analysts expect EPS to grow by **{estimated_eps_growth}** over the next year.
+- **Revenue Growth:** Analysts expect revenue to grow by **{estimated_revenue_growth}** over the next year.
+- **Commentary:** Briefly comment on whether this growth rate is high, low, or average for a company of this type.
+
+## 2. Forward-Looking Valuation Metrics
+- **Forward P/E:** The stock is currently trading at **{forward_pe}** times next year's expected earnings. Compare this to its 5-year average P/E of **{average_pe}**. Is it trading at a premium or discount to its own history?
+- **PEG Ratio:** Based on the forward P/E and estimated EPS growth, the Price-to-Earnings-Growth (PEG) ratio is **{peg_ratio}**.
+- **PEG Context:** A PEG ratio below 1.0 is often considered potentially undervalued for a growth company, while a ratio significantly above 1.0 may suggest the stock's price has outpaced its near-term earnings growth expectations.
+
+## 3. Price Projection Hypothesis
+- **Methodology:** This is a simple projection model and NOT a price target. It is calculated by multiplying the Forward EPS Estimate by the company's 5-year average P/E ratio. This model assumes the company will both meet its earnings expectations and revert to its historical valuation multiple.
+- **Projected Price:** Based on a forward EPS of **{forward_eps}** and the 5-year average P/E of **{average_pe}**, a simple price projection is **{projected_price}**.
+- **Potential Upside/Downside:** This projection represents a **{projected_upside}** potential upside/downside from the current price of **{currentPrice}**.
+
+## 4. Synthesized Outlook
+### 🐂 The Bull Case (Why the stock could go up)
+- The bull case is that the company will meet or exceed analyst expectations of **{estimated_eps_growth}** growth. If it also reverts to its historical average P/E multiple of **{average_pe}**, the stock could see significant upside as suggested by the price projection model. The current valuation, as indicated by the PEG ratio of **{peg_ratio}**, may be seen as [attractive/reasonable/high] given the growth prospects.
+
+### 🐻 The Bear Case (Why the stock could go down)
+- The bear case centers on two main risks. First, the company could fail to meet the lofty earnings expectations, causing a sharp downward revision of its price. Second, even if it meets earnings, the market may not be willing to assign it its historical P/E multiple of **{average_pe}** in the current environment, causing the stock to stagnate or decline as it remains at a lower valuation.
+
+**Disclaimer:** This is a model-based analysis and not financial advice. Projections are based on estimates and historical data that may not be indicative of future results.
+`.trim();
