@@ -896,7 +896,7 @@ async function _fetchLivePeerData(peerTickers) {
     });
 
     const keyMetricsAnnualPromises = peerTickers.map(ticker => {
-        const url = `https://financialmodelingprep.com/api/v3/key-metrics-annual/${ticker}?limit=5&apikey=${apiKey}`;
+        const url = `https://financialmodelingprep.com/stable/key-metrics?symbol=${ticker}&period=annual&limit=5&apikey=${apiKey}`;
         return makePromise(url, ticker, 'key metrics annual');
     });
 
