@@ -1,6 +1,6 @@
 // ui.js
 import { CONSTANTS, SECTORS, SECTOR_ICONS, state, NEWS_SENTIMENT_PROMPT, DEEP_DIVE_PROMPT, FINANCIAL_STATEMENT_ANALYSIS_PROMPT, INVESTMENT_THESIS_PROMPT } from './config.js';
-import { getFmpStockData, callApi, filterValidNews, callGeminiApi, generatePolishedArticle, getDriveToken, getOrCreateDriveFolder, createDriveFile, getGroupedFmpData, generateMorningBriefing, calculatePortfolioHealthScore, runOpportunityScanner, generatePortfolioAnalysis, generateTrendAnalysis, getCachedNews, getScannerResults, generateNewsSummary, summarizeSecFilingSection, getCompetitorAnalysis, getPeerMedianMetrics } from './api.js';
+import { getFmpStockData, callApi, filterValidNews, callGeminiApi, generatePolishedArticle, getDriveToken, getOrCreateDriveFolder, createDriveFile, getGroupedFmpData, generateMorningBriefing, calculatePortfolioHealthScore, runOpportunityScanner, generatePortfolioAnalysis, generateTrendAnalysis, getCachedNews, getScannerResults, generateNewsSummary, summarizeSecFilingSection, getCompetitorAnalysis, getPeerMedianMetrics, getLiveMetricsForSymbol } from './api.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getSecInsiderTrading, getSecInstitutionalOwnership, getSecMaterialEvents, getSecAnnualReports, getSecQuarterlyReports, getLatest10KRiskFactorsText, getLatest10QMdaText, getFinancialStatementsFromXBRL } from './sec-api.js';
 
@@ -3043,34 +3043,35 @@ async function handleInvestmentThesisRequest(symbol, forceNew = false) {
         openModal(CONSTANTS.MODAL_LOADING);
         const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
         
-        loadingMessage.textContent = `Gathering data for Investment Thesis on ${symbol}...`;
+        loadingMessage.textContent = `Gathering live data for Investment Thesis on ${symbol}...`;
         
-        const dataPromise = getFmpStockData(symbol);
+        const dataPromise = getLiveMetricsForSymbol(symbol);
         const peerMediansPromise = getPeerMedianMetrics(symbol);
         
         const [data, peerMedians] = await Promise.all([dataPromise, peerMediansPromise]);
 
         if (!data?.profile?.data?.[0] || !data?.key_metrics_annual?.data?.[0]) {
-             throw new Error(`Required profile or key metrics data is missing for ${symbol}. Please refresh FMP data.`);
+             throw new Error(`Required live profile or key metrics data could not be fetched for ${symbol}. Please check the ticker and API key.`);
         }
 
         const profile = data.profile.data[0];
-        const keyMetrics = data.key_metrics_annual.data;
+        const keyMetricsAnnual = data.key_metrics_annual.data;
+        const ratiosTTM = data.ratios_ttm.data[0] || {};
         const incomeStatements = data.income_statement_annual?.data;
         const cashFlows = data.cash_flow_statement_annual?.data;
         const incomeGrowth = data.income_statement_growth_annual?.data;
         const analystGrades = data.stock_grade_news?.data;
 
         // --- Calculate Checklist & Valuation Metrics ---
-        const latestMetrics = keyMetrics[0] || {};
+        const latestMetricsAnnual = keyMetricsAnnual[0] || {};
         const latestIncome = incomeStatements?.[0] || {};
         const latestCashFlow = cashFlows?.[0] || {};
 
         const isProfitable = latestIncome.netIncome > 0 ? "Yes, the company is profitable." : "No, the company is not profitable.";
         const isCashFlowPositive = latestCashFlow.freeCashFlow > 0 ? "Yes, it generates positive free cash flow." : "No, it does not generate positive free cash flow.";
         
-        const debtToEquity = latestMetrics.debtToEquity;
-        const manageableDebt = (debtToEquity > 0 && debtToEquity < 1.5)
+        const debtToEquity = ratiosTTM.debtEquityRatioTTM;
+        const manageableDebt = (typeof debtToEquity === 'number' && debtToEquity > 0 && debtToEquity < 1.5)
             ? "Yes, the debt-to-equity ratio is manageable."
             : "No, the debt load is high, unconventional, or indicates negative equity.";
 
@@ -3099,17 +3100,17 @@ async function handleInvestmentThesisRequest(symbol, forceNew = false) {
 
         const payloadData = {
             currentPrice: formatVal(profile.price),
-            grahamNumber: formatVal(latestMetrics.grahamNumber),
+            grahamNumber: formatVal(latestMetricsAnnual.grahamNumber),
             isProfitable,
             isCashFlowPositive,
             manageableDebt,
             isGrowthAccelerating,
             hasRecentUpgrades,
-            current_pe: formatVal(latestMetrics.peRatio),
-            average_pe: formatVal(calculateAverage(keyMetrics, 'peRatio')),
+            current_pe: formatVal(ratiosTTM.peRatioTTM),
+            average_pe: formatVal(calculateAverage(keyMetricsAnnual, 'peRatio')),
             peer_pe: peerMedians?.peRatio || 'N/A',
-            current_ps: formatVal(latestMetrics.priceToSalesRatio),
-            average_ps: formatVal(calculateAverage(keyMetrics, 'priceToSalesRatio')),
+            current_ps: formatVal(ratiosTTM.priceToSalesRatioTTM),
+            average_ps: formatVal(calculateAverage(keyMetricsAnnual, 'priceToSalesRatio')),
             peer_ps: peerMedians?.psRatio || 'N/A'
         };
 
