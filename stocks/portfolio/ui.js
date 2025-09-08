@@ -150,16 +150,16 @@ async function handleRefreshFmpData(symbol) {
 
     try {
         const coreEndpoints = [
-            { name: 'profile', path: 'profile', version: 'v3' },
-            { name: 'income_statement_annual', path: 'income-statement', params: 'period=annual&limit=10', version: 'v3' },
+            { name: 'profile', path: 'profile', version: 'stable', symbolAsQuery: true },
+            { name: 'income_statement_annual', path: 'income-statement', params: 'period=annual&limit=10', version: 'stable', symbolAsQuery: true },
             { name: 'income_statement_growth_annual', path: 'income-statement-growth', params: 'period=annual&limit=5', version: 'stable', symbolAsQuery: true },
-            { name: 'balance_sheet_statement_annual', path: 'balance-sheet-statement', params: 'period=annual&limit=10', version: 'v3' },
-            { name: 'cash_flow_statement_annual', path: 'cash-flow-statement', params: 'period=annual&limit=10', version: 'v3' },
-            { name: 'key_metrics_annual', path: 'key-metrics', params: 'period=annual&limit=10', version: 'v3' },
-            { name: 'ratios_annual', path: 'ratios', params: 'period=annual&limit=10', version: 'v3' },
-            { name: 'ratios_ttm', path: 'ratios-ttm', version: 'v3' },
-            { name: 'stock_grade_news', path: 'grade', version: 'v3' },
-            { name: 'analyst_estimates', path: 'analyst-estimates', version: 'v3'},
+            { name: 'balance_sheet_statement_annual', path: 'balance-sheet-statement', params: 'period=annual&limit=10', version: 'stable', symbolAsQuery: true },
+            { name: 'cash_flow_statement_annual', path: 'cashflow-statement', params: 'period=annual&limit=10', version: 'stable', symbolAsQuery: true },
+            { name: 'key_metrics_annual', path: 'key-metrics', params: 'period=annual&limit=10', version: 'stable', symbolAsQuery: true },
+            { name: 'ratios_annual', path: 'ratios', params: 'period=annual&limit=10', version: 'stable', symbolAsQuery: true },
+            { name: 'ratios_ttm', path: 'ratios-ttm', version: 'stable', symbolAsQuery: true },
+            { name: 'stock_grade_news', path: 'grade', version: 'stable', symbolAsQuery: true },
+            { name: 'analyst_estimates', path: 'financial-estimates', version: 'stable', symbolAsQuery: true },
             { name: 'company_core_information', path: 'company-core-information', version: 'v4', symbolAsQuery: true },
             { name: 'insider_trading', path: 'insider-trading', version: 'v4', symbolAsQuery: true, params: 'page=0' }
         ];
@@ -793,7 +793,7 @@ async function handleResearchSubmit(e) {
         
         document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Fetching overview for ${symbol}...`;
         
-        const profileUrl = `https://financialmodelingprep.com/api/v3/profile/${symbol}?apikey=${state.fmpApiKey}`;
+        const profileUrl = `https://financialmodelingprep.com/stable/profile?symbol=${symbol}&apikey=${state.fmpApiKey}`;
         const profileData = await callApi(profileUrl);
 
         if (!profileData || profileData.length === 0 || !profileData[0].symbol) {
@@ -1083,7 +1083,7 @@ async function handleFetchNews(symbol) {
         const stockData = await getFmpStockData(symbol);
         const profile = stockData?.profile?.data?.[0] || {};
         const companyName = profile.companyName || symbol;
-        const url = `https://financialmodelingprep.com/api/v3/stock_news?tickers=${symbol}&limit=50&apikey=${state.fmpApiKey}`;
+        const url = `https://financialmodelingprep.com/stable/news/stock?symbols=${symbol}&limit=50&apikey=${state.fmpApiKey}`;
         
         const newsData = await callApi(url);
         const validArticles = filterValidNews(newsData);
