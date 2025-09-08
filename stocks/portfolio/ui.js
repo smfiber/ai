@@ -1,5 +1,5 @@
 // ui.js
-import { CONSTANTS, SECTORS, SECTOR_ICONS, state, NEWS_SENTIMENT_PROMPT, DEEP_DIVE_PROMPT, FINANCIAL_STATEMENT_ANALYSIS_PROMPT } from './config.js';
+import { CONSTANTS, SECTORS, SECTOR_ICONS, state, NEWS_SENTIMENT_PROMPT, DEEP_DIVE_PROMPT, FINANCIAL_STATEMENT_ANALYSIS_PROMPT, INVESTMENT_THESIS_PROMPT } from './config.js';
 import { getFmpStockData, callApi, filterValidNews, callGeminiApi, generatePolishedArticle, getDriveToken, getOrCreateDriveFolder, createDriveFile, getGroupedFmpData, generateMorningBriefing, calculatePortfolioHealthScore, runOpportunityScanner, generatePortfolioAnalysis, generateTrendAnalysis, getCachedNews, getScannerResults, generateNewsSummary, summarizeSecFilingSection, getCompetitorAnalysis, getPeerMedianMetrics } from './api.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getSecInsiderTrading, getSecInstitutionalOwnership, getSecMaterialEvents, getSecAnnualReports, getSecQuarterlyReports, getLatest10KRiskFactorsText, getLatest10QMdaText, getFinancialStatementsFromXBRL } from './sec-api.js';
@@ -926,11 +926,11 @@ async function openRawDataViewer(ticker) {
                     </svg>
                     Peer Comparison
                 </button>
-                <button data-symbol="${ticker}" id="financial-statement-analysis-button" class="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-all duration-200 hover:shadow-lg">
+                <button data-symbol="${ticker}" id="investment-thesis-button" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-all duration-200 hover:shadow-lg">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
                     </svg>
-                    10-K Statement Analysis
+                    Generate Investment Thesis
                 </button>
             </div>
         `;
@@ -2561,6 +2561,10 @@ export function setupEventListeners() {
             if (activeSymbol) {
                 handlePeerComparisonRequest(activeSymbol);
             }
+        } else if (target.id === 'investment-thesis-button') {
+            if (activeSymbol) {
+                handleInvestmentThesisRequest(activeSymbol);
+            }
         } else if (target.id === 'financial-statement-analysis-button') {
             if (activeSymbol) {
                 handleFinancialStatementAnalysis(activeSymbol);
@@ -3018,6 +3022,96 @@ async function handleFinancialStatementAnalysis(symbol, forceNew = false) {
     }
 }
 
+async function handleInvestmentThesisRequest(symbol, forceNew = false) {
+    const reportType = 'InvestmentThesis';
+    const contentContainer = document.getElementById('ai-article-container');
+    const statusContainer = document.getElementById('report-status-container-ai');
+
+    contentContainer.innerHTML = '<div class="flex justify-center items-center h-full pt-16"><div class="loader"></div></div>';
+    statusContainer.classList.add('hidden');
+
+    try {
+        openModal(CONSTANTS.MODAL_LOADING);
+        const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+        
+        loadingMessage.textContent = `Gathering data for Investment Thesis on ${symbol}...`;
+        
+        const data = await getFmpStockData(symbol);
+        if (!data?.profile?.data?.[0] || !data?.key_metrics_annual?.data?.[0]) {
+             throw new Error(`Required profile or key metrics data is missing for ${symbol}. Please refresh FMP data.`);
+        }
+
+        const profile = data.profile.data[0];
+        const keyMetrics = data.key_metrics_annual.data;
+        const incomeStatements = data.income_statement_annual?.data;
+        const cashFlows = data.cash_flow_statement_annual?.data;
+        const incomeGrowth = data.income_statement_growth_annual?.data;
+        const analystGrades = data.stock_grade_news?.data;
+
+        // --- Calculate Checklist Metrics ---
+        const latestMetrics = keyMetrics[0] || {};
+        const latestIncome = incomeStatements?.[0] || {};
+        const latestCashFlow = cashFlows?.[0] || {};
+
+        const isProfitable = latestIncome.netIncome > 0;
+        const isCashFlowPositive = latestCashFlow.freeCashFlow > 0;
+        const manageableDebt = latestMetrics.debtToEquity < 1.5;
+
+        let isGrowthAccelerating = false;
+        if (incomeGrowth && incomeGrowth.length > 1) {
+            const latestGrowth = incomeGrowth[0].growthRevenue;
+            const previousGrowth = incomeGrowth[1].growthRevenue;
+            if (latestGrowth > previousGrowth) {
+                isGrowthAccelerating = true;
+            }
+        }
+        
+        let hasRecentUpgrades = false;
+        if(analystGrades && analystGrades.length > 0) {
+            const sixMonthsAgo = new Date();
+            sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+            hasRecentUpgrades = analystGrades.some(grade => {
+                const gradeDate = new Date(grade.date);
+                return grade.action?.toLowerCase().includes('upgrade') && gradeDate > sixMonthsAgo;
+            });
+        }
+        
+        const payloadData = {
+            currentPrice: profile.price,
+            grahamNumber: latestMetrics.grahamNumber,
+            isProfitable: isProfitable,
+            isCashFlowPositive: isCashFlowPositive,
+            manageableDebt: manageableDebt,
+            isGrowthAccelerating: isGrowthAccelerating,
+            hasRecentUpgrades: hasRecentUpgrades
+        };
+
+        const companyInfo = state.portfolioCache.find(s => s.ticker === symbol) || { companyName: symbol };
+
+        const prompt = INVESTMENT_THESIS_PROMPT
+            .replace(/{companyName}/g, companyInfo.companyName)
+            .replace(/{tickerSymbol}/g, symbol)
+            .replace('{jsonData}', JSON.stringify(payloadData, null, 2));
+        
+        contentContainer.dataset.currentPrompt = prompt;
+
+        loadingMessage.textContent = `AI is generating the Investment Thesis...`;
+        const markdownResponse = await callGeminiApi(prompt);
+        
+        contentContainer.dataset.rawMarkdown = markdownResponse;
+        displayReport(contentContainer, markdownResponse, prompt);
+        updateReportStatus(statusContainer, [], null, { symbol, reportType });
+
+    } catch (error) {
+        console.error("Error generating investment thesis:", error);
+        contentContainer.innerHTML = `<div class="text-center p-4 text-red-500 bg-red-50 rounded-lg"><p class="font-semibold">Could not generate thesis.</p><p class="text-sm">${error.message}</p></div>`;
+    } finally {
+        if (document.getElementById(CONSTANTS.MODAL_LOADING).classList.contains('is-open')) {
+            closeModal(CONSTANTS.MODAL_LOADING);
+        }
+    }
+}
+
 
 async function handleSaveReportToDb() {
     const modal = document.getElementById('rawDataViewerModal');
@@ -3128,6 +3222,8 @@ function updateReportStatus(statusContainer, reports, activeReportId, analysisPa
                 handlePeerComparisonRequest(analysisParams.symbol, true);
             } else if (analysisParams.reportType === 'FinancialStatementAnalysis') {
                 handleFinancialStatementAnalysis(analysisParams.symbol, true);
+            } else if (analysisParams.reportType === 'InvestmentThesis') {
+                handleInvestmentThesisRequest(analysisParams.symbol, true);
             } else { // Default or 'DeepDive'
                 handleDeepDiveRequest(analysisParams.symbol, true);
             }
