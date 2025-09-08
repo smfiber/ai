@@ -1,3 +1,4 @@
+// api.js
 import { CONSTANTS, state, MORNING_BRIEFING_PROMPT, NEWS_SENTIMENT_PROMPT, OPPORTUNITY_SCANNER_PROMPT, PORTFOLIO_ANALYSIS_PROMPT, TREND_ANALYSIS_PROMPT, SEC_RISK_FACTOR_SUMMARY_PROMPT, SEC_MDA_SUMMARY_PROMPT, COMPETITOR_ANALYSIS_PROMPT } from './config.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
@@ -969,25 +970,53 @@ async function _fetchLivePeerData(peerTickers) {
  */
 export async function getCompetitorAnalysis(targetSymbol) {
     try {
-        // 1. Fetch the list of peer tickers from FMP
+        // 1. Fetch the target company's profile to get its industry for context.
+        const targetProfileUrl = `https://financialmodelingprep.com/api/v3/profile/${targetSymbol}?apikey=${state.fmpApiKey}`;
+        const targetProfileResponse = await callApi(targetProfileUrl);
+        if (!targetProfileResponse || targetProfileResponse.length === 0) {
+            throw new Error(`Could not fetch profile for target symbol ${targetSymbol} to determine industry.`);
+        }
+        const targetProfileData = targetProfileResponse[0];
+        const targetIndustry = targetProfileData.industry;
+        const targetName = targetProfileData.companyName;
+
+        // 2. Fetch the broad list of potential peer tickers from FMP.
         const peersUrl = `https://financialmodelingprep.com/api/v4/stock_peers?symbol=${targetSymbol}&apikey=${state.fmpApiKey}`;
         const peersResponse = await callApi(peersUrl);
-        let peerTickers = peersResponse[0]?.peersList;
-        if (!peerTickers || peerTickers.length === 0) {
-            console.warn(`No peers found for ${targetSymbol}`);
+        let candidatePeers = peersResponse[0]?.peersList;
+        if (!candidatePeers || candidatePeers.length === 0) {
             return "No peer data could be found for comparison.";
         }
         
-        // Logic to prevent GOOG vs GOOGL comparison
-        if (targetSymbol === 'GOOG') {
-            peerTickers = peerTickers.filter(p => p !== 'GOOGL');
-        } else if (targetSymbol === 'GOOGL') {
-            peerTickers = peerTickers.filter(p => p !== 'GOOG');
+        // 3. Use AI to filter the broad list down to relevant competitors.
+        const filteringPrompt = `
+            Role: You are a financial analyst. Your task is to filter a list of stock tickers to find direct competitors.
+            Task: Given a target company, its industry, and a list of candidate tickers, return a JSON array containing only the tickers from the candidate list that are direct competitors in the same primary industry.
+            - Target Company: ${targetName}
+            - Industry: "${targetIndustry}"
+            - Candidate Tickers: ${JSON.stringify(candidatePeers)}
+            Return ONLY the JSON array of ticker strings. Do not include any other text, explanation, or markdown.
+            Example output: ["TICKER1", "TICKER2", "TICKER3"]
+        `.trim();
+
+        const filteredPeersJson = await callGeminiApi(filteringPrompt);
+        let filteredPeerTickers;
+        try {
+            // Clean the response from the AI which might include markdown ```json
+            const cleanedJson = filteredPeersJson.replace(/```json\n?|\n?```/g, '');
+            filteredPeerTickers = JSON.parse(cleanedJson);
+        } catch (e) {
+            console.error("Failed to parse AI's filtered peer list:", e);
+            throw new Error("Could not parse the filtered competitor list from the AI.");
         }
         
-        const limitedPeers = peerTickers.slice(0, 10); // Limit to 10 peers for efficiency
+        if (!Array.isArray(filteredPeerTickers) || filteredPeerTickers.length === 0) {
+            return `No direct competitors were identified from the initial list for the "${targetIndustry}" industry. Analysis cannot proceed.`;
+        }
+
+        const limitedPeers = filteredPeerTickers.slice(0, 10); // Limit to 10 peers for efficiency
         
-        // 2. Fetch LIVE data for the target and all peers in parallel
+        // 4. Fetch LIVE data for the target and all RELEVANT peers in parallel
         const allTickersToFetch = [targetSymbol, ...limitedPeers];
         const liveDataMap = await _fetchLivePeerData(allTickersToFetch);
 
@@ -997,13 +1026,9 @@ export async function getCompetitorAnalysis(targetSymbol) {
             throw new Error(`Could not retrieve live profile data for target stock ${targetSymbol}. Please check the ticker and API key.`);
         }
         
-        // Helper to format market cap into billions
-        const formatMarketCap = (value) => {
-            if (typeof value !== 'number') return 'N/A';
-            return (value / 1e9).toFixed(2);
-        };
+        const formatMarketCap = (value) => (typeof value !== 'number' ? 'N/A' : (value / 1e9).toFixed(2));
         
-        // --- [NEW LOGIC START] Calculate medians programmatically ---
+        // --- Calculate medians programmatically ---
         const peerMetricsForMedian = {
             peRatioTTM: [], priceToSalesRatioTTM: [], evToEBITDATTM: [],
             grossProfitMarginTTM: [], netProfitMarginTTM: [], returnOnEquityTTM: [],
@@ -1064,9 +1089,8 @@ export async function getCompetitorAnalysis(targetSymbol) {
             revenue_growth: formatMedianMetric(calculatedMedians.revenue_growth, true),
             debt_to_equity: formatMedianMetric(calculatedMedians.debt_to_equity),
         };
-        // --- [NEW LOGIC END] ---
 
-        // 3. Assemble the data for the AI prompt
+        // 5. Assemble the data for the AI prompt
         const peerData = [];
         limitedPeers.forEach(peerSymbol => {
             const fmpData = liveDataMap[peerSymbol];
@@ -1078,7 +1102,7 @@ export async function getCompetitorAnalysis(targetSymbol) {
                     name: profile.companyName,
                     market_cap_raw: profile.mktCap,
                     market_cap: formatMarketCap(profile.mktCap),
-                    ..._getCompetitorMetricsFromCache(fmpData) // This function can be reused
+                    ..._getCompetitorMetricsFromCache(fmpData)
                 });
             } else {
                  console.warn(`Skipping peer ${peerSymbol} due to missing live data or profile.`);
@@ -1086,28 +1110,26 @@ export async function getCompetitorAnalysis(targetSymbol) {
         });
 
         if (peerData.length === 0) {
-            throw new Error("Failed to gather sufficient live financial data for peer comparison.");
+            throw new Error("Failed to gather sufficient live financial data for peer comparison after filtering.");
         }
 
-        // Find the largest competitor by raw market cap
         const largestCompetitor = peerData.reduce((max, p) => (p.market_cap_raw > max.market_cap_raw ? p : max), peerData[0]);
-
-        const targetProfile = targetFmpData.profile.data[0];
+        
         const comparisonData = {
             target: {
-                name: targetProfile.companyName,
-                market_cap: formatMarketCap(targetProfile.mktCap),
+                name: targetProfileData.companyName,
+                market_cap: formatMarketCap(targetProfileData.mktCap),
                 ..._getCompetitorMetricsFromCache(targetFmpData)
             },
             peers: peerData,
             largest_competitor: largestCompetitor.name || 'N/A',
-            calculated_medians: formattedMedians // Add the correctly calculated medians
+            calculated_medians: formattedMedians
         };
 
-        // 5. Generate the AI summary using the prompt
+        // 6. Generate the AI summary using the prompt
         const prompt = COMPETITOR_ANALYSIS_PROMPT
             .replace('{comparisonData}', JSON.stringify(comparisonData, null, 2))
-            .replace(/{companyName}/g, targetProfile.companyName)
+            .replace(/{companyName}/g, targetProfileData.companyName)
             .replace(/{companySymbol}/g, targetSymbol)
             .replace('{largestCompetitor}', comparisonData.largest_competitor);
 
