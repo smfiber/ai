@@ -997,16 +997,16 @@ First, present a clear, scannable summary of the company's operational health an
 - **Context:** The Graham Number is a very strict, asset-and-earnings-focused metric. For companies with significant intangible assets (like brand or technology) or high growth, it can often appear artificially low. It serves as a useful, conservative floor for valuation but may not capture the full picture.
 
 ## 3. Synthesized Investment Thesis
-Synthesize all the points above into a final bull vs. bear summary.
+Synthesize the Quality and Valuation data to determine if the stock is a potential value trap or a genuine opportunity. Critically, you must connect the weaknesses from the Scorecard (e.g., high debt, low growth) to the valuation discount. Is the stock cheap for a good reason, or does the discount appear excessive relative to the risks?
 
 ### 🐂 The Bull Case
-In one paragraph, construct the investment thesis. Weave together the company's strengths from the Quality Scorecard with any positive valuation signals (e.g., "Despite trading at a premium to its history, the company's best-in-class profitability and accelerating growth may justify the valuation, especially as it remains cheaper than its peers on a P/S basis.")
+Construct the forward-looking investment thesis. What is the most likely catalyst or narrative shift that could cause the market to re-evaluate the stock upwards, unlocking the value identified? Weave together the company's strengths from the Quality Scorecard with the positive valuation signals to tell this story.
 
 ### 🐻 The Bear Case (Key Risks)
-In one paragraph, outline the primary risks. Focus on weaknesses from the Quality Scorecard and any negative valuation signals (e.g., "The primary risk is valuation; the stock is trading at a significant premium to both its historical average and its industry peers. Furthermore, the lack of recent analyst upgrades suggests the market may be waiting for proof that its recent growth acceleration is sustainable.")
+Outline the primary risks that could cause the stock to remain a 'value trap' or decline further. Focus on weaknesses from the Quality Scorecard and the negative valuation signals. What is the most significant hurdle to the bull case?
 
 ## 4. Final Verdict & Recommendation
-Based on the combined analysis of quality, catalysts, and valuation, classify the stock into ONE of the following categories and provide a one-sentence justification.
+Based on your synthesis of the quality, valuation, and potential for a narrative shift, you must make a decisive recommendation. Justify why the Bull or Bear case is more compelling at the current price, and then classify the stock into ONE of the following categories.
 
 -   **High-Quality Compounder at a Fair Price:** The company scores highly on the quality checklist and its valuation is reasonable relative to its history and/or peers. The thesis is based on long-term execution.
 -   **Potential Value Play:** The company exhibits a discount to its historical valuation and/or peers, and there are sufficient quality factors to suggest the discount is unwarranted.
