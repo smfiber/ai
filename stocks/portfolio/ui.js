@@ -3068,7 +3068,11 @@ async function handleInvestmentThesisRequest(symbol, forceNew = false) {
 
         const isProfitable = latestIncome.netIncome > 0 ? "Yes, the company is profitable." : "No, the company is not profitable.";
         const isCashFlowPositive = latestCashFlow.freeCashFlow > 0 ? "Yes, it generates positive free cash flow." : "No, it does not generate positive free cash flow.";
-        const manageableDebt = latestMetrics.debtToEquity < 1.5 ? "Yes, the debt-to-equity ratio is manageable." : "No, the debt load is considerable.";
+        
+        const debtToEquity = latestMetrics.debtToEquity;
+        const manageableDebt = (debtToEquity > 0 && debtToEquity < 1.5)
+            ? "Yes, the debt-to-equity ratio is manageable."
+            : "No, the debt load is high, unconventional, or indicates negative equity.";
 
         let isGrowthAccelerating = "No, revenue growth is not accelerating.";
         if (incomeGrowth && incomeGrowth.length > 1) {
