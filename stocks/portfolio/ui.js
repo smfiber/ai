@@ -1,5 +1,5 @@
 // ui.js
-import { CONSTANTS, SECTORS, SECTOR_ICONS, state, NEWS_SENTIMENT_PROMPT, DEEP_DIVE_PROMPT, FINANCIAL_STATEMENT_ANALYSIS_PROMPT, INVESTMENT_THESIS_PROMPT } from './config.js';
+import { CONSTANTS, SECTORS, SECTOR_ICONS, state, NEWS_SENTIMENT_PROMPT, DEEP_DIVE_PROMPT, FINANCIAL_STATEMENT_ANALYSIS_PROMPT, INVESTMENT_THESIS_PROMPT, FORWARD_LOOKING_ANALYSIS_PROMPT } from './config.js';
 import { getFmpStockData, callApi, filterValidNews, callGeminiApi, generatePolishedArticle, getDriveToken, getOrCreateDriveFolder, createDriveFile, getGroupedFmpData, generateMorningBriefing, calculatePortfolioHealthScore, runOpportunityScanner, generatePortfolioAnalysis, generateTrendAnalysis, getCachedNews, getScannerResults, generateNewsSummary, summarizeSecFilingSection, getCompetitorAnalysis, getPeerMedianMetrics, getLiveMetricsForSymbol } from './api.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getSecInsiderTrading, getSecInstitutionalOwnership, getSecMaterialEvents, getSecAnnualReports, getSecQuarterlyReports, getLatest10KRiskFactorsText, getLatest10QMdaText, getFinancialStatementsFromXBRL } from './sec-api.js';
@@ -913,7 +913,7 @@ async function openRawDataViewer(ticker) {
         }
 
         aiButtonsContainer.innerHTML = `
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <button data-symbol="${ticker}" id="deep-dive-analysis-button" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-all duration-200 hover:shadow-lg">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 10.5a.5.5 0 01.5-.5h3a.5.5 0 010 1h-3a.5.5 0 01-.5-.5z" />
@@ -931,6 +931,12 @@ async function openRawDataViewer(ticker) {
                         <path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
                     </svg>
                     Generate Investment Thesis
+                </button>
+                <button data-symbol="${ticker}" id="forward-looking-analysis-button" class="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-all duration-200 hover:shadow-lg">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                    </svg>
+                    Forward-Looking Analysis
                 </button>
             </div>
         `;
@@ -2565,6 +2571,10 @@ export function setupEventListeners() {
             if (activeSymbol) {
                 handleInvestmentThesisRequest(activeSymbol);
             }
+        } else if (target.id === 'forward-looking-analysis-button') {
+            if (activeSymbol) {
+                handleForwardLookingAnalysis(activeSymbol);
+            }
         } else if (target.id === 'financial-statement-analysis-button') {
             if (activeSymbol) {
                 handleFinancialStatementAnalysis(activeSymbol);
@@ -3134,6 +3144,107 @@ async function handleInvestmentThesisRequest(symbol, forceNew = false) {
     } catch (error) {
         console.error("Error generating investment thesis:", error);
         contentContainer.innerHTML = `<div class="text-center p-4 text-red-500 bg-red-50 rounded-lg"><p class="font-semibold">Could not generate thesis.</p><p class="text-sm">${error.message}</p></div>`;
+    } finally {
+        if (document.getElementById(CONSTANTS.MODAL_LOADING).classList.contains('is-open')) {
+            closeModal(CONSTANTS.MODAL_LOADING);
+        }
+    }
+}
+
+async function handleForwardLookingAnalysis(symbol, forceNew = false) {
+    const reportType = 'ForwardLookingAnalysis';
+    const contentContainer = document.getElementById('ai-article-container');
+    const statusContainer = document.getElementById('report-status-container-ai');
+
+    contentContainer.innerHTML = '';
+    statusContainer.classList.add('hidden');
+
+    try {
+        const savedReports = await getSavedReports(symbol, reportType);
+        if (savedReports.length > 0 && !forceNew) {
+            const latestReport = savedReports[0];
+            displayReport(contentContainer, latestReport.content, latestReport.prompt);
+            contentContainer.dataset.rawMarkdown = latestReport.content;
+            updateReportStatus(statusContainer, savedReports, latestReport.id, { symbol, reportType });
+            return;
+        }
+
+        openModal(CONSTANTS.MODAL_LOADING);
+        const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+        
+        loadingMessage.textContent = `Gathering data for Forward-Looking Analysis on ${symbol}...`;
+        
+        const data = await getFmpStockData(symbol);
+        if (!data?.profile?.data?.[0] || !data?.analyst_estimates?.data?.[0] || !data?.ratios_annual?.data?.[0]) {
+             throw new Error(`Required data (profile, analyst estimates, or annual ratios) could not be found in the cache for ${symbol}. Please refresh the stock's FMP data.`);
+        }
+
+        const profile = data.profile.data[0];
+        const analystEstimates = data.analyst_estimates.data;
+        const ratiosAnnual = data.ratios_annual.data;
+        const incomeAnnual = data.income_statement_annual?.data;
+
+        // --- Calculations ---
+        const formatVal = (val, places = 2) => (typeof val === 'number' ? val.toFixed(places) : 'N/A');
+        const formatPercent = (val) => (typeof val === 'number' ? `${(val * 100).toFixed(2)}%` : 'N/A');
+
+        const currentPrice = profile.price;
+        const forwardEps = analystEstimates[0]?.estimatedEpsAvg;
+
+        let estimatedEpsGrowth = 'N/A';
+        if (analystEstimates.length > 1 && analystEstimates[1]?.estimatedEpsAvg > 0) {
+            estimatedEpsGrowth = (forwardEps / analystEstimates[1].estimatedEpsAvg) - 1;
+        }
+
+        let estimatedRevenueGrowth = 'N/A';
+        const latestRevenue = incomeAnnual?.[0]?.revenue;
+        const forwardRevenue = analystEstimates[0]?.estimatedRevenueAvg;
+        if (latestRevenue > 0 && forwardRevenue) {
+            estimatedRevenueGrowth = (forwardRevenue / latestRevenue) - 1;
+        }
+
+        const calculateAverage = (items, key) => {
+            const values = items.slice(0, 5).map(i => i[key]).filter(v => typeof v === 'number' && v > 0);
+            return values.length ? values.reduce((a, b) => a + b, 0) / values.length : null;
+        };
+
+        const averagePe = calculateAverage(ratiosAnnual, 'peRatio');
+        const forwardPe = (currentPrice && forwardEps > 0) ? (currentPrice / forwardEps) : null;
+        const pegRatio = (forwardPe && typeof estimatedEpsGrowth === 'number' && estimatedEpsGrowth > 0) ? (forwardPe / (estimatedEpsGrowth * 100)) : null;
+        const projectedPrice = (forwardEps && averagePe) ? (forwardEps * averagePe) : null;
+        const projectedUpside = (projectedPrice && currentPrice > 0) ? ((projectedPrice / currentPrice) - 1) : null;
+
+        const payloadData = {
+            currentPrice: formatVal(currentPrice),
+            average_pe: formatVal(averagePe),
+            forward_pe: formatVal(forwardPe),
+            peg_ratio: formatVal(pegRatio),
+            forward_eps: formatVal(forwardEps),
+            projected_price: formatVal(projectedPrice),
+            projected_upside: formatPercent(projectedUpside),
+            estimated_eps_growth: formatPercent(estimatedEpsGrowth),
+            estimated_revenue_growth: formatPercent(estimatedRevenueGrowth),
+        };
+
+        const companyInfo = state.portfolioCache.find(s => s.ticker === symbol) || { companyName: symbol };
+
+        const prompt = FORWARD_LOOKING_ANALYSIS_PROMPT
+            .replace(/{companyName}/g, companyInfo.companyName)
+            .replace(/{tickerSymbol}/g, symbol)
+            .replace('{jsonData}', JSON.stringify(payloadData, null, 2));
+        
+        contentContainer.dataset.currentPrompt = prompt;
+
+        loadingMessage.textContent = `AI is generating the Forward-Looking Analysis...`;
+        const markdownResponse = await callGeminiApi(prompt);
+        
+        contentContainer.dataset.rawMarkdown = markdownResponse;
+        displayReport(contentContainer, markdownResponse, prompt);
+        updateReportStatus(statusContainer, [], null, { symbol, reportType });
+
+    } catch (error) {
+        console.error("Error generating forward-looking analysis:", error);
+        contentContainer.innerHTML = `<div class="text-center p-4 text-red-500 bg-red-50 rounded-lg"><p class="font-semibold">Could not generate analysis.</p><p class="text-sm">${error.message}</p></div>`;
     } finally {
         if (document.getElementById(CONSTANTS.MODAL_LOADING).classList.contains('is-open')) {
             closeModal(CONSTANTS.MODAL_LOADING);
