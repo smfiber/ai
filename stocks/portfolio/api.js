@@ -896,7 +896,7 @@ async function _fetchLivePeerData(peerTickers) {
     });
 
     const keyMetricsAnnualPromises = peerTickers.map(ticker => {
-        const url = `https://financialmodelingprep.com/api/v3/key-metrics-annual/${ticker}?limit=1&apikey=${apiKey}`;
+        const url = `https://financialmodelingprep.com/api/v3/key-metrics-annual/${ticker}?limit=5&apikey=${apiKey}`;
         return makePromise(url, ticker, 'key metrics annual');
     });
 
@@ -909,13 +909,32 @@ async function _fetchLivePeerData(peerTickers) {
         const url = `https://financialmodelingprep.com/stable/income-statement-growth?symbol=${ticker}&period=annual&limit=5&apikey=${apiKey}`;
         return makePromise(url, ticker, 'income growth');
     });
+    
+    const incomePromises = peerTickers.map(ticker => {
+        const url = `https://financialmodelingprep.com/api/v3/income-statement/${ticker}?period=annual&limit=5&apikey=${apiKey}`;
+        return makePromise(url, ticker, 'income statement annual');
+    });
 
-    const [profiles, allRatiosTtm, allKeyMetricsAnnual, allKeyMetricsTtm, allGrowthData] = await Promise.all([
+    const cashflowPromises = peerTickers.map(ticker => {
+        const url = `https://financialmodelingprep.com/api/v3/cash-flow-statement/${ticker}?period=annual&limit=5&apikey=${apiKey}`;
+        return makePromise(url, ticker, 'cash flow annual');
+    });
+
+    const gradePromises = peerTickers.map(ticker => {
+        const url = `https://financialmodelingprep.com/api/v3/grade/${ticker}?limit=20&apikey=${apiKey}`;
+        return makePromise(url, ticker, 'grades');
+    });
+
+
+    const [profiles, allRatiosTtm, allKeyMetricsAnnual, allKeyMetricsTtm, allGrowthData, allIncomeData, allCashflowData, allGradeData] = await Promise.all([
         callApi(profileUrl), // Keep bulk profile fetch
         Promise.all(ratiosTtmPromises),
         Promise.all(keyMetricsAnnualPromises),
         Promise.all(keyMetricsTtmPromises),
-        Promise.all(growthPromises)
+        Promise.all(growthPromises),
+        Promise.all(incomePromises),
+        Promise.all(cashflowPromises),
+        Promise.all(gradePromises)
     ]);
 
     // Map the arrays of results back to their respective tickers
@@ -924,15 +943,17 @@ async function _fetchLivePeerData(peerTickers) {
         const profileData = Array.isArray(profiles) ? profiles.find(p => p.symbol === ticker) : null;
         // Individual FMP calls often return an array with a single object. Get the first element.
         const ratiosTtmData = Array.isArray(allRatiosTtm[index]) ? allRatiosTtm[index][0] : null;
-        const keyMetricsAnnualData = Array.isArray(allKeyMetricsAnnual[index]) ? allKeyMetricsAnnual[index][0] : null;
         const keyMetricsTtmData = Array.isArray(allKeyMetricsTtm[index]) ? allKeyMetricsTtm[index][0] : null;
         
         liveData[ticker] = {
             profile: { data: profileData ? [profileData] : [] },
             ratios_ttm: { data: ratiosTtmData ? [ratiosTtmData] : [] },
-            key_metrics_annual: { data: keyMetricsAnnualData ? [keyMetricsAnnualData] : [] },
+            key_metrics_annual: { data: allKeyMetricsAnnual[index] || [] },
             key_metrics_ttm: { data: keyMetricsTtmData ? [keyMetricsTtmData] : [] },
-            income_statement_growth_annual: { data: allGrowthData[index] || [] }
+            income_statement_growth_annual: { data: allGrowthData[index] || [] },
+            income_statement_annual: { data: allIncomeData[index] || [] },
+            cash_flow_statement_annual: { data: allCashflowData[index] || [] },
+            stock_grade_news: { data: allGradeData[index] || [] }
         };
     });
 
