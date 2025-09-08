@@ -841,7 +841,7 @@ Generate the following report in markdown format:
 # Peer Analysis: {companyName} ({companySymbol})
 
 ## 📊 Executive Summary: At a Glance
-**Instruction:** Create 3-4 bullet points summarizing the most critical, data-supported findings from your detailed analysis. Each point must be a balanced reflection of the data. If the company is superior in one metric but inferior in another, you must state this nuance. For example: "While {companyName} boasts superior profitability margins compared to the peer median, its revenue growth is significantly slower and its ROE is notably weaker." This ensures the summary is an accurate, non-contradictory reflection of the full analysis.
+**Instruction:** Create 3-4 bullet points summarizing the most critical, data-supported findings from your detailed analysis. Each point must directly and accurately compare a key metric (e.g., Valuation, Profitability) for {companyName} against the peer median. You must explicitly state if {companyName} is higher, lower, or similar, and what that implies, without contradicting the detailed analysis below.
 
 ---
 
