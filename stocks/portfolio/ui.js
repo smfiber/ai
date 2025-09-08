@@ -3057,6 +3057,7 @@ async function handleInvestmentThesisRequest(symbol, forceNew = false) {
         const profile = data.profile.data[0];
         const keyMetricsAnnual = data.key_metrics_annual?.data || [];
         const ratiosTTM = data.ratios_ttm.data[0] || {};
+        const ratiosAnnual = data.ratios_annual?.data || [];
         const incomeStatements = data.income_statement_annual?.data;
         const cashFlows = data.cash_flow_statement_annual?.data;
         const incomeGrowth = data.income_statement_growth_annual?.data;
@@ -3107,10 +3108,10 @@ async function handleInvestmentThesisRequest(symbol, forceNew = false) {
             isGrowthAccelerating,
             hasRecentUpgrades,
             current_pe: formatVal(ratiosTTM.peRatioTTM),
-            average_pe: formatVal(calculateAverage(keyMetricsAnnual, 'peRatio')),
+            average_pe: formatVal(calculateAverage(ratiosAnnual, 'peRatio')),
             peer_pe: peerMedians?.peRatio || 'N/A',
             current_ps: formatVal(ratiosTTM.priceToSalesRatioTTM),
-            average_ps: formatVal(calculateAverage(keyMetricsAnnual, 'priceToSalesRatio')),
+            average_ps: formatVal(calculateAverage(ratiosAnnual, 'priceToSalesRatio')),
             peer_ps: peerMedians?.psRatio || 'N/A'
         };
 
