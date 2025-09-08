@@ -2940,7 +2940,7 @@ async function handlePeerComparisonRequest(symbol, forceNew = false) {
     const contentContainer = document.getElementById('ai-article-container');
     const statusContainer = document.getElementById('report-status-container-ai');
 
-    contentContainer.innerHTML = '<div class="flex justify-center items-center h-full pt-16"><div class="loader"></div></div>';
+    contentContainer.innerHTML = '';
     statusContainer.classList.add('hidden');
 
     try {
@@ -3027,7 +3027,7 @@ async function handleInvestmentThesisRequest(symbol, forceNew = false) {
     const contentContainer = document.getElementById('ai-article-container');
     const statusContainer = document.getElementById('report-status-container-ai');
 
-    contentContainer.innerHTML = '<div class="flex justify-center items-center h-full pt-16"><div class="loader"></div></div>';
+    contentContainer.innerHTML = '';
     statusContainer.classList.add('hidden');
 
     try {
