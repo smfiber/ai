@@ -163,16 +163,16 @@ async function handleRefreshFmpData(symbol) {
 
     try {
         const coreEndpoints = [
-            { name: 'profile', path: 'profile', version: 'v3' },
-            { name: 'income_statement_annual', path: 'income-statement', params: 'period=annual&limit=10', version: 'v3' },
+            { name: 'profile', path: 'profile', version: 'stable' },
+            { name: 'income_statement_annual', path: 'income-statement', params: 'period=annual&limit=10', version: 'stable' },
             { name: 'income_statement_growth_annual', path: 'income-statement-growth', params: 'period=annual&limit=5', version: 'stable' },
-            { name: 'balance_sheet_statement_annual', path: 'balance-sheet-statement', params: 'period=annual&limit=10', version: 'v3' },
-            { name: 'cash_flow_statement_annual', path: 'cash-flow-statement', params: 'period=annual&limit=10', version: 'v3' },
+            { name: 'balance_sheet_statement_annual', path: 'balance-sheet-statement', params: 'period=annual&limit=10', version: 'stable' },
+            { name: 'cash_flow_statement_annual', path: 'cash-flow-statement', params: 'period=annual&limit=10', version: 'stable' },
             { name: 'key_metrics_annual', path: 'key-metrics', params: 'period=annual&limit=10', version: 'stable' },
             { name: 'ratios_annual', path: 'ratios', params: 'period=annual&limit=10', version: 'stable' },
-            { name: 'stock_grade_news', path: 'grade', version: 'v3' },
-            { name: 'analyst_estimates', path: 'analyst-estimates', version: 'v3'},
-            { name: 'company_core_information', path: 'company-core-information', version: 'v4', symbolAsQuery: true }
+            { name: 'stock_grade_news', path: 'stock-grade', version: 'stable' },
+            { name: 'analyst_estimates', path: 'analyst-estimates', version: 'stable'},
+            { name: 'company_core_information', path: 'company-information', version: 'stable' }
         ];
 
         let successfulFetches = 0;
