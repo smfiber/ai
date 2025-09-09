@@ -205,7 +205,7 @@ export async function generateMorningBriefing(portfolioStocks) {
     const dataPromises = portfolioStocks.map(stock => getFmpStockData(stock.ticker));
     
     const tickersString = portfolioStocks.map(s => s.ticker).join(',');
-    const newsUrl = `https://financialmodelingprep.com/stable/news/stock?symbols=${tickersString}&limit=20&apikey=${state.fmpApiKey}`;
+    const newsUrl = `https://financialmodelingprep.com/stable/news/stock-latest?symbols=${tickersString}&limit=20&apikey=${state.fmpApiKey}`;
     const newsPromise = callApi(newsUrl);
 
     const [allStockData, allNews] = await Promise.all([
@@ -587,7 +587,7 @@ export async function runOpportunityScanner(stocksToScan, updateProgress) {
             updateProgress(processedCount, stocksToScan.length, `Analyzing ${stock.ticker}...`);
             
             // --- Fetch and Save FMP News ---
-            const newsUrl = `https://financialmodelingprep.com/stable/news/stock?symbols=${stock.ticker}&limit=20&apikey=${state.fmpApiKey}`;
+            const newsUrl = `https://financialmodelingprep.com/stable/news/stock-latest?symbols=${stock.ticker}&limit=20&apikey=${state.fmpApiKey}`;
             const newsData = await callApi(newsUrl);
             const newsDocRef = doc(state.db, CONSTANTS.DB_COLLECTION_FMP_NEWS_CACHE, stock.ticker);
             await setDoc(newsDocRef, {
@@ -800,7 +800,7 @@ export async function summarizeSecFilingSection(sectionName, sectionText) {
  */
 export async function generateNewsSummary(ticker, companyName) {
     try {
-        const newsUrl = `https://financialmodelingprep.com/stable/news/stock?symbols=${ticker}&limit=20&apikey=${state.fmpApiKey}`;
+        const newsUrl = `https://financialmodelingprep.com/stable/news/stock-latest?symbols=${ticker}&limit=20&apikey=${state.fmpApiKey}`;
         const newsData = await callApi(newsUrl);
         const validArticles = filterValidNews(newsData);
         if (validArticles.length === 0) return { dominant_narrative: "No recent news found.", overall_sentiment: "Neutral" };
@@ -897,7 +897,7 @@ async function _fetchLivePeerData(peerTickers) {
     });
 
     const ratiosAnnualPromises = peerTickers.map(ticker => {
-        const url = `https://financialmodelingprep.com/stable/ratios?symbol=${ticker}&period=annual&limit=5&apikey=${apiKey}`;
+        const url = `https://financialmodelingprep.com/stable/ratios-ttm?symbol=${ticker}&period=annual&limit=5&apikey=${apiKey}`;
         return makePromise(url, ticker, 'ratios annual');
     });
 
