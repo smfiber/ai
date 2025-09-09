@@ -2638,36 +2638,42 @@ async function getSavedReports(ticker, reportType) {
  */
 function _calculateDeepDiveMetrics(data, newsNarrative, institutionalHolders, totalInstitutionalShares, totalSharesOutstanding, marketCap, finalMdaSummary, finalRiskFactorsSummaries, final8KSummary, institutionalOwnershipTimeframe = 'Recent filings data.', peerMedians = null) {
     const profile = data.profile?.data?.[0] || {};
-    const income = (data.income_statement_annual?.data || []).slice().reverse(); // Oldest to newest
-    const keyMetrics = (data.key_metrics_annual?.data || []).slice().reverse();
-    const cashFlow = (data.cash_flow_statement_annual?.data || []).slice().reverse();
-    const ratios = (data.ratios_annual?.data || []).slice().reverse();
+    const income = (data.income_statement_annual?.data || []);
+    const balanceSheet = (data.balance_sheet_statement_annual?.data || []);
+    const keyMetrics = (data.key_metrics_annual?.data || []);
+    const cashFlow = (data.cash_flow_statement_annual?.data || []);
+    const ratios = (data.ratios_annual?.data || []);
     const analystEstimates = data.analyst_estimates?.data || [];
     const analystGrades = data.stock_grade_news?.data || [];
+    
+    // Sort oldest to newest for trend analysis
+    const sortedIncome = [...income].reverse();
+    const sortedCashFlow = [...cashFlow].reverse();
+    const sortedBalanceSheet = [...balanceSheet].reverse();
 
-    const latestMetrics = keyMetrics[keyMetrics.length - 1] || {};
-    const latestCashFlow = cashFlow[cashFlow.length - 1] || {};
-    const latestIncome = income[income.length - 1] || {};
-    const lastYearIncome = income[income.length - 2] || {};
+    const latestMetrics = keyMetrics[0] || {};
+    const latestCashFlow = cashFlow[0] || {};
+    const latestIncome = income[0] || {};
+    const lastYearIncome = income[1] || {};
 
     const formatTrend = (series, key, lookback = 5) => {
-        if (!series) return [];
-        return series.slice(-lookback).map(item => ({
-            year: item.calendarYear,
+        if (!series || series.length === 0) return [];
+        return [...series].reverse().slice(-lookback).map(item => ({
+            year: item.calendarYear || new Date(item.date).getFullYear(),
             value: typeof item[key] === 'number' ? item[key].toFixed(2) : 'N/A'
         }));
     };
     
     const formatLargeNumberTrend = (series, key, lookback = 5) => {
-         if (!series) return [];
-        return series.slice(-lookback).map(item => ({
-            year: item.calendarYear,
+        if (!series || series.length === 0) return [];
+        return [...series].reverse().slice(-lookback).map(item => ({
+            year: item.calendarYear || new Date(item.date).getFullYear(),
             value: typeof item[key] === 'number' ? formatLargeNumber(item[key]) : 'N/A'
         }));
     };
 
     const calculateAverage = (data, key, lookback = 5) => {
-        const values = data.slice(-lookback).map(d => d[key]).filter(v => typeof v === 'number');
+        const values = data.slice(0, lookback).map(d => d[key]).filter(v => typeof v === 'number');
         if (values.length === 0) return null;
         return values.reduce((a, b) => a + b, 0) / values.length;
     };
@@ -2682,8 +2688,6 @@ function _calculateDeepDiveMetrics(data, newsNarrative, institutionalHolders, to
         return `Current ${ratioKey} is ${current ? current.toFixed(2) : 'N/A'}.`;
     };
 
-    // Look for the user-defined price target consensus data.
-    // The key 'price_target_consensus' is assumed based on the user manually creating an endpoint with that name.
     const priceTargetData = data.price_target_consensus?.data?.[0] || {};
     let priceTargetSummary = 'Analyst price target data not available.';
     if (priceTargetData.targetConsensus && profile.price > 0) {
@@ -2692,16 +2696,10 @@ function _calculateDeepDiveMetrics(data, newsNarrative, institutionalHolders, to
     }
 
     const nextYearEstimate = analystEstimates[0] || {};
-    const lastActualRevenue = latestIncome.revenue;
     let revenueGrowthForecast = 'N/A';
-    if (nextYearEstimate.estimatedRevenueAvg && lastActualRevenue) {
-        const growthRate = ((nextYearEstimate.estimatedRevenueAvg / lastActualRevenue) - 1) * 100;
-        const formattedGrowth = `${growthRate.toFixed(2)}%`;
-        if (growthRate > 50) { // Sanity check for extreme growth
-            revenueGrowthForecast = `${formattedGrowth} (Note: This unusually high growth rate may be based on analyst forecasts for a different period than the latest annual revenue figure and should be viewed with caution.)`;
-        } else {
-            revenueGrowthForecast = formattedGrowth;
-        }
+    if (nextYearEstimate.estimatedRevenueAvg && latestIncome.revenue) {
+        const growthRate = ((nextYearEstimate.estimatedRevenueAvg / latestIncome.revenue) - 1) * 100;
+        revenueGrowthForecast = `${growthRate.toFixed(2)}%`;
     }
     
     const recentRatings = analystGrades.slice(0, 20).map(grade => {
@@ -2710,21 +2708,18 @@ function _calculateDeepDiveMetrics(data, newsNarrative, institutionalHolders, to
         const to = grade.newGrade;
         const firm = grade.gradingCompany;
         const date = grade.date;
-
         if (action === 'initiate' || !from || from.toLowerCase() === 'undefined') {
             return `Initiated coverage with '${to}' rating by ${firm} on ${date}`;
         }
         return `${grade.action} from '${from}' to '${to}' by ${firm} on ${date}`;
     });
 
-    const currentPrice = profile.price;
-    const grahamNum = latestMetrics.grahamNumber;
     let grahamVerdict = 'Graham Number calculation not available.';
-    if (typeof grahamNum === 'number' && grahamNum > 0 && typeof currentPrice === 'number') {
-        if (currentPrice < grahamNum) {
-            grahamVerdict = `The current price of ${currentPrice.toFixed(2)} is below the Graham Number of ${grahamNum.toFixed(2)}, suggesting the stock is undervalued by this metric.`;
+    if (typeof latestMetrics.grahamNumber === 'number' && latestMetrics.grahamNumber > 0 && typeof profile.price === 'number') {
+        if (profile.price < latestMetrics.grahamNumber) {
+            grahamVerdict = `The current price of ${profile.price.toFixed(2)} is below the Graham Number of ${latestMetrics.grahamNumber.toFixed(2)}, suggesting the stock is undervalued by this metric.`;
         } else {
-            grahamVerdict = `The current price of ${currentPrice.toFixed(2)} is significantly above the Graham Number of ${grahamNum.toFixed(2)}, suggesting the stock is overvalued by this metric.`;
+            grahamVerdict = `The current price of ${profile.price.toFixed(2)} is significantly above the Graham Number of ${latestMetrics.grahamNumber.toFixed(2)}, suggesting the stock is overvalued by this metric.`;
         }
     }
 
@@ -2750,62 +2745,36 @@ function _calculateDeepDiveMetrics(data, newsNarrative, institutionalHolders, to
         institutionalOwnershipPercentage: ownershipPercentage > 0 ? `${ownershipPercentage.toFixed(2)}%` : 'N/A',
         insiderTransactionSummary: (() => {
             const rawInsiderTrades = data.insider_trading?.data || [];
-            if (!rawInsiderTrades || rawInsiderTrades.length === 0) {
-                return 'No insider transaction data available for the last 6 months.';
-            }
-
-            const sixMonthsAgo = new Date();
-            sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-
-            let totalBought = 0;
-            let totalSold = 0;
-
+            if (!rawInsiderTrades || rawInsiderTrades.length === 0) return 'No insider transaction data available for the last 6 months.';
+            let totalBought = 0, totalSold = 0;
             rawInsiderTrades.forEach(trade => {
-                const tradeDate = new Date(trade.transactionDate);
-                if (tradeDate >= sixMonthsAgo) {
-                    if (trade.transactionType && trade.transactionType.startsWith('P')) { // P-Purchase
-                        totalBought += trade.securitiesTransacted;
-                    } else if (trade.transactionType && trade.transactionType.startsWith('S')) { // S-Sale
-                        totalSold += trade.securitiesTransacted;
-                    }
+                if (new Date(trade.transactionDate) > new Date(new Date().setMonth(new Date().getMonth() - 6))) {
+                    if (trade.transactionType?.startsWith('P')) totalBought += trade.securitiesTransacted;
+                    else if (trade.transactionType?.startsWith('S')) totalSold += trade.securitiesTransacted;
                 }
             });
-            
-            if (totalBought === 0 && totalSold === 0) {
-                 return 'No open market insider buying or selling has been reported in the last 6 months.';
-            }
-
+            if (totalBought === 0 && totalSold === 0) return 'No open market insider buying or selling has been reported in the last 6 months.';
             const netShares = totalBought - totalSold;
-            if (netShares > 0) {
-                return `Over the last 6 months, insiders were net buyers of ${netShares.toLocaleString()} shares.`;
-            } else if (netShares < 0) {
-                return `Over the last 6 months, insiders were net sellers of ${Math.abs(netShares).toLocaleString()} shares.`;
-            } else {
-                return 'Over the last 6 months, insider buying and selling was balanced.';
-            }
+            return `Over the last 6 months, insiders were net ${netShares > 0 ? 'buyers' : 'sellers'} of ${Math.abs(netShares).toLocaleString()} shares.`;
         })(),
-        topInstitutionalHolders: (() => {
-            if (!institutionalHolders || institutionalHolders.length === 0) {
-                return ['Institutional ownership data not available.'];
-            }
-            const sortedHolders = institutionalHolders.sort((a, b) => b.value - a.value);
-            return sortedHolders.slice(0, 5).map(h => `${h.investorName} (holding value: ${formatLargeNumber(h.value)})`);
-        })(),
+        topInstitutionalHolders: institutionalHolders?.slice(0, 5).map(h => `${h.investorName} (holding value: ${formatLargeNumber(h.value)})`) || ['Institutional ownership data not available.'],
         institutionalOwnershipTimeframe: institutionalOwnershipTimeframe,
+        
+        incomeStatementAnnual: sortedIncome,
+        balanceSheetAnnual: sortedBalanceSheet,
+        cashFlowStatementAnnual: sortedCashFlow,
+
         roeTrend: formatTrend(ratios, 'returnOnEquity'),
         grossMarginTrend: formatTrend(ratios, 'grossProfitMargin'),
         netMarginTrend: formatTrend(ratios, 'netProfitMargin'),
-        revenueTrend: formatLargeNumberTrend(income, 'revenue'),
-        netIncomeTrend: formatLargeNumberTrend(income, 'netIncome'),
-        debtToEquityTrend: formatTrend(ratios, 'debtEquityRatio'),
-        cashFlowVsNetIncome: `Operating Cash Flow (${formatLargeNumber(latestCashFlow.operatingCashFlow)}) vs. Net Income (${formatLargeNumber(latestIncome.netIncome)}).`,
-        dividendYield: latestMetrics.dividendYield ? `${(latestMetrics.dividendYield * 100).toFixed(2)}%` : 'N/A',
-        fcfPayoutRatio: (latestCashFlow.freeCashFlow > 0) ? `${(Math.abs(latestCashFlow.dividendsPaid || 0) / latestCashFlow.freeCashFlow * 100).toFixed(2)}%` : 'N/A',
-        pe_valuation: valuation('peRatio', 'P/E'),
-        ps_valuation: valuation('priceToSalesRatio', 'P/S'),
-        pb_valuation: valuation('pbRatio', 'P/B'),
-        grahamNumber: latestMetrics.grahamNumber ? latestMetrics.grahamNumber.toFixed(2) : 'N/A',
-        grahamVerdict: grahamVerdict,
+
+        valuation: {
+            pe_valuation: valuation('peRatio', 'P/E'),
+            ps_valuation: valuation('priceToSalesRatio', 'P/S'),
+            pb_valuation: valuation('pbRatio', 'P/B'),
+            grahamVerdict: grahamVerdict,
+        },
+        
         latestRiskFactorsSummaries: finalRiskFactorsSummaries,
         latestMdaSummary: finalMdaSummary,
         latest8KSummary: final8KSummary,
@@ -2840,7 +2809,7 @@ async function handleDeepDiveRequest(symbol, forceNew = false) {
         const data = await getFmpStockData(symbol);
         if (!data) throw new Error(`No cached FMP data found for ${symbol}.`);
         
-        const requiredEndpoints = ['profile', 'ratios_annual', 'key_metrics_annual', 'income_statement_annual', 'cash_flow_statement_annual', 'analyst_estimates', 'stock_grade_news'];
+        const requiredEndpoints = ['profile', 'ratios_annual', 'key_metrics_annual', 'income_statement_annual', 'cash_flow_statement_annual', 'balance_sheet_statement_annual', 'analyst_estimates', 'stock_grade_news', 'income_statement_growth_annual'];
         const missingEndpoints = requiredEndpoints.filter(ep => !data[ep] || !data[ep].data || data[ep].data.length === 0);
 
         if (missingEndpoints.length > 0) {
@@ -2894,16 +2863,12 @@ async function handleDeepDiveRequest(symbol, forceNew = false) {
 
 
         let institutionalOwnershipTimeframe = 'Recent filings data.';
-        if (institutionalData && institutionalData.holders && institutionalData.holders.length > 1) {
+        if (institutionalData?.holders?.length > 1) {
             const newestDate = new Date(institutionalData.holders[0].filedAt);
             const oldestDate = new Date(institutionalData.holders[institutionalData.holders.length - 1].filedAt);
             const months = (newestDate.getFullYear() - oldestDate.getFullYear()) * 12 + (newestDate.getMonth() - oldestDate.getMonth());
-            if (months <= 1) {
-                institutionalOwnershipTimeframe = 'Filings from the last month.';
-            } else {
-                institutionalOwnershipTimeframe = `Filings from the last ${months} months.`;
-            }
-        } else if (institutionalData && institutionalData.holders && institutionalData.holders.length === 1) {
+            institutionalOwnershipTimeframe = months <= 1 ? 'Filings from the last month.' : `Filings from the last ${months} months.`;
+        } else if (institutionalData?.holders?.length === 1) {
             institutionalOwnershipTimeframe = 'A single recent filing.';
         }
 
