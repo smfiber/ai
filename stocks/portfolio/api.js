@@ -850,11 +850,11 @@ function _getCompetitorMetricsFromCache(fmpData) {
     };
 
     const ratiosTTM = fmpData.ratios_ttm?.data?.[0] || {};
-    const ratiosAnnual = fmpData.ratios_annual?.data?.[0] || {};
     const keyMetricsTTM = fmpData.key_metrics_ttm?.data?.[0] || {};
     const growthAnnual = fmpData.income_statement_growth_annual?.data?.[0] || {};
+    const ratiosAnnual = fmpData.ratios_annual?.data?.[0] || {};
     
-    const peRatio = ratiosTTM.peRatioTTM;
+    const peRatio = keyMetricsTTM.peRatioTTM ?? ratiosTTM.priceToEarningsRatioTTM;
     const evToEbitda = keyMetricsTTM.evToEbitdaTTM;
 
     return {
@@ -863,10 +863,10 @@ function _getCompetitorMetricsFromCache(fmpData) {
         ev_ebitda: (typeof evToEbitda === 'number' && evToEbitda > 0 && isFinite(evToEbitda)) ? formatMetric(evToEbitda) : 'N/M',
         gross_margin: formatMetric(ratiosTTM.grossProfitMarginTTM, true),
         net_margin: formatMetric(ratiosTTM.netProfitMarginTTM, true),
-        roe: formatMetric(ratiosTTM.returnOnEquityTTM ?? ratiosAnnual.returnOnEquity, true),
-        roa: formatMetric(ratiosTTM.returnOnAssetsTTM ?? ratiosAnnual.returnOnAssets, true),
+        roe: formatMetric(keyMetricsTTM.returnOnEquityTTM ?? ratiosTTM.returnOnEquityTTM ?? ratiosAnnual.returnOnEquity, true),
+        roa: formatMetric(keyMetricsTTM.returnOnAssetsTTM ?? ratiosTTM.returnOnAssetsTTM ?? ratiosAnnual.returnOnAssets, true),
         revenue_growth: formatMetric(growthAnnual.growthRevenue, true),
-        debt_to_equity: formatMetric(ratiosTTM.debtEquityRatioTTM ?? ratiosAnnual.debtEquityRatio),
+        debt_to_equity: formatMetric(keyMetricsTTM.debtToEquityTTM ?? ratiosTTM.debtEquityRatioTTM ?? ratiosAnnual.debtEquityRatio),
     };
 }
 
@@ -882,10 +882,9 @@ async function _fetchLivePeerData(tickers) {
 
     const apiKey = state.fmpApiKey;
 
-    // Helper to create promises that catch their own errors, returning null on failure
-    const makePromise = (url, ticker, type) => callApi(url).catch(e => {
+    const makePromise = (url, ticker, type) => callApi(url).then(res => res[0] || null).catch(e => {
         console.warn(`Failed to fetch ${type} data for peer ${ticker}:`, e);
-        return null; // Return null on failure for this specific peer
+        return null;
     });
 
     const allPromises = tickers.flatMap(ticker => [
@@ -893,7 +892,6 @@ async function _fetchLivePeerData(tickers) {
         makePromise(`https://financialmodelingprep.com/stable/ratios-ttm?symbol=${ticker}&apikey=${apiKey}`, ticker, 'ratios TTM'),
         makePromise(`https://financialmodelingprep.com/stable/key-metrics-ttm?symbol=${ticker}&apikey=${apiKey}`, ticker, 'key metrics TTM'),
         makePromise(`https://financialmodelingprep.com/stable/income-statement-growth?symbol=${ticker}&period=annual&limit=1&apikey=${apiKey}`, ticker, 'income growth'),
-        // Add annual fallbacks for ROE/ROA/Debt-Equity
         makePromise(`https://financialmodelingprep.com/stable/ratios?symbol=${ticker}&period=annual&limit=1&apikey=${apiKey}`, ticker, 'ratios annual')
     ]);
 
@@ -906,13 +904,13 @@ async function _fetchLivePeerData(tickers) {
         const keyMetricsTtmData = results[i * 5 + 2];
         const growthData = results[i * 5 + 3];
         const ratiosAnnualData = results[i * 5 + 4];
-
+        
         liveData[ticker] = {
-            profile: { data: profileData || [] },
-            ratios_ttm: { data: ratiosTtmData || [] },
-            key_metrics_ttm: { data: keyMetricsTtmData || [] },
-            income_statement_growth_annual: { data: growthData || [] },
-            ratios_annual: { data: ratiosAnnualData || [] }
+            profile: { data: profileData ? [profileData] : [] },
+            ratios_ttm: { data: ratiosTtmData ? [ratiosTtmData] : [] },
+            key_metrics_ttm: { data: keyMetricsTtmData ? [keyMetricsTtmData] : [] },
+            income_statement_growth_annual: { data: growthData ? [growthData] : [] },
+            ratios_annual: { data: ratiosAnnualData ? [ratiosAnnualData] : [] }
         };
     });
     
@@ -927,13 +925,6 @@ async function _fetchLivePeerData(tickers) {
  */
 export async function getCompetitorAnalysis(targetSymbol) {
     try {
-        const targetProfileUrl = `https://financialmodelingprep.com/api/v3/profile/${targetSymbol}?apikey=${state.fmpApiKey}`;
-        const targetProfileResponse = await callApi(targetProfileUrl);
-        if (!targetProfileResponse || targetProfileResponse.length === 0) {
-            throw new Error(`Could not fetch profile for target symbol ${targetSymbol}.`);
-        }
-        const targetProfileData = targetProfileResponse[0];
-
         const peersUrl = `https://financialmodelingprep.com/api/v4/stock_peers?symbol=${targetSymbol}&apikey=${state.fmpApiKey}`;
         const peersResponse = await callApi(peersUrl);
         const peerTickers = peersResponse[0]?.peersList;
@@ -946,10 +937,11 @@ export async function getCompetitorAnalysis(targetSymbol) {
         const liveDataMap = await _fetchLivePeerData(allTickersToFetch);
 
         const targetFmpData = liveDataMap[targetSymbol];
-        if (!targetFmpData) {
+        if (!targetFmpData || !targetFmpData.profile?.data?.[0]) {
             throw new Error(`Could not retrieve live data for target stock ${targetSymbol}.`);
         }
-        
+        const targetProfileData = targetFmpData.profile.data[0];
+
         const formatMarketCap = (value) => (typeof value !== 'number' ? 'N/A' : (value / 1e9).toFixed(2));
 
         const peerData = [];
@@ -971,63 +963,77 @@ export async function getCompetitorAnalysis(targetSymbol) {
                     ...formattedMetrics
                 });
 
-                // For aggregation, get the raw numbers
                 const ratiosTTM = fmpData.ratios_ttm?.data?.[0];
                 const keyMetricsTTM = fmpData.key_metrics_ttm?.data?.[0];
                 const growthAnnual = fmpData.income_statement_growth_annual?.data?.[0];
+                const ratiosAnnual = fmpData.ratios_annual?.data?.[0];
 
                 if (typeof profile.mktCap === 'number') metricsForAggregation.marketCap.push(profile.mktCap);
+                const peVal = keyMetricsTTM?.peRatioTTM ?? ratiosTTM?.priceToEarningsRatioTTM;
+                if (typeof peVal === 'number' && isFinite(peVal) && peVal > 0) metricsForAggregation.peRatio.push(peVal);
+                const evEbitdaVal = keyMetricsTTM?.evToEbitdaTTM;
+                if (typeof evEbitdaVal === 'number' && isFinite(evEbitdaVal) && evEbitdaVal > 0) metricsForAggregation.evToEbitda.push(evEbitdaVal);
+                
                 if (ratiosTTM) {
-                    if (typeof ratiosTTM.peRatioTTM === 'number' && isFinite(ratiosTTM.peRatioTTM) && ratiosTTM.peRatioTTM > 0) metricsForAggregation.peRatio.push(ratiosTTM.peRatioTTM);
                     if (typeof ratiosTTM.priceToSalesRatioTTM === 'number' && isFinite(ratiosTTM.priceToSalesRatioTTM)) metricsForAggregation.psRatio.push(ratiosTTM.priceToSalesRatioTTM);
                     if (typeof ratiosTTM.grossProfitMarginTTM === 'number' && isFinite(ratiosTTM.grossProfitMarginTTM)) metricsForAggregation.grossMargin.push(ratiosTTM.grossProfitMarginTTM);
                     if (typeof ratiosTTM.netProfitMarginTTM === 'number' && isFinite(ratiosTTM.netProfitMarginTTM)) metricsForAggregation.netMargin.push(ratiosTTM.netProfitMarginTTM);
-                    if (typeof ratiosTTM.returnOnEquityTTM === 'number' && isFinite(ratiosTTM.returnOnEquityTTM)) metricsForAggregation.roe.push(ratiosTTM.returnOnEquityTTM);
-                    if (typeof ratiosTTM.returnOnAssetsTTM === 'number' && isFinite(ratiosTTM.returnOnAssetsTTM)) metricsForAggregation.roa.push(ratiosTTM.returnOnAssetsTTM);
-                    if (typeof ratiosTTM.debtEquityRatioTTM === 'number' && isFinite(ratiosTTM.debtEquityRatioTTM)) metricsForAggregation.debtToEquity.push(ratiosTTM.debtEquityRatioTTM);
                 }
-                if (keyMetricsTTM && typeof keyMetricsTTM.evToEbitdaTTM === 'number' && isFinite(keyMetricsTTM.evToEbitdaTTM) && keyMetricsTTM.evToEbitdaTTM > 0) {
-                    metricsForAggregation.evToEbitda.push(keyMetricsTTM.evToEbitdaTTM);
-                }
+
+                const roeVal = keyMetricsTTM?.returnOnEquityTTM ?? ratiosTTM?.returnOnEquityTTM ?? ratiosAnnual?.returnOnEquity;
+                if (typeof roeVal === 'number' && isFinite(roeVal)) metricsForAggregation.roe.push(roeVal);
+
+                const roaVal = keyMetricsTTM?.returnOnAssetsTTM ?? ratiosTTM?.returnOnAssetsTTM ?? ratiosAnnual?.returnOnAssets;
+                if (typeof roaVal === 'number' && isFinite(roaVal)) metricsForAggregation.roa.push(roaVal);
+
+                const debtEquityVal = keyMetricsTTM?.debtToEquityTTM ?? ratiosTTM?.debtEquityRatioTTM ?? ratiosAnnual?.debtEquityRatio;
+                if (typeof debtEquityVal === 'number' && isFinite(debtEquityVal)) metricsForAggregation.debtToEquity.push(debtEquityVal);
+
                 if (growthAnnual && typeof growthAnnual.growthRevenue === 'number' && isFinite(growthAnnual.growthRevenue)) {
                     metricsForAggregation.revenueGrowth.push(growthAnnual.growthRevenue);
                 }
-            } else {
-                 console.warn(`Skipping peer ${peerSymbol} due to missing live data or profile.`);
             }
         });
         
-        if (peerData.length === 0) {
-            throw new Error("Failed to gather sufficient live financial data for peer comparison.");
-        }
+        if (peerData.length === 0) throw new Error("Failed to gather sufficient live financial data for peer comparison.");
 
         const largestCompetitor = peerData.reduce((max, p) => (p.market_cap_raw > max.market_cap_raw ? p : max), peerData[0]);
         
-        const calculatedMedians = {
-            pe_ratio: calculateMedian(metricsForAggregation.peRatio),
-            ps_ratio: calculateMedian(metricsForAggregation.psRatio),
-            ev_ebitda: calculateMedian(metricsForAggregation.evToEbitda),
-            gross_margin: calculateMedian(metricsForAggregation.grossMargin),
-            net_margin: calculateMedian(metricsForAggregation.netMargin),
-            roe: calculateMedian(metricsForAggregation.roe),
-            roa: calculateMedian(metricsForAggregation.roa),
-            revenue_growth: calculateMedian(metricsForAggregation.revenueGrowth),
-            debt_to_equity: calculateMedian(metricsForAggregation.debtToEquity),
+        const calculateAverage = (arr) => arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : null;
+
+        const calculatedAggregates = {
+            marketCap: { average: calculateAverage(metricsForAggregation.marketCap), median: calculateMedian(metricsForAggregation.marketCap) },
+            peRatio: { average: calculateAverage(metricsForAggregation.peRatio), median: calculateMedian(metricsForAggregation.peRatio) },
+            evToEbitda: { average: calculateAverage(metricsForAggregation.evToEbitda), median: calculateMedian(metricsForAggregation.evToEbitda) },
+            psRatio: { average: calculateAverage(metricsForAggregation.psRatio), median: calculateMedian(metricsForAggregation.psRatio) },
+            grossMargin: { average: calculateAverage(metricsForAggregation.grossMargin), median: calculateMedian(metricsForAggregation.grossMargin) },
+            netMargin: { average: calculateAverage(metricsForAggregation.netMargin), median: calculateMedian(metricsForAggregation.netMargin) },
+            roe: { average: calculateAverage(metricsForAggregation.roe), median: calculateMedian(metricsForAggregation.roe) },
+            roa: { average: calculateAverage(metricsForAggregation.roa), median: calculateMedian(metricsForAggregation.roa) },
+            revenueGrowth: { average: calculateAverage(metricsForAggregation.revenueGrowth), median: calculateMedian(metricsForAggregation.revenueGrowth) },
+            debtToEquity: { average: calculateAverage(metricsForAggregation.debtToEquity), median: calculateMedian(metricsForAggregation.debtToEquity) },
         };
 
-        const formatMedianMetric = (value, isPercentage = false) => {
+        const formatAggregate = (value, isPercentage = false, is billions = false) => {
             if (value === null || typeof value !== 'number') return 'N/A';
+            if (is billions) return (value / 1e9).toFixed(2);
             if (isPercentage) return `${(value * 100).toFixed(2)}%`;
             return Math.abs(value) > 100 ? value.toFixed(0) : value.toFixed(2);
         };
         
-        const formattedMedians = Object.fromEntries(
-            Object.entries(calculatedMedians).map(([key, value]) => {
-                const isPercent = ['gross_margin', 'net_margin', 'roe', 'roa', 'revenue_growth'].includes(key);
-                return [key, formatMedianMetric(value, isPercent)];
-            })
-        );
-
+        const formattedMedians = {
+            market_cap: formatAggregate(calculatedAggregates.marketCap.median, false, true),
+            pe_ratio: formatAggregate(calculatedAggregates.peRatio.median),
+            ps_ratio: formatAggregate(calculatedAggregates.psRatio.median),
+            ev_ebitda: formatAggregate(calculatedAggregates.evToEbitda.median),
+            gross_margin: formatAggregate(calculatedAggregates.grossMargin.median, true),
+            net_margin: formatAggregate(calculatedAggregates.netMargin.median, true),
+            roe: formatAggregate(calculatedAggregates.roe.median, true),
+            roa: formatAggregate(calculatedAggregates.roa.median, true),
+            revenue_growth: formatAggregate(calculatedAggregates.revenueGrowth.median, true),
+            debt_to_equity: formatAggregate(calculatedAggregates.debtToEquity.median),
+        };
+        
         const comparisonData = {
             target: {
                 name: targetProfileData.companyName,
@@ -1093,17 +1099,19 @@ export async function getPeerMedianMetrics(targetSymbol) {
             if (!fmpData) return;
 
             const ratiosTTM = fmpData.ratios_ttm?.data?.[0];
-            if (!ratiosTTM) return;
+            const keyMetricsTTM = fmpData.key_metrics_ttm?.data?.[0];
             
-            // Push valid, numeric data into arrays for median calculation
-            if (typeof ratiosTTM.peRatioTTM === 'number' && ratiosTTM.peRatioTTM > 0) metrics.peRatio.push(ratiosTTM.peRatioTTM);
-            if (typeof ratiosTTM.priceToSalesRatioTTM === 'number') metrics.psRatio.push(ratiosTTM.priceToSalesRatioTTM);
-            if (typeof ratiosTTM.netProfitMarginTTM === 'number') metrics.netMargin.push(ratiosTTM.netProfitMarginTTM);
-            if (typeof ratiosTTM.returnOnEquityTTM === 'number') metrics.roe.push(ratiosTTM.returnOnEquityTTM);
-            if (typeof ratiosTTM.debtEquityRatioTTM === 'number') metrics.debtToEquity.push(ratiosTTM.debtEquityRatioTTM);
+            if (ratiosTTM) {
+                if (typeof ratiosTTM.priceToSalesRatioTTM === 'number') metrics.psRatio.push(ratiosTTM.priceToSalesRatioTTM);
+                if (typeof ratiosTTM.netProfitMarginTTM === 'number') metrics.netMargin.push(ratiosTTM.netProfitMarginTTM);
+                if (typeof ratiosTTM.returnOnEquityTTM === 'number') metrics.roe.push(ratiosTTM.returnOnEquityTTM);
+                if (typeof ratiosTTM.debtEquityRatioTTM === 'number') metrics.debtToEquity.push(ratiosTTM.debtEquityRatioTTM);
+            }
+            if (keyMetricsTTM && typeof keyMetricsTTM.peRatioTTM === 'number' && keyMetricsTTM.peRatioTTM > 0) {
+                 metrics.peRatio.push(keyMetricsTTM.peRatioTTM);
+            }
         });
 
-        // Format the final results nicely for the prompt.
         const formatMedian = (value, isPercentage = false) => {
             if (value === null) return 'N/A';
             return isPercentage ? `${(value * 100).toFixed(2)}%` : value.toFixed(2);
@@ -1119,7 +1127,7 @@ export async function getPeerMedianMetrics(targetSymbol) {
 
     } catch (error) {
         console.error(`Could not calculate peer medians for ${targetSymbol}:`, error);
-        return null; // Return null on failure so the deep dive can proceed without it.
+        return null;
     }
 }
 
