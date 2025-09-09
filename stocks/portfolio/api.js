@@ -882,7 +882,7 @@ async function _fetchLivePeerData(peerTickers) {
     const apiKey = state.fmpApiKey;
 
     // Profile can usually be fetched in bulk reliably
-    const profileUrl = `https://financialmodelingprep.com/stable/profile?symbol=${peersString}&apikey=${apiKey}`;
+    const profileUrl = `https://financialmodelingprep.com/api/v3/profile/${peersString}?apikey=${apiKey}`;
 
     // Helper to create promises that catch their own errors
     const makePromise = (url, ticker, type) => callApi(url).catch(e => {
@@ -897,7 +897,7 @@ async function _fetchLivePeerData(peerTickers) {
     });
 
     const ratiosAnnualPromises = peerTickers.map(ticker => {
-        const url = `https://financialmodelingprep.com/stable/ratios-ttm?symbol=${ticker}&period=annual&limit=5&apikey=${apiKey}`;
+        const url = `https://financialmodelingprep.com/stable/ratios?symbol=${ticker}&period=annual&limit=5&apikey=${apiKey}`;
         return makePromise(url, ticker, 'ratios annual');
     });
 
@@ -927,7 +927,7 @@ async function _fetchLivePeerData(peerTickers) {
     });
 
     const gradePromises = peerTickers.map(ticker => {
-        const url = `https://financialmodelingprep.com/stable/grades-historical?symbol=${ticker}&limit=20&apikey=${apiKey}`;
+        const url = `https://financialmodelingprep.com/api/v4/historical-rating/${ticker}?limit=20&apikey=${apiKey}`;
         return makePromise(url, ticker, 'grades');
     });
 
