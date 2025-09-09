@@ -185,7 +185,7 @@ async function handleRefreshFmpData(symbol) {
 
             loadingMessage.textContent = `Fetching FMP Data: ${endpoint.name.replace(/_/g, ' ')}...`;
             
-            const version = endpoint.version || 'v3';
+            const version = endpoint.version || 'v4';
             const base = version === 'stable'
                 ? `https://financialmodelingprep.com/${version}/`
                 : `https://financialmodelingprep.com/api/${version}/`;
@@ -487,7 +487,7 @@ async function handleResearchSubmit(e) {
         
         document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Fetching overview for ${symbol}...`;
         
-        const profileUrl = `https://financialmodelingprep.com/api/v3/profile/${symbol}?apikey=${state.fmpApiKey}`;
+        const profileUrl = `https://financialmodelingprep.com/stable/profile/${symbol}?apikey=${state.fmpApiKey}`;
         const profileData = await callApi(profileUrl);
 
         if (!profileData || profileData.length === 0 || !profileData[0].symbol) {
@@ -770,7 +770,7 @@ async function handleFetchNews(symbol) {
         const stockData = await getFmpStockData(symbol);
         const profile = stockData?.profile?.[0] || {};
         const companyName = profile.companyName || symbol;
-        const url = `https://financialmodelingprep.com/api/v3/stock_news?tickers=${symbol}&limit=50&apikey=${state.fmpApiKey}`;
+        const url = `https://financialmodelingprep.com/stable/news/stock-latest?page=0&limit=20&apikey=${state.fmpApiKey}`;
         
         const newsData = await callApi(url);
         const validArticles = filterValidNews(newsData);
@@ -2089,7 +2089,7 @@ async function handleUntouchablesAnalysis(contextName, contextType) {
 
 export async function displayIndustryScreener() {
     try {
-        const url = `https://financialmodelingprep.com/api/v3/industries-list?apikey=${state.fmpApiKey}`;
+        const url = `https://financialmodelingprep.com/stable/available-sectors?apikey=${state.fmpApiKey}`;
         const industryData = await callApi(url);
         if (Array.isArray(industryData)) {
             // FIX: Handle both object array and string array formats from the API.
