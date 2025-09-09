@@ -160,7 +160,7 @@ async function handleRefreshFmpData(symbol) {
             { name: 'ratios_annual', path: 'ratios', params: 'period=annual&limit=10', version: 'stable', symbolAsQuery: true },
             { name: 'ratios_ttm', path: 'ratios-ttm', version: 'stable', symbolAsQuery: true },
             { name: 'stock_grade_news', path: 'grades-historical', version: 'stable', symbolAsQuery: true },
-            { name: 'analyst_estimates', path: 'financial-estimates', version: 'stable', symbolAsQuery: true },
+            { name: 'analyst_estimates', path: 'analyst-estimates', version: 'v3', symbolAsQuery: false },
             { name: 'company_core_information', path: 'company-core-information', version: 'v4', symbolAsQuery: true },
             { name: 'insider_trading', path: 'insider-trading', version: 'v4', symbolAsQuery: true, params: 'page=0' }
         ];
