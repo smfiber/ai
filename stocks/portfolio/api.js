@@ -882,7 +882,7 @@ async function _fetchLivePeerData(tickers) {
 
     const apiKey = state.fmpApiKey;
 
-    const makePromise = (url, ticker, type) => callApi(url).then(res => res[0] || null).catch(e => {
+    const makePromise = (url, ticker, type) => callApi(url).then(res => Array.isArray(res) ? res[0] : res || null).catch(e => {
         console.warn(`Failed to fetch ${type} data for peer ${ticker}:`, e);
         return null;
     });
