@@ -205,7 +205,7 @@ export async function generateMorningBriefing(portfolioStocks) {
     const dataPromises = portfolioStocks.map(stock => getFmpStockData(stock.ticker));
     
     const tickersString = portfolioStocks.map(s => s.ticker).join(',');
-    const newsUrl = `https://financialmodelingprep.com/stable/news/stock-latest?symbols=${tickersString}&limit=20&apikey=${state.fmpApiKey}`;
+    const newsUrl = `https://financialmodelingprep.com/stable/news/general-latest?symbols=${tickersString}&limit=20&apikey=${state.fmpApiKey}`;
     const newsPromise = callApi(newsUrl);
 
     const [allStockData, allNews] = await Promise.all([
