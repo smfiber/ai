@@ -1014,9 +1014,9 @@ export async function getCompetitorAnalysis(targetSymbol) {
             debtToEquity: { average: calculateAverage(metricsForAggregation.debtToEquity), median: calculateMedian(metricsForAggregation.debtToEquity) },
         };
 
-        const formatAggregate = (value, isPercentage = false, is billions = false) => {
+        const formatAggregate = (value, isPercentage = false, isBillions = false) => {
             if (value === null || typeof value !== 'number') return 'N/A';
-            if (is billions) return (value / 1e9).toFixed(2);
+            if (isBillions) return (value / 1e9).toFixed(2);
             if (isPercentage) return `${(value * 100).toFixed(2)}%`;
             return Math.abs(value) > 100 ? value.toFixed(0) : value.toFixed(2);
         };
@@ -1127,7 +1127,7 @@ export async function getPeerMedianMetrics(targetSymbol) {
 
     } catch (error) {
         console.error(`Could not calculate peer medians for ${targetSymbol}:`, error);
-        return null;
+        return null; // Return null on failure so the deep dive can proceed without it.
     }
 }
 
