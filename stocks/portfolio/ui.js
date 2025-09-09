@@ -157,6 +157,7 @@ async function handleRefreshFmpData(symbol) {
             { name: 'cash_flow_statement_annual', path: 'cash-flow-statement', params: 'period=annual&limit=10', version: 'stable', symbolAsQuery: true },
             { name: 'cash_flow_statement_growth_annual', path: 'cash-flow-statement-growth', params: 'period=annual&limit=5', version: 'stable', symbolAsQuery: true },
             { name: 'key_metrics_annual', path: 'key-metrics', params: 'period=annual&limit=10', version: 'stable', symbolAsQuery: true },
+            { name: 'key_metrics_ttm', path: 'key-metrics-ttm', version: 'stable', symbolAsQuery: true },
             { name: 'ratios_annual', path: 'ratios', params: 'period=annual&limit=10', version: 'stable', symbolAsQuery: true },
             { name: 'ratios_ttm', path: 'ratios-ttm', version: 'stable', symbolAsQuery: true },
             { name: 'stock_grade_news', path: 'grades-historical', version: 'stable', symbolAsQuery: true },
@@ -3019,21 +3020,28 @@ async function handleInvestmentThesisRequest(symbol, forceNew = false) {
         openModal(CONSTANTS.MODAL_LOADING);
         const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
         
-        loadingMessage.textContent = `Gathering live data for Investment Thesis on ${symbol}...`;
+        loadingMessage.textContent = `Gathering cached data for Investment Thesis on ${symbol}...`;
         
-        const dataPromise = getLiveMetricsForSymbol(symbol);
+        const dataPromise = getFmpStockData(symbol);
         const peerMediansPromise = getPeerMedianMetrics(symbol);
         
         const [data, peerMedians] = await Promise.all([dataPromise, peerMediansPromise]);
 
-        if (!data?.profile?.data?.[0] || !data?.ratios_ttm?.data?.[0]) {
-             throw new Error(`Required live profile or TTM ratio data could not be fetched for ${symbol}. Please check the ticker and API key.`);
+        if (!data?.profile?.data?.[0] || !data?.ratios_ttm?.data?.[0] || !data?.key_metrics_annual?.data?.[0] || !data?.income_statement_annual?.data?.[0] || !data?.cash_flow_statement_annual?.data?.[0]) {
+             const missing = [];
+             if (!data?.profile?.data?.[0]) missing.push('profile');
+             if (!data?.ratios_ttm?.data?.[0]) missing.push('ratios_ttm');
+             if (!data?.key_metrics_annual?.data?.[0]) missing.push('key_metrics_annual');
+             if (!data?.income_statement_annual?.data?.[0]) missing.push('income_statement_annual');
+             if (!data?.cash_flow_statement_annual?.data?.[0]) missing.push('cash_flow_statement_annual');
+             throw new Error(`Required cached data (${missing.join(', ')}) could not be found for ${symbol}. Please use the 'Refresh' button for this stock first.`);
         }
 
         const profile = data.profile.data[0];
-        const keyMetricsAnnual = data.key_metrics_annual?.data || [];
+        const keyMetricsAnnual = data.key_metrics_annual.data || [];
+        const keyMetricsTTM = data.key_metrics_ttm?.data?.[0] || {};
         const ratiosTTM = data.ratios_ttm.data[0] || {};
-        const ratiosAnnual = data.ratios_annual?.data || [];
+        const ratiosAnnual = data.ratios_annual.data || [];
         const incomeStatements = data.income_statement_annual?.data;
         const cashFlows = data.cash_flow_statement_annual?.data;
         const incomeGrowth = data.income_statement_growth_annual?.data;
@@ -3047,7 +3055,7 @@ async function handleInvestmentThesisRequest(symbol, forceNew = false) {
         const isProfitable = latestIncome.netIncome > 0 ? "Yes, the company is profitable." : "No, the company is not profitable.";
         const isCashFlowPositive = latestCashFlow.freeCashFlow > 0 ? "Yes, it generates positive free cash flow." : "No, it does not generate positive free cash flow.";
         
-        const debtToEquity = ratiosTTM.debtEquityRatioTTM;
+        const debtToEquity = keyMetricsTTM.debtToEquityTTM ?? ratiosTTM.debtEquityRatioTTM;
         const manageableDebt = (typeof debtToEquity === 'number' && debtToEquity > 0 && debtToEquity < 1.5)
             ? "Yes, the debt-to-equity ratio is manageable."
             : "No, the debt load is high, unconventional, or indicates negative equity.";
