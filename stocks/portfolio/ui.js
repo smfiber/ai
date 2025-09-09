@@ -3075,6 +3075,17 @@ async function handleInvestmentThesisRequest(symbol, forceNew = false) {
                 hasRecentUpgrades = "Yes, there has been at least one analyst upgrade in the last 6 months.";
             }
         }
+        
+        let grahamVerdict = 'A deep value check using the Graham Number could not be performed.';
+        const gn = latestMetricsAnnual.grahamNumber;
+        const cp = profile.price;
+        if (typeof gn === 'number' && gn > 0 && typeof cp === 'number') {
+            if (cp < gn) {
+                grahamVerdict = `The current price of ${cp.toFixed(2)} is below the Graham Number of ${gn.toFixed(2)}, suggesting potential undervaluation based on this strict metric.`;
+            } else {
+                grahamVerdict = `The current price of ${cp.toFixed(2)} is above the Graham Number of ${gn.toFixed(2)}, suggesting the stock is overvalued by this metric.`;
+            }
+        }
 
         const calculateAverage = (items, key) => {
             const values = items.slice(0, 5).map(i => i[key]).filter(v => typeof v === 'number' && v > 0);
@@ -3085,7 +3096,7 @@ async function handleInvestmentThesisRequest(symbol, forceNew = false) {
 
         const payloadData = {
             currentPrice: formatVal(profile.price),
-            grahamNumber: formatVal(latestMetricsAnnual.grahamNumber),
+            grahamVerdict: grahamVerdict,
             isProfitable,
             isCashFlowPositive,
             manageableDebt,
