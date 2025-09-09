@@ -427,6 +427,68 @@ Raw Text from "MD&A" section:
 ---
 `.trim();
 
+export const SEC_8K_SUMMARY_PROMPT = `
+Role: You are an expert financial analyst AI. Your mission is to analyze the text from a company's 8-K filing and generate a concise, easy-to-understand summary of all disclosed material events for a potential investor.
+
+Instructions:
+
+Identify All Material Events: Scan the entire document and identify each distinct material event. Pay close attention to disclosures filed under specific 8-K Items, such as:
+
+Business & Operations: Entry into/termination of a material definitive agreement (Item 1.01), bankruptcy (Item 1.03), completion of acquisition or disposition of assets (Item 2.01).
+
+Financial Information: Results of operations and financial condition (Item 2.02), creation of a direct financial obligation (Item 2.03), material impairments (Item 2.06).
+
+Management & Governance: Departure or appointment of directors or principal officers (Item 5.02), amendments to articles of incorporation or bylaws (Item 5.03).
+
+Explain the Impact: For each event, do not just state what happened. Briefly explain its significance or potential impact on the company's finances, leadership, or strategy from an investor's perspective.
+
+Format as a Bulleted List:
+
+Use one clear, concise bullet point per distinct material event.
+
+Do not impose a fixed number of bullet points; the goal is to cover all material events disclosed in the filing, however many there may be.
+
+If the filing contains no new material information (e.g., it is purely administrative), return a single bullet point stating: * No new material events were disclosed in this filing.
+
+Be Concise and Professional: Ignore boilerplate language, forward-looking statement disclaimers, and legal jargon. Maintain a neutral, objective tone.
+
+Output Only the Summary: Return ONLY the markdown-formatted bulleted list. Do not add any introductory or concluding text.
+
+Raw Text from "8-K" filing:
+---
+{sectionText}
+---
+`.trim();
+
+export const SEC_10K_SUMMARY_PROMPT = `
+Role: You are an expert financial analyst AI. Your task is to read the text from a company's full 10-K filing and create a prioritized, categorized, and concise summary of the most critical takeaways for a potential investor.
+
+Instructions:
+
+Identify Key Themes: Scan the entire document, paying close attention to sections like "Business," "Risk Factors," and "Management's Discussion and Analysis (MD&A)."
+
+Prioritize: Identify the top 5-7 most material takeaways for an investor.
+
+Categorize: Assign each takeaway to one of the following categories: Business Strategy, Financial Performance, Key Risks, or Management Outlook.
+
+Focus: Filter out boilerplate language and concentrate on specific commentary regarding the company's competitive position, financial results, primary risks, and future guidance or challenges.
+
+Format: For each takeaway, create a single bullet point in the format: **[Category]:** [Description of the takeaway and its potential impact on the business.]
+
+Constraints: The entire summary must be 5-7 bullet points. Return ONLY the markdown summary without any introductory or concluding text.
+
+Example of Desired Output:
+**Business Strategy:** The company is focusing on expanding its direct-to-consumer channel, which now accounts for 30% of total revenue.
+**Financial Performance:** Full-year revenue increased by 15%, primarily driven by strong performance in the cloud segment, though overall net margin declined slightly due to restructuring charges.
+**Key Risks:** The company identifies the loss of a key supplier and increased competition in international markets as primary risks to future growth.
+**Management Outlook:** Management expressed caution for the upcoming fiscal year, citing macroeconomic headwinds, but expects new product launches in the second half to improve performance.
+
+Raw Text from "10-K" filing:
+---
+{sectionText}
+---
+`.trim();
+
 export const INDUSTRY_CAPITAL_ALLOCATORS_PROMPT = `
 	Act as a discerning investment strategist, channeling the analytical rigor and long-term perspective of firms like Berkshire Hathaway. Your analysis must be in the style of a detailed shareholder letter and based *only* on the provided financial data for {companyName}. **Be critical; praise should be reserved for exceptional, data-backed performance.**
 
