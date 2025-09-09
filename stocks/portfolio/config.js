@@ -1066,3 +1066,41 @@ Generate the following forward-looking analysis report:
 
 **Disclaimer:** This is a model-based analysis and not financial advice. Projections are based on estimates and historical data that may not be indicative of future results.
 `.trim();
+
+export const SEC_FILING_SYNTHESIS_PROMPT = `
+Role: You are a catalyst-driven investment analyst. Your task is to synthesize disparate information from SEC filings and ownership data to identify a potential "edge" or a significant "catalyst" for {companyName} ({tickerSymbol}). Your analysis must be based *exclusively* on the provided data.
+
+Data Instructions:
+- You will be provided a JSON object containing institutional ownership data, a summary of recent insider transactions, and AI-generated summaries of the latest 8-K, 10-Q (MD&A), and 10-K filings.
+- Your goal is to find connections, divergences, or confirmations between what management is saying, what insiders are doing, and who owns the company.
+
+JSON Data:
+{jsonData}
+
+---
+
+Generate the following report in markdown format:
+
+# Catalyst & Edge Analysis: {companyName} ({tickerSymbol})
+
+## 1. Ownership & Insider View
+- **Institutional Landscape:** Based on the list of top holders, what is the character of the ownership base? Is it concentrated with long-term funds, indexed, or are there notable activist investors present?
+- **Insider Posture:** What does the recent insider transaction summary suggest? Are key executives buying, selling, or inactive?
+
+## 2. Narrative from Filings
+- **Management's Outlook (from 10-Q MD&A):** What is the primary narrative management is communicating about its recent performance and future outlook?
+- **Material Events (from 8-K):** What are the most recent, significant events the company has formally disclosed?
+- **Key Stated Risks (from 10-K):** What are the top risks the company has identified in its most recent annual report?
+
+## 3. The Synthesized Thesis: Edge, Catalyst, or Red Flag?
+This is the core of your analysis. Synthesize the points from the sections above to form a cohesive thesis. Look for contradictions or confirmations.
+
+- **Identify the Core Tension or Alignment:** Is there a disconnect between what insiders are doing and what management is saying? Do the stated risks align with recent material events? Does the ownership base seem to be betting on a different outcome than the public narrative suggests?
+- **Formulate the Thesis:** Based on your analysis of the tension, clearly state the potential edge, catalyst, or red flag.
+    - **Example (Catalyst):** "A well-known activist fund has appeared as a top 5 holder, and management's recent 10-Q mentioned they are 'exploring strategic alternatives'. This combination strongly suggests a potential sale or spin-off is being actively considered."
+    - **Example (Edge):** "Despite management's cautious tone in the MD&A and a focus on competitive risks in the 10-K, insiders have been net buyers over the last six months. This divergence suggests that insiders may see a durable advantage or upcoming positive development that is not yet reflected in the public narrative."
+    - **Example (Red Flag):** "The recent 8-K announced the unexpected departure of the CFO, which coincides with a period of heavy insider selling. This raises significant concerns about internal controls or upcoming negative financial news, despite a neutral outlook in the last 10-Q."
+
+## 4. Key Risks to This Thesis
+- What could prove this synthesized thesis wrong? (e.g., "The activist investor could be passive," "The insider buying could be part of a pre-arranged trading plan," or "The new product mentioned in the 10-Q may fail to gain traction.")
+`.trim();
