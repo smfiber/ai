@@ -3177,12 +3177,39 @@ async function handleForwardLookingAnalysis(symbol, forceNew = false) {
         const averagePe = calculateAverage(keyMetricsAnnual, 'peRatio');
         const forwardPe = (currentPrice && forwardEps > 0) ? (currentPrice / forwardEps) : null;
         const pegRatio = (forwardPe && typeof estimatedEpsGrowth === 'number' && estimatedEpsGrowth > 0) ? (forwardPe / (estimatedEpsGrowth * 100)) : null;
-        const projectedPrice = (forwardEps && averagePe) ? (forwardEps * averagePe) : null;
+        
+        let valuation_metric_used = 'N/A';
+        let average_valuation_multiple = null;
+        let projection_metric_name = 'N/A';
+        let forward_metric_per_share = null;
+        let projectedPrice = null;
+
+        if (averagePe) {
+            valuation_metric_used = 'P/E';
+            average_valuation_multiple = averagePe;
+            projection_metric_name = 'EPS';
+            forward_metric_per_share = forwardEps;
+            projectedPrice = forwardEps * averagePe;
+        } else {
+            const averagePs = calculateAverage(keyMetricsAnnual, 'priceToSalesRatio');
+            if (averagePs && forwardRevenue && profile.sharesOutstanding > 0) {
+                valuation_metric_used = 'P/S';
+                average_valuation_multiple = averagePs;
+                projection_metric_name = 'Revenue';
+                const forwardRevenuePerShare = forwardRevenue / profile.sharesOutstanding;
+                forward_metric_per_share = forwardRevenuePerShare;
+                projectedPrice = forwardRevenuePerShare * averagePs;
+            }
+        }
+        
         const projectedUpside = (projectedPrice && currentPrice > 0) ? ((projectedPrice / currentPrice) - 1) : null;
 
         const payloadData = {
             currentPrice: formatVal(currentPrice),
-            average_pe: formatVal(averagePe),
+            average_valuation_multiple: formatVal(average_valuation_multiple),
+            valuation_metric_used: valuation_metric_used,
+            projection_metric_name: projection_metric_name,
+            forward_metric_per_share: formatVal(forward_metric_per_share),
             forward_pe: formatVal(forwardPe),
             peg_ratio: formatVal(pegRatio),
             forward_eps: formatVal(forwardEps),
