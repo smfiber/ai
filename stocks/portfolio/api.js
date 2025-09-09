@@ -837,31 +837,30 @@ export async function generateNewsSummary(ticker, companyName) {
 }
 
 /**
- * [NEW] Extracts and formats key metrics for a single competitor from cached FMP data.
- * @param {object} fmpData The full cached FMP data object for a single stock.
+ * Extracts and formats key metrics for a single competitor from fetched FMP data.
+ * @param {object} fmpData The full FMP data object for a single stock.
  * @returns {object} An object containing key financial metrics for the peer analysis.
  */
 function _getCompetitorMetricsFromCache(fmpData) {
-    // Helper to format numbers consistently for the AI prompt
     const formatMetric = (value, isPercentage = false) => {
-        if (typeof value !== 'number') return 'N/A';
+        if (typeof value !== 'number' || !isFinite(value)) return 'N/A';
         const num = Number(value);
         if (isPercentage) return `${(num * 100).toFixed(2)}%`;
         return Math.abs(num) > 100 ? num.toFixed(0) : num.toFixed(2);
     };
 
     const ratiosTTM = fmpData.ratios_ttm?.data?.[0] || {};
-    const ratiosAnnual = fmpData.ratios_annual?.data?.[0] || {}; // Get latest annual
+    const ratiosAnnual = fmpData.ratios_annual?.data?.[0] || {};
     const keyMetricsTTM = fmpData.key_metrics_ttm?.data?.[0] || {};
     const growthAnnual = fmpData.income_statement_growth_annual?.data?.[0] || {};
     
     const peRatio = ratiosTTM.peRatioTTM;
-    const evToEbitda = keyMetricsTTM.evToEBITDATTM;
+    const evToEbitda = keyMetricsTTM.evToEbitdaTTM;
 
     return {
-        pe_ratio: (typeof peRatio === 'number' && peRatio > 0) ? formatMetric(peRatio) : 'N/M',
+        pe_ratio: (typeof peRatio === 'number' && peRatio > 0 && isFinite(peRatio)) ? formatMetric(peRatio) : 'N/M',
         ps_ratio: formatMetric(ratiosTTM.priceToSalesRatioTTM),
-        ev_ebitda: (typeof evToEbitda === 'number' && evToEbitda > 0) ? formatMetric(evToEbitda) : 'N/M',
+        ev_ebitda: (typeof evToEbitda === 'number' && evToEbitda > 0 && isFinite(evToEbitda)) ? formatMetric(evToEbitda) : 'N/M',
         gross_margin: formatMetric(ratiosTTM.grossProfitMarginTTM, true),
         net_margin: formatMetric(ratiosTTM.netProfitMarginTTM, true),
         roe: formatMetric(ratiosTTM.returnOnEquityTTM ?? ratiosAnnual.returnOnEquity, true),
@@ -871,213 +870,149 @@ function _getCompetitorMetricsFromCache(fmpData) {
     };
 }
 
+
 /**
- * [NEW] Fetches live FMP data for a list of peer tickers.
- * @param {Array<string>} peerTickers - An array of ticker symbols.
+ * Fetches live FMP data for a list of peer tickers. This function is designed for resilience,
+ * making individual API calls for each ticker to prevent one bad ticker from failing the entire batch.
+ * @param {Array<string>} tickers - An array of ticker symbols.
  * @returns {Promise<object>} A promise that resolves to an object mapping tickers to their live data.
  */
-async function _fetchLivePeerData(peerTickers) {
-    if (!peerTickers || peerTickers.length === 0) return {};
+async function _fetchLivePeerData(tickers) {
+    if (!tickers || tickers.length === 0) return {};
 
-    const peersString = peerTickers.join(',');
     const apiKey = state.fmpApiKey;
 
-    // Profile can usually be fetched in bulk reliably
-    const profileUrl = `https://financialmodelingprep.com/api/v3/profile/${peersString}?apikey=${apiKey}`;
-
-    // Helper to create promises that catch their own errors
+    // Helper to create promises that catch their own errors, returning null on failure
     const makePromise = (url, ticker, type) => callApi(url).catch(e => {
         console.warn(`Failed to fetch ${type} data for peer ${ticker}:`, e);
-        return []; // Return empty array on failure for this specific peer
+        return null; // Return null on failure for this specific peer
     });
 
-    // Define promises for endpoints that are more reliable when called individually
-    const ratiosTtmPromises = peerTickers.map(ticker => {
-        const url = `https://financialmodelingprep.com/stable/ratios-ttm?symbol=${ticker}&apikey=${apiKey}`;
-        return makePromise(url, ticker, 'ratios TTM');
-    });
-
-    const ratiosAnnualPromises = peerTickers.map(ticker => {
-        const url = `https://financialmodelingprep.com/stable/ratios?symbol=${ticker}&period=annual&limit=5&apikey=${apiKey}`;
-        return makePromise(url, ticker, 'ratios annual');
-    });
-
-    const keyMetricsAnnualPromises = peerTickers.map(ticker => {
-        const url = `https://financialmodelingprep.com/stable/key-metrics?symbol=${ticker}&period=annual&limit=5&apikey=${apiKey}`;
-        return makePromise(url, ticker, 'key metrics annual');
-    });
-
-    const keyMetricsTtmPromises = peerTickers.map(ticker => {
-        const url = `https://financialmodelingprep.com/stable/key-metrics-ttm?symbol=${ticker}&apikey=${apiKey}`;
-        return makePromise(url, ticker, 'key metrics TTM');
-    });
-
-    const growthPromises = peerTickers.map(ticker => {
-        const url = `https://financialmodelingprep.com/stable/income-statement-growth?symbol=${ticker}&period=annual&limit=5&apikey=${apiKey}`;
-        return makePromise(url, ticker, 'income growth');
-    });
-    
-    const incomePromises = peerTickers.map(ticker => {
-        const url = `https://financialmodelingprep.com/stable/income-statement?symbol=${ticker}&period=annual&limit=5&apikey=${apiKey}`;
-        return makePromise(url, ticker, 'income statement annual');
-    });
-
-    const cashflowPromises = peerTickers.map(ticker => {
-        const url = `https://financialmodelingprep.com/stable/cash-flow-statement?symbol=${ticker}&period=annual&limit=5&apikey=${apiKey}`;
-        return makePromise(url, ticker, 'cash flow annual');
-    });
-
-    const gradePromises = peerTickers.map(ticker => {
-        const url = `https://financialmodelingprep.com/api/v4/historical-rating/${ticker}?limit=20&apikey=${apiKey}`;
-        return makePromise(url, ticker, 'grades');
-    });
-
-
-    const [profiles, allRatiosTtm, allRatiosAnnual, allKeyMetricsAnnual, allKeyMetricsTtm, allGrowthData, allIncomeData, allCashflowData, allGradeData] = await Promise.all([
-        callApi(profileUrl), // Keep bulk profile fetch
-        Promise.all(ratiosTtmPromises),
-        Promise.all(ratiosAnnualPromises),
-        Promise.all(keyMetricsAnnualPromises),
-        Promise.all(keyMetricsTtmPromises),
-        Promise.all(growthPromises),
-        Promise.all(incomePromises),
-        Promise.all(cashflowPromises),
-        Promise.all(gradePromises)
+    const allPromises = tickers.flatMap(ticker => [
+        makePromise(`https://financialmodelingprep.com/api/v3/profile/${ticker}?apikey=${apiKey}`, ticker, 'profile'),
+        makePromise(`https://financialmodelingprep.com/stable/ratios-ttm?symbol=${ticker}&apikey=${apiKey}`, ticker, 'ratios TTM'),
+        makePromise(`https://financialmodelingprep.com/stable/key-metrics-ttm?symbol=${ticker}&apikey=${apiKey}`, ticker, 'key metrics TTM'),
+        makePromise(`https://financialmodelingprep.com/stable/income-statement-growth?symbol=${ticker}&period=annual&limit=1&apikey=${apiKey}`, ticker, 'income growth'),
+        // Add annual fallbacks for ROE/ROA/Debt-Equity
+        makePromise(`https://financialmodelingprep.com/stable/ratios?symbol=${ticker}&period=annual&limit=1&apikey=${apiKey}`, ticker, 'ratios annual')
     ]);
 
-    // Map the arrays of results back to their respective tickers
+    const results = await Promise.all(allPromises);
+
     const liveData = {};
-    peerTickers.forEach((ticker, index) => {
-        const profileData = Array.isArray(profiles) ? profiles.find(p => p.symbol === ticker) : null;
-        // Individual FMP calls often return an array with a single object. Get the first element.
-        const ratiosTtmData = Array.isArray(allRatiosTtm[index]) ? allRatiosTtm[index][0] : null;
-        const keyMetricsTtmData = Array.isArray(allKeyMetricsTtm[index]) ? allKeyMetricsTtm[index][0] : null;
-        
+    tickers.forEach((ticker, i) => {
+        const profileData = results[i * 5];
+        const ratiosTtmData = results[i * 5 + 1];
+        const keyMetricsTtmData = results[i * 5 + 2];
+        const growthData = results[i * 5 + 3];
+        const ratiosAnnualData = results[i * 5 + 4];
+
         liveData[ticker] = {
-            profile: { data: profileData ? [profileData] : [] },
-            ratios_ttm: { data: ratiosTtmData ? [ratiosTtmData] : [] },
-            ratios_annual: { data: allRatiosAnnual[index] || [] },
-            key_metrics_annual: { data: allKeyMetricsAnnual[index] || [] },
-            key_metrics_ttm: { data: keyMetricsTtmData ? [keyMetricsTtmData] : [] },
-            income_statement_growth_annual: { data: allGrowthData[index] || [] },
-            income_statement_annual: { data: allIncomeData[index] || [] },
-            cash_flow_statement_annual: { data: allCashflowData[index] || [] },
-            stock_grade_news: { data: allGradeData[index] || [] }
+            profile: { data: profileData || [] },
+            ratios_ttm: { data: ratiosTtmData || [] },
+            key_metrics_ttm: { data: keyMetricsTtmData || [] },
+            income_statement_growth_annual: { data: growthData || [] },
+            ratios_annual: { data: ratiosAnnualData || [] }
         };
     });
-
+    
     return liveData;
 }
 
 
 /**
- * Finds competitors for a given stock, fetches comparative data,
- * and generates a group analysis summary using an AI.
- * @param {string} targetSymbol The ticker symbol of the company to analyze.
- * @returns {Promise<string|null>} A markdown string of the competitor analysis, or null if it fails.
+ * Finds competitors, fetches comparative data, and generates a group analysis.
+ * @param {string} targetSymbol The ticker symbol to analyze.
+ * @returns {Promise<string|null>} A markdown string of the analysis.
  */
 export async function getCompetitorAnalysis(targetSymbol) {
     try {
-        // 1. Fetch the target company's profile to get its industry for context.
-        const targetProfileUrl = `https://financialmodelingprep.com/stable/profile?symbol=${targetSymbol}&apikey=${state.fmpApiKey}`;
+        const targetProfileUrl = `https://financialmodelingprep.com/api/v3/profile/${targetSymbol}?apikey=${state.fmpApiKey}`;
         const targetProfileResponse = await callApi(targetProfileUrl);
         if (!targetProfileResponse || targetProfileResponse.length === 0) {
-            throw new Error(`Could not fetch profile for target symbol ${targetSymbol} to determine industry.`);
+            throw new Error(`Could not fetch profile for target symbol ${targetSymbol}.`);
         }
         const targetProfileData = targetProfileResponse[0];
-        const targetIndustry = targetProfileData.industry;
-        const targetName = targetProfileData.companyName;
 
-        // 2. Fetch the broad list of potential peer tickers from FMP.
         const peersUrl = `https://financialmodelingprep.com/api/v4/stock_peers?symbol=${targetSymbol}&apikey=${state.fmpApiKey}`;
         const peersResponse = await callApi(peersUrl);
-        let candidatePeers = peersResponse[0]?.peersList;
-        if (!candidatePeers || candidatePeers.length === 0) {
+        const peerTickers = peersResponse[0]?.peersList;
+        if (!peerTickers || peerTickers.length === 0) {
             return "No peer data could be found for comparison.";
         }
-        
-        // 3. Use AI to filter the broad list down to relevant competitors.
-        const filteringPrompt = `
-            Role: You are a financial analyst. Your task is to filter a list of stock tickers to find direct competitors.
-            Task: Given a target company, its industry, and a list of candidate tickers, return a JSON array containing only the tickers from the candidate list that are direct competitors in the same primary industry.
-            - Target Company: ${targetName}
-            - Industry: "${targetIndustry}"
-            - Candidate Tickers: ${JSON.stringify(candidatePeers)}
-            Return ONLY the JSON array of ticker strings. Do not include any other text, explanation, or markdown.
-            Example output: ["TICKER1", "TICKER2", "TICKER3"]
-        `.trim();
 
-        const filteredPeersJson = await callGeminiApi(filteringPrompt);
-        let filteredPeerTickers;
-        try {
-            // Clean the response from the AI which might include markdown ```json
-            const cleanedJson = filteredPeersJson.replace(/```json\n?|\n?```/g, '');
-            filteredPeerTickers = JSON.parse(cleanedJson);
-        } catch (e) {
-            console.error("Failed to parse AI's filtered peer list:", e);
-            throw new Error("Could not parse the filtered competitor list from the AI.");
-        }
-        
-        if (!Array.isArray(filteredPeerTickers) || filteredPeerTickers.length === 0) {
-            return `No direct competitors were identified from the initial list for the "${targetIndustry}" industry. Analysis cannot proceed.`;
-        }
-
-        const limitedPeers = filteredPeerTickers.slice(0, 10); // Limit to 10 peers for efficiency
-        
-        // 4. Fetch LIVE data for the target and all RELEVANT peers in parallel
+        const limitedPeers = peerTickers.slice(0, 10);
         const allTickersToFetch = [targetSymbol, ...limitedPeers];
         const liveDataMap = await _fetchLivePeerData(allTickersToFetch);
 
         const targetFmpData = liveDataMap[targetSymbol];
-        
-        if (!targetFmpData || !targetFmpData.profile?.data?.[0]) {
-            throw new Error(`Could not retrieve live profile data for target stock ${targetSymbol}. Please check the ticker and API key.`);
+        if (!targetFmpData) {
+            throw new Error(`Could not retrieve live data for target stock ${targetSymbol}.`);
         }
         
         const formatMarketCap = (value) => (typeof value !== 'number' ? 'N/A' : (value / 1e9).toFixed(2));
-        
-        // --- Calculate medians programmatically ---
-        const peerMetricsForMedian = {
-            peRatioTTM: [], priceToSalesRatioTTM: [], evToEBITDATTM: [],
-            grossProfitMarginTTM: [], netProfitMarginTTM: [], returnOnEquityTTM: [],
-            returnOnAssetsTTM: [], growthRevenue: [], debtEquityRatioTTM: []
-        };
 
+        const peerData = [];
+        const metricsForAggregation = {
+            marketCap: [], peRatio: [], evToEbitda: [], psRatio: [], grossMargin: [],
+            netMargin: [], roe: [], roa: [], revenueGrowth: [], debtToEquity: []
+        };
+        
         limitedPeers.forEach(peerSymbol => {
             const fmpData = liveDataMap[peerSymbol];
-            if (!fmpData) return;
+            const profile = fmpData?.profile?.data?.[0];
+            if (profile && fmpData) {
+                const formattedMetrics = _getCompetitorMetricsFromCache(fmpData);
+                peerData.push({
+                    symbol: peerSymbol,
+                    name: profile.companyName,
+                    market_cap_raw: profile.mktCap,
+                    market_cap: formatMarketCap(profile.mktCap),
+                    ...formattedMetrics
+                });
 
-            const ratiosTTM = fmpData.ratios_ttm?.data?.[0];
-            const keyMetricsTTM = fmpData.key_metrics_ttm?.data?.[0];
-            const growthAnnual = fmpData.income_statement_growth_annual?.data?.[0];
+                // For aggregation, get the raw numbers
+                const ratiosTTM = fmpData.ratios_ttm?.data?.[0];
+                const keyMetricsTTM = fmpData.key_metrics_ttm?.data?.[0];
+                const growthAnnual = fmpData.income_statement_growth_annual?.data?.[0];
 
-            if (ratiosTTM) {
-                if (typeof ratiosTTM.peRatioTTM === 'number' && ratiosTTM.peRatioTTM > 0) peerMetricsForMedian.peRatioTTM.push(ratiosTTM.peRatioTTM);
-                if (typeof ratiosTTM.priceToSalesRatioTTM === 'number') peerMetricsForMedian.priceToSalesRatioTTM.push(ratiosTTM.priceToSalesRatioTTM);
-                if (typeof ratiosTTM.grossProfitMarginTTM === 'number') peerMetricsForMedian.grossProfitMarginTTM.push(ratiosTTM.grossProfitMarginTTM);
-                if (typeof ratiosTTM.netProfitMarginTTM === 'number') peerMetricsForMedian.netProfitMarginTTM.push(ratiosTTM.netProfitMarginTTM);
-                if (typeof ratiosTTM.returnOnEquityTTM === 'number') peerMetricsForMedian.returnOnEquityTTM.push(ratiosTTM.returnOnEquityTTM);
-                if (typeof ratiosTTM.returnOnAssetsTTM === 'number') peerMetricsForMedian.returnOnAssetsTTM.push(ratiosTTM.returnOnAssetsTTM);
-                if (typeof ratiosTTM.debtEquityRatioTTM === 'number') peerMetricsForMedian.debtEquityRatioTTM.push(ratiosTTM.debtEquityRatioTTM);
-            }
-            if (keyMetricsTTM && typeof keyMetricsTTM.evToEBITDATTM === 'number' && keyMetricsTTM.evToEBITDATTM > 0) {
-                peerMetricsForMedian.evToEBITDATTM.push(keyMetricsTTM.evToEBITDATTM);
-            }
-            if (growthAnnual && typeof growthAnnual.growthRevenue === 'number') {
-                peerMetricsForMedian.growthRevenue.push(growthAnnual.growthRevenue);
+                if (typeof profile.mktCap === 'number') metricsForAggregation.marketCap.push(profile.mktCap);
+                if (ratiosTTM) {
+                    if (typeof ratiosTTM.peRatioTTM === 'number' && isFinite(ratiosTTM.peRatioTTM) && ratiosTTM.peRatioTTM > 0) metricsForAggregation.peRatio.push(ratiosTTM.peRatioTTM);
+                    if (typeof ratiosTTM.priceToSalesRatioTTM === 'number' && isFinite(ratiosTTM.priceToSalesRatioTTM)) metricsForAggregation.psRatio.push(ratiosTTM.priceToSalesRatioTTM);
+                    if (typeof ratiosTTM.grossProfitMarginTTM === 'number' && isFinite(ratiosTTM.grossProfitMarginTTM)) metricsForAggregation.grossMargin.push(ratiosTTM.grossProfitMarginTTM);
+                    if (typeof ratiosTTM.netProfitMarginTTM === 'number' && isFinite(ratiosTTM.netProfitMarginTTM)) metricsForAggregation.netMargin.push(ratiosTTM.netProfitMarginTTM);
+                    if (typeof ratiosTTM.returnOnEquityTTM === 'number' && isFinite(ratiosTTM.returnOnEquityTTM)) metricsForAggregation.roe.push(ratiosTTM.returnOnEquityTTM);
+                    if (typeof ratiosTTM.returnOnAssetsTTM === 'number' && isFinite(ratiosTTM.returnOnAssetsTTM)) metricsForAggregation.roa.push(ratiosTTM.returnOnAssetsTTM);
+                    if (typeof ratiosTTM.debtEquityRatioTTM === 'number' && isFinite(ratiosTTM.debtEquityRatioTTM)) metricsForAggregation.debtToEquity.push(ratiosTTM.debtEquityRatioTTM);
+                }
+                if (keyMetricsTTM && typeof keyMetricsTTM.evToEbitdaTTM === 'number' && isFinite(keyMetricsTTM.evToEbitdaTTM) && keyMetricsTTM.evToEbitdaTTM > 0) {
+                    metricsForAggregation.evToEbitda.push(keyMetricsTTM.evToEbitdaTTM);
+                }
+                if (growthAnnual && typeof growthAnnual.growthRevenue === 'number' && isFinite(growthAnnual.growthRevenue)) {
+                    metricsForAggregation.revenueGrowth.push(growthAnnual.growthRevenue);
+                }
+            } else {
+                 console.warn(`Skipping peer ${peerSymbol} due to missing live data or profile.`);
             }
         });
+        
+        if (peerData.length === 0) {
+            throw new Error("Failed to gather sufficient live financial data for peer comparison.");
+        }
 
+        const largestCompetitor = peerData.reduce((max, p) => (p.market_cap_raw > max.market_cap_raw ? p : max), peerData[0]);
+        
         const calculatedMedians = {
-            pe_ratio: calculateMedian(peerMetricsForMedian.peRatioTTM),
-            ps_ratio: calculateMedian(peerMetricsForMedian.priceToSalesRatioTTM),
-            ev_ebitda: calculateMedian(peerMetricsForMedian.evToEBITDATTM),
-            gross_margin: calculateMedian(peerMetricsForMedian.grossProfitMarginTTM),
-            net_margin: calculateMedian(peerMetricsForMedian.netProfitMarginTTM),
-            roe: calculateMedian(peerMetricsForMedian.returnOnEquityTTM),
-            roa: calculateMedian(peerMetricsForMedian.returnOnAssetsTTM),
-            revenue_growth: calculateMedian(peerMetricsForMedian.growthRevenue),
-            debt_to_equity: calculateMedian(peerMetricsForMedian.debtEquityRatioTTM),
+            pe_ratio: calculateMedian(metricsForAggregation.peRatio),
+            ps_ratio: calculateMedian(metricsForAggregation.psRatio),
+            ev_ebitda: calculateMedian(metricsForAggregation.evToEbitda),
+            gross_margin: calculateMedian(metricsForAggregation.grossMargin),
+            net_margin: calculateMedian(metricsForAggregation.netMargin),
+            roe: calculateMedian(metricsForAggregation.roe),
+            roa: calculateMedian(metricsForAggregation.roa),
+            revenue_growth: calculateMedian(metricsForAggregation.revenueGrowth),
+            debt_to_equity: calculateMedian(metricsForAggregation.debtToEquity),
         };
 
         const formatMedianMetric = (value, isPercentage = false) => {
@@ -1085,44 +1020,14 @@ export async function getCompetitorAnalysis(targetSymbol) {
             if (isPercentage) return `${(value * 100).toFixed(2)}%`;
             return Math.abs(value) > 100 ? value.toFixed(0) : value.toFixed(2);
         };
-
-        const formattedMedians = {
-            pe_ratio: formatMedianMetric(calculatedMedians.pe_ratio),
-            ps_ratio: formatMedianMetric(calculatedMedians.ps_ratio),
-            ev_ebitda: formatMedianMetric(calculatedMedians.ev_ebitda),
-            gross_margin: formatMedianMetric(calculatedMedians.gross_margin, true),
-            net_margin: formatMedianMetric(calculatedMedians.net_margin, true),
-            roe: formatMedianMetric(calculatedMedians.roe, true),
-            roa: formatMedianMetric(calculatedMedians.roa, true),
-            revenue_growth: formatMedianMetric(calculatedMedians.revenue_growth, true),
-            debt_to_equity: formatMedianMetric(calculatedMedians.debt_to_equity),
-        };
-
-        // 5. Assemble the data for the AI prompt
-        const peerData = [];
-        limitedPeers.forEach(peerSymbol => {
-            const fmpData = liveDataMap[peerSymbol];
-            const profile = fmpData?.profile?.data?.[0];
-            
-            if (profile && fmpData) {
-                peerData.push({
-                    symbol: peerSymbol,
-                    name: profile.companyName,
-                    market_cap_raw: profile.mktCap,
-                    market_cap: formatMarketCap(profile.mktCap),
-                    ..._getCompetitorMetricsFromCache(fmpData)
-                });
-            } else {
-                 console.warn(`Skipping peer ${peerSymbol} due to missing live data or profile.`);
-            }
-        });
-
-        if (peerData.length === 0) {
-            throw new Error("Failed to gather sufficient live financial data for peer comparison after filtering.");
-        }
-
-        const largestCompetitor = peerData.reduce((max, p) => (p.market_cap_raw > max.market_cap_raw ? p : max), peerData[0]);
         
+        const formattedMedians = Object.fromEntries(
+            Object.entries(calculatedMedians).map(([key, value]) => {
+                const isPercent = ['gross_margin', 'net_margin', 'roe', 'roa', 'revenue_growth'].includes(key);
+                return [key, formatMedianMetric(value, isPercent)];
+            })
+        );
+
         const comparisonData = {
             target: {
                 name: targetProfileData.companyName,
@@ -1134,7 +1039,6 @@ export async function getCompetitorAnalysis(targetSymbol) {
             calculated_medians: formattedMedians
         };
 
-        // 6. Generate the AI summary using the prompt
         const prompt = COMPETITOR_ANALYSIS_PROMPT
             .replace('{comparisonData}', JSON.stringify(comparisonData, null, 2))
             .replace(/{companyName}/g, targetProfileData.companyName)
@@ -1149,8 +1053,9 @@ export async function getCompetitorAnalysis(targetSymbol) {
     }
 }
 
+
 /**
- * [NEW] Fetches live data for a stock's peers and calculates the median for key metrics.
+ * Fetches live data for a stock's peers and calculates the median for key metrics.
  * @param {string} targetSymbol The ticker symbol of the company.
  * @returns {Promise<object|null>} An object with median metrics or null if data is insufficient.
  */
