@@ -998,27 +998,27 @@ First, present a clear, scannable summary of the company's operational health an
 - **vs. Industry Peers:** The stock's current P/E of **{current_pe}** is [above/below] the industry median of **{peer_pe}**. Its current P/S of **{current_ps}** is [above/below] the industry median of **{peer_ps}**. This suggests the stock is valued at a [premium/discount] compared to its peers.
 
 ### Conservative Deep Value Check
-- **Graham Number:** If the '{grahamNumber}' is 'N/A', state that a deep value check using the Graham Number could not be performed for this company. Otherwise, compare the current price of **{currentPrice}** to the Graham Number of **{grahamNumber}**.
+- **Graham Number:** State the pre-calculated 'grahamVerdict'.
 - **Context:** The Graham Number is a very strict, asset-and-earnings-focused metric. For companies with significant intangible assets (like brand or technology) or high growth, it can often appear artificially low. It serves as a useful, conservative floor for valuation but may not capture the full picture.
 
-## 3. Synthesized Investment Thesis
-Synthesize the Quality and Valuation data to determine if the stock is a potential value trap or a genuine opportunity. Critically, you must connect the weaknesses from the Scorecard (e.g., high debt, low growth) to the valuation discount. Is the stock cheap for a good reason, or does the discount appear excessive relative to the risks?
+## 3. Thesis & Recommendation
+Synthesize the Quality and Valuation data to determine the core tension of the investment case. Is the stock a high-quality company at a fair price, a struggling company whose discount is justified (a value trap), or a genuine opportunity where the market is mispricing its quality or catalysts?
 
 ### 🐂 The Bull Case
-Construct the forward-looking investment thesis. What is the most likely catalyst or narrative shift that could cause the market to re-evaluate the stock upwards, unlocking the value identified? Weave together the company's strengths from the Quality Scorecard with the positive valuation signals to tell this story.
+Construct the forward-looking investment thesis. Based on the data, what is the most plausible argument for a positive investment outcome? Weave together the company's strengths from the Quality Scorecard with any positive valuation signals to tell this story.
 
 ### 🐻 The Bear Case (Key Risks)
-Outline the primary risks that could cause the stock to remain a 'value trap' or decline further. Focus on weaknesses from the Quality Scorecard and the negative valuation signals. What is the most significant hurdle to the bull case?
+Outline the primary risks that could cause the stock to underperform or remain a 'value trap'. Focus on weaknesses from the Quality Scorecard and any negative valuation signals. What is the most significant hurdle to the bull case?
 
-## 4. Final Verdict & Recommendation
-Based on your synthesis of the quality, valuation, and potential for a narrative shift, you must make a decisive recommendation. Your final verdict MUST be consistent with the Quality & Catalyst Scorecard. For example, do not claim 'strong financial health' or 'a solid balance sheet' if the 'Balance Sheet' scorecard is negative or indicates high risk. Justify why the Bull or Bear case is more compelling at the current price, and then classify the stock into ONE of the following categories.
+### Final Verdict
+Based on your synthesis of the quality, valuation, and Bull/Bear cases, make a decisive recommendation. Your final verdict MUST be consistent with the Quality & Catalyst Scorecard. For example, do not claim 'strong financial health' if the 'Financial Health' scorecard is negative. Justify why the Bull or Bear case is more compelling at the current price, and then classify the stock into ONE of the following categories.
 
 -   **High-Quality Compounder at a Fair Price:** The company scores highly on the quality checklist and its valuation is reasonable relative to its history and/or peers. The thesis is based on long-term execution.
 -   **Potential Value Play:** The company exhibits a discount to its historical valuation and/or peers, and there are sufficient quality factors to suggest the discount is unwarranted.
 -   **Speculative Growth:** The investment case relies heavily on future growth justifying a high valuation. The quality scorecard may be mixed, but forward momentum is strong.
 -   **Turnaround / Deep Value:** The company is trading at a steep discount, often for a reason. The quality scorecard is likely weak, and the investment thesis depends on specific catalysts materializing to unlock value.
 -   **Monitor / Fairly Priced:** The company is of high quality but its valuation appears full, offering little margin of safety. A candidate for a watchlist.
--   **Avoid / Pass:** The stock combines a weak quality scorecard with a high valuation. The risks appear to outweigh the potential rewards.
+-   **Avoid / Pass:** The stock combines a weak quality scorecard with a high valuation, or its discount is fully justified by its poor fundamentals. The risks appear to outweigh the potential rewards.
 `.trim();
 
 export const FORWARD_LOOKING_ANALYSIS_PROMPT = `
