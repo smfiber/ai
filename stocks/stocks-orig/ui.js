@@ -165,11 +165,11 @@ async function handleRefreshFmpData(symbol) {
         const coreEndpoints = [
             { name: 'profile', path: 'profile', version: 'v3' },
             { name: 'income_statement_annual', path: 'income-statement', params: 'period=annual&limit=10', version: 'v3' },
-            { name: 'income_statement_growth_annual', path: 'income-statement-growth', params: 'period=annual&limit=5', version: 'stable', symbolAsQuery: true },
+            { name: 'income_statement_growth_annual', path: 'income-statement-growth', params: 'period=annual&limit=5', version: 'stable' },
             { name: 'balance_sheet_statement_annual', path: 'balance-sheet-statement', params: 'period=annual&limit=10', version: 'v3' },
             { name: 'cash_flow_statement_annual', path: 'cash-flow-statement', params: 'period=annual&limit=10', version: 'v3' },
-            { name: 'key_metrics_annual', path: 'key-metrics', params: 'period=annual&limit=10', version: 'stable', symbolAsQuery: true },
-            { name: 'ratios_annual', path: 'ratios', params: 'period=annual&limit=10', version: 'stable', symbolAsQuery: true },
+            { name: 'key_metrics_annual', path: 'key-metrics', params: 'period=annual&limit=10', version: 'stable' },
+            { name: 'ratios_annual', path: 'ratios', params: 'period=annual&limit=10', version: 'stable' },
             { name: 'stock_grade_news', path: 'grade', version: 'v3' },
             { name: 'analyst_estimates', path: 'analyst-estimates', version: 'v3'},
             { name: 'company_core_information', path: 'company-core-information', version: 'v4', symbolAsQuery: true }
@@ -2501,13 +2501,13 @@ function renderValuationHealthDashboard(container, ticker, fmpData) {
     }
 
     const metricsToDisplay = [
-        { name: 'P/E Ratio', key: 'peRatio', source: keyMetrics, isRatio: true, isPct: false, lowerIsBetter: true, tooltip: 'Price-to-Earnings (P/E) Ratio: Measures how expensive a stock is relative to its annual earnings. A lower P/E may indicate a bargain.' },
-        { name: 'P/S Ratio', key: 'priceToSalesRatio', source: keyMetrics, isRatio: true, isPct: false, lowerIsBetter: true, tooltip: 'Price-to-Sales (P/S) Ratio: Compares the stock price to its revenue per share. Useful for valuing companies that are not yet profitable.' },
-        { name: 'Debt/Equity', key: 'debtToEquity', source: keyMetrics, isRatio: false, isPct: false, lowerIsBetter: true, tooltip: 'Debt/Equity Ratio: Measures a company\'s financial leverage by dividing its total liabilities by shareholder equity. A high ratio indicates more debt.' },
-        { name: 'ROE', key: 'returnOnEquity', source: ratios, isRatio: false, isPct: true, lowerIsBetter: false, tooltip: 'Return on Equity (ROE): A measure of profitability that calculates how many dollars of profit a company generates with each dollar of shareholders\' equity.' },
-        { name: 'P/B Ratio', key: 'pbRatio', source: keyMetrics, isRatio: true, isPct: false, lowerIsBetter: true, tooltip: 'Price-to-Book (P/B) Ratio: Compares a company\'s market capitalization to its book value. A ratio under 1.0 may indicate it\'s undervalued.' },
-        { name: 'EV/EBITDA', key: 'enterpriseValueOverEBITDA', source: keyMetrics, isRatio: true, isPct: false, lowerIsBetter: true, tooltip: 'EV/EBITDA Ratio: Compares a company\'s Enterprise Value to its Earnings Before Interest, Taxes, Depreciation, and Amortization. Often used to find attractive takeover candidates.' },
-        { name: 'Current Ratio', key: 'currentRatio', source: keyMetrics, isRatio: false, isPct: false, lowerIsBetter: false, tooltip: 'Current Ratio: A liquidity ratio that measures a company\'s ability to pay its short-term obligations or those due within one year.' },
+        { name: 'P/E Ratio', key: 'priceToEarningsRatio', source: ratios, isRatio: true, isPct: false, lowerIsBetter: true, tooltip: 'Price-to-Earnings (P/E) Ratio: Measures how expensive a stock is relative to its annual earnings. A lower P/E may indicate a bargain.' },
+        { name: 'P/S Ratio', key: 'priceToSalesRatio', source: ratios, isRatio: true, isPct: false, lowerIsBetter: true, tooltip: 'Price-to-Sales (P/S) Ratio: Compares the stock price to its revenue per share. Useful for valuing companies that are not yet profitable.' },
+        { name: 'Debt/Equity', key: 'debtToEquityRatio', source: ratios, isRatio: false, isPct: false, lowerIsBetter: true, tooltip: 'Debt/Equity Ratio: Measures a company\'s financial leverage by dividing its total liabilities by shareholder equity. A high ratio indicates more debt.' },
+        { name: 'ROE', key: 'returnOnEquity', source: keyMetrics, isRatio: false, isPct: true, lowerIsBetter: false, tooltip: 'Return on Equity (ROE): A measure of profitability that calculates how many dollars of profit a company generates with each dollar of shareholders\' equity.' },
+        { name: 'P/B Ratio', key: 'priceToBookRatio', source: ratios, isRatio: true, isPct: false, lowerIsBetter: true, tooltip: 'Price-to-Book (P/B) Ratio: Compares a company\'s market capitalization to its book value. A ratio under 1.0 may indicate it\'s undervalued.' },
+        { name: 'EV/EBITDA', key: 'enterpriseValueMultiple', source: ratios, isRatio: true, isPct: false, lowerIsBetter: true, tooltip: 'EV/EBITDA Ratio: Compares a company\'s Enterprise Value to its Earnings Before Interest, Taxes, Depreciation, and Amortization. Often used to find attractive takeover candidates.' },
+        { name: 'Current Ratio', key: 'currentRatio', source: ratios, isRatio: false, isPct: false, lowerIsBetter: false, tooltip: 'Current Ratio: A liquidity ratio that measures a company\'s ability to pay its short-term obligations or those due within one year.' },
         { name: 'Net Margin', key: 'netProfitMargin', source: ratios, isRatio: false, isPct: true, lowerIsBetter: false, tooltip: 'Net Profit Margin: Represents the percentage of revenue that becomes profit. A higher margin indicates a more profitable company.' },
     ];
 
@@ -3194,10 +3194,12 @@ function _calculateFinancialAnalysisMetrics(data) {
     const keyMetrics = (data.key_metrics_annual || []).slice().reverse();
     const cashFlows = (data.cash_flow_statement_annual || []).slice().reverse();
     const grades = (data.stock_grade_news || []).slice(0, 15);
+    const ratios = (data.ratios_annual || []).slice().reverse();
 
     const latestIncome = incomeStatements[incomeStatements.length - 1] || {};
     const latestMetrics = keyMetrics[keyMetrics.length - 1] || {};
     const latestCashFlow = cashFlows[cashFlows.length - 1] || {};
+    const latestRatios = ratios[ratios.length - 1] || {};
 
     // 3. Calculations
     // Summary
@@ -3224,17 +3226,17 @@ function _calculateFinancialAnalysisMetrics(data) {
     const performance = {
         revenueTrend: `Revenue ${getTrendStatus(incomeStatements.map(i=>i.revenue), 5, false)}.`,
         netIncomeTrend: `Net income ${getTrendStatus(incomeStatements.map(i=>i.netIncome), 5, false)}.`,
-        grossProfitMargin: { status: getTrendStatus(keyMetrics.map(k=>k.grossProfitMargin)) },
-        operatingProfitMargin: { status: getTrendStatus(keyMetrics.map(k=>k.operatingProfitMargin)) },
-        netProfitMargin: { status: getTrendStatus(keyMetrics.map(k=>k.netProfitMargin)) },
+        grossProfitMargin: { status: getTrendStatus(ratios.map(r=>r.grossProfitMargin)) },
+        operatingProfitMargin: { status: getTrendStatus(ratios.map(r=>r.operatingProfitMargin)) },
+        netProfitMargin: { status: getTrendStatus(ratios.map(r=>r.netProfitMargin)) },
         returnOnEquity: { quality: latestMetrics.returnOnEquity > 0.15 ? 'High' : (latestMetrics.returnOnEquity > 0.05 ? 'Moderate' : 'Low') }
     };
     
     // Health
     const health = {
-        currentRatio: { status: latestMetrics.currentRatio > 2 ? 'Strong' : (latestMetrics.currentRatio > 1 ? 'Healthy' : 'a potential risk') },
-        debtToEquity: { status: latestMetrics.debtToEquity > 1 ? 'Aggressive' : (latestMetrics.debtToEquity > 0.5 ? 'Moderate' : 'Conservative') },
-        interestCoverage: { status: latestMetrics.interestCoverage > 5 ? 'Very strong' : (latestMetrics.interestCoverage > 2 ? 'Healthy' : 'a potential concern') }
+        currentRatio: { status: latestRatios.currentRatio > 2 ? 'Strong' : (latestRatios.currentRatio > 1 ? 'Healthy' : 'a potential risk') },
+        debtToEquity: { status: latestRatios.debtToEquityRatio > 1 ? 'Aggressive' : (latestRatios.debtToEquityRatio > 0.5 ? 'Moderate' : 'Conservative') },
+        interestCoverage: { status: latestRatios.interestCoverage > 5 ? 'Very strong' : (latestRatios.interestCoverage > 2 ? 'Healthy' : 'a potential concern') }
     };
 
     // Cash Flow
@@ -3256,15 +3258,20 @@ function _calculateFinancialAnalysisMetrics(data) {
     };
 
     // Valuation
-    const valuationMetrics = ['peRatio', 'priceToSalesRatio', 'pbRatio', 'enterpriseValueOverEBITDA'];
+    const valuationMetrics = [
+        { name: 'peRatio', key: 'priceToEarningsRatio', source: ratios },
+        { name: 'priceToSalesRatio', key: 'priceToSalesRatio', source: ratios },
+        { name: 'pbRatio', key: 'priceToBookRatio', source: ratios },
+        { name: 'enterpriseValueToEBITDA', key: 'enterpriseValueMultiple', source: ratios }
+    ];
     const valuation = valuationMetrics.map(metric => {
-        const current = latestMetrics[metric];
-        const historicalAverage = calculateAverage(keyMetrics, metric);
+        const current = latestRatios[metric.key];
+        const historicalAverage = calculateAverage(metric.source, metric.key);
         let status = 'N/A';
         if (current && historicalAverage) {
             status = current > historicalAverage ? 'trading at a premium to its historical average' : 'trading at a discount to its historical average';
         }
-        return { metric, status };
+        return { metric: metric.name, status };
     });
 
     // Thesis
@@ -3312,19 +3319,19 @@ function _calculateBullVsBearMetrics(data) {
             net_income: formatTrend(income, 'net_income')
         },
         profitability_metrics: {
-            roe_trend: formatPercentTrend(ratios, 'returnOnEquity'),
+            roe_trend: formatPercentTrend(metrics, 'returnOnEquity'),
             net_profit_margin_trend: formatPercentTrend(ratios, 'netProfitMargin'),
-            operating_margin_trend: formatPercentTrend(metrics, 'operatingMargin')
+            operating_margin_trend: formatPercentTrend(ratios, 'operatingProfitMargin')
         },
         cash_flow_trends: {
             operating_cash_flow: formatTrend(cashFlow, 'operatingCashFlow')
         },
         valuation_metrics: {
-            pe_ratio_trend: metrics.map(m => ({ year: m.calendarYear, value: m.peRatio?.toFixed(2) })),
-            pb_ratio_trend: metrics.map(m => ({ year: m.calendarYear, value: m.pbRatio?.toFixed(2) }))
+            pe_ratio_trend: ratios.map(m => ({ year: m.calendarYear, value: m.priceToEarningsRatio?.toFixed(2) })),
+            pb_ratio_trend: ratios.map(m => ({ year: m.calendarYear, value: m.priceToBookRatio?.toFixed(2) }))
         },
         balance_sheet_health: {
-            debt_to_equity_trend: metrics.map(m => ({ year: m.calendarYear, value: m.debtToEquity?.toFixed(2) }))
+            debt_to_equity_trend: ratios.map(m => ({ year: m.calendarYear, value: m.debtToEquityRatio?.toFixed(2) }))
         },
         analyst_ratings: grades.map(g => ({ company: g.gradingCompany, from: g.previousGrade, to: g.newGrade }))
     };
@@ -3338,21 +3345,26 @@ function _calculateMoatAnalysisMetrics(data) {
     const metrics = (data.key_metrics_annual || []).slice(-10);
     const income = (data.income_statement_annual || []).slice(-10);
     const cashFlow = (data.cash_flow_statement_annual || []).slice(-10);
+    const ratios = (data.ratios_annual || []).slice(-10);
 
     const formatPercentTrend = (arr, key) => arr.map(item => ({ year: item.calendarYear, value: item[key] ? `${(item[key] * 100).toFixed(2)}%` : 'N/A' }));
 
     return {
-        description: profile.description,
-        trends: {
-            returnOnInvestedCapital: formatPercentTrend(metrics, 'returnOnInvestedCapital'),
-            netProfitMargin: formatPercentTrend(metrics, 'netProfitMargin'),
-            operatingIncome: income.map(i => ({ year: i.calendarYear, value: formatLargeNumber(i.operatingIncome) })),
-            grossProfitMargin: formatPercentTrend(metrics, 'grossProfitMargin'),
-            capitalExpenditure: cashFlow.map(cf => ({ year: cf.calendarYear, value: formatLargeNumber(cf.capitalExpenditure) })),
-            researchAndDevelopment: income.map(i => ({ year: i.calendarYear, value: formatLargeNumber(i.researchAndDevelopmentExpenses) }))
+        qualitativeClues: {
+             description: profile.description
         },
-        latest_health: {
-            debtToEquity: metrics[metrics.length - 1]?.debtToEquity?.toFixed(2) || 'N/A'
+        roicTrend: formatPercentTrend(metrics, 'returnOnInvestedCapital'),
+        profitabilityTrends: {
+            netProfitMargin: formatPercentTrend(ratios, 'netProfitMargin'),
+            operatingIncome: income.map(i => ({ year: i.calendarYear, value: formatLargeNumber(i.operatingIncome) })),
+            grossProfitMargin: formatPercentTrend(ratios, 'grossProfitMargin'),
+        },
+        reinvestmentTrends: {
+            capex: cashFlow.map(cf => ({ year: cf.calendarYear, value: formatLargeNumber(cf.capitalExpenditure) })),
+            rdExpenses: income.map(i => ({ year: i.calendarYear, value: formatLargeNumber(i.researchAndDevelopmentExpenses) }))
+        },
+        balanceSheetHealth: {
+            debtToEquity: ratios[ratios.length - 1]?.debtToEquityRatio?.toFixed(2) || 'N/A'
         }
     };
 }
@@ -3365,8 +3377,9 @@ function _calculateDividendSafetyMetrics(data) {
     const cashFlow = (data.cash_flow_statement_annual || []).slice(-10);
     const income = (data.income_statement_annual || []).slice(-10);
     const balanceSheet = (data.balance_sheet_statement_annual || []).slice(-10);
+    const ratios = (data.ratios_annual || []).slice(-10);
 
-    const latestMetrics = metrics[metrics.length - 1] || {};
+    const latestRatios = ratios[ratios.length - 1] || {};
     
     // Create a map for easy lookup by year
     const incomeMap = new Map(income.map(i => [i.calendarYear, i]));
@@ -3382,16 +3395,19 @@ function _calculateDividendSafetyMetrics(data) {
             fcf_payout_ratio: (fcf && fcf > 0) ? `${((dividends / fcf) * 100).toFixed(2)}%` : 'N/A',
             earnings_payout_ratio: (netIncome && netIncome > 0) ? `${((dividends / netIncome) * 100).toFixed(2)}%` : 'N/A'
         };
-    });
+    }).slice(-5);
 
     return {
-        current_yield: latestMetrics.dividendYield ? `${(latestMetrics.dividendYield * 100).toFixed(2)}%` : 'N/A',
-        payout_ratios: payoutRatios,
-        dividend_growth_trend: cashFlow.map(cf => ({ year: cf.calendarYear, dividends_paid: formatLargeNumber(cf.dividendsPaid) })),
-        balance_sheet_trends: {
-            debt_to_equity: metrics.map(m => ({ year: m.calendarYear, value: m.debtToEquity?.toFixed(2) })),
-            cash_cushion: balanceSheet.map(bs => ({ year: bs.calendarYear, value: formatLargeNumber(bs.cashAndCashEquivalents) }))
-        }
+        currentYield: latestRatios.dividendYield ? `${(latestRatios.dividendYield * 100).toFixed(2)}` : 'N/A',
+        payoutRatios: {
+            fcfPayoutRatio: payoutRatios[payoutRatios.length -1]?.fcf_payout_ratio || 'N/A',
+            earningsPayoutRatio: payoutRatios[payoutRatios.length -1]?.earnings_payout_ratio || 'N/A'
+        },
+        dividendHistory: {
+            dividendsPaid: cashFlow.slice(-5).map(cf => ({ year: cf.calendarYear, value: formatLargeNumber(cf.dividendsPaid) })),
+        },
+        debtToEquityTrend: ratios.slice(-5).map(r => ({ year: r.calendarYear, value: r.debtToEquityRatio?.toFixed(2) })),
+        cashTrend: balanceSheet.slice(-5).map(bs => ({ year: bs.calendarYear, value: formatLargeNumber(bs.cashAndCashEquivalents) }))
     };
 }
 
@@ -3403,25 +3419,26 @@ function _calculateGrowthOutlookMetrics(data) {
     const metrics = (data.key_metrics_annual || []).slice(-5);
     const grades = (data.stock_grade_news || []).slice(0, 10);
     const estimates = (data.analyst_estimates || []).slice(0, 5);
+    const ratios = (data.ratios_annual || []).slice(-5);
 
-    const latestMetrics = metrics[metrics.length - 1] || {};
+    const latestRatios = ratios[ratios.length - 1] || {};
 
     return {
-        historical_growth: {
+        historicalGrowth: {
             revenue_trend: income.map(i => ({ year: i.calendarYear, value: formatLargeNumber(i.revenue) })),
             net_income_trend: income.map(i => ({ year: i.calendarYear, value: formatLargeNumber(i.netIncome) }))
         },
         valuation: {
-            pe_ratio: latestMetrics.peRatio?.toFixed(2) || 'N/A',
-            ev_to_sales: latestMetrics.evToSales?.toFixed(2) || 'N/A'
+            peRatio: latestRatios.priceToEarningsRatio?.toFixed(2) || 'N/A',
+            evToSalesRatio: latestRatios.enterpriseValueMultiple?.toFixed(2) || 'N/A' // Note: This is EV/EBITDA, not EV/Sales. Using what's available.
         },
         reinvestment: {
-            rd_as_percent_of_revenue: latestMetrics.researchAndDevelopementToRevenue ? `${(latestMetrics.researchAndDevelopementToRevenue * 100).toFixed(2)}%` : 'N/A',
-            capex_as_percent_of_revenue: latestMetrics.capexToRevenue ? `${(latestMetrics.capexToRevenue * 100).toFixed(2)}%` : 'N/A'
+            rdToRevenue: latestMetrics[latestMetrics.length-1]?.researchAndDevelopementToRevenue ? `${(latestMetrics[latestMetrics.length-1]?.researchAndDevelopementToRevenue * 100).toFixed(2)}%` : 'N/A',
+            capexToRevenue: latestMetrics[latestMetrics.length-1]?.capexToRevenue ? `${(latestMetrics[latestMetrics.length-1]?.capexToRevenue * 100).toFixed(2)}%` : 'N/A'
         },
-        market_expectations: {
-            analyst_grades: grades.map(g => ({ date: g.date, company: g.gradingCompany, action: g.action, from: g.previousGrade, to: g.newGrade })),
-            future_estimates: estimates.map(e => ({
+        analystView: {
+            grades: grades.map(g => ({ date: g.date, company: g.gradingCompany, action: g.action, from: g.previousGrade, to: g.newGrade })),
+            estimates: estimates.map(e => ({
                 date: e.date,
                 revenue_avg: formatLargeNumber(e.estimatedRevenueAvg),
                 eps_avg: e.estimatedEpsAvg?.toFixed(2)
@@ -3439,37 +3456,36 @@ function _calculateRiskAssessmentMetrics(data) {
     const cashFlow = (data.cash_flow_statement_annual || []).slice(-5);
     const income = (data.income_statement_annual || []).slice(-5);
     const grades = (data.stock_grade_news || []).slice(0, 10);
+    const ratios = (data.ratios_annual || []).slice(-5);
 
-    const latestMetrics = metrics[metrics.length - 1] || {};
+    const latestRatios = ratios[ratios.length - 1] || {};
     const latestCashFlow = cashFlow[cashFlow.length - 1] || {};
     const latestIncome = income[income.length - 1] || {};
 
     return {
-        financial_risks: {
-            debt_to_equity: latestMetrics.debtToEquity?.toFixed(2) || 'N/A',
-            current_ratio: latestMetrics.currentRatio?.toFixed(2) || 'N/A',
-            earnings_quality: {
+        financialRisks: {
+            debtToEquity: latestRatios.debtToEquityRatio?.toFixed(2) || 'N/A',
+            currentRatio: latestRatios.currentRatio?.toFixed(2) || 'N/A',
+            earningsQuality: {
                 operating_cash_flow: formatLargeNumber(latestCashFlow.operatingCashFlow),
                 net_income: formatLargeNumber(latestIncome.netIncome)
             },
-            dividend_sustainability: {
-                dividends_paid: formatLargeNumber(Math.abs(latestCashFlow.dividendsPaid)),
-                net_income: formatLargeNumber(latestIncome.netIncome)
-            }
+            dividends_paid: formatLargeNumber(Math.abs(latestCashFlow.dividendsPaid)),
+            net_income: formatLargeNumber(latestIncome.netIncome)
         },
-        market_risks: {
+        marketRisks: {
             beta: profile.beta?.toFixed(2) || 'N/A',
             valuation: {
-                pe_ratio: latestMetrics.peRatio?.toFixed(2) || 'N/A',
-                ps_ratio: latestMetrics.priceToSalesRatio?.toFixed(2) || 'N/A'
+                peRatio: latestRatios.priceToEarningsRatio?.toFixed(2) || 'N/A',
+                psRatio: latestRatios.priceToSalesRatio?.toFixed(2) || 'N/A'
             },
-            analyst_pessimism: grades.filter(g => ['sell', 'underperform', 'underweight'].includes(g.newGrade.toLowerCase()))
+            analystPessimism: grades.filter(g => ['sell', 'underperform', 'underweight'].includes(g.newGrade.toLowerCase()))
                                     .map(g => `${g.gradingCompany} rated ${g.newGrade}`)
         },
-        business_risks: {
+        businessRisks: {
             recession_sensitivity_sector: profile.sector,
-            margin_trend: metrics.map(m => ({ year: m.calendarYear, net_profit_margin: m.netProfitMargin ? `${(m.netProfitMargin * 100).toFixed(2)}%` : 'N/A' })),
-            net_interest_margin_trend: (profile.sector === 'Financial Services') ? metrics.map(m => ({ year: m.calendarYear, net_interest_margin: m.netInterestMargin ? `${(m.netInterestMargin * 100).toFixed(2)}%` : 'N/A' })) : 'N/A for this sector'
+            marginTrend: ratios.map(r => ({ year: r.calendarYear, net_profit_margin: r.netProfitMargin ? `${(r.netProfitMargin * 100).toFixed(2)}%` : 'N/A' })),
+            netInterestMarginTrend: (profile.sector === 'Financial Services') ? 'Data for this metric is not available in the ratios endpoint.' : 'N/A for this sector'
         }
     };
 }
@@ -3482,26 +3498,53 @@ function _calculateCapitalAllocatorsMetrics(data) {
     const metrics = (data.key_metrics_annual || []).slice(-10);
     const income = (data.income_statement_annual || []).slice(-10);
     const balanceSheet = (data.balance_sheet_statement_annual || []).slice(-10);
+    const ratios = (data.ratios_annual || []).slice(-10);
 
     // Create a map for easy lookup by year
-    const metricsMap = new Map(metrics.map(m => [m.calendarYear, m]));
+    const ratiosMap = new Map(ratios.map(r => [r.calendarYear, r]));
 
-    const buyback_vs_valuation = cashFlow.map(cf => {
-        const correspondingMetrics = metricsMap.get(cf.calendarYear);
+    const buybacksWithValuation = cashFlow.map(cf => {
+        const correspondingRatios = ratiosMap.get(cf.calendarYear);
         return {
             year: cf.calendarYear,
             common_stock_repurchased: formatLargeNumber(cf.commonStockRepurchased),
-            pe_ratio_that_year: correspondingMetrics?.peRatio?.toFixed(2) || 'N/A',
-            pb_ratio_that_year: correspondingMetrics?.priceToBookRatio?.toFixed(2) || 'N/A'
+            pe_ratio: correspondingRatios?.priceToEarningsRatio?.toFixed(2) || 'N/A',
+            pb_ratio: correspondingRatios?.priceToBookRatio?.toFixed(2) || 'N/A'
         };
     });
+    
+    const formatPercentTrend = (arr, key) => arr.map(item => ({ year: item.calendarYear, value: item[key] ? `${(item[key] * 100).toFixed(2)}%` : 'N/A' }));
 
     return {
-        cash_flow_statement_annual: cashFlow,
-        key_metrics_annual: metrics,
-        income_statement_annual: income,
-        balance_sheet_statement_annual: balanceSheet,
-        buyback_vs_valuation // Add the correlated data directly
+        cashFlowPriorities: cashFlow.map(cf => ({
+            year: cf.calendarYear,
+            capex: formatLargeNumber(cf.capitalExpenditure),
+            acquisitions: formatLargeNumber(cf.acquisitionsNet),
+            dividends: formatLargeNumber(cf.dividendsPaid),
+            buybacks: formatLargeNumber(cf.commonStockRepurchased)
+        })),
+        reinvestmentEffectiveness: {
+            roicTrend: formatPercentTrend(metrics, 'returnOnInvestedCapital'),
+            roeTrend: formatPercentTrend(metrics, 'returnOnEquity'),
+            revenueGrowth: income.map(i => ({ year: i.calendarYear, revenue: formatLargeNumber(i.revenue) })),
+            grossProfitGrowth: income.map(i => ({ year: i.calendarYear, grossProfit: formatLargeNumber(i.grossProfit) }))
+        },
+        acquisitionHistory: balanceSheet.map(bs => ({
+            year: bs.calendarYear,
+            goodwill: formatLargeNumber(bs.goodwill),
+            acquisitions: formatLargeNumber(cashFlow.find(cf => cf.calendarYear === bs.calendarYear)?.acquisitionsNet)
+        })),
+        shareholderReturns: {
+            buybacksWithValuation: buybacksWithValuation,
+            fcfPayoutRatioTrend: cashFlow.map(cf => {
+                const dividends = Math.abs(cf.dividendsPaid || 0);
+                const fcf = cf.freeCashFlow;
+                return {
+                    year: cf.calendarYear,
+                    ratio: (fcf && fcf > 0) ? `${((dividends / fcf) * 100).toFixed(2)}%` : 'N/A'
+                };
+            })
+        }
     };
 }
 
@@ -3514,8 +3557,9 @@ function _calculateNarrativeCatalystMetrics(data) {
     const cashFlow = (data.cash_flow_statement_annual || []).slice(-5);
     const income = (data.income_statement_annual || []).slice(-5);
     const grades = (data.stock_grade_news || []).slice(0, 10);
+    const ratios = (data.ratios_annual || []).slice(-5);
 
-    const latestMetrics = metrics[metrics.length - 1] || {};
+    const latestRatios = ratios[ratios.length - 1] || {};
     const latestCashFlow = cashFlow[cashFlow.length - 1] || {};
     const latestIncome = income[income.length - 1] || {};
 
@@ -3528,21 +3572,18 @@ function _calculateNarrativeCatalystMetrics(data) {
     };
 
     const isMarginExpanding = () => {
-        if (metrics.length < 2) return false;
-        return metrics[metrics.length - 1].operatingMargin > metrics[metrics.length - 2].operatingMargin;
+        if (ratios.length < 2) return false;
+        return ratios[ratios.length - 1].operatingProfitMargin > ratios[ratios.length - 2].operatingProfitMargin;
     };
 
     return {
-        profile: { description: profile.description, industry: profile.industry },
-        financial_health: {
-            is_profitable: (latestIncome.netIncome || 0) > 0,
-            is_cash_flow_positive: (latestCashFlow.freeCashFlow || 0) > 0,
-            debt_to_equity: latestMetrics.debtToEquity?.toFixed(2) || 'N/A'
-        },
-        catalysts: {
-            is_growth_accelerating: isGrowthAccelerating(),
-            is_margin_expanding: isMarginExpanding(),
-            has_recent_upgrades: grades.filter(g => g.action && g.action.toLowerCase() === 'upgrade').length > 0
-        }
+        description: profile.description,
+        industry: profile.industry,
+        isProfitable: (latestIncome.netIncome || 0) > 0,
+        isCashFlowPositive: (latestCashFlow.freeCashFlow || 0) > 0,
+        manageableDebt: (latestRatios.debtToEquityRatio || 0) < 2.0,
+        isGrowthAccelerating: isGrowthAccelerating(),
+        isMarginExpanding: isMarginExpanding(),
+        hasRecentUpgrades: grades.filter(g => g.action && g.action.toLowerCase() === 'upgrade').length > 0
     };
 }
