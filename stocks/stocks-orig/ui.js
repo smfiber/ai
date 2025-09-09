@@ -168,8 +168,8 @@ async function handleRefreshFmpData(symbol) {
             { name: 'income_statement_growth_annual', path: 'income-statement-growth', params: 'period=annual&limit=5', version: 'stable', symbolAsQuery: true },
             { name: 'balance_sheet_statement_annual', path: 'balance-sheet-statement', params: 'period=annual&limit=10', version: 'v3' },
             { name: 'cash_flow_statement_annual', path: 'cash-flow-statement', params: 'period=annual&limit=10', version: 'v3' },
-            { name: 'key_metrics_annual', path: 'key-metrics', params: 'period=annual&limit=10', version: 'v3' },
-            { name: 'ratios_annual', path: 'ratios', params: 'period=annual&limit=10', version: 'v3' },
+            { name: 'key_metrics_annual', path: 'key-metrics', params: 'period=annual&limit=10', version: 'stable', symbolAsQuery: true },
+            { name: 'ratios_annual', path: 'ratios', params: 'period=annual&limit=10', version: 'stable', symbolAsQuery: true },
             { name: 'stock_grade_news', path: 'grade', version: 'v3' },
             { name: 'analyst_estimates', path: 'analyst-estimates', version: 'v3'},
             { name: 'company_core_information', path: 'company-core-information', version: 'v4', symbolAsQuery: true }
@@ -3079,11 +3079,11 @@ function _calculateUndervaluedMetrics(data) {
     const profitabilityTrend = getTrend(ratios, 'netProfitMargin', v => typeof v === 'number' ? `${(v * 100).toFixed(2)}%` : 'N/A');
 
     // 2. Financial Health
-    const roeTrend = getTrend(ratios, 'returnOnEquity', v => typeof v === 'number' ? `${(v * 100).toFixed(2)}%` : 'N/A');
+    const roeTrend = getTrend(keyMetrics, 'returnOnEquity', v => typeof v === 'number' ? `${(v * 100).toFixed(2)}%` : 'N/A');
     const debtToEquity = latestRatios.debtToEquityRatio ? latestRatios.debtToEquityRatio.toFixed(2) : 'N/A';
     
     // 3. Dividend Analysis
-    const dividendYield = latestMetrics.dividendYield ? `${(latestMetrics.dividendYield * 100).toFixed(2)}%` : 'N/A';
+    const dividendYield = latestRatios.dividendYield ? `${(latestRatios.dividendYield * 100).toFixed(2)}%` : 'N/A';
     let cashFlowPayoutRatio = 'N/A';
     if (latestCashFlow.operatingCashFlow && latestCashFlow.dividendsPaid) {
         if (latestCashFlow.operatingCashFlow > 0) {
@@ -3093,14 +3093,14 @@ function _calculateUndervaluedMetrics(data) {
     }
 
     // 4. Valuation Multiples
-    const peRatio = latestMetrics.peRatio ? latestMetrics.peRatio.toFixed(2) : 'N/A';
-    const psRatio = latestMetrics.priceToSalesRatio ? latestMetrics.priceToSalesRatio.toFixed(2) : 'N/A';
-    const pbRatio = latestMetrics.pbRatio ? latestMetrics.pbRatio.toFixed(2) : 'N/A';
+    const peRatio = latestRatios.priceToEarningsRatio ? latestRatios.priceToEarningsRatio.toFixed(2) : 'N/A';
+    const psRatio = latestRatios.priceToSalesRatio ? latestRatios.priceToSalesRatio.toFixed(2) : 'N/A';
+    const pbRatio = latestRatios.priceToBookRatio ? latestRatios.priceToBookRatio.toFixed(2) : 'N/A';
 
     // 5. Valuation in Context
-    const historicalPe = calculateAverage(keyMetrics, 'peRatio');
-    const historicalPs = calculateAverage(keyMetrics, 'priceToSalesRatio');
-    const historicalPb = calculateAverage(keyMetrics, 'pbRatio');
+    const historicalPe = calculateAverage(ratios, 'priceToEarningsRatio');
+    const historicalPs = calculateAverage(ratios, 'priceToSalesRatio');
+    const historicalPb = calculateAverage(ratios, 'priceToBookRatio');
 
     const valuationRelativeToHistory = {
         pe: {
