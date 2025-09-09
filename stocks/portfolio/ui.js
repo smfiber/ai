@@ -2704,7 +2704,7 @@ function _calculateDeepDiveMetrics(data, newsNarrative, institutionalHolders, to
         }
     }
     
-    const recentRatings = analystGrades.slice(0, 5).map(grade => {
+    const recentRatings = analystGrades.slice(0, 20).map(grade => {
         const action = grade.action?.toLowerCase();
         const from = grade.previousGrade;
         const to = grade.newGrade;
