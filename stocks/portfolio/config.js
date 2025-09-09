@@ -900,7 +900,7 @@ Synthesize the findings into a balanced, data-driven summary. Frame the conclusi
 - Based on the data, what are the strongest quantitative arguments for {companyName}'s competitive position? Highlight its most significant strengths (e.g., "superior profitability at a reasonable valuation").
 
 ###🐻 The Bear Case
-- Based on the data, what are the most significant quantitative weaknesses or risks for {companyName} relative to its peers? (e.g., "slower growth and higher leverage").
+- Based on the most significant quantitative weaknesses or risks for {companyName} relative to its peers? (e.g., "slower growth and higher leverage").
 `.trim();
 
 export const FINANCIAL_STATEMENT_ANALYSIS_PROMPT = `
