@@ -420,7 +420,28 @@
 
             <div class="flex-grow overflow-y-auto">
                 <div id="ai-analysis-tab" class="tab-content p-6">
-                    <div id="ai-buttons-container" class="border-b pb-4 mb-4 flex flex-wrap gap-2 justify-center"></div>
+                    <div id="ai-buttons-container" class="border-b pb-6 mb-6 flex flex-wrap gap-4 justify-center">
+                        <button id="deep-dive-analysis-button" class="ai-analysis-tile">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" /></svg>
+                            <span>Deep Dive</span>
+                        </button>
+                        <button id="peer-comparison-button" class="ai-analysis-tile">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m-7.5-2.159a3 3 0 00-4.682-2.72 8.986 8.986 0 003.741.479M21 12a9 9 0 11-18 0 9 9 0 0118 0a9.094 9.094 0 00-3.741-.479 3 3 0 00-4.682-2.72 8.986 8.986 0 003.741.479M12 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                            <span>Peer Comparison</span>
+                        </button>
+                        <button id="investment-thesis-button" class="ai-analysis-tile">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 18v-5.25m0 0a6.01 6.01 0 001.5-.189m-1.5.189a6.01 6.01 0 01-1.5-.189m3.75 7.478a12.06 12.06 0 01-4.5 0m3.75 2.311a14.994 14.994 0 01-4.5 0M9.75 15.75A3 3 0 0112 12m0 0v2.25m0-2.25a3 3 0 00-3.75 2.25M12 12A3 3 0 0114.25 9.75" /></svg>
+                            <span>Investment Thesis</span>
+                        </button>
+                        <button id="forward-looking-analysis-button" class="ai-analysis-tile">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941" /></svg>
+                            <span>Forward-Looking</span>
+                        </button>
+                        <button id="sec-analysis-button" class="ai-analysis-tile">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" /></svg>
+                            <span>SEC & Ownership</span>
+                        </button>
+                    </div>
                     <div id="report-status-container-ai" class="hidden p-3 mb-4 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between gap-4"></div>
                     <div id="ai-article-container" class="prose max-w-none"></div>
                 </div>
