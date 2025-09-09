@@ -1,5 +1,5 @@
 // ui.js
-import { CONSTANTS, SECTORS, SECTOR_ICONS, state, NEWS_SENTIMENT_PROMPT, DEEP_DIVE_PROMPT, FINANCIAL_STATEMENT_ANALYSIS_PROMPT, INVESTMENT_THESIS_PROMPT, FORWARD_LOOKING_ANALYSIS_PROMPT } from './config.js';
+import { CONSTANTS, SECTORS, SECTOR_ICONS, state, NEWS_SENTIMENT_PROMPT, DEEP_DIVE_PROMPT, INVESTMENT_THESIS_PROMPT, FORWARD_LOOKING_ANALYSIS_PROMPT, SEC_FILING_SYNTHESIS_PROMPT } from './config.js';
 import { getFmpStockData, callApi, filterValidNews, callGeminiApi, generatePolishedArticle, getDriveToken, getOrCreateDriveFolder, createDriveFile, getGroupedFmpData, generateMorningBriefing, calculatePortfolioHealthScore, runOpportunityScanner, generatePortfolioAnalysis, generateTrendAnalysis, getCachedNews, getScannerResults, generateNewsSummary, summarizeSecFilingSection, getCompetitorAnalysis, getPeerMedianMetrics, getLiveMetricsForSymbol } from './api.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getSecInsiderTrading, getSecInstitutionalOwnership, getSecMaterialEvents, getSecAnnualReports, getSecQuarterlyReports, getLatest10KRiskFactorsText, getLatest10QMdaText, getFinancialStatementsFromXBRL } from './sec-api.js';
@@ -2577,9 +2577,9 @@ export function setupEventListeners() {
             if (activeSymbol) {
                 handleForwardLookingAnalysis(activeSymbol);
             }
-        } else if (target.id === 'financial-statement-analysis-button') {
+        } else if (target.id === 'sec-analysis-button') {
             if (activeSymbol) {
-                handleFinancialStatementAnalysis(activeSymbol);
+                handleSecAnalysisRequest(activeSymbol);
             }
         }
         
@@ -2949,8 +2949,8 @@ async function handlePeerComparisonRequest(symbol, forceNew = false) {
     }
 }
 
-async function handleFinancialStatementAnalysis(symbol, forceNew = false) {
-    const reportType = 'FinancialStatementAnalysis';
+async function handleSecAnalysisRequest(symbol, forceNew = false) {
+    const reportType = 'SecFilingSynthesis';
     const contentContainer = document.getElementById('ai-article-container');
     const statusContainer = document.getElementById('report-status-container-ai');
 
@@ -2970,19 +2970,50 @@ async function handleFinancialStatementAnalysis(symbol, forceNew = false) {
         openModal(CONSTANTS.MODAL_LOADING);
         const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
         
-        loadingMessage.textContent = `Fetching 10-K financial statements for ${symbol}...`;
-        const financialData = await getFinancialStatementsFromXBRL(symbol);
-
+        loadingMessage.textContent = `Gathering SEC and ownership data for ${symbol}...`;
+        const data = await getFmpStockData(symbol);
+        if (!data) throw new Error(`No cached FMP data found for ${symbol}.`);
+        
         const companyInfo = state.portfolioCache.find(s => s.ticker === symbol) || { companyName: symbol };
+        
+        const institutionalHolders = data.institutional_ownership?.data?.holders?.slice(0, 10).map(h => ({
+            investor: h.investorName,
+            value: formatLargeNumber(h.value)
+        })) || 'N/A';
+        
+        const insiderSummary = (() => {
+            const rawInsiderTrades = data.insider_trading?.data || [];
+            if (!rawInsiderTrades || rawInsiderTrades.length === 0) return 'No insider transaction data available for the last 6 months.';
+            let totalBought = 0, totalSold = 0;
+            rawInsiderTrades.forEach(trade => {
+                if (new Date(trade.transactionDate) > new Date(new Date().setMonth(new Date().getMonth() - 6))) {
+                    if (trade.transactionType?.startsWith('P')) totalBought += trade.securitiesTransacted;
+                    else if (trade.transactionType?.startsWith('S')) totalSold += trade.securitiesTransacted;
+                }
+            });
+            if (totalBought === 0 && totalSold === 0) return 'No open market insider buying or selling has been reported in the last 6 months.';
+            const netShares = totalBought - totalSold;
+            return `Over the last 6 months, insiders were net ${netShares > 0 ? 'buyers' : 'sellers'} of ${Math.abs(netShares).toLocaleString()} shares.`;
+        })();
 
-        const prompt = FINANCIAL_STATEMENT_ANALYSIS_PROMPT
-            .replace('{companyName}', companyInfo.companyName)
-            .replace('{tickerSymbol}', symbol)
-            .replace('{jsonData}', JSON.stringify(financialData, null, 2));
+        const payloadData = {
+            institutionalHoldings: institutionalHolders,
+            insiderTransactionSummary: insiderSummary,
+            secSummaries: {
+                mda_10q: data.user_mda_summary?.data?.summary || 'Not provided by user.',
+                risk_factors_10k: data.user_10k_summary?.data?.summary || 'Not provided by user.',
+                material_events_8k: data.user_8k_summary?.data?.summary || 'Not provided by user.',
+            }
+        };
+
+        const prompt = SEC_FILING_SYNTHESIS_PROMPT
+            .replace(/{companyName}/g, companyInfo.companyName)
+            .replace(/{tickerSymbol}/g, symbol)
+            .replace('{jsonData}', JSON.stringify(payloadData, null, 2));
         
         contentContainer.dataset.currentPrompt = prompt;
 
-        loadingMessage.textContent = `AI is analyzing the financial statements...`;
+        loadingMessage.textContent = `AI is synthesizing the data...`;
         const markdownResponse = await callGeminiApi(prompt);
         
         contentContainer.dataset.rawMarkdown = markdownResponse;
@@ -2990,7 +3021,7 @@ async function handleFinancialStatementAnalysis(symbol, forceNew = false) {
         updateReportStatus(statusContainer, [], null, { symbol, reportType });
 
     } catch (error) {
-        console.error("Error generating financial statement analysis:", error);
+        console.error("Error generating SEC & Ownership analysis:", error);
         contentContainer.innerHTML = `<div class="text-center p-4 text-red-500 bg-red-50 rounded-lg"><p class="font-semibold">Could not generate analysis.</p><p class="text-sm">${error.message}</p></div>`;
     } finally {
         if (document.getElementById(CONSTANTS.MODAL_LOADING).classList.contains('is-open')) {
