@@ -1021,6 +1021,19 @@ export async function getCompetitorAnalysis(targetSymbol) {
             return Math.abs(value) > 100 ? value.toFixed(0) : value.toFixed(2);
         };
         
+        const formattedAverages = {
+            market_cap: formatAggregate(calculatedAggregates.marketCap.average, false, true),
+            pe_ratio: formatAggregate(calculatedAggregates.peRatio.average),
+            ps_ratio: formatAggregate(calculatedAggregates.psRatio.average),
+            ev_ebitda: formatAggregate(calculatedAggregates.evToEbitda.average),
+            gross_margin: formatAggregate(calculatedAggregates.grossMargin.average, true),
+            net_margin: formatAggregate(calculatedAggregates.netMargin.average, true),
+            roe: formatAggregate(calculatedAggregates.roe.average, true),
+            roa: formatAggregate(calculatedAggregates.roa.average, true),
+            revenue_growth: formatAggregate(calculatedAggregates.revenueGrowth.average, true),
+            debt_to_equity: formatAggregate(calculatedAggregates.debtToEquity.average),
+        };
+
         const formattedMedians = {
             market_cap: formatAggregate(calculatedAggregates.marketCap.median, false, true),
             pe_ratio: formatAggregate(calculatedAggregates.peRatio.median),
@@ -1042,6 +1055,7 @@ export async function getCompetitorAnalysis(targetSymbol) {
             },
             peers: peerData,
             largest_competitor: largestCompetitor.name || 'N/A',
+            calculated_averages: formattedAverages,
             calculated_medians: formattedMedians
         };
 
