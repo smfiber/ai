@@ -851,6 +851,7 @@ function _getCompetitorMetricsFromCache(fmpData) {
     };
 
     const ratiosTTM = fmpData.ratios_ttm?.data?.[0] || {};
+    const ratiosAnnual = fmpData.ratios_annual?.data?.[0] || {}; // Get latest annual
     const keyMetricsTTM = fmpData.key_metrics_ttm?.data?.[0] || {};
     const growthAnnual = fmpData.income_statement_growth_annual?.data?.[0] || {};
     
@@ -863,10 +864,10 @@ function _getCompetitorMetricsFromCache(fmpData) {
         ev_ebitda: (typeof evToEbitda === 'number' && evToEbitda > 0) ? formatMetric(evToEbitda) : 'N/M',
         gross_margin: formatMetric(ratiosTTM.grossProfitMarginTTM, true),
         net_margin: formatMetric(ratiosTTM.netProfitMarginTTM, true),
-        roe: formatMetric(ratiosTTM.returnOnEquityTTM, true),
-        roa: formatMetric(ratiosTTM.returnOnAssetsTTM, true),
+        roe: formatMetric(ratiosTTM.returnOnEquityTTM ?? ratiosAnnual.returnOnEquity, true),
+        roa: formatMetric(ratiosTTM.returnOnAssetsTTM ?? ratiosAnnual.returnOnAssets, true),
         revenue_growth: formatMetric(growthAnnual.growthRevenue, true),
-        debt_to_equity: formatMetric(ratiosTTM.debtEquityRatioTTM),
+        debt_to_equity: formatMetric(ratiosTTM.debtEquityRatioTTM ?? ratiosAnnual.debtEquityRatio),
     };
 }
 
