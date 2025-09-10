@@ -2492,15 +2492,89 @@ function renderValuationHealthDashboard(container, ticker, fmpData) {
         };
     };
 
+    // --- DATA EXTRACTION & CALCULATION ---
+    const profile = fmpData.profile?.[0] || {};
+    const incomeStatements = fmpData.income_statement_annual || [];
+    const balanceSheets = fmpData.balance_sheet_statement_annual || [];
+    const cashFlows = fmpData.cash_flow_statement_annual || [];
     const keyMetrics = (fmpData.key_metrics_annual || []).slice(0, 5).reverse();
     const ratios = (fmpData.ratios_annual || []).slice(0, 5).reverse();
+    const employeeData = fmpData.employee_count || [];
 
-    if (keyMetrics.length < 2 || ratios.length < 2) {
+    if (keyMetrics.length < 2 || ratios.length < 2 || incomeStatements.length < 2 || balanceSheets.length < 1) {
         container.innerHTML = `<h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Valuation & Health Dashboard</h3><p class="text-center text-gray-500 py-8">Not enough historical data to generate the dashboard.</p>`;
         return;
     }
+    
+    // --- NEW METRIC CALCULATIONS ---
+    const latestIncome = incomeStatements[0] || {};
+    const priorIncome = incomeStatements[1] || {};
+    const earliestIncome = incomeStatements[incomeStatements.length - 1] || {};
+    const latestBalance = balanceSheets[0] || {};
+    const latestCashFlow = cashFlows[0] || {};
+    const latestRatiosData = fmpData.ratios_annual?.[0] || {};
+    const latestEmployee = employeeData[0] || {};
 
-    const metricsToDisplay = [
+    let epsGrowthTTM = 'N/A';
+    if (latestIncome.eps && priorIncome.eps && priorIncome.eps !== 0) {
+        epsGrowthTTM = `${(((latestIncome.eps - priorIncome.eps) / Math.abs(priorIncome.eps)) * 100).toFixed(2)}%`;
+    }
+
+    let epsCagr = 'N/A';
+    if (latestIncome.eps && earliestIncome.eps && earliestIncome.eps > 0) {
+        const years = parseInt(latestIncome.calendarYear) - parseInt(earliestIncome.calendarYear);
+        if (years > 0) {
+            const cagr = (Math.pow(latestIncome.eps / earliestIncome.eps, 1 / years) - 1) * 100;
+            epsCagr = `${cagr.toFixed(2)}%`;
+        }
+    }
+    
+    let longTermDebtEquity = 'N/A';
+    if (latestBalance.longTermDebt && latestBalance.totalStockholdersEquity) {
+        longTermDebtEquity = (latestBalance.longTermDebt / latestBalance.totalStockholdersEquity).toFixed(2);
+    }
+    
+    const incomePerEmployee = latestEmployee.employeeCount ? formatLargeNumber(latestIncome.netIncome / latestEmployee.employeeCount) : 'N/A';
+    const revenuePerEmployee = latestEmployee.employeeCount ? formatLargeNumber(latestIncome.revenue / latestEmployee.employeeCount) : 'N/A';
+    
+    // --- TILE DEFINITIONS ---
+    const _renderSimpleTile = (title, value, group) => {
+        return `
+            <div class="metric-tile" data-group="${group}">
+                <p class="metric-title">${title}</p>
+                <p class="metric-value">${value}</p>
+            </div>
+        `;
+    };
+    
+    const simpleMetrics = [
+        { title: 'Market Cap', value: formatLargeNumber(profile.mktCap), group: 'Key Ratios' },
+        { title: 'P/E (TTM)', value: latestRatiosData.priceEarningsRatio?.toFixed(2) || 'N/A', group: 'Key Ratios' },
+        { title: 'EPS growth (TTM vs. prior TTM)', value: epsGrowthTTM, group: 'Key Ratios' },
+        { title: `EPS Growth (${parseInt(latestIncome.calendarYear) - parseInt(earliestIncome.calendarYear)}-Yr CAGR)`, value: epsCagr, group: 'Key Ratios' },
+        
+        { title: 'Gross margin (TTM)', value: latestRatiosData.grossProfitMargin ? `${(latestRatiosData.grossProfitMargin * 100).toFixed(2)}%` : 'N/A', group: 'Profitability' },
+        { title: 'EBITDA margin (TTM)', value: latestRatiosData.ebitdaMargin ? `${(latestRatiosData.ebitdaMargin * 100).toFixed(2)}%` : 'N/A', group: 'Profitability' },
+        { title: 'Return on equity (TTM)', value: latestRatiosData.returnOnEquity ? `${(latestRatiosData.returnOnEquity * 100).toFixed(2)}%` : 'N/A', group: 'Profitability' },
+        { title: 'Return on assets (TTM)', value: latestRatiosData.returnOnAssets ? `${(latestRatiosData.returnOnAssets * 100).toFixed(2)}%` : 'N/A', group: 'Profitability' },
+
+        { title: 'Long term debt/equity (TTM)', value: longTermDebtEquity, group: 'Balance Sheet' },
+        { title: 'Total debt/assets (TTM)', value: latestRatiosData.debtRatio ? `${(latestRatiosData.debtRatio * 100).toFixed(2)}%` : 'N/A', group: 'Balance Sheet' },
+        { title: 'Total assets', value: formatLargeNumber(latestBalance.totalAssets), group: 'Balance Sheet' },
+        { title: 'Total liabilities', value: formatLargeNumber(latestBalance.totalLiabilities), group: 'Balance Sheet' },
+
+        { title: 'Income/employee (TTM)', value: `$${incomePerEmployee}`, group: 'Per Employee' },
+        { title: 'Revenue/employee (TTM)', value: `$${revenuePerEmployee}`, group: 'Per Employee' },
+        
+        { title: 'Net sales', value: formatLargeNumber(latestIncome.revenue), group: 'Income Statement' },
+        { title: 'Gross profit', value: formatLargeNumber(latestIncome.grossProfit), group: 'Income Statement' },
+        { title: 'Profit margin', value: latestRatiosData.netProfitMargin ? `${(latestRatiosData.netProfitMargin * 100).toFixed(2)}%` : 'N/A', group: 'Income Statement' },
+
+        { title: 'Operating', value: formatLargeNumber(latestCashFlow.operatingCashFlow), group: 'Cash Flow' },
+        { title: 'Net cash flow', value: formatLargeNumber(latestCashFlow.netChangeInCash), group: 'Cash Flow' }
+    ];
+
+    const complexMetrics = [
         { name: 'P/E Ratio', key: 'peRatio', source: keyMetrics, isRatio: true, isPct: false, lowerIsBetter: true, tooltip: 'Price-to-Earnings (P/E) Ratio: Measures how expensive a stock is relative to its annual earnings. A lower P/E may indicate a bargain.' },
         { name: 'P/S Ratio', key: 'priceToSalesRatio', source: ratios, isRatio: true, isPct: false, lowerIsBetter: true, tooltip: 'Price-to-Sales (P/S) Ratio: Compares the stock price to its revenue per share. Useful for valuing companies that are not yet profitable.' },
         { name: 'Debt/Equity', key: 'debtToEquity', source: keyMetrics, isRatio: false, isPct: false, lowerIsBetter: true, tooltip: 'Debt/Equity Ratio: Measures a company\'s financial leverage by dividing its total liabilities by shareholder equity. A high ratio indicates more debt.' },
@@ -2510,8 +2584,9 @@ function renderValuationHealthDashboard(container, ticker, fmpData) {
         { name: 'Current Ratio', key: 'currentRatio', source: ratios, isRatio: false, isPct: false, lowerIsBetter: false, tooltip: 'Current Ratio: A liquidity ratio that measures a company\'s ability to pay its short-term obligations or those due within one year.' },
         { name: 'Net Margin', key: 'netProfitMargin', source: ratios, isRatio: false, isPct: true, lowerIsBetter: false, tooltip: 'Net Profit Margin: Represents the percentage of revenue that becomes profit. A higher margin indicates a more profitable company.' },
     ];
-
-    const tilesHtml = metricsToDisplay.map(m => {
+    
+    // --- HTML RENDERING ---
+    const complexTilesHtml = complexMetrics.map(m => {
         const data = evaluateMetric(m.name, m.key, m.source, m.isRatio, m.isPct, m.lowerIsBetter);
         return `
             <div class="metric-tile" data-tooltip="${sanitizeText(m.tooltip)}">
@@ -2530,9 +2605,11 @@ function renderValuationHealthDashboard(container, ticker, fmpData) {
         `;
     }).join('');
 
+    const simpleTilesHtml = simpleMetrics.map(m => _renderSimpleTile(m.title, m.value, m.group)).join('');
+
     container.innerHTML = `
         <h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Valuation & Health Dashboard</h3>
-        <div class="health-dashboard-grid">${tilesHtml}</div>`;
+        <div class="health-dashboard-grid">${complexTilesHtml}${simpleTilesHtml}</div>`;
 }
 
 
