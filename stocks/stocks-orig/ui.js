@@ -3080,7 +3080,7 @@ function _calculateUndervaluedMetrics(data) {
 
     // 2. Financial Health
     const roeTrend = getTrend(keyMetrics, 'returnOnEquity', v => typeof v === 'number' ? `${(v * 100).toFixed(2)}%` : 'N/A');
-    const debtToEquity = latestRatios.debtToEquityRatio ? latestRatios.debtToEquityRatio.toFixed(2) : 'N/A';
+    const debtToEquity = latestMetrics.debtToEquity ? latestMetrics.debtToEquity.toFixed(2) : 'Data not available';
     
     // 3. Dividend Analysis
     const dividendYield = latestRatios.dividendYield ? `${(latestRatios.dividendYield * 100).toFixed(2)}%` : 'N/A';
@@ -3093,12 +3093,12 @@ function _calculateUndervaluedMetrics(data) {
     }
 
     // 4. Valuation Multiples
-    const peRatio = latestRatios.priceToEarningsRatio ? latestRatios.priceToEarningsRatio.toFixed(2) : 'N/A';
+    const peRatio = latestMetrics.peRatio ? latestMetrics.peRatio.toFixed(2) : 'Not applicable (e.g. negative earnings)';
     const psRatio = latestRatios.priceToSalesRatio ? latestRatios.priceToSalesRatio.toFixed(2) : 'N/A';
     const pbRatio = latestRatios.priceToBookRatio ? latestRatios.priceToBookRatio.toFixed(2) : 'N/A';
 
     // 5. Valuation in Context
-    const historicalPe = calculateAverage(ratios, 'priceToEarningsRatio');
+    const historicalPe = calculateAverage(keyMetrics, 'peRatio');
     const historicalPs = calculateAverage(ratios, 'priceToSalesRatio');
     const historicalPb = calculateAverage(ratios, 'priceToBookRatio');
 
@@ -3235,7 +3235,7 @@ function _calculateFinancialAnalysisMetrics(data) {
     // Health
     const health = {
         currentRatio: { status: latestRatios.currentRatio > 2 ? 'Strong' : (latestRatios.currentRatio > 1 ? 'Healthy' : 'a potential risk') },
-        debtToEquity: { status: latestRatios.debtToEquityRatio > 1 ? 'Aggressive' : (latestRatios.debtToEquityRatio > 0.5 ? 'Moderate' : 'Conservative') },
+        debtToEquity: { status: latestMetrics.debtToEquity > 1 ? 'Aggressive' : (latestMetrics.debtToEquity > 0.5 ? 'Moderate' : 'Conservative') },
         interestCoverage: { status: latestRatios.interestCoverage > 5 ? 'Very strong' : (latestRatios.interestCoverage > 2 ? 'Healthy' : 'a potential concern') }
     };
 
@@ -3259,13 +3259,13 @@ function _calculateFinancialAnalysisMetrics(data) {
 
     // Valuation
     const valuationMetrics = [
-        { name: 'peRatio', key: 'priceToEarningsRatio', source: ratios },
+        { name: 'peRatio', key: 'peRatio', source: keyMetrics },
         { name: 'priceToSalesRatio', key: 'priceToSalesRatio', source: ratios },
         { name: 'pbRatio', key: 'priceToBookRatio', source: ratios },
         { name: 'enterpriseValueToEBITDA', key: 'enterpriseValueMultiple', source: ratios }
     ];
     const valuation = valuationMetrics.map(metric => {
-        const current = latestRatios[metric.key];
+        const current = (metric.name === 'peRatio') ? latestMetrics[metric.key] : latestRatios[metric.key];
         const historicalAverage = calculateAverage(metric.source, metric.key);
         let status = 'N/A';
         if (current && historicalAverage) {
@@ -3327,11 +3327,11 @@ function _calculateBullVsBearMetrics(data) {
             operating_cash_flow: formatTrend(cashFlow, 'operatingCashFlow')
         },
         valuation_metrics: {
-            pe_ratio_trend: ratios.map(m => ({ year: m.calendarYear, value: m.priceToEarningsRatio?.toFixed(2) })),
+            pe_ratio_trend: metrics.map(m => ({ year: m.calendarYear, value: m.peRatio?.toFixed(2) })),
             pb_ratio_trend: ratios.map(m => ({ year: m.calendarYear, value: m.priceToBookRatio?.toFixed(2) }))
         },
         balance_sheet_health: {
-            debt_to_equity_trend: ratios.map(m => ({ year: m.calendarYear, value: m.debtToEquityRatio?.toFixed(2) }))
+            debt_to_equity_trend: metrics.map(m => ({ year: m.calendarYear, value: m.debtToEquity?.toFixed(2) }))
         },
         analyst_ratings: grades.map(g => ({ company: g.gradingCompany, from: g.previousGrade, to: g.newGrade }))
     };
@@ -3364,7 +3364,7 @@ function _calculateMoatAnalysisMetrics(data) {
             rdExpenses: income.map(i => ({ year: i.calendarYear, value: formatLargeNumber(i.researchAndDevelopmentExpenses) }))
         },
         balanceSheetHealth: {
-            debtToEquity: ratios[ratios.length - 1]?.debtToEquityRatio?.toFixed(2) || 'N/A'
+            debtToEquity: metrics[metrics.length - 1]?.debtToEquity?.toFixed(2) || 'N/A'
         }
     };
 }
@@ -3406,7 +3406,7 @@ function _calculateDividendSafetyMetrics(data) {
         dividendHistory: {
             dividendsPaid: cashFlow.slice(-5).map(cf => ({ year: cf.calendarYear, value: formatLargeNumber(cf.dividendsPaid) })),
         },
-        debtToEquityTrend: ratios.slice(-5).map(r => ({ year: r.calendarYear, value: r.debtToEquityRatio?.toFixed(2) })),
+        debtToEquityTrend: metrics.slice(-5).map(m => ({ year: m.calendarYear, value: m.debtToEquity?.toFixed(2) })),
         cashTrend: balanceSheet.slice(-5).map(bs => ({ year: bs.calendarYear, value: formatLargeNumber(bs.cashAndCashEquivalents) }))
     };
 }
@@ -3422,6 +3422,7 @@ function _calculateGrowthOutlookMetrics(data) {
     const ratios = (data.ratios_annual || []).slice(-5);
 
     const latestRatios = ratios[ratios.length - 1] || {};
+    const latestMetrics = metrics[metrics.length - 1] || {};
 
     return {
         historicalGrowth: {
@@ -3429,7 +3430,7 @@ function _calculateGrowthOutlookMetrics(data) {
             net_income_trend: income.map(i => ({ year: i.calendarYear, value: formatLargeNumber(i.netIncome) }))
         },
         valuation: {
-            peRatio: latestRatios.priceToEarningsRatio?.toFixed(2) || 'N/A',
+            peRatio: latestMetrics.peRatio?.toFixed(2) || 'N/A',
             evToSalesRatio: latestRatios.enterpriseValueMultiple?.toFixed(2) || 'N/A' // Note: This is EV/EBITDA, not EV/Sales. Using what's available.
         },
         reinvestment: {
@@ -3461,10 +3462,11 @@ function _calculateRiskAssessmentMetrics(data) {
     const latestRatios = ratios[ratios.length - 1] || {};
     const latestCashFlow = cashFlow[cashFlow.length - 1] || {};
     const latestIncome = income[income.length - 1] || {};
+    const latestMetrics = metrics[metrics.length - 1] || {};
 
     return {
         financialRisks: {
-            debtToEquity: latestRatios.debtToEquityRatio?.toFixed(2) || 'N/A',
+            debtToEquity: latestMetrics.debtToEquity?.toFixed(2) || 'N/A',
             currentRatio: latestRatios.currentRatio?.toFixed(2) || 'N/A',
             earningsQuality: {
                 operating_cash_flow: formatLargeNumber(latestCashFlow.operatingCashFlow),
@@ -3476,7 +3478,7 @@ function _calculateRiskAssessmentMetrics(data) {
         marketRisks: {
             beta: profile.beta?.toFixed(2) || 'N/A',
             valuation: {
-                peRatio: latestRatios.priceToEarningsRatio?.toFixed(2) || 'N/A',
+                peRatio: latestMetrics.peRatio?.toFixed(2) || 'N/A',
                 psRatio: latestRatios.priceToSalesRatio?.toFixed(2) || 'N/A'
             },
             analystPessimism: grades.filter(g => ['sell', 'underperform', 'underweight'].includes(g.newGrade.toLowerCase()))
@@ -3502,13 +3504,15 @@ function _calculateCapitalAllocatorsMetrics(data) {
 
     // Create a map for easy lookup by year
     const ratiosMap = new Map(ratios.map(r => [r.calendarYear, r]));
+    const metricsMap = new Map(metrics.map(m => [m.calendarYear, m]));
 
     const buybacksWithValuation = cashFlow.map(cf => {
         const correspondingRatios = ratiosMap.get(cf.calendarYear);
+        const correspondingMetrics = metricsMap.get(cf.calendarYear);
         return {
             year: cf.calendarYear,
             common_stock_repurchased: formatLargeNumber(cf.commonStockRepurchased),
-            pe_ratio: correspondingRatios?.priceToEarningsRatio?.toFixed(2) || 'N/A',
+            pe_ratio: correspondingMetrics?.peRatio?.toFixed(2) || 'N/A',
             pb_ratio: correspondingRatios?.priceToBookRatio?.toFixed(2) || 'N/A'
         };
     });
@@ -3562,6 +3566,7 @@ function _calculateNarrativeCatalystMetrics(data) {
     const latestRatios = ratios[ratios.length - 1] || {};
     const latestCashFlow = cashFlow[cashFlow.length - 1] || {};
     const latestIncome = income[income.length - 1] || {};
+    const latestMetrics = metrics[metrics.length - 1] || {};
 
     const isGrowthAccelerating = () => {
         if (income.length < 3) return false;
@@ -3581,7 +3586,7 @@ function _calculateNarrativeCatalystMetrics(data) {
         industry: profile.industry,
         isProfitable: (latestIncome.netIncome || 0) > 0,
         isCashFlowPositive: (latestCashFlow.freeCashFlow || 0) > 0,
-        manageableDebt: (latestRatios.debtToEquityRatio || 0) < 2.0,
+        manageableDebt: (latestMetrics.debtToEquity || 0) < 2.0,
         isGrowthAccelerating: isGrowthAccelerating(),
         isMarginExpanding: isMarginExpanding(),
         hasRecentUpgrades: grades.filter(g => g.action && g.action.toLowerCase() === 'upgrade').length > 0
