@@ -125,6 +125,12 @@ body.modal-open {
     padding-top: 1rem;
 }
 
+@media (min-width: 1280px) { /* Corresponds to Tailwind's 'xl' breakpoint */
+    .health-dashboard-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
 .metric-tile {
     background-color: #f9fafb; /* bg-gray-50 */
     border: 1px solid #e5e7eb; /* border-gray-200 */
