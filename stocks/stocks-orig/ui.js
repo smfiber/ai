@@ -2089,7 +2089,7 @@ async function handleUntouchablesAnalysis(contextName, contextType) {
 
 export async function displayIndustryScreener() {
     try {
-        const url = `https://financialmodelingprep.com/api/v3/available-industries?apikey=${state.fmpApiKey}`;
+        const url = `https://financialmodelingprep.com/stable/available-industries?apikey=${state.fmpApiKey}`;
         const industryData = await callApi(url);
         if (Array.isArray(industryData)) {
             // FIX: Handle both object array and string array formats from the API.
