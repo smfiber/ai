@@ -3079,7 +3079,7 @@ function _calculateUndervaluedMetrics(data) {
     const profitabilityTrend = getTrend(ratios, 'netProfitMargin', v => typeof v === 'number' ? `${(v * 100).toFixed(2)}%` : 'N/A');
 
     // 2. Financial Health
-    const roeTrend = getTrend(keyMetrics, 'returnOnEquity', v => typeof v === 'number' ? `${(v * 100).toFixed(2)}%` : 'N/A');
+    const roeTrend = getTrend(keyMetrics, 'roe', v => typeof v === 'number' ? `${(v * 100).toFixed(2)}%` : 'N/A');
     const debtToEquity = latestMetrics.debtToEquity ? latestMetrics.debtToEquity.toFixed(2) : 'Data not available';
     
     // 3. Dividend Analysis
@@ -3229,7 +3229,7 @@ function _calculateFinancialAnalysisMetrics(data) {
         grossProfitMargin: { status: getTrendStatus(ratios.map(r=>r.grossProfitMargin)) },
         operatingProfitMargin: { status: getTrendStatus(ratios.map(r=>r.operatingProfitMargin)) },
         netProfitMargin: { status: getTrendStatus(ratios.map(r=>r.netProfitMargin)) },
-        returnOnEquity: { quality: latestMetrics.returnOnEquity > 0.15 ? 'High' : (latestMetrics.returnOnEquity > 0.05 ? 'Moderate' : 'Low') }
+        returnOnEquity: { quality: latestMetrics.roe > 0.15 ? 'High' : (latestMetrics.roe > 0.05 ? 'Moderate' : 'Low') }
     };
     
     // Health
@@ -3288,7 +3288,7 @@ function _calculateFinancialAnalysisMetrics(data) {
     if (health.currentRatio.status === 'a potential risk') bearCasePoints.push("Low liquidity, which could be a short-term risk.");
     
     const moatIndicator = (() => {
-        const highRoe = keyMetrics.slice(-5).every(k => k.returnOnEquity > 0.15);
+        const highRoe = keyMetrics.slice(-5).every(k => k.roe > 0.15);
         const stableMargins = !performance.netProfitMargin.status.includes('declining');
         if (highRoe && stableMargins) return "The data, showing consistently high ROE and stable margins, suggests the presence of a strong competitive moat.";
         if (stableMargins) return "The data suggests a potential moat, indicated by stable profit margins.";
@@ -3319,7 +3319,7 @@ function _calculateBullVsBearMetrics(data) {
             net_income: formatTrend(income, 'net_income')
         },
         profitability_metrics: {
-            roe_trend: formatPercentTrend(metrics, 'returnOnEquity'),
+            roe_trend: formatPercentTrend(metrics, 'roe'),
             net_profit_margin_trend: formatPercentTrend(ratios, 'netProfitMargin'),
             operating_margin_trend: formatPercentTrend(ratios, 'operatingProfitMargin')
         },
@@ -3529,7 +3529,7 @@ function _calculateCapitalAllocatorsMetrics(data) {
         })),
         reinvestmentEffectiveness: {
             roicTrend: formatPercentTrend(metrics, 'returnOnInvestedCapital'),
-            roeTrend: formatPercentTrend(metrics, 'returnOnEquity'),
+            roeTrend: formatPercentTrend(metrics, 'roe'),
             revenueGrowth: income.map(i => ({ year: i.calendarYear, revenue: formatLargeNumber(i.revenue) })),
             grossProfitGrowth: income.map(i => ({ year: i.calendarYear, grossProfit: formatLargeNumber(i.grossProfit) }))
         },
