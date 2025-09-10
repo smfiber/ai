@@ -2492,8 +2492,8 @@ function renderValuationHealthDashboard(container, ticker, fmpData) {
         };
     };
 
-    const keyMetrics = (fmpData.key_metrics_annual || []).slice().reverse().slice(0, 5).reverse();
-    const ratios = (fmpData.ratios_annual || []).slice().reverse().slice(0, 5).reverse();
+    const keyMetrics = (fmpData.key_metrics_annual || []).slice(0, 5).reverse();
+    const ratios = (fmpData.ratios_annual || []).slice(0, 5).reverse();
 
     if (keyMetrics.length < 2 || ratios.length < 2) {
         container.innerHTML = `<h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Valuation & Health Dashboard</h3><p class="text-center text-gray-500 py-8">Not enough historical data to generate the dashboard.</p>`;
