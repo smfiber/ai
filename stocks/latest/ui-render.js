@@ -27,6 +27,34 @@ async function getScreenerInteractions() {
     return interactions;
 }
 
+// --- DATA FETCHING & CACHING ---
+
+export async function fetchAndCachePortfolioData() {
+    try {
+        if (!state.db) {
+            console.error("Firestore is not initialized.");
+            return;
+        }
+        const querySnapshot = await getDocs(collection(state.db, CONSTANTS.DB_COLLECTION_PORTFOLIO));
+        state.portfolioCache = querySnapshot.docs.map(doc => ({ ticker: doc.id, ...doc.data() }));
+
+        // Update dashboard counts
+        const portfolioCount = state.portfolioCache.filter(s => s.status === 'Portfolio').length;
+        const watchlistCount = state.portfolioCache.filter(s => s.status === 'Watchlist').length;
+        const revisit3Count = state.portfolioCache.filter(s => s.status === 'Revisit 3 months').length;
+        const revisit6Count = state.portfolioCache.filter(s => s.status === 'Revisit 6 months').length;
+
+        document.getElementById('portfolio-count').textContent = portfolioCount;
+        document.getElementById('watchlist-count').textContent = watchlistCount;
+        document.getElementById('revisit-3-months-count').textContent = revisit3Count;
+        document.getElementById('revisit-6-months-count').textContent = revisit6Count;
+        
+    } catch (error) {
+        console.error("Error fetching portfolio data:", error);
+    }
+}
+
+
 // --- UI RENDERING ---
 
 export async function renderSectorButtons() {
