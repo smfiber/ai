@@ -3424,7 +3424,7 @@ function _calculateBullVsBearMetrics(data) {
     return {
         growth_trends: {
             revenue: formatTrend(income, 'revenue'),
-            net_income: formatTrend(income, 'net_income')
+            net_income: formatTrend(income, 'netIncome')
         },
         profitability_metrics: {
             roe_trend: formatPercentTrend(metrics, 'roe'),
