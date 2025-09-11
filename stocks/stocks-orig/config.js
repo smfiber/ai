@@ -313,6 +313,7 @@ Focus on strengths like:
 - **High Profitability:** Is the company a good money-maker? Analyze the trends in 'profitability_metrics'. If 'roe_trend' has valid data, use it. If not, analyze 'net_profit_margin_trend' or 'operating_margin_trend'.
 - **Solid Cash Flow:** Is the business generating real cash? Check for consistent positive values in the 'cash_flow_trends.operating_cash_flow' array.
 - **Attractive Valuation:** Does the stock seem cheap relative to its history? Use recent values from 'valuation_metrics.pe_ratio_trend' and 'valuation_metrics.pb_ratio_trend'.
+- **Positive Market Momentum:** Does the \`price_performance\` data show strong recent gains? Interpret this as positive market sentiment.
 
 ## The Bear Case (The Cautious View: Reasons for Concern)
 Construct a negative argument. For each point, state the supporting data and explain the potential risk.
@@ -320,6 +321,7 @@ Focus on weaknesses like:
 - **Heavy Debt Load:** Does the company owe a lot of money? Analyze the trend in 'balance_sheet_health.debt_to_equity_trend'.
 - **Slowing Growth or Declining Profitability:** Are sales or profits shrinking or stagnating? Check the 'growth_trends' object. Are the trends in 'profitability_metrics' declining?
 - **Analyst Skepticism:** Do the 'analyst_ratings' show downgrades?
+- **Negative Market Momentum:** Does the \`price_performance\` data show significant recent losses? Interpret this as negative market sentiment or specific company concerns.
 
 ## The Final Takeaway: What's the Core Debate?
 Conclude with a 1-2 sentence summary that frames the central conflict for an investor **and identifies the single most important factor to watch going forward.** For example: "The core debate for {companyName} is whether its strong profitability (the bull case) can outweigh its significant debt load (the bear case). The key factor to watch will be if they can pay down debt while maintaining their high margins."
@@ -577,7 +579,7 @@ export const promptMap = {
     },
     'BullVsBear': {
         prompt: BULL_VS_BEAR_PROMPT,
-        requires: ['income_statement_annual', 'key_metrics_annual', 'cash_flow_statement_annual', 'stock_grade_news']
+        requires: ['income_statement_annual', 'key_metrics_annual', 'cash_flow_statement_annual', 'stock_grade_news', 'historical_price']
     },
     'MoatAnalysis': {
         prompt: MOAT_ANALYSIS_PROMPT,
