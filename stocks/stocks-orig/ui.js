@@ -311,9 +311,13 @@ export async function fetchAndCachePortfolioData() {
 
         const portfolioStocks = state.portfolioCache.filter(s => s.status === 'Portfolio');
         const watchlistStocks = state.portfolioCache.filter(s => s.status === 'Watchlist');
+        const revisit3MonthsStocks = state.portfolioCache.filter(s => s.status === 'Revisit 3 months');
+        const revisit6MonthsStocks = state.portfolioCache.filter(s => s.status === 'Revisit 6 months');
 
         document.getElementById('portfolio-count').textContent = portfolioStocks.length;
         document.getElementById('watchlist-count').textContent = watchlistStocks.length;
+        document.getElementById('revisit-3-months-count').textContent = revisit3MonthsStocks.length;
+        document.getElementById('revisit-6-months-count').textContent = revisit6MonthsStocks.length;
 
     } catch (error) {
         console.error("Error loading dashboard data:", error);
@@ -335,7 +339,7 @@ async function openStockListModal(listType) {
 
     const title = modal.querySelector('#stock-list-modal-title');
     const container = modal.querySelector('#stock-list-modal-content');
-    title.textContent = listType === 'Portfolio' ? 'My Portfolio' : 'My Watchlist';
+    title.textContent = `My ${listType}`;
     container.innerHTML = '';
 
     try {
@@ -479,7 +483,7 @@ async function handleResearchSubmit(e) {
     try {
         const docRef = doc(state.db, CONSTANTS.DB_COLLECTION_PORTFOLIO, symbol);
         if ((await getDoc(docRef)).exists()) {
-             displayMessageInModal(`${symbol} is already in your portfolio or watchlist. You can edit it from the dashboard.`, 'info');
+             displayMessageInModal(`${symbol} is already in your lists (Portfolio, Watchlist, or Revisit). You can edit it from the dashboard.`, 'info');
              tickerInput.value = '';
              closeModal(CONSTANTS.MODAL_LOADING);
              return;
@@ -1437,6 +1441,18 @@ function setupGlobalEventListeners() {
         const watchlistButton = e.target.closest('#open-watchlist-modal-button');
         if (watchlistButton) {
             openStockListModal('Watchlist');
+            return;
+        }
+
+        const revisit3MonthsButton = e.target.closest('#open-revisit-3-months-modal-button');
+        if (revisit3MonthsButton) {
+            openStockListModal('Revisit 3 months');
+            return;
+        }
+
+        const revisit6MonthsButton = e.target.closest('#open-revisit-6-months-modal-button');
+        if (revisit6MonthsButton) {
+            openStockListModal('Revisit 6 months');
             return;
         }
     });
