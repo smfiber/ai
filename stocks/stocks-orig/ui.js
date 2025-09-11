@@ -172,6 +172,7 @@ async function handleRefreshFmpData(symbol) {
             { name: 'ratios_annual', path: 'ratios', params: 'period=annual&limit=10', version: 'v3' },
             { name: 'stock_grade_news', path: 'grade', version: 'v3' },
             { name: 'analyst_estimates', path: 'analyst-estimates', version: 'v3'},
+            { name: 'historical_price', path: 'historical-price-full', params: 'serietype=line', version: 'v3' },
             { name: 'company_core_information', path: 'company-core-information', version: 'v4', symbolAsQuery: true }
         ];
 
@@ -3377,9 +3378,48 @@ function _calculateBullVsBearMetrics(data) {
     const cashFlow = (data.cash_flow_statement_annual || []).slice(-5);
     const grades = (data.stock_grade_news || []).slice(0, 10);
     const ratios = (data.ratios_annual || []).slice(-5);
+    const history = (data.historical_price || []);
 
     const formatTrend = (arr, key) => arr.map(item => ({ year: item.calendarYear, value: formatLargeNumber(item[key]) }));
     const formatPercentTrend = (arr, key) => arr.map(item => ({ year: item.calendarYear, value: item[key] ? `${(item[key] * 100).toFixed(2)}%` : 'N/A' }));
+
+    const findPriceClosestToDate = (targetDate, priceHistory) => {
+        if (!priceHistory || priceHistory.length === 0) return null;
+        const targetTimestamp = targetDate.getTime();
+        for (const point of priceHistory) {
+            const pointDate = new Date(point.date);
+            if (pointDate.getTime() <= targetTimestamp) {
+                return point.close;
+            }
+        }
+        return priceHistory[priceHistory.length - 1].close;
+    };
+
+    let price_performance = {
+        '1M': 'N/A', '3M': 'N/A', '6M': 'N/A', '12M': 'N/A'
+    };
+
+    if (history.length > 1) {
+        history.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        const today = new Date();
+        const currentPrice = history[0].close;
+
+        const dates = {
+            '1M': new Date(new Date().setMonth(today.getMonth() - 1)),
+            '3M': new Date(new Date().setMonth(today.getMonth() - 3)),
+            '6M': new Date(new Date().setMonth(today.getMonth() - 6)),
+            '12M': new Date(new Date().setFullYear(today.getFullYear() - 1)),
+        };
+
+        for (const period in dates) {
+            const pastPrice = findPriceClosestToDate(dates[period], history);
+            if (currentPrice && pastPrice && pastPrice !== 0) {
+                const change = ((currentPrice - pastPrice) / pastPrice) * 100;
+                price_performance[period] = `${change.toFixed(2)}%`;
+            }
+        }
+    }
 
     return {
         growth_trends: {
@@ -3398,6 +3438,7 @@ function _calculateBullVsBearMetrics(data) {
             pe_ratio_trend: metrics.map(m => ({ year: m.calendarYear, value: m.peRatio?.toFixed(2) })),
             pb_ratio_trend: ratios.map(m => ({ year: m.calendarYear, value: m.priceToBookRatio?.toFixed(2) }))
         },
+        price_performance,
         balance_sheet_health: {
             debt_to_equity_trend: metrics.map(m => ({ year: m.calendarYear, value: m.debtToEquity?.toFixed(2) }))
         },
