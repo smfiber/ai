@@ -1,4 +1,6 @@
-import { setupEventListeners, openModal, closeModal, displayMessageInModal, fetchAndCachePortfolioData, renderSectorButtons, displayIndustryScreener } from './ui.js';
+import { setupEventListeners } from './ui.js';
+import { openModal, closeModal, displayMessageInModal } from './ui-modals.js';
+import { fetchAndCachePortfolioData, renderSectorButtons, displayIndustryScreener } from './ui-render.js';
 import { CONSTANTS, APP_VERSION, state } from './config.js';
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, signOut, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
