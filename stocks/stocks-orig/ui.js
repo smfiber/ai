@@ -870,6 +870,22 @@ function renderOverviewCard(data, symbol, status) {
         statusBadge = '<span class="ml-2 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-green-100 text-green-800">Portfolio</span>';
     } else if (status === 'Watchlist') {
         statusBadge = '<span class="ml-2 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800">Watchlist</span>';
+    } else if (status === 'Revisit 3 months') {
+        statusBadge = '<span class="ml-2 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-yellow-100 text-yellow-800">Revisit 3 Months</span>';
+    } else if (status === 'Revisit 6 months') {
+        statusBadge = '<span class="ml-2 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-orange-100 text-orange-800">Revisit 6 Months</span>';
+    }
+
+    let needsReviewClass = '';
+    if (status && status.startsWith('Revisit') && data.cachedAt) {
+        const months = parseInt(status.match(/\d+/)[0]);
+        const cachedDate = data.cachedAt.toDate();
+        const thresholdDate = new Date();
+        thresholdDate.setMonth(thresholdDate.getMonth() - months);
+
+        if (cachedDate < thresholdDate) {
+            needsReviewClass = 'needs-review';
+        }
     }
 
     const marketCap = formatLargeNumber(profile.mktCap);
@@ -882,7 +898,7 @@ function renderOverviewCard(data, symbol, status) {
     const fmpTimestampString = data.cachedAt ? `FMP Data Stored On: ${data.cachedAt.toDate().toLocaleDateString()}` : '';
 
     return `
-        <div class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6" id="card-${symbol}">
+        <div class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 ${needsReviewClass}" id="card-${symbol}">
             <div class="flex justify-between items-start gap-4">
                 <div>
                     <h2 class="text-2xl font-bold text-gray-800 flex items-center">${sanitizeText(profile.companyName)} (${sanitizeText(profile.symbol)}) ${statusBadge}</h2>
@@ -940,9 +956,23 @@ function renderPortfolioManagerList() {
         html += `<div class="portfolio-exchange-header">${sanitizeText(sector)}</div>`;
         html += '<ul class="divide-y divide-gray-200">';
         groupedBySector[sector].sort((a,b) => a.companyName.localeCompare(b.companyName)).forEach(stock => {
-            const statusBadge = stock.status === 'Portfolio'
-                ? '<span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-green-100 text-green-800">Portfolio</span>'
-                : '<span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800">Watchlist</span>';
+            let statusBadge = '';
+            switch (stock.status) {
+                case 'Portfolio':
+                    statusBadge = '<span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-green-100 text-green-800">Portfolio</span>';
+                    break;
+                case 'Watchlist':
+                    statusBadge = '<span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800">Watchlist</span>';
+                    break;
+                case 'Revisit 3 months':
+                    statusBadge = '<span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-yellow-100 text-yellow-800">Revisit 3 Months</span>';
+                    break;
+                case 'Revisit 6 months':
+                    statusBadge = '<span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-orange-100 text-orange-800">Revisit 6 Months</span>';
+                    break;
+                default:
+                    statusBadge = `<span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-gray-100 text-gray-800">${sanitizeText(stock.status)}</span>`;
+            }
 
             html += `
                 <li class="p-4 flex justify-between items-center hover:bg-gray-50">
