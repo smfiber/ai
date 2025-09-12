@@ -1349,5 +1349,3 @@ export async function handleSaveToDrive(modalId) {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
 }
-
-}
