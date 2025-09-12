@@ -1,4 +1,4 @@
-import { CONSTANTS, state, promptMap, NEWS_SENTIMENT_PROMPT, DISRUPTOR_ANALYSIS_PROMPT, MACRO_PLAYBOOK_PROMPT, INDUSTRY_CAPITAL_ALLOCATORS_PROMPT, INDUSTRY_DISRUPTOR_ANALYSIS_PROMPT, INDUSTRY_MACRO_PLAYBOOK_PROMPT, ONE_SHOT_INDUSTRY_TREND_PROMPT, FORTRESS_ANALYSIS_PROMPT, PHOENIX_ANALYSIS_PROMPT, PICK_AND_SHOVEL_PROMPT, LINCHPIN_ANALYSIS_PROMPT, HIDDEN_VALUE_PROMPT, UNTOUCHABLES_ANALYSIS_PROMPT, INVESTMENT_MEMO_PROMPT, ENABLE_STARTER_PLAN_MODE, STARTER_SYMBOLS, ALL_REPORTS_PROMPT } from './config.js';
+import { CONSTANTS, state, promptMap, NEWS_SENTIMENT_PROMPT, DISRUPTOR_ANALYSIS_PROMPT, MACRO_PLAYBOOK_PROMPT, INDUSTRY_CAPITAL_ALLOCATORS_PROMPT, INDUSTRY_DISRUPTOR_ANALYSIS_PROMPT, INDUSTRY_MACRO_PLAYBOOK_PROMPT, ONE_SHOT_INDUSTRY_TREND_PROMPT, FORTRESS_ANALYSIS_PROMPT, PHOENIX_ANALYSIS_PROMPT, PICK_AND_SHOVEL_PROMPT, LINCHPIN_ANALYSIS_PROMPT, HIDDEN_VALUE_PROMPT, UNTOUCHABLES_ANALYSIS_PROMPT, INVESTMENT_MEMO_PROMPT, ENABLE_STARTER_PLAN_MODE, STARTER_SYMBOLS } from './config.js';
 import { callApi, filterValidNews, callGeminiApi, generatePolishedArticle, getDriveToken, getOrCreateDriveFolder, createDriveFile, findStocksByIndustry, searchSectorNews, findStocksBySector, synthesizeAndRankCompanies, generateDeepDiveReport, getFmpStockData } from './api.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { openModal, closeModal, displayMessageInModal, openConfirmationModal, openManageStockModal } from './ui-modals.js';
@@ -1145,6 +1145,89 @@ export async function handleInvestmentMemoRequest(symbol) {
         console.error("Error generating investment memo:", error);
         displayMessageInModal(`Could not generate memo: ${error.message}`, 'error');
         contentContainer.innerHTML = `<p class="text-red-500">Failed to generate memo: ${error.message}</p>`;
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
+export async function handleGenerateAllReportsRequest(symbol) {
+    const reportTypes = [
+        'FinancialAnalysis', 'UndervaluedAnalysis', 'GarpAnalysis', 'BullVsBear', 
+        'MoatAnalysis', 'DividendSafety', 'GrowthOutlook', 'RiskAssessment', 
+        'CapitalAllocators', 'NarrativeCatalyst'
+    ];
+
+    const metricCalculators = {
+        'FinancialAnalysis': _calculateFinancialAnalysisMetrics,
+        'UndervaluedAnalysis': _calculateUndervaluedMetrics,
+        'GarpAnalysis': _calculateGarpAnalysisMetrics,
+        'BullVsBear': _calculateBullVsBearMetrics,
+        'MoatAnalysis': _calculateMoatAnalysisMetrics,
+        'DividendSafety': _calculateDividendSafetyMetrics,
+        'GrowthOutlook': _calculateGrowthOutlookMetrics,
+        'RiskAssessment': _calculateRiskAssessmentMetrics,
+        'CapitalAllocators': _calculateCapitalAllocatorsMetrics,
+        'NarrativeCatalyst': _calculateNarrativeCatalystMetrics
+    };
+
+    openModal(CONSTANTS.MODAL_LOADING);
+    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+
+    try {
+        loadingMessage.textContent = `Fetching latest FMP data for ${symbol}...`;
+        const data = await getFmpStockData(symbol);
+        if (!data) throw new Error(`No cached FMP data found for ${symbol}. Please refresh the data first.`);
+        
+        const profile = data.profile?.[0] || {};
+        const companyName = profile.companyName || 'the company';
+        const tickerSymbol = profile.symbol || symbol;
+
+        for (let i = 0; i < reportTypes.length; i++) {
+            const reportType = reportTypes[i];
+            const count = `(${i + 1}/${reportTypes.length})`;
+            loadingMessage.textContent = `Generating ${reportType} report ${count}...`;
+
+            const promptConfig = promptMap[reportType];
+            const calculateMetrics = metricCalculators[reportType];
+            if (!promptConfig || !calculateMetrics) {
+                console.warn(`Skipping report: No config for ${reportType}`);
+                continue;
+            }
+
+            const payloadData = calculateMetrics(data);
+
+            const prompt = promptConfig.prompt
+                .replace(/{companyName}/g, companyName)
+                .replace(/{tickerSymbol}/g, tickerSymbol)
+                .replace('{jsonData}', JSON.stringify(payloadData, null, 2));
+
+            const reportContent = await generatePolishedArticle(prompt, loadingMessage);
+
+            const reportData = {
+                ticker: symbol,
+                reportType: reportType,
+                content: reportContent,
+                savedAt: Timestamp.now(),
+                prompt: prompt
+            };
+            await addDoc(collection(state.db, CONSTANTS.DB_COLLECTION_AI_REPORTS), reportData);
+        }
+
+        displayMessageInModal(`Successfully generated and saved all 10 reports for ${symbol}. You can now generate the Investment Memo.`, 'info');
+        
+        const aiButtonsContainer = document.getElementById('ai-buttons-container');
+        if (aiButtonsContainer) {
+            reportTypes.forEach(reportType => {
+                const button = aiButtonsContainer.querySelector(`button[data-report-type="${reportType}"]`);
+                if (button) {
+                    button.classList.add('has-saved-report');
+                }
+            });
+        }
+
+    } catch (error) {
+        console.error("Error generating all reports:", error);
+        displayMessageInModal(`Could not complete batch generation: ${error.message}`, 'error');
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
