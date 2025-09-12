@@ -1154,3 +1154,5 @@ export const creativePromptMap = {
     'Real Estate': { prompt: REAL_ESTATE_SECTOR_PROMPT, label: 'Playbook' },
     'Materials': { prompt: MATERIALS_SECTOR_PROMPT, label: 'Playbook' }
 };
+
+}
