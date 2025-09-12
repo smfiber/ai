@@ -636,22 +636,27 @@ export function _calculateGarpAnalysisMetrics(data) {
     // Valuation
     const peRatio = latestMetrics.peRatio;
     const psRatio = latestRatios.priceToSalesRatio;
-    const historicalPeAvg = keyMetrics.slice(-5).map(m => m.peRatio).reduce((a, b) => a + b, 0) / 5;
-    const peStatusVsHistory = peRatio > historicalPeAvg ? 'trading at a premium to its history' : 'trading at a discount to its history';
+
+    const peHistory = keyMetrics.slice(-5).map(m => m.peRatio).filter(pe => typeof pe === 'number');
+    const historicalPeAvg = peHistory.length > 0 ? peHistory.reduce((a, b) => a + b, 0) / peHistory.length : null;
+
+    const peStatusVsHistory = (peRatio && historicalPeAvg) ? 
+        (peRatio > historicalPeAvg ? 'trading at a premium to its history' : 'trading at a discount to its history')
+        : 'N/A';
 
     // Growth
     const lastActualEps = lastActualIncome.eps;
     let historicalEpsGrowth = 'N/A';
     if (income.length >= 2) {
         const priorEps = income[income.length - 2].eps;
-        if (priorEps && lastActualEps) {
+        if (priorEps && lastActualEps && priorEps !== 0) {
             historicalEpsGrowth = `${(((lastActualEps / priorEps) - 1) * 100).toFixed(2)}%`;
         }
     }
     
     const nextYearEstimate = estimates.find(e => new Date(e.date).getFullYear() > new Date(lastActualIncome.date).getFullYear());
     let forwardEpsGrowth = 'N/A';
-    if (nextYearEstimate && lastActualEps) {
+    if (nextYearEstimate && lastActualEps && lastActualEps !== 0) {
         forwardEpsGrowth = `${(((nextYearEstimate.estimatedEpsAvg / lastActualEps) - 1) * 100).toFixed(2)}%`;
     }
 
