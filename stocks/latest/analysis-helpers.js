@@ -291,11 +291,11 @@ export function _calculateFinancialAnalysisMetrics(data) {
  * NEW: Calculates metrics for the "Bull Vs Bear" prompt.
  */
 export function _calculateBullVsBearMetrics(data) {
-    const income = (data.income_statement_annual || []).slice(-5);
-    const metrics = (data.key_metrics_annual || []).slice(-5);
-    const cashFlow = (data.cash_flow_statement_annual || []).slice(-5);
+    const income = (data.income_statement_annual || []).slice(0, 5);
+    const metrics = (data.key_metrics_annual || []).slice(0, 5);
+    const cashFlow = (data.cash_flow_statement_annual || []).slice(0, 5);
     const grades = (data.stock_grade_news || []).slice(0, 10);
-    const ratios = (data.ratios_annual || []).slice(-5);
+    const ratios = (data.ratios_annual || []).slice(0, 5);
     const history = (data.historical_price?.historical || []);
 
     const formatTrend = (arr, key) => arr.map(item => ({ year: item.calendarYear, value: formatLargeNumber(item[key]) }));
@@ -369,10 +369,10 @@ export function _calculateBullVsBearMetrics(data) {
  */
 export function _calculateMoatAnalysisMetrics(data) {
     const profile = data.profile?.[0] || {};
-    const metrics = (data.key_metrics_annual || []).slice(-10);
-    const income = (data.income_statement_annual || []).slice(-10);
-    const cashFlow = (data.cash_flow_statement_annual || []).slice(-10);
-    const ratios = (data.ratios_annual || []).slice(-10);
+    const metrics = (data.key_metrics_annual || []).slice(0, 10);
+    const income = (data.income_statement_annual || []).slice(0, 10);
+    const cashFlow = (data.cash_flow_statement_annual || []).slice(0, 10);
+    const ratios = (data.ratios_annual || []).slice(0, 10);
 
     const formatPercentTrend = (arr, key) => arr.map(item => ({ year: item.calendarYear, value: item[key] ? `${(item[key] * 100).toFixed(2)}%` : 'N/A' }));
 
@@ -400,11 +400,11 @@ export function _calculateMoatAnalysisMetrics(data) {
  * NEW: Calculates metrics for the "Dividend Safety" prompt.
  */
 export function _calculateDividendSafetyMetrics(data) {
-    const metrics = (data.key_metrics_annual || []).slice(-10);
-    const cashFlow = (data.cash_flow_statement_annual || []).slice(-10);
-    const income = (data.income_statement_annual || []).slice(-10);
-    const balanceSheet = (data.balance_sheet_statement_annual || []).slice(-10);
-    const ratios = (data.ratios_annual || []).slice(-10);
+    const metrics = (data.key_metrics_annual || []).slice(0, 10);
+    const cashFlow = (data.cash_flow_statement_annual || []).slice(0, 10);
+    const income = (data.income_statement_annual || []).slice(0, 10);
+    const balanceSheet = (data.balance_sheet_statement_annual || []).slice(0, 10);
+    const ratios = (data.ratios_annual || []).slice(0, 10);
 
     const latestRatios = ratios[ratios.length - 1] || {};
     
@@ -422,7 +422,7 @@ export function _calculateDividendSafetyMetrics(data) {
             fcf_payout_ratio: (fcf && fcf > 0) ? `${((dividends / fcf) * 100).toFixed(2)}%` : 'N/A',
             earnings_payout_ratio: (netIncome && netIncome > 0) ? `${((dividends / netIncome) * 100).toFixed(2)}%` : 'N/A'
         };
-    }).slice(-5);
+    }).slice(0, 5);
 
     return {
         currentYield: latestRatios.dividendYield ? `${(latestRatios.dividendYield * 100).toFixed(2)}` : 'N/A',
@@ -431,10 +431,10 @@ export function _calculateDividendSafetyMetrics(data) {
             earningsPayoutRatio: payoutRatios[payoutRatios.length -1]?.earnings_payout_ratio || 'N/A'
         },
         dividendHistory: {
-            dividendsPaid: cashFlow.slice(-5).map(cf => ({ year: cf.calendarYear, value: formatLargeNumber(cf.dividendsPaid) })),
+            dividendsPaid: cashFlow.slice(0, 5).map(cf => ({ year: cf.calendarYear, value: formatLargeNumber(cf.dividendsPaid) })),
         },
-        debtToEquityTrend: metrics.slice(-5).map(m => ({ year: m.calendarYear, value: m.debtToEquity?.toFixed(2) })),
-        cashTrend: balanceSheet.slice(-5).map(bs => ({ year: bs.calendarYear, value: formatLargeNumber(bs.cashAndCashEquivalents) }))
+        debtToEquityTrend: metrics.slice(0, 5).map(m => ({ year: m.calendarYear, value: m.debtToEquity?.toFixed(2) })),
+        cashTrend: balanceSheet.slice(0, 5).map(bs => ({ year: bs.calendarYear, value: formatLargeNumber(bs.cashAndCashEquivalents) }))
     };
 }
 
@@ -442,11 +442,11 @@ export function _calculateDividendSafetyMetrics(data) {
  * NEW: Calculates metrics for the "Growth Outlook" prompt.
  */
 export function _calculateGrowthOutlookMetrics(data) {
-    const income = (data.income_statement_annual || []).slice(-5);
-    const metrics = (data.key_metrics_annual || []).slice(-5);
+    const income = (data.income_statement_annual || []).slice(0, 5);
+    const metrics = (data.key_metrics_annual || []).slice(0, 5);
     const grades = (data.stock_grade_news || []).slice(0, 10);
     const estimates = (data.analyst_estimates || []).slice(0, 5);
-    const ratios = (data.ratios_annual || []).slice(-5);
+    const ratios = (data.ratios_annual || []).slice(0, 5);
 
     const latestRatios = ratios[ratios.length - 1] || {};
     const latestMetrics = metrics[metrics.length - 1] || {};
@@ -480,11 +480,11 @@ export function _calculateGrowthOutlookMetrics(data) {
  */
 export function _calculateRiskAssessmentMetrics(data) {
     const profile = data.profile?.[0] || {};
-    const metrics = (data.key_metrics_annual || []).slice(-5);
-    const cashFlow = (data.cash_flow_statement_annual || []).slice(-5);
-    const income = (data.income_statement_annual || []).slice(-5);
+    const metrics = (data.key_metrics_annual || []).slice(0, 5);
+    const cashFlow = (data.cash_flow_statement_annual || []).slice(0, 5);
+    const income = (data.income_statement_annual || []).slice(0, 5);
     const grades = (data.stock_grade_news || []).slice(0, 10);
-    const ratios = (data.ratios_annual || []).slice(-5);
+    const ratios = (data.ratios_annual || []).slice(0, 5);
 
     const latestRatios = ratios[ratios.length - 1] || {};
     const latestCashFlow = cashFlow[cashFlow.length - 1] || {};
@@ -523,11 +523,11 @@ export function _calculateRiskAssessmentMetrics(data) {
  * NEW: Calculates metrics for the "Capital Allocators" prompt.
  */
 export function _calculateCapitalAllocatorsMetrics(data) {
-    const cashFlow = (data.cash_flow_statement_annual || []).slice(-10);
-    const metrics = (data.key_metrics_annual || []).slice(-10);
-    const income = (data.income_statement_annual || []).slice(-10);
-    const balanceSheet = (data.balance_sheet_statement_annual || []).slice(-10);
-    const ratios = (data.ratios_annual || []).slice(-10);
+    const cashFlow = (data.cash_flow_statement_annual || []).slice(0, 10);
+    const metrics = (data.key_metrics_annual || []).slice(0, 10);
+    const income = (data.income_statement_annual || []).slice(0, 10);
+    const balanceSheet = (data.balance_sheet_statement_annual || []).slice(0, 10);
+    const ratios = (data.ratios_annual || []).slice(0, 10);
 
     // Create a map for easy lookup by year
     const ratiosMap = new Map(ratios.map(r => [r.calendarYear, r]));
@@ -584,11 +584,11 @@ export function _calculateCapitalAllocatorsMetrics(data) {
  */
 export function _calculateNarrativeCatalystMetrics(data) {
     const profile = data.profile?.[0] || {};
-    const metrics = (data.key_metrics_annual || []).slice(-5);
-    const cashFlow = (data.cash_flow_statement_annual || []).slice(-5);
-    const income = (data.income_statement_annual || []).slice(-5);
+    const metrics = (data.key_metrics_annual || []).slice(0, 5);
+    const cashFlow = (data.cash_flow_statement_annual || []).slice(0, 5);
+    const income = (data.income_statement_annual || []).slice(0, 5);
     const grades = (data.stock_grade_news || []).slice(0, 10);
-    const ratios = (data.ratios_annual || []).slice(-5);
+    const ratios = (data.ratios_annual || []).slice(0, 5);
 
     const latestRatios = ratios[ratios.length - 1] || {};
     const latestCashFlow = cashFlow[cashFlow.length - 1] || {};
