@@ -1,4 +1,4 @@
-import { CONSTANTS, state, promptMap, NEWS_SENTIMENT_PROMPT, DISRUPTOR_ANALYSIS_PROMPT, MACRO_PLAYBOOK_PROMPT, INDUSTRY_CAPITAL_ALLOCATORS_PROMPT, INDUSTRY_DISRUPTOR_ANALYSIS_PROMPT, INDUSTRY_MACRO_PLAYBOOK_PROMPT, ONE_SHOT_INDUSTRY_TREND_PROMPT, FORTRESS_ANALYSIS_PROMPT, PHOENIX_ANALYSIS_PROMPT, PICK_AND_SHOVEL_PROMPT, LINCHPIN_ANALYSIS_PROMPT, HIDDEN_VALUE_PROMPT, UNTOUCHABLES_ANALYSIS_PROMPT, INVESTMENT_MEMO_PROMPT, ENABLE_STARTER_PLAN_MODE, STARTER_SYMBOLS } from './config.js';
+import { CONSTANTS, state, promptMap, NEWS_SENTIMENT_PROMPT, DISRUPTOR_ANALYSIS_PROMPT, MACRO_PLAYBOOK_PROMPT, INDUSTRY_CAPITAL_ALLOCATORS_PROMPT, INDUSTRY_DISRUPTOR_ANALYSIS_PROMPT, INDUSTRY_MACRO_PLAYBOOK_PROMPT, ONE_SHOT_INDUSTRY_TREND_PROMPT, FORTRESS_ANALYSIS_PROMPT, PHOENIX_ANALYSIS_PROMPT, PICK_AND_SHOVEL_PROMPT, LINCHPIN_ANALYSIS_PROMPT, HIDDEN_VALUE_PROMPT, UNTOUCHABLES_ANALYSIS_PROMPT, INVESTMENT_MEMO_PROMPT, GARP_VALIDATION_PROMPT, ENABLE_STARTER_PLAN_MODE, STARTER_SYMBOLS } from './config.js';
 import { callApi, filterValidNews, callGeminiApi, generatePolishedArticle, getDriveToken, getOrCreateDriveFolder, createDriveFile, findStocksByIndustry, searchSectorNews, findStocksBySector, synthesizeAndRankCompanies, generateDeepDiveReport, getFmpStockData } from './api.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { openModal, closeModal, displayMessageInModal, openConfirmationModal, openManageStockModal } from './ui-modals.js';
@@ -1145,6 +1145,58 @@ export async function handleInvestmentMemoRequest(symbol) {
         console.error("Error generating investment memo:", error);
         displayMessageInModal(`Could not generate memo: ${error.message}`, 'error');
         contentContainer.innerHTML = `<p class="text-red-500">Failed to generate memo: ${error.message}</p>`;
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
+export async function handleGarpValidationRequest(symbol) {
+    const contentContainer = document.getElementById('ai-article-container');
+    const statusContainer = document.getElementById('report-status-container-ai');
+    contentContainer.innerHTML = '';
+    statusContainer.classList.add('hidden');
+
+    openModal(CONSTANTS.MODAL_LOADING);
+    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+
+    try {
+        loadingMessage.textContent = "Gathering required analysis reports...";
+        const requiredReports = ['GarpAnalysis', 'FinancialAnalysis', 'RiskAssessment'];
+        
+        const reportPromises = requiredReports.map(type => getSavedReports(symbol, type).then(reports => reports[0]));
+        const latestReports = await Promise.all(reportPromises);
+
+        const missingReports = requiredReports.filter((type, index) => !latestReports[index]);
+        if (missingReports.length > 0) {
+            throw new Error(`Please generate and save the following required reports first: ${missingReports.join(', ')}`);
+        }
+
+        loadingMessage.textContent = "Synthesizing reports into a GARP Validation Report...";
+
+        let allAnalysesData = latestReports.map(report => {
+            const reportTitle = report.content.match(/#\s*(.*)/)?.[1] || report.reportType;
+            return `--- REPORT: ${reportTitle} ---\n\n${report.content}\n\n`;
+        }).join('\n');
+
+        const data = await getFmpStockData(symbol);
+        const profile = data.profile?.[0] || {};
+        const companyName = profile.companyName || 'the company';
+
+        const prompt = GARP_VALIDATION_PROMPT
+            .replace(/{companyName}/g, companyName)
+            .replace(/{tickerSymbol}/g, symbol)
+            .replace('{allAnalysesData}', allAnalysesData);
+
+        const validationContent = await generatePolishedArticle(prompt, loadingMessage);
+        displayReport(contentContainer, validationContent);
+        
+        statusContainer.innerHTML = `<span class="text-sm font-semibold text-green-800">GARP Validation Report generated successfully.</span>`;
+        statusContainer.classList.remove('hidden');
+
+    } catch (error) {
+        console.error("Error generating GARP Validation report:", error);
+        displayMessageInModal(`Could not generate report: ${error.message}`, 'error');
+        contentContainer.innerHTML = `<p class="text-red-500">Failed to generate report: ${error.message}</p>`;
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
