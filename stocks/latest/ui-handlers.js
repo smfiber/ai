@@ -1103,7 +1103,7 @@ export async function handleInvestmentMemoRequest(symbol) {
     try {
         loadingMessage.textContent = "Gathering all latest analysis reports from the database...";
         const reportTypes = [
-            'FinancialAnalysis', 'UndervaluedAnalysis', 'GarpAnalysis', 'BullVsBear', 'MoatAnalysis', 
+            'FinancialAnalysis', 'UndervaluedAnalysis', 'BullVsBear', 'MoatAnalysis', 
             'DividendSafety', 'GrowthOutlook', 'RiskAssessment', 'CapitalAllocators',
             'NarrativeCatalyst'
         ];
@@ -1156,6 +1156,13 @@ export async function handleGenerateAllReportsRequest(symbol) {
         'MoatAnalysis', 'DividendSafety', 'GrowthOutlook', 'RiskAssessment', 
         'CapitalAllocators', 'NarrativeCatalyst'
     ];
+    // A simple mapping for user-friendly names in the progress display
+    const reportDisplayNames = {
+        'FinancialAnalysis': 'Financial Analysis', 'UndervaluedAnalysis': 'Undervalued Analysis', 'GarpAnalysis': 'GARP Analysis', 
+        'BullVsBear': 'Bull vs. Bear', 'MoatAnalysis': 'Moat Analysis', 'DividendSafety': 'Dividend Safety', 
+        'GrowthOutlook': 'Growth Outlook', 'RiskAssessment': 'Risk Assessment', 'CapitalAllocators': 'Capital Allocators', 
+        'NarrativeCatalyst': 'Narrative & Catalyst'
+    };
 
     const metricCalculators = {
         'FinancialAnalysis': _calculateFinancialAnalysisMetrics,
@@ -1172,7 +1179,18 @@ export async function handleGenerateAllReportsRequest(symbol) {
 
     openModal(CONSTANTS.MODAL_LOADING);
     const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+    const progressContainer = document.getElementById('progress-container');
+    const progressStatus = document.getElementById('progress-status');
+    const currentReportName = document.getElementById('current-report-name');
+    const progressBarFill = document.getElementById('progress-bar-fill');
+    const genericLoader = document.getElementById('generic-loader-container');
+    const aiButtonsContainer = document.getElementById('ai-buttons-container');
 
+    // Setup progress UI
+    progressContainer.classList.remove('hidden');
+    genericLoader.classList.add('hidden');
+    progressBarFill.style.width = '0%';
+    
     try {
         loadingMessage.textContent = `Fetching latest FMP data for ${symbol}...`;
         const data = await getFmpStockData(symbol);
@@ -1184,8 +1202,10 @@ export async function handleGenerateAllReportsRequest(symbol) {
 
         for (let i = 0; i < reportTypes.length; i++) {
             const reportType = reportTypes[i];
-            const count = `(${i + 1}/${reportTypes.length})`;
-            loadingMessage.textContent = `Generating ${reportType} report ${count}...`;
+            
+            // Update progress UI for the current report
+            progressStatus.textContent = `Generating Reports (${i + 1}/${reportTypes.length})`;
+            currentReportName.textContent = `Running: ${reportDisplayNames[reportType]}...`;
 
             const promptConfig = promptMap[reportType];
             const calculateMetrics = metricCalculators[reportType];
@@ -1211,25 +1231,29 @@ export async function handleGenerateAllReportsRequest(symbol) {
                 prompt: prompt
             };
             await addDoc(collection(state.db, CONSTANTS.DB_COLLECTION_AI_REPORTS), reportData);
-        }
 
-        displayMessageInModal(`Successfully generated and saved all 10 reports for ${symbol}. You can now generate the Investment Memo.`, 'info');
-        
-        const aiButtonsContainer = document.getElementById('ai-buttons-container');
-        if (aiButtonsContainer) {
-            reportTypes.forEach(reportType => {
+            // Immediate UI feedback
+            if (aiButtonsContainer) {
                 const button = aiButtonsContainer.querySelector(`button[data-report-type="${reportType}"]`);
                 if (button) {
                     button.classList.add('has-saved-report');
                 }
-            });
+            }
+            const progress = ((i + 1) / reportTypes.length) * 100;
+            progressBarFill.style.width = `${progress}%`;
         }
+
+        displayMessageInModal(`Successfully generated and saved all 10 reports for ${symbol}. You can now generate the Investment Memo.`, 'info');
 
     } catch (error) {
         console.error("Error generating all reports:", error);
         displayMessageInModal(`Could not complete batch generation: ${error.message}`, 'error');
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
+        // Reset progress UI for next time
+        progressContainer.classList.add('hidden');
+        genericLoader.classList.remove('hidden');
+        loadingMessage.textContent = '';
     }
 }
 
