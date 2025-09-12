@@ -619,3 +619,71 @@ export function _calculateNarrativeCatalystMetrics(data) {
         hasRecentUpgrades: grades.filter(g => g.action && g.action.toLowerCase() === 'upgrade').length > 0
     };
 }
+
+/**
+ * NEW: Calculates metrics for the "GARP Analysis" prompt.
+ */
+export function _calculateGarpAnalysisMetrics(data) {
+    const keyMetrics = (data.key_metrics_annual || []).slice().reverse();
+    const ratios = (data.ratios_annual || []).slice().reverse();
+    const estimates = (data.analyst_estimates || []).slice().reverse();
+    const income = (data.income_statement_annual || []).slice().reverse();
+
+    const latestMetrics = keyMetrics[keyMetrics.length - 1] || {};
+    const latestRatios = ratios[ratios.length - 1] || {};
+    const lastActualIncome = income[income.length - 1] || {};
+    
+    // Valuation
+    const peRatio = latestMetrics.peRatio;
+    const psRatio = latestRatios.priceToSalesRatio;
+    const historicalPeAvg = keyMetrics.slice(-5).map(m => m.peRatio).reduce((a, b) => a + b, 0) / 5;
+    const peStatusVsHistory = peRatio > historicalPeAvg ? 'trading at a premium to its history' : 'trading at a discount to its history';
+
+    // Growth
+    const lastActualEps = lastActualIncome.eps;
+    let historicalEpsGrowth = 'N/A';
+    if (income.length >= 2) {
+        const priorEps = income[income.length - 2].eps;
+        if (priorEps && lastActualEps) {
+            historicalEpsGrowth = `${(((lastActualEps / priorEps) - 1) * 100).toFixed(2)}%`;
+        }
+    }
+    
+    const nextYearEstimate = estimates.find(e => new Date(e.date).getFullYear() > new Date(lastActualIncome.date).getFullYear());
+    let forwardEpsGrowth = 'N/A';
+    if (nextYearEstimate && lastActualEps) {
+        forwardEpsGrowth = `${(((nextYearEstimate.estimatedEpsAvg / lastActualEps) - 1) * 100).toFixed(2)}%`;
+    }
+
+    // PEG Ratio
+    let pegValue = 'N/A';
+    let pegVerdict = 'Not applicable';
+    const forwardGrowthRate = parseFloat(forwardEpsGrowth);
+
+    if (peRatio > 0 && forwardGrowthRate > 0) {
+        pegValue = (peRatio / forwardGrowthRate).toFixed(2);
+        if (pegValue < 1.2) {
+            pegVerdict = 'Potentially attractive';
+        } else if (pegValue < 2.0) {
+            pegVerdict = 'Fairly priced';
+        } else {
+            pegVerdict = 'Appears expensive';
+        }
+    }
+
+    return {
+        valuation: {
+            peRatio: peRatio ? peRatio.toFixed(2) : 'N/A',
+            psRatio: psRatio ? psRatio.toFixed(2) : 'N/A',
+            peStatusVsHistory,
+        },
+        growth: {
+            historicalEpsGrowth,
+            forwardEpsGrowth,
+        },
+        pegRatio: {
+            value: pegValue,
+            verdict: pegVerdict,
+        }
+    };
+}
