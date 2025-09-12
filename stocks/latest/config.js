@@ -88,7 +88,7 @@ export const CONSTANTS = {
 };
 
 export const SECTOR_ICONS = {
-    'Technology': `<svg xmlns="http://www.w.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12l7-7 7 7M5 12a7 7 0 1114 0M5 12a7 7 0 0014 0" /></svg>`,
+    'Technology': `<svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12l7-7 7 7M5 12a7 7 0 1114 0M5 12a7 7 0 0014 0" /></svg>`,
     'Health Care': `<svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>`,
     'Financials': `<svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" /></svg>`,
     'Consumer Discretionary': `<svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg>`,
@@ -606,6 +606,63 @@ In one paragraph, deliver your final judgment. Justify your decision by **explic
 - **Recommendation:** [Choose one: **Initiate a Position**, **Add to Watchlist**, **Pass**]
 - **Conviction Level:** [Choose one: **High**, **Medium**, **Low**]
 - **Key Monitoring Point (if Watchlist):** [If recommending 'Watchlist', state the single most important factor to monitor that would change the recommendation. E.g., "Two consecutive quarters of margin improvement."]
+`.trim();
+
+export const ALL_REPORTS_PROMPT = `
+Role: You are an expert financial analyst AI. Your task is to generate a comprehensive dossier of 10 distinct financial analysis reports for {companyName} ({tickerSymbol}).
+
+Data Instructions:
+- Your analysis MUST be based *exclusively* on the pre-calculated metrics provided in the JSON data below.
+- You will generate each of the 10 reports listed below.
+- The instructions for each report are embedded in their respective sections.
+
+Output Format:
+- The entire output must be a single block of text in professional markdown format.
+- You MUST separate each of the 10 reports with a unique delimiter on its own line: \`--- REPORT: [ReportType] ---\`, where \`[ReportType]\` is the exact name from the list (e.g., FinancialAnalysis, UndervaluedAnalysis, GarpAnalysis).
+- The first line of each report section MUST be its title in markdown (e.g., \`# Comprehensive Financial Analysis: {companyName} ({tickerSymbol})\`).
+
+JSON Data with All Pre-Calculated Metrics:
+{jsonData}
+
+--- REPORT: FinancialAnalysis ---
+# Comprehensive Financial Analysis: {companyName} ({tickerSymbol})
+(Follow the full instructions from the FINANCIAL_ANALYSIS_PROMPT to generate this report section based on the provided JSON data.)
+
+--- REPORT: UndervaluedAnalysis ---
+# Investment Valuation Report: Is {companyName} ({tickerSymbol}) a Bargain?
+(Follow the full instructions from the UNDERVALUED_ANALYSIS_PROMPT to generate this report section based on the provided JSON data.)
+
+--- REPORT: GarpAnalysis ---
+# GARP Analysis: Is {companyName} ({tickerSymbol}) Priced for Perfection?
+(Follow the full instructions from the GARP_ANALYSIS_PROMPT to generate this report section based on the provided JSON data.)
+
+--- REPORT: BullVsBear ---
+# The Investment Debate: {companyName} ({tickerSymbol})
+(Follow the full instructions from the BULL_VS_BEAR_PROMPT to generate this report section based on the provided JSON data.)
+
+--- REPORT: MoatAnalysis ---
+# Economic Moat Analysis: {companyName} ({tickerSymbol})
+(Follow the full instructions from the MOAT_ANALYSIS_PROMPT to generate this report section based on the provided JSON data.)
+
+--- REPORT: DividendSafety ---
+# Dividend Safety Analysis: {companyName} ({tickerSymbol})
+(Follow the full instructions from the DIVIDEND_SAFETY_PROMPT to generate this report section based on the provided JSON data.)
+
+--- REPORT: GrowthOutlook ---
+# Growth Outlook: {companyName} ({tickerSymbol})
+(Follow the full instructions from the GROWTH_OUTLOOK_PROMPT to generate this report section based on the provided JSON data.)
+
+--- REPORT: RiskAssessment ---
+# Uncovering the Risks: {companyName} ({tickerSymbol})
+(Follow the full instructions from the RISK_ASSESSMENT_PROMPT to generate this report section based on the provided JSON data.)
+
+--- REPORT: CapitalAllocators ---
+# The Capital Allocators: A Deep Dive into the Financial Stewardship of {companyName}'s Leadership
+(Follow the full instructions from the CAPITAL_ALLOCATORS_PROMPT to generate this report section based on the provided JSON data.)
+
+--- REPORT: NarrativeCatalyst ---
+# Narrative & Catalyst Checklist: {companyName} ({tickerSymbol})
+(Follow the full instructions from the NARRATIVE_CATALYST_PROMPT to generate this report section based on the provided JSON data.)
 `.trim();
 
 export const promptMap = {
