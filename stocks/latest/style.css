@@ -51,6 +51,23 @@ body.modal-open {
     border-top-color: var(--color-primary);
 }
 
+/* --- NEW: Progress Bar Styles --- */
+#progress-bar {
+    width: 100%;
+    height: 0.625rem; /* 10px */
+    background-color: #4b5563; /* Corresponds to bg-gray-600 in HTML for contrast */
+    border-radius: 9999px;
+    overflow: hidden;
+}
+
+#progress-bar-fill {
+    height: 100%;
+    background-color: var(--color-primary); /* Corresponds to bg-indigo-500 in HTML */
+    border-radius: 9999px;
+    transition: width 0.3s ease-in-out;
+}
+
+
 /*
  * =================================================================
  * NEW COMPONENT STYLES (v7.0.0 & v7.4.0)
