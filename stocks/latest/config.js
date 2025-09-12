@@ -257,7 +257,7 @@ Role: You are a growth-oriented investment analyst, specializing in the "Growth 
 
 Data Instructions: Your analysis MUST be based *exclusively* on the pre-calculated metrics provided in the JSON data below.
 
-Output Format: The final report must be in professional markdown format. Use # for the main title, ## for major sections, ### for sub-sections, and bullet points for key data points.
+Output Format: The final report must be in professional markdown format. Use # for the main title, ## for major sections, and bullet points for key data points. Each bullet point MUST start on a new line.
 
 IMPORTANT: Do not include any HTML tags in your output. Generate pure markdown only.
 
@@ -269,21 +269,21 @@ JSON Data with Pre-Calculated Metrics:
 # GARP Analysis: Is {companyName} ({tickerSymbol}) Priced for Perfection?
 
 ## 1. The Valuation Question
-Start by framing the core debate. Is this a high-quality company whose growth justifies its price, or is it an over-hyped stock?
-- **Current P/E Ratio:** [Use \`valuation.peRatio\`]
-- **Current P/S Ratio:** [Use \`valuation.psRatio\`]
-- **Valuation vs. History:** Based on \`valuation.peStatusVsHistory\`, is the company trading at a premium or discount to its own past?
+Start by framing the core debate. Is this a high-quality company whose growth justifies its price, or is it an over-hyped stock? Each bullet point below must start on a new line.
+- **Current P/E Ratio:** State the value from \`valuation.peRatio\`.
+- **Current P/S Ratio:** State the value from \`valuation.psRatio\`.
+- **Valuation vs. History:** Based on \`valuation.peStatusVsHistory\`, state whether the company is trading at a premium or discount to its own past.
 
 ## 2. The Growth Engine: Justifying the Price
-This section analyzes the growth that investors are paying for.
-- **Historical EPS Growth:** Based on \`growth.historicalEpsGrowth\`, what has the recent track record of earnings growth been?
-- **Forward EPS Growth (Analyst Forecast):** What is the market's expectation for next year's earnings growth, according to \`growth.forwardEpsGrowth\`? This is the most critical number for the GARP thesis.
+This section analyzes the growth that investors are paying for. Each bullet point below must start on a new line.
+- **Historical EPS Growth:** Based on \`growth.historicalEpsGrowth\`, state the recent track record of earnings growth.
+- **Forward EPS Growth (Analyst Forecast):** State the market's expectation for next year's earnings growth from \`growth.forwardEpsGrowth\`. This is the most critical number for the GARP thesis.
 
 ## 3. The PEG Ratio Verdict
-The Price/Earnings-to-Growth (PEG) ratio is a key tool for GARP investors.
+The Price/Earnings-to-Growth (PEG) ratio is a key tool for GARP investors. Each bullet point below must start on a new line.
 - **Explain the PEG Ratio:** Briefly explain that a PEG ratio of around 1.0 suggests a fair balance between a stock's P/E ratio and its expected earnings growth.
-- **Calculated PEG Ratio:** [Use \`pegRatio.value\`]
-- **Interpretation:** Based on the calculated PEG ratio, does the stock appear to be attractively priced, fairly priced, or expensively priced relative to its growth forecast? Use the provided \`pegRatio.verdict\`.
+- **Calculated PEG Ratio:** State the value from \`pegRatio.value\`.
+- **Interpretation:** Based on the \`pegRatio.verdict\`, describe whether the stock appears attractively priced, fairly priced, or expensive relative to its growth forecast.
 
 ## 4. Final Conclusion: The Investment Profile
 Synthesize all the points above into a final verdict.
