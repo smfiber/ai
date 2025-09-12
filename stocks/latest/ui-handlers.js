@@ -793,4 +793,561 @@ export async function handleIndustrySelection(industryName, buttonElement) {
             name: 'The Untouchables',
             promptName: 'Untouchables',
             description: 'Deconstructs the "cult" brand moat of a company with fanatical customer loyalty, analyzing how that translates into durable pricing power and long-term profits.',
-            svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24
+            svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" /></svg>`
+        }
+    ];
+
+    let html = `
+        <div class="text-center w-full">
+            <span class="block text-sm font-bold text-gray-500 uppercase mb-4">AI Analysis</span>
+            <div class="flex flex-wrap justify-center gap-4">`;
+
+    analysisTypes.forEach(type => {
+        const hasSaved = savedReportTypes.has(type.promptName) ? 'has-saved-report' : '';
+        html += `
+            <button class="analysis-tile ${hasSaved}" data-industry="${industryName}" data-prompt-name="${type.promptName}" data-tooltip="${type.description}">
+                ${type.svgIcon}
+                <span class="tile-name">${type.name}</span>
+            </button>
+        `;
+    });
+
+    html += `</div></div>`;
+    selectorContainer.innerHTML = html;
+    openModal(CONSTANTS.MODAL_INDUSTRY_ANALYSIS);
+
+    try {
+        const docRef = doc(state.db, CONSTANTS.DB_COLLECTION_SCREENER_INTERACTIONS, industryName);
+        await setDoc(docRef, { lastClicked: Timestamp.now(), contextType: 'industry' });
+        if (buttonElement) {
+            const dateElement = buttonElement.querySelector('.last-clicked-date');
+            if (dateElement) {
+                dateElement.textContent = `Last Clicked: ${new Date().toLocaleDateString()}`;
+            }
+        }
+    } catch (error) {
+        console.error(`Error updating last clicked for ${industryName}:`, error);
+    }
+}
+
+async function handleIndustryMarketTrendsAnalysis(industryName) {
+    openModal(CONSTANTS.MODAL_LOADING);
+    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+    const contentArea = document.getElementById('industry-analysis-content');
+
+    try {
+        loadingMessage.textContent = `Finding companies in the ${industryName} industry...`;
+        contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">${loadingMessage.textContent}</div>`;
+
+        const stocksResult = await findStocksByIndustry({ industryName });
+        if (stocksResult.error || !stocksResult.stocks || stocksResult.stocks.length === 0) {
+            throw new Error(`Could not find any companies for the ${industryName} industry.`);
+        }
+        const industryStocks = stocksResult.stocks;
+
+        loadingMessage.textContent = `Searching news for up to ${industryStocks.length} companies...`;
+        contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">${loadingMessage.textContent}</div>`;
+        const newsResult = await searchSectorNews({ sectorName: industryName, sectorStocks: industryStocks });
+        if (newsResult.error || !newsResult.articles || newsResult.articles.length === 0) {
+            throw new Error(`Could not find any recent news for the ${industryName} industry.`);
+        }
+        const validArticles = newsResult.articles;
+
+        loadingMessage.textContent = `AI is analyzing news and generating the report...`;
+        contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">${loadingMessage.textContent}</div>`;
+
+        const prompt = ONE_SHOT_INDUSTRY_TREND_PROMPT
+            .replace(/{industryName}/g, industryName)
+            .replace('${industryStocks}', industryStocks.join(', '))
+            .replace('{newsArticlesJson}', JSON.stringify(validArticles, null, 2));
+
+        let finalReport = await generatePolishedArticle(prompt, loadingMessage);
+
+        finalReport = finalReport.replace(/\[Source: (?:Article )?(\d+)\]/g, (match, indexStr) => {
+            const index = parseInt(indexStr, 10);
+            const article = validArticles.find(a => a.articleIndex === index);
+            if (article) {
+                const sourceParts = article.source.split('.');
+                const sourceName = sourceParts.length > 1 ? sourceParts[sourceParts.length - 2] : article.source;
+                return `[(Source: ${sourceName}, ${article.publicationDate})](${article.link})`;
+            }
+            return match;
+        });
+
+        contentArea.innerHTML = marked.parse(finalReport);
+
+    } catch (error) {
+        console.error("Error during AI agent industry analysis:", error);
+        displayMessageInModal(`Could not complete AI analysis: ${error.message}`, 'error');
+        contentArea.innerHTML = `<div class="p-4 text-center text-red-500">Error: ${error.message}</div>`;
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
+async function handleIndustryDisruptorAnalysis(industryName) {
+    openModal(CONSTANTS.MODAL_LOADING);
+    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+
+    const contentArea = document.getElementById('industry-analysis-content');
+    contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">Generating AI article: "Disruptor Analysis"...</div>`;
+
+    try {
+        const prompt = INDUSTRY_DISRUPTOR_ANALYSIS_PROMPT.replace(/{industryName}/g, industryName);
+        const report = await generatePolishedArticle(prompt, loadingMessage);
+        contentArea.innerHTML = marked.parse(report);
+    } catch (error) {
+        console.error(`Error generating disruptor analysis for ${industryName}:`, error);
+        displayMessageInModal(`Could not generate AI article: ${error.message}`, 'error');
+        contentArea.innerHTML = `<div class="p-4 text-center text-red-500">Error: ${error.message}</div>`;
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
+async function handleIndustryMacroPlaybookAnalysis(industryName) {
+    openModal(CONSTANTS.MODAL_LOADING);
+    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+
+    const contentArea = document.getElementById('industry-analysis-content');
+    contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">Generating AI article: "Macro Playbook"...</div>`;
+
+    try {
+        const standardDisclaimer = "This article is for informational purposes only and should not be considered financial advice. Readers should consult with a qualified financial professional before making any investment decisions.";
+        const prompt = INDUSTRY_MACRO_PLAYBOOK_PROMPT
+            .replace(/{industryName}/g, industryName)
+            .replace(/\[Include standard disclaimer\]/g, standardDisclaimer);
+        const report = await generatePolishedArticle(prompt, loadingMessage);
+        contentArea.innerHTML = marked.parse(report);
+    } catch (error) {
+        console.error(`Error generating macro playbook analysis for ${industryName}:`, error);
+        displayMessageInModal(`Could not generate AI article: ${error.message}`, 'error');
+        contentArea.innerHTML = `<div class="p-4 text-center text-red-500">Error: ${error.message}</div>`;
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
+// --- THESIS TRACKER ---
+export async function handleSaveThesis(e) {
+    e.preventDefault();
+    const ticker = document.getElementById('thesis-tracker-ticker').value;
+    const thesisContent = document.getElementById('thesis-tracker-content').value.trim();
+
+    if (!ticker) {
+        displayMessageInModal('Ticker is missing, cannot save thesis.', 'error');
+        return;
+    }
+
+    openModal(CONSTANTS.MODAL_LOADING);
+    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Saving thesis for ${ticker}...`;
+
+    try {
+        const docRef = doc(state.db, CONSTANTS.DB_COLLECTION_PORTFOLIO, ticker);
+        await updateDoc(docRef, {
+            thesis: thesisContent
+        });
+        
+        closeModal('thesisTrackerModal');
+        
+        await fetchAndCachePortfolioData();
+        const thesisContainer = document.getElementById('thesis-tracker-container');
+        if (thesisContainer && document.getElementById('rawDataViewerModal').dataset.activeTicker === ticker) {
+            renderThesisTracker(thesisContainer, ticker);
+        }
+
+        displayMessageInModal('Thesis saved successfully!', 'info');
+
+    } catch (error) {
+        console.error("Error saving thesis:", error);
+        displayMessageInModal(`Could not save thesis: ${error.message}`, 'error');
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
+// --- AI ANALYSIS REPORT GENERATORS ---
+
+async function getSavedReports(ticker, reportType) {
+    const reportsRef = collection(state.db, CONSTANTS.DB_COLLECTION_AI_REPORTS);
+    const q = query(reportsRef, where("ticker", "==", ticker), where("reportType", "==", reportType), orderBy("savedAt", "desc"));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+}
+
+async function getSavedBroadReports(contextName, contextType) {
+    const reportsRef = collection(state.db, CONSTANTS.DB_COLLECTION_BROAD_REPORTS);
+    const q = query(reportsRef, where("contextName", "==", contextName), where("contextType", "==", contextType), orderBy("savedAt", "desc"));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+}
+
+function buildAnalysisPayload(fullData, requiredEndpoints) {
+    const payload = {};
+    for (const endpointName of requiredEndpoints) {
+        if (fullData.hasOwnProperty(endpointName)) {
+            payload[endpointName] = fullData[endpointName];
+        }
+    }
+    return payload;
+}
+
+export async function handleAnalysisRequest(symbol, reportType, promptConfig, forceNew = false) {
+    const contentContainer = document.getElementById('ai-article-container');
+    const statusContainer = document.getElementById('report-status-container-ai');
+    
+    contentContainer.innerHTML = ''; // Clear previous content
+    statusContainer.classList.add('hidden');
+
+    try {
+        const savedReports = await getSavedReports(symbol, reportType);
+
+        if (savedReports.length > 0 && !forceNew) {
+            const latestReport = savedReports[0];
+            displayReport(contentContainer, latestReport.content, latestReport.prompt);
+            contentContainer.dataset.currentPrompt = latestReport.prompt || '';
+            contentContainer.dataset.rawMarkdown = latestReport.content;
+            updateReportStatus(statusContainer, savedReports, latestReport.id, { symbol, reportType, promptConfig });
+            return; 
+        }
+
+        openModal(CONSTANTS.MODAL_LOADING);
+        const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+        
+        const data = await getFmpStockData(symbol);
+        if (!data) throw new Error(`No cached FMP data found for ${symbol}.`);
+        
+        const requiredEndpoints = promptConfig.requires || [];
+        const missingEndpoints = requiredEndpoints.filter(ep => !data[ep]);
+
+        if (missingEndpoints.length > 0) {
+            const specialReqs = ANALYSIS_REQUIREMENTS[reportType] || [];
+            const isSpecialMissing = specialReqs.some(req => missingEndpoints.includes(req));
+
+            if (isSpecialMissing) {
+                closeModal(CONSTANTS.MODAL_LOADING);
+                openConfirmationModal(
+                    'Data Refresh Required',
+                    `This analysis requires specific data that is not yet cached for ${symbol} (${missingEndpoints.join(', ')}). Would you like to refresh all FMP data now? This may take a moment.`,
+                    async () => {
+                        await handleRefreshFmpData(symbol);
+                        // After refresh, re-run the request forcing a new generation
+                        await handleAnalysisRequest(symbol, reportType, promptConfig, true);
+                    }
+                );
+                return;
+            }
+        }
+        
+        let payloadData;
+        if (reportType === 'UndervaluedAnalysis') {
+            payloadData = _calculateUndervaluedMetrics(data);
+        } else if (reportType === 'FinancialAnalysis') {
+            payloadData = _calculateFinancialAnalysisMetrics(data);
+        } else if (reportType === 'BullVsBear') {
+            payloadData = _calculateBullVsBearMetrics(data);
+        } else if (reportType === 'MoatAnalysis') {
+            payloadData = _calculateMoatAnalysisMetrics(data);
+        } else if (reportType === 'DividendSafety') {
+            payloadData = _calculateDividendSafetyMetrics(data);
+        } else if (reportType === 'GrowthOutlook') {
+            payloadData = _calculateGrowthOutlookMetrics(data);
+        } else if (reportType === 'RiskAssessment') {
+            payloadData = _calculateRiskAssessmentMetrics(data);
+        } else if (reportType === 'CapitalAllocators') {
+            payloadData = _calculateCapitalAllocatorsMetrics(data);
+        } else if (reportType === 'NarrativeCatalyst') {
+            payloadData = _calculateNarrativeCatalystMetrics(data);
+        } else if (reportType === 'GarpAnalysis') {
+            payloadData = _calculateGarpAnalysisMetrics(data);
+        } else {
+            payloadData = buildAnalysisPayload(data, requiredEndpoints);
+        }
+
+        const profile = data.profile?.[0] || {};
+        const companyName = profile.companyName || 'the company';
+        const tickerSymbol = profile.symbol || symbol;
+
+        const promptTemplate = promptConfig.prompt;
+        const prompt = promptTemplate
+            .replace(/{companyName}/g, companyName)
+            .replace(/{tickerSymbol}/g, tickerSymbol)
+            .replace('{jsonData}', JSON.stringify(payloadData, null, 2));
+
+        contentContainer.dataset.currentPrompt = prompt;
+
+        const newReportContent = await generatePolishedArticle(prompt, loadingMessage);
+        contentContainer.dataset.rawMarkdown = newReportContent;
+        displayReport(contentContainer, newReportContent, prompt);
+        updateReportStatus(statusContainer, [], null, { symbol, reportType, promptConfig });
+
+    } catch (error) {
+        displayMessageInModal(`Could not generate or load analysis: ${error.message}`, 'error');
+        contentContainer.innerHTML = `<p class="text-red-500">Failed to generate report: ${error.message}</p>`;
+    } finally {
+        if (document.getElementById(CONSTANTS.MODAL_LOADING).classList.contains('is-open')) {
+            closeModal(CONSTANTS.MODAL_LOADING);
+        }
+    }
+}
+
+export async function handleInvestmentMemoRequest(symbol) {
+    const contentContainer = document.getElementById('ai-article-container');
+    const statusContainer = document.getElementById('report-status-container-ai');
+    contentContainer.innerHTML = '';
+    statusContainer.classList.add('hidden');
+
+    openModal(CONSTANTS.MODAL_LOADING);
+    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+
+    try {
+        loadingMessage.textContent = "Gathering all latest analysis reports from the database...";
+        const reportTypes = [
+            'FinancialAnalysis', 'UndervaluedAnalysis', 'BullVsBear', 'MoatAnalysis', 
+            'DividendSafety', 'GrowthOutlook', 'RiskAssessment', 'CapitalAllocators',
+            'NarrativeCatalyst'
+        ];
+
+        const reportPromises = reportTypes.map(type => getSavedReports(symbol, type).then(reports => reports[0])); // Get only the latest
+        const allLatestReports = await Promise.all(reportPromises);
+
+        const foundReports = allLatestReports.filter(Boolean); // Filter out any undefined/null reports
+        const missingReports = reportTypes.filter((type, index) => !allLatestReports[index]);
+
+        if (missingReports.length > 0) {
+            throw new Error(`Cannot generate memo. Please generate and save the following reports first: ${missingReports.join(', ')}`);
+        }
+
+        loadingMessage.textContent = "Synthesizing reports into a final memo...";
+        
+        let allAnalysesData = foundReports.map(report => {
+            const reportTitle = report.content.match(/#\s*(.*)/)?.[1] || report.reportType;
+            return `--- REPORT: ${reportTitle} ---\n\n${report.content}\n\n`;
+        }).join('\n');
+        
+        const data = await getFmpStockData(symbol);
+        const profile = data.profile?.[0] || {};
+        const companyName = profile.companyName || 'the company';
+
+        const prompt = INVESTMENT_MEMO_PROMPT
+            .replace(/{companyName}/g, companyName)
+            .replace(/{tickerSymbol}/g, symbol)
+            .replace('{allAnalysesData}', allAnalysesData);
+
+        const memoContent = await generatePolishedArticle(prompt, loadingMessage);
+        displayReport(contentContainer, memoContent);
+        
+        // Since this is a unique, synthesized report, we don't show versioning for it.
+        statusContainer.innerHTML = `<span class="text-sm font-semibold text-green-800">Investment Memo generated successfully.</span>`;
+        statusContainer.classList.remove('hidden');
+
+    } catch (error) {
+        console.error("Error generating investment memo:", error);
+        displayMessageInModal(`Could not generate memo: ${error.message}`, 'error');
+        contentContainer.innerHTML = `<p class="text-red-500">Failed to generate memo: ${error.message}</p>`;
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
+export async function handleSaveReportToDb() {
+    const modal = document.getElementById('rawDataViewerModal');
+    const symbol = modal.querySelector('.ai-analysis-button')?.dataset.symbol;
+    const contentContainer = document.getElementById('ai-article-container');
+    const statusContainer = document.getElementById('report-status-container-ai');
+    const reportType = statusContainer.dataset.activeReportType;
+    const contentToSave = contentContainer.dataset.rawMarkdown;
+
+    if (!symbol || !reportType || !contentToSave) {
+        displayMessageInModal("Please generate an analysis before saving.", "warning");
+        return;
+    }
+
+    openModal(CONSTANTS.MODAL_LOADING);
+    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Saving ${reportType} report to database...`;
+
+    try {
+        const reportData = {
+            ticker: symbol,
+            reportType: reportType,
+            content: contentToSave,
+            savedAt: Timestamp.now()
+        };
+        await addDoc(collection(state.db, CONSTANTS.DB_COLLECTION_AI_REPORTS), reportData);
+        displayMessageInModal("Report saved successfully!", "info");
+        
+        const savedReports = await getSavedReports(symbol, reportType);
+        const latestReport = savedReports[0];
+        const promptConfig = promptMap[reportType];
+        updateReportStatus(document.getElementById('report-status-container-ai'), savedReports, latestReport.id, { symbol, reportType, promptConfig });
+
+    } catch (error) {
+        console.error("Error saving report to DB:", error);
+        displayMessageInModal(`Could not save report: ${error.message}`, 'error');
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
+export async function handleSaveBroadReportToDb(modalId) {
+    const modal = document.getElementById(modalId);
+    const contextName = modal.dataset.contextName;
+    const contextType = modal.dataset.contextType;
+    const reportType = modal.dataset.reportType;
+    
+    const contentContainer = modal.querySelector('.prose');
+    if (!contentContainer || !contentContainer.innerHTML.trim() || contentContainer.textContent.includes('Please select an analysis type')) {
+        displayMessageInModal("Please generate an analysis before saving.", "warning");
+        return;
+    }
+
+    const contentToSave = contentContainer.innerHTML;
+
+    openModal(CONSTANTS.MODAL_LOADING);
+    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Saving ${reportType} report for ${contextName}...`;
+
+    try {
+        const reportData = {
+            contextName,
+            contextType,
+            reportType,
+            content: contentToSave,
+            savedAt: Timestamp.now()
+        };
+        await addDoc(collection(state.db, CONSTANTS.DB_COLLECTION_BROAD_REPORTS), reportData);
+        displayMessageInModal("Report saved successfully!", "info");
+        
+        // Refresh the status to show the new version
+        const savedReports = await getSavedBroadReports(contextName, contextType);
+        const latestReport = savedReports.find(r => r.reportType === reportType);
+        const statusContainer = modal.querySelector('[id^="report-status-container"]');
+        if (latestReport && statusContainer) {
+            updateBroadReportStatus(statusContainer, savedReports.filter(r => r.reportType === reportType), latestReport.id, { contextName, contextType, reportType });
+        }
+
+    } catch (error) {
+        console.error("Error saving broad report to DB:", error);
+        displayMessageInModal(`Could not save report: ${error.message}`, 'error');
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
+export async function handleBroadAnalysisRequest(contextName, contextType, promptName, forceNew = false) {
+    const modalId = contextType === 'sector' ? CONSTANTS.MODAL_CUSTOM_ANALYSIS : CONSTANTS.MODAL_INDUSTRY_ANALYSIS;
+    const modal = document.getElementById(modalId);
+    const contentArea = modal.querySelector('.prose');
+    const statusContainer = modal.querySelector('[id^="report-status-container"]');
+
+    contentArea.innerHTML = '';
+    statusContainer.classList.add('hidden');
+
+    try {
+        const savedReports = (await getSavedBroadReports(contextName, contextType)).filter(r => r.reportType === promptName);
+
+        if (savedReports.length > 0 && !forceNew) {
+            const latestReport = savedReports[0];
+            displayReport(contentArea, latestReport.content);
+            updateBroadReportStatus(statusContainer, savedReports, latestReport.id, { contextName, contextType, reportType: promptName });
+            return;
+        }
+
+        // Map promptName to the correct handler function
+        const analysisHandlers = {
+            'MarketTrends': contextType === 'sector' ? handleMarketTrendsAnalysis : handleIndustryMarketTrendsAnalysis,
+            'DisruptorAnalysis': contextType === 'sector' ? handleDisruptorAnalysis : handleIndustryDisruptorAnalysis,
+            'FortressAnalysis': handleFortressAnalysis,
+            'PhoenixAnalysis': handlePhoenixAnalysis,
+            'PickAndShovel': handlePickAndShovelAnalysis,
+            'Linchpin': handleLinchpinAnalysis,
+            'HiddenValue': handleHiddenValueAnalysis,
+            'Untouchables': handleUntouchablesAnalysis,
+        };
+
+        const handler = analysisHandlers[promptName];
+        if (handler) {
+            await handler(contextName, contextType); // Pass contextType for relevant handlers
+            updateBroadReportStatus(statusContainer, [], null, { contextName, contextType, reportType: promptName });
+        } else {
+            throw new Error(`No handler found for analysis type: ${promptName}`);
+        }
+
+    } catch (error) {
+        console.error(`Error during broad analysis for ${contextName}:`, error);
+        displayMessageInModal(`Could not complete analysis: ${error.message}`, 'error');
+        contentArea.innerHTML = `<p class="text-red-500">Failed to generate report: ${error.message}</p>`;
+    }
+}
+
+export async function handleSaveToDrive(modalId) {
+    if (!state.auth.currentUser || state.auth.currentUser.isAnonymous) {
+        displayMessageInModal("Please log in with Google to save files to Drive.", "warning");
+        return;
+    }
+
+    const modal = document.getElementById(modalId);
+    if (!modal) return;
+
+    let contentToSave = '';
+    let fileName = '';
+
+    const contentContainer = modal.querySelector('#custom-analysis-content, #industry-analysis-content, #view-fmp-data-content, #ai-article-container');
+
+    if (!contentContainer || !contentContainer.innerHTML.trim()) {
+        displayMessageInModal('There is no content to save.', 'warning');
+        return;
+    }
+    contentToSave = contentContainer.innerHTML;
+    
+    const modalTitleText = modal.querySelector('h2').textContent;
+    const reportH1 = contentContainer.querySelector('h1');
+    const reportTitleText = reportH1 ? reportH1.textContent : '';
+
+    let symbolOrContext = '';
+    let reportTypeName = modal.dataset.analysisName || '';
+
+    if (modalId === 'rawDataViewerModal' && reportTitleText) {
+        symbolOrContext = modalTitleText.replace('Analysis for', '').trim();
+        reportTypeName = reportTitleText.split(':')[0].trim();
+    } else {
+        const titleParts = modalTitleText.split('|').map(s => s.trim());
+        if (!reportTypeName) {
+            reportTypeName = titleParts[0];
+        }
+        symbolOrContext = titleParts.length > 1 ? titleParts[1] : '';
+    }
+
+    const cleanSymbol = symbolOrContext.replace(/\s+/g, '_');
+    const cleanReportType = reportTypeName.replace(/\s+/g, '_');
+    const dateStr = new Date().toISOString().split('T')[0];
+
+    if (cleanSymbol && cleanReportType) {
+        fileName = `${cleanSymbol}_${cleanReportType}_${dateStr}.md`;
+    } else {
+        fileName = `${(cleanReportType || cleanSymbol).replace(/ /g, '_') || 'AI_Analysis'}_${dateStr}.md`;
+    }
+
+
+    openModal(CONSTANTS.MODAL_LOADING);
+    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Saving to Google Drive...`;
+
+    try {
+        const accessToken = await getDriveToken();
+        
+        await new Promise((resolve, reject) => {
+            gapi.load('client', () => {
+                gapi.client.setToken({ access_token: accessToken });
+                gapi.client.load('drive', 'v3').then(resolve).catch(reject);
+            });
+        });
+
+        const folderId = await getOrCreateDriveFolder();
+        await createDriveFile(folderId, fileName, contentToSave);
+        displayMessageInModal(`${fileName} was saved successfully to your "Stock Evaluations" folder in Google Drive.`, 'info');
+    } catch (error) {
+        console.error("Error saving to drive:", error);
+        displayMessageInModal(`Failed to save to Drive: ${error.message || 'Check console for details.'}`, 'error');
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
