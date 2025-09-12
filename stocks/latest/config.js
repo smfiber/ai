@@ -571,31 +571,53 @@ JSON Data:
 `.trim();
 
 export const GARP_VALIDATION_PROMPT = `
-Role: You are a senior portfolio manager, responsible for making a final, data-driven investment decision. Your task is to synthesize three key analyst reports (GARP, Financial Health, and Risk) to form a complete, actionable conclusion.
+Role: You are a skeptical senior portfolio manager. Your goal is to critically evaluate an investment opportunity by synthesizing three separate analyst reports (GARP, Financial Health, and Risk). Your final output must be a decisive, data-driven investment thesis.
 
-IMPORTANT: Your analysis MUST be based *only* on the provided summaries from the other reports. Synthesize, do not invent.
+**CRITICAL INSTRUCTIONS:**
+- **Synthesize, Don't Invent:** Base your analysis *exclusively* on the information within the provided reports. Do not introduce outside information.
+- **Quantify When Possible:** Use the specific metrics and figures from the reports to support your claims.
+- **Be Decisive:** Avoid vague language. Your conclusion should be clear and actionable.
 
-Input Reports:
+**Input Reports:**
+\`\`\`
 {allAnalysesData}
+\`\`\`
 
-# GARP Validation Report: {companyName} ({tickerSymbol})
+---
 
-## 1. The Opportunity (from GARP Analysis)
-Based on the GARP report, briefly summarize the core growth thesis. What is the projected forward growth rate, and how does the PEG ratio frame this as an attractive opportunity?
+# Investment Thesis: {companyName} ({tickerSymbol})
 
-## 2. The Financial Foundation (from Financial Analysis)
-Based on the Financial Analysis report, assess the company's health. Is the company financially strong enough to achieve its projected growth? Comment on its debt load, cash flow situation, and profitability trends.
+## 1. The Growth Opportunity (from GARP Analysis)
+* **Core Thesis:** What is the primary narrative driving the forecasted growth? (e.g., market expansion, new product cycle, pricing power).
+* **Key Metrics:** What is the projected forward growth rate? How does the PEG ratio quantify the attractiveness of this growth relative to its valuation?
+
+---
+
+## 2. The Financial Foundation (from Financial Health Analysis)
+* **Overall Strength:** Does the company's balance sheet and cash flow provide a stable foundation to achieve the growth thesis?
+* **Specifics:** Comment on the **trajectory** (improving, stable, or deteriorating) of key indicators like debt levels, profitability margins, and cash flow generation. Is the company's financial health a tailwind or a headwind for the growth story?
+
+---
 
 ## 3. The Primary Obstacles (from Risk Assessment)
-Based on the Risk Assessment report, identify the top 2-3 most significant risks that could prevent the growth forecast from becoming a reality.
+* **Key Risks:** Identify the top 2-3 risks that could derail the growth thesis.
+* **Impact Assessment:** For each risk, briefly assess its potential impact. Are these near-term threats or long-term structural issues?
 
-## 4. Final Verdict & Classification
-Synthesize all the points above into a final, decisive paragraph. Explicitly weigh the attractiveness of the growth opportunity against the strength of the company's financial foundation and the severity of its risks.
+---
 
-Conclude by classifying the stock into ONE of the following three categories, providing a brief justification:
-- **High-Conviction GARP:** An attractive growth story that is supported by a strong balance sheet and minimal, manageable risks.
-- **Speculative GARP:** A compelling growth story, but with notable financial weaknesses or significant risks that require careful monitoring.
-- **Potential Value Trap:** A situation where the low PEG ratio appears to be a mirage, hiding significant underlying financial or business risks that make the forecasted growth highly improbable.
+## 4. Synthesis & Recommendation
+* **The Balancing Act:** Directly weigh the growth opportunity against the financial foundation and the identified risks. Is the potential reward significant enough to justify the risks? Does the company have the financial resilience to withstand these threats?
+* **Final Verdict:** Based on this synthesis, provide a clear investment recommendation.
+
+---
+
+## 5. Classification & Key Monitoring Points
+* **Classification:** Classify the stock into **ONE** of the following categories, providing a concise justification that links directly to your synthesis.
+    * **High-Conviction GARP:** A compelling growth story backed by a robust financial position and manageable risks. The investment thesis is strong.
+    * **Speculative GARP:** A promising growth story, but undermined by significant financial concerns or high-impact risks that make the outcome uncertain.
+    * **Potential Value Trap:** The "cheap" valuation appears deceptive, hiding fundamental weaknesses or highly probable risks that make the forecasted growth unlikely to materialize.
+
+* **Next Steps:** What are the top 1-2 specific metrics or events we must monitor over the next 6-12 months to validate or invalidate this thesis? (e.g., "Monitor gross margins in the next two earnings reports," "Track regulatory decisions regarding X.")
 `.trim();
 
 export const INVESTMENT_MEMO_PROMPT = `
