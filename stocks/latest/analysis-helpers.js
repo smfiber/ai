@@ -296,7 +296,7 @@ export function _calculateBullVsBearMetrics(data) {
     const cashFlow = (data.cash_flow_statement_annual || []).slice(-5);
     const grades = (data.stock_grade_news || []).slice(0, 10);
     const ratios = (data.ratios_annual || []).slice(-5);
-    const history = (data.historical_price || []);
+    const history = (data.historical_price?.historical || []);
 
     const formatTrend = (arr, key) => arr.map(item => ({ year: item.calendarYear, value: formatLargeNumber(item[key]) }));
     const formatPercentTrend = (arr, key) => arr.map(item => ({ year: item.calendarYear, value: item[key] ? `${(item[key] * 100).toFixed(2)}%` : 'N/A' }));
