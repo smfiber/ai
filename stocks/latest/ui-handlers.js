@@ -1103,7 +1103,7 @@ export async function handleInvestmentMemoRequest(symbol) {
     try {
         loadingMessage.textContent = "Gathering all latest analysis reports from the database...";
         const reportTypes = [
-            'FinancialAnalysis', 'UndervaluedAnalysis', 'BullVsBear', 'MoatAnalysis', 
+            'FinancialAnalysis', 'UndervaluedAnalysis', 'GarpAnalysis', 'BullVsBear', 'MoatAnalysis', 
             'DividendSafety', 'GrowthOutlook', 'RiskAssessment', 'CapitalAllocators',
             'NarrativeCatalyst'
         ];
