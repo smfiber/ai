@@ -131,64 +131,63 @@ Output Format: The final report must be in professional markdown format. Use # f
 
 IMPORTANT: Do not include any HTML tags in your output. Generate pure markdown only.
 
-Analyze the comprehensive financial data for {companyName} (Ticker: {tickerSymbol}) provided below.
+Based on the provided data for {companyName} (Ticker: {tickerSymbol}), generate a multi-faceted financial report. Follow the structure below, replacing all instructions with your analysis derived from the JSON data.
 
 JSON Data with Pre-Calculated Metrics:
 {jsonData}
 
-Based on the provided data, generate the following multi-faceted financial report:
 # Comprehensive Financial Analysis: {companyName} ({tickerSymbol})
 
 ## 1. Executive Summary
-Begin with a concise, one-paragraph summary. For someone in a hurry, what is the most important takeaway about this company's financial health, performance, and overall story as a potential investment? Synthesize the key findings from the report below.
+Write a concise, one-paragraph summary synthesizing the most important takeaways about this company's financial health, performance, and overall story as a potential investment.
 
 ## 2. Company Profile & Market Context
 ### Business Description
-In simple terms, describe the company's business based on the provided 'description', 'sector', and 'industry'. Avoid jargon.
+In simple terms, describe the company's business using the 'description', 'sector', and 'industry' from the JSON. Avoid jargon.
 ### Market Snapshot
-- Market Capitalization: [Use summary.marketCap]
-- 52-Week Price Range: [Use summary.priceRange]
-- **Analyst Consensus:** [Use summary.analystConsensus]
-- **Insider Ownership:** [Use summary.insiderOwnership, state if N/A]
+- **Market Capitalization:** State the value from \`summary.marketCap\`.
+- **52-Week Price Range:** State the value from \`summary.priceRange\`.
+- **Analyst Consensus:** Report the analyst consensus from \`summary.analystConsensus\`.
+- **Insider Ownership:** Report the insider ownership from \`summary.insiderOwnership\`, stating if it's N/A.
 
 ## 3. Performance & Profitability (How Well Does It Make Money?)
 ### 3.1. Revenue & Earnings Trend
-- **Revenue:** Based on 'performance.revenueTrend', describe the company's recent top-line performance.
-- **Net Income:** Based on 'performance.netIncomeTrend', describe the company's recent bottom-line performance.
+- **Revenue Trend:** Describe the company's recent top-line performance using the text from \`performance.revenueTrend\`.
+- **Net Income Trend:** Describe the company's recent bottom-line performance using the text from \`performance.netIncomeTrend\`.
 ### 3.2. Margin Analysis (The Quality of Sales)
-- **Gross & Operating Margins:** Explain what these margins represent. Using 'performance.grossProfitMargin.status' and 'performance.operatingProfitMargin.status', describe the trend in the company's core profitability.
+- **Gross & Operating Margins:** Explain what these margins represent. Describe the trend in the company's core profitability by using the 'status' from \`performance.grossProfitMargin\` and \`performance.operatingProfitMargin\`.
 ### 3.3. Net Profitability & Returns
-- **Net Profit Margin:** Explain what this means. Using 'performance.netProfitMargin.status', what is the trend?
-- **Return on Equity (ROE):** Explain ROE as a "report card" for how well management uses shareholder money. Based on 'performance.returnOnEquity.quality', how effective is the company?
+- **Net Profit Margin:** Explain what this means. What is the trend according to the 'status' in \`performance.netProfitMargin\`?
+- **Return on Equity (ROE):** Explain ROE as a "report card" for how well management uses shareholder money. How effective is the company based on the 'quality' from \`performance.returnOnEquity\`?
 
 ## 4. Financial Health & Risk (Is the Company on Solid Ground?)
 ### 4.1. Liquidity Analysis
-- **Current Ratio:** Explain this as the ability to pay short-term bills. Using 'health.currentRatio.status', comment on the company's short-term financial position.
+- **Current Ratio:** Explain this as the ability to pay short-term bills. Using the 'status' from \`health.currentRatio\`, comment on the company's short-term financial position.
 ### 4.2. Solvency and Debt Structure
-- **Debt-to-Equity:** Explain this like a personal debt-to-income ratio. Based on 'health.debtToEquity.status', is the company conservatively or aggressively financed?
-- **Interest Coverage:** Explain this as the ability to pay interest on its debt. Using 'health.interestCoverage.status', comment on its ability to handle its debt payments.
+- **Debt-to-Equity:** Explain this like a personal debt-to-income ratio. Based on the 'status' from \`health.debtToEquity\`, is the company conservatively or aggressively financed?
+- **Interest Coverage:** Explain this as the ability to pay interest on its debt. Using the 'status' from \`health.interestCoverage\`, comment on its ability to handle its debt payments.
 
 ## 5. Cash Flow Analysis (Following the Actual Cash)
 ### 5.1. Operating Cash Flow (OCF) & Quality of Earnings
-- Based on 'cashFlow.qualityOfEarnings', are the company's reported profits being converted into real cash?
+- Based on \`cashFlow.qualityOfEarnings\`, are the company's reported profits being converted into real cash?
 ### 5.2. Capital Allocation Story
-- Based on 'cashFlow.capitalAllocationStory', what is the company primarily doing with its cash? Is it in growth mode, return mode, or deleveraging mode?
+- Based on \`cashFlow.capitalAllocationStory\`, what is the company primarily doing with its cash? Is it in growth mode, return mode, or deleveraging mode?
 
 ## 6. Valuation Analysis (Is the Stock Price Fair?)
-**Crucially, for each multiple, compare it to its own historical trend using the provided 'status' field.**
-- **P/E Ratio:** [Use valuation[0].status]
-- **Price-to-Sales Ratio:** [Use valuation[1].status]
-- **Price-to-Book Ratio:** [Use valuation[2].status]
-- **Enterprise Value to EBITDA:** [Use valuation[3].status]
-Briefly discuss what these comparisons imply. Is the stock trading at a premium or a discount to its own history?
+For each valuation multiple below, report its status relative to its own historical trend.
+- **P/E Ratio:** Use the 'status' from the object in the \`valuation\` array where 'metric' is 'peRatio'.
+- **Price-to-Sales Ratio:** Use the 'status' from the object where 'metric' is 'priceToSalesRatio'.
+- **Price-to-Book Ratio:** Use the 'status' from the object where 'metric' is 'pbRatio'.
+- **Enterprise Value to EBITDA:** Use the 'status' from the object where 'metric' is 'enterpriseValueToEBITDA'.
+After listing the statuses, briefly discuss what these comparisons imply. Is the stock trading at a premium or a discount to its own history overall?
 
 ## 7. The Long-Term Investment Thesis: Bull vs. Bear
 ### The Bull Case (Key Strengths)
-- Create a bulleted list using the points from 'thesis.bullCasePoints'.
+- Create a bulleted list using the points provided in \`thesis.bullCasePoints\`.
 ### The Bear Case (Potential Risks)
-- Create a bulleted list using the points from 'thesis.bearCasePoints'.
+- Create a bulleted list using the points provided in \`thesis.bearCasePoints\`.
 ### Final Verdict: The "Moat"
-Based purely on this quantitative analysis, what is the primary story? Does the 'thesis.moatIndicator' suggest the company has a strong competitive advantage (a "moat")? Conclude with a final statement on its profile as a potential long-term holding.
+Based purely on this quantitative analysis, what is the primary story? Does the \`thesis.moatIndicator\` suggest the company has a strong competitive advantage (a "moat")? Conclude with a final statement on its profile as a potential long-term holding.
 `.trim();
 
 export const UNDERVALUED_ANALYSIS_PROMPT = `
