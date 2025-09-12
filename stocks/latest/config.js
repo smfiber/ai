@@ -570,6 +570,34 @@ JSON Data:
 - **The Bear Case (Key Risk):** In one sentence, what is the single biggest data-driven risk to this narrative?
 `.trim();
 
+export const GARP_VALIDATION_PROMPT = `
+Role: You are a senior portfolio manager, responsible for making a final, data-driven investment decision. Your task is to synthesize three key analyst reports (GARP, Financial Health, and Risk) to form a complete, actionable conclusion.
+
+IMPORTANT: Your analysis MUST be based *only* on the provided summaries from the other reports. Synthesize, do not invent.
+
+Input Reports:
+{allAnalysesData}
+
+# GARP Validation Report: {companyName} ({tickerSymbol})
+
+## 1. The Opportunity (from GARP Analysis)
+Based on the GARP report, briefly summarize the core growth thesis. What is the projected forward growth rate, and how does the PEG ratio frame this as an attractive opportunity?
+
+## 2. The Financial Foundation (from Financial Analysis)
+Based on the Financial Analysis report, assess the company's health. Is the company financially strong enough to achieve its projected growth? Comment on its debt load, cash flow situation, and profitability trends.
+
+## 3. The Primary Obstacles (from Risk Assessment)
+Based on the Risk Assessment report, identify the top 2-3 most significant risks that could prevent the growth forecast from becoming a reality.
+
+## 4. Final Verdict & Classification
+Synthesize all the points above into a final, decisive paragraph. Explicitly weigh the attractiveness of the growth opportunity against the strength of the company's financial foundation and the severity of its risks.
+
+Conclude by classifying the stock into ONE of the following three categories, providing a brief justification:
+- **High-Conviction GARP:** An attractive growth story that is supported by a strong balance sheet and minimal, manageable risks.
+- **Speculative GARP:** A compelling growth story, but with notable financial weaknesses or significant risks that require careful monitoring.
+- **Potential Value Trap:** A situation where the low PEG ratio appears to be a mirage, hiding significant underlying financial or business risks that make the forecasted growth highly improbable.
+`.trim();
+
 export const INVESTMENT_MEMO_PROMPT = `
 Role: You are the Chief Investment Officer (CIO) of a value-investing fund. You have been given a dossier of reports from your analyst team on {companyName}. Your task is to synthesize these findings into a final, decisive investment memo, **weighing the pros and cons to arrive at a clear-cut recommendation.**
 
@@ -703,6 +731,10 @@ export const promptMap = {
     },
     'InvestmentMemo': {
         prompt: INVESTMENT_MEMO_PROMPT,
+        requires: [] // This prompt uses other reports, not raw FMP data.
+    },
+    'GarpValidation': {
+        prompt: GARP_VALIDATION_PROMPT,
         requires: [] // This prompt uses other reports, not raw FMP data.
     }
 };
