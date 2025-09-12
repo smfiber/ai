@@ -555,7 +555,7 @@ export function _calculateCapitalAllocatorsMetrics(data) {
             buybacks: formatLargeNumber(cf.commonStockRepurchased)
         })),
         reinvestmentEffectiveness: {
-            roicTrend: formatPercentTrend(metrics, 'returnOnInvestedCapital'),
+            roicTrend: formatPercentTrend(metrics, 'roic'),
             roeTrend: formatPercentTrend(metrics, 'roe'),
             revenueGrowth: income.map(i => ({ year: i.calendarYear, revenue: formatLargeNumber(i.revenue) })),
             grossProfitGrowth: income.map(i => ({ year: i.calendarYear, grossProfit: formatLargeNumber(i.grossProfit) }))
