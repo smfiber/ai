@@ -1,5 +1,5 @@
 import { CONSTANTS, state, promptMap, NEWS_SENTIMENT_PROMPT, DISRUPTOR_ANALYSIS_PROMPT, MACRO_PLAYBOOK_PROMPT, INDUSTRY_CAPITAL_ALLOCATORS_PROMPT, INDUSTRY_DISRUPTOR_ANALYSIS_PROMPT, INDUSTRY_MACRO_PLAYBOOK_PROMPT, ONE_SHOT_INDUSTRY_TREND_PROMPT, FORTRESS_ANALYSIS_PROMPT, PHOENIX_ANALYSIS_PROMPT, PICK_AND_SHOVEL_PROMPT, LINCHPIN_ANALYSIS_PROMPT, HIDDEN_VALUE_PROMPT, UNTOUCHABLES_ANALYSIS_PROMPT, INVESTMENT_MEMO_PROMPT, ENABLE_STARTER_PLAN_MODE, STARTER_SYMBOLS } from './config.js';
-import { callApi, filterValidNews, callGeminiApi, generatePolishedArticle, getDriveToken, getOrCreateDriveFolder, createDriveFile, findStocksByIndustry, searchSectorNews, findStocksBySector, synthesizeAndRankCompanies, generateDeepDiveReport } from './api.js';
+import { callApi, filterValidNews, callGeminiApi, generatePolishedArticle, getDriveToken, getOrCreateDriveFolder, createDriveFile, findStocksByIndustry, searchSectorNews, findStocksBySector, synthesizeAndRankCompanies, generateDeepDiveReport, getFmpStockData } from './api.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { openModal, closeModal, displayMessageInModal, openConfirmationModal, openManageStockModal } from './ui-modals.js';
 import { renderPortfolioManagerList, renderFmpEndpointsList, renderBroadEndpointsList, renderNewsArticles, displayReport, updateReportStatus, updateBroadReportStatus, fetchAndCachePortfolioData } from './ui-render.js';
@@ -1348,4 +1348,6 @@ export async function handleSaveToDrive(modalId) {
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
+}
+
 }
