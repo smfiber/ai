@@ -380,7 +380,7 @@ export function _calculateMoatAnalysisMetrics(data) {
         qualitativeClues: {
              description: profile.description
         },
-        roicTrend: formatPercentTrend(metrics, 'returnOnInvestedCapital'),
+        roicTrend: formatPercentTrend(metrics, 'roic'),
         profitabilityTrends: {
             netProfitMargin: formatPercentTrend(ratios, 'netProfitMargin'),
             operatingIncome: income.map(i => ({ year: i.calendarYear, value: formatLargeNumber(i.operatingIncome) })),
