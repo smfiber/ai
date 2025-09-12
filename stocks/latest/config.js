@@ -469,10 +469,10 @@ Interpret the market's view on the company's growth prospects using the 'analyst
 Based on all the factors above, provide a brief, synthesized outlook. Is this a consistent, long-term grower that is reasonably priced, or is its growth recent and potentially expensive? What is the primary story for a potential investor looking for growth?
 `.trim();
 
-const RISK_ASSESSMENT_PROMPT = `
+export const RISK_ASSESSMENT_PROMPT = `
 Role: You are a risk analyst AI. Your job is to act like a cautious inspector, identifying the most significant potential problems or "red flags" for {companyName} and explaining them simply.
 
-Data Instructions: Your analysis must be derived exclusively from the provided JSON data, which contains pre-calculated trends and metrics.
+Data Instructions: Your analysis must be derived exclusively from the provided JSON data. For each potential risk listed below, evaluate the data. **Only include the bullet point in your final output if the data indicates a risk is present.**
 
 Output Format: You MUST return a prioritized, bulleted list in markdown, categorized by risk type. Do NOT use prose or paragraph format for the main analysis. Explain each risk in simple terms within the bullet points.
 
@@ -482,26 +482,22 @@ JSON Data:
 # Uncovering the Risks: {companyName} ({tickerSymbol})
 
 ## 1. Financial Risks (Is the Foundation Solid?)
-These are risks related to the company's balance sheet and cash flow.
-- **Debt Load (Leverage):** Is the 'financialRisks.debtToEquity' ratio high? Explain this risk like having a large mortgage.
-- **Paying Short-Term Bills (Liquidity):** Is the 'financialRisks.currentRatio' low (below 1.5)?
-- **"Real" Cash vs. "Paper" Profit (Earnings Quality):** Is 'financialRisks.earningsQuality.operating_cash_flow' significantly lower than 'financialRisks.earningsQuality.net_income'? This can be a red flag.
-- **Dividend Sustainability:** Is the *amount* of 'dividends_paid' (a positive number representing cash outflow) greater than 'net_income'? This is a major warning sign.
+- **Debt Load (Leverage):** Evaluate \`financialRisks.debtToEquity\`. If the ratio is high (e.g., > 1.0), state the value and explain the risk.
+- **Liquidity:** Evaluate \`financialRisks.currentRatio\`. If the ratio is low (e.g., < 1.5), state the value and explain the risk of paying short-term bills.
+- **Earnings Quality:** Compare \`financialRisks.earningsQuality.operating_cash_flow\` to \`financialRisks.earningsQuality.net_income\`. If operating cash flow is significantly lower, flag this as a potential red flag.
+- **Dividend Sustainability:** Compare the \`financialRisks.dividends_paid\` amount to \`financialRisks.net_income\`. If dividends paid are greater than net income, flag this as a major risk to the dividend.
 
 ## 2. Market & Stock Price Risks (Is the Stock Itself Risky?)
-These are risks related to the stock's price and behavior in the market.
-- **Volatility (The "Drama" Level):** Is the 'marketRisks.beta' greater than 1? This means the stock tends to have bigger price swings.
-- **Priced for Perfection? (Valuation Risk):** Are the 'marketRisks.valuation.peRatio' or 'marketRisks.valuation.psRatio' exceptionally high?
-- **Analyst Pessimism:** Does the 'marketRisks.analystPessimism' list contain any "Sell" ratings or downgrades?
+- **Volatility:** Evaluate \`marketRisks.beta\`. If it is > 1.2, state the value and explain that the stock is more volatile than the market.
+- **Valuation Risk:** Evaluate \`marketRisks.valuation.peRatio\` and \`psRatio\`. If either is high for its industry, note this as a risk that the stock may be "priced for perfection."
+- **Analyst Pessimism:** Check the \`marketRisks.analystPessimism\` list. If it is not empty, list the pessimistic ratings as a risk.
 
 ## 3. Business Risks (Are There Cracks in the Operations?)
-These are risks related to the day-to-day health of the business.
-- **Recession Sensitivity (Economic Cycle Risk):** Based on the 'businessRisks.recession_sensitivity_sector', is it "Cyclical" or "Defensive"?
-- **Shrinking Profits? (Margin Compression):** Is the 'businessRisks.marginTrend' trending downwards over the past few years?
-- **Core Profitability for Financials (Net Interest Margin):** For banks, is the 'businessRisks.netInterestMarginTrend' trending downwards?
+- **Recession Sensitivity:** Based on \`businessRisks.recession_sensitivity_sector\`, explain the risk if it's a cyclical sector like 'Industrials' or 'Consumer Discretionary'.
+- **Margin Compression:** Analyze the \`businessRisks.marginTrend\`. If the net profit margin shows a clear downward trend over the last few years, identify this as a risk.
 
 ## 4. The Bottom Line: What Are the Biggest Worries?
-Based on the data, provide a brief, 1-2 sentence summary highlighting the top 2-3 risks an investor should be most aware of.
+Based on the risks you identified above, provide a brief, 1-2 sentence summary highlighting the top 2-3 risks an investor should be most aware of.
 `.trim();
 
 const CAPITAL_ALLOCATORS_PROMPT = `
@@ -1154,5 +1150,3 @@ export const creativePromptMap = {
     'Real Estate': { prompt: REAL_ESTATE_SECTOR_PROMPT, label: 'Playbook' },
     'Materials': { prompt: MATERIALS_SECTOR_PROMPT, label: 'Playbook' }
 };
-
-}
