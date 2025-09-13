@@ -646,7 +646,7 @@ Role: You are a skeptical senior portfolio manager. Your goal is to critically e
 export const INVESTMENT_MEMO_PROMPT = `
 **Role:** You are a quantitative analyst for a value-investing fund. Your task is to process a dossier of qualitative and quantitative reports on {companyName} and distill them into a concise "Factor Scorecard" and recommendation.
 
-**IMPORTANT:** Base your scores and rationale *only* on the provided summaries. Do not use external knowledge.
+**IMPORTANT:** Base your scores and rationale *only* on the provided summaries. Pay special attention to the Form 10-K (annual) and 10-Q (quarterly) reports to understand the company's official reporting and any recent changes in momentum or risk.
 
 **Input Reports:**
 {allAnalysesData}
@@ -662,19 +662,19 @@ A one-sentence takeaway and the final weighted score.
 
 ### 1. Business Quality & Moat
 * **Score:** \`[1-10]\`
-* **Rationale:** \`(Briefly justify the score based on moat width, industry position, and competitive durability).\`
+* **Rationale:** \`(Briefly justify the score based on moat width, industry position, and competitive durability, referencing the Moat and 10-K analysis).\`
 
 ### 2. Financial Health
 * **Score:** \`[1-10]\`
-* **Rationale:** \`(Justify based on debt levels, cash flow, and margin stability).\`
+* **Rationale:** \`(Justify based on debt levels, cash flow, and margin stability, referencing the Financial Health and SEC filing reports).\`
 
 ### 3. Management & Capital Allocation
 * **Score:** \`[1-10]\`
-* **Rationale:** \`(Justify based on ROIC trends, shareholder alignment, and M&A track record).\`
+* **Rationale:** \`(Justify based on ROIC trends, shareholder alignment, and M&A track record from the Capital Allocators report).\`
 
-### 4. Growth Outlook
+### 4. Growth Outlook & Momentum
 * **Score:** \`[1-10]\`
-* **Rationale:** \`(Justify based on historical growth, future forecasts, and catalysts).\`
+* **Rationale:** \`(Justify based on historical growth, future forecasts, and catalysts. Use the 10-Q report to assess recent momentum).\`
 
 ### 5. Valuation & Margin of Safety
 * **Score:** \`[1-10]\`
@@ -821,6 +821,47 @@ Synthesize your entire analysis into a final verdict.
 - **Cracks (Red Flags):** What are the 1-2 most significant risks, inconsistencies, or concerns that undermine the bull thesis?
 `.trim();
 
+export const FORM_10Q_ANALYSIS_PROMPT = `
+Role: You are a meticulous Senior Equity Analyst. Your task is to analyze the provided Form 10-Q for {companyName}, focusing on quarterly changes and deviations from the last annual report (10-K). Your analysis should identify momentum shifts, new risks, and updates to the long-term investment thesis. Your audience is an investment committee that has already read the 10-K.
+
+Data Instructions: Your analysis MUST be based *exclusively* on the provided filing text.
+
+Output Format: A professional markdown report structured as follows.
+
+Filing Text:
+{filingText}
+
+# Form 10-Q Update Brief: {companyName} ({tickerSymbol})
+
+## 1. Executive Summary: The Quarter's Core Narrative
+In one or two sentences, what is the most significant takeaway from this quarter? Did the results confirm, challenge, or alter the existing investment thesis?
+
+## 2. Key Performance Indicators & Financial Snapshot
+Create a bulleted list of the most important quantitative results from the quarter.
+- **Revenue:** [State the revenue and its YoY growth.]
+- **Net Income:** [State the net income and its YoY growth.]
+- **EPS:** [State the EPS.]
+- **Key Segment Performance:** [Briefly describe the performance of the main business segments.]
+
+## 3. MD&A Insights: Management's Perspective
+From the "Management's Discussion and Analysis" section:
+- **Performance Drivers:** What specific factors does management credit for the quarterly results (both positive and negative)?
+- **Updated Outlook:** Did management update their guidance or change their tone regarding the full-year outlook?
+
+## 4. Balance Sheet & Cash Flow Check-up
+- **Material Changes:** Note any significant changes in cash, debt levels, or working capital since the last quarter or year-end. Is the company's financial position strengthening or weakening?
+
+## 5. Delta vs. 10-K: What Has Changed?
+This is the most critical section. Directly compare this quarter's filing to the narrative from the last annual report.
+- **Risk Factors:** Are there any new or significantly modified risk factors?
+- **Strategic Shifts:** Is there any language that suggests a change in strategy, capital allocation priorities, or competitive landscape?
+- **Thesis Validation/Invalidation:** Does this report provide evidence that validates or invalidates key pillars of the long-term bull or bear case from the 10-K?
+
+## 6. Final Verdict: Impact on Investment Thesis
+- **Verdict:** [Bullish Update / Bearish Update / Neutral Update]
+- **Justification:** Concisely explain your verdict. How does this quarterly report affect the long-term investment case for {companyName}?
+`.trim();
+
 export const promptMap = {
     'FinancialAnalysis': {
         prompt: FINANCIAL_ANALYSIS_PROMPT,
@@ -870,6 +911,10 @@ export const promptMap = {
         prompt: FORM_10K_ANALYSIS_PROMPT,
         requires: [] // This will be based on manually provided text
     },
+    'Form10QAnalysis': {
+        prompt: FORM_10Q_ANALYSIS_PROMPT,
+        requires: [] // This will be based on manually provided text
+    },
     'InvestmentMemo': {
         prompt: INVESTMENT_MEMO_PROMPT,
         requires: [] // This prompt uses other reports, not raw FMP data.
@@ -893,6 +938,7 @@ export const ANALYSIS_ICONS = {
     'NarrativeCatalyst': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.362 5.214A8.252 8.252 0 0112 21 8.25 8.25 0 016.038 7.048 8.287 8.287 0 009 9.62a8.983 8.983 0 013.362-3.867 8.262 8.262 0 013 2.456z" /><path stroke-linecap="round" stroke-linejoin="round" d="M12 18a3.75 3.75 0 00.495-7.467 5.99 5.99 0 00-1.925 3.546 5.974 5.974 0 01-2.133-1A3.75 3.75 0 0012 18z" /></svg>`,
     'Form8KAnalysis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h.01M15 12h.01M10.5 16.5h3m-6.75-3.75a3 3 0 013-3h3a3 3 0 013 3v3a3 3 0 01-3 3h-3a3 3 0 01-3-3v-3z" /><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`,
     'Form10KAnalysis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>`,
+    'Form10QAnalysis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /><path d="M9.5 10.5 A1.5 1.5 0 1 1 12.5 10.5 A1.5 1.5 0 1 1 9.5 10.5 Z" /><path d="M11.5 12 L 13 14" /></svg>`,
     'InvestmentMemo': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>`
 };
 
