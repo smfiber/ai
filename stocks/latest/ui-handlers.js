@@ -1152,16 +1152,28 @@ export async function handleInvestmentMemoRequest(symbol) {
     }
 }
 
-export async function handleGarpValidationRequest(symbol) {
+export async function handleGarpValidationRequest(symbol, forceNew = false) {
     const contentContainer = document.getElementById('ai-article-container');
     const statusContainer = document.getElementById('report-status-container-ai');
     contentContainer.innerHTML = '';
     statusContainer.classList.add('hidden');
 
-    openModal(CONSTANTS.MODAL_LOADING);
-    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
-
     try {
+        const savedReports = await getSavedReports(symbol, 'GarpValidation');
+
+        if (savedReports.length > 0 && !forceNew) {
+            const latestReport = savedReports[0];
+            displayReport(contentContainer, latestReport.content, latestReport.prompt);
+            contentContainer.dataset.currentPrompt = latestReport.prompt || '';
+            contentContainer.dataset.rawMarkdown = latestReport.content;
+            const promptConfig = promptMap['GarpValidation'];
+            updateReportStatus(statusContainer, savedReports, latestReport.id, { symbol, reportType: 'GarpValidation', promptConfig });
+            return;
+        }
+
+        openModal(CONSTANTS.MODAL_LOADING);
+        const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+
         loadingMessage.textContent = "Gathering required analysis reports...";
         const requiredReports = ['GarpAnalysis', 'FinancialAnalysis', 'RiskAssessment'];
         
@@ -1191,19 +1203,21 @@ export async function handleGarpValidationRequest(symbol) {
 
         const validationContent = await generatePolishedArticle(prompt, loadingMessage);
         
+        contentContainer.dataset.currentPrompt = prompt;
         contentContainer.dataset.rawMarkdown = validationContent;
-        displayReport(contentContainer, validationContent);
+        displayReport(contentContainer, validationContent, prompt);
         
-        statusContainer.dataset.activeReportType = 'GarpValidation';
-        statusContainer.innerHTML = `<span class="text-sm font-semibold text-green-800">GARP Validation Report generated successfully.</span>`;
-        statusContainer.classList.remove('hidden');
+        const promptConfig = promptMap['GarpValidation'];
+        updateReportStatus(statusContainer, [], null, { symbol, reportType: 'GarpValidation', promptConfig });
 
     } catch (error) {
         console.error("Error generating GARP Validation report:", error);
         displayMessageInModal(`Could not generate report: ${error.message}`, 'error');
         contentContainer.innerHTML = `<p class="text-red-500">Failed to generate report: ${error.message}</p>`;
     } finally {
-        closeModal(CONSTANTS.MODAL_LOADING);
+        if (document.getElementById(CONSTANTS.MODAL_LOADING).classList.contains('is-open')) {
+            closeModal(CONSTANTS.MODAL_LOADING);
+        }
     }
 }
 
@@ -1316,11 +1330,12 @@ export async function handleGenerateAllReportsRequest(symbol) {
 
 export async function handleSaveReportToDb() {
     const modal = document.getElementById('rawDataViewerModal');
-    const symbol = modal.querySelector('.ai-analysis-button')?.dataset.symbol;
+    const symbol = modal.querySelector('.ai-analysis-button')?.dataset.symbol || modal.querySelector('#garp-validation-button')?.dataset.symbol;
     const contentContainer = document.getElementById('ai-article-container');
     const statusContainer = document.getElementById('report-status-container-ai');
     const reportType = statusContainer.dataset.activeReportType;
     const contentToSave = contentContainer.dataset.rawMarkdown;
+    const promptToSave = contentContainer.dataset.currentPrompt;
 
     if (!symbol || !reportType || !contentToSave) {
         displayMessageInModal("Please generate an analysis before saving.", "warning");
@@ -1335,7 +1350,8 @@ export async function handleSaveReportToDb() {
             ticker: symbol,
             reportType: reportType,
             content: contentToSave,
-            savedAt: Timestamp.now()
+            savedAt: Timestamp.now(),
+            prompt: promptToSave || ''
         };
         await addDoc(collection(state.db, CONSTANTS.DB_COLLECTION_AI_REPORTS), reportData);
         displayMessageInModal("Report saved successfully!", "info");
