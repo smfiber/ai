@@ -188,6 +188,44 @@ export function _calculateFinancialAnalysisMetrics(data) {
     const latestCashFlow = cashFlows[cashFlows.length - 1] || {};
     const latestRatios = ratios[ratios.length - 1] || {};
 
+    // 2.5 Quarterly Performance Calculations
+    const incomeQuarterly = data.income_statement_quarterly || [];
+    let recentPerformance = {
+        mrqDate: 'N/A',
+        mrqRevenue: 'N/A',
+        mrqNetIncome: 'N/A',
+        revenueYoyGrowth: 'N/A',
+        netIncomeYoyGrowth: 'N/A',
+        ttmNetIncome: 'N/A'
+    };
+
+    if (incomeQuarterly.length > 0) {
+        recentPerformance.mrqDate = incomeQuarterly[0].date;
+        const last4Quarters = incomeQuarterly.slice(0, 4);
+        if (last4Quarters.length === 4) {
+            const ttmNetIncome = last4Quarters.reduce((sum, q) => sum + (q.netIncome || 0), 0);
+            recentPerformance.ttmNetIncome = formatLargeNumber(ttmNetIncome);
+        }
+
+        if (incomeQuarterly.length >= 5) {
+            const mrq = incomeQuarterly[0];
+            const prevYearQ = incomeQuarterly[4];
+
+            recentPerformance.mrqRevenue = formatLargeNumber(mrq.revenue);
+            recentPerformance.mrqNetIncome = formatLargeNumber(mrq.netIncome);
+
+            if (prevYearQ.revenue && prevYearQ.revenue !== 0) {
+                const revGrowth = ((mrq.revenue - prevYearQ.revenue) / Math.abs(prevYearQ.revenue)) * 100;
+                recentPerformance.revenueYoyGrowth = `${revGrowth.toFixed(2)}%`;
+            }
+
+            if (prevYearQ.netIncome && prevYearQ.netIncome !== 0) {
+                const niGrowth = ((mrq.netIncome - prevYearQ.netIncome) / Math.abs(prevYearQ.netIncome)) * 100;
+                recentPerformance.netIncomeYoyGrowth = `${niGrowth.toFixed(2)}%`;
+            }
+        }
+    }
+
     // 3. Calculations
     // Find market cap from profile, with a fallback to the dedicated market_cap endpoint
     const marketCapValue = profile.mktCap || data.market_cap?.[0]?.marketCap;
@@ -287,7 +325,7 @@ export function _calculateFinancialAnalysisMetrics(data) {
 
     const thesis = { bullCasePoints, bearCasePoints, moatIndicator };
     
-    return { summary, performance, health, cashFlow, valuation, thesis };
+    return { summary, performance, health, cashFlow, valuation, thesis, recentPerformance };
 }
 
 /**
