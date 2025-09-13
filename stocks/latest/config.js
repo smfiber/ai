@@ -712,9 +712,9 @@ JSON Data with All Pre-Calculated Metrics:
 `.trim();
 
 export const FORM_8K_ANALYSIS_PROMPT = `
-Role: You are a skeptical financial analyst specializing in SEC filings. Your task is to dissect a Form 8-K filing for {companyName} and extract only the most critical, investment-relevant information. Your audience is a busy portfolio manager who needs to know the bottom-line impact immediately.
+Role: You are a skeptical and meticulous financial analyst specializing in SEC filings. Your task is to dissect the provided Form 8-K for {companyName} and distill the critical, investment-relevant information. You must look beyond the corporate jargon to identify both the stated facts and the unstated implications. Your audience is a busy portfolio manager who needs the bottom-line impact immediately.
 
-Data Instructions: Your analysis MUST be based *exclusively* on the provided filing text.
+Data Instructions: Your analysis MUST be based *exclusively* on the provided filing text. Do not invent facts or speculate beyond what a reasonable analyst would infer from the text.
 
 Output Format: A concise, professional markdown report.
 
@@ -723,50 +723,63 @@ Filing Text:
 
 # Form 8-K Analysis: {companyName} ({tickerSymbol})
 
-## 1. Executive Summary: What Happened and Why It Matters
-In one or two sentences, what is the single most important event disclosed in this filing? State the facts clearly and concisely.
+## 1. Executive Summary: The Core Event and Its Immediate Implication
+In one or two sentences, what is the single most important event disclosed and what is its direct consequence for the company and its investors?
 
-## 2. Key Disclosed Items
-Create a bulleted list of the specific "Items" disclosed in the 8-K (e.g., Item 1.01, Item 2.02, Item 5.02). For each item, provide a brief, one-sentence summary of the event.
-- **Item [Number]:** [e.g., Entry into a Material Definitive Agreement]
-- **Item [Number]:** [e.g., Results of Operations and Financial Condition]
+## 2. Key Disclosed Items & Data Points
+Create a bulleted list of the specific "Items" disclosed (e.g., Item 1.01, Item 5.02). For each item:
+- **Item [Number] - [Description]:** Briefly summarize the event in one sentence.
+- **Key Data:** Extract critical quantitative data (e.g., dollar amounts, dates, percentages, executive names). If none, state "N/A".
 
-## 3. The Bottom-Line Impact: Bullish, Bearish, or Neutral?
-Based on the events disclosed, provide a clear verdict on the immediate impact to the investment thesis. Justify your reasoning in one or two sentences.
+## 3. The Bull Case (Potential Positives)
+Based ONLY on the filing, what is the most positive interpretation of this news? What opportunities or strengths does it signal?
+- **Positive Interpretation:** [Explain the upside in 3-4 sentences.]
+
+## 4. The Bear Case (Potential Risks & Red Flags)
+As a skeptical analyst, what are the potential risks, downsides, or unanswered questions raised by this filing? What could be the negative interpretation?
+- **Risks & Red Flags:** [Explain the potential negatives or concerns in 3-4 sentences.]
+
+## 5. Final Verdict & Justification
+Provide a clear verdict on the immediate net impact.
 - **Verdict:** [Bullish / Bearish / Neutral]
-- **Justification:** [Explain why this news is positive, negative, or largely informational for an investor.]
+- **Justification:** [Concisely synthesize why the bull or bear case is stronger in the immediate term, based on the disclosed facts.]
 `.trim();
 
 export const FORM_10K_ANALYSIS_PROMPT = `
-Role: You are a diligent forensic accountant and business analyst. Your task is to "read between the lines" of a Form 10-K for {companyName} to identify the most critical insights a financial model might miss.
+Role: You are a Senior Equity Analyst and Forensic Accountant. Your task is to perform a deep, qualitative analysis of the Form 10-K for {companyName}. Go beyond the obvious statements to uncover the underlying story, changes in strategy, and potential disconnects between management's narrative and the disclosed risks. Your audience is an investment committee deciding on a long-term position.
 
-Data Instructions: Your analysis MUST be based *exclusively* on the provided filing text. Focus on synthesizing narrative sections, not just pulling numbers.
+Data Instructions: Your analysis MUST be based *exclusively* on the provided filing text. Synthesize information from across the document to form your conclusions.
 
 Output Format: A professional markdown report structured as follows.
 
 Filing Text:
 {filingText}
 
-# Form 10-K Deep Dive: {companyName} ({tickerSymbol})
+# Form 10-K Intelligence Brief: {companyName} ({tickerSymbol})
 
-## 1. Business & Strategy Summary
-Based on the "Business" section (Item 1), what is the core narrative management is telling about their strategy and competitive position? What are they emphasizing as their key strengths for the coming year?
+## 1. The Core Narrative: Strategy & Competitive Moat
+Based on the "Business" section (Item 1), summarize management's description of their core business model and competitive advantage ("moat"). What is the central pillar of their strategy for the upcoming year?
 
-## 2. Top 3-5 Identified Risks
-From the "Risk Factors" section (Item 1A), create a bulleted list of the top 3 to 5 most significant or unique risks that management has disclosed. **Do not list generic risks; focus on those specific to the company or its industry.**
-- **Risk 1:** [Summarize the risk]
-- **Risk 2:** [Summarize the risk]
-- **Risk 3:** [Summarize the risk]
+## 2. Risk Factors: What's New and What's Escalating?
+From the "Risk Factors" section (Item 1A), identify the 3-5 most material risks. For each, note if it appears to be a new or an escalating concern compared to previous years (based on phrasing like "increasingly," "new," or the level of detail provided).
+- **Risk:** [Summarize the risk.] **Assessment:** [New / Escalating / Chronic]
+- **Risk:** [Summarize the risk.] **Assessment:** [New / Escalating / Chronic]
+- **Risk:** [Summarize the risk.] **Assessment:** [New / Escalating / Chronic]
 
-## 3. Management's Discussion & Analysis (MD&A) Insights
-Based on the "MD&A" section (Item 7), what is management's narrative about the company's recent performance?
-- **Performance Drivers:** What specific factors (e.g., new products, pricing, market share gains) does management credit for their successes or blame for their failures?
-- **Forward-Looking Outlook:** What is the tone of the forward-looking statements? Are they optimistic and pointing to specific growth initiatives, or are they cautious and highlighting headwinds?
+## 3. Management's Story (MD&A Insights)
+From the "MD&A" section (Item 7), distill management's explanation of their performance.
+- **Performance Narrative:** What specific factors are credited for successes, and what external or internal factors are blamed for failures?
+- **Capital Allocation:** Where is management deploying capital? Note any significant mentions of spending on R&D, acquisitions, share buybacks, or capital expenditures, and the stated reason.
+- **Tone & Outlook:** Characterize the tone of the forward-looking statements. Is it confident, defensive, or ambiguous? Quote a brief, representative phrase if possible.
 
-## 4. Red Flags & Green Flags Summary
-Conclude with a final summary.
-- **Red Flags:** Based on your analysis of the risks and MD&A, what are 1-2 potential red flags an investor should be cautious about? (e.g., increasing competition, reliance on a single customer, cautious outlook).
-- **Green Flags:** What are 1-2 green flags that suggest underlying strength or a positive outlook? (e.g., a clear strategy to address a major risk, strong commentary on a new growth driver).
+## 4. Hidden Details: Legal & Accounting Notes
+- **Legal Proceedings (Item 3):** Are there any new, significant legal proceedings disclosed? If so, what is the potential risk? If not, state "No significant new litigation noted."
+- **Critical Accounting Policies (from MD&A):** Does management highlight any highly subjective accounting estimates (e.g., goodwill, revenue recognition)? Note any areas that require significant judgment.
+
+## 5. Investment Thesis: Key Pillars & Cracks
+Synthesize your entire analysis into a final verdict.
+- **Pillars (Green Flags):** What are the 1-2 core strengths or positive dynamics evident from the narrative? (This is the foundation of a bull thesis).
+- **Cracks (Red Flags):** What are the 1-2 most significant risks, inconsistencies, or concerns that undermine the bull thesis?
 `.trim();
 
 export const promptMap = {
