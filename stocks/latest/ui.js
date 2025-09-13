@@ -311,6 +311,8 @@ export function setupEventListeners() {
             handleSaveManualFiling(ticker, '8-K');
         } else if (e.target.id === 'manual-10k-form') {
             handleSaveManualFiling(ticker, '10-K');
+        } else if (e.target.id === 'manual-10q-form') {
+            handleSaveManualFiling(ticker, '10-Q');
         }
     });
 
@@ -346,6 +348,9 @@ export function setupEventListeners() {
             } else if (tabId === 'form-10k-analysis' && !target.dataset.loaded) {
                 renderFilingAnalysisTab(ticker, '10-K');
                 target.dataset.loaded = 'true';
+            } else if (tabId === 'form-10q-analysis' && !target.dataset.loaded) {
+                renderFilingAnalysisTab(ticker, '10-Q');
+                target.dataset.loaded = 'true';
             }
             return;
         }
@@ -355,10 +360,16 @@ export function setupEventListeners() {
 
         if (target.matches('.ai-analysis-button')) {
             const reportType = target.dataset.reportType;
-            if (reportType === 'Form8KAnalysis' || reportType === 'Form10KAnalysis') {
-                const tabName = reportType === 'Form8KAnalysis' ? 'form-8k-analysis' : 'form-10k-analysis';
-                const tabButton = document.querySelector(`.tab-button[data-tab='${tabName}']`);
-                if (tabButton) tabButton.click();
+            if (reportType === 'Form8KAnalysis' || reportType === 'Form10KAnalysis' || reportType === 'Form10QAnalysis') {
+                let tabName;
+                if (reportType === 'Form8KAnalysis') tabName = 'form-8k-analysis';
+                else if (reportType === 'Form10KAnalysis') tabName = 'form-10k-analysis';
+                else if (reportType === 'Form10QAnalysis') tabName = 'form-10q-analysis';
+                
+                if(tabName) {
+                    const tabButton = document.querySelector(`.tab-button[data-tab='${tabName}']`);
+                    if (tabButton) tabButton.click();
+                }
             } else {
                 const promptConfig = promptMap[reportType];
                 if (promptConfig) handleAnalysisRequest(symbol, reportType, promptConfig);
@@ -370,6 +381,7 @@ export function setupEventListeners() {
         if (target.id === 'garp-validation-button') handleGarpValidationRequest(symbol);
         if (target.id === 'analyze-latest-8k-button') handleFilingAnalysisRequest(symbol, '8-K');
         if (target.id === 'analyze-latest-10k-button') handleFilingAnalysisRequest(symbol, '10-K');
+        if (target.id === 'analyze-latest-10q-button') handleFilingAnalysisRequest(symbol, '10-Q');
     });
 	
 	document.getElementById('manageBroadEndpointsModal')?.addEventListener('click', (e) => {
