@@ -2,7 +2,7 @@ import { CONSTANTS, SECTORS, SECTOR_ICONS, state } from './config.js';
 import { callApi } from './api.js';
 import { getSecInsiderTrading, getSecInstitutionalOwnership, getSecMaterialEvents, getSecAnnualReports, getSecQuarterlyReports } from './sec-api.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { handleAnalysisRequest, handleBroadAnalysisRequest } from './ui-handlers.js';
+import { handleAnalysisRequest, handleBroadAnalysisRequest, handleInvestmentMemoRequest, handleGarpValidationRequest } from './ui-handlers.js';
 
 // --- UTILITY & SECURITY HELPERS ---
 
@@ -817,7 +817,14 @@ export function updateReportStatus(statusContainer, reports, activeReportId, ana
     const generateNewBtn = document.getElementById(`generate-new-${analysisParams.reportType}`);
     if (generateNewBtn) {
         generateNewBtn.addEventListener('click', () => {
-            handleAnalysisRequest(analysisParams.symbol, analysisParams.reportType, analysisParams.promptConfig, true);
+            // Add special handling for reports with custom generation logic
+            if (analysisParams.reportType === 'InvestmentMemo') {
+                handleInvestmentMemoRequest(analysisParams.symbol, true);
+            } else if (analysisParams.reportType === 'GarpValidation') {
+                handleGarpValidationRequest(analysisParams.symbol, true);
+            } else {
+                handleAnalysisRequest(analysisParams.symbol, analysisParams.reportType, analysisParams.promptConfig, true);
+            }
         });
     }
 }
