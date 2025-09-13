@@ -1,4 +1,4 @@
-import { CONSTANTS, state } from './config.js';
+import { CONSTANTS, state, GEMINI_COMPETITOR_PROMPT } from './config.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- UTILITY & SECURITY HELPERS (Moved from ui.js) ---
@@ -72,6 +72,28 @@ export async function callGeminiApi(prompt) {
     console.error("Unexpected Gemini API response structure:", data);
     throw new Error("Failed to parse the response from the Gemini API.");
 }
+
+export async function getCompetitorsFromGemini(companyName, ticker) {
+    if (!state.geminiApiKey) throw new Error("Gemini API key is not configured.");
+
+    const prompt = GEMINI_COMPETITOR_PROMPT
+        .replace('{companyName}', companyName)
+        .replace('{tickerSymbol}', ticker);
+
+    const resultText = await callGeminiApi(prompt);
+    try {
+        const cleanedJson = resultText.replace(/```json\n|```/g, '').trim();
+        const competitors = JSON.parse(cleanedJson);
+        if (!Array.isArray(competitors)) {
+            throw new Error("API did not return a valid array of competitors.");
+        }
+        return competitors;
+    } catch (error) {
+        console.error("Error parsing competitor list from Gemini:", error);
+        throw new Error("Failed to parse the competitor list from the AI. The response was not valid JSON.");
+    }
+}
+
 
 export async function callGeminiApiWithTools(contents) {
     if (!state.geminiApiKey) throw new Error("Gemini API key is not configured.");
