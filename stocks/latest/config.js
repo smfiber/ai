@@ -151,7 +151,7 @@ In simple terms, describe the company's business using the 'description', 'secto
 - **Analyst Consensus:** Report the analyst consensus from \`summary.analystConsensus\`.
 - **Insider Ownership:** Report the insider ownership from \`summary.insiderOwnership\`, stating if it's N/A.
 
-## 3. Performance & Profitability (The Long-Term View)
+## 3. Annual Performance & Profitability (The Long-Term View)
 ### 3.1. Annual Revenue & Earnings Trend
 - **Revenue Trend:** Describe the company's long-term top-line performance using the text from \`performance.revenueTrend\`.
 - **Net Income Trend:** Describe the company's long-term bottom-line performance using the text from \`performance.netIncomeTrend\`.
@@ -792,7 +792,7 @@ Synthesize your entire analysis into a final verdict.
 export const promptMap = {
     'FinancialAnalysis': {
         prompt: FINANCIAL_ANALYSIS_PROMPT,
-        requires: ['profile', 'key_metrics_annual', 'stock_grade_news', 'income_statement_annual', 'cash_flow_statement_annual']
+        requires: ['profile', 'key_metrics_annual', 'stock_grade_news', 'income_statement_annual', 'cash_flow_statement_annual', 'income_statement_quarterly']
     },
     'UndervaluedAnalysis': {
         prompt: UNDERVALUED_ANALYSIS_PROMPT,
