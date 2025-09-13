@@ -1,7 +1,7 @@
 import { CONSTANTS, state, promptMap } from './config.js';
-import { openModal, closeModal, openStockListModal, openSessionLogModal, openManageStockModal, openPortfolioManagerModal, openViewFmpDataModal, openManageFmpEndpointsModal, openManageBroadEndpointsModal, openRawDataViewer, openThesisTrackerModal } from './ui-modals.js';
-import { fetchAndCachePortfolioData, renderPortfolioManagerList, renderSecFilings } from './ui-render.js';
-import { handleResearchSubmit, handleSaveStock, handleDeleteStock, handleRefreshFmpData, handleFetchNews, handleAnalysisRequest, handleInvestmentMemoRequest, handleSaveReportToDb, handleSaveBroadReportToDb, handleSaveToDrive, handleSectorSelection, handleIndustrySelection, handleSaveFmpEndpoint, cancelFmpEndpointEdit, handleEditFmpEndpoint, handleDeleteFmpEndpoint, handleSaveBroadEndpoint, cancelBroadEndpointEdit, handleEditBroadEndpoint, handleDeleteBroadEndpoint, handleSaveThesis, handleBroadAnalysisRequest, handleGenerateAllReportsRequest, handleGarpValidationRequest } from './ui-handlers.js';
+import { openModal, closeModal, openStockListModal, openSessionLogModal, openManageStockModal, openPortfolioManagerModal, openViewFm/pDataModal, openManageFmpEndpointsModal, openManageBroadEndpointsModal, openRawDataViewer, openThesisTrackerModal } from './ui-modals.js';
+import { fetchAndCachePortfolioData, renderPortfolioManagerList, renderSecFilings, renderFilingAnalysisTab } from './ui-render.js';
+import { handleResearchSubmit, handleSaveStock, handleDeleteStock, handleRefreshFmpData, handleFetchNews, handleAnalysisRequest, handleInvestmentMemoRequest, handleSaveReportToDb, handleSaveBroadReportToDb, handleSaveToDrive, handleSectorSelection, handleIndustrySelection, handleSaveFmpEndpoint, cancelFmpEndpointEdit, handleEditFmpEndpoint, handleDeleteFmpEndpoint, handleSaveBroadEndpoint, cancelBroadEndpointEdit, handleEditBroadEndpoint, handleDeleteBroadEndpoint, handleSaveThesis, handleBroadAnalysisRequest, handleGenerateAllReportsRequest, handleGarpValidationRequest, handleSaveManualFiling, handleFilingAnalysisRequest } from './ui-handlers.js';
 
 // --- PROMPT MAPPING ---
 // The main promptMap is now imported directly from config.js
@@ -300,7 +300,21 @@ export function setupEventListeners() {
         }
     });
 
-    document.getElementById('rawDataViewerModal').addEventListener('click', (e) => {
+    const analysisModal = document.getElementById('rawDataViewerModal');
+
+    analysisModal.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const ticker = analysisModal.dataset.activeTicker;
+        if (!ticker) return;
+
+        if (e.target.id === 'manual-8k-form') {
+            handleSaveManualFiling(ticker, '8-K');
+        } else if (e.target.id === 'manual-10k-form') {
+            handleSaveManualFiling(ticker, '10-K');
+        }
+    });
+
+    analysisModal.addEventListener('click', (e) => {
         const target = e.target.closest('button');
         if (!target) return;
 
@@ -319,39 +333,43 @@ export function setupEventListeners() {
             document.getElementById(`${tabId}-tab`).classList.remove('hidden');
             target.classList.add('active');
 
-            // Lazy-load SEC data on first click
+            // Lazy-load data on first click
+            const ticker = document.getElementById('rawDataViewerModal').dataset.activeTicker;
+            if (!ticker) return;
+
             if (tabId === 'sec-filings' && !target.dataset.loaded) {
-                const ticker = document.getElementById('rawDataViewerModal').dataset.activeTicker;
-                if(ticker) {
-                    renderSecFilings(ticker);
-                    target.dataset.loaded = 'true'; // Prevent re-loading
-                }
+                renderSecFilings(ticker);
+                target.dataset.loaded = 'true';
+            } else if (tabId === 'form-8k-analysis' && !target.dataset.loaded) {
+                renderFilingAnalysisTab(ticker, '8-K');
+                target.dataset.loaded = 'true';
+            } else if (tabId === 'form-10k-analysis' && !target.dataset.loaded) {
+                renderFilingAnalysisTab(ticker, '10-K');
+                target.dataset.loaded = 'true';
             }
             return;
         }
         
-        const symbol = target.dataset.symbol;
+        const symbol = target.dataset.symbol || analysisModal.dataset.activeTicker;
         if (!symbol) return;
 
         if (target.matches('.ai-analysis-button')) {
             const reportType = target.dataset.reportType;
-            const promptConfig = promptMap[reportType];
-            if (promptConfig) {
-                handleAnalysisRequest(symbol, reportType, promptConfig);
+            if (reportType === 'Form8KAnalysis' || reportType === 'Form10KAnalysis') {
+                const tabName = reportType === 'Form8KAnalysis' ? 'form-8k-analysis' : 'form-10k-analysis';
+                const tabButton = document.querySelector(`.tab-button[data-tab='${tabName}']`);
+                if (tabButton) tabButton.click();
+            } else {
+                const promptConfig = promptMap[reportType];
+                if (promptConfig) handleAnalysisRequest(symbol, reportType, promptConfig);
             }
         }
         
-        if (target.id === 'investment-memo-button') {
-            handleInvestmentMemoRequest(symbol);
-        }
-
-        if (target.id === 'generate-all-reports-button') {
-            handleGenerateAllReportsRequest(symbol);
-        }
-
-        if (target.id === 'garp-validation-button') {
-            handleGarpValidationRequest(symbol);
-        }
+        if (target.id === 'investment-memo-button') handleInvestmentMemoRequest(symbol);
+        if (target.id === 'generate-all-reports-button') handleGenerateAllReportsRequest(symbol);
+        if (target.id === 'garp-validation-button') handleGarpValidationRequest(symbol);
+        if (target.id === 'analyze-latest-8k-button') handleFilingAnalysisRequest(symbol, '8-K');
+        if (target.id === 'analyze-latest-10k-button') handleFilingAnalysisRequest(symbol, '10-K');
     });
 	
 	document.getElementById('manageBroadEndpointsModal')?.addEventListener('click', (e) => {
