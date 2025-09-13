@@ -329,18 +329,34 @@ export async function openRawDataViewer(ticker) {
             { reportType: 'DividendSafety', text: 'Dividend Safety', tooltip: 'Checks the sustainability of the company\'s dividend payments.' }
         ];
         
-        aiButtonsContainer.innerHTML = buttons.map((btn, index) => {
-            const hasSaved = savedReportTypes.has(btn.reportType) ? 'has-saved-report' : '';
-            const icon = ANALYSIS_ICONS[btn.reportType] || '';
-            return `<button data-symbol="${ticker}" data-report-type="${btn.reportType}" class="ai-analysis-button analysis-tile ${hasSaved}" data-tooltip="${btn.tooltip}">
-                        <span class="tile-sequence-number">${index + 1}</span>
-                        ${icon}
-                        <span class="tile-name">${btn.text}</span>
-                    </button>`
+        const firstRow = buttons.slice(0, 5).map((btn, index) => {
+             const hasSaved = savedReportTypes.has(btn.reportType) ? 'has-saved-report' : '';
+             const icon = ANALYSIS_ICONS[btn.reportType] || '';
+             return `<button data-symbol="${ticker}" data-report-type="${btn.reportType}" class="ai-analysis-button analysis-tile ${hasSaved}" data-tooltip="${btn.tooltip}">
+                         <span class="tile-sequence-number">${index + 1}</span>
+                         ${icon}
+                         <span class="tile-name">${btn.text}</span>
+                     </button>`;
         }).join('');
-        
-        // Add the special action buttons
-        aiButtonsContainer.innerHTML += `
+
+        const secondRow = buttons.slice(5, 10).map((btn, index) => {
+             const hasSaved = savedReportTypes.has(btn.reportType) ? 'has-saved-report' : '';
+             const icon = ANALYSIS_ICONS[btn.reportType] || '';
+             const sequenceNumber = index + 6; 
+             return `<button data-symbol="${ticker}" data-report-type="${btn.reportType}" class="ai-analysis-button analysis-tile ${hasSaved}" data-tooltip="${btn.tooltip}">
+                         <span class="tile-sequence-number">${sequenceNumber}</span>
+                         ${icon}
+                         <span class="tile-name">${btn.text}</span>
+                     </button>`;
+        }).join('');
+
+        aiButtonsContainer.innerHTML = `
+            <div class="flex flex-wrap gap-2 justify-center">
+                ${firstRow}
+            </div>
+            <div class="flex flex-wrap gap-2 justify-center mt-2">
+                ${secondRow}
+            </div>
             <div class="w-full border-t my-4"></div>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <button data-symbol="${ticker}" id="generate-all-reports-button" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-all duration-200 hover:shadow-lg" data-tooltip="Generates all 10 core analysis reports and saves them to the database in a single, efficient batch.">
