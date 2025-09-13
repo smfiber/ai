@@ -81,6 +81,7 @@ export const CONSTANTS = {
     DB_COLLECTION_FMP_ENDPOINTS: 'fmp_endpoints',
     DB_COLLECTION_BROAD_ENDPOINTS: 'broad_api_endpoints',
     DB_COLLECTION_AI_REPORTS: 'ai_analysis_reports',
+    DB_COLLECTION_MANUAL_FILINGS: 'manual_filings',
     // v13.1.0: New collection for sector/industry reports
     DB_COLLECTION_BROAD_REPORTS: 'ai_broad_reports',
     // v13.8.0: New collection for screener tile interactions
@@ -710,6 +711,64 @@ JSON Data with All Pre-Calculated Metrics:
 (Follow the full instructions from the NARRATIVE_CATALYST_PROMPT to generate this report section based on the provided JSON data.)
 `.trim();
 
+export const FORM_8K_ANALYSIS_PROMPT = `
+Role: You are a skeptical financial analyst specializing in SEC filings. Your task is to dissect a Form 8-K filing for {companyName} and extract only the most critical, investment-relevant information. Your audience is a busy portfolio manager who needs to know the bottom-line impact immediately.
+
+Data Instructions: Your analysis MUST be based *exclusively* on the provided filing text.
+
+Output Format: A concise, professional markdown report.
+
+Filing Text:
+{filingText}
+
+# Form 8-K Analysis: {companyName} ({tickerSymbol})
+
+## 1. Executive Summary: What Happened and Why It Matters
+In one or two sentences, what is the single most important event disclosed in this filing? State the facts clearly and concisely.
+
+## 2. Key Disclosed Items
+Create a bulleted list of the specific "Items" disclosed in the 8-K (e.g., Item 1.01, Item 2.02, Item 5.02). For each item, provide a brief, one-sentence summary of the event.
+- **Item [Number]:** [e.g., Entry into a Material Definitive Agreement]
+- **Item [Number]:** [e.g., Results of Operations and Financial Condition]
+
+## 3. The Bottom-Line Impact: Bullish, Bearish, or Neutral?
+Based on the events disclosed, provide a clear verdict on the immediate impact to the investment thesis. Justify your reasoning in one or two sentences.
+- **Verdict:** [Bullish / Bearish / Neutral]
+- **Justification:** [Explain why this news is positive, negative, or largely informational for an investor.]
+`.trim();
+
+export const FORM_10K_ANALYSIS_PROMPT = `
+Role: You are a diligent forensic accountant and business analyst. Your task is to "read between the lines" of a Form 10-K for {companyName} to identify the most critical insights a financial model might miss.
+
+Data Instructions: Your analysis MUST be based *exclusively* on the provided filing text. Focus on synthesizing narrative sections, not just pulling numbers.
+
+Output Format: A professional markdown report structured as follows.
+
+Filing Text:
+{filingText}
+
+# Form 10-K Deep Dive: {companyName} ({tickerSymbol})
+
+## 1. Business & Strategy Summary
+Based on the "Business" section (Item 1), what is the core narrative management is telling about their strategy and competitive position? What are they emphasizing as their key strengths for the coming year?
+
+## 2. Top 3-5 Identified Risks
+From the "Risk Factors" section (Item 1A), create a bulleted list of the top 3 to 5 most significant or unique risks that management has disclosed. **Do not list generic risks; focus on those specific to the company or its industry.**
+- **Risk 1:** [Summarize the risk]
+- **Risk 2:** [Summarize the risk]
+- **Risk 3:** [Summarize the risk]
+
+## 3. Management's Discussion & Analysis (MD&A) Insights
+Based on the "MD&A" section (Item 7), what is management's narrative about the company's recent performance?
+- **Performance Drivers:** What specific factors (e.g., new products, pricing, market share gains) does management credit for their successes or blame for their failures?
+- **Forward-Looking Outlook:** What is the tone of the forward-looking statements? Are they optimistic and pointing to specific growth initiatives, or are they cautious and highlighting headwinds?
+
+## 4. Red Flags & Green Flags Summary
+Conclude with a final summary.
+- **Red Flags:** Based on your analysis of the risks and MD&A, what are 1-2 potential red flags an investor should be cautious about? (e.g., increasing competition, reliance on a single customer, cautious outlook).
+- **Green Flags:** What are 1-2 green flags that suggest underlying strength or a positive outlook? (e.g., a clear strategy to address a major risk, strong commentary on a new growth driver).
+`.trim();
+
 export const promptMap = {
     'FinancialAnalysis': {
         prompt: FINANCIAL_ANALYSIS_PROMPT,
@@ -751,6 +810,14 @@ export const promptMap = {
         prompt: NARRATIVE_CATALYST_PROMPT,
         requires: ['profile', 'key_metrics_annual', 'cash_flow_statement_annual', 'income_statement_annual', 'stock_grade_news']
     },
+    'Form8KAnalysis': {
+        prompt: FORM_8K_ANALYSIS_PROMPT,
+        requires: [] // This will be based on manually provided text
+    },
+    'Form10KAnalysis': {
+        prompt: FORM_10K_ANALYSIS_PROMPT,
+        requires: [] // This will be based on manually provided text
+    },
     'InvestmentMemo': {
         prompt: INVESTMENT_MEMO_PROMPT,
         requires: [] // This prompt uses other reports, not raw FMP data.
@@ -772,6 +839,8 @@ export const ANALYSIS_ICONS = {
     'RiskAssessment': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" /></svg>`,
     'CapitalAllocators': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15.91 15.91a2.25 2.25 0 01-3.182 0l-3.03-3.03a.75.75 0 011.06-1.061l2.47 2.47 2.47-2.47a.75.75 0 011.06 1.06l-3.03 3.03z" /></svg>`,
     'NarrativeCatalyst': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.362 5.214A8.252 8.252 0 0112 21 8.25 8.25 0 016.038 7.048 8.287 8.287 0 009 9.62a8.983 8.983 0 013.362-3.867 8.262 8.262 0 013 2.456z" /><path stroke-linecap="round" stroke-linejoin="round" d="M12 18a3.75 3.75 0 00.495-7.467 5.99 5.99 0 00-1.925 3.546 5.974 5.974 0 01-2.133-1A3.75 3.75 0 0012 18z" /></svg>`,
+    'Form8KAnalysis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h.01M15 12h.01M10.5 16.5h3m-6.75-3.75a3 3 0 013-3h3a3 3 0 013 3v3a3 3 0 01-3 3h-3a3 3 0 01-3-3v-3z" /><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`,
+    'Form10KAnalysis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>`,
     'InvestmentMemo': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>`
 };
 
