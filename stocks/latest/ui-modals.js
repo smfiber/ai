@@ -262,7 +262,7 @@ export async function openRawDataViewer(ticker) {
     document.getElementById('annual-reports-container').innerHTML = `<h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Recent Annual Reports (10-K)</h3><div class="content-placeholder text-center text-gray-500 py-8">Loading...</div>`;
     document.getElementById('quarterly-reports-container').innerHTML = `<h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Recent Quarterly Reports (10-Q)</h3><div class="content-placeholder text-center text-gray-500 py-8">Loading...</div>`;
 
-    // Reset 8-K, 10-K, and 10-Q tabs
+    // Reset 8-K and 10-K tabs
     const eightKTab = document.getElementById('form-8k-analysis-tab');
     if (eightKTab) {
         eightKTab.querySelector('#recent-8k-list').innerHTML = '<div class="content-placeholder text-center text-gray-500 py-8">Loading...</div>';
@@ -282,16 +282,6 @@ export async function openRawDataViewer(ticker) {
         tenKTab.querySelector('#analyze-latest-10k-button').disabled = true;
         const form10k = tenKTab.querySelector('#manual-10k-form');
         if (form10k) form10k.reset();
-    }
-    const tenQTab = document.getElementById('form-10q-analysis-tab');
-    if (tenQTab) {
-        tenQTab.querySelector('#recent-10q-list').innerHTML = '<div class="content-placeholder text-center text-gray-500 py-8">Loading...</div>';
-        tenQTab.querySelector('#latest-saved-10q-container').innerHTML = '<div class="content-placeholder text-center text-gray-500 py-8">No filing text has been saved yet.</div>';
-        tenQTab.querySelector('#ai-article-container-10q').innerHTML = '';
-        tenQTab.querySelector('#report-status-container-10q').classList.add('hidden');
-        tenQTab.querySelector('#analyze-latest-10q-button').disabled = true;
-        const form10q = tenQTab.querySelector('#manual-10q-form');
-        if (form10q) form10q.reset();
     }
 
 
@@ -345,55 +335,52 @@ export async function openRawDataViewer(ticker) {
 
 
         // Build AI buttons
-        const buttons = [
-            // Step 1: Idea Discovery
-            { reportType: 'GarpAnalysis', text: 'GARP', tooltip: 'Growth at a Reasonable Price. Is the valuation justified by its growth?' },
-            { reportType: 'UndervaluedAnalysis', text: 'Undervalued', tooltip: 'Assess if the stock is a potential bargain based on valuation metrics.' },
-            { reportType: 'NarrativeCatalyst', text: 'Catalysts', tooltip: 'Identifies the investment story and future catalysts.' },
-            // Step 2: Quality Check
-            { reportType: 'MoatAnalysis', text: 'Moat Analysis', tooltip: 'Evaluates the company\'s competitive advantages.' },
+        const quantButtons = [
             { reportType: 'FinancialAnalysis', text: 'Financial Analysis', tooltip: 'Deep dive into financial statements, ratios, and health.' },
-            { reportType: 'CapitalAllocators', text: 'Capital Allocators', tooltip: 'Assesses management\'s skill in deploying capital.' },
-            // Step 3: Risk & Final Verdict
+            { reportType: 'UndervaluedAnalysis', text: 'Undervalued', tooltip: 'Assess if the stock is a potential bargain based on valuation metrics.' },
+            { reportType: 'GarpAnalysis', text: 'GARP', tooltip: 'Growth at a Reasonable Price. Is the valuation justified by its growth?' },
+            { reportType: 'MoatAnalysis', text: 'Moat Analysis', tooltip: 'Evaluates the company\'s competitive advantages.' },
             { reportType: 'RiskAssessment', text: 'Risk Assessment', tooltip: 'Identifies potential financial, market, and business risks.' },
             { reportType: 'BullVsBear', text: 'Bull vs. Bear', tooltip: 'Presents both the positive and negative investment arguments.' },
-            // Specialized Lenses
-            { reportType: 'GrowthOutlook', text: 'Growth Outlook', tooltip: 'Analyzes the company\'s future growth potential.' },
-            { reportType: 'DividendSafety', text: 'Dividend Safety', tooltip: 'Checks the sustainability of the company\'s dividend payments.' },
-            // NEW Filing Analysis
-            { reportType: 'Form8KAnalysis', text: '8-K Analysis', tooltip: 'Perform an AI analysis on a specific 8-K filing.' },
-            { reportType: 'Form10KAnalysis', text: '10-K Analysis', tooltip: 'Perform an AI analysis on a specific 10-K filing.' },
-            { reportType: 'Form10QAnalysis', text: '10-Q Analysis', tooltip: 'Perform an AI analysis on a specific 10-Q filing.' }
+        ];
+
+        const narrativeButtons = [
+            { reportType: 'StockFortress', text: 'The Fortress', tooltip: 'Is this a resilient, all-weather business with a rock-solid balance sheet?' },
+            { reportType: 'StockDisruptor', text: 'The Disruptor', tooltip: 'Is this a high-growth innovator with potential to redefine its industry?' },
+            { reportType: 'StockPhoenix', text: 'The Phoenix', tooltip: 'Is this a fallen angel showing credible signs of a business turnaround?' },
+            { reportType: 'StockLinchpin', text: 'The Linchpin', tooltip: 'Does this company control a vital, irreplaceable choke point in its industry?' },
+            { reportType: 'StockUntouchables', text: 'The Untouchables', tooltip: 'Analyzes the power of a "cult" brand and its translation to durable profits.' },
+            { reportType: 'CompetitiveLandscape', text: 'Peer Analysis', tooltip: 'How does this company stack up against its main competitors?' },
+        ];
+
+        const specializedButtons = [
+             { reportType: 'CapitalAllocators', text: 'Capital Allocators', tooltip: 'Assesses management\'s skill in deploying capital.' },
+             { reportType: 'GrowthOutlook', text: 'Growth Outlook', tooltip: 'Analyzes the company\'s future growth potential.' },
+             { reportType: 'DividendSafety', text: 'Dividend Safety', tooltip: 'Checks the sustainability of the company\'s dividend payments.' },
+             { reportType: 'NarrativeCatalyst', text: 'Catalysts', tooltip: 'Identifies the investment story and future catalysts.' },
         ];
         
-        const firstRow = buttons.slice(0, 7).map((btn, index) => {
+        const buildButtonHtml = (buttons) => buttons.map((btn) => {
              const hasSaved = savedReportTypes.has(btn.reportType) ? 'has-saved-report' : '';
              const icon = ANALYSIS_ICONS[btn.reportType] || '';
              return `<button data-symbol="${ticker}" data-report-type="${btn.reportType}" class="ai-analysis-button analysis-tile ${hasSaved}" data-tooltip="${btn.tooltip}">
-                         <span class="tile-sequence-number">${index + 1}</span>
                          ${icon}
                          <span class="tile-name">${btn.text}</span>
                      </button>`;
         }).join('');
-
-        const secondRow = buttons.slice(7, 13).map((btn, index) => {
-             const hasSaved = savedReportTypes.has(btn.reportType) ? 'has-saved-report' : '';
-             const icon = ANALYSIS_ICONS[btn.reportType] || '';
-             const sequenceNumber = index + 8; 
-             return `<button data-symbol="${ticker}" data-report-type="${btn.reportType}" class="ai-analysis-button analysis-tile ${hasSaved}" data-tooltip="${btn.tooltip}">
-                         <span class="tile-sequence-number">${sequenceNumber}</span>
-                         ${icon}
-                         <span class="tile-name">${btn.text}</span>
-                     </button>`;
-        }).join('');
+        
+        const quantHtml = buildButtonHtml(quantButtons);
+        const narrativeHtml = buildButtonHtml(narrativeButtons);
+        const specializedHtml = buildButtonHtml(specializedButtons);
 
         const tileContainer = `
-            <div class="flex-grow"> <div class="flex flex-wrap gap-2 justify-center">
-                    ${firstRow}
-                </div>
-                <div class="flex flex-wrap gap-2 justify-center mt-2">
-                    ${secondRow}
-                </div>
+            <div class="flex-grow space-y-4">
+                 <h3 class="text-sm font-bold text-gray-500 uppercase text-center">Quantitative Analysis</h3>
+                 <div class="flex flex-wrap gap-2 justify-center">${quantHtml}</div>
+                 <h3 class="text-sm font-bold text-gray-500 uppercase pt-4 text-center">Investment Thesis & Narrative Analysis</h3>
+                 <div class="flex flex-wrap gap-2 justify-center">${narrativeHtml}</div>
+                 <h3 class="text-sm font-bold text-gray-500 uppercase pt-4 text-center">Specialized Analysis</h3>
+                 <div class="flex flex-wrap gap-2 justify-center">${specializedHtml}</div>
             </div>
         `;
 
