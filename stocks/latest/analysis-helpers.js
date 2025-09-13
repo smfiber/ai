@@ -192,8 +192,8 @@ export function _calculateFinancialAnalysisMetrics(data) {
     // Summary
     const analystConsensus = (() => {
         if (grades.length === 0) return "No recent analyst ratings available.";
-        const buys = grades.filter(g => ['buy', 'outperform', 'overweight', 'strong buy'].includes(g.newGrade.toLowerCase())).length;
-        const sells = grades.filter(g => ['sell', 'underperform', 'underweight'].includes(g.newGrade.toLowerCase())).length;
+        const buys = grades.filter(g => g.newGrade && ['buy', 'outperform', 'overweight', 'strong buy'].includes(g.newGrade.toLowerCase())).length;
+        const sells = grades.filter(g => g.newGrade && ['sell', 'underperform', 'underweight'].includes(g.newGrade.toLowerCase())).length;
         const holds = grades.length - buys - sells;
         return `Generally ${buys > sells ? 'positive' : 'neutral'}, with ${buys} buys, ${holds} holds, and ${sells} sells in the last ${grades.length} ratings.`;
     })();
@@ -508,7 +508,7 @@ export function _calculateRiskAssessmentMetrics(data) {
                 peRatio: latestMetrics.peRatio?.toFixed(2) || 'N/A',
                 psRatio: latestRatios.priceToSalesRatio?.toFixed(2) || 'N/A'
             },
-            analystPessimism: grades.filter(g => ['sell', 'underperform', 'underweight'].includes(g.newGrade.toLowerCase()))
+            analystPessimism: grades.filter(g => g.newGrade && ['sell', 'underperform', 'underweight'].includes(g.newGrade.toLowerCase()))
                                 .map(g => `${g.gradingCompany} rated ${g.newGrade}`)
         },
         businessRisks: {
