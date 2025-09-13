@@ -634,7 +634,7 @@ export const INVESTMENT_MEMO_PROMPT = `
 **IMPORTANT:** Base your scores and rationale *only* on the provided summaries. Do not use external knowledge.
 
 **Input Reports:**
-`{allAnalysesData}`
+{allAnalysesData}
 
 ---
 
