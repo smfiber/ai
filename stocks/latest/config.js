@@ -628,6 +628,21 @@ Role: You are a skeptical senior portfolio manager. Your goal is to critically e
 * **Next Steps:** What are the top 1-2 specific metrics or events we must monitor over the next 6-12 months to validate or invalidate this thesis? (e.g., "Monitor gross margins in the next two earnings reports," "Track regulatory decisions regarding X.")
 `.trim();
 
+/**
+ * @fileoverview Defines a prompt template for generating an investment memo.
+ * @module prompts/investment
+ */
+
+/**
+ * @description A prompt template for guiding an AI model to act as a quantitative analyst.
+ * The model is instructed to process a dossier of company reports and generate a concise
+ * "Factor Scorecard" and a final investment recommendation.
+ *
+ * Placeholders:
+ * - {companyName}: The name of the company being analyzed.
+ * - {tickerSymbol}: The stock ticker symbol for the company.
+ * - {allAnalysesData}: The compiled qualitative and quantitative reports.
+ */
 export const INVESTMENT_MEMO_PROMPT = `
 **Role:** You are a quantitative analyst for a value-investing fund. Your task is to process a dossier of qualitative and quantitative reports on {companyName} and distill them into a concise "Factor Scorecard" and recommendation.
 
@@ -646,29 +661,29 @@ A one-sentence takeaway and the final weighted score.
 ## Factor Analysis & Scoring (Scale of 1-10)
 
 ### 1. Business Quality & Moat
-* **Score:** `[1-10]`
-* **Rationale:** `(Briefly justify the score based on moat width, industry position, and competitive durability).`
+* **Score:** \`[1-10]\`
+* **Rationale:** \`(Briefly justify the score based on moat width, industry position, and competitive durability).\`
 
 ### 2. Financial Health
-* **Score:** `[1-10]`
-* **Rationale:** `(Justify based on debt levels, cash flow, and margin stability).`
+* **Score:** \`[1-10]\`
+* **Rationale:** \`(Justify based on debt levels, cash flow, and margin stability).\`
 
 ### 3. Management & Capital Allocation
-* **Score:** `[1-10]`
-* **Rationale:** `(Justify based on ROIC trends, shareholder alignment, and M&A track record).`
+* **Score:** \`[1-10]\`
+* **Rationale:** \`(Justify based on ROIC trends, shareholder alignment, and M&A track record).\`
 
 ### 4. Growth Outlook
-* **Score:** `[1-10]`
-* **Rationale:** `(Justify based on historical growth, future forecasts, and catalysts).`
+* **Score:** \`[1-10]\`
+* **Rationale:** \`(Justify based on historical growth, future forecasts, and catalysts).\`
 
 ### 5. Valuation & Margin of Safety
-* **Score:** `[1-10]`
-* **Rationale:** `(Justify based on absolute and relative valuation, and implied upside).`
+* **Score:** \`[1-10]\`
+* **Rationale:** \`(Justify based on absolute and relative valuation, and implied upside).\`
 
 ---
 
 ## Overall Weighted Score
-`[Calculate a final score out of 50]`
+\`[Calculate a final score out of 50]\`
 
 ## Recommendation
 Based on the total score, what is the final recommendation?
