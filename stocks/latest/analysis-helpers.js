@@ -760,14 +760,18 @@ export function _calculateCompetitiveLandscapeMetrics(targetData, peersData) {
     ];
 
     const getLatestMetric = (data, metricInfo) => {
-        const sourceData = metricInfo.source === 'key_metrics' ? data?.key_metrics_annual?.[0] : data?.ratios_annual?.[0];
+        const sourceData = metricInfo.source === 'key_metrics' 
+            ? data?.key_metrics_ttm?.[0] || data?.key_metrics_annual?.[0] 
+            : data?.ratios_ttm?.[0] || data?.ratios_annual?.[0];
         const value = sourceData ? sourceData[metricInfo.key] : null;
         if (typeof value !== 'number') return 'N/A';
         return metricInfo.isPercent ? `${(value * 100).toFixed(2)}%` : value.toFixed(2);
     };
     
     const getRawMetric = (data, metricInfo) => {
-        const sourceData = metricInfo.source === 'key_metrics' ? data?.key_metrics_annual?.[0] : data?.ratios_annual?.[0];
+        const sourceData = metricInfo.source === 'key_metrics' 
+            ? data?.key_metrics_ttm?.[0] || data?.key_metrics_annual?.[0] 
+            : data?.ratios_ttm?.[0] || data?.ratios_annual?.[0];
         return sourceData ? sourceData[metricInfo.key] : null;
     };
     
