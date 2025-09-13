@@ -1,9 +1,9 @@
 import { CONSTANTS, state, promptMap, NEWS_SENTIMENT_PROMPT, DISRUPTOR_ANALYSIS_PROMPT, MACRO_PLAYBOOK_PROMPT, INDUSTRY_CAPITAL_ALLOCATORS_PROMPT, INDUSTRY_DISRUPTOR_ANALYSIS_PROMPT, INDUSTRY_MACRO_PLAYBOOK_PROMPT, ONE_SHOT_INDUSTRY_TREND_PROMPT, FORTRESS_ANALYSIS_PROMPT, PHOENIX_ANALYSIS_PROMPT, PICK_AND_SHOVEL_PROMPT, LINCHPIN_ANALYSIS_PROMPT, HIDDEN_VALUE_PROMPT, UNTOUCHABLES_ANALYSIS_PROMPT, INVESTMENT_MEMO_PROMPT, GARP_VALIDATION_PROMPT, ENABLE_STARTER_PLAN_MODE, STARTER_SYMBOLS } from './config.js';
-import { callApi, filterValidNews, callGeminiApi, generatePolishedArticle, getDriveToken, getOrCreateDriveFolder, createDriveFile, findStocksByIndustry, searchSectorNews, findStocksBySector, synthesizeAndRankCompanies, generateDeepDiveReport, getFmpStockData } from './api.js';
+import { callApi, filterValidNews, callGeminiApi, generatePolishedArticle, getDriveToken, getOrCreateDriveFolder, createDriveFile, findStocksByIndustry, searchSectorNews, findStocksBySector, synthesizeAndRankCompanies, generateDeepDiveReport, getFmpStockData, getCompetitorsFromGemini } from './api.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { openModal, closeModal, displayMessageInModal, openConfirmationModal, openManageStockModal } from './ui-modals.js';
 import { renderPortfolioManagerList, renderFmpEndpointsList, renderBroadEndpointsList, renderNewsArticles, displayReport, updateReportStatus, updateBroadReportStatus, fetchAndCachePortfolioData, renderThesisTracker, renderFilingAnalysisTab } from './ui-render.js';
-import { _calculateUndervaluedMetrics, _calculateFinancialAnalysisMetrics, _calculateBullVsBearMetrics, _calculateMoatAnalysisMetrics, _calculateDividendSafetyMetrics, _calculateGrowthOutlookMetrics, _calculateRiskAssessmentMetrics, _calculateCapitalAllocatorsMetrics, _calculateNarrativeCatalystMetrics, _calculateGarpAnalysisMetrics } from './analysis-helpers.js';
+import { _calculateUndervaluedMetrics, _calculateFinancialAnalysisMetrics, _calculateBullVsBearMetrics, _calculateMoatAnalysisMetrics, _calculateDividendSafetyMetrics, _calculateGrowthOutlookMetrics, _calculateRiskAssessmentMetrics, _calculateCapitalAllocatorsMetrics, _calculateNarrativeCatalystMetrics, _calculateGarpAnalysisMetrics, _calculateCompetitiveLandscapeMetrics, _calculateStockDisruptorMetrics, _calculateStockFortressMetrics, _calculateStockPhoenixMetrics, _calculateStockLinchpinMetrics, _calculateStockUntouchablesMetrics } from './analysis-helpers.js';
 
 // --- FMP API INTEGRATION & MANAGEMENT ---
 export async function handleRefreshFmpData(symbol) {
@@ -1007,6 +1007,77 @@ export async function handleAnalysisRequest(symbol, reportType, promptConfig, fo
     contentContainer.innerHTML = ''; // Clear previous content
     statusContainer.classList.add('hidden');
 
+    // Special handling for CompetitiveLandscape which has a different data fetching flow
+    if (reportType === 'CompetitiveLandscape') {
+        openModal(CONSTANTS.MODAL_LOADING);
+        const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+        try {
+            loadingMessage.textContent = `Analyzing ${symbol} and its competitors...`;
+
+            const targetData = await getFmpStockData(symbol);
+            if (!targetData || !targetData.profile || !targetData.profile[0]) {
+                throw new Error(`Could not retrieve primary data for ${symbol}.`);
+            }
+
+            const companyName = targetData.profile[0].companyName;
+            loadingMessage.textContent = `Identifying competitors for ${companyName}...`;
+
+            const competitors = await getCompetitorsFromGemini(companyName, symbol);
+            if (!competitors || competitors.length === 0) {
+                throw new Error(`Could not identify any competitors for ${symbol}.`);
+            }
+
+            loadingMessage.textContent = `Fetching data for ${competitors.length} competitors...`;
+            
+            const peersDataPromises = competitors.map(async (peer) => {
+                try {
+                    const keyMetricsUrl = `https://financialmodelingprep.com/api/v3/key-metrics-annual/${peer.ticker}?limit=1&apikey=${state.fmpApiKey}`;
+                    const ratiosUrl = `https://financialmodelingprep.com/api/v3/ratios-annual/${peer.ticker}?limit=1&apikey=${state.fmpApiKey}`;
+                    
+                    const [keyMetrics, ratios] = await Promise.all([
+                        callApi(keyMetricsUrl),
+                        callApi(ratiosUrl)
+                    ]);
+
+                    return { 
+                        ticker: peer.ticker, 
+                        data: { key_metrics_annual: keyMetrics, ratios_annual: ratios } 
+                    };
+                } catch (peerError) {
+                    console.warn(`Could not fetch data for competitor ${peer.ticker}:`, peerError);
+                    return null; // Return null for failed fetches
+                }
+            });
+
+            const peersData = (await Promise.all(peersDataPromises)).filter(Boolean); // Filter out nulls
+
+            if (peersData.length === 0) {
+                throw new Error('Could not fetch financial data for any identified competitors.');
+            }
+
+            const payloadData = _calculateCompetitiveLandscapeMetrics(targetData, peersData);
+            
+            const promptTemplate = promptConfig.prompt;
+            const prompt = promptTemplate
+                .replace(/{companyName}/g, companyName)
+                .replace('{jsonData}', JSON.stringify(payloadData, null, 2));
+
+            contentContainer.dataset.currentPrompt = prompt;
+            const newReportContent = await generatePolishedArticle(prompt, loadingMessage);
+            contentContainer.dataset.rawMarkdown = newReportContent;
+            displayReport(contentContainer, newReportContent, prompt);
+            updateReportStatus(statusContainer, [], null, { symbol, reportType, promptConfig });
+
+        } catch (error) {
+             displayMessageInModal(`Could not generate competitive analysis: ${error.message}`, 'error');
+             contentContainer.innerHTML = `<p class="text-red-500">Failed to generate report: ${error.message}</p>`;
+        } finally {
+            closeModal(CONSTANTS.MODAL_LOADING);
+        }
+        return; // End execution for this special case
+    }
+
+
     try {
         const savedReports = await getSavedReports(symbol, reportType);
 
@@ -1068,6 +1139,16 @@ export async function handleAnalysisRequest(symbol, reportType, promptConfig, fo
             payloadData = _calculateNarrativeCatalystMetrics(data);
         } else if (reportType === 'GarpAnalysis') {
             payloadData = _calculateGarpAnalysisMetrics(data);
+        } else if (reportType === 'StockDisruptor') {
+            payloadData = _calculateStockDisruptorMetrics(data);
+        } else if (reportType === 'StockFortress') {
+            payloadData = _calculateStockFortressMetrics(data);
+        } else if (reportType === 'StockPhoenix') {
+            payloadData = _calculateStockPhoenixMetrics(data);
+        } else if (reportType === 'StockLinchpin') {
+            payloadData = _calculateStockLinchpinMetrics(data);
+        } else if (reportType === 'StockUntouchables') {
+            payloadData = _calculateStockUntouchablesMetrics(data);
         } else {
             payloadData = buildAnalysisPayload(data, requiredEndpoints);
         }
@@ -1126,8 +1207,7 @@ export async function handleInvestmentMemoRequest(symbol, forceNew = false) {
         const reportTypes = [
             'FinancialAnalysis', 'UndervaluedAnalysis', 'GarpAnalysis', 'BullVsBear', 
             'MoatAnalysis', 'DividendSafety', 'GrowthOutlook', 'RiskAssessment', 
-            'CapitalAllocators', 'NarrativeCatalyst', 'Form8KAnalysis', 'Form10KAnalysis',
-            'Form10QAnalysis'
+            'CapitalAllocators', 'NarrativeCatalyst', 'Form8KAnalysis', 'Form10KAnalysis'
         ];
 
         const reportPromises = reportTypes.map(type => getSavedReports(symbol, type).then(reports => reports[0])); // Get only the latest
@@ -1248,15 +1328,13 @@ export async function handleGenerateAllReportsRequest(symbol) {
     const reportTypes = [
         'FinancialAnalysis', 'UndervaluedAnalysis', 'GarpAnalysis', 'BullVsBear', 
         'MoatAnalysis', 'DividendSafety', 'GrowthOutlook', 'RiskAssessment', 
-        'CapitalAllocators', 'NarrativeCatalyst', 'Form8KAnalysis', 'Form10KAnalysis',
-        'Form10QAnalysis'
+        'CapitalAllocators', 'NarrativeCatalyst', 'Form8KAnalysis', 'Form10KAnalysis'
     ];
     const reportDisplayNames = {
         'FinancialAnalysis': 'Financial Analysis', 'UndervaluedAnalysis': 'Undervalued Analysis', 'GarpAnalysis': 'GARP Analysis', 
         'BullVsBear': 'Bull vs. Bear', 'MoatAnalysis': 'Moat Analysis', 'DividendSafety': 'Dividend Safety', 
         'GrowthOutlook': 'Growth Outlook', 'RiskAssessment': 'Risk Assessment', 'CapitalAllocators': 'Capital Allocators', 
-        'NarrativeCatalyst': 'Narrative & Catalyst', 'Form8KAnalysis': '8-K Filing Analysis', 'Form10KAnalysis': '10-K Filing Analysis',
-        'Form10QAnalysis': '10-Q Filing Analysis'
+        'NarrativeCatalyst': 'Narrative & Catalyst', 'Form8KAnalysis': '8-K Filing Analysis', 'Form10KAnalysis': '10-K Filing Analysis'
     };
 
     const metricCalculators = {
@@ -1302,12 +1380,8 @@ export async function handleGenerateAllReportsRequest(symbol) {
 
             let prompt;
 
-            if (reportType === 'Form8KAnalysis' || reportType === 'Form10KAnalysis' || reportType === 'Form10QAnalysis') {
-                let formType;
-                if (reportType === 'Form8KAnalysis') formType = '8-K';
-                if (reportType === 'Form10KAnalysis') formType = '10-K';
-                if (reportType === 'Form10QAnalysis') formType = '10-Q';
-
+            if (reportType === 'Form8KAnalysis' || reportType === 'Form10KAnalysis') {
+                const formType = reportType === 'Form8KAnalysis' ? '8-K' : '10-K';
                 const q = query(collection(state.db, CONSTANTS.DB_COLLECTION_MANUAL_FILINGS), where("ticker", "==", symbol), where("formType", "==", formType), orderBy("filingDate", "desc"), limit(1));
                 const manualFilingSnapshot = await getDocs(q);
                 
@@ -1386,9 +1460,6 @@ export async function handleSaveReportToDb() {
     } else if (activeTab === 'form-10k-analysis') {
         contentContainer = document.getElementById('ai-article-container-10k');
         reportType = 'Form10KAnalysis';
-    } else if (activeTab === 'form-10q-analysis') {
-        contentContainer = document.getElementById('ai-article-container-10q');
-        reportType = 'Form10QAnalysis';
     }
 
     if (!symbol || !reportType || !contentContainer) {
@@ -1429,8 +1500,6 @@ export async function handleSaveReportToDb() {
             statusContainer = document.getElementById('report-status-container-8k');
         } else if (activeTab === 'form-10k-analysis') {
             statusContainer = document.getElementById('report-status-container-10k');
-        } else if (activeTab === 'form-10q-analysis') {
-            statusContainer = document.getElementById('report-status-container-10q');
         }
         updateReportStatus(statusContainer, savedReports, latestReport.id, { symbol, reportType, promptConfig });
 
@@ -1607,9 +1676,9 @@ export async function handleSaveToDrive(modalId) {
 
 
 export async function handleSaveManualFiling(ticker, formType) {
-    const formTypeLower = formType.toLowerCase().replace('-', '');
-    const dateInput = document.getElementById(`manual-${formTypeLower}-date`);
-    const contentInput = document.getElementById(`manual-${formTypeLower}-content`);
+    const is8K = formType === '8-K';
+    const dateInput = document.getElementById(is8K ? 'manual-8k-date' : 'manual-10k-date');
+    const contentInput = document.getElementById(is8K ? 'manual-8k-content' : 'manual-10k-content');
 
     const filingDate = dateInput.value;
     const content = contentInput.value.trim();
@@ -1645,10 +1714,10 @@ export async function handleSaveManualFiling(ticker, formType) {
 }
 
 export async function handleFilingAnalysisRequest(symbol, formType, forceNew = false) {
-    const formTypeLower = formType.toLowerCase().replace('-', '');
-    const reportType = `Form${formType.replace('-', '')}Analysis`;
-    const contentContainer = document.getElementById(`ai-article-container-${formTypeLower}`);
-    const statusContainer = document.getElementById(`report-status-container-${formTypeLower}`);
+    const is8K = formType === '8-K';
+    const reportType = is8K ? 'Form8KAnalysis' : 'Form10KAnalysis';
+    const contentContainer = document.getElementById(is8K ? 'ai-article-container-8k' : 'ai-article-container-10k');
+    const statusContainer = document.getElementById(is8K ? 'report-status-container-8k' : 'report-status-container-10k');
     
     contentContainer.innerHTML = '';
     statusContainer.classList.add('hidden');
