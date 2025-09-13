@@ -262,7 +262,7 @@ export async function openRawDataViewer(ticker) {
     document.getElementById('annual-reports-container').innerHTML = `<h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Recent Annual Reports (10-K)</h3><div class="content-placeholder text-center text-gray-500 py-8">Loading...</div>`;
     document.getElementById('quarterly-reports-container').innerHTML = `<h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Recent Quarterly Reports (10-Q)</h3><div class="content-placeholder text-center text-gray-500 py-8">Loading...</div>`;
 
-    // Reset 8-K and 10-K tabs
+    // Reset 8-K, 10-K, and 10-Q tabs
     const eightKTab = document.getElementById('form-8k-analysis-tab');
     if (eightKTab) {
         eightKTab.querySelector('#recent-8k-list').innerHTML = '<div class="content-placeholder text-center text-gray-500 py-8">Loading...</div>';
@@ -282,6 +282,16 @@ export async function openRawDataViewer(ticker) {
         tenKTab.querySelector('#analyze-latest-10k-button').disabled = true;
         const form10k = tenKTab.querySelector('#manual-10k-form');
         if (form10k) form10k.reset();
+    }
+    const tenQTab = document.getElementById('form-10q-analysis-tab');
+    if (tenQTab) {
+        tenQTab.querySelector('#recent-10q-list').innerHTML = '<div class="content-placeholder text-center text-gray-500 py-8">Loading...</div>';
+        tenQTab.querySelector('#latest-saved-10q-container').innerHTML = '<div class="content-placeholder text-center text-gray-500 py-8">No filing text has been saved yet.</div>';
+        tenQTab.querySelector('#ai-article-container-10q').innerHTML = '';
+        tenQTab.querySelector('#report-status-container-10q').classList.add('hidden');
+        tenQTab.querySelector('#analyze-latest-10q-button').disabled = true;
+        const form10q = tenQTab.querySelector('#manual-10q-form');
+        if (form10q) form10q.reset();
     }
 
 
@@ -352,10 +362,11 @@ export async function openRawDataViewer(ticker) {
             { reportType: 'DividendSafety', text: 'Dividend Safety', tooltip: 'Checks the sustainability of the company\'s dividend payments.' },
             // NEW Filing Analysis
             { reportType: 'Form8KAnalysis', text: '8-K Analysis', tooltip: 'Perform an AI analysis on a specific 8-K filing.' },
-            { reportType: 'Form10KAnalysis', text: '10-K Analysis', tooltip: 'Perform an AI analysis on a specific 10-K filing.' }
+            { reportType: 'Form10KAnalysis', text: '10-K Analysis', tooltip: 'Perform an AI analysis on a specific 10-K filing.' },
+            { reportType: 'Form10QAnalysis', text: '10-Q Analysis', tooltip: 'Perform an AI analysis on a specific 10-Q filing.' }
         ];
         
-        const firstRow = buttons.slice(0, 6).map((btn, index) => {
+        const firstRow = buttons.slice(0, 7).map((btn, index) => {
              const hasSaved = savedReportTypes.has(btn.reportType) ? 'has-saved-report' : '';
              const icon = ANALYSIS_ICONS[btn.reportType] || '';
              return `<button data-symbol="${ticker}" data-report-type="${btn.reportType}" class="ai-analysis-button analysis-tile ${hasSaved}" data-tooltip="${btn.tooltip}">
@@ -365,10 +376,10 @@ export async function openRawDataViewer(ticker) {
                      </button>`;
         }).join('');
 
-        const secondRow = buttons.slice(6, 12).map((btn, index) => {
+        const secondRow = buttons.slice(7, 13).map((btn, index) => {
              const hasSaved = savedReportTypes.has(btn.reportType) ? 'has-saved-report' : '';
              const icon = ANALYSIS_ICONS[btn.reportType] || '';
-             const sequenceNumber = index + 7; 
+             const sequenceNumber = index + 8; 
              return `<button data-symbol="${ticker}" data-report-type="${btn.reportType}" class="ai-analysis-button analysis-tile ${hasSaved}" data-tooltip="${btn.tooltip}">
                          <span class="tile-sequence-number">${sequenceNumber}</span>
                          ${icon}
