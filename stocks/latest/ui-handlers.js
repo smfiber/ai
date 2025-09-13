@@ -19,12 +19,20 @@ export async function handleRefreshFmpData(symbol) {
     try {
         const coreEndpoints = [
             { name: 'profile', path: 'profile', version: 'v3' },
+            // Annual Data (for long-term trends)
             { name: 'income_statement_annual', path: 'income-statement', params: 'period=annual&limit=10', version: 'v3' },
-            { name: 'income_statement_growth_annual', path: 'income-statement-growth', params: 'period=annual&limit=5', version: 'v3' },
             { name: 'balance_sheet_statement_annual', path: 'balance-sheet-statement', params: 'period=annual&limit=10', version: 'v3' },
             { name: 'cash_flow_statement_annual', path: 'cash-flow-statement', params: 'period=annual&limit=10', version: 'v3' },
             { name: 'key_metrics_annual', path: 'key-metrics', params: 'period=annual&limit=10', version: 'v3' },
             { name: 'ratios_annual', path: 'ratios', params: 'period=annual&limit=10', version: 'v3' },
+            // Quarterly Data (for recent performance)
+            { name: 'income_statement_quarterly', path: 'income-statement', params: 'period=quarter&limit=5', version: 'v3' },
+            { name: 'balance_sheet_statement_quarterly', path: 'balance-sheet-statement', params: 'period=quarter&limit=5', version: 'v3' },
+            { name: 'cash_flow_statement_quarterly', path: 'cash-flow-statement', params: 'period=quarter&limit=5', version: 'v3' },
+            { name: 'key_metrics_quarterly', path: 'key-metrics', params: 'period=quarter&limit=5', version: 'v3' },
+            { name: 'ratios_quarterly', path: 'ratios', params: 'period=quarter&limit=5', version: 'v3' },
+            // Other point-in-time and supplemental data
+            { name: 'income_statement_growth_annual', path: 'income-statement-growth', params: 'period=annual&limit=5', version: 'v3' },
             { name: 'stock_grade_news', path: 'grade', version: 'v3' },
             { name: 'analyst_estimates', path: 'analyst-estimates', version: 'v3'},
             { name: 'historical_price', path: 'historical-price-full', params: 'serietype=line', version: 'v3' },
