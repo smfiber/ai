@@ -1091,16 +1091,29 @@ export async function handleAnalysisRequest(symbol, reportType, promptConfig, fo
     }
 }
 
-export async function handleInvestmentMemoRequest(symbol) {
+export async function handleInvestmentMemoRequest(symbol, forceNew = false) {
     const contentContainer = document.getElementById('ai-article-container');
     const statusContainer = document.getElementById('report-status-container-ai');
     contentContainer.innerHTML = '';
     statusContainer.classList.add('hidden');
 
-    openModal(CONSTANTS.MODAL_LOADING);
-    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
-
     try {
+        const reportType = 'InvestmentMemo';
+        const savedReports = await getSavedReports(symbol, reportType);
+        const promptConfig = promptMap[reportType];
+
+        if (savedReports.length > 0 && !forceNew) {
+            const latestReport = savedReports[0];
+            displayReport(contentContainer, latestReport.content, latestReport.prompt);
+            contentContainer.dataset.currentPrompt = latestReport.prompt || '';
+            contentContainer.dataset.rawMarkdown = latestReport.content;
+            updateReportStatus(statusContainer, savedReports, latestReport.id, { symbol, reportType, promptConfig });
+            return;
+        }
+
+        openModal(CONSTANTS.MODAL_LOADING);
+        const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+
         loadingMessage.textContent = "Gathering all latest analysis reports from the database...";
         const reportTypes = [
             'FinancialAnalysis', 'UndervaluedAnalysis', 'GarpAnalysis', 'BullVsBear', 
@@ -1136,19 +1149,20 @@ export async function handleInvestmentMemoRequest(symbol) {
 
         const memoContent = await generatePolishedArticle(prompt, loadingMessage);
         
+        contentContainer.dataset.currentPrompt = prompt;
         contentContainer.dataset.rawMarkdown = memoContent;
-        displayReport(contentContainer, memoContent);
+        displayReport(contentContainer, memoContent, prompt);
         
-        statusContainer.dataset.activeReportType = 'InvestmentMemo';
-        statusContainer.innerHTML = `<span class="text-sm font-semibold text-green-800">Investment Memo generated successfully.</span>`;
-        statusContainer.classList.remove('hidden');
+        updateReportStatus(statusContainer, [], null, { symbol, reportType, promptConfig });
 
     } catch (error) {
         console.error("Error generating investment memo:", error);
         displayMessageInModal(`Could not generate memo: ${error.message}`, 'error');
         contentContainer.innerHTML = `<p class="text-red-500">Failed to generate memo: ${error.message}</p>`;
     } finally {
-        closeModal(CONSTANTS.MODAL_LOADING);
+        if (document.getElementById(CONSTANTS.MODAL_LOADING).classList.contains('is-open')) {
+            closeModal(CONSTANTS.MODAL_LOADING);
+        }
     }
 }
 
