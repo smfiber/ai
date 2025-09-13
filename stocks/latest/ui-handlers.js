@@ -25,6 +25,9 @@ export async function handleRefreshFmpData(symbol) {
             { name: 'cash_flow_statement_annual', path: 'cash-flow-statement', params: 'period=annual&limit=10', version: 'v3' },
             { name: 'key_metrics_annual', path: 'key-metrics', params: 'period=annual&limit=10', version: 'v3' },
             { name: 'ratios_annual', path: 'ratios', params: 'period=annual&limit=10', version: 'v3' },
+            // TTM Data (for the most current analysis)
+            { name: 'key_metrics_ttm', path: 'key-metrics-ttm', version: 'v3' },
+            { name: 'ratios_ttm', path: 'ratios-ttm', version: 'v3' },
             // Quarterly Data (for recent performance)
             { name: 'income_statement_quarterly', path: 'income-statement', params: 'period=quarter&limit=5', version: 'v3' },
             { name: 'balance_sheet_statement_quarterly', path: 'balance-sheet-statement', params: 'period=quarter&limit=5', version: 'v3' },
@@ -1031,8 +1034,8 @@ export async function handleAnalysisRequest(symbol, reportType, promptConfig, fo
             
             const peersDataPromises = competitors.map(async (peer) => {
                 try {
-                    const keyMetricsUrl = `https://financialmodelingprep.com/api/v3/key-metrics-annual/${peer.ticker}?limit=1&apikey=${state.fmpApiKey}`;
-                    const ratiosUrl = `https://financialmodelingprep.com/api/v3/ratios-annual/${peer.ticker}?limit=1&apikey=${state.fmpApiKey}`;
+                    const keyMetricsUrl = `https://financialmodelingprep.com/api/v3/key-metrics-ttm/${peer.ticker}?apikey=${state.fmpApiKey}`;
+                    const ratiosUrl = `https://financialmodelingprep.com/api/v3/ratios-ttm/${peer.ticker}?apikey=${state.fmpApiKey}`;
                     
                     const [keyMetrics, ratios] = await Promise.all([
                         callApi(keyMetricsUrl),
@@ -1041,7 +1044,7 @@ export async function handleAnalysisRequest(symbol, reportType, promptConfig, fo
 
                     return { 
                         ticker: peer.ticker, 
-                        data: { key_metrics_annual: keyMetrics, ratios_annual: ratios } 
+                        data: { key_metrics_ttm: keyMetrics, ratios_ttm: ratios } 
                     };
                 } catch (peerError) {
                     console.warn(`Could not fetch data for competitor ${peer.ticker}:`, peerError);
