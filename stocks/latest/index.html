@@ -388,6 +388,8 @@
                     <button class="tab-button" data-tab="dashboard">Dashboard</button>
                     <button class="tab-button" data-tab="ai-analysis">AI Analysis</button>
                     <button class="tab-button" data-tab="sec-filings">SEC Filings</button>
+                    <button class="tab-button" data-tab="form-8k-analysis">8-K Analysis</button>
+                    <button class="tab-button" data-tab="form-10k-analysis">10-K Analysis</button>
                     <button class="tab-button" data-tab="raw-data">Raw Data</button>
                 </nav>
             </div>
@@ -425,6 +427,78 @@
                     <div id="quarterly-reports-container">
                         <h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Recent Quarterly Reports (10-Q)</h3>
                         <div class="content-placeholder text-center text-gray-500 py-8">Loading...</div>
+                    </div>
+                </div>
+
+                <div id="form-8k-analysis-tab" class="tab-content hidden p-6 space-y-8">
+                    <div>
+                        <h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Recent 8-K Filings</h3>
+                        <div id="recent-8k-list" class="content-placeholder text-center text-gray-500 py-8">Loading...</div>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Add or Update Filing Text for Analysis</h3>
+                        <form id="manual-8k-form" class="space-y-4 p-4 border rounded-lg bg-gray-50">
+                            <div>
+                                <label for="manual-8k-date" class="block text-sm font-medium text-gray-700">Filing Date</label>
+                                <input type="date" id="manual-8k-date" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required>
+                            </div>
+                            <div>
+                                <label for="manual-8k-content" class="block text-sm font-medium text-gray-700">Paste Filing Text Here</label>
+                                <textarea id="manual-8k-content" rows="10" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 font-mono text-xs" placeholder="Paste the full text content of the 8-K filing..."></textarea>
+                            </div>
+                            <div class="flex justify-end">
+                                <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg">Save Filing Text</button>
+                            </div>
+                        </form>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">AI Analysis of Latest Saved Filing</h3>
+                        <div id="latest-saved-8k-container" class="mb-4">
+                             <div class="content-placeholder text-center text-gray-500 py-8">No filing text has been saved yet.</div>
+                        </div>
+                        <div class="text-center mb-4">
+                            <button id="analyze-latest-8k-button" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-5 rounded-lg disabled:bg-gray-400" disabled>
+                                Analyze Latest Filing
+                            </button>
+                        </div>
+                        <div id="report-status-container-8k" class="hidden p-3 mb-4 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between gap-4"></div>
+                        <div id="ai-article-container-8k" class="prose max-w-none"></div>
+                    </div>
+                </div>
+
+                <div id="form-10k-analysis-tab" class="tab-content hidden p-6 space-y-8">
+                     <div>
+                        <h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Recent 10-K Filings</h3>
+                        <div id="recent-10k-list" class="content-placeholder text-center text-gray-500 py-8">Loading...</div>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Add or Update Filing Text for Analysis</h3>
+                        <form id="manual-10k-form" class="space-y-4 p-4 border rounded-lg bg-gray-50">
+                            <div>
+                                <label for="manual-10k-date" class="block text-sm font-medium text-gray-700">Filing Date</label>
+                                <input type="date" id="manual-10k-date" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required>
+                            </div>
+                            <div>
+                                <label for="manual-10k-content" class="block text-sm font-medium text-gray-700">Paste Filing Text Here</label>
+                                <textarea id="manual-10k-content" rows="10" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 font-mono text-xs" placeholder="Paste the full text content of the 10-K filing..."></textarea>
+                            </div>
+                            <div class="flex justify-end">
+                                <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg">Save Filing Text</button>
+                            </div>
+                        </form>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">AI Analysis of Latest Saved Filing</h3>
+                        <div id="latest-saved-10k-container" class="mb-4">
+                             <div class="content-placeholder text-center text-gray-500 py-8">No filing text has been saved yet.</div>
+                        </div>
+                        <div class="text-center mb-4">
+                            <button id="analyze-latest-10k-button" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-5 rounded-lg disabled:bg-gray-400" disabled>
+                                Analyze Latest Filing
+                            </button>
+                        </div>
+                        <div id="report-status-container-10k" class="hidden p-3 mb-4 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between gap-4"></div>
+                        <div id="ai-article-container-10k" class="prose max-w-none"></div>
                     </div>
                 </div>
 
