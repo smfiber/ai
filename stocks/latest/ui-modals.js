@@ -262,6 +262,29 @@ export async function openRawDataViewer(ticker) {
     document.getElementById('annual-reports-container').innerHTML = `<h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Recent Annual Reports (10-K)</h3><div class="content-placeholder text-center text-gray-500 py-8">Loading...</div>`;
     document.getElementById('quarterly-reports-container').innerHTML = `<h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Recent Quarterly Reports (10-Q)</h3><div class="content-placeholder text-center text-gray-500 py-8">Loading...</div>`;
 
+    // Reset 8-K and 10-K tabs
+    const eightKTab = document.getElementById('form-8k-analysis-tab');
+    if (eightKTab) {
+        eightKTab.querySelector('#recent-8k-list').innerHTML = '<div class="content-placeholder text-center text-gray-500 py-8">Loading...</div>';
+        eightKTab.querySelector('#latest-saved-8k-container').innerHTML = '<div class="content-placeholder text-center text-gray-500 py-8">No filing text has been saved yet.</div>';
+        eightKTab.querySelector('#ai-article-container-8k').innerHTML = '';
+        eightKTab.querySelector('#report-status-container-8k').classList.add('hidden');
+        eightKTab.querySelector('#analyze-latest-8k-button').disabled = true;
+        const form8k = eightKTab.querySelector('#manual-8k-form');
+        if (form8k) form8k.reset();
+    }
+    const tenKTab = document.getElementById('form-10k-analysis-tab');
+    if (tenKTab) {
+        tenKTab.querySelector('#recent-10k-list').innerHTML = '<div class="content-placeholder text-center text-gray-500 py-8">Loading...</div>';
+        tenKTab.querySelector('#latest-saved-10k-container').innerHTML = '<div class="content-placeholder text-center text-gray-500 py-8">No filing text has been saved yet.</div>';
+        tenKTab.querySelector('#ai-article-container-10k').innerHTML = '';
+        tenKTab.querySelector('#report-status-container-10k').classList.add('hidden');
+        tenKTab.querySelector('#analyze-latest-10k-button').disabled = true;
+        const form10k = tenKTab.querySelector('#manual-10k-form');
+        if (form10k) form10k.reset();
+    }
+
+
     // Reset tabs to default state
     document.querySelectorAll('#rawDataViewerModal .tab-content').forEach(c => c.classList.add('hidden'));
     document.querySelectorAll('#rawDataViewerModal .tab-button').forEach(b => {
@@ -326,10 +349,13 @@ export async function openRawDataViewer(ticker) {
             { reportType: 'BullVsBear', text: 'Bull vs. Bear', tooltip: 'Presents both the positive and negative investment arguments.' },
             // Specialized Lenses
             { reportType: 'GrowthOutlook', text: 'Growth Outlook', tooltip: 'Analyzes the company\'s future growth potential.' },
-            { reportType: 'DividendSafety', text: 'Dividend Safety', tooltip: 'Checks the sustainability of the company\'s dividend payments.' }
+            { reportType: 'DividendSafety', text: 'Dividend Safety', tooltip: 'Checks the sustainability of the company\'s dividend payments.' },
+            // NEW Filing Analysis
+            { reportType: 'Form8KAnalysis', text: '8-K Analysis', tooltip: 'Perform an AI analysis on a specific 8-K filing.' },
+            { reportType: 'Form10KAnalysis', text: '10-K Analysis', tooltip: 'Perform an AI analysis on a specific 10-K filing.' }
         ];
         
-        const firstRow = buttons.slice(0, 5).map((btn, index) => {
+        const firstRow = buttons.slice(0, 6).map((btn, index) => {
              const hasSaved = savedReportTypes.has(btn.reportType) ? 'has-saved-report' : '';
              const icon = ANALYSIS_ICONS[btn.reportType] || '';
              return `<button data-symbol="${ticker}" data-report-type="${btn.reportType}" class="ai-analysis-button analysis-tile ${hasSaved}" data-tooltip="${btn.tooltip}">
@@ -339,10 +365,10 @@ export async function openRawDataViewer(ticker) {
                      </button>`;
         }).join('');
 
-        const secondRow = buttons.slice(5, 10).map((btn, index) => {
+        const secondRow = buttons.slice(6, 12).map((btn, index) => {
              const hasSaved = savedReportTypes.has(btn.reportType) ? 'has-saved-report' : '';
              const icon = ANALYSIS_ICONS[btn.reportType] || '';
-             const sequenceNumber = index + 6; 
+             const sequenceNumber = index + 7; 
              return `<button data-symbol="${ticker}" data-report-type="${btn.reportType}" class="ai-analysis-button analysis-tile ${hasSaved}" data-tooltip="${btn.tooltip}">
                          <span class="tile-sequence-number">${sequenceNumber}</span>
                          ${icon}
