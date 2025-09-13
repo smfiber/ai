@@ -2,7 +2,7 @@ import { CONSTANTS, SECTORS, SECTOR_ICONS, state } from './config.js';
 import { callApi } from './api.js';
 import { getSecInsiderTrading, getSecInstitutionalOwnership, getSecMaterialEvents, getSecAnnualReports, getSecQuarterlyReports } from './sec-api.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { handleAnalysisRequest, handleBroadAnalysisRequest, handleInvestmentMemoRequest, handleGarpValidationRequest } from './ui-handlers.js';
+import { handleAnalysisRequest, handleBroadAnalysisRequest, handleInvestmentMemoRequest, handleGarpValidationRequest, handleFilingAnalysisRequest } from './ui-handlers.js';
 
 // --- UTILITY & SECURITY HELPERS ---
 
@@ -822,6 +822,8 @@ export function updateReportStatus(statusContainer, reports, activeReportId, ana
                 handleInvestmentMemoRequest(analysisParams.symbol, true);
             } else if (analysisParams.reportType === 'GarpValidation') {
                 handleGarpValidationRequest(analysisParams.symbol, true);
+            } else if (analysisParams.reportType === 'Form8KAnalysis' || analysisParams.reportType === 'Form10KAnalysis') {
+                handleFilingAnalysisRequest(analysisParams.symbol, analysisParams.reportType.includes('8K') ? '8-K' : '10-K', true);
             } else {
                 handleAnalysisRequest(analysisParams.symbol, analysisParams.reportType, analysisParams.promptConfig, true);
             }
@@ -870,5 +872,79 @@ export function updateBroadReportStatus(statusContainer, reports, activeReportId
         generateNewBtn.addEventListener('click', () => {
             handleBroadAnalysisRequest(analysisParams.contextName, analysisParams.contextType, analysisParams.reportType, true);
         });
+    }
+}
+
+
+export async function renderFilingAnalysisTab(ticker, formType) {
+    const is8K = formType === '8-K';
+    const recentListContainer = document.getElementById(is8K ? 'recent-8k-list' : 'recent-10k-list');
+    const savedContainer = document.getElementById(is8K ? 'latest-saved-8k-container' : 'latest-saved-10k-container');
+    const analyzeBtn = document.getElementById(is8K ? 'analyze-latest-8k-button' : 'analyze-latest-10k-button');
+    const aiArticleContainer = document.getElementById(is8K ? 'ai-article-container-8k' : 'ai-article-container-10k');
+    const statusContainer = document.getElementById(is8K ? 'report-status-container-8k' : 'report-status-container-10k');
+    const reportType = is8K ? 'Form8KAnalysis' : 'Form10KAnalysis';
+
+    try {
+        // 1. Fetch and render recent filings from SEC API
+        const filings = is8K ? await getSecMaterialEvents(ticker) : await getSecAnnualReports(ticker);
+        const topFilings = filings.slice(0, 2);
+        if (topFilings.length > 0) {
+            recentListContainer.innerHTML = `
+                <ul class="divide-y divide-gray-200">
+                    ${topFilings.map(f => `
+                        <li class="p-3 hover:bg-gray-50">
+                            <a href="${sanitizeText(f.linkToFilingDetails)}" target="_blank" rel="noopener noreferrer" class="block">
+                                <p class="font-semibold text-indigo-600">${sanitizeText(f.description || `Form ${formType}`)}</p>
+                                <p class="text-xs text-gray-500">Filed: ${new Date(f.filedAt).toLocaleString()}</p>
+                            </a>
+                        </li>
+                    `).join('')}
+                </ul>
+            `;
+        } else {
+            recentListContainer.innerHTML = `<p class="text-center text-gray-500 py-8">No recent ${formType} filings found via SEC API.</p>`;
+        }
+
+        // 2. Fetch and render latest manually saved filing from Firestore
+        const q = query(
+            collection(state.db, CONSTANTS.DB_COLLECTION_MANUAL_FILINGS),
+            where("ticker", "==", ticker),
+            where("formType", "==", formType),
+            orderBy("filingDate", "desc"),
+            limit(1)
+        );
+        const manualFilingSnapshot = await getDocs(q);
+        if (!manualFilingSnapshot.empty) {
+            const latestFiling = manualFilingSnapshot.docs[0].data();
+            savedContainer.innerHTML = `
+                <div class="bg-gray-100 p-4 rounded-lg border">
+                    <p class="text-sm font-semibold text-gray-700">Displaying saved filing from: ${latestFiling.filingDate}</p>
+                    <pre class="mt-2 text-xs whitespace-pre-wrap break-all bg-white p-2 rounded border max-h-48 overflow-y-auto">${sanitizeText(latestFiling.content)}</pre>
+                </div>
+            `;
+            analyzeBtn.disabled = false;
+        } else {
+            savedContainer.innerHTML = `<div class="content-placeholder text-center text-gray-500 py-8">No filing text has been saved yet for this stock.</div>`;
+            analyzeBtn.disabled = true;
+        }
+
+        // 3. Fetch and render latest AI analysis from Firestore
+        const reportsRef = collection(state.db, CONSTANTS.DB_COLLECTION_AI_REPORTS);
+        const reportQuery = query(reportsRef, where("ticker", "==", ticker), where("reportType", "==", reportType), orderBy("savedAt", "desc"));
+        const reportSnapshot = await getDocs(reportQuery);
+        const savedReports = reportSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        aiArticleContainer.innerHTML = '';
+        statusContainer.classList.add('hidden');
+        if (savedReports.length > 0) {
+            const latestReport = savedReports[0];
+            displayReport(aiArticleContainer, latestReport.content, latestReport.prompt);
+            updateReportStatus(statusContainer, savedReports, latestReport.id, { symbol: ticker, reportType });
+        }
+
+    } catch (error) {
+        console.error(`Error rendering ${formType} tab:`, error);
+        recentListContainer.innerHTML = `<p class="text-red-500">Error loading data: ${error.message}</p>`;
     }
 }
