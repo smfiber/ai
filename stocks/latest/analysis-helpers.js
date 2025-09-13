@@ -415,13 +415,19 @@ export function _calculateMoatAnalysisMetrics(data) {
     const cashFlow = (data.cash_flow_statement_annual || []).slice(0, 10);
     const ratios = (data.ratios_annual || []).slice(0, 10);
 
+    // Normalize metrics to handle 'roic' or 'returnOnInvestedCapital'
+    const metricsWithNormalizedKeys = metrics.map(m => ({
+        ...m,
+        returnOnInvestedCapital: m.returnOnInvestedCapital ?? m.roic
+    }));
+
     const formatPercentTrend = (arr, key) => arr.map(item => ({ year: item.calendarYear, value: item[key] ? `${(item[key] * 100).toFixed(2)}%` : 'N/A' }));
 
     return {
         qualitativeClues: {
              description: profile.description
         },
-        roicTrend: formatPercentTrend(metrics, 'returnOnInvestedCapital'),
+        roicTrend: formatPercentTrend(metricsWithNormalizedKeys, 'returnOnInvestedCapital'),
         profitabilityTrends: {
             netProfitMargin: formatPercentTrend(ratios, 'netProfitMargin'),
             operatingIncome: income.map(i => ({ year: i.calendarYear, value: formatLargeNumber(i.operatingIncome) })),
