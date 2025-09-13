@@ -629,36 +629,53 @@ Role: You are a skeptical senior portfolio manager. Your goal is to critically e
 `.trim();
 
 export const INVESTMENT_MEMO_PROMPT = `
-Role: You are the Chief Investment Officer (CIO) of a value-investing fund. You have been given a dossier of reports from your analyst team on {companyName}. Your task is to synthesize these findings into a final, decisive investment memo, **weighing the pros and cons to arrive at a clear-cut recommendation.**
+**Role:** You are a quantitative analyst for a value-investing fund. Your task is to process a dossier of qualitative and quantitative reports on {companyName} and distill them into a concise "Factor Scorecard" and recommendation.
 
-IMPORTANT: Your analysis MUST be based *only* on the provided summaries from the other reports. Do not use any external knowledge. Synthesize, do not invent.
+**IMPORTANT:** Base your scores and rationale *only* on the provided summaries. Do not use external knowledge.
 
-Input Reports:
-{allAnalysesData}
+**Input Reports:**
+`{allAnalysesData}`
 
-# Investment Memo: {companyName} ({tickerSymbol})
+---
 
-## 1. The Core Question
-Based on the collection of reports, what is the primary reason this stock is under consideration now? (e.g., a potential price dislocation, a newly identified catalyst, a best-in-class business hitting a buy point, etc.).
+# Investment Scorecard: {companyName} ({tickerSymbol})
 
-## 2. Synthesis of Analyst Findings
-Concisely synthesize the most critical conclusions from the analyst dossier.
-- **Business Quality (Moat & Financials):** What is the fundamental quality of the business? Is it a financially robust "fortress" with a durable competitive moat? (Synthesize from Financial Analysis, Moat Analysis, Competitive Landscape).
-- **Management & Stewardship:** Is the leadership team a net **asset or liability**? Are they skilled capital allocators who are aligned with shareholders? (Synthesize from Management Scorecard, Capital Allocators).
-- **Growth & Catalysts:** What are the realistic prospects for future growth, and are there clear catalysts on the horizon to unlock value? (Synthesize from Growth Outlook, Narrative & Catalyst Checklist).
+## Executive Summary
+A one-sentence takeaway and the final weighted score.
 
-## 3. The Valuation Case
-Based on the Undervalued Analysis report, is the stock currently trading at a price that offers a **compelling** margin of safety? **Briefly state the implied upside.**
+## Factor Analysis & Scoring (Scale of 1-10)
 
-## 4. Primary Risks & Mitigants
-What are the 2-3 most critical risks that could permanently impair capital? **For each risk, note any potential mitigating factors mentioned in the reports.** (Synthesize from all reports, especially Risk Assessment and Bear Case).
+### 1. Business Quality & Moat
+* **Score:** `[1-10]`
+* **Rationale:** `(Briefly justify the score based on moat width, industry position, and competitive durability).`
 
-## 5. Final Verdict & Actionable Recommendation
-In one paragraph, deliver your final judgment. Justify your decision by **explicitly weighing the investment's strengths (e.g., moat, valuation) against its weaknesses (e.g., risks, management).**
+### 2. Financial Health
+* **Score:** `[1-10]`
+* **Rationale:** `(Justify based on debt levels, cash flow, and margin stability).`
 
-- **Recommendation:** [Choose one: **Initiate a Position**, **Add to Watchlist**, **Pass**]
-- **Conviction Level:** [Choose one: **High**, **Medium**, **Low**]
-- **Key Monitoring Point (if Watchlist):** [If recommending 'Watchlist', state the single most important factor to monitor that would change the recommendation. E.g., "Two consecutive quarters of margin improvement."]
+### 3. Management & Capital Allocation
+* **Score:** `[1-10]`
+* **Rationale:** `(Justify based on ROIC trends, shareholder alignment, and M&A track record).`
+
+### 4. Growth Outlook
+* **Score:** `[1-10]`
+* **Rationale:** `(Justify based on historical growth, future forecasts, and catalysts).`
+
+### 5. Valuation & Margin of Safety
+* **Score:** `[1-10]`
+* **Rationale:** `(Justify based on absolute and relative valuation, and implied upside).`
+
+---
+
+## Overall Weighted Score
+`[Calculate a final score out of 50]`
+
+## Recommendation
+Based on the total score, what is the final recommendation?
+> * **(40-50):** High Conviction Buy
+> * **(30-39):** Initiate Position
+> * **(20-29):** Add to Watchlist
+> * **(Below 20):** Pass
 `.trim();
 
 export const ALL_REPORTS_PROMPT = `
