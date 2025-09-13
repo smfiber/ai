@@ -189,6 +189,9 @@ export function _calculateFinancialAnalysisMetrics(data) {
     const latestRatios = ratios[ratios.length - 1] || {};
 
     // 3. Calculations
+    // Find market cap from profile, with a fallback to the dedicated market_cap endpoint
+    const marketCapValue = profile.mktCap || data.market_cap?.[0]?.marketCap;
+
     // Summary
     const analystConsensus = (() => {
         if (grades.length === 0) return "No recent analyst ratings available.";
@@ -203,7 +206,7 @@ export function _calculateFinancialAnalysisMetrics(data) {
         description: profile.description,
         sector: profile.sector,
         industry: profile.industry,
-        marketCap: formatLargeNumber(profile.mktCap),
+        marketCap: formatLargeNumber(marketCapValue),
         priceRange: profile.range || 'N/A',
         analystConsensus: analystConsensus,
         insiderOwnership: 'N/A' // This field is not in the provided profile data
