@@ -151,30 +151,37 @@ In simple terms, describe the company's business using the 'description', 'secto
 - **Analyst Consensus:** Report the analyst consensus from \`summary.analystConsensus\`.
 - **Insider Ownership:** Report the insider ownership from \`summary.insiderOwnership\`, stating if it's N/A.
 
-## 3. Performance & Profitability (How Well Does It Make Money?)
-### 3.1. Revenue & Earnings Trend
-- **Revenue Trend:** Describe the company's recent top-line performance using the text from \`performance.revenueTrend\`.
-- **Net Income Trend:** Describe the company's recent bottom-line performance using the text from \`performance.netIncomeTrend\`.
-### 3.2. Margin Analysis (The Quality of Sales)
+## 3. Performance & Profitability (The Long-Term View)
+### 3.1. Annual Revenue & Earnings Trend
+- **Revenue Trend:** Describe the company's long-term top-line performance using the text from \`performance.revenueTrend\`.
+- **Net Income Trend:** Describe the company's long-term bottom-line performance using the text from \`performance.netIncomeTrend\`.
+### 3.2. Annual Margin Analysis (The Quality of Sales)
 - **Gross & Operating Margins:** Explain what these margins represent. Describe the trend in the company's core profitability by using the 'status' from \`performance.grossProfitMargin\` and \`performance.operatingProfitMargin\`.
-### 3.3. Net Profitability & Returns
+### 3.3. Annual Net Profitability & Returns
 - **Net Profit Margin:** Explain what this means. What is the trend according to the 'status' in \`performance.netProfitMargin\`?
 - **Return on Equity (ROE):** Explain ROE as a "report card" for how well management uses shareholder money. How effective is the company based on the 'quality' from \`performance.returnOnEquity\`?
 
-## 4. Financial Health & Risk (Is the Company on Solid Ground?)
-### 4.1. Liquidity Analysis
+## 4. Recent Quarterly Performance (The Latest Snapshot)
+This section provides a look at the company's most recent performance, which can indicate current momentum.
+- **Most Recent Quarter (MRQ):** State the quarter ending date from \`recentPerformance.mrqDate\`.
+- **MRQ Revenue & YoY Growth:** Report the revenue for the latest quarter from \`recentPerformance.mrqRevenue\` and its year-over-year growth from \`recentPerformance.revenueYoyGrowth\`. Explain what this growth rate signifies about the company's current sales trajectory.
+- **MRQ Net Income & YoY Growth:** Report the net income for the latest quarter from \`recentPerformance.mrqNetIncome\` and its year-over-year growth from \`recentPerformance.netIncomeYoyGrowth\`. Comment on the current profitability trend.
+- **Trailing Twelve Months (TTM) Net Income:** State the TTM Net Income from \`recentPerformance.ttmNetIncome\` and explain that this gives a better picture of recent full-year profitability than a single quarter alone.
+
+## 5. Financial Health & Risk (Is the Company on Solid Ground?)
+### 5.1. Liquidity Analysis
 - **Current Ratio:** Explain this as the ability to pay short-term bills. Using the 'status' from \`health.currentRatio\`, comment on the company's short-term financial position.
-### 4.2. Solvency and Debt Structure
+### 5.2. Solvency and Debt Structure
 - **Debt-to-Equity:** Explain this like a personal debt-to-income ratio. Based on the 'status' from \`health.debtToEquity\`, is the company conservatively or aggressively financed?
 - **Interest Coverage:** Explain this as the ability to pay interest on its debt. Using the 'status' from \`health.interestCoverage\`, comment on its ability to handle its debt payments.
 
-## 5. Cash Flow Analysis (Following the Actual Cash)
-### 5.1. Operating Cash Flow (OCF) & Quality of Earnings
+## 6. Cash Flow Analysis (Following the Actual Cash)
+### 6.1. Operating Cash Flow (OCF) & Quality of Earnings
 - Based on \`cashFlow.qualityOfEarnings\`, are the company's reported profits being converted into real cash?
-### 5.2. Capital Allocation Story
+### 6.2. Capital Allocation Story
 - Based on \`cashFlow.capitalAllocationStory\`, what is the company primarily doing with its cash? Is it in growth mode, return mode, or deleveraging mode?
 
-## 6. Valuation Analysis (Is the Stock Price Fair?)
+## 7. Valuation Analysis (Is the Stock Price Fair?)
 For each valuation multiple below, report its status relative to its own historical trend.
 - **P/E Ratio:** Use the 'status' from the object in the \`valuation\` array where 'metric' is 'peRatio'.
 - **Price-to-Sales Ratio:** Use the 'status' from the object where 'metric' is 'priceToSalesRatio'.
@@ -182,7 +189,7 @@ For each valuation multiple below, report its status relative to its own histori
 - **Enterprise Value to EBITDA:** Use the 'status' from the object where 'metric' is 'enterpriseValueToEBITDA'.
 After listing the statuses, briefly discuss what these comparisons imply. Is the stock trading at a premium or a discount to its own history overall?
 
-## 7. The Long-Term Investment Thesis: Bull vs. Bear
+## 8. The Long-Term Investment Thesis: Bull vs. Bear
 ### The Bull Case (Key Strengths)
 - Create a bulleted list using the points provided in \`thesis.bullCasePoints\`.
 ### The Bear Case (Potential Risks)
