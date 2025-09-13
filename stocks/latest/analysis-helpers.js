@@ -747,3 +747,175 @@ export function _calculateGarpAnalysisMetrics(data) {
         }
     };
 }
+
+// --- NEW NARRATIVE & COMPARATIVE HELPERS (v14.17.0) ---
+
+export function _calculateCompetitiveLandscapeMetrics(targetData, peersData) {
+    const metricsToCompare = [
+        { key: 'peRatio', name: 'P/E Ratio', source: 'key_metrics' },
+        { key: 'priceToSalesRatio', name: 'P/S Ratio', source: 'ratios' },
+        { key: 'returnOnEquity', name: 'ROE', source: 'key_metrics', isPercent: true },
+        { key: 'netProfitMargin', name: 'Net Profit Margin', source: 'ratios', isPercent: true },
+        { key: 'debtToEquity', name: 'Debt/Equity', source: 'key_metrics' }
+    ];
+
+    const getLatestMetric = (data, metricInfo) => {
+        const sourceData = metricInfo.source === 'key_metrics' ? data?.key_metrics_annual?.[0] : data?.ratios_annual?.[0];
+        const value = sourceData ? sourceData[metricInfo.key] : null;
+        if (typeof value !== 'number') return 'N/A';
+        return metricInfo.isPercent ? `${(value * 100).toFixed(2)}%` : value.toFixed(2);
+    };
+    
+    const getRawMetric = (data, metricInfo) => {
+        const sourceData = metricInfo.source === 'key_metrics' ? data?.key_metrics_annual?.[0] : data?.ratios_annual?.[0];
+        return sourceData ? sourceData[metricInfo.key] : null;
+    };
+    
+    // Target Company Metrics
+    const targetCompanyMetrics = { ticker: targetData.profile?.[0]?.symbol };
+    metricsToCompare.forEach(m => {
+        targetCompanyMetrics[m.key] = getLatestMetric(targetData, m);
+    });
+
+    // Peer Metrics
+    const peerMetricsList = peersData.map(peer => {
+        const metrics = { ticker: peer.ticker };
+        metricsToCompare.forEach(m => {
+            metrics[m.key] = getLatestMetric(peer.data, m);
+        });
+        return metrics;
+    });
+
+    // Peer Average Calculation
+    const peerAverage = {};
+    metricsToCompare.forEach(m => {
+        const validPeerValues = peersData
+            .map(p => getRawMetric(p.data, m))
+            .filter(v => typeof v === 'number');
+        
+        if (validPeerValues.length > 0) {
+            const avg = validPeerValues.reduce((a, b) => a + b, 0) / validPeerValues.length;
+            peerAverage[m.key] = m.isPercent ? `${(avg * 100).toFixed(2)}%` : avg.toFixed(2);
+        } else {
+            peerAverage[m.key] = 'N/A';
+        }
+    });
+
+    return {
+        targetCompany: targetCompanyMetrics,
+        peers: peerMetricsList,
+        peerAverage: peerAverage
+    };
+}
+
+export function _calculateStockDisruptorMetrics(data) {
+    const profile = data.profile?.[0] || {};
+    const income = (data.income_statement_annual || []).slice(0, 5).reverse();
+    const metrics = (data.key_metrics_annual || []).slice(0, 5).reverse();
+    
+    const latestMetrics = metrics[metrics.length - 1] || {};
+
+    const calculateYoyGrowth = (arr, key) => {
+        if (arr.length < 2) return 'N/A';
+        const prev = arr[arr.length - 2][key];
+        const curr = arr[arr.length - 1][key];
+        if (prev && curr && prev !== 0) {
+            return `${(((curr / prev) - 1) * 100).toFixed(2)}%`;
+        }
+        return 'N/A';
+    };
+
+    return {
+        description: profile.description,
+        revenueGrowth: income.map(d => ({ year: d.calendarYear, value: formatLargeNumber(d.revenue) })),
+        netIncomeGrowth: income.map(d => ({ year: d.calendarYear, value: formatLargeNumber(d.netIncome) })),
+        rdToRevenue: latestMetrics.researchAndDevelopementToRevenue ? `${(latestMetrics.researchAndDevelopementToRevenue * 100).toFixed(2)}%` : 'N/A',
+        capexToRevenue: latestMetrics.capexToRevenue ? `${(latestMetrics.capexToRevenue * 100).toFixed(2)}%` : 'N/A',
+        peRatio: latestMetrics.peRatio ? latestMetrics.peRatio.toFixed(2) : 'N/A',
+        psRatio: latestMetrics.priceToSalesRatio ? latestMetrics.priceToSalesRatio.toFixed(2) : 'N/A',
+    };
+}
+
+export function _calculateStockFortressMetrics(data) {
+    const ratios = (data.ratios_annual || []).slice(0, 5).reverse();
+    const metrics = (data.key_metrics_annual || []).slice(0, 5).reverse();
+
+    const latestRatios = ratios[ratios.length - 1] || {};
+    const latestMetrics = metrics[metrics.length - 1] || {};
+
+    return {
+        grossMarginTrend: ratios.map(r => ({ year: r.calendarYear, value: r.grossProfitMargin ? `${(r.grossProfitMargin * 100).toFixed(2)}%` : 'N/A' })),
+        netMarginTrend: ratios.map(r => ({ year: r.calendarYear, value: r.netProfitMargin ? `${(r.netProfitMargin * 100).toFixed(2)}%` : 'N/A' })),
+        debtToEquity: latestMetrics.debtToEquity ? latestMetrics.debtToEquity.toFixed(2) : 'N/A',
+        currentRatio: latestRatios.currentRatio ? latestRatios.currentRatio.toFixed(2) : 'N/A',
+        roeTrend: metrics.map(m => ({ year: m.calendarYear, value: m.roe ? `${(m.roe * 100).toFixed(2)}%` : 'N/A' })),
+        peRatio: latestMetrics.peRatio ? latestMetrics.peRatio.toFixed(2) : 'N/A',
+        pbRatio: latestRatios.priceToBookRatio ? latestRatios.priceToBookRatio.toFixed(2) : 'N/A',
+    };
+}
+
+export function _calculateStockPhoenixMetrics(data) {
+    const income = (data.income_statement_annual || []).slice(0, 5).reverse();
+    const incomeQ = data.income_statement_quarterly || [];
+    const ratios = (data.ratios_annual || []).slice(0, 5).reverse();
+    const metrics = (data.key_metrics_annual || []).slice(0, 5).reverse();
+    
+    let revenueYoyGrowth = 'N/A';
+    if (incomeQ.length >= 5) {
+        const mrqRevenue = incomeQ[0].revenue;
+        const prevYearQRevenue = incomeQ[4].revenue;
+        if (mrqRevenue && prevYearQRevenue && prevYearQRevenue !== 0) {
+            revenueYoyGrowth = `${(((mrqRevenue / prevYearQRevenue) - 1) * 100).toFixed(2)}%`;
+        }
+    }
+
+    return {
+        revenueTrend: income.map(d => ({ year: d.calendarYear, value: formatLargeNumber(d.revenue) })),
+        netIncomeTrend: income.map(d => ({ year: d.calendarYear, value: formatLargeNumber(d.netIncome) })),
+        revenueYoyGrowth,
+        profitabilityTrend: {
+            netProfitMargin: ratios.map(r => r.netProfitMargin ? `${(r.netProfitMargin * 100).toFixed(2)}%` : 'N/A'),
+            operatingMargin: ratios.map(r => r.operatingProfitMargin ? `${(r.operatingProfitMargin * 100).toFixed(2)}%` : 'N/A')
+        },
+        debtToEquity: (metrics[metrics.length - 1] || {}).debtToEquity?.toFixed(2) || 'N/A',
+        peRatio: (metrics[metrics.length - 1] || {}).peRatio?.toFixed(2) || 'N/A',
+        psRatio: (ratios[ratios.length - 1] || {}).priceToSalesRatio?.toFixed(2) || 'N/A',
+    };
+}
+
+export function _calculateStockLinchpinMetrics(data) {
+    const profile = data.profile?.[0] || {};
+    const ratios = (data.ratios_annual || []).slice(0, 5).reverse();
+    const metrics = (data.key_metrics_annual || []).slice(0, 5).reverse();
+    
+    return {
+        description: profile.description,
+        profitabilityTrends: {
+            grossProfitMargin: ratios.map(r => r.grossProfitMargin ? `${(r.grossProfitMargin * 100).toFixed(2)}%` : 'N/A'),
+            netProfitMargin: ratios.map(r => r.netProfitMargin ? `${(r.netProfitMargin * 100).toFixed(2)}%` : 'N/A')
+        },
+        roicTrend: metrics.map(m => m.roic ? `${(m.roic * 100).toFixed(2)}%` : 'N/A'),
+        peRatio: (metrics[metrics.length - 1] || {}).peRatio?.toFixed(2) || 'N/A',
+        psRatio: (ratios[ratios.length - 1] || {}).priceToSalesRatio?.toFixed(2) || 'N/A'
+    };
+}
+
+export function _calculateStockUntouchablesMetrics(data) {
+    const profile = data.profile?.[0] || {};
+    const income = (data.income_statement_annual || []).slice(0, 5).reverse();
+    const ratios = (data.ratios_annual || []).slice(0, 5).reverse();
+    const metrics = (data.key_metrics_annual || []).slice(0, 5).reverse();
+
+    return {
+        description: profile.description,
+        profitabilityMetrics: {
+            grossMargin: (ratios[ratios.length - 1] || {}).grossProfitMargin ? `${((ratios[ratios.length - 1] || {}).grossProfitMargin * 100).toFixed(2)}%` : 'N/A'
+        },
+        rdToRevenue: (metrics[metrics.length - 1] || {}).researchAndDevelopementToRevenue ? `${((metrics[metrics.length - 1] || {}).researchAndDevelopementToRevenue * 100).toFixed(2)}%` : 'N/A',
+        sgnaToRevenue: (income[income.length - 1] || {}).sellingGeneralAndAdministrativeExpenses / (income[income.length - 1] || {}).revenue ? `${(((income[income.length - 1] || {}).sellingGeneralAndAdministrativeExpenses / (income[income.length - 1] || {}).revenue) * 100).toFixed(2)}%` : 'N/A',
+        valuation: {
+            peRatio: (metrics[metrics.length - 1] || {}).peRatio?.toFixed(2) || 'N/A',
+            psRatio: (ratios[ratios.length - 1] || {}).priceToSalesRatio?.toFixed(2) || 'N/A'
+        }
+    };
+}
