@@ -1135,9 +1135,11 @@ export async function handleInvestmentMemoRequest(symbol) {
             .replace('{allAnalysesData}', allAnalysesData);
 
         const memoContent = await generatePolishedArticle(prompt, loadingMessage);
+        
+        contentContainer.dataset.rawMarkdown = memoContent;
         displayReport(contentContainer, memoContent);
         
-        // Since this is a unique, synthesized report, we don't show versioning for it.
+        statusContainer.dataset.activeReportType = 'InvestmentMemo';
         statusContainer.innerHTML = `<span class="text-sm font-semibold text-green-800">Investment Memo generated successfully.</span>`;
         statusContainer.classList.remove('hidden');
 
@@ -1188,8 +1190,11 @@ export async function handleGarpValidationRequest(symbol) {
             .replace('{allAnalysesData}', allAnalysesData);
 
         const validationContent = await generatePolishedArticle(prompt, loadingMessage);
+        
+        contentContainer.dataset.rawMarkdown = validationContent;
         displayReport(contentContainer, validationContent);
         
+        statusContainer.dataset.activeReportType = 'GarpValidation';
         statusContainer.innerHTML = `<span class="text-sm font-semibold text-green-800">GARP Validation Report generated successfully.</span>`;
         statusContainer.classList.remove('hidden');
 
