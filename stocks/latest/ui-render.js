@@ -822,8 +822,14 @@ export function updateReportStatus(statusContainer, reports, activeReportId, ana
                 handleInvestmentMemoRequest(analysisParams.symbol, true);
             } else if (analysisParams.reportType === 'GarpValidation') {
                 handleGarpValidationRequest(analysisParams.symbol, true);
-            } else if (analysisParams.reportType === 'Form8KAnalysis' || analysisParams.reportType === 'Form10KAnalysis') {
-                handleFilingAnalysisRequest(analysisParams.symbol, analysisParams.reportType.includes('8K') ? '8-K' : '10-K', true);
+            } else if (analysisParams.reportType.startsWith('Form')) {
+                let formType;
+                if (analysisParams.reportType.includes('8K')) formType = '8-K';
+                else if (analysisParams.reportType.includes('10K')) formType = '10-K';
+                else if (analysisParams.reportType.includes('10Q')) formType = '10-Q';
+                if (formType) {
+                    handleFilingAnalysisRequest(analysisParams.symbol, formType, true);
+                }
             } else {
                 handleAnalysisRequest(analysisParams.symbol, analysisParams.reportType, analysisParams.promptConfig, true);
             }
@@ -877,17 +883,26 @@ export function updateBroadReportStatus(statusContainer, reports, activeReportId
 
 
 export async function renderFilingAnalysisTab(ticker, formType) {
-    const is8K = formType === '8-K';
-    const recentListContainer = document.getElementById(is8K ? 'recent-8k-list' : 'recent-10k-list');
-    const savedContainer = document.getElementById(is8K ? 'latest-saved-8k-container' : 'latest-saved-10k-container');
-    const analyzeBtn = document.getElementById(is8K ? 'analyze-latest-8k-button' : 'analyze-latest-10k-button');
-    const aiArticleContainer = document.getElementById(is8K ? 'ai-article-container-8k' : 'ai-article-container-10k');
-    const statusContainer = document.getElementById(is8K ? 'report-status-container-8k' : 'report-status-container-10k');
-    const reportType = is8K ? 'Form8KAnalysis' : 'Form10KAnalysis';
+    const formTypeLower = formType.toLowerCase().replace('-', '');
+    const reportType = `Form${formType.replace('-', '')}Analysis`;
+
+    const recentListContainer = document.getElementById(`recent-${formTypeLower}-list`);
+    const savedContainer = document.getElementById(`latest-saved-${formTypeLower}-container`);
+    const analyzeBtn = document.getElementById(`analyze-latest-${formTypeLower}-button`);
+    const aiArticleContainer = document.getElementById(`ai-article-container-${formTypeLower}`);
+    const statusContainer = document.getElementById(`report-status-container-${formTypeLower}`);
 
     try {
         // 1. Fetch and render recent filings from SEC API
-        const filings = is8K ? await getSecMaterialEvents(ticker) : await getSecAnnualReports(ticker);
+        let filings;
+        if (formType === '8-K') {
+            filings = await getSecMaterialEvents(ticker);
+        } else if (formType === '10-K') {
+            filings = await getSecAnnualReports(ticker);
+        } else if (formType === '10-Q') {
+            filings = await getSecQuarterlyReports(ticker);
+        }
+        
         const topFilings = filings.slice(0, 2);
         if (topFilings.length > 0) {
             recentListContainer.innerHTML = `
