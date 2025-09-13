@@ -1,5 +1,5 @@
 // --- App Version ---
-export const APP_VERSION = "14.16.1";
+export const APP_VERSION = "14.17.0";
 
 // --- Shared State ---
 // This object will hold all the application's shared state.
@@ -122,6 +122,212 @@ export const FINANCIAL_NEWS_SOURCES = [
     'theguardian.com', 'bbc.com', 'financialpost.com', 'scmp.com',
     'spglobal.com', 'nytimes.com', 'gurufocus.com', 'streetinsider.com', 'moodys.com'
 ];
+
+export const GEMINI_COMPETITOR_PROMPT = `
+Role: You are a market intelligence analyst AI.
+Task: Identify the top 5 publicly traded, direct competitors for the company {companyName} ({tickerSymbol}).
+- Focus on companies that compete directly in the same primary business segments.
+- Exclude companies that are only minor or indirect competitors.
+- Exclude private companies.
+
+Output Format: You MUST return ONLY a valid JSON array of objects. Each object must contain "companyName" and "ticker" keys. Do not include any text, explanation, or markdown formatting before or after the JSON array.
+
+Example:
+[
+  {"companyName": "Microsoft Corporation", "ticker": "MSFT"},
+  {"companyName": "Alphabet Inc.", "ticker": "GOOGL"},
+  {"companyName": "Samsung Electronics Co., Ltd.", "ticker": "SSNLF"}
+]
+`;
+
+const COMPETITIVE_LANDSCAPE_PROMPT = `
+Role: You are a sharp, insightful financial analyst. Your task is to provide a clear, data-driven comparison of {companyName} against its key competitors. Your goal is to determine if the company is a leader, a laggard, or just part of the pack.
+
+Data Instructions: Your analysis MUST be based *exclusively* on the provided JSON data, which includes the target company's metrics, a list of its peers' metrics, and the calculated peer average for each metric.
+
+Output Format: The final report must be in professional markdown format. Use # for the main title, ## for major sections, and bullet points for key data points.
+
+JSON Data with Pre-Calculated Metrics:
+{jsonData}
+
+# Competitive Landscape: {companyName} vs. The Field
+
+## 1. Executive Summary: The Verdict in 30 Seconds
+Based on the data, write a 2-3 sentence summary that directly answers: Is {companyName} quantitatively superior, inferior, or in-line with its competitors? Highlight the one or two most significant areas of strength or weakness.
+
+## 2. Valuation: Is the Stock Cheap or Expensive?
+Compare the target company's valuation metrics against the peer average.
+- **P/E Ratio:** Is it trading at a premium (higher P/E) or discount (lower P/E) to its peers? What does this suggest about market expectations?
+- **P/S Ratio:** How does its Price-to-Sales ratio compare? Is the market valuing its revenues more or less than competitors?
+
+## 3. Profitability: Who is the Most Efficient Operator?
+Analyze the company's ability to turn revenue into profit compared to the peer group.
+- **Return on Equity (ROE):** Does the company generate a higher or lower return for its shareholders than its rivals?
+- **Net Profit Margin:** Is the company more or less profitable on each dollar of sales compared to the average?
+
+## 4. Financial Health: Who Has the Strongest Foundation?
+Assess the company's balance sheet strength relative to its peers.
+- **Debt-to-Equity:** Does the company use more or less debt than its competitors? What are the implications of this (e.g., higher risk vs. more flexibility)?
+
+## 5. Final Takeaway: Investment Profile
+Synthesize all the points above to classify {companyName}'s competitive position. Choose ONE of the following profiles and briefly justify your choice based on the data.
+- **Best-in-Breed Leader:** The company demonstrates clear superiority across most key metrics (e.g., higher profitability, stronger balance sheet), justifying a premium valuation.
+- **Undervalued Contender:** The company shows comparable or even superior profitability/health but trades at a valuation discount to its peers, suggesting a potential opportunity.
+- **Middle of the Pack:** The company's metrics are largely in-line with the peer group, suggesting it is a solid but not exceptional player in its industry.
+- **Turnaround Play / Laggard:** The company significantly underperforms its peers on key metrics, suggesting it may be a higher-risk investment that needs to prove it can catch up.
+`;
+
+const STOCK_DISRUPTOR_PROMPT = `
+Role: You are an analyst for a forward-looking investment publication, analyzing if a specific company fits the "disruptor" profile.
+
+Task: Evaluate if {companyName} ({tickerSymbol}) is a true disruptor based *only* on the provided data.
+
+Output Format: A concise markdown report.
+
+JSON Data:
+{jsonData}
+
+# Disruptor Analysis: Is {companyName} a Market Shaker?
+
+## 1. The Disruptor's Edge
+Based on the company 'description', what is its unique advantage? Is it a **Technological Moat**, an innovative **Business Model**, or a powerful **Network Effect**?
+
+## 2. The Proof in the Numbers
+Does the quantitative data support the "disruptor" thesis?
+- **Growth:** Analyze the 'revenueGrowth' and 'netIncomeGrowth' trends. Are they consistently high and/or accelerating, as expected from a disruptor?
+- **Reinvestment:** Look at 'rdToRevenue' and 'capexToRevenue'. Is the company aggressively reinvesting capital to fuel innovation and solidify its lead?
+
+## 3. The Price of Innovation
+- **Valuation:** Review the 'peRatio' and 'psRatio'. Is the company trading at high multiples? Acknowledge if the market is already pricing in significant future growth.
+
+## 4. Verdict: Is It a True Disruptor?
+Based on the synthesis of the narrative and the numbers, provide a final verdict. Classify the company as one of the following and briefly justify your choice.
+- **Confirmed Disruptor:** High growth, aggressive reinvestment, and a clear competitive edge are evident.
+- **Potential Disruptor:** Shows some signs, but the data is not yet conclusive (e.g., growth is lumpy, reinvestment is low).
+- **Legacy Player:** The company does not fit the high-growth, innovative profile of a disruptor.
+`;
+
+const STOCK_FORTRESS_PROMPT = `
+Role: You are a conservative, risk-averse investment analyst evaluating if a company is a resilient "all-weather" business.
+
+Task: Evaluate if {companyName} ({tickerSymbol}) fits the "Fortress" profile based *only* on the provided data.
+
+Output Format: A concise markdown report.
+
+JSON Data:
+{jsonData}
+
+# Fortress Analysis: Is {companyName} Built to Last?
+
+## 1. Pillar 1: Pricing Power
+- A true fortress can pass costs to customers. Is there evidence of this in the 'grossMarginTrend' and 'netMarginTrend'? Are margins consistently high and stable/expanding?
+
+## 2. Pillar 2: Impenetrable Balance Sheet
+- Analyze its financial health. Is the 'debtToEquity' ratio low and stable/decreasing? Is the 'currentRatio' strong?
+
+## 3. Pillar 3: Superior Profitability
+- A fortress is a superior money-maker. Is the 'roeTrend' consistently high (>15%) and stable?
+
+## 4. The Price of Safety
+- Review the 'peRatio' and 'pbRatio'. Is the stock trading at a premium valuation that reflects its quality, or does it offer a reasonable margin of safety?
+
+## 5. Verdict: Is It a True Fortress?
+Based on the data, provide a final verdict. Classify the company as one of the following and briefly justify your choice.
+- **Confirmed Fortress:** Demonstrates high margins, a rock-solid balance sheet, and superior profitability.
+- **Solid Contender:** Strong in some areas but shows minor weaknesses in others (e.g., moderate debt, slightly inconsistent margins).
+- **Not a Fortress:** Lacks the consistent profitability and balance sheet strength required.
+`;
+
+const STOCK_PHOENIX_PROMPT = `
+Role: You are a special situations analyst looking for high-risk, high-reward turnaround stories.
+
+Task: Evaluate if {companyName} ({tickerSymbol}) shows signs of a "Phoenix" (a fundamental business turnaround) based *only* on the provided data.
+
+Output Format: A concise markdown report.
+
+JSON Data:
+{jsonData}
+
+# Phoenix Analysis: Is {companyName} Rising from the Ashes?
+
+## 1. The Fall (Historical Context)
+- Briefly check the long-term 'revenueTrend' and 'netIncomeTrend'. Does the data show a period of significant decline or stagnation in the past that would necessitate a turnaround?
+
+## 2. Early "Green Shoots" of a Turnaround
+This is the most critical section. Look for recent, quantifiable evidence of improvement.
+- **Renewed Growth:** Is the most recent 'revenueYoyGrowth' positive and accelerating compared to previous years?
+- **Margin Improvement:** Are the 'netProfitMargin' and 'operatingMargin' in the 'profitabilityTrend' showing a clear positive inflection in the most recent year(s)?
+- **Financial Triage:** Is the 'debtToEquity' ratio improving (decreasing)?
+
+## 3. The Valuation Opportunity
+- Does the 'peRatio' or 'psRatio' still appear low relative to historical levels or the company's newfound growth, suggesting the market hasn't fully bought into the turnaround story yet?
+
+## 4. Verdict: Is It a Potential Phoenix?
+Based on the evidence of a business inflection, provide a final verdict.
+- **Credible Phoenix:** There is clear, multi-faceted data (improving growth, margins, AND balance sheet) suggesting a turnaround is underway.
+- **Early Smoke Signal:** There are tentative signs in one or two areas, but the turnaround is not yet confirmed across the business.
+- **Still in the Ashes:** There is no clear quantitative evidence of a fundamental business improvement.
+`;
+
+const STOCK_LINCHPIN_PROMPT = `
+Role: You are a business strategist analyzing a company's structural competitive advantages.
+
+Task: Evaluate if {companyName} ({tickerSymbol}) acts as a "Linchpin" (a company controlling a vital choke point in its industry) based *only* on the provided data.
+
+Output Format: A concise markdown report.
+
+JSON Data:
+{jsonData}
+
+# Linchpin Analysis: Does {companyName} Control a Choke Point?
+
+## 1. The Choke Point Moat (Proof in the Numbers)
+A true linchpin should have financials that are superior to typical companies.
+- **Superior Profitability:** Are the 'grossProfitMargin' and 'netProfitMargin' trends from the 'profitabilityTrends' object consistently high and stable? This signals pricing power.
+- **Exceptional Returns on Capital:** Is the 'roicTrend' consistently high (e.g., >20%)? This indicates a powerful, hard-to-replicate business model.
+
+## 2. Qualitative Clues
+- Based on the company 'description', does it mention controlling a "platform," "standard," "ecosystem," or providing a "mission-critical" component that other businesses in its industry depend on?
+
+## 3. The Price of Power
+- Is the company's strategic importance reflected in a premium valuation? Briefly comment on its 'peRatio' and 'psRatio'.
+
+## 4. Verdict: Is It a Linchpin?
+Based on the synthesis of its financial superiority and qualitative description, provide a final verdict.
+- **Confirmed Linchpin:** The company exhibits both exceptional, sustained profitability/ROIC and has a clear strategic role described in its profile.
+- **Potential Linchpin:** The company has strong financials but its strategic choke point is not immediately obvious from the description.
+- **Supplier, Not a Linchpin:** The company is part of the value chain but lacks the extraordinary financial metrics that would indicate a true choke point.
+`;
+
+const STOCK_UNTOUCHABLES_PROMPT = `
+Role: You are a brand strategist analyzing companies with powerful, "cult-like" brands.
+
+Task: Evaluate if {companyName} ({tickerSymbol}) fits "The Untouchables" profile (a company with a fanatical customer base that translates into durable profits) based *only* on the provided data.
+
+Output Format: A concise markdown report.
+
+JSON Data:
+{jsonData}
+
+# The Untouchables: Deconstructing {companyName}'s Brand Moat
+
+## 1. The Financial Fingerprints of a Great Brand
+A powerful brand should be visible in the financial statements.
+- **Pricing Power:** Is the 'grossMargin' in the 'profitabilityMetrics' object consistently high? This is the clearest sign that customers are willing to pay more for the brand.
+- **Marketing Efficiency:** Is the 'rdToRevenue' ratio high while the 'sgnaToRevenue' ratio is stable or declining? This can suggest the brand's reputation does the heavy lifting, allowing for efficient marketing spend focused on innovation.
+
+## 2. Qualitative Clues
+- Does the company 'description' mention themes like "community," "loyalty," "design," "experience," or a strong "mission"? These often point to a powerful brand identity.
+
+## 3. The Price of Perfection
+- Powerful brands are rarely cheap. Briefly comment on the company's valuation ('peRatio', 'psRatio'). Does the market already award the stock a significant premium for its brand strength?
+
+## 4. Verdict: Is It an Untouchable?
+Based on the financial evidence and qualitative clues, provide a final verdict.
+- **Confirmed Untouchable:** The company shows clear evidence of pricing power (high gross margins) and its description aligns with a strong brand ethos.
+- **Strong Brand, Unconfirmed Moat:** The company has qualitative signs of a strong brand, but the financial proof (e.g., high margins) is not yet consistently demonstrated.
+- **Product, Not a Brand:** The company competes primarily on product features or price, not on brand loyalty.
+`;
 
 const FINANCIAL_ANALYSIS_PROMPT = `
 Role: You are a financial analyst AI who excels at explaining complex topics to everyday investors. Your purpose is to generate a rigorous, data-driven financial analysis that is also educational, objective, and easy to understand. Use relatable analogies to clarify financial concepts.
@@ -646,7 +852,7 @@ Role: You are a skeptical senior portfolio manager. Your goal is to critically e
 export const INVESTMENT_MEMO_PROMPT = `
 **Role:** You are a quantitative analyst for a value-investing fund. Your task is to process a dossier of qualitative and quantitative reports on {companyName} and distill them into a concise "Factor Scorecard" and recommendation.
 
-**IMPORTANT:** Base your scores and rationale *only* on the provided summaries. Pay special attention to the Form 10-K (annual) and 10-Q (quarterly) reports to understand the company's official reporting and any recent changes in momentum or risk.
+**IMPORTANT:** Base your scores and rationale *only* on the provided summaries. Do not use external knowledge.
 
 **Input Reports:**
 {allAnalysesData}
@@ -662,19 +868,19 @@ A one-sentence takeaway and the final weighted score.
 
 ### 1. Business Quality & Moat
 * **Score:** \`[1-10]\`
-* **Rationale:** \`(Briefly justify the score based on moat width, industry position, and competitive durability, referencing the Moat and 10-K analysis).\`
+* **Rationale:** \`(Briefly justify the score based on moat width, industry position, and competitive durability).\`
 
 ### 2. Financial Health
 * **Score:** \`[1-10]\`
-* **Rationale:** \`(Justify based on debt levels, cash flow, and margin stability, referencing the Financial Health and SEC filing reports).\`
+* **Rationale:** \`(Justify based on debt levels, cash flow, and margin stability).\`
 
 ### 3. Management & Capital Allocation
 * **Score:** \`[1-10]\`
-* **Rationale:** \`(Justify based on ROIC trends, shareholder alignment, and M&A track record from the Capital Allocators report).\`
+* **Rationale:** \`(Justify based on ROIC trends, shareholder alignment, and M&A track record).\`
 
-### 4. Growth Outlook & Momentum
+### 4. Growth Outlook
 * **Score:** \`[1-10]\`
-* **Rationale:** \`(Justify based on historical growth, future forecasts, and catalysts. Use the 10-Q report to assess recent momentum).\`
+* **Rationale:** \`(Justify based on historical growth, future forecasts, and catalysts).\`
 
 ### 5. Valuation & Margin of Safety
 * **Score:** \`[1-10]\`
@@ -821,47 +1027,6 @@ Synthesize your entire analysis into a final verdict.
 - **Cracks (Red Flags):** What are the 1-2 most significant risks, inconsistencies, or concerns that undermine the bull thesis?
 `.trim();
 
-export const FORM_10Q_ANALYSIS_PROMPT = `
-Role: You are a meticulous Senior Equity Analyst. Your task is to analyze the provided Form 10-Q for {companyName}, focusing on quarterly changes and deviations from the last annual report (10-K). Your analysis should identify momentum shifts, new risks, and updates to the long-term investment thesis. Your audience is an investment committee that has already read the 10-K.
-
-Data Instructions: Your analysis MUST be based *exclusively* on the provided filing text.
-
-Output Format: A professional markdown report structured as follows.
-
-Filing Text:
-{filingText}
-
-# Form 10-Q Update Brief: {companyName} ({tickerSymbol})
-
-## 1. Executive Summary: The Quarter's Core Narrative
-In one or two sentences, what is the most significant takeaway from this quarter? Did the results confirm, challenge, or alter the existing investment thesis?
-
-## 2. Key Performance Indicators & Financial Snapshot
-Create a bulleted list of the most important quantitative results from the quarter.
-- **Revenue:** [State the revenue and its YoY growth.]
-- **Net Income:** [State the net income and its YoY growth.]
-- **EPS:** [State the EPS.]
-- **Key Segment Performance:** [Briefly describe the performance of the main business segments.]
-
-## 3. MD&A Insights: Management's Perspective
-From the "Management's Discussion and Analysis" section:
-- **Performance Drivers:** What specific factors does management credit for the quarterly results (both positive and negative)?
-- **Updated Outlook:** Did management update their guidance or change their tone regarding the full-year outlook?
-
-## 4. Balance Sheet & Cash Flow Check-up
-- **Material Changes:** Note any significant changes in cash, debt levels, or working capital since the last quarter or year-end. Is the company's financial position strengthening or weakening?
-
-## 5. Delta vs. 10-K: What Has Changed?
-This is the most critical section. Directly compare this quarter's filing to the narrative from the last annual report.
-- **Risk Factors:** Are there any new or significantly modified risk factors?
-- **Strategic Shifts:** Is there any language that suggests a change in strategy, capital allocation priorities, or competitive landscape?
-- **Thesis Validation/Invalidation:** Does this report provide evidence that validates or invalidates key pillars of the long-term bull or bear case from the 10-K?
-
-## 6. Final Verdict: Impact on Investment Thesis
-- **Verdict:** [Bullish Update / Bearish Update / Neutral Update]
-- **Justification:** Concisely explain your verdict. How does this quarterly report affect the long-term investment case for {companyName}?
-`.trim();
-
 export const promptMap = {
     'FinancialAnalysis': {
         prompt: FINANCIAL_ANALYSIS_PROMPT,
@@ -877,31 +1042,55 @@ export const promptMap = {
     },
     'BullVsBear': {
         prompt: BULL_VS_BEAR_PROMPT,
-        requires: ['income_statement_annual', 'key_metrics_annual', 'cash_flow_statement_annual', 'stock_grade_news', 'historical_price']
+        requires: ['income_statement_annual', 'key_metrics_annual', 'cash_flow_statement_annual', 'stock_grade_news', 'historical_price', 'ratios_annual']
     },
     'MoatAnalysis': {
         prompt: MOAT_ANALYSIS_PROMPT,
-        requires: ['profile', 'key_metrics_annual', 'income_statement_annual', 'cash_flow_statement_annual']
+        requires: ['profile', 'key_metrics_annual', 'income_statement_annual', 'cash_flow_statement_annual', 'ratios_annual']
     },
     'DividendSafety': {
         prompt: DIVIDEND_SAFETY_PROMPT,
-        requires: ['key_metrics_annual', 'cash_flow_statement_annual', 'income_statement_annual', 'balance_sheet_statement_annual']
+        requires: ['key_metrics_annual', 'cash_flow_statement_annual', 'income_statement_annual', 'balance_sheet_statement_annual', 'ratios_annual']
     },
     'GrowthOutlook': {
         prompt: GROWTH_OUTLOOK_PROMPT,
-        requires: ['income_statement_annual', 'key_metrics_annual', 'stock_grade_news', 'analyst_estimates']
+        requires: ['income_statement_annual', 'key_metrics_annual', 'stock_grade_news', 'analyst_estimates', 'ratios_annual']
     },
     'RiskAssessment': {
         prompt: RISK_ASSESSMENT_PROMPT,
-        requires: ['profile', 'key_metrics_annual', 'cash_flow_statement_annual', 'income_statement_annual', 'stock_grade_news']
+        requires: ['profile', 'key_metrics_annual', 'cash_flow_statement_annual', 'income_statement_annual', 'stock_grade_news', 'ratios_annual']
     },
     'CapitalAllocators': {
         prompt: CAPITAL_ALLOCATORS_PROMPT,
-        requires: ['cash_flow_statement_annual', 'key_metrics_annual', 'income_statement_annual', 'balance_sheet_statement_annual']
+        requires: ['cash_flow_statement_annual', 'key_metrics_annual', 'income_statement_annual', 'balance_sheet_statement_annual', 'ratios_annual']
     },
     'NarrativeCatalyst': {
         prompt: NARRATIVE_CATALYST_PROMPT,
-        requires: ['profile', 'key_metrics_annual', 'cash_flow_statement_annual', 'income_statement_annual', 'stock_grade_news']
+        requires: ['profile', 'key_metrics_annual', 'cash_flow_statement_annual', 'income_statement_annual', 'stock_grade_news', 'ratios_annual']
+    },
+    'CompetitiveLandscape': {
+        prompt: COMPETITIVE_LANDSCAPE_PROMPT,
+        requires: ['profile', 'key_metrics_annual', 'ratios_annual']
+    },
+    'StockDisruptor': {
+        prompt: STOCK_DISRUPTOR_PROMPT,
+        requires: ['profile', 'income_statement_annual', 'key_metrics_annual']
+    },
+    'StockFortress': {
+        prompt: STOCK_FORTRESS_PROMPT,
+        requires: ['ratios_annual', 'key_metrics_annual']
+    },
+    'StockPhoenix': {
+        prompt: STOCK_PHOENIX_PROMPT,
+        requires: ['income_statement_annual', 'income_statement_quarterly', 'ratios_annual', 'key_metrics_annual']
+    },
+    'StockLinchpin': {
+        prompt: STOCK_LINCHPIN_PROMPT,
+        requires: ['profile', 'ratios_annual', 'key_metrics_annual']
+    },
+    'StockUntouchables': {
+        prompt: STOCK_UNTOUCHABLES_PROMPT,
+        requires: ['profile', 'income_statement_annual', 'ratios_annual']
     },
     'Form8KAnalysis': {
         prompt: FORM_8K_ANALYSIS_PROMPT,
@@ -909,10 +1098,6 @@ export const promptMap = {
     },
     'Form10KAnalysis': {
         prompt: FORM_10K_ANALYSIS_PROMPT,
-        requires: [] // This will be based on manually provided text
-    },
-    'Form10QAnalysis': {
-        prompt: FORM_10Q_ANALYSIS_PROMPT,
         requires: [] // This will be based on manually provided text
     },
     'InvestmentMemo': {
@@ -936,9 +1121,14 @@ export const ANALYSIS_ICONS = {
     'RiskAssessment': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" /></svg>`,
     'CapitalAllocators': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15.91 15.91a2.25 2.25 0 01-3.182 0l-3.03-3.03a.75.75 0 011.06-1.061l2.47 2.47 2.47-2.47a.75.75 0 011.06 1.06l-3.03 3.03z" /></svg>`,
     'NarrativeCatalyst': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.362 5.214A8.252 8.252 0 0112 21 8.25 8.25 0 016.038 7.048 8.287 8.287 0 009 9.62a8.983 8.983 0 013.362-3.867 8.262 8.262 0 013 2.456z" /><path stroke-linecap="round" stroke-linejoin="round" d="M12 18a3.75 3.75 0 00.495-7.467 5.99 5.99 0 00-1.925 3.546 5.974 5.974 0 01-2.133-1A3.75 3.75 0 0012 18z" /></svg>`,
+    'CompetitiveLandscape': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m-7.284-2.72a3 3 0 00-4.682 2.72 9.094 9.094 0 003.741.479m7.284-2.72a3 3 0 01-4.682-2.72 9.094 9.094 0 013.741-.479m-7.284 2.72a9.094 9.094 0 00-3.741-.479 3 3 0 004.682 2.72M12 12a3 3 0 11-6 0 3 3 0 016 0zm6 0a3 3 0 11-6 0 3 3 0 016 0z" /></svg>`,
+    'StockDisruptor': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" /></svg>`,
+    'StockFortress': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.286zm0 13.036h.008v.008h-.008v-.008z" /></svg>`,
+    'StockPhoenix': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.362 5.214A8.252 8.252 0 0112 21 8.25 8.25 0 016.038 7.048 8.287 8.287 0 009 9.62a8.983 8.983 0 013.362-3.867 8.262 8.262 0 013 2.456z" /><path stroke-linecap="round" stroke-linejoin="round" d="M12 18a3.75 3.75 0 00.495-7.467 5.99 5.99 0 00-1.925 3.546 5.974 5.974 0 01-2.133-1A3.75 3.75 0 0012 18z" /></svg>`,
+    'StockLinchpin': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.192 7.027a5.25 5.25 0 017.423 0L21 7.402a5.25 5.25 0 010 7.423l-.385.385a5.25 5.25 0 01-7.423 0L13.192 7.027zm-6.384 0a5.25 5.25 0 017.423 0L15 7.402a5.25 5.25 0 010 7.423l-5.385 5.385a5.25 5.25 0 01-7.423 0L2 19.973a5.25 5.25 0 010-7.423l.385-.385z" /><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6" /></svg>`,
+    'StockUntouchables': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" /></svg>`,
     'Form8KAnalysis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h.01M15 12h.01M10.5 16.5h3m-6.75-3.75a3 3 0 013-3h3a3 3 0 013 3v3a3 3 0 01-3 3h-3a3 3 0 01-3-3v-3z" /><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`,
     'Form10KAnalysis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>`,
-    'Form10QAnalysis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /><path d="M9.5 10.5 A1.5 1.5 0 1 1 12.5 10.5 A1.5 1.5 0 1 1 9.5 10.5 Z" /><path d="M11.5 12 L 13 14" /></svg>`,
     'InvestmentMemo': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>`
 };
 
