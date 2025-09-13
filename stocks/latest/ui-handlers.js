@@ -1126,7 +1126,8 @@ export async function handleInvestmentMemoRequest(symbol, forceNew = false) {
         const reportTypes = [
             'FinancialAnalysis', 'UndervaluedAnalysis', 'GarpAnalysis', 'BullVsBear', 
             'MoatAnalysis', 'DividendSafety', 'GrowthOutlook', 'RiskAssessment', 
-            'CapitalAllocators', 'NarrativeCatalyst', 'Form8KAnalysis', 'Form10KAnalysis'
+            'CapitalAllocators', 'NarrativeCatalyst', 'Form8KAnalysis', 'Form10KAnalysis',
+            'Form10QAnalysis'
         ];
 
         const reportPromises = reportTypes.map(type => getSavedReports(symbol, type).then(reports => reports[0])); // Get only the latest
@@ -1247,13 +1248,15 @@ export async function handleGenerateAllReportsRequest(symbol) {
     const reportTypes = [
         'FinancialAnalysis', 'UndervaluedAnalysis', 'GarpAnalysis', 'BullVsBear', 
         'MoatAnalysis', 'DividendSafety', 'GrowthOutlook', 'RiskAssessment', 
-        'CapitalAllocators', 'NarrativeCatalyst', 'Form8KAnalysis', 'Form10KAnalysis'
+        'CapitalAllocators', 'NarrativeCatalyst', 'Form8KAnalysis', 'Form10KAnalysis',
+        'Form10QAnalysis'
     ];
     const reportDisplayNames = {
         'FinancialAnalysis': 'Financial Analysis', 'UndervaluedAnalysis': 'Undervalued Analysis', 'GarpAnalysis': 'GARP Analysis', 
         'BullVsBear': 'Bull vs. Bear', 'MoatAnalysis': 'Moat Analysis', 'DividendSafety': 'Dividend Safety', 
         'GrowthOutlook': 'Growth Outlook', 'RiskAssessment': 'Risk Assessment', 'CapitalAllocators': 'Capital Allocators', 
-        'NarrativeCatalyst': 'Narrative & Catalyst', 'Form8KAnalysis': '8-K Filing Analysis', 'Form10KAnalysis': '10-K Filing Analysis'
+        'NarrativeCatalyst': 'Narrative & Catalyst', 'Form8KAnalysis': '8-K Filing Analysis', 'Form10KAnalysis': '10-K Filing Analysis',
+        'Form10QAnalysis': '10-Q Filing Analysis'
     };
 
     const metricCalculators = {
@@ -1299,8 +1302,12 @@ export async function handleGenerateAllReportsRequest(symbol) {
 
             let prompt;
 
-            if (reportType === 'Form8KAnalysis' || reportType === 'Form10KAnalysis') {
-                const formType = reportType === 'Form8KAnalysis' ? '8-K' : '10-K';
+            if (reportType === 'Form8KAnalysis' || reportType === 'Form10KAnalysis' || reportType === 'Form10QAnalysis') {
+                let formType;
+                if (reportType === 'Form8KAnalysis') formType = '8-K';
+                if (reportType === 'Form10KAnalysis') formType = '10-K';
+                if (reportType === 'Form10QAnalysis') formType = '10-Q';
+
                 const q = query(collection(state.db, CONSTANTS.DB_COLLECTION_MANUAL_FILINGS), where("ticker", "==", symbol), where("formType", "==", formType), orderBy("filingDate", "desc"), limit(1));
                 const manualFilingSnapshot = await getDocs(q);
                 
@@ -1379,6 +1386,9 @@ export async function handleSaveReportToDb() {
     } else if (activeTab === 'form-10k-analysis') {
         contentContainer = document.getElementById('ai-article-container-10k');
         reportType = 'Form10KAnalysis';
+    } else if (activeTab === 'form-10q-analysis') {
+        contentContainer = document.getElementById('ai-article-container-10q');
+        reportType = 'Form10QAnalysis';
     }
 
     if (!symbol || !reportType || !contentContainer) {
@@ -1419,6 +1429,8 @@ export async function handleSaveReportToDb() {
             statusContainer = document.getElementById('report-status-container-8k');
         } else if (activeTab === 'form-10k-analysis') {
             statusContainer = document.getElementById('report-status-container-10k');
+        } else if (activeTab === 'form-10q-analysis') {
+            statusContainer = document.getElementById('report-status-container-10q');
         }
         updateReportStatus(statusContainer, savedReports, latestReport.id, { symbol, reportType, promptConfig });
 
@@ -1595,9 +1607,9 @@ export async function handleSaveToDrive(modalId) {
 
 
 export async function handleSaveManualFiling(ticker, formType) {
-    const is8K = formType === '8-K';
-    const dateInput = document.getElementById(is8K ? 'manual-8k-date' : 'manual-10k-date');
-    const contentInput = document.getElementById(is8K ? 'manual-8k-content' : 'manual-10k-content');
+    const formTypeLower = formType.toLowerCase().replace('-', '');
+    const dateInput = document.getElementById(`manual-${formTypeLower}-date`);
+    const contentInput = document.getElementById(`manual-${formTypeLower}-content`);
 
     const filingDate = dateInput.value;
     const content = contentInput.value.trim();
@@ -1633,10 +1645,10 @@ export async function handleSaveManualFiling(ticker, formType) {
 }
 
 export async function handleFilingAnalysisRequest(symbol, formType, forceNew = false) {
-    const is8K = formType === '8-K';
-    const reportType = is8K ? 'Form8KAnalysis' : 'Form10KAnalysis';
-    const contentContainer = document.getElementById(is8K ? 'ai-article-container-8k' : 'ai-article-container-10k');
-    const statusContainer = document.getElementById(is8K ? 'report-status-container-8k' : 'report-status-container-10k');
+    const formTypeLower = formType.toLowerCase().replace('-', '');
+    const reportType = `Form${formType.replace('-', '')}Analysis`;
+    const contentContainer = document.getElementById(`ai-article-container-${formTypeLower}`);
+    const statusContainer = document.getElementById(`report-status-container-${formTypeLower}`);
     
     contentContainer.innerHTML = '';
     statusContainer.classList.add('hidden');
