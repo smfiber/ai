@@ -574,6 +574,13 @@ export function _calculateCapitalAllocatorsMetrics(data) {
     const ratiosMap = new Map(ratios.map(r => [r.calendarYear, r]));
     const metricsMap = new Map(metrics.map(m => [m.calendarYear, m]));
 
+    // Normalize metrics to handle different key names from the API (e.g., 'roic' vs 'returnOnInvestedCapital')
+    const metricsWithNormalizedKeys = metrics.map(m => ({
+        ...m,
+        returnOnInvestedCapital: m.returnOnInvestedCapital ?? m.roic,
+        returnOnEquity: m.returnOnEquity ?? m.roe
+    }));
+
     const buybacksWithValuation = cashFlow.map(cf => {
         const correspondingRatios = ratiosMap.get(cf.calendarYear);
         const correspondingMetrics = metricsMap.get(cf.calendarYear);
@@ -596,8 +603,8 @@ export function _calculateCapitalAllocatorsMetrics(data) {
             buybacks: formatLargeNumber(cf.commonStockRepurchased)
         })),
         reinvestmentEffectiveness: {
-            roicTrend: formatPercentTrend(metrics, 'returnOnInvestedCapital'),
-            roeTrend: formatPercentTrend(metrics, 'returnOnEquity'),
+            roicTrend: formatPercentTrend(metricsWithNormalizedKeys, 'returnOnInvestedCapital'),
+            roeTrend: formatPercentTrend(metricsWithNormalizedKeys, 'returnOnEquity'),
             revenueGrowth: income.map(i => ({ year: i.calendarYear, revenue: formatLargeNumber(i.revenue) })),
             grossProfitGrowth: income.map(i => ({ year: i.calendarYear, grossProfit: formatLargeNumber(i.grossProfit) }))
         },
@@ -619,6 +626,7 @@ export function _calculateCapitalAllocatorsMetrics(data) {
         }
     };
 }
+
 
 /**
  * NEW: Calculates metrics for the "Narrative & Catalyst" prompt.
