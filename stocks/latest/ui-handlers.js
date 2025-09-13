@@ -2,7 +2,7 @@ import { CONSTANTS, state, promptMap, NEWS_SENTIMENT_PROMPT, DISRUPTOR_ANALYSIS_
 import { callApi, filterValidNews, callGeminiApi, generatePolishedArticle, getDriveToken, getOrCreateDriveFolder, createDriveFile, findStocksByIndustry, searchSectorNews, findStocksBySector, synthesizeAndRankCompanies, generateDeepDiveReport, getFmpStockData } from './api.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { openModal, closeModal, displayMessageInModal, openConfirmationModal, openManageStockModal } from './ui-modals.js';
-import { renderPortfolioManagerList, renderFmpEndpointsList, renderBroadEndpointsList, renderNewsArticles, displayReport, updateReportStatus, updateBroadReportStatus, fetchAndCachePortfolioData, renderThesisTracker } from './ui-render.js';
+import { renderPortfolioManagerList, renderFmpEndpointsList, renderBroadEndpointsList, renderNewsArticles, displayReport, updateReportStatus, updateBroadReportStatus, fetchAndCachePortfolioData, renderThesisTracker, renderFilingAnalysisTab } from './ui-render.js';
 import { _calculateUndervaluedMetrics, _calculateFinancialAnalysisMetrics, _calculateBullVsBearMetrics, _calculateMoatAnalysisMetrics, _calculateDividendSafetyMetrics, _calculateGrowthOutlookMetrics, _calculateRiskAssessmentMetrics, _calculateCapitalAllocatorsMetrics, _calculateNarrativeCatalystMetrics, _calculateGarpAnalysisMetrics } from './analysis-helpers.js';
 
 // --- FMP API INTEGRATION & MANAGEMENT ---
@@ -879,7 +879,7 @@ async function handleIndustryMarketTrendsAnalysis(industryName) {
     } catch (error) {
         console.error("Error during AI agent industry analysis:", error);
         displayMessageInModal(`Could not complete AI analysis: ${error.message}`, 'error');
-        contentArea.innerHTML = `<div class="p-4 text-center text-red-500">Error: ${error.message}</div>`;
+        contentArea.innerHTML = `<p class="p-4 text-center text-red-500">Error: ${error.message}</p>`;
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
@@ -1118,7 +1118,7 @@ export async function handleInvestmentMemoRequest(symbol, forceNew = false) {
         const reportTypes = [
             'FinancialAnalysis', 'UndervaluedAnalysis', 'GarpAnalysis', 'BullVsBear', 
             'MoatAnalysis', 'DividendSafety', 'GrowthOutlook', 'RiskAssessment', 
-            'CapitalAllocators', 'NarrativeCatalyst'
+            'CapitalAllocators', 'NarrativeCatalyst', 'Form8KAnalysis', 'Form10KAnalysis'
         ];
 
         const reportPromises = reportTypes.map(type => getSavedReports(symbol, type).then(reports => reports[0])); // Get only the latest
@@ -1239,14 +1239,13 @@ export async function handleGenerateAllReportsRequest(symbol) {
     const reportTypes = [
         'FinancialAnalysis', 'UndervaluedAnalysis', 'GarpAnalysis', 'BullVsBear', 
         'MoatAnalysis', 'DividendSafety', 'GrowthOutlook', 'RiskAssessment', 
-        'CapitalAllocators', 'NarrativeCatalyst'
+        'CapitalAllocators', 'NarrativeCatalyst', 'Form8KAnalysis', 'Form10KAnalysis'
     ];
-    // A simple mapping for user-friendly names in the progress display
     const reportDisplayNames = {
         'FinancialAnalysis': 'Financial Analysis', 'UndervaluedAnalysis': 'Undervalued Analysis', 'GarpAnalysis': 'GARP Analysis', 
         'BullVsBear': 'Bull vs. Bear', 'MoatAnalysis': 'Moat Analysis', 'DividendSafety': 'Dividend Safety', 
         'GrowthOutlook': 'Growth Outlook', 'RiskAssessment': 'Risk Assessment', 'CapitalAllocators': 'Capital Allocators', 
-        'NarrativeCatalyst': 'Narrative & Catalyst'
+        'NarrativeCatalyst': 'Narrative & Catalyst', 'Form8KAnalysis': '8-K Filing Analysis', 'Form10KAnalysis': '10-K Filing Analysis'
     };
 
     const metricCalculators = {
@@ -1271,7 +1270,6 @@ export async function handleGenerateAllReportsRequest(symbol) {
     const genericLoader = document.getElementById('generic-loader-container');
     const aiButtonsContainer = document.getElementById('ai-buttons-container');
 
-    // Setup progress UI
     progressContainer.classList.remove('hidden');
     genericLoader.classList.add('hidden');
     progressBarFill.style.width = '0%';
@@ -1288,23 +1286,40 @@ export async function handleGenerateAllReportsRequest(symbol) {
         for (let i = 0; i < reportTypes.length; i++) {
             const reportType = reportTypes[i];
             
-            // Update progress UI for the current report
             progressStatus.textContent = `Generating Reports (${i + 1}/${reportTypes.length})`;
             currentReportName.textContent = `Running: ${reportDisplayNames[reportType]}...`;
 
-            const promptConfig = promptMap[reportType];
-            const calculateMetrics = metricCalculators[reportType];
-            if (!promptConfig || !calculateMetrics) {
-                console.warn(`Skipping report: No config for ${reportType}`);
-                continue;
+            let prompt;
+
+            if (reportType === 'Form8KAnalysis' || reportType === 'Form10KAnalysis') {
+                const formType = reportType === 'Form8KAnalysis' ? '8-K' : '10-K';
+                const q = query(collection(state.db, CONSTANTS.DB_COLLECTION_MANUAL_FILINGS), where("ticker", "==", symbol), where("formType", "==", formType), orderBy("filingDate", "desc"), limit(1));
+                const manualFilingSnapshot = await getDocs(q);
+                
+                if (manualFilingSnapshot.empty) {
+                    console.warn(`Skipping ${reportType} generation: No manual filing saved for ${symbol}.`);
+                    continue; 
+                }
+                const filingData = manualFilingSnapshot.docs[0].data();
+                const promptTemplate = promptMap[reportType].prompt;
+                prompt = promptTemplate
+                    .replace(/{companyName}/g, companyName)
+                    .replace(/{tickerSymbol}/g, tickerSymbol)
+                    .replace('{filingText}', filingData.content);
+
+            } else {
+                const promptConfig = promptMap[reportType];
+                const calculateMetrics = metricCalculators[reportType];
+                if (!promptConfig || !calculateMetrics) {
+                    console.warn(`Skipping report: No config for ${reportType}`);
+                    continue;
+                }
+                const payloadData = calculateMetrics(data);
+                prompt = promptConfig.prompt
+                    .replace(/{companyName}/g, companyName)
+                    .replace(/{tickerSymbol}/g, tickerSymbol)
+                    .replace('{jsonData}', JSON.stringify(payloadData, null, 2));
             }
-
-            const payloadData = calculateMetrics(data);
-
-            const prompt = promptConfig.prompt
-                .replace(/{companyName}/g, companyName)
-                .replace(/{tickerSymbol}/g, tickerSymbol)
-                .replace('{jsonData}', JSON.stringify(payloadData, null, 2));
 
             const reportContent = await generatePolishedArticle(prompt, loadingMessage);
 
@@ -1317,7 +1332,6 @@ export async function handleGenerateAllReportsRequest(symbol) {
             };
             await addDoc(collection(state.db, CONSTANTS.DB_COLLECTION_AI_REPORTS), reportData);
 
-            // Immediate UI feedback
             if (aiButtonsContainer) {
                 const button = aiButtonsContainer.querySelector(`button[data-report-type="${reportType}"]`);
                 if (button) {
@@ -1328,14 +1342,13 @@ export async function handleGenerateAllReportsRequest(symbol) {
             progressBarFill.style.width = `${progress}%`;
         }
 
-        displayMessageInModal(`Successfully generated and saved all 10 reports for ${symbol}. You can now generate the Investment Memo.`, 'info');
+        displayMessageInModal(`Successfully generated and saved all reports for ${symbol}. You can now generate the Investment Memo.`, 'info');
 
     } catch (error) {
         console.error("Error generating all reports:", error);
         displayMessageInModal(`Could not complete batch generation: ${error.message}`, 'error');
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
-        // Reset progress UI for next time
         progressContainer.classList.add('hidden');
         genericLoader.classList.remove('hidden');
         loadingMessage.textContent = '';
@@ -1344,14 +1357,31 @@ export async function handleGenerateAllReportsRequest(symbol) {
 
 export async function handleSaveReportToDb() {
     const modal = document.getElementById('rawDataViewerModal');
-    const symbol = modal.querySelector('.ai-analysis-button')?.dataset.symbol || modal.querySelector('#garp-validation-button')?.dataset.symbol;
-    const contentContainer = document.getElementById('ai-article-container');
-    const statusContainer = document.getElementById('report-status-container-ai');
-    const reportType = statusContainer.dataset.activeReportType;
+    const symbol = modal.dataset.activeTicker;
+    const activeTab = modal.querySelector('.tab-button.active').dataset.tab;
+    
+    let reportType, contentContainer;
+
+    if (activeTab === 'ai-analysis') {
+        contentContainer = document.getElementById('ai-article-container');
+        reportType = document.getElementById('report-status-container-ai').dataset.activeReportType;
+    } else if (activeTab === 'form-8k-analysis') {
+        contentContainer = document.getElementById('ai-article-container-8k');
+        reportType = 'Form8KAnalysis';
+    } else if (activeTab === 'form-10k-analysis') {
+        contentContainer = document.getElementById('ai-article-container-10k');
+        reportType = 'Form10KAnalysis';
+    }
+
+    if (!symbol || !reportType || !contentContainer) {
+        displayMessageInModal("Could not determine which report to save.", "warning");
+        return;
+    }
+    
     const contentToSave = contentContainer.dataset.rawMarkdown;
     const promptToSave = contentContainer.dataset.currentPrompt;
 
-    if (!symbol || !reportType || !contentToSave) {
+    if (!contentToSave) {
         displayMessageInModal("Please generate an analysis before saving.", "warning");
         return;
     }
@@ -1372,8 +1402,17 @@ export async function handleSaveReportToDb() {
         
         const savedReports = await getSavedReports(symbol, reportType);
         const latestReport = savedReports[0];
-        const promptConfig = promptMap[reportType];
-        updateReportStatus(document.getElementById('report-status-container-ai'), savedReports, latestReport.id, { symbol, reportType, promptConfig });
+        
+        let statusContainer, promptConfig;
+         if (activeTab === 'ai-analysis') {
+            statusContainer = document.getElementById('report-status-container-ai');
+            promptConfig = promptMap[reportType];
+        } else if (activeTab === 'form-8k-analysis') {
+            statusContainer = document.getElementById('report-status-container-8k');
+        } else if (activeTab === 'form-10k-analysis') {
+            statusContainer = document.getElementById('report-status-container-10k');
+        }
+        updateReportStatus(statusContainer, savedReports, latestReport.id, { symbol, reportType, promptConfig });
 
     } catch (error) {
         console.error("Error saving report to DB:", error);
@@ -1543,5 +1582,104 @@ export async function handleSaveToDrive(modalId) {
         displayMessageInModal(`Failed to save to Drive: ${error.message || 'Check console for details.'}`, 'error');
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
+
+export async function handleSaveManualFiling(ticker, formType) {
+    const is8K = formType === '8-K';
+    const dateInput = document.getElementById(is8K ? 'manual-8k-date' : 'manual-10k-date');
+    const contentInput = document.getElementById(is8K ? 'manual-8k-content' : 'manual-10k-content');
+
+    const filingDate = dateInput.value;
+    const content = contentInput.value.trim();
+
+    if (!filingDate || !content) {
+        displayMessageInModal('Both a filing date and content are required to save.', 'warning');
+        return;
+    }
+
+    openModal(CONSTANTS.MODAL_LOADING);
+    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Saving ${formType} text for ${ticker}...`;
+
+    try {
+        const dataToSave = {
+            ticker,
+            formType,
+            filingDate,
+            content,
+            savedAt: Timestamp.now()
+        };
+        await addDoc(collection(state.db, CONSTANTS.DB_COLLECTION_MANUAL_FILINGS), dataToSave);
+        
+        // Refresh the tab to show the new data
+        await renderFilingAnalysisTab(ticker, formType);
+        displayMessageInModal(`${formType} filing text saved successfully.`, 'info');
+
+    } catch (error) {
+        console.error(`Error saving manual ${formType} filing:`, error);
+        displayMessageInModal(`Could not save filing text: ${error.message}`, 'error');
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
+export async function handleFilingAnalysisRequest(symbol, formType, forceNew = false) {
+    const is8K = formType === '8-K';
+    const reportType = is8K ? 'Form8KAnalysis' : 'Form10KAnalysis';
+    const contentContainer = document.getElementById(is8K ? 'ai-article-container-8k' : 'ai-article-container-10k');
+    const statusContainer = document.getElementById(is8K ? 'report-status-container-8k' : 'report-status-container-10k');
+    
+    contentContainer.innerHTML = '';
+    statusContainer.classList.add('hidden');
+
+    try {
+        const savedReports = await getSavedReports(symbol, reportType);
+
+        if (savedReports.length > 0 && !forceNew) {
+            const latestReport = savedReports[0];
+            displayReport(contentContainer, latestReport.content, latestReport.prompt);
+            contentContainer.dataset.currentPrompt = latestReport.prompt || '';
+            contentContainer.dataset.rawMarkdown = latestReport.content;
+            updateReportStatus(statusContainer, savedReports, latestReport.id, { symbol, reportType });
+            return;
+        }
+
+        openModal(CONSTANTS.MODAL_LOADING);
+        const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+        loadingMessage.textContent = `Fetching latest saved ${formType} to analyze...`;
+
+        const q = query(collection(state.db, CONSTANTS.DB_COLLECTION_MANUAL_FILINGS), where("ticker", "==", symbol), where("formType", "==", formType), orderBy("filingDate", "desc"), limit(1));
+        const manualFilingSnapshot = await getDocs(q);
+
+        if (manualFilingSnapshot.empty) {
+            throw new Error(`No manually saved ${formType} filing found for ${symbol}. Please save one first.`);
+        }
+        
+        const filingData = manualFilingSnapshot.docs[0].data();
+        const profile = state.portfolioCache.find(s => s.ticker === symbol) || {};
+        const companyName = profile.companyName || symbol;
+
+        const promptTemplate = promptMap[reportType].prompt;
+        const prompt = promptTemplate
+            .replace(/{companyName}/g, companyName)
+            .replace(/{tickerSymbol}/g, symbol)
+            .replace('{filingText}', filingData.content);
+        
+        contentContainer.dataset.currentPrompt = prompt;
+
+        const newReportContent = await generatePolishedArticle(prompt, loadingMessage);
+        contentContainer.dataset.rawMarkdown = newReportContent;
+        displayReport(contentContainer, newReportContent, prompt);
+        updateReportStatus(statusContainer, [], null, { symbol, reportType });
+
+    } catch (error) {
+        console.error(`Error in ${formType} analysis request:`, error);
+        displayMessageInModal(`Could not generate analysis: ${error.message}`, 'error');
+        contentContainer.innerHTML = `<p class="text-red-500">Failed to generate report: ${error.message}</p>`;
+    } finally {
+        if (document.getElementById(CONSTANTS.MODAL_LOADING).classList.contains('is-open')) {
+            closeModal(CONSTANTS.MODAL_LOADING);
+        }
     }
 }
