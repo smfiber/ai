@@ -1218,7 +1218,7 @@ export async function handleInvestmentMemoRequest(symbol, forceNew = false) {
             'MoatAnalysis', 'DividendSafety', 'GrowthOutlook', 'RiskAssessment',
             'CapitalAllocators', 'NarrativeCatalyst',
             // Investment Thesis & Narrative Analysis
-            'StockFortress', 'StockDisruptor', 'StockPhoenix', 'StockLinchpin', 'StockUntouchables', 'CompetitiveLandscape',
+            'StockFortress', 'StockDisruptor', 'StockPhoenix', 'StockLinchpin', 'StockUntouchables',
             // Filing Analysis
             'Form8KAnalysis', 'Form10KAnalysis', 'Form10QAnalysis',
             // Synthesis Reports
@@ -1566,12 +1566,10 @@ export async function handleSaveReportToDb() {
         const savedReports = await getSavedReports(symbol, reportType);
         const latestReport = savedReports[0];
         
-        let statusContainer;
-        // The promptConfig is the same for all filing reports, so we can get it directly.
-        const promptConfig = promptMap[reportType]; 
-
+        let statusContainer, promptConfig;
          if (activeTab === 'ai-analysis') {
             statusContainer = document.getElementById('report-status-container-ai');
+            promptConfig = promptMap[reportType];
         } else if (activeTab === 'form-8k-analysis') {
             statusContainer = document.getElementById('report-status-container-8k');
         } else if (activeTab === 'form-10k-analysis') {
@@ -1839,6 +1837,16 @@ export async function handleFilingAnalysisRequest(symbol, formType, forceNew = f
         contentContainer.dataset.rawMarkdown = newReportContent;
         displayReport(contentContainer, newReportContent, prompt);
         updateReportStatus(statusContainer, [], null, { symbol, reportType });
+        
+        const stockRef = doc(state.db, CONSTANTS.DB_COLLECTION_PORTFOLIO, symbol);
+        const stockDoc = await getDoc(stockRef);
+        if (stockDoc.exists() && stockDoc.data().hasNewFilings) {
+            await updateDoc(stockRef, {
+                hasNewFilings: false
+            });
+            console.log(`Reset 'hasNewFilings' flag for ${symbol}.`);
+            await fetchAndCachePortfolioData();
+        }
 
     } catch (error) {
         console.error(`Error in ${formType} analysis request:`, error);
