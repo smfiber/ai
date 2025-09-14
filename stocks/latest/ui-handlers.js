@@ -1213,9 +1213,16 @@ export async function handleInvestmentMemoRequest(symbol, forceNew = false) {
 
         loadingMessage.textContent = "Gathering all latest analysis reports from the database...";
         const reportTypes = [
-            'FinancialAnalysis', 'UndervaluedAnalysis', 'GarpAnalysis', 'BullVsBear', 
-            'MoatAnalysis', 'DividendSafety', 'GrowthOutlook', 'RiskAssessment', 
-            'CapitalAllocators', 'NarrativeCatalyst', 'Form8KAnalysis', 'Form10KAnalysis'
+            // Quantitative Analysis
+            'FinancialAnalysis', 'UndervaluedAnalysis', 'GarpAnalysis', 'BullVsBear',
+            'MoatAnalysis', 'DividendSafety', 'GrowthOutlook', 'RiskAssessment',
+            'CapitalAllocators', 'NarrativeCatalyst',
+            // Investment Thesis & Narrative Analysis
+            'StockFortress', 'StockDisruptor', 'StockPhoenix', 'StockLinchpin', 'StockUntouchables',
+            // Filing Analysis
+            'Form8KAnalysis', 'Form10KAnalysis', 'Form10QAnalysis',
+            // Synthesis Reports
+            'GarpValidation'
         ];
 
         const reportPromises = reportTypes.map(type => getSavedReports(symbol, type).then(reports => reports[0])); // Get only the latest
