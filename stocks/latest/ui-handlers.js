@@ -1003,14 +1003,39 @@ function buildAnalysisPayload(fullData, requiredEndpoints) {
     return payload;
 }
 
+// --- ADDED FOR AUTO-SAVE ---
+/**
+ * A helper function to save a generated report to Firestore.
+ * @param {string} ticker The stock ticker.
+ * @param {string} reportType The type of the report (e.g., 'InvestmentMemo').
+ * @param {string} content The markdown content of the report.
+ * @param {string} prompt The prompt used to generate the report.
+ */
+async function autoSaveReport(ticker, reportType, content, prompt) {
+    try {
+        const reportData = {
+            ticker,
+            reportType,
+            content,
+            prompt: prompt || '',
+            savedAt: Timestamp.now()
+        };
+        await addDoc(collection(state.db, CONSTANTS.DB_COLLECTION_AI_REPORTS), reportData);
+        console.log(`${reportType} for ${ticker} was auto-saved successfully.`);
+    } catch (error) {
+        console.error(`Auto-save for ${reportType} failed:`, error);
+        // Display a non-blocking message to the user
+        displayMessageInModal(`The ${reportType} report was generated but failed to auto-save. You can still save it manually. Error: ${error.message}`, 'warning');
+    }
+}
+// --- END OF ADDITION ---
+
 export async function handleAnalysisRequest(symbol, reportType, promptConfig, forceNew = false) {
     const contentContainer = document.getElementById('ai-article-container');
     const statusContainer = document.getElementById('report-status-container-ai');
     
     contentContainer.innerHTML = ''; // Clear previous content
     statusContainer.classList.add('hidden');
-
-// ui-handlers.js -> inside handleAnalysisRequest function
 
     // Special handling for CompetitiveLandscape which has a different data fetching flow
     if (reportType === 'CompetitiveLandscape') {
@@ -1074,8 +1099,15 @@ export async function handleAnalysisRequest(symbol, reportType, promptConfig, fo
             contentContainer.dataset.currentPrompt = prompt;
             const newReportContent = await generatePolishedArticle(prompt, loadingMessage);
             contentContainer.dataset.rawMarkdown = newReportContent;
+            
+            // --- ADDED FOR AUTO-SAVE ---
+            await autoSaveReport(symbol, reportType, newReportContent, prompt);
+            const refreshedReports = await getSavedReports(symbol, reportType);
+            const latestReport = refreshedReports[0];
+            
             displayReport(contentContainer, newReportContent, prompt);
-            updateReportStatus(statusContainer, [], null, { symbol, reportType, promptConfig });
+            updateReportStatus(statusContainer, refreshedReports, latestReport.id, { symbol, reportType, promptConfig });
+            // --- END OF ADDITION ---
 
         } catch (error) {
              displayMessageInModal(`Could not generate competitive analysis: ${error.message}`, 'error');
@@ -1254,28 +1286,20 @@ export async function handleInvestmentMemoRequest(symbol, forceNew = false) {
             .replace(/{tickerSymbol}/g, symbol)
             .replace('{allAnalysesData}', allAnalysesData);
 
-        // --- Start: Added Refinement Steps for Memo ---
-        loadingMessage.textContent = "AI is drafting the memo...";
-        const draft = await callGeminiApi(prompt);
-
-        loadingMessage.textContent = "Refining focus...";
-        const focusPrompt = `Your first pass is to ensure the article is doing exactly what you asked for in the original prompt. Reread the original prompt below, then read your draft. Trim anything that doesn't belong and add anything that's missing. Is the main point clear? Did it miss anything? Did it add fluff? Return only the improved article.\n\nORIGINAL PROMPT:\n${prompt}\n\nDRAFT:\n${draft}`;
-        const focusedDraft = await callGeminiApi(focusPrompt);
-
-        loadingMessage.textContent = "Improving flow...";
-        const flowPrompt = `This pass is all about the reader's experience. Read the article out loud to catch awkward phrasing. Are the transitions smooth? Is the order logical? Are any sentences too long or clumsy? Return only the improved article.\n\nARTICLE:\n${focusedDraft}`;
-        const flowedDraft = await callGeminiApi(flowPrompt);
-
-        loadingMessage.textContent = "Adding final flair...";
-        const flairPrompt = `This final pass is about elevating the article from "correct" to "compelling." Is the intro boring? Is the conclusion weak? Is the language engaging? Rewrite the introduction to be more engaging. Strengthen the conclusion. Replace basic words with more dynamic ones. Return only the final, polished article.\n\nARTICLE:\n${flowedDraft}`;
-        const memoContent = await callGeminiApi(flairPrompt);
-        // --- End: Added Refinement Steps for Memo ---
+        loadingMessage.textContent = "AI is drafting the investment memo...";
+        const memoContent = await generatePolishedArticle(prompt, loadingMessage);
         
+        // --- ADDED FOR AUTO-SAVE ---
+        await autoSaveReport(symbol, reportType, memoContent, prompt);
+        const refreshedReports = await getSavedReports(symbol, reportType);
+        const latestReport = refreshedReports[0];
+
         contentContainer.dataset.currentPrompt = prompt;
         contentContainer.dataset.rawMarkdown = memoContent;
         displayReport(contentContainer, memoContent, prompt);
         
-        updateReportStatus(statusContainer, [], null, { symbol, reportType, promptConfig });
+        updateReportStatus(statusContainer, refreshedReports, latestReport.id, { symbol, reportType, promptConfig });
+        // --- END OF ADDITION ---
 
     } catch (error) {
         console.error("Error generating investment memo:", error);
@@ -1336,28 +1360,20 @@ export async function handleGarpValidationRequest(symbol, forceNew = false) {
             .replace(/{tickerSymbol}/g, symbol)
             .replace('{allAnalysesData}', allAnalysesData);
 
-        // --- Start: Added Refinement Steps for GARP Validation ---
-        loadingMessage.textContent = "AI is drafting the GARP report...";
-        const draft = await callGeminiApi(prompt);
-
-        loadingMessage.textContent = "Refining focus...";
-        const focusPrompt = `Your first pass is to ensure the article is doing exactly what you asked for in the original prompt. Reread the original prompt below, then read your draft. Trim anything that doesn't belong and add anything that's missing. Is the main point clear? Did it miss anything? Did it add fluff? Return only the improved article.\n\nORIGINAL PROMPT:\n${prompt}\n\nDRAFT:\n${draft}`;
-        const focusedDraft = await callGeminiApi(focusPrompt);
-
-        loadingMessage.textContent = "Improving flow...";
-        const flowPrompt = `This pass is all about the reader's experience. Read the article out loud to catch awkward phrasing. Are the transitions smooth? Is the order logical? Are any sentences too long or clumsy? Return only the improved article.\n\nARTICLE:\n${focusedDraft}`;
-        const flowedDraft = await callGeminiApi(flowPrompt);
-
-        loadingMessage.textContent = "Adding final flair...";
-        const flairPrompt = `This final pass is about elevating the article from "correct" to "compelling." Is the intro boring? Is the conclusion weak? Is the language engaging? Rewrite the introduction to be more engaging. Strengthen the conclusion. Replace basic words with more dynamic ones. Return only the final, polished article.\n\nARTICLE:\n${flowedDraft}`;
-        const validationContent = await callGeminiApi(flairPrompt);
-        // --- End: Added Refinement Steps for GARP Validation ---
+        loadingMessage.textContent = "AI is drafting the GARP validation report...";
+        const validationContent = await generatePolishedArticle(prompt, loadingMessage);
+        
+        // --- ADDED FOR AUTO-SAVE ---
+        await autoSaveReport(symbol, reportType, validationContent, prompt);
+        const refreshedReports = await getSavedReports(symbol, reportType);
+        const latestReport = refreshedReports[0];
         
         contentContainer.dataset.currentPrompt = prompt;
         contentContainer.dataset.rawMarkdown = validationContent;
         displayReport(contentContainer, validationContent, prompt);
         
-        updateReportStatus(statusContainer, [], null, { symbol, reportType: 'GarpValidation', promptConfig });
+        updateReportStatus(statusContainer, refreshedReports, latestReport.id, { symbol, reportType, promptConfig });
+        // --- END OF ADDITION ---
 
     } catch (error) {
         console.error("Error generating GARP Validation report:", error);
