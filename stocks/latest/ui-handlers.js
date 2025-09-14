@@ -1227,12 +1227,16 @@ export async function handleInvestmentMemoRequest(symbol, forceNew = false) {
 
         const reportPromises = reportTypes.map(type => getSavedReports(symbol, type).then(reports => reports[0])); // Get only the latest
         const allLatestReports = await Promise.all(reportPromises);
-
         const foundReports = allLatestReports.filter(Boolean); // Filter out any undefined/null reports
         const missingReports = reportTypes.filter((type, index) => !allLatestReports[index]);
 
         if (missingReports.length > 0) {
-            throw new Error(`Cannot generate memo. Please generate and save the following reports first: ${missingReports.join(', ')}`);
+            const optionalReports = ['Form8KAnalysis', 'Form10KAnalysis', 'Form10QAnalysis'];
+            const requiredMissingReports = missingReports.filter(report => !optionalReports.includes(report));
+
+            if (requiredMissingReports.length > 0) {
+                throw new Error(`Cannot generate memo. Please generate and save the following reports first: ${requiredMissingReports.join(', ')}`);
+            }
         }
 
         loadingMessage.textContent = "Synthesizing reports into a final memo...";
