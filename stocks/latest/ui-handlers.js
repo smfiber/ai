@@ -1441,9 +1441,12 @@ export async function handleGenerateAllReportsRequest(symbol) {
             await addDoc(collection(state.db, CONSTANTS.DB_COLLECTION_AI_REPORTS), reportData);
 
             if (aiButtonsContainer) {
-                const button = aiButtonsContainer.querySelector(`button[data-report-type="${reportType}"]`);
-                if (button) {
-                    button.classList.add('has-saved-report');
+                // This check prevents the error for 8-K, 10-K, 10-Q reports
+                if (!reportType.startsWith('Form')) {
+                    const button = aiButtonsContainer.querySelector(`button[data-report-type="${reportType}"]`);
+                    if (button) {
+                        button.classList.add('has-saved-report');
+                    }
                 }
             }
             const progress = ((i + 1) / reportTypes.length) * 100;
@@ -1483,7 +1486,7 @@ export async function handleSaveReportToDb() {
         contentContainer = document.getElementById('ai-article-container-10q');
         reportType = 'Form10QAnalysis';
     }
-    
+
     if (!symbol || !reportType || !contentContainer) {
         displayMessageInModal("Could not determine which report to save.", "warning");
         return;
@@ -1511,6 +1514,17 @@ export async function handleSaveReportToDb() {
         await addDoc(collection(state.db, CONSTANTS.DB_COLLECTION_AI_REPORTS), reportData);
         displayMessageInModal("Report saved successfully!", "info");
         
+        // Add a check to only update the button if it's a standard AI analysis tab
+        if (activeTab === 'ai-analysis') {
+            const aiButtonsContainer = document.getElementById('ai-buttons-container');
+            if (aiButtonsContainer) {
+                const button = aiButtonsContainer.querySelector(`button[data-report-type="${reportType}"]`);
+                if (button) {
+                    button.classList.add('has-saved-report');
+                }
+            }
+        }
+
         const savedReports = await getSavedReports(symbol, reportType);
         const latestReport = savedReports[0];
         
@@ -1522,6 +1536,8 @@ export async function handleSaveReportToDb() {
             statusContainer = document.getElementById('report-status-container-8k');
         } else if (activeTab === 'form-10k-analysis') {
             statusContainer = document.getElementById('report-status-container-10k');
+        } else if (activeTab === 'form-10q-analysis') {
+            statusContainer = document.getElementById('report-status-container-10q');
         }
         updateReportStatus(statusContainer, savedReports, latestReport.id, { symbol, reportType, promptConfig });
 
@@ -1698,7 +1714,7 @@ export async function handleSaveToDrive(modalId) {
 
 
 export async function handleSaveManualFiling(ticker, formType) {
-    const formTypeLower = formType.toLowerCase().replace('-', ''); // Converts "10-Q" to "10q"
+    const formTypeLower = formType.toLowerCase().replace('-', '');
     const dateInput = document.getElementById(`manual-${formTypeLower}-date`);
     const contentInput = document.getElementById(`manual-${formTypeLower}-content`);
 
@@ -1736,12 +1752,10 @@ export async function handleSaveManualFiling(ticker, formType) {
 }
 
 export async function handleFilingAnalysisRequest(symbol, formType, forceNew = false) {
-    const formTypeLower = formType.toLowerCase().replace('-', ''); // e.g., "10q"
-    const reportType = `Form${formType.replace('-', '')}Analysis`; // e.g., "Form10QAnalysis"
+    const formTypeLower = formType.toLowerCase().replace('-', '');
+    const reportType = `Form${formType.replace('-', '')}Analysis`;
     const contentContainer = document.getElementById(`ai-article-container-${formTypeLower}`);
     const statusContainer = document.getElementById(`report-status-container-${formTypeLower}`);
-
-    //... function continues
     
     contentContainer.innerHTML = '';
     statusContainer.classList.add('hidden');
