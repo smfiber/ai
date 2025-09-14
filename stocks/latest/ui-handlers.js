@@ -1244,11 +1244,14 @@ export async function handleInvestmentMemoRequest(symbol, forceNew = false) {
         const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
 
         loadingMessage.textContent = "Gathering all latest analysis reports from the database...";
+        // --- UPDATED REPORT LIST ---
         const reportTypes = [
             // Quantitative Analysis
             'FinancialAnalysis', 'UndervaluedAnalysis', 'GarpAnalysis', 'BullVsBear',
             'MoatAnalysis', 'DividendSafety', 'GrowthOutlook', 'RiskAssessment',
             'CapitalAllocators', 'NarrativeCatalyst',
+            // Competitive Analysis
+            'CompetitiveLandscape', 
             // Investment Thesis & Narrative Analysis
             'StockFortress', 'StockDisruptor', 'StockPhoenix', 'StockLinchpin', 'StockUntouchables',
             // Filing Analysis
@@ -1256,6 +1259,7 @@ export async function handleInvestmentMemoRequest(symbol, forceNew = false) {
             // Synthesis Reports
             'GarpValidation'
         ];
+        // --- END OF UPDATE ---
 
         const reportPromises = reportTypes.map(type => getSavedReports(symbol, type).then(reports => reports[0])); // Get only the latest
         const allLatestReports = await Promise.all(reportPromises);
