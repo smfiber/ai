@@ -857,7 +857,7 @@ export function _calculateStockFortressMetrics(data) {
         netMarginTrend: ratios.map(r => ({ year: r.calendarYear, value: r.netProfitMargin ? `${(r.netProfitMargin * 100).toFixed(2)}%` : 'N/A' })),
         debtToEquity: latestMetrics.debtToEquity ? latestMetrics.debtToEquity.toFixed(2) : 'N/A',
         currentRatio: latestRatios.currentRatio ? latestRatios.currentRatio.toFixed(2) : 'N/A',
-        roeTrend: metrics.map(m => ({ year: m.calendarYear, value: m.roe ? `${(m.roe * 100).toFixed(2)}%` : 'N/A' })),
+        roeTrend: metrics.map(m => ({ year: m.calendarYear, value: m.returnOnEquity ? `${(m.returnOnEquity * 100).toFixed(2)}%` : 'N/A' })),
         peRatio: latestMetrics.peRatio ? latestMetrics.peRatio.toFixed(2) : 'N/A',
         pbRatio: latestRatios.priceToBookRatio ? latestRatios.priceToBookRatio.toFixed(2) : 'N/A',
     };
