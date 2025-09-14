@@ -1033,6 +1033,34 @@ Synthesize your entire analysis into a final verdict.
 - **Cracks (Red Flags):** What are the 1-2 most significant risks, inconsistencies, or concerns that undermine the bull thesis?
 `.trim();
 
+export const FORM_10Q_ANALYSIS_PROMPT = `
+Role: You are a Senior Equity Analyst. Your task is to perform a concise, qualitative analysis of the Form 10-Q for {companyName}. Focus on identifying significant changes or trends since the last annual report (10-K). Your audience is an investment committee needing a quick update.
+
+Data Instructions: Your analysis MUST be based *exclusively* on the provided filing text.
+
+Output Format: A professional markdown report structured as follows.
+
+Filing Text:
+{filingText}
+
+# Form 10-Q Interim Analysis: {companyName} ({tickerSymbol})
+
+## 1. Executive Summary: What's the Story This Quarter?
+In 2-3 sentences, what is the most important takeaway from this quarter? Did the company's performance meet, exceed, or miss the implied trajectory from their last 10-K?
+
+## 2. Key Changes & Developments (MD&A Insights)
+From the "MD&A" section (Item 2), distill management's explanation of their quarterly performance.
+- **Performance Drivers:** What specific factors are credited for this quarter's results (both positive and negative)?
+- **Strategic Updates:** Note any new initiatives, capital allocation decisions, or changes in outlook mentioned.
+- **Emerging Risks:** Have any new risks emerged since the last annual report, or has management's commentary on existing risks intensified?
+
+## 3. Financial Snapshot: Key Trends
+Briefly analyze any significant sequential (vs. prior quarter) or year-over-year changes mentioned in the financial statements or MD&A. Focus on trends in revenue, margins, or cash flow.
+
+## 4. Red Flags & Questions for Management
+Based on your analysis, list 1-2 critical questions this 10-Q raises. What should an investor be watching for in the next earnings call?
+`.trim();
+
 export const promptMap = {
     'FinancialAnalysis': {
         prompt: FINANCIAL_ANALYSIS_PROMPT,
