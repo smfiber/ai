@@ -1134,6 +1134,10 @@ export const promptMap = {
         prompt: FORM_10K_ANALYSIS_PROMPT,
         requires: [] // This will be based on manually provided text
     },
+    'Form10QAnalysis': { // ADD THIS BLOCK
+        prompt: FORM_10Q_ANALYSIS_PROMPT,
+        requires: [] // This will be based on manually provided text
+    },	
     'InvestmentMemo': {
         prompt: INVESTMENT_MEMO_PROMPT,
         requires: [] // This prompt uses other reports, not raw FMP data.
