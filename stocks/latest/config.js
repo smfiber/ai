@@ -839,113 +839,61 @@ Role: You are a skeptical senior portfolio manager. Your goal is to critically e
 * **Next Steps:** What are the top 1-2 specific metrics or events we must monitor over the next 6-12 months to validate or invalidate this thesis? (e.g., "Monitor gross margins in the next two earnings reports," "Track regulatory decisions regarding X.")
 `.trim();
 
-/**
- * @fileoverview Defines a prompt template for generating an investment memo.
- * @module prompts/investment
- */
-
-/**
- * @description A prompt template for guiding an AI model to act as a quantitative analyst.
- * The model is instructed to process a dossier of company reports and generate a concise
- * "Factor Scorecard" and a final investment recommendation.
- *
- * Placeholders:
- * - {companyName}: The name of the company being analyzed.
- * - {tickerSymbol}: The stock ticker symbol for the company.
- * - {allAnalysesData}: The compiled qualitative and quantitative reports.
- */
-// GARP FIX: This entire prompt has been updated for a GARP focus.
 export const INVESTMENT_MEMO_PROMPT = `
 **Persona & Goal:**
-You are a Senior Investment Analyst at a GARP-focused ("Growth at a Reasonable Price") fund, channeling the analytical rigor of investors like Peter Lynch. Your task is to synthesize a dossier of qualitative and quantitative reports on {companyName} into a definitive investment memo. Your goal is to determine if this is a quality growth company trading at a fair price.
+You are a Senior Investment Analyst at a GARP-focused ("Growth at a Reasonable Price") fund, channeling the analytical rigor and narrative style of top-tier investors. Your goal is to synthesize a dossier of qualitative and quantitative reports on {companyName} into a definitive and convincing investment memo. The final output must be a clear, thesis-driven analysis that determines if this is a quality growth company trading at a fair price.
 
-**Core Instructions:**
-1.  **Strictly Adhere to Provided Data:** Your entire analysis, including every score and rationale, MUST be derived *exclusively* from the information within the provided '{allAnalysesData}'. Do not use any external knowledge.
-2.  **Acknowledge & Weigh Contradictions:** The reports may contain conflicting information (e.g., a GARP report is bullish, a deep-value report is bearish). Your rationale must explicitly acknowledge these conflicts and explain which view is more relevant to a GARP thesis.
-3.  **Cite Your Evidence:** For each rationale, briefly reference the source of the key data points (e.g., "according to the GARP Analysis report,").
-4.  **Think Step-by-Step:** First, review all reports. Second, score each factor using the GARP-focused rubric below. Third, write the detailed rationale for each score. Finally, calculate the final weighted score and write the executive summary and recommendation.
-
----
-
-## Scoring Rubric (Internal Guide for a 1-10 Scale)
-
-**1. Business Quality & Moat:**
-* 1-2: Commodity business, no pricing power.
-* 5-6: A moderate but not insurmountable moat. Faces meaningful competition.
-* 9-10: A dominant, near-impregnable moat with immense pricing power.
-
-**2. Financial Health:**
-* 1-2: Highly leveraged, negative cash flow, high bankruptcy risk.
-* 5-6: Manageable debt, positive but lumpy free cash flow.
-* 9-10: Fortress-like balance sheet (e.g., net cash), abundant and growing FCF.
-
-**3. Management & Capital Allocation:**
-* 1-2: Poor track record of value destruction (bad M&A), misaligned incentives.
-* 5-6: Competent management with a decent track record. ROIC is consistently above WACC.
-* 9-10: Exemplary management with a history of genius-level capital allocation.
-
-**4. Growth Outlook:**
-* 1-2: Secular decline, shrinking market.
-* 5-6: Moderate, sustainable growth prospects from market expansion or share gains.
-* 9-10: Hyper-growth potential; operating in a massive, underpenetrated market with multiple secular tailwinds.
-
-**5. Valuation & Margin of Safety (GARP-Focused):**
-* 1-2: Extremely overvalued, growth prospects do not justify the premium (e.g., PEG ratio > 2.5).
-* 5-6: Fairly valued; price reflects reasonable future growth expectations (e.g., PEG ratio between 1.5 and 2.5).
-* 9-10: Deeply undervalued relative to its growth. A clear mispricing by the market, offering an exceptional margin of safety (e.g., PEG ratio < 1.0).
+**Core Philosophy (How to Think):**
+1.  **Narrative Over Numbers:** The heart of this memo is the qualitative analysis. The scores are a summary, not the main event. Your primary task is to build a compelling investment case, not just fill out a scorecard.
+2.  **Synthesize, Don't Summarize:** Do not merely list findings from each report. Weave them together to form a cohesive bull case, bear case, and valuation assessment.
+3.  **Weigh Contradictions:** Explicitly address conflicting data points between reports. Explain which view is more relevant to our GARP thesis and why. For example, if a value fund sees a "value trap," but a growth fund sees a "compounding machine," your job is to determine if the price justifies the growth.
+4.  **Cite Your Evidence:** Casually reference the source of key data points within your narrative (e.g., "The GARP analysis highlights strong FCF conversion," or "Conversely, the deep-value report warns of margin compression...").
 
 ---
 
 # Investment Memo: {companyName} ({tickerSymbol})
 
-## 1. Executive Summary
-*(A one-sentence thesis summarizing the core investment case, followed by the final weighted score and recommendation.)*
+## 1. Executive Summary & Investment Thesis
+*(Begin with a 3-4 sentence paragraph that concisely summarizes the investment thesis. It should cover the core bull case, the primary risks (the bear case), and the final recommendation based on the current valuation. This is the "elevator pitch" for the entire memo.)*
 
-## 2. Factor Analysis & Scoring
+## 2. The Bull Case: Why We Could Be Right
+*(This section should be a compelling narrative about the investment's upside potential. Synthesize the strongest points from the provided reports.)*
+* **Business Quality & Moat:** Analyze the company's competitive advantages. Is it a dominant leader with strong pricing power, or simply a good operator in a tough industry?
+* **Growth Outlook:** What are the key drivers of future growth? Are they secular (long-term tailwinds) or cyclical? How large is the total addressable market (TAM)?
+* **Management & Capital Allocation:** Is the leadership team proven and shareholder-aligned? Do they have a strong track record of intelligent capital allocation (e.g., high ROIC, smart M&A, opportunistic buybacks)?
 
-### A. Business Quality & Moat
-* **Score:** \`[1-10]\`
-* **Rationale:** \`(Justify the score using the rubric. Synthesize findings on industry structure, competitive advantages, pricing power, and moat durability. Acknowledge conflicting views from reports.)\`
+## 3. The Bear Case: What Could Go Wrong
+*(This section critically examines the primary risks and counterarguments. Acknowledge the potential downsides mentioned in the reports.)*
+* **Key Risks & Competitive Threats:** What are the top 2-3 most critical risks? Are there credible threats to the company's moat?
+* **Financial Health Concerns:** Are there any red flags on the balance sheet (e.g., high leverage)? Is cash flow consistent? Are margins sustainable or at risk of compression?
+* **Potential Headwinds:** Are there any secular or cyclical headwinds that could derail the growth story?
 
-### B. Financial Health
-* **Score:** \`[1-10]\`
-* **Rationale:** \`(Justify using the rubric. Analyze debt load, cash flow generation, and margin stability/trends. Cite key metrics.)\`
+## 4. Valuation: The GARP Fulcrum
+*(This is the deciding section. Analyze whether the current price is reasonable given the quality of the business and its growth prospects.)*
+* **Current Valuation Picture:** Based on the reports, what do key GARP metrics like the PEG ratio, P/FCF, or EV/EBITDA tell us?
+* **Margin of Safety:** Does the current price offer a sufficient margin of safety? Is the market overly optimistic or pessimistic about the company's future?
+* **Conclusion on Price:** Synthesize the bull and bear cases to answer the ultimate question: Is {companyName} a quality growth company trading at a fair price *today*?
 
-### C. Management & Capital Allocation
-* **Score:** \`[1-10]\`
-* **Rationale:** \`(Justify using the rubric. Assess historical ROIC/ROCE, track record of acquisitions vs. buybacks, and evidence of shareholder alignment.)\`
+## 5. Final Verdict & Actionable Recommendation
 
-### D. Growth Outlook
-* **Score:** \`[1-10]\`
-* **Rationale:** \`(Justify using the rubric. Evaluate organic growth prospects, market size (TAM), and specific catalysts mentioned in the reports. Distinguish between cyclical and secular growth.)\`
+### A. Recommendation
+*(Provide a clear, actionable recommendation.)*
+* **High Conviction Buy:** A compelling opportunity; recommend a full position.
+* **Initiate Position:** A good opportunity; recommend building a starter (e.g., 1/3) position and adding on weakness.
+* **Add to Watchlist:** An interesting company, but the current price/risk profile isn't compelling. Specify the catalyst or price target you'd be waiting for.
+* **Pass:** The risks outweigh the potential rewards; not a suitable GARP investment at this time.
 
-### E. Valuation & Margin of Safety
-* **Score:** \`[1-10]\`
-* **Rationale:** \`(Justify using the rubric. Summarize findings from a GARP perspective, focusing on PEG ratio and valuation relative to growth. Explicitly state the implied margin of safety.)\`
-
-## 3. Key Risks & Mitigants
-*(Identify the top 2-3 most critical risks cited in the dossier. For each risk, briefly describe potential mitigating factors.)*
-
-* **Risk 1:**
-    * **Mitigant:**
-* **Risk 2:**
-    * **Mitigant:**
-
-## 4. Final Weighted Score & Recommendation
-
-* **Factor Weights (GARP-Focused):**
-    * **Growth Outlook: 30%**
-    * **Valuation: 25%**
-    * **Business Quality: 25%**
-    * **Financial Health: 10%**
-    * **Management: 10%**
-* **Calculation:** \`[(Growth Score * 3) + (Valuation Score * 2.5) + (Business Quality Score * 2.5) + (Financial Health Score * 1) + (Management Score * 1)] / 10 = Final Score out of 10\`
-* **Final Score:** \`[Calculated Score / 10.0]\`
-* **Recommendation:**
-    * **> 8.0:** High Conviction Buy
-    * **7.0 - 7.9:** Initiate Position
-    * **6.0 - 6.9:** Add to Watchlist
-    * **< 6.0:** Pass
+### B. Internal Scorecard Summary
+*(Here, you will summarize your analysis using the 1-10 scoring system as a final quantitative check. The rationale for each score is the detailed analysis you've already written above.)*
+* **Business Quality & Moat:** \`[1-10]\`
+* **Financial Health:** \`[1-10]\`
+* **Management & Capital Allocation:** \`[1-10]\`
+* **Growth Outlook:** \`[1-10]\`
+* **Valuation & Margin of Safety:** \`[1-10]\`
+* ---
+* **Final Weighted Score:**
+    * **Calculation:** \`[(Growth * 0.3) + (Valuation * 0.25) + (Business Quality * 0.25) + (Financial Health * 0.1) + (Management * 0.1)] = Final Score\`
+    * **Score:** \`[Calculated Score / 10.0]\`
 
 ---
 **Input Reports:**
