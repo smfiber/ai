@@ -285,10 +285,15 @@ export function renderPortfolioManagerList() {
                     statusBadge = `<span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-gray-100 text-gray-800">${sanitizeText(stock.status)}</span>`;
             }
 
+            const hasNewFilings = stock.hasNewFilings === true;
+            const newFilingBadge = hasNewFilings
+              ? `<span class="ml-2 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800 animate-pulse">New Filing</span>`
+              : '';
+
             html += `
                 <li class="p-4 flex justify-between items-center hover:bg-gray-50">
                     <div>
-                        <p class="font-semibold text-gray-800">${sanitizeText(stock.companyName)} (${sanitizeText(stock.ticker)})</p>
+                        <p class="font-semibold text-gray-800 flex items-center">${sanitizeText(stock.companyName)} (${sanitizeText(stock.ticker)}) ${newFilingBadge}</p>
                         <p class="text-sm text-gray-500">${statusBadge}</p>
                     </div>
                     <div class="flex gap-2">
@@ -334,11 +339,15 @@ export async function _renderGroupedStockList(container, stocksWithData, listTyp
         stocks.forEach(stock => {
             const profile = stock.fmpData?.profile?.[0] || {};
             const refreshedAt = stock.fmpData?.cachedAt ? stock.fmpData.cachedAt.toDate().toLocaleString() : 'N/A';
+            const hasNewFilings = stock.hasNewFilings === true;
+            const newFilingBadge = hasNewFilings
+              ? `<span class="ml-2 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800 animate-pulse">New Filing</span>`
+              : '';
 
             html += `
                 <li class="dashboard-list-item-detailed">
                     <div class="stock-main-info">
-                        <p class="font-bold text-indigo-700">${sanitizeText(stock.companyName)}</p>
+                        <p class="font-bold text-indigo-700 flex items-center">${sanitizeText(stock.companyName)} ${newFilingBadge}</p>
                         <p class="text-sm text-gray-600">${sanitizeText(stock.ticker)}</p>
                     </div>
                     <div class="stock-actions">
