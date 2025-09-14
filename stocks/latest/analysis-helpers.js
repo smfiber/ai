@@ -584,7 +584,7 @@ export function _calculateCapitalAllocatorsMetrics(data) {
     const metricsWithNormalizedKeys = metrics.map(m => ({
         ...m,
         returnOnInvestedCapital: m.returnOnInvestedCapital ?? m.roic,
-        returnOnEquity: m.returnOnEquity ?? m.roe
+        returnOnEquity: m.returnOnEquity ?? m.returnOnEquity
     }));
 
     const buybacksWithValuation = cashFlow.map(cf => {
@@ -838,7 +838,7 @@ export function _calculateStockDisruptorMetrics(data) {
         description: profile.description,
         revenueGrowth: income.map(d => ({ year: d.calendarYear, value: formatLargeNumber(d.revenue) })),
         netIncomeGrowth: income.map(d => ({ year: d.calendarYear, value: formatLargeNumber(d.netIncome) })),
-        rdToRevenue: latestMetrics.researchAndDevelopementToRevenue ? `${(latestMetrics.researchAndDevelopementToRevenue * 100).toFixed(2)}%` : 'N/A',
+        rdToRevenue: latestMetrics.researchAndDevelopmentToRevenue ? `${(latestMetrics.researchAndDevelopmentToRevenue * 100).toFixed(2)}%` : 'N/A',
         capexToRevenue: latestMetrics.capexToRevenue ? `${(latestMetrics.capexToRevenue * 100).toFixed(2)}%` : 'N/A',
         peRatio: latestMetrics.peRatio ? latestMetrics.peRatio.toFixed(2) : 'N/A',
         psRatio: latestMetrics.priceToSalesRatio ? latestMetrics.priceToSalesRatio.toFixed(2) : 'N/A',
@@ -920,7 +920,7 @@ export function _calculateStockUntouchablesMetrics(data) {
         profitabilityMetrics: {
             grossMargin: (ratios[ratios.length - 1] || {}).grossProfitMargin ? `${((ratios[ratios.length - 1] || {}).grossProfitMargin * 100).toFixed(2)}%` : 'N/A'
         },
-        rdToRevenue: (metrics[metrics.length - 1] || {}).researchAndDevelopementToRevenue ? `${((metrics[metrics.length - 1] || {}).researchAndDevelopementToRevenue * 100).toFixed(2)}%` : 'N/A',
+        rdToRevenue: (metrics[metrics.length - 1] || {}).researchAndDevelopmentToRevenue ? `${((metrics[metrics.length - 1] || {}).researchAndDevelopmentToRevenue * 100).toFixed(2)}%` : 'N/A',
         sgnaToRevenue: (income[income.length - 1] || {}).sellingGeneralAndAdministrativeExpenses / (income[income.length - 1] || {}).revenue ? `${(((income[income.length - 1] || {}).sellingGeneralAndAdministrativeExpenses / (income[income.length - 1] || {}).revenue) * 100).toFixed(2)}%` : 'N/A',
         valuation: {
             peRatio: (metrics[metrics.length - 1] || {}).peRatio?.toFixed(2) || 'N/A',
