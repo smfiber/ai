@@ -51,7 +51,7 @@ export async function callGeminiApi(prompt) {
     
     state.sessionLog.push({ type: 'prompt', timestamp: new Date(), content: prompt });
 
-    const url = `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${state.geminiApiKey}`;
+    const url = `https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=${state.geminiApiKey}`;
     const body = { contents: [{ parts: [{ "text": prompt }] }] };
     const data = await callApi(url, {
         method: 'POST',
@@ -100,7 +100,7 @@ export async function callGeminiApiWithTools(contents) {
 
     state.sessionLog.push({ type: 'prompt', timestamp: new Date(), content: JSON.stringify(contents, null, 2) });
 
-    const url = `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${state.geminiApiKey}`;
+    const url = `https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=${state.geminiApiKey}`;
     const data = await callApi(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -137,11 +137,7 @@ export async function generatePolishedArticle(initialPrompt, loadingMessageEleme
     const flowPrompt = `This pass is all about the reader's experience. Read the article out loud to catch awkward phrasing. Are the transitions smooth? Is the order logical? Are any sentences too long or clumsy? Return only the improved article.\n\nARTICLE:\n${focusedDraft}`;
     const flowedDraft = await callGeminiApi(flowPrompt);
 
-    updateLoadingMessage("Adding final flair...");
-    const flairPrompt = `This final pass is about elevating the article from "correct" to "compelling." Is the intro boring? Is the conclusion weak? Is the language engaging? Rewrite the introduction to be more engaging. Strengthen the conclusion. Replace basic words with more dynamic ones. Return only the final, polished article.\n\nARTICLE:\n${flowedDraft}`;
-    const finalArticle = await callGeminiApi(flairPrompt);
-
-    return finalArticle;
+    return flowedDraft;
 }
 
 export async function getFmpStockData(symbol) {
