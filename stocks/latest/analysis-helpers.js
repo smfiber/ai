@@ -50,8 +50,8 @@ export function _calculateUndervaluedMetrics(data) {
     };
 
     // Helper to get last N years of a metric
-    const getTrend = (data, key, formatFn = (v) => v) => {
-        return data.slice(-6).map(d => ({ year: d.calendarYear, value: formatFn(d[key]) }));
+    const getTrend = (data, key1, key2, formatFn) => {
+        return data.slice(-6).map(d => ({ year: d.calendarYear, value: formatFn(d[key1] ?? d[key2]) }));
     };
     
     // Helper to calculate historical average
@@ -63,11 +63,11 @@ export function _calculateUndervaluedMetrics(data) {
 
     // 1. Growth & Profitability
     const revenueGrowthTrend = calculateYoyGrowth(incomeStatements, 'revenue');
-    const profitabilityTrend = getTrend(ratios, 'netProfitMargin', v => typeof v === 'number' ? `${(v * 100).toFixed(2)}%` : 'N/A');
+    const profitabilityTrend = getTrend(ratios, 'netProfitMargin', null, v => typeof v === 'number' ? `${(v * 100).toFixed(2)}%` : 'N/A');
 
     // 2. Financial Health
-    // FIX: Changed 'returnOnEquity' to 'roe' to match the API data.
-    const roeTrend = getTrend(keyMetrics, 'roe', v => typeof v === 'number' ? `${(v * 100).toFixed(2)}%` : 'N/A');
+    // ROBUST FIX: Check for 'roe' first, then fall back to 'returnOnEquity'.
+    const roeTrend = getTrend(keyMetrics, 'roe', 'returnOnEquity', v => typeof v === 'number' ? `${(v * 100).toFixed(2)}%` : 'N/A');
     const debtToEquity = latestMetrics.debtToEquity ? latestMetrics.debtToEquity.toFixed(2) : 'Data not available';
     
     // 3. Dividend Analysis
@@ -170,8 +170,8 @@ export function _calculateFinancialAnalysisMetrics(data) {
         return 'has been stable';
     };
     
-    const calculateAverage = (data, key, lookback = 5) => {
-        const values = data.slice(-lookback).map(d => d[key]).filter(v => typeof v === 'number');
+    const calculateAverage = (data, key) => {
+        const values = data.slice(-5).map(d => d[key]).filter(v => typeof v === 'number');
         if (values.length === 0) return null;
         return values.reduce((a, b) => a + b, 0) / values.length;
     };
@@ -228,10 +228,8 @@ export function _calculateFinancialAnalysisMetrics(data) {
     }
 
     // 3. Calculations
-    // Find market cap from profile, with a fallback to the dedicated market_cap endpoint
     const marketCapValue = profile.mktCap || data.market_cap?.[0]?.marketCap;
 
-    // Summary
     const analystConsensus = (() => {
         if (grades.length === 0) return "No recent analyst ratings available.";
         const buys = grades.filter(g => g.newGrade && ['buy', 'outperform', 'overweight', 'strong buy'].includes(g.newGrade.toLowerCase())).length;
@@ -239,6 +237,11 @@ export function _calculateFinancialAnalysisMetrics(data) {
         const holds = grades.length - buys - sells;
         return `Generally ${buys > sells ? 'positive' : 'neutral'}, with ${buys} buys, ${holds} holds, and ${sells} sells in the last ${grades.length} ratings.`;
     })();
+
+    // ROBUST FIX: Check for 'roe' first, then fall back to 'returnOnEquity'.
+    const latestRoe = latestMetrics.roe ?? latestMetrics.returnOnEquity;
+    const highRoe = keyMetrics.slice(-5).every(k => (k.roe ?? k.returnOnEquity) > 0.15);
+
     const summary = {
         companyName: profile.companyName,
         tickerSymbol: profile.symbol,
@@ -248,28 +251,24 @@ export function _calculateFinancialAnalysisMetrics(data) {
         marketCap: formatLargeNumber(marketCapValue),
         priceRange: profile.range || 'N/A',
         analystConsensus: analystConsensus,
-        insiderOwnership: 'N/A' // This field is not in the provided profile data
+        insiderOwnership: 'N/A'
     };
 
-    // Performance
     const performance = {
         revenueTrend: `Revenue ${getTrendStatus(incomeStatements.map(i=>i.revenue), 5, false)}.`,
         netIncomeTrend: `Net income ${getTrendStatus(incomeStatements.map(i=>i.netIncome), 5, false)}.`,
         grossProfitMargin: { status: getTrendStatus(ratios.map(r=>r.grossProfitMargin)) },
         operatingProfitMargin: { status: getTrendStatus(ratios.map(r=>r.operatingProfitMargin)) },
         netProfitMargin: { status: getTrendStatus(ratios.map(r=>r.netProfitMargin)) },
-        // FIX: Changed 'returnOnEquity' to 'roe' to match the API data.
-        returnOnEquity: { quality: latestMetrics.roe > 0.15 ? 'High' : (latestMetrics.roe > 0.05 ? 'Moderate' : 'Low') }
+        returnOnEquity: { quality: latestRoe > 0.15 ? 'High' : (latestRoe > 0.05 ? 'Moderate' : 'Low') }
     };
     
-    // Health
     const health = {
         currentRatio: { status: latestRatios.currentRatio > 2 ? 'Strong' : (latestRatios.currentRatio > 1 ? 'Healthy' : 'a potential risk') },
         debtToEquity: { status: latestMetrics.debtToEquity > 1 ? 'Aggressive' : (latestMetrics.debtToEquity > 0.5 ? 'Moderate' : 'Conservative') },
         interestCoverage: { status: latestRatios.interestCoverage > 5 ? 'Very strong' : (latestRatios.interestCoverage > 2 ? 'Healthy' : 'a potential concern') }
     };
 
-    // Cash Flow
     const capitalAllocationStory = (() => {
         const recentFlows = cashFlows.slice(-3);
         if (recentFlows.length === 0) return "Not enough data.";
@@ -287,7 +286,6 @@ export function _calculateFinancialAnalysisMetrics(data) {
         capitalAllocationStory
     };
 
-    // Valuation
     const valuationMetrics = [
         { name: 'peRatio', key: 'peRatio', source: keyMetrics },
         { name: 'priceToSalesRatio', key: 'priceToSalesRatio', source: ratios },
@@ -295,7 +293,7 @@ export function _calculateFinancialAnalysisMetrics(data) {
         { name: 'enterpriseValueToEBITDA', key: 'enterpriseValueMultiple', source: ratios }
     ];
     const valuation = valuationMetrics.map(metric => {
-        const current = (metric.name === 'peRatio') ? latestMetrics[metric.key] : latestRatios[metric.key];
+        const current = metric.source === keyMetrics ? (latestMetrics[metric.key]) : (latestRatios[metric.key]);
         const historicalAverage = calculateAverage(metric.source, metric.key);
         let status = 'N/A';
         if (current && historicalAverage) {
@@ -304,12 +302,10 @@ export function _calculateFinancialAnalysisMetrics(data) {
         return { metric: metric.name, status };
     });
 
-    // Thesis
     const bullCasePoints = [];
     if (performance.revenueTrend.includes('growing')) bullCasePoints.push("Consistent or growing revenue.");
     if (cashFlow.qualityOfEarnings.includes('Strong')) bullCasePoints.push("Strong operating cash flow that exceeds net income.");
     if (health.debtToEquity.status === 'Conservative') bullCasePoints.push("A strong balance sheet with a conservative debt load.");
-    // FIX: Changed 'returnOnEquity' to 'roe' to match the API data.
     if (performance.returnOnEquity.quality === 'High') bullCasePoints.push("High return on equity, indicating efficient use of shareholder capital.");
 
     const bearCasePoints = [];
@@ -319,8 +315,6 @@ export function _calculateFinancialAnalysisMetrics(data) {
     if (health.currentRatio.status === 'a potential risk') bearCasePoints.push("Low liquidity, which could be a short-term risk.");
     
     const moatIndicator = (() => {
-        // FIX: Changed 'returnOnEquity' to 'roe' to match the API data.
-        const highRoe = keyMetrics.slice(-5).every(k => k.roe > 0.15);
         const stableMargins = !performance.netProfitMargin.status.includes('declining');
         if (highRoe && stableMargins) return "The data, showing consistently high ROE and stable margins, suggests the presence of a strong competitive moat.";
         if (stableMargins) return "The data suggests a potential moat, indicated by stable profit margins.";
@@ -344,7 +338,10 @@ export function _calculateBullVsBearMetrics(data) {
     const history = (data.historical_price?.historical || []);
 
     const formatTrend = (arr, key) => arr.map(item => ({ year: item.calendarYear, value: formatLargeNumber(item[key]) }));
-    const formatPercentTrend = (arr, key) => arr.map(item => ({ year: item.calendarYear, value: item[key] ? `${(item[key] * 100).toFixed(2)}%` : 'N/A' }));
+    const formatPercentTrend = (arr, key1, key2) => arr.map(item => {
+        const value = item[key1] ?? item[key2];
+        return { year: item.calendarYear, value: value ? `${(value * 100).toFixed(2)}%` : 'N/A' };
+    });
 
     const findPriceClosestToDate = (targetDate, priceHistory) => {
         if (!priceHistory || priceHistory.length === 0) return null;
@@ -390,8 +387,8 @@ export function _calculateBullVsBearMetrics(data) {
             net_income: formatTrend(income, 'netIncome')
         },
         profitability_metrics: {
-            // FIX: Changed 'returnOnEquity' to 'roe' to match the API data.
-            roe_trend: formatPercentTrend(metrics, 'roe'),
+            // ROBUST FIX: Check for 'roe' first, then fall back to 'returnOnEquity'.
+            roe_trend: formatPercentTrend(metrics, 'roe', 'returnOnEquity'),
             net_profit_margin_trend: formatPercentTrend(ratios, 'netProfitMargin'),
             operating_margin_trend: formatPercentTrend(ratios, 'operatingProfitMargin')
         },
@@ -420,19 +417,17 @@ export function _calculateMoatAnalysisMetrics(data) {
     const cashFlow = (data.cash_flow_statement_annual || []).slice(0, 10);
     const ratios = (data.ratios_annual || []).slice(0, 10);
 
-    // Normalize metrics to handle 'roic' or 'returnOnInvestedCapital'
-    const metricsWithNormalizedKeys = metrics.map(m => ({
-        ...m,
-        returnOnInvestedCapital: m.returnOnInvestedCapital ?? m.roic
-    }));
-
-    const formatPercentTrend = (arr, key) => arr.map(item => ({ year: item.calendarYear, value: item[key] ? `${(item[key] * 100).toFixed(2)}%` : 'N/A' }));
+    // ROBUST FIX: Check for 'roic', then fall back to 'returnOnInvestedCapital'
+    const formatPercentTrend = (arr, key1, key2) => arr.map(item => {
+        const value = item[key1] ?? item[key2];
+        return { year: item.calendarYear, value: value ? `${(value * 100).toFixed(2)}%` : 'N/A' };
+    });
 
     return {
         qualitativeClues: {
              description: profile.description
         },
-        roicTrend: formatPercentTrend(metricsWithNormalizedKeys, 'returnOnInvestedCapital'),
+        roicTrend: formatPercentTrend(metrics, 'roic', 'returnOnInvestedCapital'),
         profitabilityTrends: {
             netProfitMargin: formatPercentTrend(ratios, 'netProfitMargin'),
             operatingIncome: income.map(i => ({ year: i.calendarYear, value: formatLargeNumber(i.operatingIncome) })),
@@ -460,7 +455,6 @@ export function _calculateDividendSafetyMetrics(data) {
 
     const latestRatios = ratios[ratios.length - 1] || {};
     
-    // Create a map for easy lookup by year
     const incomeMap = new Map(income.map(i => [i.calendarYear, i]));
 
     const payoutRatios = cashFlow.map(cf => {
@@ -510,7 +504,7 @@ export function _calculateGrowthOutlookMetrics(data) {
         },
         valuation: {
             peRatio: latestMetrics.peRatio?.toFixed(2) || 'N/A',
-            evToSalesRatio: latestRatios.enterpriseValueMultiple?.toFixed(2) || 'N/A' // Note: This is EV/EBITDA, not EV/Sales. Using what's available.
+            evToSalesRatio: latestRatios.enterpriseValueMultiple?.toFixed(2) || 'N/A'
         },
         reinvestment: {
             rdToRevenue: latestMetrics.researchAndDevelopmentToRevenue ? `${(latestMetrics.researchAndDevelopmentToRevenue * 100).toFixed(2)}%` : 'N/A',
@@ -581,15 +575,13 @@ export function _calculateCapitalAllocatorsMetrics(data) {
     const balanceSheet = (data.balance_sheet_statement_annual || []).slice(0, 10);
     const ratios = (data.ratios_annual || []).slice(0, 10);
 
-    // Create a map for easy lookup by year
     const ratiosMap = new Map(ratios.map(r => [r.calendarYear, r]));
     const metricsMap = new Map(metrics.map(m => [m.calendarYear, m]));
 
-    // Normalize metrics to handle different key names from the API (e.g., 'roic' vs 'returnOnInvestedCapital')
+    // ROBUST FIX: Check for primary key, then fall back to secondary key.
     const metricsWithNormalizedKeys = metrics.map(m => ({
         ...m,
-        returnOnInvestedCapital: m.returnOnInvestedCapital ?? m.roic,
-        // FIX: Changed 'returnOnEquity' to 'roe' to match the API data. Also corrected the typo.
+        returnOnInvestedCapital: m.roic ?? m.returnOnInvestedCapital,
         returnOnEquity: m.roe ?? m.returnOnEquity
     }));
 
@@ -760,7 +752,8 @@ export function _calculateCompetitiveLandscapeMetrics(targetData, peersData) {
     const metricsToCompare = [
         { key: 'peRatio', ttmKey: 'peRatioTTM', name: 'P/E Ratio', source: 'key_metrics' },
         { key: 'priceToSalesRatio', ttmKey: 'priceToSalesRatioTTM', name: 'P/S Ratio', source: 'ratios' },
-        { key: 'returnOnEquity', ttmKey: 'roeTTM', name: 'ROE', source: 'key_metrics', isPercent: true },
+        // ROBUST FIX: Add 'roe' as a fallback for 'returnOnEquity'
+        { key: 'returnOnEquity', ttmKey: 'roeTTM', name: 'ROE', source: 'key_metrics', isPercent: true, fallbackKey: 'roe' },
         { key: 'netProfitMargin', ttmKey: 'netProfitMarginTTM', name: 'Net Profit Margin', source: 'ratios', isPercent: true },
         { key: 'debtToEquity', ttmKey: 'debtToEquityTTM', name: 'Debt/Equity', source: 'key_metrics' }
     ];
@@ -770,8 +763,8 @@ export function _calculateCompetitiveLandscapeMetrics(targetData, peersData) {
             ? data?.key_metrics_ttm?.[0] || data?.key_metrics_annual?.[0]
             : data?.ratios_ttm?.[0] || data?.ratios_annual?.[0];
 
-        // Use the ttmKey for TTM data, otherwise fall back to the generic key for annual data.
-        const value = sourceData ? (sourceData[metricInfo.ttmKey] ?? sourceData[metricInfo.key]) : null;
+        // ROBUST FIX: Check for multiple keys
+        const value = sourceData ? (sourceData[metricInfo.ttmKey] ?? sourceData[metricInfo.key] ?? sourceData[metricInfo.fallbackKey]) : null;
 
         if (typeof value !== 'number') return 'N/A';
         return metricInfo.isPercent ? `${(value * 100).toFixed(2)}%` : value.toFixed(2);
@@ -782,8 +775,8 @@ export function _calculateCompetitiveLandscapeMetrics(targetData, peersData) {
             ? data?.key_metrics_ttm?.[0] || data?.key_metrics_annual?.[0]
             : data?.ratios_ttm?.[0] || data?.ratios_annual?.[0];
 
-        // Use the ttmKey for TTM data, otherwise fall back to the generic key for annual data.
-        return sourceData ? (sourceData[metricInfo.ttmKey] ?? sourceData[metricInfo.key]) : null;
+        // ROBUST FIX: Check for multiple keys
+        return sourceData ? (sourceData[metricInfo.ttmKey] ?? sourceData[metricInfo.key] ?? sourceData[metricInfo.fallbackKey]) : null;
     };
     
     // Target Company Metrics
@@ -830,16 +823,6 @@ export function _calculateStockDisruptorMetrics(data) {
     
     const latestMetrics = metrics[metrics.length - 1] || {};
 
-    const calculateYoyGrowth = (arr, key) => {
-        if (arr.length < 2) return 'N/A';
-        const prev = arr[arr.length - 2][key];
-        const curr = arr[arr.length - 1][key];
-        if (prev && curr && prev !== 0) {
-            return `${(((curr / prev) - 1) * 100).toFixed(2)}%`;
-        }
-        return 'N/A';
-    };
-
     return {
         description: profile.description,
         revenueGrowth: income.map(d => ({ year: d.calendarYear, value: formatLargeNumber(d.revenue) })),
@@ -847,7 +830,7 @@ export function _calculateStockDisruptorMetrics(data) {
         rdToRevenue: latestMetrics.researchAndDevelopmentToRevenue ? `${(latestMetrics.researchAndDevelopmentToRevenue * 100).toFixed(2)}%` : 'N/A',
         capexToRevenue: latestMetrics.capexToRevenue ? `${(latestMetrics.capexToRevenue * 100).toFixed(2)}%` : 'N/A',
         peRatio: latestMetrics.peRatio ? latestMetrics.peRatio.toFixed(2) : 'N/A',
-        psRatio: latestMetrics.priceToSalesRatio ? latestMetrics.priceToSalesRatio.toFixed(2) : 'N/A',
+        psRatio: (data.ratios_annual?.[0] || {}).priceToSalesRatio ? (data.ratios_annual[0] || {}).priceToSalesRatio.toFixed(2) : 'N/A'
     };
 }
 
@@ -863,7 +846,11 @@ export function _calculateStockFortressMetrics(data) {
         netMarginTrend: ratios.map(r => ({ year: r.calendarYear, value: r.netProfitMargin ? `${(r.netProfitMargin * 100).toFixed(2)}%` : 'N/A' })),
         debtToEquity: latestMetrics.debtToEquity ? latestMetrics.debtToEquity.toFixed(2) : 'N/A',
         currentRatio: latestRatios.currentRatio ? latestRatios.currentRatio.toFixed(2) : 'N/A',
-        roeTrend: metrics.map(m => ({ year: m.calendarYear, value: m.roe ? `${(m.roe * 100).toFixed(2)}%` : 'N/A' })), // FIX: Changed 'returnOnEquity' to 'roe'
+        // ROBUST FIX: Check for 'roe' first, then fall back to 'returnOnEquity'
+        roeTrend: metrics.map(m => {
+            const roeValue = m.roe ?? m.returnOnEquity;
+            return { year: m.calendarYear, value: roeValue ? `${(roeValue * 100).toFixed(2)}%` : 'N/A' };
+        }),
         peRatio: latestMetrics.peRatio ? latestMetrics.peRatio.toFixed(2) : 'N/A',
         pbRatio: latestRatios.priceToBookRatio ? latestRatios.priceToBookRatio.toFixed(2) : 'N/A',
     };
@@ -909,7 +896,11 @@ export function _calculateStockLinchpinMetrics(data) {
             grossProfitMargin: ratios.map(r => r.grossProfitMargin ? `${(r.grossProfitMargin * 100).toFixed(2)}%` : 'N/A'),
             netProfitMargin: ratios.map(r => r.netProfitMargin ? `${(r.netProfitMargin * 100).toFixed(2)}%` : 'N/A')
         },
-        roicTrend: metrics.map(m => m.roic ? `${(m.roic * 100).toFixed(2)}%` : 'N/A'),
+        // ROBUST FIX: Check for 'roic' first, then fall back to 'returnOnInvestedCapital'
+        roicTrend: metrics.map(m => {
+            const roicValue = m.roic ?? m.returnOnInvestedCapital;
+            return roicValue ? `${(roicValue * 100).toFixed(2)}%` : 'N/A';
+        }),
         peRatio: (metrics[metrics.length - 1] || {}).peRatio?.toFixed(2) || 'N/A',
         psRatio: (ratios[ratios.length - 1] || {}).priceToSalesRatio?.toFixed(2) || 'N/A'
     };
