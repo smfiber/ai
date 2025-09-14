@@ -1786,10 +1786,10 @@ export async function handleSaveManualFiling(ticker, formType) {
 
     openModal(CONSTANTS.MODAL_LOADING);
     const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+    loadingMessage.textContent = `Saving ${formType} text for ${ticker}...`;
 
     try {
         // Step 1: Save the filing text
-        loadingMessage.textContent = `Saving ${formType} text for ${ticker}...`;
         const dataToSave = {
             ticker,
             formType,
@@ -1800,19 +1800,11 @@ export async function handleSaveManualFiling(ticker, formType) {
         await addDoc(collection(state.db, CONSTANTS.DB_COLLECTION_MANUAL_FILINGS), dataToSave);
         await renderFilingAnalysisTab(ticker, formType); // Refresh UI to show the new saved text
 
-        // Step 2: Automatically run the analysis on the newly saved file
-        loadingMessage.textContent = `Analyzing saved ${formType} filing...`;
-        await handleFilingAnalysisRequest(ticker, formType, true); // forceNew = true
-
-        // Step 3: Automatically save the newly generated report to the database
-        loadingMessage.textContent = `Saving AI analysis to database...`;
-        await handleSaveReportToDb();
-
-        displayMessageInModal(`${formType} filing text saved, analyzed, and the report was stored successfully!`, 'info');
+        displayMessageInModal(`${formType} filing text was saved successfully.`, 'info');
 
     } catch (error) {
-        console.error(`Error during automated filing process for ${formType}:`, error);
-        displayMessageInModal(`The automated process failed: ${error.message}`, 'error');
+        console.error(`Error during filing save for ${formType}:`, error);
+        displayMessageInModal(`The save process failed: ${error.message}`, 'error');
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
