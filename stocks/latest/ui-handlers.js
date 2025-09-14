@@ -1227,6 +1227,7 @@ export async function handleInvestmentMemoRequest(symbol, forceNew = false) {
 
         const reportPromises = reportTypes.map(type => getSavedReports(symbol, type).then(reports => reports[0])); // Get only the latest
         const allLatestReports = await Promise.all(reportPromises);
+
         const foundReports = allLatestReports.filter(Boolean); // Filter out any undefined/null reports
         const missingReports = reportTypes.filter((type, index) => !allLatestReports[index]);
 
@@ -1239,8 +1240,6 @@ export async function handleInvestmentMemoRequest(symbol, forceNew = false) {
             }
         }
 
-        loadingMessage.textContent = "Synthesizing reports into a final memo...";
-        
         let allAnalysesData = foundReports.map(report => {
             const reportTitle = report.content.match(/#\s*(.*)/)?.[1] || report.reportType;
             return `--- REPORT: ${reportTitle} ---\n\n${report.content}\n\n`;
@@ -1270,6 +1269,7 @@ export async function handleInvestmentMemoRequest(symbol, forceNew = false) {
         loadingMessage.textContent = "Adding final flair...";
         const flairPrompt = `This final pass is about elevating the article from "correct" to "compelling." Is the intro boring? Is the conclusion weak? Is the language engaging? Rewrite the introduction to be more engaging. Strengthen the conclusion. Replace basic words with more dynamic ones. Return only the final, polished article.\n\nARTICLE:\n${flowedDraft}`;
         const memoContent = await callGeminiApi(flairPrompt);
+        // --- End: Added Refinement Steps for Memo ---
         
         contentContainer.dataset.currentPrompt = prompt;
         contentContainer.dataset.rawMarkdown = memoContent;
@@ -1295,15 +1295,16 @@ export async function handleGarpValidationRequest(symbol, forceNew = false) {
     statusContainer.classList.add('hidden');
 
     try {
-        const savedReports = await getSavedReports(symbol, 'GarpValidation');
+        const reportType = 'GarpValidation';
+        const savedReports = await getSavedReports(symbol, reportType);
+        const promptConfig = promptMap[reportType];
 
         if (savedReports.length > 0 && !forceNew) {
             const latestReport = savedReports[0];
             displayReport(contentContainer, latestReport.content, latestReport.prompt);
             contentContainer.dataset.currentPrompt = latestReport.prompt || '';
             contentContainer.dataset.rawMarkdown = latestReport.content;
-            const promptConfig = promptMap['GarpValidation'];
-            updateReportStatus(statusContainer, savedReports, latestReport.id, { symbol, reportType: 'GarpValidation', promptConfig });
+            updateReportStatus(statusContainer, savedReports, latestReport.id, { symbol, reportType, promptConfig });
             return;
         }
 
@@ -1321,8 +1322,6 @@ export async function handleGarpValidationRequest(symbol, forceNew = false) {
             throw new Error(`Please generate and save the following required reports first: ${missingReports.join(', ')}`);
         }
 
-        loadingMessage.textContent = "Synthesizing reports into a GARP Validation Report...";
-
         let allAnalysesData = latestReports.map(report => {
             const reportTitle = report.content.match(/#\s*(.*)/)?.[1] || report.reportType;
             return `--- REPORT: ${reportTitle} ---\n\n${report.content}\n\n`;
@@ -1337,13 +1336,27 @@ export async function handleGarpValidationRequest(symbol, forceNew = false) {
             .replace(/{tickerSymbol}/g, symbol)
             .replace('{allAnalysesData}', allAnalysesData);
 
-        const validationContent = await generatePolishedArticle(prompt, loadingMessage);
+        // --- Start: Added Refinement Steps for GARP Validation ---
+        loadingMessage.textContent = "AI is drafting the GARP report...";
+        const draft = await callGeminiApi(prompt);
+
+        loadingMessage.textContent = "Refining focus...";
+        const focusPrompt = `Your first pass is to ensure the article is doing exactly what you asked for in the original prompt. Reread the original prompt below, then read your draft. Trim anything that doesn't belong and add anything that's missing. Is the main point clear? Did it miss anything? Did it add fluff? Return only the improved article.\n\nORIGINAL PROMPT:\n${prompt}\n\nDRAFT:\n${draft}`;
+        const focusedDraft = await callGeminiApi(focusPrompt);
+
+        loadingMessage.textContent = "Improving flow...";
+        const flowPrompt = `This pass is all about the reader's experience. Read the article out loud to catch awkward phrasing. Are the transitions smooth? Is the order logical? Are any sentences too long or clumsy? Return only the improved article.\n\nARTICLE:\n${focusedDraft}`;
+        const flowedDraft = await callGeminiApi(flowPrompt);
+
+        loadingMessage.textContent = "Adding final flair...";
+        const flairPrompt = `This final pass is about elevating the article from "correct" to "compelling." Is the intro boring? Is the conclusion weak? Is the language engaging? Rewrite the introduction to be more engaging. Strengthen the conclusion. Replace basic words with more dynamic ones. Return only the final, polished article.\n\nARTICLE:\n${flowedDraft}`;
+        const validationContent = await callGeminiApi(flairPrompt);
+        // --- End: Added Refinement Steps for GARP Validation ---
         
         contentContainer.dataset.currentPrompt = prompt;
         contentContainer.dataset.rawMarkdown = validationContent;
         displayReport(contentContainer, validationContent, prompt);
         
-        const promptConfig = promptMap['GarpValidation'];
         updateReportStatus(statusContainer, [], null, { symbol, reportType: 'GarpValidation', promptConfig });
 
     } catch (error) {
