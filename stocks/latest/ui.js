@@ -6,11 +6,6 @@ import { handleResearchSubmit, handleSaveStock, handleDeleteStock, handleRefresh
 // --- PROMPT MAPPING ---
 // The main promptMap is now imported directly from config.js
 
-// Map specific AI analysis types to the FMP endpoints they require.
-const ANALYSIS_REQUIREMENTS = {
-    'ManagementScorecard': ['executive_compensation']
-};
-
 // --- DYNAMIC TOOLTIPS ---
 function initializeTooltips() {
     let tooltipElement;
