@@ -508,8 +508,8 @@ export function _calculateGrowthOutlookMetrics(data) {
             evToSalesRatio: latestRatios.enterpriseValueMultiple?.toFixed(2) || 'N/A' // Note: This is EV/EBITDA, not EV/Sales. Using what's available.
         },
         reinvestment: {
-            rdToRevenue: latestMetrics[latestMetrics.length-1]?.researchAndDevelopementToRevenue ? `${(latestMetrics[latestMetrics.length-1]?.researchAndDevelopementToRevenue * 100).toFixed(2)}%` : 'N/A',
-            capexToRevenue: latestMetrics[latestMetrics.length-1]?.capexToRevenue ? `${(latestMetrics[latestMetrics.length-1]?.capexToRevenue * 100).toFixed(2)}%` : 'N/A'
+            rdToRevenue: latestMetrics.researchAndDevelopmentToRevenue ? `${(latestMetrics.researchAndDevelopmentToRevenue * 100).toFixed(2)}%` : 'N/A',
+            capexToRevenue: latestMetrics.capexToRevenue ? `${(latestMetrics.capexToRevenue * 100).toFixed(2)}%` : 'N/A'
         },
         analystView: {
             grades: grades.map(g => ({ date: g.date, company: g.gradingCompany, action: g.action, from: g.previousGrade, to: g.newGrade })),
