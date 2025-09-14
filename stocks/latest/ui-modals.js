@@ -1,3 +1,163 @@
+import { CONSTANTS, state, ANALYSIS_ICONS } from './config.js';
+import { getFmpStockData, getGroupedFmpData } from './api.js';
+import { renderValuationHealthDashboard, renderThesisTracker } from './ui-render.js';
+import { getDocs, query, collection, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+// --- GENERIC MODAL HELPERS (RESTORED) ---
+
+/**
+ * Opens a modal dialog by its ID.
+ * @param {string} modalId The ID of the modal element to open.
+ */
+export function openModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.classList.add(CONSTANTS.CLASS_MODAL_OPEN);
+        document.body.classList.add(CONSTANTS.CLASS_BODY_MODAL_OPEN);
+    }
+}
+
+/**
+ * Closes a modal dialog by its ID.
+ * @param {string} modalId The ID of the modal element to close.
+ */
+export function closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.classList.remove(CONSTANTS.CLASS_MODAL_OPEN);
+        // Only remove the body class if no other modals are open
+        const anyModalOpen = document.querySelector('.modal.is-open');
+        if (!anyModalOpen) {
+            document.body.classList.remove(CONSTANTS.CLASS_BODY_MODAL_OPEN);
+        }
+    }
+}
+
+/**
+ * Displays a temporary message in a dedicated message modal.
+ * @param {string} message The message to display.
+ * @param {string} type The type of message ('info', 'warning', 'error').
+ * @param {number} duration The time in milliseconds before the modal auto-closes.
+ */
+export function displayMessageInModal(message, type = 'info', duration = 4000) {
+    const modal = document.getElementById(CONSTANTS.MODAL_MESSAGE);
+    const content = modal.querySelector('.modal-content');
+    if (!content) return;
+
+    const typeClasses = {
+        info: 'bg-blue-100 border-blue-500 text-blue-700',
+        warning: 'bg-yellow-100 border-yellow-500 text-yellow-700',
+        error: 'bg-red-100 border-red-500 text-red-700',
+    };
+
+    content.innerHTML = `<div class="p-6 rounded-lg border-l-4 ${typeClasses[type] || typeClasses.info}" role="alert">
+                           <p class="font-bold">${type.charAt(0).toUpperCase() + type.slice(1)}</p>
+                           <p>${message}</p>
+                         </div>`;
+    openModal(CONSTANTS.MODAL_MESSAGE);
+    setTimeout(() => closeModal(CONSTANTS.MODAL_MESSAGE), duration);
+}
+
+/**
+ * Opens a confirmation dialog with a specific action.
+ * @param {string} title The title for the confirmation dialog.
+ * @param {string} message The message/question to ask the user.
+ * @param {function} onConfirm A callback function to execute if the user confirms.
+ */
+export function openConfirmationModal(title, message, onConfirm) {
+    document.getElementById('confirmation-title').textContent = title;
+    document.getElementById('confirmation-message').textContent = message;
+
+    const confirmButton = document.getElementById('confirm-button');
+    // Clone and replace the button to remove old event listeners
+    const newConfirmButton = confirmButton.cloneNode(true);
+    confirmButton.parentNode.replaceChild(newConfirmButton, confirmButton);
+
+    newConfirmButton.addEventListener('click', () => {
+        closeModal(CONSTANTS.MODAL_CONFIRMATION);
+        onConfirm();
+    }, { once: true });
+
+    openModal(CONSTANTS.MODAL_CONFIRMATION);
+}
+
+/**
+ * Opens the "Manage Stock" modal and pre-populates its form fields.
+ * @param {object} stockData The data for the stock to be managed.
+ */
+export function openManageStockModal(stockData) {
+    const form = document.getElementById('manage-stock-form');
+    form.reset();
+
+    document.getElementById('manage-stock-original-ticker').value = stockData.ticker || '';
+    document.getElementById('manage-stock-ticker').value = stockData.ticker || '';
+    document.getElementById('manage-stock-name').value = stockData.companyName || '';
+    document.getElementById('manage-stock-exchange').value = stockData.exchange || '';
+    document.getElementById('manage-stock-sector').value = stockData.sector || 'N/A';
+    document.getElementById('manage-stock-industry').value = stockData.industry || 'N/A';
+    document.getElementById('manage-stock-status').value = stockData.status || 'Watchlist';
+    
+    const deleteButton = document.getElementById('delete-stock-button');
+    deleteButton.style.display = stockData.isEditMode ? 'block' : 'none';
+
+    openModal(CONSTANTS.MODAL_MANAGE_STOCK);
+}
+
+/**
+ * Opens the "Portfolio & Watchlist Manager" modal.
+ */
+export function openPortfolioManagerModal() {
+    openModal(CONSTANTS.MODAL_PORTFOLIO_MANAGER);
+}
+
+/**
+ * Opens the "View FMP Data" modal.
+ * @param {string} symbol The stock ticker symbol.
+ */
+export function openViewFmpDataModal(symbol) {
+    openModal(CONSTANTS.MODAL_VIEW_FMP_DATA);
+}
+
+/**
+ * Opens the "Manage FMP Endpoints" modal.
+ */
+export function openManageFmpEndpointsModal() {
+    openModal(CONSTANTS.MODAL_MANAGE_FMP_ENDPOINTS);
+}
+
+/**
+ * Opens the "Manage Broad API Endpoints" modal.
+ */
+export function openManageBroadEndpointsModal() {
+    openModal(CONSTANTS.MODAL_MANAGE_BROAD_ENDPOINTS);
+}
+
+/**
+ * Opens a modal displaying a list of stocks.
+ * @param {string} listType The type of list to display (e.g., 'Portfolio', 'Watchlist').
+ */
+export function openStockListModal(listType) {
+    openModal(CONSTANTS.MODAL_STOCK_LIST);
+}
+
+/**
+ * Opens the "Session Log" modal.
+ */
+export function openSessionLogModal() {
+    openModal(CONSTANTS.MODAL_SESSION_LOG);
+}
+
+/**
+ * Opens the "Thesis Tracker" modal.
+ * @param {string} ticker The stock ticker symbol.
+ */
+export function openThesisTrackerModal(ticker) {
+    openModal('thesisTrackerModal');
+}
+
+
+// --- SPECIFIC, COMPLEX MODAL CONTROLLERS ---
+
 export async function openRawDataViewer(ticker) {
     const modalId = 'rawDataViewerModal';
     openModal(modalId);
