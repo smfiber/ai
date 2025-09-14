@@ -1,239 +1,3 @@
-import { CONSTANTS, state, promptMap, ANALYSIS_ICONS } from './config.js';
-import { getFmpStockData, getGroupedFmpData } from './api.js';
-import { getDocs, collection, query, limit, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { renderPortfolioManagerList, renderFmpEndpointsList, renderBroadEndpointsList, _renderGroupedStockList, renderValuationHealthDashboard, renderThesisTracker, renderSecFilings, displayReport, updateReportStatus } from './ui-render.js';
-import { handleAnalysisRequest, handleInvestmentMemoRequest, handleRefreshFmpData, handleGarpValidationRequest } from './ui-handlers.js';
-
-// --- MODAL HELPERS ---
-
-export function openModal(modalId) {
-    const modal = document.getElementById(modalId);
-    if(modal) {
-        document.body.classList.add(CONSTANTS.CLASS_BODY_MODAL_OPEN);
-        modal.classList.add(CONSTANTS.CLASS_MODAL_OPEN);
-    }
-}
-
-export function closeModal(modalId) {
-    const modal = document.getElementById(modalId);
-    if(modal) {
-        modal.classList.remove(CONSTANTS.CLASS_MODAL_OPEN);
-        if (document.querySelectorAll('.modal.is-open').length === 0) {
-             document.body.classList.remove(CONSTANTS.CLASS_BODY_MODAL_OPEN);
-        }
-    }
-}
-
-export function displayMessageInModal(message, type = 'info') {
-    const modalId = CONSTANTS.MODAL_MESSAGE;
-    const modal = document.getElementById(modalId);
-    const modalContent = modal ? modal.querySelector('.modal-content') : null;
-    if (!modal || !modalContent) return;
-
-    const card = document.createElement('div');
-    card.className = 'bg-white rounded-2xl shadow-lg border border-gray-200 p-8 w-full max-w-sm m-4 text-center';
-    const titleEl = document.createElement('h2');
-    titleEl.className = 'text-2xl font-bold mb-4';
-    const contentEl = document.createElement('p');
-    contentEl.className = 'mb-6 text-gray-500 whitespace-pre-wrap';
-    contentEl.textContent = message;
-    const okButton = document.createElement('button');
-    okButton.textContent = 'OK';
-    okButton.className = 'bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-5 rounded-lg shadow-md transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-600 w-full';
-    okButton.addEventListener('click', () => closeModal(modalId));
-
-    switch (type) {
-        case 'error': titleEl.textContent = 'Error!'; titleEl.classList.add('text-red-600'); break;
-        case 'warning': titleEl.textContent = 'Warning!'; titleEl.classList.add('text-yellow-600'); break;
-        default: titleEl.textContent = 'Info'; titleEl.classList.add('text-gray-800');
-    }
-
-    card.append(titleEl, contentEl, okButton);
-    modalContent.innerHTML = '';
-    modalContent.appendChild(card);
-    openModal(modalId);
-}
-
-export function openConfirmationModal(title, message, onConfirm) {
-    const modalId = CONSTANTS.MODAL_CONFIRMATION;
-    const modal = document.getElementById(modalId);
-    if (!modal) return;
-    modal.querySelector('#confirmation-title').textContent = title;
-    modal.querySelector('#confirmation-message').textContent = message;
-    const confirmBtn = modal.querySelector('#confirm-button');
-    const newConfirmBtn = confirmBtn.cloneNode(true);
-    confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
-    newConfirmBtn.addEventListener('click', () => {
-        onConfirm();
-        closeModal(modalId);
-    });
-    openModal(modalId);
-}
-
-// --- SESSION LOG MODAL ---
-export function openSessionLogModal() {
-    const contentContainer = document.getElementById('session-log-content');
-    if (!contentContainer) return;
-
-    if (state.sessionLog.length === 0) {
-        contentContainer.innerHTML = '<p class="text-center text-gray-500 py-8">No AI interactions have been logged in this session yet.</p>';
-    } else {
-        const logHtml = state.sessionLog.slice().reverse().map(log => {
-            const isPrompt = log.type === 'prompt';
-            const headerBg = isPrompt ? 'bg-indigo-100' : 'bg-emerald-100';
-            const headerText = isPrompt ? 'text-indigo-800' : 'text-emerald-800';
-            const icon = isPrompt 
-                ? `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>`
-                : `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>`;
-
-            return `
-                <div class="border rounded-lg bg-white overflow-hidden">
-                    <div class="p-3 ${headerBg} ${headerText} font-semibold text-sm flex items-center justify-between">
-                        <div class="flex items-center">
-                            ${icon}
-                            <span>${isPrompt ? 'Prompt Sent' : 'AI Response Received'}</span>
-                        </div>
-                        <span class="font-mono text-xs">${log.timestamp.toLocaleTimeString()}</span>
-                    </div>
-                    <pre class="text-xs whitespace-pre-wrap break-all bg-gray-900 text-white p-4">${log.content}</pre>
-                </div>
-            `;
-        }).join('');
-        contentContainer.innerHTML = logHtml;
-    }
-
-    openModal(CONSTANTS.MODAL_SESSION_LOG);
-}
-
-export async function openStockListModal(listType) {
-    const modalId = CONSTANTS.MODAL_STOCK_LIST;
-    const modal = document.getElementById(modalId);
-    if (!modal) return;
-
-    openModal(CONSTANTS.MODAL_LOADING);
-    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Loading ${listType}...`;
-
-    const title = modal.querySelector('#stock-list-modal-title');
-    const container = modal.querySelector('#stock-list-modal-content');
-    title.textContent = `My ${listType}`;
-    container.innerHTML = '';
-
-    try {
-        const stocksToFetch = state.portfolioCache.filter(s => s.status === listType);
-        if (stocksToFetch.length === 0) {
-            container.innerHTML = `<p class="text-center text-gray-500 py-8">No stocks in your ${listType}.</p>`;
-            openModal(modalId);
-            closeModal(CONSTANTS.MODAL_LOADING);
-            return;
-        }
-
-        const stockDataPromises = stocksToFetch.map(stock => getFmpStockData(stock.ticker));
-        const results = await Promise.allSettled(stockDataPromises);
-
-        const stocksWithData = stocksToFetch.map((stock, index) => {
-            if (results[index].status === 'fulfilled' && results[index].value) {
-                return { ...stock, fmpData: results[index].value };
-            }
-            return { ...stock, fmpData: null };
-        }).filter(stock => stock.fmpData);
-
-        await _renderGroupedStockList(container, stocksWithData, listType);
-        openModal(modalId);
-    } catch (error) {
-        console.error(`Error loading ${listType} modal:`, error);
-        displayMessageInModal(`Failed to load ${listType}: ${error.message}`, 'error');
-    } finally {
-        closeModal(CONSTANTS.MODAL_LOADING);
-    }
-}
-
-export async function openManageStockModal(stockData = {}) {
-    const form = document.getElementById('manage-stock-form');
-    form.reset();
-    
-    if (stockData.isEditMode) {
-        document.getElementById('manage-stock-modal-title').textContent = `Edit ${stockData.ticker}`;
-        document.getElementById('manage-stock-original-ticker').value = stockData.ticker;
-        document.getElementById('manage-stock-ticker').value = stockData.ticker;
-        document.getElementById('manage-stock-name').value = stockData.companyName;
-        document.getElementById('manage-stock-exchange').value = stockData.exchange;
-        document.getElementById('manage-stock-status').value = stockData.status || 'Watchlist';
-        document.getElementById('manage-stock-sector').value = stockData.sector || '';
-        document.getElementById('manage-stock-industry').value = stockData.industry || '';
-    } else {
-        document.getElementById('manage-stock-modal-title').textContent = 'Add New Stock';
-        document.getElementById('manage-stock-original-ticker').value = '';
-        document.getElementById('manage-stock-ticker').value = stockData.ticker || '';
-        document.getElementById('manage-stock-name').value = stockData.companyName || '';
-        document.getElementById('manage-stock-exchange').value = stockData.exchange || '';
-        document.getElementById('manage-stock-status').value = 'Watchlist';
-        document.getElementById('manage-stock-sector').value = stockData.sector || '';
-        document.getElementById('manage-stock-industry').value = stockData.industry || '';
-    }
-    openModal(CONSTANTS.MODAL_MANAGE_STOCK);
-}
-
-export function openPortfolioManagerModal() {
-    renderPortfolioManagerList();
-    openModal(CONSTANTS.MODAL_PORTFOLIO_MANAGER);
-}
-
-export async function openViewFmpDataModal(symbol) {
-    openModal(CONSTANTS.MODAL_LOADING);
-    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Loading FMP data for ${symbol}...`;
-    
-    const contentContainer = document.getElementById('view-fmp-data-content');
-    contentContainer.innerHTML = '';
-
-    try {
-        const endpointsSnapshot = await getDocs(collection(state.db, CONSTANTS.DB_COLLECTION_FMP_ENDPOINTS));
-        const endpointNames = {};
-        endpointsSnapshot.forEach(doc => {
-            endpointNames[doc.id] = doc.data().name || 'Unnamed Endpoint';
-        });
-
-        const fmpCacheRef = collection(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, symbol, 'endpoints');
-        const fmpCacheSnapshot = await getDocs(fmpCacheRef);
-
-        if (fmpCacheSnapshot.empty) {
-            contentContainer.innerHTML = '<p class="text-center text-gray-500 py-8">No FMP data has been cached for this stock yet. Use the "Refresh FMP" button first.</p>';
-        } else {
-            const fmpData = fmpCacheSnapshot.docs.map(doc => ({
-                name: endpointNames[doc.id] || `Unknown (${doc.id})`,
-                ...doc.data()
-            })).sort((a, b) => a.name.localeCompare(b.name));
-
-            const html = fmpData.map(item => `
-                <div>
-                    <h3 class="text-lg font-bold text-gray-800">${item.name}</h3>
-                    <p class="text-xs text-gray-500 mb-2">Cached On: ${item.cachedAt.toDate().toLocaleString()}</p>
-                    <pre class="text-xs whitespace-pre-wrap break-all bg-white p-4 rounded-lg border">${JSON.stringify(item.data, null, 2)}</pre>
-                </div>
-            `).join('');
-            contentContainer.innerHTML = html;
-        }
-
-        document.getElementById('view-fmp-data-modal-title').textContent = `Cached FMP Data for ${symbol}`;
-        openModal(CONSTANTS.MODAL_VIEW_FMP_DATA);
-
-    } catch (error) {
-        console.error("Error viewing FMP data:", error);
-        displayMessageInModal(`Could not display FMP data: ${error.message}`, 'error');
-    } finally {
-        closeModal(CONSTANTS.MODAL_LOADING);
-    }
-}
-
-export async function openManageFmpEndpointsModal() {
-    await renderFmpEndpointsList();
-    openModal(CONSTANTS.MODAL_MANAGE_FMP_ENDPOINTS);
-}
-
-export async function openManageBroadEndpointsModal() {
-    await renderBroadEndpointsList();
-    openModal(CONSTANTS.MODAL_MANAGE_BROAD_ENDPOINTS);
-}
-
 export async function openRawDataViewer(ticker) {
     const modalId = 'rawDataViewerModal';
     openModal(modalId);
@@ -283,7 +47,6 @@ export async function openRawDataViewer(ticker) {
         const form10k = tenKTab.querySelector('#manual-10k-form');
         if (form10k) form10k.reset();
     }
-    // --- ADDED THIS BLOCK TO FIX THE BUG ---
     const tenQTab = document.getElementById('form-10q-analysis-tab');
     if (tenQTab) {
         tenQTab.querySelector('#recent-10q-list').innerHTML = '<div class="content-placeholder text-center text-gray-500 py-8">Loading...</div>';
@@ -294,7 +57,6 @@ export async function openRawDataViewer(ticker) {
         const form10q = tenQTab.querySelector('#manual-10q-form');
         if (form10q) form10q.reset();
     }
-    // --- END OF FIX ---
 
     // Reset tabs to default state
     document.querySelectorAll('#rawDataViewerModal .tab-content').forEach(c => c.classList.add('hidden'));
@@ -330,7 +92,6 @@ export async function openRawDataViewer(ticker) {
         let accordionHtml = '';
         if (groupedFmpData) {
             const sortedKeys = Object.keys(groupedFmpData).sort();
-
             for (const key of sortedKeys) {
                 accordionHtml += `
                     <details class="mb-2 bg-white rounded-lg border">
@@ -344,8 +105,9 @@ export async function openRawDataViewer(ticker) {
              rawDataContainer.innerHTML = '<p class="text-center text-gray-500 py-8">Could not load grouped raw data.</p>';
         }
 
+        // --- START OF UI REFACTOR ---
 
-        // Build AI buttons
+        // Build individual analysis tile buttons
         const quantButtons = [
             { reportType: 'FinancialAnalysis', text: 'Financial Analysis', tooltip: 'Deep dive into financial statements, ratios, and health.' },
             { reportType: 'UndervaluedAnalysis', text: 'Undervalued', tooltip: 'Assess if the stock is a potential bargain based on valuation metrics.' },
@@ -354,7 +116,6 @@ export async function openRawDataViewer(ticker) {
             { reportType: 'RiskAssessment', text: 'Risk Assessment', tooltip: 'Identifies potential financial, market, and business risks.' },
             { reportType: 'BullVsBear', text: 'Bull vs. Bear', tooltip: 'Presents both the positive and negative investment arguments.' },
         ];
-
         const narrativeButtons = [
             { reportType: 'StockFortress', text: 'The Fortress', tooltip: 'Is this a resilient, all-weather business with a rock-solid balance sheet?' },
             { reportType: 'StockDisruptor', text: 'The Disruptor', tooltip: 'Is this a high-growth innovator with potential to redefine its industry?' },
@@ -362,7 +123,6 @@ export async function openRawDataViewer(ticker) {
             { reportType: 'StockLinchpin', text: 'The Linchpin', tooltip: 'Does this company control a vital, irreplaceable choke point in its industry?' },
             { reportType: 'StockUntouchables', text: 'The Untouchables', tooltip: 'Analyzes the power of a "cult" brand and its translation to durable profits.' },
         ];
-
         const specializedButtons = [
              { reportType: 'CapitalAllocators', text: 'Capital Allocators', tooltip: 'Assesses management\'s skill in deploying capital.' },
              { reportType: 'GrowthOutlook', text: 'Growth Outlook', tooltip: 'Analyzes the company\'s future growth potential.' },
@@ -383,52 +143,80 @@ export async function openRawDataViewer(ticker) {
         const narrativeHtml = buildButtonHtml(narrativeButtons);
         const specializedHtml = buildButtonHtml(specializedButtons);
 
-        const tileContainer = `
-            <div class="flex-grow space-y-4">
-                 <h3 class="text-sm font-bold text-gray-500 uppercase text-center">Quantitative Analysis</h3>
-                 <div class="flex flex-wrap gap-2 justify-center">${quantHtml}</div>
-                 <h3 class="text-sm font-bold text-gray-500 uppercase pt-4 text-center">Investment Thesis & Narrative Analysis</h3>
-                 <div class="flex flex-wrap gap-2 justify-center">${narrativeHtml}</div>
-                 <h3 class="text-sm font-bold text-gray-500 uppercase pt-4 text-center">Specialized Analysis</h3>
-                 <div class="flex flex-wrap gap-2 justify-center">${specializedHtml}</div>
-            </div>
-        `;
+        // Define the main workflow buttons
+        const peerAnalysisBtn = `
+            <button data-symbol="${ticker}" data-report-type="CompetitiveLandscape" class="ai-analysis-button bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg flex items-center justify-center gap-2 transition-all duration-200 hover:shadow-lg text-base" data-tooltip="How does this company stack up against its main competitors?">
+                ${ANALYSIS_ICONS['CompetitiveLandscape']}
+                Run Peer Analysis
+            </button>`;
+            
+        const generateAllBtn = `
+            <button data-symbol="${ticker}" id="generate-all-reports-button" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg flex items-center justify-center gap-2 transition-all duration-200 hover:shadow-lg text-base" data-tooltip="Generates all 10 core analysis reports and saves them to the database in a single, efficient batch.">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m.75 12l3 3m0 0 3-3m-3 3v-6m-1.5-9H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" /></svg>
+                Generate All Deep-Dive Reports
+            </button>`;
 
-        const actionButtonContainer = `
-            <div class="flex flex-col gap-4 pl-6 ml-6 border-l border-gray-200" style="width: 240px;">
-                <button data-symbol="${ticker}" data-report-type="CompetitiveLandscape" class="ai-analysis-button relative w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-all duration-200 hover:shadow-lg" data-tooltip="How does this company stack up against its main competitors?">
-                    <div class="absolute top-2 left-2 w-6 h-6 rounded-full bg-white/20 text-white flex items-center justify-center font-bold text-sm">1</div>
-                    ${ANALYSIS_ICONS['CompetitiveLandscape']}
-                    Peer Analysis
-                </button>
-                <button data-symbol="${ticker}" id="generate-all-reports-button" class="relative w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-all duration-200 hover:shadow-lg" data-tooltip="Generates all 10 core analysis reports and saves them to the database in a single, efficient batch.">
-                    <div class="absolute top-2 left-2 w-6 h-6 rounded-full bg-white/20 text-white flex items-center justify-center font-bold text-sm">2</div>
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m.75 12l3 3m0 0 3-3m-3 3v-6m-1.5-9H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" /></svg>
-                    Generate All Reports
-                </button>
-                <button data-symbol="${ticker}" id="garp-validation-button" class="relative w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-all duration-200 hover:shadow-lg" data-tooltip="Synthesizes GARP, Financial, and Risk reports into a final verdict. Requires these 3 analyses to be saved first.">
-                    <div class="absolute top-2 left-2 w-6 h-6 rounded-full bg-white/20 text-white flex items-center justify-center font-bold text-sm">3</div>
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                    </svg>
-                    GARP Validation Report
-                </button>
-                <button data-symbol="${ticker}" id="investment-memo-button" class="relative w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-all duration-200 hover:shadow-lg" data-tooltip="Synthesizes all other reports into a final verdict. Requires all other analyses to be saved first.">
-                    <div class="absolute top-2 left-2 w-6 h-6 rounded-full bg-white/20 text-white flex items-center justify-center font-bold text-sm">4</div>
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                    Generate Investment Memo
-                </button>
-            </div>
-        `;
+        const garpValidationBtn = `
+            <button data-symbol="${ticker}" id="garp-validation-button" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg flex items-center justify-center gap-2 transition-all duration-200 hover:shadow-lg text-base" data-tooltip="Synthesizes GARP, Financial, and Risk reports into a final verdict. Requires these 3 analyses to be saved first.">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+                GARP Validation Report
+            </button>`;
+            
+        const investmentMemoBtn = `
+            <button data-symbol="${ticker}" id="investment-memo-button" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg flex items-center justify-center gap-2 transition-all duration-200 hover:shadow-lg text-base" data-tooltip="Synthesizes all other reports into a final verdict. Requires all other analyses to be saved first.">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                Generate Investment Memo
+            </button>`;
 
+        // Assemble the new single-column guided workflow layout
         aiButtonsContainer.innerHTML = `
-            <div class="flex items-start">
-                ${tileContainer}
-                ${actionButtonContainer}
+            <div class="space-y-10">
+                <div>
+                    <div class="relative text-center mb-4">
+                        <span class="absolute inset-x-0 top-1/2 h-px bg-gray-200" aria-hidden="true"></span>
+                        <span class="relative bg-white px-4 text-sm font-bold text-gray-500 uppercase">Step 1: Start with the Competitive Landscape</span>
+                    </div>
+                    <div class="flex justify-center">${peerAnalysisBtn}</div>
+                </div>
+
+                <div>
+                    <div class="relative text-center mb-6">
+                        <span class="absolute inset-x-0 top-1/2 h-px bg-gray-200" aria-hidden="true"></span>
+                        <span class="relative bg-white px-4 text-sm font-bold text-gray-500 uppercase">Step 2: Perform a Deep Dive</span>
+                    </div>
+                    <div class="flex justify-center mb-6">${generateAllBtn}</div>
+                    <p class="text-center text-sm text-gray-500 mb-4 italic">...or run individual analyses:</p>
+                    <div class="space-y-6">
+                        <div>
+                            <h3 class="text-sm font-bold text-gray-500 uppercase text-center mb-3">Quantitative Analysis</h3>
+                            <div class="flex flex-wrap gap-2 justify-center">${quantHtml}</div>
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-bold text-gray-500 uppercase text-center mb-3">Investment Thesis & Narrative Analysis</h3>
+                            <div class="flex flex-wrap gap-2 justify-center">${narrativeHtml}</div>
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-bold text-gray-500 uppercase text-center mb-3">Specialized Analysis</h3>
+                            <div class="flex flex-wrap gap-2 justify-center">${specializedHtml}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="relative text-center mb-4">
+                        <span class="absolute inset-x-0 top-1/2 h-px bg-gray-200" aria-hidden="true"></span>
+                        <span class="relative bg-white px-4 text-sm font-bold text-gray-500 uppercase">Step 3: Synthesize & Conclude</span>
+                    </div>
+                    <div class="flex flex-wrap justify-center gap-4">
+                        ${garpValidationBtn}
+                        ${investmentMemoBtn}
+                    </div>
+                </div>
             </div>
         `;
+        // --- END OF UI REFACTOR ---
 
-        // Render the new company profile section
+        // Render the company profile section
         const imageUrl = profile.image || '';
         const description = profile.description || 'No description available.';
         const exchange = profile.exchange || 'N/A';
@@ -446,22 +234,18 @@ export async function openRawDataViewer(ticker) {
         }
 
         profileHtml += `<p class="text-sm text-gray-700 mb-4">${description}</p>`;
-        
         profileHtml += `<div class="grid grid-cols-2 gap-x-4 gap-y-2 text-sm mt-4 border-t pt-3">`;
         profileHtml += `<div><p class="font-semibold text-gray-500">Exchange</p><p class="text-gray-800">${exchange}</p></div>`;
         profileHtml += `<div><p class="font-semibold text-gray-500">Sector</p><p class="text-gray-800">${sector}</p></div>`;
-
         if (filingsUrl) {
              profileHtml += `<div class="col-span-2"><p class="font-semibold text-gray-500">SEC Filings</p><a href="${filingsUrl}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:underline">${filingsUrl}</a></div>`;
         }
-        
         profileHtml += `</div></div></div>`;
         profileDisplayContainer.innerHTML = profileHtml;
         
         // Render Dashboard tab content
         renderValuationHealthDashboard(document.getElementById('valuation-health-container'), ticker, fmpData);
         renderThesisTracker(document.getElementById('thesis-tracker-container'), ticker);
-        // SEC Filings are lazy-loaded via tab click event
 
     } catch (error) {
         console.error('Error opening raw data viewer:', error);
@@ -469,21 +253,4 @@ export async function openRawDataViewer(ticker) {
         aiArticleContainer.innerHTML = `<p class="text-red-500 text-center">${error.message}</p>`;
         profileDisplayContainer.innerHTML = `<p class="text-red-500 text-center">${error.message}</p>`;
     }
-}
-
-export function openThesisTrackerModal(ticker) {
-    const modal = document.getElementById('thesisTrackerModal');
-    if (!modal) return;
-
-    const stock = state.portfolioCache.find(s => s.ticker === ticker);
-    if (!stock) {
-        displayMessageInModal(`Could not find ${ticker} in your portfolio.`, 'error');
-        return;
-    }
-
-    modal.querySelector('#thesis-tracker-ticker').value = ticker;
-    modal.querySelector('#thesis-tracker-modal-title').textContent = `Investment Thesis for ${ticker}`;
-    modal.querySelector('#thesis-tracker-content').value = stock.thesis || '';
-    
-    openModal('thesisTrackerModal');
 }
