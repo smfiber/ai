@@ -262,7 +262,7 @@ export async function openRawDataViewer(ticker) {
     document.getElementById('annual-reports-container').innerHTML = `<h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Recent Annual Reports (10-K)</h3><div class="content-placeholder text-center text-gray-500 py-8">Loading...</div>`;
     document.getElementById('quarterly-reports-container').innerHTML = `<h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Recent Quarterly Reports (10-Q)</h3><div class="content-placeholder text-center text-gray-500 py-8">Loading...</div>`;
 
-    // Reset 8-K and 10-K tabs
+    // Reset 8-K, 10-K, and 10-Q tabs
     const eightKTab = document.getElementById('form-8k-analysis-tab');
     if (eightKTab) {
         eightKTab.querySelector('#recent-8k-list').innerHTML = '<div class="content-placeholder text-center text-gray-500 py-8">Loading...</div>';
@@ -283,7 +283,18 @@ export async function openRawDataViewer(ticker) {
         const form10k = tenKTab.querySelector('#manual-10k-form');
         if (form10k) form10k.reset();
     }
-
+    // --- ADDED THIS BLOCK TO FIX THE BUG ---
+    const tenQTab = document.getElementById('form-10q-analysis-tab');
+    if (tenQTab) {
+        tenQTab.querySelector('#recent-10q-list').innerHTML = '<div class="content-placeholder text-center text-gray-500 py-8">Loading...</div>';
+        tenQTab.querySelector('#latest-saved-10q-container').innerHTML = '<div class="content-placeholder text-center text-gray-500 py-8">No filing text has been saved yet.</div>';
+        tenQTab.querySelector('#ai-article-container-10q').innerHTML = '';
+        tenQTab.querySelector('#report-status-container-10q').classList.add('hidden');
+        tenQTab.querySelector('#analyze-latest-10q-button').disabled = true;
+        const form10q = tenQTab.querySelector('#manual-10q-form');
+        if (form10q) form10q.reset();
+    }
+    // --- END OF FIX ---
 
     // Reset tabs to default state
     document.querySelectorAll('#rawDataViewerModal .tab-content').forEach(c => c.classList.add('hidden'));
@@ -350,7 +361,6 @@ export async function openRawDataViewer(ticker) {
             { reportType: 'StockPhoenix', text: 'The Phoenix', tooltip: 'Is this a fallen angel showing credible signs of a business turnaround?' },
             { reportType: 'StockLinchpin', text: 'The Linchpin', tooltip: 'Does this company control a vital, irreplaceable choke point in its industry?' },
             { reportType: 'StockUntouchables', text: 'The Untouchables', tooltip: 'Analyzes the power of a "cult" brand and its translation to durable profits.' },
-            { reportType: 'CompetitiveLandscape', text: 'Peer Analysis', tooltip: 'How does this company stack up against its main competitors?' },
         ];
 
         const specializedButtons = [
@@ -385,19 +395,28 @@ export async function openRawDataViewer(ticker) {
         `;
 
         const actionButtonContainer = `
-            <div class="flex flex-col gap-4 pl-6 ml-6 border-l border-gray-200" style="width: 240px;"> <button data-symbol="${ticker}" id="generate-all-reports-button" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-all duration-200 hover:shadow-lg" data-tooltip="Generates all 10 core analysis reports and saves them to the database in a single, efficient batch.">
+            <div class="flex flex-col gap-4 pl-6 ml-6 border-l border-gray-200" style="width: 240px;">
+                <button data-symbol="${ticker}" data-report-type="CompetitiveLandscape" class="ai-analysis-button relative w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-all duration-200 hover:shadow-lg" data-tooltip="How does this company stack up against its main competitors?">
+                    <div class="absolute top-2 left-2 w-6 h-6 rounded-full bg-white/20 text-white flex items-center justify-center font-bold text-sm">1</div>
+                    ${ANALYSIS_ICONS['CompetitiveLandscape']}
+                    Peer Analysis
+                </button>
+                <button data-symbol="${ticker}" id="generate-all-reports-button" class="relative w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-all duration-200 hover:shadow-lg" data-tooltip="Generates all 10 core analysis reports and saves them to the database in a single, efficient batch.">
+                    <div class="absolute top-2 left-2 w-6 h-6 rounded-full bg-white/20 text-white flex items-center justify-center font-bold text-sm">2</div>
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m.75 12l3 3m0 0 3-3m-3 3v-6m-1.5-9H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" /></svg>
                     Generate All Reports
                 </button>
-                <button data-symbol="${ticker}" id="investment-memo-button" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-all duration-200 hover:shadow-lg" data-tooltip="Synthesizes all other reports into a final verdict. Requires all other analyses to be saved first.">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                    Generate Investment Memo
-                </button>
-                <button data-symbol="${ticker}" id="garp-validation-button" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-all duration-200 hover:shadow-lg" data-tooltip="Synthesizes GARP, Financial, and Risk reports into a final verdict. Requires these 3 analyses to be saved first.">
+                <button data-symbol="${ticker}" id="garp-validation-button" class="relative w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-all duration-200 hover:shadow-lg" data-tooltip="Synthesizes GARP, Financial, and Risk reports into a final verdict. Requires these 3 analyses to be saved first.">
+                    <div class="absolute top-2 left-2 w-6 h-6 rounded-full bg-white/20 text-white flex items-center justify-center font-bold text-sm">3</div>
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                     </svg>
                     GARP Validation Report
+                </button>
+                <button data-symbol="${ticker}" id="investment-memo-button" class="relative w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-all duration-200 hover:shadow-lg" data-tooltip="Synthesizes all other reports into a final verdict. Requires all other analyses to be saved first.">
+                    <div class="absolute top-2 left-2 w-6 h-6 rounded-full bg-white/20 text-white flex items-center justify-center font-bold text-sm">4</div>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                    Generate Investment Memo
                 </button>
             </div>
         `;
