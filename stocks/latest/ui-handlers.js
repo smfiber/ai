@@ -1010,6 +1010,8 @@ export async function handleAnalysisRequest(symbol, reportType, promptConfig, fo
     contentContainer.innerHTML = ''; // Clear previous content
     statusContainer.classList.add('hidden');
 
+// ui-handlers.js -> inside handleAnalysisRequest function
+
     // Special handling for CompetitiveLandscape which has a different data fetching flow
     if (reportType === 'CompetitiveLandscape') {
         openModal(CONSTANTS.MODAL_LOADING);
@@ -1017,10 +1019,19 @@ export async function handleAnalysisRequest(symbol, reportType, promptConfig, fo
         try {
             loadingMessage.textContent = `Analyzing ${symbol} and its competitors...`;
 
+            // Get cached data first, but we will supplement it with fresh TTM data
             const targetData = await getFmpStockData(symbol);
             if (!targetData || !targetData.profile || !targetData.profile[0]) {
                 throw new Error(`Could not retrieve primary data for ${symbol}.`);
             }
+
+            // --- FIX: Explicitly fetch TTM data for the target company ---
+            loadingMessage.textContent = `Fetching latest TTM data for ${symbol}...`;
+            const targetKeyMetricsUrl = `https://financialmodelingprep.com/api/v3/key-metrics-ttm/${symbol}?apikey=${state.fmpApiKey}`;
+            const targetRatiosUrl = `https://financialmodelingprep.com/api/v3/ratios-ttm/${symbol}?apikey=${state.fmpApiKey}`;
+            targetData.key_metrics_ttm = await callApi(targetKeyMetricsUrl);
+            targetData.ratios_ttm = await callApi(targetRatiosUrl);
+            // --- END FIX ---
 
             const companyName = targetData.profile[0].companyName;
             loadingMessage.textContent = `Identifying competitors for ${companyName}...`;
@@ -1037,7 +1048,6 @@ export async function handleAnalysisRequest(symbol, reportType, promptConfig, fo
                     const keyMetricsUrl = `https://financialmodelingprep.com/api/v3/key-metrics-ttm/${peer.ticker}?apikey=${state.fmpApiKey}`;
                     const ratiosUrl = `https://financialmodelingprep.com/api/v3/ratios-ttm/${peer.ticker}?apikey=${state.fmpApiKey}`;
                     
-                    // Fetch data for each peer sequentially
                     const keyMetrics = await callApi(keyMetricsUrl);
                     const ratios = await callApi(ratiosUrl);
 
@@ -1047,7 +1057,6 @@ export async function handleAnalysisRequest(symbol, reportType, promptConfig, fo
                     });
                 } catch (peerError) {
                     console.warn(`Could not fetch data for competitor ${peer.ticker}:`, peerError);
-                    // Continue to the next peer even if one fails
                 }
             }
 
@@ -1076,7 +1085,6 @@ export async function handleAnalysisRequest(symbol, reportType, promptConfig, fo
         }
         return; // End execution for this special case
     }
-
 
     try {
         const savedReports = await getSavedReports(symbol, reportType);
