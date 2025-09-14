@@ -37,6 +37,12 @@ export const STARTER_SYMBOLS = [
     'VWO', 'VZ', 'WBA', 'WFC', 'WMT', 'XOM', 'ZM'
 ];
 
+// Map specific AI analysis types to the FMP endpoints they require.
+export const ANALYSIS_REQUIREMENTS = {
+    'ManagementScorecard': ['executive_compensation']
+};
+
+
 // --- Constants ---
 export const CONSTANTS = {
     // Modals
@@ -86,12 +92,6 @@ export const CONSTANTS = {
     DB_COLLECTION_BROAD_REPORTS: 'ai_broad_reports',
     // v13.8.0: New collection for screener tile interactions
     DB_COLLECTION_SCREENER_INTERACTIONS: 'screener_interactions',
-};
-
-// Maps specific AI analysis types to FMP endpoints they absolutely require.
-// This is used to prompt the user to refresh data if a special endpoint is missing.
-export const ANALYSIS_REQUIREMENTS = {
-    'ManagementScorecard': ['executive_compensation']
 };
 
 export const SECTOR_ICONS = {
