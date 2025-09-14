@@ -1218,7 +1218,7 @@ export async function handleInvestmentMemoRequest(symbol, forceNew = false) {
             'MoatAnalysis', 'DividendSafety', 'GrowthOutlook', 'RiskAssessment',
             'CapitalAllocators', 'NarrativeCatalyst',
             // Investment Thesis & Narrative Analysis
-            'StockFortress', 'StockDisruptor', 'StockPhoenix', 'StockLinchpin', 'StockUntouchables',
+            'StockFortress', 'StockDisruptor', 'StockPhoenix', 'StockLinchpin', 'StockUntouchables', 'CompetitiveLandscape',
             // Filing Analysis
             'Form8KAnalysis', 'Form10KAnalysis', 'Form10QAnalysis',
             // Synthesis Reports
