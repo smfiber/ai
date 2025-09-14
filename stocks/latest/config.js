@@ -131,7 +131,7 @@ export const FINANCIAL_NEWS_SOURCES = [
 
 export const GEMINI_COMPETITOR_PROMPT = `
 Role: You are a market intelligence analyst AI.
-Task: Identify the top 5 publicly traded, direct competitors for the company {companyName} ({tickerSymbol}).
+Task: Identify the top 10 publicly traded, direct competitors for the company {companyName} ({tickerSymbol}).
 - Focus on companies that compete directly in the same primary business segments.
 - Exclude companies that are only minor or indirect competitors.
 - Exclude private companies.
