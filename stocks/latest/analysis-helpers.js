@@ -752,27 +752,32 @@ export function _calculateGarpAnalysisMetrics(data) {
 
 export function _calculateCompetitiveLandscapeMetrics(targetData, peersData) {
     const metricsToCompare = [
-        { key: 'peRatio', name: 'P/E Ratio', source: 'key_metrics' },
-        { key: 'priceToSalesRatio', name: 'P/S Ratio', source: 'ratios' },
-        { key: 'returnOnEquity', name: 'ROE', source: 'key_metrics', isPercent: true },
-        { key: 'netProfitMargin', name: 'Net Profit Margin', source: 'ratios', isPercent: true },
-        { key: 'debtToEquity', name: 'Debt/Equity', source: 'key_metrics' }
+        { key: 'peRatio', ttmKey: 'peRatioTTM', name: 'P/E Ratio', source: 'key_metrics' },
+        { key: 'priceToSalesRatio', ttmKey: 'priceToSalesRatioTTM', name: 'P/S Ratio', source: 'ratios' },
+        { key: 'returnOnEquity', ttmKey: 'roeTTM', name: 'ROE', source: 'key_metrics', isPercent: true },
+        { key: 'netProfitMargin', ttmKey: 'netProfitMarginTTM', name: 'Net Profit Margin', source: 'ratios', isPercent: true },
+        { key: 'debtToEquity', ttmKey: 'debtToEquityTTM', name: 'Debt/Equity', source: 'key_metrics' }
     ];
 
     const getLatestMetric = (data, metricInfo) => {
-        const sourceData = metricInfo.source === 'key_metrics' 
-            ? data?.key_metrics_ttm?.[0] || data?.key_metrics_annual?.[0] 
+        const sourceData = metricInfo.source === 'key_metrics'
+            ? data?.key_metrics_ttm?.[0] || data?.key_metrics_annual?.[0]
             : data?.ratios_ttm?.[0] || data?.ratios_annual?.[0];
-        const value = sourceData ? sourceData[metricInfo.key] : null;
+
+        // Use the ttmKey for TTM data, otherwise fall back to the generic key for annual data.
+        const value = sourceData ? (sourceData[metricInfo.ttmKey] ?? sourceData[metricInfo.key]) : null;
+
         if (typeof value !== 'number') return 'N/A';
         return metricInfo.isPercent ? `${(value * 100).toFixed(2)}%` : value.toFixed(2);
     };
-    
+
     const getRawMetric = (data, metricInfo) => {
-        const sourceData = metricInfo.source === 'key_metrics' 
-            ? data?.key_metrics_ttm?.[0] || data?.key_metrics_annual?.[0] 
+        const sourceData = metricInfo.source === 'key_metrics'
+            ? data?.key_metrics_ttm?.[0] || data?.key_metrics_annual?.[0]
             : data?.ratios_ttm?.[0] || data?.ratios_annual?.[0];
-        return sourceData ? sourceData[metricInfo.key] : null;
+
+        // Use the ttmKey for TTM data, otherwise fall back to the generic key for annual data.
+        return sourceData ? (sourceData[metricInfo.ttmKey] ?? sourceData[metricInfo.key]) : null;
     };
     
     // Target Company Metrics
