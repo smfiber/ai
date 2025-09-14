@@ -1255,7 +1255,7 @@ export async function handleInvestmentMemoRequest(symbol, forceNew = false) {
             // Investment Thesis & Narrative Analysis
             'StockFortress', 'StockDisruptor', 'StockPhoenix', 'StockLinchpin', 'StockUntouchables',
             // Filing Analysis
-            'Form8KAnalysis', 'Form10KAnalysis', 'Form10QAnalysis',
+            'Form8KAnalysis', 'Form10KAnalysis',
             // Synthesis Reports
             'GarpValidation'
         ];
