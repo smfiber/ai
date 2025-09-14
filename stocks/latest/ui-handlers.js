@@ -1695,9 +1695,9 @@ export async function handleSaveToDrive(modalId) {
 
 
 export async function handleSaveManualFiling(ticker, formType) {
-    const is8K = formType === '8-K';
-    const dateInput = document.getElementById(is8K ? 'manual-8k-date' : 'manual-10k-date');
-    const contentInput = document.getElementById(is8K ? 'manual-8k-content' : 'manual-10k-content');
+    const formTypeLower = formType.toLowerCase().replace('-', ''); // Converts "10-Q" to "10q"
+    const dateInput = document.getElementById(`manual-${formTypeLower}-date`);
+    const contentInput = document.getElementById(`manual-${formTypeLower}-content`);
 
     const filingDate = dateInput.value;
     const content = contentInput.value.trim();
