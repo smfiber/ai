@@ -1,5 +1,6 @@
-import { CONSTANTS, SECTORS, SECTOR_ICONS, state, ANALYSIS_ICONS } from './config.js';
-import { callApi } from './api.js';
+// ADD _renderGroupedStockList to the export list
+import { CONSTANTS, SECTORS, SECTOR_ICONS, state, ANALYSIS_ICONS } from './config.js'; 
+import { callApi, getFmpStockData } from './api.js';
 import { getSecInsiderTrading, getSecInstitutionalOwnership, getSecMaterialEvents, getSecAnnualReports, getSecQuarterlyReports } from './sec-api.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { handleAnalysisRequest, handleBroadAnalysisRequest, handleInvestmentMemoRequest, handleGarpValidationRequest, handleFilingAnalysisRequest } from './ui-handlers.js';
@@ -308,6 +309,7 @@ export function renderPortfolioManagerList() {
     container.innerHTML = html;
 }
 
+// MAKE THIS FUNCTION EXPORTABLE
 export async function _renderGroupedStockList(container, stocksWithData, listType) {
     container.innerHTML = ''; 
     if (stocksWithData.length === 0) {
@@ -398,7 +400,7 @@ export async function renderBroadEndpointsList() {
     const container = document.getElementById('broad-endpoints-list-container');
     container.innerHTML = 'Loading endpoints...';
     try {
-        const querySnapshot = await getDocs(collection(state.db, CONSTANTS.DB_COLLECTION_BROAD_ENDPOINTS));
+        const querySnapshot = await getDocs(collection(state.db, CONSTANTS.DB_COLlection_BROAD_ENDPOINTS));
         if (querySnapshot.empty) {
             container.innerHTML = '<p class="text-center text-gray-500 py-4">No endpoints saved.</p>';
             return;
