@@ -946,9 +946,9 @@ You are a Senior Investment Analyst at a prestigious, fundamentals-driven value 
 * **Factor Weights:**
     * Business Quality: 30%
     * Financial Health: 15%
-    * Management: 15%
-    * Growth Outlook: 10%
-    * Valuation: 30%
+    * Management: 10%
+    * Growth Outlook: 25%
+    * Valuation: 20%
 * **Calculation:** \`[(Business Quality Score * 3) + (Financial Health Score * 1.5) + (Management Score * 1.5) + (Growth Score * 1) + (Valuation Score * 3)] / 10 = Final Score out of 10\`
 * **Final Score:** \`[Calculated Score / 10.0]\`
 * **Recommendation:**
