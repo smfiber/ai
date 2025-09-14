@@ -757,7 +757,6 @@ const CAPITAL_ALLOCATORS_PROMPT = `
 `.trim();
 
 // --- NEW PROMPTS (v13.2.0) ---
-
 const NARRATIVE_CATALYST_PROMPT = `
 Role: You are a forward-looking equity analyst. Your task is to analyze the provided data for {companyName} and complete the following investment checklist. You MUST address every single item.
 
@@ -1182,7 +1181,7 @@ export const promptMap = {
         prompt: FORM_10K_ANALYSIS_PROMPT,
         requires: [] // This will be based on manually provided text
     },
-    'Form10QAnalysis': { // ADD THIS BLOCK
+    'Form10QAnalysis': {
         prompt: FORM_10Q_ANALYSIS_PROMPT,
         requires: [] // This will be based on manually provided text
     },	
