@@ -1328,13 +1328,18 @@ export async function handleGenerateAllReportsRequest(symbol) {
     const reportTypes = [
         'FinancialAnalysis', 'UndervaluedAnalysis', 'GarpAnalysis', 'BullVsBear', 
         'MoatAnalysis', 'DividendSafety', 'GrowthOutlook', 'RiskAssessment', 
-        'CapitalAllocators', 'NarrativeCatalyst', 'Form8KAnalysis', 'Form10KAnalysis'
+        'CapitalAllocators', 'NarrativeCatalyst', 
+        'StockFortress', 'StockDisruptor', 'StockPhoenix', 'StockLinchpin', 'StockUntouchables',
+        'Form8KAnalysis', 'Form10KAnalysis', 'Form10QAnalysis'
     ];
     const reportDisplayNames = {
         'FinancialAnalysis': 'Financial Analysis', 'UndervaluedAnalysis': 'Undervalued Analysis', 'GarpAnalysis': 'GARP Analysis', 
         'BullVsBear': 'Bull vs. Bear', 'MoatAnalysis': 'Moat Analysis', 'DividendSafety': 'Dividend Safety', 
         'GrowthOutlook': 'Growth Outlook', 'RiskAssessment': 'Risk Assessment', 'CapitalAllocators': 'Capital Allocators', 
-        'NarrativeCatalyst': 'Narrative & Catalyst', 'Form8KAnalysis': '8-K Filing Analysis', 'Form10KAnalysis': '10-K Filing Analysis'
+        'NarrativeCatalyst': 'Narrative & Catalyst',
+        'StockFortress': 'The Fortress', 'StockDisruptor': 'The Disruptor', 'StockPhoenix': 'The Phoenix',
+        'StockLinchpin': 'The Linchpin', 'StockUntouchables': 'The Untouchables',
+        'Form8KAnalysis': '8-K Filing Analysis', 'Form10KAnalysis': '10-K Filing Analysis', 'Form10QAnalysis': '10-Q Filing Analysis'
     };
 
     const metricCalculators = {
@@ -1347,7 +1352,12 @@ export async function handleGenerateAllReportsRequest(symbol) {
         'GrowthOutlook': _calculateGrowthOutlookMetrics,
         'RiskAssessment': _calculateRiskAssessmentMetrics,
         'CapitalAllocators': _calculateCapitalAllocatorsMetrics,
-        'NarrativeCatalyst': _calculateNarrativeCatalystMetrics
+        'NarrativeCatalyst': _calculateNarrativeCatalystMetrics,
+        'StockFortress': _calculateStockFortressMetrics,
+        'StockDisruptor': _calculateStockDisruptorMetrics,
+        'StockPhoenix': _calculateStockPhoenixMetrics,
+        'StockLinchpin': _calculateStockLinchpinMetrics,
+        'StockUntouchables': _calculateStockUntouchablesMetrics
     };
 
     openModal(CONSTANTS.MODAL_LOADING);
@@ -1380,8 +1390,9 @@ export async function handleGenerateAllReportsRequest(symbol) {
 
             let prompt;
 
-            if (reportType === 'Form8KAnalysis' || reportType === 'Form10KAnalysis') {
-                const formType = reportType === 'Form8KAnalysis' ? '8-K' : '10-K';
+            if (reportType.startsWith('Form')) {
+                 const formTypeMap = { 'Form8KAnalysis': '8-K', 'Form10KAnalysis': '10-K', 'Form10QAnalysis': '10-Q' };
+                 const formType = formTypeMap[reportType];
                 const q = query(collection(state.db, CONSTANTS.DB_COLLECTION_MANUAL_FILINGS), where("ticker", "==", symbol), where("formType", "==", formType), orderBy("filingDate", "desc"), limit(1));
                 const manualFilingSnapshot = await getDocs(q);
                 
