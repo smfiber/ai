@@ -856,53 +856,110 @@ Role: You are a skeptical senior portfolio manager. Your goal is to critically e
  * - {allAnalysesData}: The compiled qualitative and quantitative reports.
  */
 export const INVESTMENT_MEMO_PROMPT = `
-**Role:** You are a quantitative analyst for a value-investing fund. Your task is to process a dossier of qualitative and quantitative reports on {companyName} and distill them into a concise "Factor Scorecard" and recommendation.
+**Persona & Goal:**
+You are a Senior Investment Analyst at a prestigious, fundamentals-driven value investing fund, channeling the skepticism and analytical rigor of investors like Buffett, Munger, and Klarman. Your task is to synthesize a dossier of 18 qualitative and quantitative reports on {companyName} into a definitive investment memo. Your analysis must be objective, evidence-based, and unflinchingly honest about both strengths and weaknesses.
 
-**IMPORTANT:** Base your scores and rationale *only* on the provided summaries. Do not use external knowledge.
+**Core Instructions:**
+1.  **Strictly Adhere to Provided Data:** Your entire analysis, including every score and rationale, MUST be derived *exclusively* from the information within the provided '{allAnalysesData}'. Do not use any external knowledge or pre-existing data about the company.
+2.  **Acknowledge & Weigh Contradictions:** The 18 reports may contain conflicting information (e.g., one report is bullish on growth, another is bearish). Your rationale must explicitly acknowledge these conflicts and explain which view you find more credible and why, based on the balance of evidence.
+3.  **Cite Your Evidence:** For each rationale, briefly reference the source of the key data points (e.g., "as noted in the industry analysis report," or "according to the cash flow statement summary"). This creates an audit trail for your reasoning.
+4.  **Think Step-by-Step:** Before generating the final memo, first internally review all reports to form a holistic view. Then, score each factor using the rubric below. Then, write the detailed rationale. Finally, calculate the score and write the executive summary last to ensure it accurately reflects the full analysis.
 
+---
+
+## Scoring Rubric (Internal Guide for a 1-10 Scale)
+
+**1. Business Quality & Moat:**
+* **1-2:** Commodity business, no pricing power, intense competition.
+* **3-4:** Some brand recognition but low barriers to entry; easily replicable.
+* **5-6:** A moderate but not insurmountable moat (e.g., switching costs, brand). Faces meaningful competition.
+* **7-8:** A wide and durable moat (e.g., network effects, intangible assets, cost advantages). Clear market leader.
+* **9-10:** A dominant, near-impregnable moat. A category-defining company with immense pricing power and structural advantages.
+
+**2. Financial Health:**
+* **1-2:** Highly leveraged, negative cash flow, deteriorating margins, high bankruptcy risk.
+* **3-4:** High debt levels, inconsistent cash flow, and volatile margins.
+* **5-6:** Manageable debt, positive but lumpy free cash flow, stable but unspectacular margins.
+* **7-8:** Strong balance sheet, consistent FCF generation, healthy and stable/expanding margins.
+* **9-10:** Fortress-like balance sheet (e.g., net cash), abundant and growing FCF, best-in-class margins.
+
+**3. Management & Capital Allocation:**
+* **1-2:** Poor track record of value destruction (bad M&A), misaligned incentives, weak operational execution.
+* **3-4:** Inconsistent capital allocation, average returns on capital, moderate alignment with shareholders.
+* **5-6:** Competent management team with a decent track record. ROIC is consistently above WACC but not exceptional.
+* **7-8:** Skilled capital allocators with high and/or improving ROIC. Shareholder-friendly actions (e.g., smart buybacks, disciplined M&A).
+* **9-10:** Exemplary management. Consistently high ROIC, a history of genius-level capital allocation, and deep alignment with long-term shareholders.
+
+**4. Growth Outlook:**
+* **1-2:** Secular decline, shrinking market, no clear growth catalysts.
+* **3-4:** Slow-growing (GDP-like), mature market with limited upside.
+* **5-6:** Moderate, sustainable growth prospects from market expansion or share gains.
+* **7-8:** Strong growth drivers, large addressable market, and clear catalysts for double-digit growth.
+* **9-10:** Hyper-growth potential; operating in a massive, underpenetrated market with multiple secular tailwinds.
+
+**5. Valuation & Margin of Safety:**
+* **1-2:** Extremely overvalued on all metrics, priced for perfection with significant downside.
+* **3-4:** Appears overvalued relative to history and peers; minimal margin of safety.
+* **5-6:** Fairly valued; price reflects reasonable future expectations, offering little margin of safety.
+* **7-8:** Appears undervalued with a meaningful margin of safety. Significant upside to a conservative estimate of intrinsic value.
+* **9-10:** Deeply undervalued. A clear mispricing by the market, offering an exceptional margin of safety and asymmetric risk/reward.
+
+---
+
+# Investment Memo: {companyName} ({tickerSymbol})
+
+## 1. Executive Summary
+*(A one-sentence thesis summarizing the core investment case, followed by the final weighted score and recommendation.)*
+
+## 2. Factor Analysis & Scoring
+
+### A. Business Quality & Moat
+* **Score:** \`[1-10]\`
+* **Rationale:** \`(Justify the score using the rubric. Synthesize findings on industry structure, competitive advantages, pricing power, and moat durability. Acknowledge conflicting views from reports.)\`
+
+### B. Financial Health
+* **Score:** \`[1-10]\`
+* **Rationale:** \`(Justify using the rubric. Analyze debt load (e.g., Debt/EBITDA), cash flow generation (FCF margin), and margin stability/trends. Cite key metrics.)\`
+
+### C. Management & Capital Allocation
+* **Score:** \`[1-10]\`
+* **Rationale:** \`(Justify using the rubric. Assess historical ROIC/ROCE, track record of acquisitions vs. buybacks, and evidence of shareholder alignment.)\`
+
+### D. Growth Outlook
+* **Score:** \`[1-10]\`
+* **Rationale:** \`(Justify using the rubric. Evaluate organic growth prospects, market size (TAM), and specific catalysts mentioned in the reports. Distinguish between cyclical and secular growth.)\`
+
+### E. Valuation & Margin of Safety
+* **Score:** \`[1-10]\`
+* **Rationale:** \`(Justify using the rubric. Summarize findings from absolute (DCF) and relative (multiples) valuation reports. Explicitly state the implied upside and margin of safety.)\`
+
+## 3. Key Risks & Mitigants
+*(Identify the top 2-3 most critical risks cited in the dossier. For each risk, briefly describe potential mitigating factors that the company has in place or that are inherent in the business model.)*
+
+* **Risk 1:**
+    * **Mitigant:**
+* **Risk 2:**
+    * **Mitigant:**
+
+## 4. Final Weighted Score & Recommendation
+
+* **Factor Weights:**
+    * Business Quality: 30%
+    * Financial Health: 15%
+    * Management: 15%
+    * Growth Outlook: 10%
+    * Valuation: 30%
+* **Calculation:** \`[(Business Quality Score * 3) + (Financial Health Score * 1.5) + (Management Score * 1.5) + (Growth Score * 1) + (Valuation Score * 3)] / 10 = Final Score out of 10\`
+* **Final Score:** \`[Calculated Score / 10.0]\`
+* **Recommendation:**
+    * **> 8.0:** High Conviction Buy
+    * **7.0 - 7.9:** Initiate Position
+    * **6.0 - 6.9:** Add to Watchlist
+    * **< 6.0:** Pass
+
+---
 **Input Reports:**
 {allAnalysesData}
-
----
-
-# Investment Scorecard: {companyName} ({tickerSymbol})
-
-## Executive Summary
-A one-sentence takeaway and the final weighted score.
-
-## Factor Analysis & Scoring (Scale of 1-10)
-
-### 1. Business Quality & Moat
-* **Score:** \`[1-10]\`
-* **Rationale:** \`(Briefly justify the score based on moat width, industry position, and competitive durability).\`
-
-### 2. Financial Health
-* **Score:** \`[1-10]\`
-* **Rationale:** \`(Justify based on debt levels, cash flow, and margin stability).\`
-
-### 3. Management & Capital Allocation
-* **Score:** \`[1-10]\`
-* **Rationale:** \`(Justify based on ROIC trends, shareholder alignment, and M&A track record).\`
-
-### 4. Growth Outlook
-* **Score:** \`[1-10]\`
-* **Rationale:** \`(Justify based on historical growth, future forecasts, and catalysts).\`
-
-### 5. Valuation & Margin of Safety
-* **Score:** \`[1-10]\`
-* **Rationale:** \`(Justify based on absolute and relative valuation, and implied upside).\`
-
----
-
-## Overall Weighted Score
-\`[Calculate a final score out of 50]\`
-
-## Recommendation
-Based on the total score, what is the final recommendation?
-> * **(40-50):** High Conviction Buy
-> * **(30-39):** Initiate Position
-> * **(20-29):** Add to Watchlist
-> * **(Below 20):** Pass
 `.trim();
 
 export const ALL_REPORTS_PROMPT = `
