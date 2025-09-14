@@ -1733,10 +1733,12 @@ export async function handleSaveManualFiling(ticker, formType) {
 }
 
 export async function handleFilingAnalysisRequest(symbol, formType, forceNew = false) {
-    const is8K = formType === '8-K';
-    const reportType = is8K ? 'Form8KAnalysis' : 'Form10KAnalysis';
-    const contentContainer = document.getElementById(is8K ? 'ai-article-container-8k' : 'ai-article-container-10k');
-    const statusContainer = document.getElementById(is8K ? 'report-status-container-8k' : 'report-status-container-10k');
+    const formTypeLower = formType.toLowerCase().replace('-', ''); // e.g., "10q"
+    const reportType = `Form${formType.replace('-', '')}Analysis`; // e.g., "Form10QAnalysis"
+    const contentContainer = document.getElementById(`ai-article-container-${formTypeLower}`);
+    const statusContainer = document.getElementById(`report-status-container-${formTypeLower}`);
+
+    //... function continues
     
     contentContainer.innerHTML = '';
     statusContainer.classList.add('hidden');
