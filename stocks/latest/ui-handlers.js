@@ -1479,7 +1479,6 @@ export async function handleSaveReportToDb() {
     } else if (activeTab === 'form-10k-analysis') {
         contentContainer = document.getElementById('ai-article-container-10k');
         reportType = 'Form10KAnalysis';
-    }
     } else if (activeTab === 'form-10q-analysis') {
         contentContainer = document.getElementById('ai-article-container-10q');
         reportType = 'Form10QAnalysis';
