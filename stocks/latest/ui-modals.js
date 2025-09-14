@@ -1,9 +1,10 @@
 import { CONSTANTS, state, ANALYSIS_ICONS } from './config.js';
 import { getFmpStockData, getGroupedFmpData } from './api.js';
-import { renderValuationHealthDashboard, renderThesisTracker } from './ui-render.js';
+// ADD THIS IMPORT to get the list rendering function
+import { renderValuationHealthDashboard, renderThesisTracker, _renderGroupedStockList } from './ui-render.js'; 
 import { getDocs, query, collection, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// --- GENERIC MODAL HELPERS (RESTORED) ---
+// --- GENERIC MODAL HELPERS ---
 
 /**
  * Opens a modal dialog by its ID.
@@ -132,12 +133,42 @@ export function openManageBroadEndpointsModal() {
     openModal(CONSTANTS.MODAL_MANAGE_BROAD_ENDPOINTS);
 }
 
+// --- REVISED FUNCTION ---
 /**
- * Opens a modal displaying a list of stocks.
+ * Opens a modal displaying a list of stocks, fetches their data, and renders the list.
  * @param {string} listType The type of list to display (e.g., 'Portfolio', 'Watchlist').
  */
-export function openStockListModal(listType) {
-    openModal(CONSTANTS.MODAL_STOCK_LIST);
+export async function openStockListModal(listType) {
+    const modalId = CONSTANTS.MODAL_STOCK_LIST;
+    const titleEl = document.getElementById('stock-list-modal-title');
+    const contentContainer = document.getElementById('stock-list-modal-content');
+
+    if (!titleEl || !contentContainer) return;
+
+    // Set title and loading state immediately
+    titleEl.textContent = listType;
+    contentContainer.innerHTML = '<div class="loader mx-auto my-8"></div>';
+    openModal(modalId);
+
+    try {
+        // Filter the cached stocks based on the list type
+        const filteredStocks = state.portfolioCache.filter(s => s.status === listType);
+
+        // Enrich the filtered stocks with their cached FMP data
+        const stocksWithData = await Promise.all(
+            filteredStocks.map(async (stock) => {
+                const fmpData = await getFmpStockData(stock.ticker);
+                return { ...stock, fmpData }; // Combine portfolio data with FMP data
+            })
+        );
+        
+        // Render the fully populated list
+        await _renderGroupedStockList(contentContainer, stocksWithData, listType);
+
+    } catch (error) {
+        console.error(`Error populating stock list for ${listType}:`, error);
+        contentContainer.innerHTML = `<p class="text-center text-red-500 p-8">Could not load stock list: ${error.message}</p>`;
+    }
 }
 
 /**
