@@ -66,7 +66,8 @@ export function _calculateUndervaluedMetrics(data) {
     const profitabilityTrend = getTrend(ratios, 'netProfitMargin', v => typeof v === 'number' ? `${(v * 100).toFixed(2)}%` : 'N/A');
 
     // 2. Financial Health
-    const roeTrend = getTrend(keyMetrics, 'returnOnEquity', v => typeof v === 'number' ? `${(v * 100).toFixed(2)}%` : 'N/A');
+    // FIX: Changed 'returnOnEquity' to 'roe' to match the API data.
+    const roeTrend = getTrend(keyMetrics, 'roe', v => typeof v === 'number' ? `${(v * 100).toFixed(2)}%` : 'N/A');
     const debtToEquity = latestMetrics.debtToEquity ? latestMetrics.debtToEquity.toFixed(2) : 'Data not available';
     
     // 3. Dividend Analysis
@@ -257,7 +258,8 @@ export function _calculateFinancialAnalysisMetrics(data) {
         grossProfitMargin: { status: getTrendStatus(ratios.map(r=>r.grossProfitMargin)) },
         operatingProfitMargin: { status: getTrendStatus(ratios.map(r=>r.operatingProfitMargin)) },
         netProfitMargin: { status: getTrendStatus(ratios.map(r=>r.netProfitMargin)) },
-        returnOnEquity: { quality: latestMetrics.returnOnEquity > 0.15 ? 'High' : (latestMetrics.returnOnEquity > 0.05 ? 'Moderate' : 'Low') }
+        // FIX: Changed 'returnOnEquity' to 'roe' to match the API data.
+        returnOnEquity: { quality: latestMetrics.roe > 0.15 ? 'High' : (latestMetrics.roe > 0.05 ? 'Moderate' : 'Low') }
     };
     
     // Health
@@ -307,6 +309,7 @@ export function _calculateFinancialAnalysisMetrics(data) {
     if (performance.revenueTrend.includes('growing')) bullCasePoints.push("Consistent or growing revenue.");
     if (cashFlow.qualityOfEarnings.includes('Strong')) bullCasePoints.push("Strong operating cash flow that exceeds net income.");
     if (health.debtToEquity.status === 'Conservative') bullCasePoints.push("A strong balance sheet with a conservative debt load.");
+    // FIX: Changed 'returnOnEquity' to 'roe' to match the API data.
     if (performance.returnOnEquity.quality === 'High') bullCasePoints.push("High return on equity, indicating efficient use of shareholder capital.");
 
     const bearCasePoints = [];
@@ -316,7 +319,8 @@ export function _calculateFinancialAnalysisMetrics(data) {
     if (health.currentRatio.status === 'a potential risk') bearCasePoints.push("Low liquidity, which could be a short-term risk.");
     
     const moatIndicator = (() => {
-        const highRoe = keyMetrics.slice(-5).every(k => k.returnOnEquity > 0.15);
+        // FIX: Changed 'returnOnEquity' to 'roe' to match the API data.
+        const highRoe = keyMetrics.slice(-5).every(k => k.roe > 0.15);
         const stableMargins = !performance.netProfitMargin.status.includes('declining');
         if (highRoe && stableMargins) return "The data, showing consistently high ROE and stable margins, suggests the presence of a strong competitive moat.";
         if (stableMargins) return "The data suggests a potential moat, indicated by stable profit margins.";
@@ -386,7 +390,8 @@ export function _calculateBullVsBearMetrics(data) {
             net_income: formatTrend(income, 'netIncome')
         },
         profitability_metrics: {
-            roe_trend: formatPercentTrend(metrics, 'returnOnEquity'),
+            // FIX: Changed 'returnOnEquity' to 'roe' to match the API data.
+            roe_trend: formatPercentTrend(metrics, 'roe'),
             net_profit_margin_trend: formatPercentTrend(ratios, 'netProfitMargin'),
             operating_margin_trend: formatPercentTrend(ratios, 'operatingProfitMargin')
         },
@@ -584,7 +589,8 @@ export function _calculateCapitalAllocatorsMetrics(data) {
     const metricsWithNormalizedKeys = metrics.map(m => ({
         ...m,
         returnOnInvestedCapital: m.returnOnInvestedCapital ?? m.roic,
-        returnOnEquity: m.returnOnEquity ?? m.returnOnEquity
+        // FIX: Changed 'returnOnEquity' to 'roe' to match the API data. Also corrected the typo.
+        returnOnEquity: m.roe ?? m.returnOnEquity
     }));
 
     const buybacksWithValuation = cashFlow.map(cf => {
@@ -857,7 +863,7 @@ export function _calculateStockFortressMetrics(data) {
         netMarginTrend: ratios.map(r => ({ year: r.calendarYear, value: r.netProfitMargin ? `${(r.netProfitMargin * 100).toFixed(2)}%` : 'N/A' })),
         debtToEquity: latestMetrics.debtToEquity ? latestMetrics.debtToEquity.toFixed(2) : 'N/A',
         currentRatio: latestRatios.currentRatio ? latestRatios.currentRatio.toFixed(2) : 'N/A',
-        roeTrend: metrics.map(m => ({ year: m.calendarYear, value: m.returnOnEquity ? `${(m.returnOnEquity * 100).toFixed(2)}%` : 'N/A' })),
+        roeTrend: metrics.map(m => ({ year: m.calendarYear, value: m.roe ? `${(m.roe * 100).toFixed(2)}%` : 'N/A' })), // FIX: Changed 'returnOnEquity' to 'roe'
         peRatio: latestMetrics.peRatio ? latestMetrics.peRatio.toFixed(2) : 'N/A',
         pbRatio: latestRatios.priceToBookRatio ? latestRatios.priceToBookRatio.toFixed(2) : 'N/A',
     };
