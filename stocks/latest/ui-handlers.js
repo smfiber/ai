@@ -1255,7 +1255,21 @@ export async function handleInvestmentMemoRequest(symbol, forceNew = false) {
             .replace(/{tickerSymbol}/g, symbol)
             .replace('{allAnalysesData}', allAnalysesData);
 
-        const memoContent = await generatePolishedArticle(prompt, loadingMessage);
+        // --- Start: Added Refinement Steps for Memo ---
+        loadingMessage.textContent = "AI is drafting the memo...";
+        const draft = await callGeminiApi(prompt);
+
+        loadingMessage.textContent = "Refining focus...";
+        const focusPrompt = `Your first pass is to ensure the article is doing exactly what you asked for in the original prompt. Reread the original prompt below, then read your draft. Trim anything that doesn't belong and add anything that's missing. Is the main point clear? Did it miss anything? Did it add fluff? Return only the improved article.\n\nORIGINAL PROMPT:\n${prompt}\n\nDRAFT:\n${draft}`;
+        const focusedDraft = await callGeminiApi(focusPrompt);
+
+        loadingMessage.textContent = "Improving flow...";
+        const flowPrompt = `This pass is all about the reader's experience. Read the article out loud to catch awkward phrasing. Are the transitions smooth? Is the order logical? Are any sentences too long or clumsy? Return only the improved article.\n\nARTICLE:\n${focusedDraft}`;
+        const flowedDraft = await callGeminiApi(flowPrompt);
+
+        loadingMessage.textContent = "Adding final flair...";
+        const flairPrompt = `This final pass is about elevating the article from "correct" to "compelling." Is the intro boring? Is the conclusion weak? Is the language engaging? Rewrite the introduction to be more engaging. Strengthen the conclusion. Replace basic words with more dynamic ones. Return only the final, polished article.\n\nARTICLE:\n${flowedDraft}`;
+        const memoContent = await callGeminiApi(flairPrompt);
         
         contentContainer.dataset.currentPrompt = prompt;
         contentContainer.dataset.rawMarkdown = memoContent;
