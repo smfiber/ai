@@ -1566,10 +1566,12 @@ export async function handleSaveReportToDb() {
         const savedReports = await getSavedReports(symbol, reportType);
         const latestReport = savedReports[0];
         
-        let statusContainer, promptConfig;
+        let statusContainer;
+        // The promptConfig is the same for all filing reports, so we can get it directly.
+        const promptConfig = promptMap[reportType]; 
+
          if (activeTab === 'ai-analysis') {
             statusContainer = document.getElementById('report-status-container-ai');
-            promptConfig = promptMap[reportType];
         } else if (activeTab === 'form-8k-analysis') {
             statusContainer = document.getElementById('report-status-container-8k');
         } else if (activeTab === 'form-10k-analysis') {
