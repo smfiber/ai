@@ -322,33 +322,42 @@ export function setupEventListeners() {
             }
             return; 
         }
-
-        if (target.matches('.tab-button')) {
-            const tabId = target.dataset.tab;
-            document.querySelectorAll('#rawDataViewerModal .tab-content').forEach(c => c.classList.add('hidden'));
-            document.querySelectorAll('#rawDataViewerModal .tab-button').forEach(b => b.classList.remove('active'));
-            document.getElementById(`${tabId}-tab`).classList.remove('hidden');
-            target.classList.add('active');
-
-            // Lazy-load data on first click
-            const ticker = document.getElementById('rawDataViewerModal').dataset.activeTicker;
-            if (!ticker) return;
-
-            if (tabId === 'sec-filings' && !target.dataset.loaded) {
-                renderSecFilings(ticker);
-                target.dataset.loaded = 'true';
-            } else if (tabId === 'form-8k-analysis' && !target.dataset.loaded) {
-                renderFilingAnalysisTab(ticker, '8-K');
-                target.dataset.loaded = 'true';
-            } else if (tabId === 'form-10k-analysis' && !target.dataset.loaded) {
-                renderFilingAnalysisTab(ticker, '10-K');
-                target.dataset.loaded = 'true';
-            } else if (tabId === 'form-10q-analysis' && !target.dataset.loaded) {
-                renderFilingAnalysisTab(ticker, '10-Q');
-                target.dataset.loaded = 'true';
-            }
-            return;
-        }
+		
+		if (target.matches('.tab-button')) {
+		    const tabId = target.dataset.tab;
+		    
+		    // --- START OF FIX ---
+		    // Find the main scrollable container within the modal and reset its scroll position
+		    const scrollContainer = analysisModal.querySelector('.flex-grow.overflow-y-auto');
+		    if (scrollContainer) {
+		        scrollContainer.scrollTop = 0;
+		    }
+		    // --- END OF FIX ---
+		
+		    document.querySelectorAll('#rawDataViewerModal .tab-content').forEach(c => c.classList.add('hidden'));
+		    document.querySelectorAll('#rawDataViewerModal .tab-button').forEach(b => b.classList.remove('active'));
+		    document.getElementById(`${tabId}-tab`).classList.remove('hidden');
+		    target.classList.add('active');
+		
+		    // Lazy-load data on first click
+		    const ticker = document.getElementById('rawDataViewerModal').dataset.activeTicker;
+		    if (!ticker) return;
+		
+		    if (tabId === 'sec-filings' && !target.dataset.loaded) {
+		        renderSecFilings(ticker);
+		        target.dataset.loaded = 'true';
+		    } else if (tabId === 'form-8k-analysis' && !target.dataset.loaded) {
+		        renderFilingAnalysisTab(ticker, '8-K');
+		        target.dataset.loaded = 'true';
+		    } else if (tabId === 'form-10k-analysis' && !target.dataset.loaded) {
+		        renderFilingAnalysisTab(ticker, '10-K');
+		        target.dataset.loaded = 'true';
+		    } else if (tabId === 'form-10q-analysis' && !target.dataset.loaded) {
+		        renderFilingAnalysisTab(ticker, '10-Q');
+		        target.dataset.loaded = 'true';
+		    }
+		    return;
+		}
         
         const symbol = target.dataset.symbol || analysisModal.dataset.activeTicker;
         if (!symbol) return;
