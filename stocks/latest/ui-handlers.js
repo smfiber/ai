@@ -1,4 +1,4 @@
-import { CONSTANTS, state, promptMap, NEWS_SENTIMENT_PROMPT, DISRUPTOR_ANALYSIS_PROMPT, MACRO_PLAYBOOK_PROMPT, INDUSTRY_CAPITAL_ALLOCATORS_PROMPT, INDUSTRY_DISRUPTOR_ANALYSIS_PROMPT, INDUSTRY_MACRO_PLAYBOOK_PROMPT, ONE_SHOT_INDUSTRY_TREND_PROMPT, FORTRESS_ANALYSIS_PROMPT, PHOENIX_ANALYSIS_PROMPT, PICK_AND_SHOVEL_PROMPT, LINCHPIN_ANALYSIS_PROMPT, HIDDEN_VALUE_PROMPT, UNTOUCHABLES_ANALYSIS_PROMPT, INVESTMENT_MEMO_PROMPT, GARP_VALIDATION_PROMPT, ENABLE_STARTER_PLAN_MODE, STARTER_SYMBOLS } from './config.js';
+import { CONSTANTS, state, promptMap, NEWS_SENTIMENT_PROMPT, DISRUPTOR_ANALYSIS_PROMPT, MACRO_PLAYBOOK_PROMPT, INDUSTRY_CAPITAL_ALLOCATORS_PROMPT, INDUSTRY_DISRUPTOR_ANALYSIS_PROMPT, INDUSTRY_MACRO_PLAYBOOK_PROMPT, ONE_SHOT_INDUSTRY_TREND_PROMPT, FORTRESS_ANALYSIS_PROMPT, PHOENIX_ANALYSIS_PROMPT, PICK_AND_SHOVEL_PROMPT, LINCHPIN_ANALYSIS_PROMPT, HIDDEN_VALUE_PROMPT, UNTOUCHABLES_ANALYSIS_PROMPT, INVESTMENT_MEMO_PROMPT, GARP_VALIDATION_PROMPT, ENABLE_STARTER_PLAN_MODE, STARTER_SYMBOLS, ANALYSIS_REQUIREMENTS } from './config.js';
 import { callApi, filterValidNews, callGeminiApi, generatePolishedArticle, getDriveToken, getOrCreateDriveFolder, createDriveFile, findStocksByIndustry, searchSectorNews, findStocksBySector, synthesizeAndRankCompanies, generateDeepDiveReport, getFmpStockData, getCompetitorsFromGemini } from './api.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { openModal, closeModal, displayMessageInModal, openConfirmationModal, openManageStockModal } from './ui-modals.js';
@@ -1029,30 +1029,27 @@ export async function handleAnalysisRequest(symbol, reportType, promptConfig, fo
             if (!competitors || competitors.length === 0) {
                 throw new Error(`Could not identify any competitors for ${symbol}.`);
             }
-
-            loadingMessage.textContent = `Fetching data for ${competitors.length} competitors...`;
             
-            const peersDataPromises = competitors.map(async (peer) => {
+            const peersData = [];
+            for (const peer of competitors) {
                 try {
+                    loadingMessage.textContent = `Fetching data for competitor ${peer.ticker}...`;
                     const keyMetricsUrl = `https://financialmodelingprep.com/api/v3/key-metrics-ttm/${peer.ticker}?apikey=${state.fmpApiKey}`;
                     const ratiosUrl = `https://financialmodelingprep.com/api/v3/ratios-ttm/${peer.ticker}?apikey=${state.fmpApiKey}`;
                     
-                    const [keyMetrics, ratios] = await Promise.all([
-                        callApi(keyMetricsUrl),
-                        callApi(ratiosUrl)
-                    ]);
+                    // Fetch data for each peer sequentially
+                    const keyMetrics = await callApi(keyMetricsUrl);
+                    const ratios = await callApi(ratiosUrl);
 
-                    return { 
+                    peersData.push({ 
                         ticker: peer.ticker, 
                         data: { key_metrics_ttm: keyMetrics, ratios_ttm: ratios } 
-                    };
+                    });
                 } catch (peerError) {
                     console.warn(`Could not fetch data for competitor ${peer.ticker}:`, peerError);
-                    return null; // Return null for failed fetches
+                    // Continue to the next peer even if one fails
                 }
-            });
-
-            const peersData = (await Promise.all(peersDataPromises)).filter(Boolean); // Filter out nulls
+            }
 
             if (peersData.length === 0) {
                 throw new Error('Could not fetch financial data for any identified competitors.');
