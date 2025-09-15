@@ -1247,22 +1247,16 @@ export async function handleInvestmentMemoRequest(symbol, forceNew = false) {
         const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
 
         loadingMessage.textContent = "Gathering all latest analysis reports from the database...";
-        // --- UPDATED REPORT LIST ---
+        
+        // --- MODIFICATION: Focused report list ---
         const reportTypes = [
-            // Quantitative Analysis
-            'FinancialAnalysis', 'UndervaluedAnalysis', 'GarpAnalysis', 'BullVsBear',
-            'MoatAnalysis', 'DividendSafety', 'GrowthOutlook', 'RiskAssessment',
-            'CapitalAllocators', 'NarrativeCatalyst',
-            // Competitive Analysis
-            'CompetitiveLandscape', 
-            // Investment Thesis & Narrative Analysis
-            'StockFortress', 'StockDisruptor', 'StockPhoenix', 'StockLinchpin', 'StockUntouchables',
-            // Filing Analysis
-            'Form8KAnalysis', 'Form10KAnalysis',
-            // Synthesis Reports
-            'GarpValidation'
+            'GarpAnalysis',
+            'FinancialAnalysis',
+            'RiskAssessment',
+            'MoatAnalysis',
+            'CapitalAllocators'
         ];
-        // --- END OF UPDATE ---
+        // --- END MODIFICATION ---
 
         const reportPromises = reportTypes.map(type => getSavedReports(symbol, type).then(reports => reports[0])); // Get only the latest
         const allLatestReports = await Promise.all(reportPromises);
@@ -1394,22 +1388,22 @@ export async function handleGarpValidationRequest(symbol, forceNew = false) {
 }
 
 export async function handleGenerateAllReportsRequest(symbol) {
+    // --- MODIFICATION: Focused report list and display names ---
     const reportTypes = [
-        'FinancialAnalysis', 'UndervaluedAnalysis', 'GarpAnalysis', 'BullVsBear', 
-        'MoatAnalysis', 'DividendSafety', 'GrowthOutlook', 'RiskAssessment', 
-        'CapitalAllocators', 'NarrativeCatalyst', 
-        'StockFortress', 'StockDisruptor', 'StockPhoenix', 'StockLinchpin', 'StockUntouchables',
-        'Form8KAnalysis', 'Form10KAnalysis'
+        'GarpAnalysis',
+        'FinancialAnalysis',
+        'RiskAssessment',
+        'MoatAnalysis',
+        'CapitalAllocators'
     ];
     const reportDisplayNames = {
-        'FinancialAnalysis': 'Financial Analysis', 'UndervaluedAnalysis': 'Undervalued Analysis', 'GarpAnalysis': 'GARP Analysis', 
-        'BullVsBear': 'Bull vs. Bear', 'MoatAnalysis': 'Moat Analysis', 'DividendSafety': 'Dividend Safety', 
-        'GrowthOutlook': 'Growth Outlook', 'RiskAssessment': 'Risk Assessment', 'CapitalAllocators': 'Capital Allocators', 
-        'NarrativeCatalyst': 'Narrative & Catalyst',
-        'StockFortress': 'The Fortress', 'StockDisruptor': 'The Disruptor', 'StockPhoenix': 'The Phoenix',
-        'StockLinchpin': 'The Linchpin', 'StockUntouchables': 'The Untouchables',
-        'Form8KAnalysis': '8-K Filing Analysis', 'Form10KAnalysis': '10-K Filing Analysis'
+        'GarpAnalysis': 'GARP Analysis',
+        'FinancialAnalysis': 'Financial Analysis',
+        'RiskAssessment': 'Risk Assessment',
+        'MoatAnalysis': 'Moat Analysis',
+        'CapitalAllocators': 'Capital Allocators'
     };
+    // --- END MODIFICATION ---
 
     const metricCalculators = {
         'FinancialAnalysis': _calculateFinancialAnalysisMetrics,
