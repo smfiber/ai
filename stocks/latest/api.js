@@ -6,7 +6,9 @@ function isValidHttpUrl(urlString) {
     if (typeof urlString !== 'string' || !urlString) return false;
     try {
         const url = new URL(urlString);
-        return url.protocol === "http:" || url.protocol === "https.":";
+        // --- START OF FIX: Corrected the protocol check ---
+        return url.protocol === "http:" || url.protocol === "https:";
+        // --- END OF FIX ---
     } catch (_) {
         return false;
     }
@@ -136,7 +138,6 @@ export async function generateQuickArticle(initialPrompt, loadingMessageElement 
     return draft;
 }
 
-// --- START OF NEW FUNCTION ---
 /**
  * Generates a two-pass refined article from the AI.
  * @param {string} initialPrompt The prompt for the AI.
@@ -159,7 +160,6 @@ export async function generateRefinedArticle(initialPrompt, loadingMessageElemen
 
     return finalArticle;
 }
-// --- END OF NEW FUNCTION ---
 
 /**
  * Generates a high-quality, multi-pass polished article from the AI.
