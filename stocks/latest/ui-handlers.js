@@ -1,5 +1,6 @@
 import { CONSTANTS, state, promptMap, NEWS_SENTIMENT_PROMPT, DISRUPTOR_ANALYSIS_PROMPT, MACRO_PLAYBOOK_PROMPT, INDUSTRY_CAPITAL_ALLOCATORS_PROMPT, INDUSTRY_DISRUPTOR_ANALYSIS_PROMPT, INDUSTRY_MACRO_PLAYBOOK_PROMPT, ONE_SHOT_INDUSTRY_TREND_PROMPT, FORTRESS_ANALYSIS_PROMPT, PHOENIX_ANALYSIS_PROMPT, PICK_AND_SHOVEL_PROMPT, LINCHPIN_ANALYSIS_PROMPT, HIDDEN_VALUE_PROMPT, UNTOUCHABLES_ANALYSIS_PROMPT, INVESTMENT_MEMO_PROMPT, GARP_VALIDATION_PROMPT, ENABLE_STARTER_PLAN_MODE, STARTER_SYMBOLS, ANALYSIS_REQUIREMENTS } from './config.js';
-import { callApi, filterValidNews, callGeminiApi, generatePolishedArticle, generateQuickArticle, getDriveToken, getOrCreateDriveFolder, createDriveFile, findStocksByIndustry, searchSectorNews, findStocksBySector, synthesizeAndRankCompanies, generateDeepDiveReport, getFmpStockData, getCompetitorsFromGemini } from './api.js';
+// --- MODIFICATION: Import the new refinement function ---
+import { callApi, filterValidNews, callGeminiApi, generatePolishedArticle, generateRefinedArticle, getDriveToken, getOrCreateDriveFolder, createDriveFile, findStocksByIndustry, searchSectorNews, findStocksBySector, synthesizeAndRankCompanies, generateDeepDiveReport, getFmpStockData, getCompetitorsFromGemini } from './api.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { openModal, closeModal, displayMessageInModal, openConfirmationModal, openManageStockModal } from './ui-modals.js';
 import { renderPortfolioManagerList, renderFmpEndpointsList, renderBroadEndpointsList, renderNewsArticles, displayReport, updateReportStatus, updateBroadReportStatus, fetchAndCachePortfolioData, renderThesisTracker, renderFilingAnalysisTab } from './ui-render.js';
@@ -1206,7 +1207,8 @@ export async function handleAnalysisRequest(symbol, reportType, promptConfig, fo
 
         contentContainer.dataset.currentPrompt = prompt;
 
-        const newReportContent = await generateQuickArticle(prompt, loadingMessage);
+        // --- MODIFICATION: Use the new refinement function ---
+        const newReportContent = await generateRefinedArticle(prompt, loadingMessage);
         contentContainer.dataset.rawMarkdown = newReportContent;
         displayReport(contentContainer, newReportContent, prompt);
         updateReportStatus(statusContainer, [], null, { symbol, reportType, promptConfig });
@@ -1488,7 +1490,8 @@ export async function handleGenerateAllReportsRequest(symbol) {
                     .replace('{jsonData}', JSON.stringify(payloadData, null, 2));
             }
 
-            const reportContent = await generateQuickArticle(prompt, loadingMessage);
+            // --- MODIFICATION: Use the new refinement function ---
+            const reportContent = await generateRefinedArticle(prompt, loadingMessage);
 
             const reportData = {
                 ticker: symbol,
@@ -1850,7 +1853,8 @@ export async function handleFilingAnalysisRequest(symbol, formType, forceNew = f
         
         contentContainer.dataset.currentPrompt = prompt;
 
-        const newReportContent = await generateQuickArticle(prompt, loadingMessage);
+        // --- MODIFICATION: Use the new refinement function ---
+        const newReportContent = await generateRefinedArticle(prompt, loadingMessage);
         contentContainer.dataset.rawMarkdown = newReportContent;
         displayReport(contentContainer, newReportContent, prompt);
         updateReportStatus(statusContainer, [], null, { symbol, reportType });
