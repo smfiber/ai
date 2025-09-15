@@ -6,7 +6,7 @@ function isValidHttpUrl(urlString) {
     if (typeof urlString !== 'string' || !urlString) return false;
     try {
         const url = new URL(urlString);
-        return url.protocol === "http:" || url.protocol === "https:";
+        return url.protocol === "http:" || url.protocol === "https.":";
     } catch (_) {
         return false;
     }
@@ -136,6 +136,30 @@ export async function generateQuickArticle(initialPrompt, loadingMessageElement 
     return draft;
 }
 
+// --- START OF NEW FUNCTION ---
+/**
+ * Generates a two-pass refined article from the AI.
+ * @param {string} initialPrompt The prompt for the AI.
+ * @param {HTMLElement|null} loadingMessageElement The element to update with loading messages.
+ * @returns {Promise<string>} The AI-generated and refined article content.
+ */
+export async function generateRefinedArticle(initialPrompt, loadingMessageElement = null) {
+    const updateLoadingMessage = (msg) => {
+        if (loadingMessageElement) {
+            loadingMessageElement.textContent = msg;
+        }
+    };
+
+    updateLoadingMessage("AI is drafting the report...");
+    const draft = await callGeminiApi(initialPrompt);
+
+    updateLoadingMessage("AI is refining the content for clarity and professionalism...");
+    const refinementPrompt = `Please review the following draft report. Check it for clarity, conciseness, and a professional tone. Ensure all markdown formatting is correct, especially for headings and bullet points. Return only the final, improved report. Do not add any new sections or analysis.\n\nDRAFT:\n${draft}`;
+    const finalArticle = await callGeminiApi(refinementPrompt);
+
+    return finalArticle;
+}
+// --- END OF NEW FUNCTION ---
 
 /**
  * Generates a high-quality, multi-pass polished article from the AI.
