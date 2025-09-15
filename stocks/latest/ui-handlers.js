@@ -574,7 +574,7 @@ async function handleDisruptorAnalysis(contextName, contextType) {
 
     try {
         const prompt = DISRUPTOR_ANALYSIS_PROMPT.replace(/{sectorName}/g, contextName).replace(/{industryName}/g, contextName);
-        const report = await generateQuickArticle(prompt, loadingMessage);
+        const report = await generatePolishedArticle(prompt, loadingMessage);
         contentArea.innerHTML = marked.parse(report);
     } catch (error) {
         console.error(`Error generating disruptor analysis for ${contextName}:`, error);
@@ -598,7 +598,7 @@ async function handleMacroPlaybookAnalysis(contextName, contextType) {
             .replace(/{sectorName}/g, contextName)
             .replace(/{industryName}/g, contextName)
             .replace(/\[Include standard disclaimer\]/g, standardDisclaimer);
-        const report = await generateQuickArticle(prompt, loadingMessage);
+        const report = await generatePolishedArticle(prompt, loadingMessage);
         contentArea.innerHTML = marked.parse(report);
     } catch (error) {
         console.error(`Error generating macro playbook analysis for ${contextName}:`, error);
@@ -621,7 +621,7 @@ async function handleFortressAnalysis(contextName, contextType) {
         const prompt = FORTRESS_ANALYSIS_PROMPT
             .replace(/{contextName}/g, contextName)
             .replace(/{contextType}/g, contextType);
-        const report = await generateQuickArticle(prompt, loadingMessage);
+        const report = await generatePolishedArticle(prompt, loadingMessage);
         contentArea.innerHTML = marked.parse(report);
     } catch (error) {
         console.error(`Error generating fortress analysis for ${contextName}:`, error);
@@ -644,7 +644,7 @@ async function handlePhoenixAnalysis(contextName, contextType) {
         const prompt = PHOENIX_ANALYSIS_PROMPT
             .replace(/{contextName}/g, contextName)
             .replace(/{contextType}/g, contextType);
-        const report = await generateQuickArticle(prompt, loadingMessage);
+        const report = await generatePolishedArticle(prompt, loadingMessage);
         contentArea.innerHTML = marked.parse(report);
     } catch (error) {
         console.error(`Error generating phoenix analysis for ${contextName}:`, error);
@@ -666,7 +666,7 @@ async function handlePickAndShovelAnalysis(contextName, contextType) {
         const prompt = PICK_AND_SHOVEL_PROMPT
             .replace(/{contextName}/g, contextName)
             .replace(/{contextType}/g, contextType);
-        const report = await generateQuickArticle(prompt, loadingMessage);
+        const report = await generatePolishedArticle(prompt, loadingMessage);
         contentArea.innerHTML = marked.parse(report);
     } catch (error) {
         console.error(`Error generating Pick and Shovel analysis for ${contextName}:`, error);
@@ -688,7 +688,7 @@ async function handleLinchpinAnalysis(contextName, contextType) {
         const prompt = LINCHPIN_ANALYSIS_PROMPT
             .replace(/{contextName}/g, contextName)
             .replace(/{contextType}/g, contextType);
-        const report = await generateQuickArticle(prompt, loadingMessage);
+        const report = await generatePolishedArticle(prompt, loadingMessage);
         contentArea.innerHTML = marked.parse(report);
     } catch (error) {
         console.error(`Error generating Linchpin analysis for ${contextName}:`, error);
@@ -710,7 +710,7 @@ async function handleHiddenValueAnalysis(contextName, contextType) {
         const prompt = HIDDEN_VALUE_PROMPT
             .replace(/{contextName}/g, contextName)
             .replace(/{contextType}/g, contextType);
-        const report = await generateQuickArticle(prompt, loadingMessage);
+        const report = await generatePolishedArticle(prompt, loadingMessage);
         contentArea.innerHTML = marked.parse(report);
     } catch (error) {
         console.error(`Error generating Hidden Value analysis for ${contextName}:`, error);
@@ -732,7 +732,7 @@ async function handleUntouchablesAnalysis(contextName, contextType) {
         const prompt = UNTOUCHABLES_ANALYSIS_PROMPT
             .replace(/{contextName}/g, contextName)
             .replace(/{contextType}/g, contextType);
-        const report = await generateQuickArticle(prompt, loadingMessage);
+        const report = await generatePolishedArticle(prompt, loadingMessage);
         contentArea.innerHTML = marked.parse(report);
     } catch (error) {
         console.error(`Error generating Untouchables analysis for ${contextName}:`, error);
@@ -873,7 +873,7 @@ async function handleIndustryMarketTrendsAnalysis(industryName) {
             .replace('${industryStocks}', industryStocks.join(', '))
             .replace('{newsArticlesJson}', JSON.stringify(validArticles, null, 2));
 
-        let finalReport = await generateQuickArticle(prompt, loadingMessage);
+        let finalReport = await generatePolishedArticle(prompt, loadingMessage);
 
         finalReport = finalReport.replace(/\[Source: (?:Article )?(\d+)\]/g, (match, indexStr) => {
             const index = parseInt(indexStr, 10);
@@ -906,7 +906,7 @@ async function handleIndustryDisruptorAnalysis(industryName) {
 
     try {
         const prompt = INDUSTRY_DISRUPTOR_ANALYSIS_PROMPT.replace(/{industryName}/g, industryName);
-        const report = await generateQuickArticle(prompt, loadingMessage);
+        const report = await generatePolishedArticle(prompt, loadingMessage);
         contentArea.innerHTML = marked.parse(report);
     } catch (error) {
         console.error(`Error generating disruptor analysis for ${industryName}:`, error);
@@ -929,7 +929,7 @@ async function handleIndustryMacroPlaybookAnalysis(industryName) {
         const prompt = INDUSTRY_MACRO_PLAYBOOK_PROMPT
             .replace(/{industryName}/g, industryName)
             .replace(/\[Include standard disclaimer\]/g, standardDisclaimer);
-        const report = await generateQuickArticle(prompt, loadingMessage);
+        const report = await generatePolishedArticle(prompt, loadingMessage);
         contentArea.innerHTML = marked.parse(report);
     } catch (error) {
         console.error(`Error generating macro playbook analysis for ${industryName}:`, error);
@@ -1098,7 +1098,7 @@ export async function handleAnalysisRequest(symbol, reportType, promptConfig, fo
                 .replace('{jsonData}', JSON.stringify(payloadData, null, 2));
 
             contentContainer.dataset.currentPrompt = prompt;
-            const newReportContent = await generateQuickArticle(prompt, loadingMessage);
+            const newReportContent = await generatePolishedArticle(prompt, loadingMessage);
             contentContainer.dataset.rawMarkdown = newReportContent;
             
             // --- ADDED FOR AUTO-SAVE ---
