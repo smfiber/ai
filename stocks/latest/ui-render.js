@@ -400,7 +400,7 @@ export async function renderBroadEndpointsList() {
     const container = document.getElementById('broad-endpoints-list-container');
     container.innerHTML = 'Loading endpoints...';
     try {
-        const querySnapshot = await getDocs(collection(state.db, CONSTANTS.DB_COLlection_BROAD_ENDPOINTS));
+        const querySnapshot = await getDocs(collection(state.db, CONSTANTS.DB_COLLECTION_BROAD_ENDPOINTS));
         if (querySnapshot.empty) {
             container.innerHTML = '<p class="text-center text-gray-500 py-4">No endpoints saved.</p>';
             return;
@@ -910,9 +910,11 @@ export async function renderFilingAnalysisTab(ticker, formType) {
             filings = await getSecMaterialEvents(ticker);
         } else if (formType === '10-K') {
             filings = await getSecAnnualReports(ticker);
+        // --- START OF FIX ---
         } else if (formType === '10-Q') {
             filings = await getSecQuarterlyReports(ticker);
         }
+        // --- END OF FIX ---
         
         const topFilings = filings.slice(0, 2);
         if (topFilings.length > 0) {
