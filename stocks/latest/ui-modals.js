@@ -317,6 +317,7 @@ export async function openRawDataViewer(ticker) {
         const specializedButtons = [
              { reportType: 'CapitalAllocators', text: 'Capital Allocators', tooltip: 'Assesses management\'s skill in deploying capital.' },
              { reportType: 'GrowthOutlook', text: 'Growth Outlook', tooltip: 'Analyzes the company\'s future growth potential.' },
+             { reportType: 'DividendDeepDive', text: 'Dividend Deep Dive', tooltip: 'Assesses the safety and sustainability of the company\'s dividend.' },
              { reportType: 'NarrativeCatalyst', text: 'Catalysts', tooltip: 'Identifies the investment story and future catalysts.' },
         ];
         
@@ -341,9 +342,9 @@ export async function openRawDataViewer(ticker) {
             </button>`;
             
         const generateAllBtn = `
-            <button data-symbol="${ticker}" id="generate-all-reports-button" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg flex items-center justify-center gap-2 transition-all duration-200 hover:shadow-lg text-base" data-tooltip="Generates all 10 core analysis reports and saves them to the database in a single, efficient batch.">
+            <button data-symbol="${ticker}" id="generate-all-reports-button" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg flex items-center justify-center gap-2 transition-all duration-200 hover:shadow-lg text-base" data-tooltip="Generates the core reports required for the GARP and Income Memo analyses.">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m.75 12l3 3m0 0 3-3m-3 3v-6m-1.5-9H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" /></svg>
-                Generate Reports for GARP Analysis
+                Generate Prerequisite Reports
             </button>`;
 
         const garpValidationBtn = `
@@ -352,10 +353,16 @@ export async function openRawDataViewer(ticker) {
                 GARP Validation Report
             </button>`;
             
-        const investmentMemoBtn = `
-            <button data-symbol="${ticker}" id="investment-memo-button" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg flex items-center justify-center gap-2 transition-all duration-200 hover:shadow-lg text-base" data-tooltip="Synthesizes all other reports into a final verdict. Requires all other analyses to be saved first.">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+        const garpMemoBtn = `
+            <button data-symbol="${ticker}" id="investment-memo-button" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg flex items-center justify-center gap-2 transition-all duration-200 hover:shadow-lg text-base" data-tooltip="Synthesizes the core analysis reports into a final GARP-focused investment memo. Requires the prerequisite reports to be saved first.">
+                ${ANALYSIS_ICONS['InvestmentMemo']}
                 Generate GARP Memo
+            </button>`;
+
+        const incomeMemoBtn = `
+            <button data-symbol="${ticker}" id="income-memo-button" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 px-6 rounded-lg flex items-center justify-center gap-2 transition-all duration-200 hover:shadow-lg text-base" data-tooltip="Synthesizes Dividend, Financial Health, and Moat reports into a final verdict for income investors. Requires these 3 analyses to be saved first.">
+                ${ANALYSIS_ICONS['IncomeMemo']}
+                Generate Income Memo
             </button>`;
 
         // Assemble the new single-column guided workflow layout
@@ -372,7 +379,7 @@ export async function openRawDataViewer(ticker) {
                 <div>
                     <div class="relative text-center mb-6">
                         <span class="absolute inset-x-0 top-1/2 h-px bg-gray-200" aria-hidden="true"></span>
-                        <span class="relative bg-white px-4 text-sm font-bold text-gray-500 uppercase">Step 2: Perform a Deep Dive</span>
+                        <span class="relative bg-white px-4 text-sm font-bold text-gray-500 uppercase">Step 2: Perform Foundational Analysis</span>
                     </div>
                     <div class="flex justify-center mb-6">${generateAllBtn}</div>
                     <p class="text-center text-sm text-gray-500 mb-4 italic">...or run individual analyses:</p>
@@ -399,7 +406,8 @@ export async function openRawDataViewer(ticker) {
                     </div>
                     <div class="flex flex-wrap justify-center gap-4">
                         ${garpValidationBtn}
-                        ${investmentMemoBtn}
+                        ${garpMemoBtn}
+                        ${incomeMemoBtn}
                     </div>
                 </div>
             </div>
