@@ -249,6 +249,9 @@ export function _calculateFinancialAnalysisMetrics(data) {
         sector: profile.sector,
         industry: profile.industry,
         marketCap: formatLargeNumber(marketCapValue),
+        // --- MODIFICATION: Add latest price to the summary object ---
+        price: profile.price ? `$${profile.price.toFixed(2)}` : 'N/A',
+        // --- END MODIFICATION ---
         priceRange: profile.range || 'N/A',
         analystConsensus: analystConsensus,
         insiderOwnership: 'N/A'
