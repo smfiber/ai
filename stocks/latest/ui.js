@@ -349,7 +349,7 @@ export function setupEventListeners() {
 		    } else if (tabId === 'form-8k-analysis' && !target.dataset.loaded) {
 		        renderFilingAnalysisTab(ticker, '8-K');
 		        target.dataset.loaded = 'true';
-		    } else if (tabId === 'form-10k-analysis' and !target.dataset.loaded) {
+		    } else if (tabId === 'form-10k-analysis' && !target.dataset.loaded) {
 		        renderFilingAnalysisTab(ticker, '10-K');
 		        target.dataset.loaded = 'true';
 		    }
