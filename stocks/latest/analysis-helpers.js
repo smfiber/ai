@@ -447,9 +447,9 @@ export function _calculateMoatAnalysisMetrics(data) {
 }
 
 /**
- * NEW: Calculates metrics for the "Dividend Safety" prompt.
+ * NEW: Calculates metrics for the "Dividend Deep Dive" prompt.
  */
-export function _calculateDividendSafetyMetrics(data) {
+export function _calculateDividendDeepDiveMetrics(data) {
     const metrics = (data.key_metrics_annual || []).slice(0, 10);
     const cashFlow = (data.cash_flow_statement_annual || []).slice(0, 10);
     const income = (data.income_statement_annual || []).slice(0, 10);
