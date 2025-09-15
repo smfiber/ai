@@ -618,7 +618,7 @@ Based on all the evidence, provide a concluding assessment. Classify the moat as
 - **No Moat:** The company has no clear, sustainable competitive advantage, **making it vulnerable to competition and price wars.**
 `.trim();
 
-const DIVIDEND_SAFETY_PROMPT = `
+const DIVIDEND_DEEP_DIVE_PROMPT = `
 Role: You are a conservative income investment analyst AI. Your goal is to explain dividend safety in simple, clear terms for an investor who relies on that income.
 Concept: Dividend safety analysis is all about figuring out how likely a company is to continue paying its dividend.
 
@@ -629,7 +629,7 @@ Output Format: Create a markdown report. Explain each point using simple analogi
 JSON Data:
 {jsonData}
 
-# Dividend Safety Analysis: {companyName} ({tickerSymbol})
+# Dividend Deep Dive: {companyName} ({tickerSymbol})
 
 ## 1. The Payout: What Are You Earning?
 - **Current Dividend Yield:** [Use 'currentYield' value]%. Explain this as the annual return you get from dividends.
@@ -901,6 +901,63 @@ You are a Senior Investment Analyst at a GARP-focused ("Growth at a Reasonable P
 {allAnalysesData}
 `.trim();
 
+export const INCOME_MEMO_PROMPT = `
+**Persona & Goal:**
+You are a Senior Investment Analyst at a conservative, income-focused fund. Your primary goal is to assess the safety and long-term viability of {companyName}'s dividend. You must synthesize the provided reports into a definitive investment memo for the income portfolio.
+
+**Core Philosophy (How to Think):**
+1.  **Safety First:** The central question is, "How safe is the dividend?" The business quality and financial health are analyzed through the lens of their ability to protect and grow the dividend.
+2.  **Synthesize, Don't Summarize:** Weave the findings from the 'Dividend Deep Dive', 'Financial Health', and 'Moat Analysis' reports into a cohesive narrative.
+3.  **Address Contradictions:** If the 'Moat Analysis' shows a strong business but the 'Dividend Deep Dive' reveals a high payout ratio, you must address this conflict directly.
+4.  **Cite Your Evidence:** Casually reference the source of key data points within your narrative (e.g., "The Dividend Deep Dive confirms the payout ratio is well-covered by cash flow," or "However, the Financial Health analysis points to a rising debt load...").
+
+---
+
+# Income Investment Memo: {companyName} ({tickerSymbol})
+
+## 1. Executive Summary & Thesis
+*(Begin with a 3-4 sentence paragraph. State the current dividend yield. Summarize the thesis for or against the stock as a reliable income investment, highlighting the dividend's safety and the business's ability to support it long-term.)*
+
+## 2. The Dividend: Safety & Growth Potential
+*(This is the core section. Synthesize findings from the 'Dividend Deep Dive' report.)*
+* **Coverage & Affordability:** How well is the dividend covered by Free Cash Flow? Is the payout ratio conservative or aggressive?
+* **Track Record & Management Commitment:** Does the company have a history of consistent and growing dividend payments? What does this signal about management's philosophy?
+
+## 3. The Business: Can it Sustain the Dividend?
+*(Synthesize findings from the 'Financial Health' and 'Moat Analysis' reports.)*
+* **Financial Foundation:** Is the balance sheet strong enough to protect the dividend during a recession? Focus on debt levels and cash reserves.
+* **Economic Moat:** Does the company have a durable competitive advantage that protects the long-term cash flows needed to fund the dividend? A business with no moat has an inherently unsafe dividend.
+
+## 4. Risks to the Income Stream
+*(Critically examine the primary threats to the dividend.)*
+* **Key Risks:** What are the top 2-3 most critical risks identified in the reports that could force a dividend cut? (e.g., margin compression, secular decline in the industry, rising debt).
+* **Valuation:** Is the current yield attractive for the level of risk being taken? A high yield can often be a warning sign (a "yield trap").
+
+## 5. Final Verdict & Recommendation for the Income Portfolio
+
+### A. Recommendation
+*(Provide a clear, actionable recommendation for an income-focused portfolio.)*
+* **Core Income Holding:** A blue-chip quality stock with a very safe and growing dividend.
+* **Accumulate for Income:** A solid company with a well-covered dividend; a good candidate for the portfolio.
+* **Monitor / High Yield Watch:** The yield is attractive but comes with elevated risks. Keep on a watchlist, but do not add to the core portfolio.
+* **Avoid for Income:** The dividend is unsafe, or the company is not a suitable income investment.
+
+### B. Dividend Scorecard
+*(Summarize your analysis with a 1-10 scoring system.)*
+* **Dividend Safety (Payout Ratio & Balance Sheet):** \`[1-10]\`
+* **Dividend Growth (History & Future Prospects):** \`[1-10]\`
+* **Business Quality (Moat & Cash Flow Stability):** \`[1-10]\`
+* **Yield Attractiveness (Yield vs. Risk):** \`[1-10]\`
+* ---
+* **Final Weighted Score:**
+    * **Calculation:** \`[(Safety * 0.4) + (Business Quality * 0.3) + (Growth * 0.2) + (Yield * 0.1)] = Final Score\`
+    * **Score:** \`[Calculated Score / 10.0]\`
+
+---
+**Input Reports:**
+{allAnalysesData}
+`.trim();
+
 export const ALL_REPORTS_PROMPT = `
 Role: You are an expert financial analyst AI. Your task is to generate a comprehensive dossier of 10 distinct financial analysis reports for {companyName} ({tickerSymbol}).
 
@@ -1078,8 +1135,8 @@ export const promptMap = {
         prompt: MOAT_ANALYSIS_PROMPT,
         requires: ['profile', 'key_metrics_annual', 'income_statement_annual', 'cash_flow_statement_annual', 'ratios_annual']
     },
-    'DividendSafety': {
-        prompt: DIVIDEND_SAFETY_PROMPT,
+    'DividendDeepDive': {
+        prompt: DIVIDEND_DEEP_DIVE_PROMPT,
         requires: ['key_metrics_annual', 'cash_flow_statement_annual', 'income_statement_annual', 'balance_sheet_statement_annual', 'ratios_annual']
     },
     'GrowthOutlook': {
@@ -1138,6 +1195,10 @@ export const promptMap = {
         prompt: INVESTMENT_MEMO_PROMPT,
         requires: [] // This prompt uses other reports, not raw FMP data.
     },
+    'IncomeMemo': {
+        prompt: INCOME_MEMO_PROMPT,
+        requires: [] // This prompt uses other reports, not raw FMP data.
+    },
     'GarpValidation': {
         prompt: GARP_VALIDATION_PROMPT,
         requires: [] // This prompt uses other reports, not raw FMP data.
@@ -1150,7 +1211,7 @@ export const ANALYSIS_ICONS = {
     'GarpAnalysis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18L9 11.25l1.5 1.5L13.5 6l3 3 4.5-4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`,
     'BullVsBear': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 15.75l-2.489-2.489m0 0a3.375 3.375 0 10-4.773-4.773 3.375 3.375 0 004.774 4.774zM21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`,
     'MoatAnalysis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.286zm0 13.036h.008v.008h-.008v-.008z" /></svg>`,
-    'DividendSafety': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a2.25 2.25 0 00-2.25-2.25H15a3 3 0 11-6 0H5.25A2.25 2.25 0 003 12m18 0v6a2.25 2.25 0 01-2.25-2.25H5.25A2.25 2.25 0 013 18v-6m18 0V9M3 12V9m18 3a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 12m15 0a2.25 2.25 0 01-2.25 2.25H12a2.25 2.25 0 01-2.25-2.25" /></svg>`,
+    'DividendDeepDive': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a2.25 2.25 0 00-2.25-2.25H15a3 3 0 11-6 0H5.25A2.25 2.25 0 003 12m18 0v6a2.25 2.25 0 01-2.25-2.25H5.25A2.25 2.25 0 013 18v-6m18 0V9M3 12V9m18 3a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 12m15 0a2.25 2.25 0 01-2.25 2.25H12a2.25 2.25 0 01-2.25-2.25" /></svg>`,
     'GrowthOutlook': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941" /></svg>`,
     'RiskAssessment': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" /></svg>`,
     'CapitalAllocators': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15.91 15.91a2.25 2.25 0 01-3.182 0l-3.03-3.03a.75.75 0 011.06-1.061l2.47 2.47 2.47-2.47a.75.75 0 011.06 1.06l-3.03 3.03z" /></svg>`,
@@ -1163,7 +1224,8 @@ export const ANALYSIS_ICONS = {
     'StockUntouchables': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" /></svg>`,
     'Form8KAnalysis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h.01M15 12h.01M10.5 16.5h3m-6.75-3.75a3 3 0 013-3h3a3 3 0 013 3v3a3 3 0 01-3 3h-3a3 3 0 01-3-3v-3z" /><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`,
     'Form10KAnalysis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>`,
-    'InvestmentMemo': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>`
+    'InvestmentMemo': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>`,
+    'IncomeMemo': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 00-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 01-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 003 15h-.75M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" /></svg>`
 };
 
 export const INDUSTRY_CAPITAL_ALLOCATORS_PROMPT = `
