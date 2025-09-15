@@ -359,6 +359,7 @@ Write a concise, one-paragraph summary synthesizing the most important takeaways
 In simple terms, describe the company's business using the 'description', 'sector', and 'industry' from the JSON. Avoid jargon.
 ### Market Snapshot
 - **Market Capitalization:** State the value from \`summary.marketCap\`.
+- **Latest Price:** State the value from \`summary.price\`.
 - **52-Week Price Range:** State the value from \`summary.priceRange\`.
 - **Analyst Consensus:** Report the analyst consensus from \`summary.analystConsensus\`.
 - **Insider Ownership:** Report the insider ownership from \`summary.insiderOwnership\`, stating if it's N/A.
