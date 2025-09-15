@@ -119,6 +119,30 @@ export async function callGeminiApiWithTools(contents) {
     throw new Error("Failed to parse the response from the Gemini API with tools.");
 }
 
+/**
+ * Generates a simplified, single-pass article from the AI.
+ * @param {string} initialPrompt The prompt for the AI.
+ * @param {HTMLElement|null} loadingMessageElement The element to update with loading messages.
+ * @returns {Promise<string>} The AI-generated article content.
+ */
+export async function generateQuickArticle(initialPrompt, loadingMessageElement = null) {
+    const updateLoadingMessage = (msg) => {
+        if (loadingMessageElement) {
+            loadingMessageElement.textContent = msg;
+        }
+    };
+    updateLoadingMessage("AI is drafting the article...");
+    const draft = await callGeminiApi(initialPrompt);
+    return draft;
+}
+
+
+/**
+ * Generates a high-quality, multi-pass polished article from the AI.
+ * @param {string} initialPrompt The prompt for the AI.
+ * @param {HTMLElement|null} loadingMessageElement The element to update with loading messages.
+ * @returns {Promise<string>} The AI-generated and polished article content.
+ */
 export async function generatePolishedArticle(initialPrompt, loadingMessageElement = null) {
     const updateLoadingMessage = (msg) => {
         if (loadingMessageElement) {
@@ -133,10 +157,6 @@ export async function generatePolishedArticle(initialPrompt, loadingMessageEleme
     const focusPrompt = `Your first pass is to ensure the article is doing exactly what you asked for in the original prompt. Reread the original prompt below, then read your draft. Trim anything that doesn't belong and add anything that's missing. Is the main point clear? Did it miss anything? Did it add fluff? Return only the improved article.\n\nORIGINAL PROMPT:\n${initialPrompt}\n\nDRAFT:\n${draft}`;
     const focusedDraft = await callGeminiApi(focusPrompt);
 
-    /*
-    // NOTE: The following two steps were commented out to reduce API costs and speed up generation.
-    // They can be re-enabled for higher quality, more polished prose.
-
     updateLoadingMessage("Improving flow...");
     const flowPrompt = `This pass is all about the reader's experience. Read the article out loud to catch awkward phrasing. Are the transitions smooth? Is the order logical? Are any sentences too long or clumsy? Return only the improved article.\n\nARTICLE:\n${focusedDraft}`;
     const flowedDraft = await callGeminiApi(flowPrompt);
@@ -146,9 +166,6 @@ export async function generatePolishedArticle(initialPrompt, loadingMessageEleme
     const finalArticle = await callGeminiApi(flairPrompt);
 
     return finalArticle;
-    */
-
-    return focusedDraft;
 }
 
 export async function getFmpStockData(symbol) {
