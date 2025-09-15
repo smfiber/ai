@@ -1,5 +1,5 @@
 import { CONSTANTS, state, promptMap, NEWS_SENTIMENT_PROMPT, DISRUPTOR_ANALYSIS_PROMPT, MACRO_PLAYBOOK_PROMPT, INDUSTRY_CAPITAL_ALLOCATORS_PROMPT, INDUSTRY_DISRUPTOR_ANALYSIS_PROMPT, INDUSTRY_MACRO_PLAYBOOK_PROMPT, ONE_SHOT_INDUSTRY_TREND_PROMPT, FORTRESS_ANALYSIS_PROMPT, PHOENIX_ANALYSIS_PROMPT, PICK_AND_SHOVEL_PROMPT, LINCHPIN_ANALYSIS_PROMPT, HIDDEN_VALUE_PROMPT, UNTOUCHABLES_ANALYSIS_PROMPT, INVESTMENT_MEMO_PROMPT, GARP_VALIDATION_PROMPT, ENABLE_STARTER_PLAN_MODE, STARTER_SYMBOLS, ANALYSIS_REQUIREMENTS } from './config.js';
-import { callApi, filterValidNews, callGeminiApi, generatePolishedArticle, getDriveToken, getOrCreateDriveFolder, createDriveFile, findStocksByIndustry, searchSectorNews, findStocksBySector, synthesizeAndRankCompanies, generateDeepDiveReport, getFmpStockData, getCompetitorsFromGemini } from './api.js';
+import { callApi, filterValidNews, callGeminiApi, generatePolishedArticle, generateQuickArticle, getDriveToken, getOrCreateDriveFolder, createDriveFile, findStocksByIndustry, searchSectorNews, findStocksBySector, synthesizeAndRankCompanies, generateDeepDiveReport, getFmpStockData, getCompetitorsFromGemini } from './api.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { openModal, closeModal, displayMessageInModal, openConfirmationModal, openManageStockModal } from './ui-modals.js';
 import { renderPortfolioManagerList, renderFmpEndpointsList, renderBroadEndpointsList, renderNewsArticles, displayReport, updateReportStatus, updateBroadReportStatus, fetchAndCachePortfolioData, renderThesisTracker, renderFilingAnalysisTab } from './ui-render.js';
@@ -565,16 +565,16 @@ export async function handleSectorSelection(sectorName, buttonElement) {
     }
 }
 
-async function handleDisruptorAnalysis(contextName) {
+async function handleDisruptorAnalysis(contextName, contextType) {
     openModal(CONSTANTS.MODAL_LOADING);
     const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
-
-    const contentArea = document.getElementById('custom-analysis-content');
-    contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">Generating AI article: "Disruptor Analysis"...</div>`;
+    const modalId = contextType === 'sector' ? 'customAnalysisModal' : 'industryAnalysisModal';
+    const contentArea = document.getElementById(modalId).querySelector(contextType === 'sector' ? '#custom-analysis-content' : '#industry-analysis-content');
+    contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">Generating AI article: "The Disruptor"...</div>`;
 
     try {
-        const prompt = DISRUPTOR_ANALYSIS_PROMPT.replace(/{sectorName}/g, contextName);
-        const report = await generatePolishedArticle(prompt, loadingMessage);
+        const prompt = DISRUPTOR_ANALYSIS_PROMPT.replace(/{sectorName}/g, contextName).replace(/{industryName}/g, contextName);
+        const report = await generateQuickArticle(prompt, loadingMessage);
         contentArea.innerHTML = marked.parse(report);
     } catch (error) {
         console.error(`Error generating disruptor analysis for ${contextName}:`, error);
@@ -585,19 +585,20 @@ async function handleDisruptorAnalysis(contextName) {
     }
 }
 
-async function handleMacroPlaybookAnalysis(contextName) {
+async function handleMacroPlaybookAnalysis(contextName, contextType) {
     openModal(CONSTANTS.MODAL_LOADING);
     const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
-
-    const contentArea = document.getElementById('custom-analysis-content');
+    const modalId = contextType === 'sector' ? 'customAnalysisModal' : 'industryAnalysisModal';
+    const contentArea = document.getElementById(modalId).querySelector(contextType === 'sector' ? '#custom-analysis-content' : '#industry-analysis-content');
     contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">Generating AI article: "Macro Playbook"...</div>`;
 
     try {
         const standardDisclaimer = "This article is for informational purposes only and should not be considered financial advice. Readers should consult with a qualified financial professional before making any investment decisions.";
-        const prompt = MACRO_PLAYBOOK_PROMPT
+        const prompt = (contextType === 'sector' ? MACRO_PLAYBOOK_PROMPT : INDUSTRY_MACRO_PLAYBOOK_PROMPT)
             .replace(/{sectorName}/g, contextName)
+            .replace(/{industryName}/g, contextName)
             .replace(/\[Include standard disclaimer\]/g, standardDisclaimer);
-        const report = await generatePolishedArticle(prompt, loadingMessage);
+        const report = await generateQuickArticle(prompt, loadingMessage);
         contentArea.innerHTML = marked.parse(report);
     } catch (error) {
         console.error(`Error generating macro playbook analysis for ${contextName}:`, error);
@@ -620,7 +621,7 @@ async function handleFortressAnalysis(contextName, contextType) {
         const prompt = FORTRESS_ANALYSIS_PROMPT
             .replace(/{contextName}/g, contextName)
             .replace(/{contextType}/g, contextType);
-        const report = await generatePolishedArticle(prompt, loadingMessage);
+        const report = await generateQuickArticle(prompt, loadingMessage);
         contentArea.innerHTML = marked.parse(report);
     } catch (error) {
         console.error(`Error generating fortress analysis for ${contextName}:`, error);
@@ -643,7 +644,7 @@ async function handlePhoenixAnalysis(contextName, contextType) {
         const prompt = PHOENIX_ANALYSIS_PROMPT
             .replace(/{contextName}/g, contextName)
             .replace(/{contextType}/g, contextType);
-        const report = await generatePolishedArticle(prompt, loadingMessage);
+        const report = await generateQuickArticle(prompt, loadingMessage);
         contentArea.innerHTML = marked.parse(report);
     } catch (error) {
         console.error(`Error generating phoenix analysis for ${contextName}:`, error);
@@ -665,7 +666,7 @@ async function handlePickAndShovelAnalysis(contextName, contextType) {
         const prompt = PICK_AND_SHOVEL_PROMPT
             .replace(/{contextName}/g, contextName)
             .replace(/{contextType}/g, contextType);
-        const report = await generatePolishedArticle(prompt, loadingMessage);
+        const report = await generateQuickArticle(prompt, loadingMessage);
         contentArea.innerHTML = marked.parse(report);
     } catch (error) {
         console.error(`Error generating Pick and Shovel analysis for ${contextName}:`, error);
@@ -687,7 +688,7 @@ async function handleLinchpinAnalysis(contextName, contextType) {
         const prompt = LINCHPIN_ANALYSIS_PROMPT
             .replace(/{contextName}/g, contextName)
             .replace(/{contextType}/g, contextType);
-        const report = await generatePolishedArticle(prompt, loadingMessage);
+        const report = await generateQuickArticle(prompt, loadingMessage);
         contentArea.innerHTML = marked.parse(report);
     } catch (error) {
         console.error(`Error generating Linchpin analysis for ${contextName}:`, error);
@@ -709,7 +710,7 @@ async function handleHiddenValueAnalysis(contextName, contextType) {
         const prompt = HIDDEN_VALUE_PROMPT
             .replace(/{contextName}/g, contextName)
             .replace(/{contextType}/g, contextType);
-        const report = await generatePolishedArticle(prompt, loadingMessage);
+        const report = await generateQuickArticle(prompt, loadingMessage);
         contentArea.innerHTML = marked.parse(report);
     } catch (error) {
         console.error(`Error generating Hidden Value analysis for ${contextName}:`, error);
@@ -731,7 +732,7 @@ async function handleUntouchablesAnalysis(contextName, contextType) {
         const prompt = UNTOUCHABLES_ANALYSIS_PROMPT
             .replace(/{contextName}/g, contextName)
             .replace(/{contextType}/g, contextType);
-        const report = await generatePolishedArticle(prompt, loadingMessage);
+        const report = await generateQuickArticle(prompt, loadingMessage);
         contentArea.innerHTML = marked.parse(report);
     } catch (error) {
         console.error(`Error generating Untouchables analysis for ${contextName}:`, error);
@@ -872,7 +873,7 @@ async function handleIndustryMarketTrendsAnalysis(industryName) {
             .replace('${industryStocks}', industryStocks.join(', '))
             .replace('{newsArticlesJson}', JSON.stringify(validArticles, null, 2));
 
-        let finalReport = await generatePolishedArticle(prompt, loadingMessage);
+        let finalReport = await generateQuickArticle(prompt, loadingMessage);
 
         finalReport = finalReport.replace(/\[Source: (?:Article )?(\d+)\]/g, (match, indexStr) => {
             const index = parseInt(indexStr, 10);
@@ -905,7 +906,7 @@ async function handleIndustryDisruptorAnalysis(industryName) {
 
     try {
         const prompt = INDUSTRY_DISRUPTOR_ANALYSIS_PROMPT.replace(/{industryName}/g, industryName);
-        const report = await generatePolishedArticle(prompt, loadingMessage);
+        const report = await generateQuickArticle(prompt, loadingMessage);
         contentArea.innerHTML = marked.parse(report);
     } catch (error) {
         console.error(`Error generating disruptor analysis for ${industryName}:`, error);
@@ -928,7 +929,7 @@ async function handleIndustryMacroPlaybookAnalysis(industryName) {
         const prompt = INDUSTRY_MACRO_PLAYBOOK_PROMPT
             .replace(/{industryName}/g, industryName)
             .replace(/\[Include standard disclaimer\]/g, standardDisclaimer);
-        const report = await generatePolishedArticle(prompt, loadingMessage);
+        const report = await generateQuickArticle(prompt, loadingMessage);
         contentArea.innerHTML = marked.parse(report);
     } catch (error) {
         console.error(`Error generating macro playbook analysis for ${industryName}:`, error);
@@ -1097,7 +1098,7 @@ export async function handleAnalysisRequest(symbol, reportType, promptConfig, fo
                 .replace('{jsonData}', JSON.stringify(payloadData, null, 2));
 
             contentContainer.dataset.currentPrompt = prompt;
-            const newReportContent = await generatePolishedArticle(prompt, loadingMessage);
+            const newReportContent = await generateQuickArticle(prompt, loadingMessage);
             contentContainer.dataset.rawMarkdown = newReportContent;
             
             // --- ADDED FOR AUTO-SAVE ---
@@ -1205,7 +1206,7 @@ export async function handleAnalysisRequest(symbol, reportType, promptConfig, fo
 
         contentContainer.dataset.currentPrompt = prompt;
 
-        const newReportContent = await generatePolishedArticle(prompt, loadingMessage);
+        const newReportContent = await generateQuickArticle(prompt, loadingMessage);
         contentContainer.dataset.rawMarkdown = newReportContent;
         displayReport(contentContainer, newReportContent, prompt);
         updateReportStatus(statusContainer, [], null, { symbol, reportType, promptConfig });
@@ -1396,7 +1397,7 @@ export async function handleGenerateAllReportsRequest(symbol) {
         'MoatAnalysis', 'DividendSafety', 'GrowthOutlook', 'RiskAssessment', 
         'CapitalAllocators', 'NarrativeCatalyst', 
         'StockFortress', 'StockDisruptor', 'StockPhoenix', 'StockLinchpin', 'StockUntouchables',
-        'Form8KAnalysis', 'Form10KAnalysis', 'Form10QAnalysis'
+        'Form8KAnalysis', 'Form10KAnalysis'
     ];
     const reportDisplayNames = {
         'FinancialAnalysis': 'Financial Analysis', 'UndervaluedAnalysis': 'Undervalued Analysis', 'GarpAnalysis': 'GARP Analysis', 
@@ -1405,7 +1406,7 @@ export async function handleGenerateAllReportsRequest(symbol) {
         'NarrativeCatalyst': 'Narrative & Catalyst',
         'StockFortress': 'The Fortress', 'StockDisruptor': 'The Disruptor', 'StockPhoenix': 'The Phoenix',
         'StockLinchpin': 'The Linchpin', 'StockUntouchables': 'The Untouchables',
-        'Form8KAnalysis': '8-K Filing Analysis', 'Form10KAnalysis': '10-K Filing Analysis', 'Form10QAnalysis': '10-Q Filing Analysis'
+        'Form8KAnalysis': '8-K Filing Analysis', 'Form10KAnalysis': '10-K Filing Analysis'
     };
 
     const metricCalculators = {
@@ -1457,7 +1458,7 @@ export async function handleGenerateAllReportsRequest(symbol) {
             let prompt;
 
             if (reportType.startsWith('Form')) {
-                 const formTypeMap = { 'Form8KAnalysis': '8-K', 'Form10KAnalysis': '10-K', 'Form10QAnalysis': '10-Q' };
+                 const formTypeMap = { 'Form8KAnalysis': '8-K', 'Form10KAnalysis': '10-K' };
                  const formType = formTypeMap[reportType];
                 const q = query(collection(state.db, CONSTANTS.DB_COLLECTION_MANUAL_FILINGS), where("ticker", "==", symbol), where("formType", "==", formType), orderBy("filingDate", "desc"), limit(1));
                 const manualFilingSnapshot = await getDocs(q);
@@ -1487,7 +1488,7 @@ export async function handleGenerateAllReportsRequest(symbol) {
                     .replace('{jsonData}', JSON.stringify(payloadData, null, 2));
             }
 
-            const reportContent = await generatePolishedArticle(prompt, loadingMessage);
+            const reportContent = await generateQuickArticle(prompt, loadingMessage);
 
             const reportData = {
                 ticker: symbol,
@@ -1499,7 +1500,7 @@ export async function handleGenerateAllReportsRequest(symbol) {
             await addDoc(collection(state.db, CONSTANTS.DB_COLLECTION_AI_REPORTS), reportData);
 
             if (aiButtonsContainer) {
-                // This check prevents the error for 8-K, 10-K, 10-Q reports
+                // This check prevents the error for 8-K, 10-K reports
                 if (!reportType.startsWith('Form')) {
                     const button = aiButtonsContainer.querySelector(`button[data-report-type="${reportType}"]`);
                     if (button) {
@@ -1540,9 +1541,6 @@ export async function handleSaveReportToDb() {
     } else if (activeTab === 'form-10k-analysis') {
         contentContainer = document.getElementById('ai-article-container-10k');
         reportType = 'Form10KAnalysis';
-    } else if (activeTab === 'form-10q-analysis') {
-        contentContainer = document.getElementById('ai-article-container-10q');
-        reportType = 'Form10QAnalysis';
     }
 
     if (!symbol || !reportType || !contentContainer) {
@@ -1594,8 +1592,6 @@ export async function handleSaveReportToDb() {
             statusContainer = document.getElementById('report-status-container-8k');
         } else if (activeTab === 'form-10k-analysis') {
             statusContainer = document.getElementById('report-status-container-10k');
-        } else if (activeTab === 'form-10q-analysis') {
-            statusContainer = document.getElementById('report-status-container-10q');
         }
         updateReportStatus(statusContainer, savedReports, latestReport.id, { symbol, reportType, promptConfig });
 
@@ -1854,7 +1850,7 @@ export async function handleFilingAnalysisRequest(symbol, formType, forceNew = f
         
         contentContainer.dataset.currentPrompt = prompt;
 
-        const newReportContent = await generatePolishedArticle(prompt, loadingMessage);
+        const newReportContent = await generateQuickArticle(prompt, loadingMessage);
         contentContainer.dataset.rawMarkdown = newReportContent;
         displayReport(contentContainer, newReportContent, prompt);
         updateReportStatus(statusContainer, [], null, { symbol, reportType });
