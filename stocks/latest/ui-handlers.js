@@ -1,10 +1,10 @@
-import { CONSTANTS, state, promptMap, NEWS_SENTIMENT_PROMPT, DISRUPTOR_ANALYSIS_PROMPT, MACRO_PLAYBOOK_PROMPT, INDUSTRY_CAPITAL_ALLOCATORS_PROMPT, INDUSTRY_DISRUPTOR_ANALYSIS_PROMPT, INDUSTRY_MACRO_PLAYBOOK_PROMPT, ONE_SHOT_INDUSTRY_TREND_PROMPT, FORTRESS_ANALYSIS_PROMPT, PHOENIX_ANALYSIS_PROMPT, PICK_AND_SHOVEL_PROMPT, LINCHPIN_ANALYSIS_PROMPT, HIDDEN_VALUE_PROMPT, UNTOUCHABLES_ANALYSIS_PROMPT, INVESTMENT_MEMO_PROMPT, GARP_VALIDATION_PROMPT, ENABLE_STARTER_PLAN_MODE, STARTER_SYMBOLS, ANALYSIS_REQUIREMENTS } from './config.js';
+import { CONSTANTS, state, promptMap, NEWS_SENTIMENT_PROMPT, DISRUPTOR_ANALYSIS_PROMPT, MACRO_PLAYBOOK_PROMPT, INDUSTRY_CAPITAL_ALLOCATORS_PROMPT, INDUSTRY_DISRUPTOR_ANALYSIS_PROMPT, INDUSTRY_MACRO_PLAYBOOK_PROMPT, ONE_SHOT_INDUSTRY_TREND_PROMPT, FORTRESS_ANALYSIS_PROMPT, PHOENIX_ANALYSIS_PROMPT, PICK_AND_SHOVEL_PROMPT, LINCHPIN_ANALYSIS_PROMPT, HIDDEN_VALUE_PROMPT, UNTOUCHABLES_ANALYSIS_PROMPT, INVESTMENT_MEMO_PROMPT, INCOME_MEMO_PROMPT, GARP_VALIDATION_PROMPT, ENABLE_STARTER_PLAN_MODE, STARTER_SYMBOLS, ANALYSIS_REQUIREMENTS } from './config.js';
 // --- MODIFICATION: Import the new refinement function ---
 import { callApi, filterValidNews, callGeminiApi, generatePolishedArticle, generateRefinedArticle, getDriveToken, getOrCreateDriveFolder, createDriveFile, findStocksByIndustry, searchSectorNews, findStocksBySector, synthesizeAndRankCompanies, generateDeepDiveReport, getFmpStockData, getCompetitorsFromGemini } from './api.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { openModal, closeModal, displayMessageInModal, openConfirmationModal, openManageStockModal } from './ui-modals.js';
 import { renderPortfolioManagerList, renderFmpEndpointsList, renderBroadEndpointsList, renderNewsArticles, displayReport, updateReportStatus, updateBroadReportStatus, fetchAndCachePortfolioData, renderThesisTracker, renderFilingAnalysisTab } from './ui-render.js';
-import { _calculateUndervaluedMetrics, _calculateFinancialAnalysisMetrics, _calculateBullVsBearMetrics, _calculateMoatAnalysisMetrics, _calculateDividendSafetyMetrics, _calculateGrowthOutlookMetrics, _calculateRiskAssessmentMetrics, _calculateCapitalAllocatorsMetrics, _calculateNarrativeCatalystMetrics, _calculateGarpAnalysisMetrics, _calculateCompetitiveLandscapeMetrics, _calculateStockDisruptorMetrics, _calculateStockFortressMetrics, _calculateStockPhoenixMetrics, _calculateStockLinchpinMetrics, _calculateStockUntouchablesMetrics } from './analysis-helpers.js';
+import { _calculateUndervaluedMetrics, _calculateFinancialAnalysisMetrics, _calculateBullVsBearMetrics, _calculateMoatAnalysisMetrics, _calculateDividendDeepDiveMetrics, _calculateGrowthOutlookMetrics, _calculateRiskAssessmentMetrics, _calculateCapitalAllocatorsMetrics, _calculateNarrativeCatalystMetrics, _calculateGarpAnalysisMetrics, _calculateCompetitiveLandscapeMetrics, _calculateStockDisruptorMetrics, _calculateStockFortressMetrics, _calculateStockPhoenixMetrics, _calculateStockLinchpinMetrics, _calculateStockUntouchablesMetrics } from './analysis-helpers.js';
 
 // --- FMP API INTEGRATION & MANAGEMENT ---
 export async function handleRefreshFmpData(symbol) {
@@ -1169,8 +1169,8 @@ export async function handleAnalysisRequest(symbol, reportType, promptConfig, fo
             payloadData = _calculateBullVsBearMetrics(data);
         } else if (reportType === 'MoatAnalysis') {
             payloadData = _calculateMoatAnalysisMetrics(data);
-        } else if (reportType === 'DividendSafety') {
-            payloadData = _calculateDividendSafetyMetrics(data);
+        } else if (reportType === 'DividendDeepDive') {
+            payloadData = _calculateDividendDeepDiveMetrics(data);
         } else if (reportType === 'GrowthOutlook') {
             payloadData = _calculateGrowthOutlookMetrics(data);
         } else if (reportType === 'RiskAssessment') {
@@ -1313,6 +1313,78 @@ export async function handleInvestmentMemoRequest(symbol, forceNew = false) {
     }
 }
 
+export async function handleIncomeMemoRequest(symbol, forceNew = false) {
+    const contentContainer = document.getElementById('ai-article-container');
+    const statusContainer = document.getElementById('report-status-container-ai');
+    contentContainer.innerHTML = '';
+    statusContainer.classList.add('hidden');
+
+    try {
+        const reportType = 'IncomeMemo';
+        const savedReports = await getSavedReports(symbol, reportType);
+        const promptConfig = promptMap[reportType];
+
+        if (savedReports.length > 0 && !forceNew) {
+            const latestReport = savedReports[0];
+            displayReport(contentContainer, latestReport.content, latestReport.prompt);
+            contentContainer.dataset.currentPrompt = latestReport.prompt || '';
+            contentContainer.dataset.rawMarkdown = latestReport.content;
+            updateReportStatus(statusContainer, savedReports, latestReport.id, { symbol, reportType, promptConfig });
+            return;
+        }
+
+        openModal(CONSTANTS.MODAL_LOADING);
+        const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+
+        loadingMessage.textContent = "Gathering required analysis reports for Income Memo...";
+        const requiredReports = ['DividendDeepDive', 'FinancialAnalysis', 'MoatAnalysis'];
+        
+        const reportPromises = requiredReports.map(type => getSavedReports(symbol, type).then(reports => reports[0]));
+        const latestReports = await Promise.all(reportPromises);
+
+        const missingReports = requiredReports.filter((type, index) => !latestReports[index]);
+        if (missingReports.length > 0) {
+            throw new Error(`Please generate and save the following required reports first: ${missingReports.join(', ')}`);
+        }
+
+        let allAnalysesData = latestReports.map(report => {
+            const reportTitle = report.content.match(/#\s*(.*)/)?.[1] || report.reportType;
+            return `--- REPORT: ${reportTitle} ---\n\n${report.content}\n\n`;
+        }).join('\n');
+
+        const data = await getFmpStockData(symbol);
+        const profile = data.profile?.[0] || {};
+        const companyName = profile.companyName || 'the company';
+
+        const prompt = INCOME_MEMO_PROMPT
+            .replace(/{companyName}/g, companyName)
+            .replace(/{tickerSymbol}/g, symbol)
+            .replace('{allAnalysesData}', allAnalysesData);
+
+        loadingMessage.textContent = "AI is drafting the income investment memo...";
+        const memoContent = await generatePolishedArticle(prompt, loadingMessage);
+        
+        await autoSaveReport(symbol, reportType, memoContent, prompt);
+        const refreshedReports = await getSavedReports(symbol, reportType);
+        const latestReport = refreshedReports[0];
+        
+        contentContainer.dataset.currentPrompt = prompt;
+        contentContainer.dataset.rawMarkdown = memoContent;
+        displayReport(contentContainer, memoContent, prompt);
+        
+        updateReportStatus(statusContainer, refreshedReports, latestReport.id, { symbol, reportType, promptConfig });
+
+    } catch (error) {
+        console.error("Error generating Income Memo:", error);
+        displayMessageInModal(`Could not generate report: ${error.message}`, 'error');
+        contentContainer.innerHTML = `<p class="text-red-500">Failed to generate report: ${error.message}</p>`;
+    } finally {
+        if (document.getElementById(CONSTANTS.MODAL_LOADING).classList.contains('is-open')) {
+            closeModal(CONSTANTS.MODAL_LOADING);
+        }
+    }
+}
+
 export async function handleGarpValidationRequest(symbol, forceNew = false) {
     const contentContainer = document.getElementById('ai-article-container');
     const statusContainer = document.getElementById('report-status-container-ai');
@@ -1394,14 +1466,16 @@ export async function handleGenerateAllReportsRequest(symbol) {
         'FinancialAnalysis',
         'RiskAssessment',
         'MoatAnalysis',
-        'CapitalAllocators'
+        'CapitalAllocators',
+        'DividendDeepDive'
     ];
     const reportDisplayNames = {
         'GarpAnalysis': 'GARP Analysis',
         'FinancialAnalysis': 'Financial Analysis',
         'RiskAssessment': 'Risk Assessment',
         'MoatAnalysis': 'Moat Analysis',
-        'CapitalAllocators': 'Capital Allocators'
+        'CapitalAllocators': 'Capital Allocators',
+        'DividendDeepDive': 'Dividend Deep Dive'
     };
     // --- END MODIFICATION ---
 
@@ -1411,7 +1485,7 @@ export async function handleGenerateAllReportsRequest(symbol) {
         'GarpAnalysis': _calculateGarpAnalysisMetrics,
         'BullVsBear': _calculateBullVsBearMetrics,
         'MoatAnalysis': _calculateMoatAnalysisMetrics,
-        'DividendSafety': _calculateDividendSafetyMetrics,
+        'DividendDeepDive': _calculateDividendDeepDiveMetrics,
         'GrowthOutlook': _calculateGrowthOutlookMetrics,
         'RiskAssessment': _calculateRiskAssessmentMetrics,
         'CapitalAllocators': _calculateCapitalAllocatorsMetrics,
