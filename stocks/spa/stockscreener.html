@@ -1222,6 +1222,7 @@ font-size: 0.75rem;
                 data.forEach(stock => {
                     const cachedInfo = appConfig.cachedStockInfo[stock.symbol];
                     stock.cachedTimestamp = cachedInfo?.timestamp ? new Date(cachedInfo.timestamp).getTime() : null;
+                    stock.dividendYield = (stock.price > 0 && stock.lastAnnualDividend > 0) ? (stock.lastAnnualDividend / stock.price) * 100 : null;
                 });
                 
                 advancedScreenerData = data;
@@ -1247,7 +1248,7 @@ font-size: 0.75rem;
                 currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
             } else {
                 currentSort.key = key;
-                const numericDesc = ['marketCap', 'volume', 'price', 'lastAnnualDividend', 'cachedTimestamp'];
+                const numericDesc = ['marketCap', 'volume', 'price', 'lastAnnualDividend', 'dividendYield', 'cachedTimestamp'];
                 currentSort.direction = numericDesc.includes(key) ? 'desc' : 'asc';
             }
             sortAndRerenderAdvancedTable();
@@ -1967,15 +1968,16 @@ font-size: 0.75rem;
             const headers = [
                 getSortableHeaderHtml('symbol', 'Symbol', 'w-[10%]', 'left'),
                 getSortableHeaderHtml('companyName', 'Company', 'w-[15%]', 'left'),
-                getSortableHeaderHtml('marketCap', 'Market Cap', 'w-[9%]', 'right'),
-                getSortableHeaderHtml('volume', 'Volume', 'w-[9%]', 'right'),
+                getSortableHeaderHtml('marketCap', 'Mkt Cap', 'w-[8%]', 'right'),
+                getSortableHeaderHtml('volume', 'Volume', 'w-[8%]', 'right'),
                 getSortableHeaderHtml('sector', 'Sector', 'w-[10%]', 'left'),
                 getSortableHeaderHtml('industry', 'Industry', 'w-[10%]', 'left'),
-                getSortableHeaderHtml('beta', 'Beta', 'w-[6%]', 'right'),
+                getSortableHeaderHtml('beta', 'Beta', 'w-[5%]', 'right'),
                 `<th class="w-[8%] px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">AI Rating</th>`,
                 getSortableHeaderHtml('price', 'Price', 'w-[6%]', 'right'),
                 getSortableHeaderHtml('lastAnnualDividend', 'Dividend', 'w-[6%]', 'right'),
-                getSortableHeaderHtml('cachedTimestamp', 'Cached On', 'w-[11%]', 'left')
+                getSortableHeaderHtml('dividendYield', 'Dividend %', 'w-[6%]', 'right'),
+                getSortableHeaderHtml('cachedTimestamp', 'Cached On', 'w-[8%]', 'left')
             ].join('');
 
             const tableRows = data.map(stock => {
@@ -1998,6 +2000,7 @@ font-size: 0.75rem;
                      <td class="px-4 py-3 whitespace-nowrap text-sm text-center" data-rating-symbol="${stock.symbol}">${getRatingHtml(stock.symbol)}</td>
                      <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-right">${stock.price ? '$'+stock.price.toFixed(2) : 'N/A'}</td>
                      <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-right">${stock.lastAnnualDividend ? '$'+stock.lastAnnualDividend.toFixed(2) : 'N/A'}</td>
+                     <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-right">${stock.dividendYield ? stock.dividendYield.toFixed(2) + '%' : 'N/A'}</td>
                      <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${formatDate(stock.cachedTimestamp)}</td>
                 </tr>`;
             }).join('');
