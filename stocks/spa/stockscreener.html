@@ -729,45 +729,70 @@ font-size: 0.75rem;
 
         // --- MODIFIED: NEW, ADVANCED PROMPT FOR AI SUMMARY ---
         const AI_SUMMARY_PROMPT = `
-        Act as a pragmatic, data-driven investment analyst, channeling the mindset of a value investor. Your goal is to produce a balanced, clear-eyed assessment of a stock's investment potential, grounded *only* in the provided data.
-
-        Critically analyze the provided company information, financial summary, and recent news headlines. Your task is to weigh the pros and cons to arrive at a comprehensive investment thesis. You must follow these steps in your reasoning:
-        1.  Identify the key strengths and positive catalysts from the data (the bull case).
-        2.  Identify the key weaknesses, risks, and negative catalysts (the bear case).
-        3.  Weigh the bull case against the bear case to form a final, synthesized investment thesis.
-        4.  Assign a final valuation category based on your thesis.
-
+        Act as a sharp, pragmatic, and data-driven investment analyst, channeling the skeptical yet insightful spirit of a classic value investor like Benjamin Graham. Your sole objective is to produce a balanced, clear-eyed assessment of a stock's investment potential, grounded exclusively in the provided data. You must ignore any information not present in the inputs.
+        
+        Your analysis will culminate in a comprehensive investment thesis. To achieve this, you must strictly adhere to the following structured reasoning process:
+        
+        1. Core Analytical Framework:
+        First, mentally screen the provided Financial Summary JSON through these lenses:
+        
+        Valuation: How does its Price-to-Earnings (P/E), Price-to-Sales (P/S), and Price-to-Book (P/B) compare to its historical averages? Is it cheap or expensive on the surface?
+        
+        Financial Health: Assess the balance sheet. Is the Debt-to-Equity ratio manageable? Is the company solvent (e.g., based on Current Ratio)?
+        
+        Profitability & Efficiency: Scrutinize the margins (Gross, Operating, Net) and returns (Return on Equity - ROE, Return on Assets - ROA). Is the company an efficient operator? Are profits stable or volatile?
+        
+        Growth: Analyze the trajectory of Revenue and Earnings Per Share (EPS). Is growth accelerating, decelerating, or stagnant?
+        
+        Catalysts: Review the News Headlines. Do they suggest near-term catalysts (positive or negative), competitive shifts, or regulatory changes that could impact intrinsic value?
+        
+        2. Construct the Bull Case:
+        Based on your framework, identify the key strengths and positive catalysts. Each point must be directly and explicitly supported by a specific data point from the provided Financial Summary or a News Headline.
+        
+        3. Construct the Bear Case:
+        Similarly, identify the key weaknesses, risks, and negative catalysts. Each point must also be directly and explicitly supported by a specific data point from the provided inputs. Avoid generic statements.
+        
+        4. Synthesize the Investment Thesis:
+        Weigh the bull case against the bear case. This is your synthesis. It must explain why the pros and cons lead you to your final conclusion. Address the core tension: Do the strengths justify the risks at the current price?
+        
+        5. Assign a Final Valuation Category:
+        Based on your thesis, assign a single valuation category from the list below.
+        
+        INPUT VARIABLES:
+        
         Company: {companyName} ({tickerSymbol})
+        
         Industry: {industry}
+        
         Sector: {sector}
-
-        Financial Summary JSON:
-        {jsonData}
-
-        Latest News Headlines (last 10 days):
-        {newsHeadlines}
-
+        
+        Financial Summary JSON: {jsonData}
+        
+        Latest News Headlines (last 10 days): {newsHeadlines}
+        
+        VALUATION CATEGORY DEFINITIONS:
+        
+        Undervalued: Appears to be trading below its intrinsic value, with strong fundamentals and a clear margin of safety.
+        
+        Fairly Valued: The current market price seems to accurately reflect the company's fundamentals, growth prospects, and risks.
+        
+        Overvalued: The stock price appears to be significantly higher than its intrinsic value, often driven by hype or unrealistic growth expectations.
+        
+        Speculative Growth: Lacks current profitability or has an extreme valuation, but possesses high potential growth that might justify the risk for certain investors.
+        
+        Potential Value Trap: Looks cheap based on valuation metrics (e.g., low P/E), but has deteriorating fundamentals or underlying business challenges.
+        
+        OUTPUT REQUIREMENTS:
+        
         Your final output MUST be a single, valid JSON object with no other text before or after it. The JSON object must contain these four keys:
-        - "valuation_category": A single valuation assessment. Choose ONE: "Undervalued", "Fairly Valued", "Overvalued", "Speculative Growth", "Potential Value Trap".
-        - "investment_thesis": A concise, 2-4 sentence paragraph that summarizes your final assessment, explaining the core reason for the valuation category.
-        - "bull_case_points": A JSON array of strings. Each string is a specific, data-supported reason to be optimistic.
-        - "bear_case_points": A JSON array of strings. Each string is a specific, data-supported risk or reason for caution.
-
-        --- EXAMPLE OUTPUT ---
-        {
-            "valuation_category": "Fairly Valued",
-            "investment_thesis": "While the company shows strong profitability with a high ROE, its revenue growth is decelerating and it trades at a premium to its historical averages. The positive analyst sentiment is counterbalanced by a high debt load, suggesting the current price appropriately reflects both its strengths and risks.",
-            "bull_case_points": [
-                "Consistently high Return on Equity (ROE) trend suggests efficient management.",
-                "Positive analyst sentiment with multiple recent 'Buy' ratings.",
-                "Strong cash flow easily covers dividend payments."
-            ],
-            "bear_case_points": [
-                "Revenue growth has slowed in the most recent year.",
-                "P/E ratio is currently at a premium compared to its 5-year historical average.",
-                "Debt-to-Equity ratio is elevated, indicating higher financial risk."
-            ]
-        }
+        
+        "valuation_category": Your chosen category from the definitions above.
+        
+        "investment_thesis": A concise, 2-4 sentence paragraph summarizing your final assessment and the reasoning for your valuation choice.
+        
+        "bull_case_points": A JSON array of strings. Each string is a specific, data-supported reason for optimism.
+        
+        "bear_case_points": A JSON array of strings. Each string is a specific, data-supported risk or reason for caution.
         `;
 
         // --- 3. Initialization Logic ---
@@ -1443,35 +1468,75 @@ font-size: 0.75rem;
         const analysisPrompts = [
             // Phase 1: Market-Level View
             {
-                title: "Market Summary",
-                id: "market-summary",
-                requiresSymbol: false,
-                prompt: (exchange, articlesText) => `
-                    Act as an expert financial analyst. I will provide you with a list of recent news articles for the ${exchange.toUpperCase()} stock exchange from the last 30 days.
-                    Your task is to synthesize this information into a concise market briefing.
-                    If the provided "NEWS ARTICLES" list is empty, you MUST respond with only this message: "No recent news was available to generate a market summary for this exchange."
-                    If news is available, please structure your analysis into three parts:
-                    1.  **Key Themes:** In bullet points, identify 2-3 dominant themes or narratives driving analyst commentary (e.g., AI investment, inflation concerns, specific sector strength).
-                    2.  **Overall Sentiment:** State the prevailing market sentiment (e.g., Bullish 🐂, Bearish 🐻, or Mixed/Neutral ⚖️) and provide a one-sentence justification based on the balance of positive versus negative analyst ratings.
-                    3.  **Notable Movers:** Mention 1-2 companies that received particularly significant or frequent analyst attention.
-                    Format your response using Markdown.
-                    NEWS ARTICLES:
-                    ${articlesText}`
+            title: "Market Summary",
+            id: "market-summary",
+            requiresSymbol: false,
+            prompt: (exchange, articlesText) => `
+                Act as a senior market strategist at a major financial institution. Your task is to digest a collection of recent news articles for the ${exchange.toUpperCase()} exchange and produce a high-level, institutional-quality market briefing. Your analysis must be objective, data-driven, and based *strictly* on the content of the articles provided.
+        
+                **CRITICAL INSTRUCTION:** If the provided "NEWS ARTICLES" list is empty or contains no relevant information, you MUST respond with *only* this exact text: "No recent news was available to generate a market summary for this exchange."
+        
+                If news is available, synthesize it into the following four-part briefing using Markdown for formatting:
+        
+                **1. Dominant Market Themes:**
+                In bullet points, identify 2-3 recurring themes or narratives driving the market. Look for macroeconomic trends (e.g., inflation data, central bank policy), sector rotations (e.g., capital moving from tech to energy), or major corporate storylines (e.g., widespread M&A activity, supply chain disruptions). Each theme must be directly evident in the articles.
+        
+                **2. Market Sentiment:**
+                State the prevailing market sentiment (choose one: **Bullish 🐂**, **Bearish 🐻**, or **Mixed/Neutral ⚖️**). Justify your choice with a single sentence explaining the dominant driver, based on the tone and substance of the news (e.g., "...driven by widespread positive earnings reports" or "...weighed down by persistent regulatory concerns").
+        
+                **3. Key Stock-Specific News:**
+                Highlight 1-3 companies that are receiving significant attention. For each, specify the company and briefly state the primary reason for the focus (e.g., 'Major earnings beat,' 'CEO change,' 'Significant product announcement,' 'Analyst upgrade/downgrade wave').
+        
+                **4. Forward-Looking Indicator:**
+                Based on the prevailing themes, provide a single sentence on what the market appears to be pricing in or watching for in the near future (e.g., "The intense focus on inflation data suggests the market is bracing for the next central bank interest rate decision.").
+        
+                ---
+                NEWS ARTICLES:
+                ${articlesText}
+            `
             },
             {
                 title: "Sector Sentiment",
                 id: "sector-sentiment",
                 requiresSymbol: false,
                 prompt: (exchange, articlesText) => `
-                    Act as a macro-focused financial analyst. Using the provided news from the ${exchange.toUpperCase()}, perform a sector-level sentiment analysis.
-                    If the provided "NEWS ARTICLES" list is empty, you MUST respond with only this message: "No recent news was available to perform a sector sentiment analysis."
-                    If news is available:
-                    1.  You will need to infer the sector for each company (e.g., technology, healthcare, financials, consumer discretionary), likely from the company name or your own knowledge.
-                    2.  Identify the 3 sectors that received the most news coverage in the dataset.
-                    3.  For each of these top 3 sectors, assign a sentiment score (e.g., Positive, Negative, Neutral).
-                    4.  Provide a 1-2 sentence justification for the assigned sentiment, referencing specific company examples or trends. Format using Markdown.
+                    Act as a quantitative analyst specializing in parsing market news to derive sector-level sentiment. Your goal is to analyze the provided news articles from the ${exchange.toUpperCase()} and produce a concise, data-driven report on the top 3 most-discussed market sectors.
+            
+                    **CRITICAL INSTRUCTION:** If the provided "NEWS ARTICLES" list is empty, you MUST respond with *only* this exact message: "No recent news was available to perform a sector sentiment analysis."
+            
+                    If news is available, follow this methodology:
+                    1.  **Categorize:** Read through all articles. For each piece of news, associate it with one of the sectors from the **Standard Sector Classification** list below.
+                    2.  **Tally:** Count the number of mentions for each sector to identify the three that appear most frequently in the dataset.
+                    3.  **Analyze & Report:** For these top three sectors, determine the prevailing sentiment and the key drivers. Present your findings in a Markdown table and add a concluding summary sentence.
+            
+                    ---
+                    **Standard Sector Classification (Use only these categories):**
+                    * Information Technology
+                    * Health Care
+                    * Financials
+                    * Communication Services
+                    * Consumer Discretionary
+                    * Consumer Staples
+                    * Industrials
+                    * Energy
+                    * Materials
+                    * Real Estate
+                    * Utilities
+            
+                    ---
+                    **Output Format:**
+            
+                    First, create a Markdown table with the following columns:
+                    * **Sector:** The name of the sector.
+                    * **Sentiment:** Assign one of three ratings: **Bullish 🐂**, **Bearish 🐻**, or **Neutral ⚖️**.
+                    * **Key Drivers / Justification:** A 1-2 sentence explanation for the sentiment, citing specific trends, events, or company news from the articles (e.g., "Positive momentum from several major earnings beats," or "Negative pressure due to new regulatory proposals impacting key players.").
+            
+                    Finally, conclude with a single-sentence **Overall Sector View** that summarizes the main takeaway from your analysis.
+            
+                    ---
                     NEWS ARTICLES:
-                    ${articlesText}`
+                    ${articlesText}
+                `
             },
             // Phase 2: Screening for Candidates
             {
@@ -1479,77 +1544,204 @@ font-size: 0.75rem;
                 id: "top-upside",
                 requiresSymbol: false,
                 prompt: (exchange, articlesText) => `
-                    Act as a financial analyst for a growth-focused fund. Your goal is to identify stocks with the highest potential upside based on recent analyst price targets from the ${exchange.toUpperCase()}.
-                    First, examine the provided "NEWS ARTICLES". If the list is empty or contains no articles with both a 'priceTarget' and a 'priceWhenPosted' value, you MUST respond with only this message: "No articles with actionable price targets were found in the provided news data."
-                    If such articles exist, perform the following:
-                    1. For each article with the required data, calculate the potential upside: Upside % = (priceTarget - priceWhenPosted) / priceWhenPosted.
-                    2. Identify the top 5 stocks with the highest calculated potential upside.
-                    3. Present the results in a Markdown numbered list, including the **stock symbol**, the **highest price target**, the **analyst firm** that set it, and the **calculated upside percentage**.
-                    NEWS ARTICLES:
-                    ${articlesText}`
+                    Act as a financial analyst for a growth-focused fund. Your task is to screen recent analyst ratings from the ${exchange.toUpperCase()} and generate a "High-Potential Watchlist" identifying stocks with the greatest potential upside based on price targets.
+            
+                    **CRITICAL:** First, examine the provided "NEWS ARTICLES". If the data is empty or contains no articles with all the required fields ('symbol', 'priceTarget', 'priceWhenPosted', 'analystFirm'), you MUST respond with *only* this message: "No articles with actionable price targets were found in the provided news data."
+            
+                    If actionable data exists, adhere to the following methodology and format:
+            
+                    ---
+                    **Methodology**
+            
+                    1.  **Filter & Calculate:** For each article containing the required data, calculate the potential upside using the formula:
+                        Potential Upside % = ((priceTarget - priceWhenPosted) / priceWhenPosted) * 100
+            
+                    2.  **Group & Select Max:** Some stocks may have multiple new price targets. For the purpose of ranking, you must consider all targets for a single stock and use **only the one that represents the highest potential upside** for that stock.
+            
+                    3.  **Rank:** Identify the top 5 unique stocks with the highest calculated potential upside from the step above.
+            
+                    ---
+                    **Output Format**
+            
+                    1.  Begin your response with the main heading: \`### High-Potential Watchlist: Top 5 Stocks by Analyst Target Upside\`
+            
+                    2.  Present the results in a clean Markdown table with these exact columns:
+                        * **Rank:** 1 through 5.
+                        * **Symbol:** The stock's ticker symbol.
+                        * **Highest Target:** The price target associated with the highest potential upside.
+                        * **Analyst Firm:** The firm that issued that specific price target.
+                        * **Price at Rating:** The 'priceWhenPosted' value.
+                        * **Potential Upside (%)**: The calculated upside, formatted to two decimal places.
+            
+                    3.  Conclude with the following **Analyst's Note**:
+                        *Analyst's Note: This list represents a quantitative screening based on recent analyst targets. It should be used as a starting point for deeper fundamental analysis and due diligence, not as a direct buy recommendation.*
+            
+                    ---
+                    NEWS ARTICLES (Assumed to be a list of objects):
+                    ${articlesText}
+                `
             },
             {
                 title: "Upgrades/Downgrades",
                 id: "upgrades-downgrades",
                 requiresSymbol: false,
                 prompt: (exchange, articlesText) => `
-                    Act as an equity analyst. Your task is to track and summarize significant analyst rating changes from the provided news on the ${exchange.toUpperCase()}.
-                    First, scan all headlines for keywords indicating a change (e.g., "Upgrades," "Downgrades," "Initiates Coverage," "Lowers Rating").
-                    If the provided news list is empty or no such rating changes are found, you MUST respond with only this message: "No significant analyst upgrades or downgrades were found in the recent news."
-                    If changes are found, create two Markdown lists: **"Recent Upgrades"** and **"Recent Downgrades."**
-                    For each entry in the lists, provide:
-                    -   The stock symbol.
-                    -   The analyst firm making the change.
-                    -   A 1-sentence summary of the new rating and price target (e.g., "Upgraded to Outperform with a $120 price target.").
-                    NEWS ARTICLES:
-                    ${articlesText}`
+                    Act as an equity research associate. Your task is to compile a clear, concise "Analyst Actions Briefing" by summarizing all significant analyst rating changes from the provided news on the ${exchange.toUpperCase()}.
+            
+                    **CRITICAL:** First, scan the provided "NEWS ARTICLES". If the list is empty or if no articles mention rating changes (e.g., "upgrades," "downgrades," "initiates," "maintains," "sets target"), you MUST respond with *only* this exact message: "No significant analyst upgrades or downgrades were found in the recent news."
+            
+                    If rating changes are found, structure your briefing as follows:
+            
+                    **1. Executive Summary:**
+                    Start with a brief, 1-2 sentence summary that quantifies the overall activity.
+                    *Example: "This period saw 8 notable analyst actions, including 5 upgrades, 2 downgrades, and 1 new coverage initiation, with significant activity in the Technology sector."*
+            
+                    **2. Detailed Changes:**
+                    Organize all individual rating changes under three distinct Markdown subheadings: \`### 📈 Recent Upgrades\`, \`### 📉 Recent Downgrades\`, and \`### ✨ New Coverage\`.
+            
+                    Under each subheading, create a bulleted list. Each bullet point must follow this format:
+                    **{Stock Symbol}**: by **{Analyst Firm}** - A brief summary of the action, including the rating change (e.g., "from Hold to Buy") and the new price target, if available.
+            
+                    *Example for an upgrade:*
+                    * **AAPL**: by **Morgan Stanley** - Upgraded from **Equal-weight** to **Overweight** with a revised price target of **$220**.
+            
+                    *Example for new coverage:*
+                    * **ZNTH**: by **Goldman Sachs** - Initiated coverage with a **Buy** rating and a **$50** price target.
+            
+                    ---
+                    NEWS ARTICLES (Assumed to be a list of objects):
+                    ${articlesText}
+                `
             },
             {
                 title: "Target Revisions",
                 id: "target-revisions",
                 requiresSymbol: false,
                 prompt: (exchange, articlesText) => `
-                    Act as an equity analyst tracking sentiment momentum. From the provided news articles on the ${exchange.toUpperCase()}, identify stocks that have received multiple price target revisions within the last 30 days.
-                    If the provided news list is empty or no companies have multiple revisions, you MUST respond with only this message: "No stocks with multiple recent price target revisions were found."
-                    If such companies are found, identify up to 3 with the most revisions and for each, describe the trend:
-                    -   **Stock Symbol:** The ticker symbol.
-                    -   **Trend Direction:** Is the consensus price target trending Upward, Downward, or is it Mixed?
-                    -   **Summary of Revisions:** Briefly explain the changes. For example: "Morgan Stanley raised its target from $150 to $175, followed by Goldman Sachs increasing its target to $180, indicating a strengthening positive outlook."
-                    Format using Markdown.
-                    NEWS ARTICLES:
-                    ${articlesText}`
+                    Act as an equity analyst tracking sentiment momentum. Your job is to identify stocks on the ${exchange.toUpperCase()} with a high volume of recent price target revisions and to quantify the resulting shift in analyst consensus.
+            
+                    **CRITICAL:** If the provided "NEWS ARTICLES" list is empty or no single stock has two or more price target revisions, you MUST respond with *only* this exact message: "No stocks with multiple recent price target revisions were found."
+            
+                    If such stocks exist, follow this methodology and format:
+            
+                    ---
+                    **Methodology**
+            
+                    1.  **Group & Count:** Scan all articles, group them by stock symbol, and count the number of unique price target revisions for each stock.
+                    2.  **Filter & Rank:** Identify all stocks with 2 or more revisions and select up to 3 with the highest count.
+                    3.  **Calculate Metrics:** For each of the top stocks, calculate:
+                        * The average of the *new* price targets (the "New Consensus").
+                        * The average of the *previous* price targets or the 'priceWhenPosted' (the "Old Consensus").
+                        * The percentage change from the Old to the New Consensus.
+                    4.  **Determine Trend Direction:** Assign a trend based on the revisions:
+                        * **Upward 📈**: More than two-thirds (>66%) of revisions were positive (new target > old target).
+                        * **Downward 📉**: More than two-thirds (>66%) of revisions were negative.
+                        * **Mixed ⚖️**: Neither of the above conditions is met, indicating analyst disagreement.
+            
+                    ---
+                    **Output Format**
+            
+                    Begin with a brief introductory sentence. Then, for each of the top stocks, create a distinct section with a Markdown heading.
+            
+                    *Example Structure for one stock:*
+            
+                    ### 1. MSFT (Microsoft Corp.)
+                    * **Total Revisions:** 5
+                    * **Previous Consensus Target:** $410.50
+                    * **New Consensus Target:** $455.00
+                    * **Consensus Change:** +10.84%
+            
+                    **Trend Analysis (Upward 📈):** The sentiment for MSFT is clearly positive, with four out of five analysts raising their price targets. The most significant revision came from Morgan Stanley, which lifted its target from $415 to $465, citing strong growth in the Azure cloud division.
+            
+                    ---
+                    NEWS ARTICLES (Assumed to be a list of objects):
+                    ${articlesText}
+                `
             },
             {
                 title: "Influential Analysts",
                 id: "influential-analysts",
                 requiresSymbol: false,
-                 prompt: (exchange, articlesText) => `
-                    Act as a financial markets commentator. From the list of news articles for the ${exchange.toUpperCase()}, identify the most influential analysts in the past 30 days.
-                    If the provided "NEWS ARTICLES" list is empty or too sparse to identify active analysts, you MUST respond with only this message: "Insufficient data to identify the most active analysts."
-                    If data is available, your analysis should name the **Top 3 Most Active Analysts** based on the number of reports in the data.
-                    For each of these three analysts, provide:
-                    -   **Analyst Name and Firm:** e.g., "Akash Tewari (Wolfe Research)".
-                    -   **General Stance:** A brief description of their recent activity (e.g., "Appears bullish on the biotech sector, reiterating multiple 'Outperform' ratings.").
-                    -   **Highlight Call:** Mention their most optimistic or notable call from the dataset.
-                    Format using Markdown.
-                    NEWS ARTICLES:
-                    ${articlesText}`
-            },
+                prompt: (exchange, articlesText) => `
+                    Act as a financial markets commentator. Your task is to produce a segment on "Analysts on the Move," identifying the most active and influential analysts based on the provided news articles for the ${exchange.toUpperCase()}. Your analysis should focus on both the quantity and the nature of their recent calls.
+            
+                    **CRITICAL:** If the provided "NEWS ARTICLES" list is empty or lacks sufficient data to identify at least three distinct analyst actions, you MUST respond with *only* this message: "Insufficient data to identify the most active analysts."
+            
+                    If data is available, follow this methodology and format:
+            
+                    ---
+                    **Methodology**
+            
+                    1.  **Group & Count:** Parse all articles, grouping them by analyst and firm. Tally the total number of unique reports for each analyst to find the most active.
+                    2.  **Rank by Activity:** Identify the **Top 3 Most Active Analysts** based on the number of reports.
+                    3.  **Quantify Stance:** For each of the top analysts, categorize their reports (e.g., Upgrades/Buy vs. Downgrades/Sell) to determine their general market bias.
+                    4.  **Identify Highlight Call:** For each analyst, identify their single most significant call. Prioritize in this order: 1) A major rating change on a widely-known, large-cap stock, OR 2) The call with the highest calculated potential upside.
+            
+                    ---
+                    **Output Format**
+            
+                    Start with a brief, thematic introductory sentence. Then, for each of the top 3 analysts, create a detailed **Analyst Scorecard**.
+            
+                    *Example Structure for one scorecard:*
+            
+                    ### 1. Dan Ives (Wedbush)
+                    * **Activity Breakdown:**
+                        * **Total Reports:** 7
+                        * **Bullish Calls:** 6 (5 Upgrades, 1 New 'Buy' Initiation)
+                        * **Bearish Calls:** 1 (1 Downgrade)
+                    * **Notable Activity & Highlight Call:**
+                        Dan Ives has been exceptionally bullish on the enterprise software space, issuing multiple upgrades. His most significant call was upgrading **Microsoft (MSFT)** from 'Neutral' to 'Outperform' and raising the price target to $500, citing confidence in AI-driven growth for their Azure platform.
+            
+                    ---
+                    NEWS ARTICLES (Assumed to be a list of objects):
+                    ${articlesText}
+                `
+            }
             {
                 title: "New Coverage",
                 id: "new-coverage",
                 requiresSymbol: false,
                 prompt: (exchange, articlesText) => `
-                    Act as a special situations analyst. Your specific task is to scan the provided news from the ${exchange.toUpperCase()} and identify all instances of **new analyst coverage initiations.**
-                    Filter for headlines containing keywords like "Initiates," "Starts," or "Begins Coverage."
-                    If the provided news list is empty or no new coverage initiations are found, you MUST respond with only this message: "No new analyst coverage initiations were found in the recent news."
-                    If initiations are found, present your findings as a Markdown summary list. For each new coverage initiation, detail:
-                    -   **Stock Symbol:** The company being covered.
-                    -   **Analyst Firm:** The firm initiating coverage.
-                    -   **Initial Rating:** The starting rating (e.g., Buy, Hold, Outperform).
-                    -   **Initial Price Target:** The new price target assigned to the stock.
-                    NEWS ARTICLES:
-                    ${articlesText}`
+                    Act as a special situations analyst creating a "New Coverage Catalyst Report." Your specific task is to scan news from the ${exchange.toUpperCase()}, identify all instances of new analyst coverage initiations, and analyze their potential impact.
+            
+                    **CRITICAL:** If the provided "NEWS ARTICLES" list is empty or no headlines mention new coverage (e.g., "Initiates," "Starts," "Begins Coverage"), you MUST respond with *only* this exact message: "No new analyst coverage initiations were found in the recent news."
+            
+                    If initiations are found, follow this methodology and format:
+            
+                    ---
+                    **Methodology**
+            
+                    1.  **Filter & Extract:** Identify all articles that signal new coverage and extract the stock symbol, analyst firm, initial rating, and price target.
+                    2.  **Calculate Potential Upside:** If a 'priceWhenPosted' value is available, calculate the potential upside using the formula: \`Potential Upside % = ((priceTarget - priceWhenPosted) / priceWhenPosted) * 100\`. If not available, leave this field blank.
+                    3.  **Formulate Analyst's Take:** For each initiation, provide a concise, one-sentence insight into its significance. Consider the reputation of the firm, the strength of the rating, or what the coverage implies for the stock.
+            
+                    ---
+                    **Output Format**
+            
+                    1.  **Executive Summary:**
+                        Begin with a 1-2 sentence summary that quantifies the number of initiations and notes any trends.
+                        *Example: "This period saw 6 new coverage initiations, with a notable bullish focus on the renewable energy sector."*
+            
+                    2.  **Detailed Coverage Table:**
+                        Present all findings in a single Markdown table with these exact columns:
+                        * **Symbol**
+                        * **Analyst Firm**
+                        * **Initial Rating**
+                        * **Price Target**
+                        * **Potential Upside (%)**
+                        * **Analyst's Take** (Your one-sentence analysis)
+            
+                    *Example Table Row:*
+            
+            | Symbol | Analyst Firm | Initial Rating | Price Target | Potential Upside (%) | Analyst's Take |
+            | :--- | :--- | :--- | :--- | :--- | :--- |
+            | RNW | Goldman Sachs | Buy | $85.00 | 25.7% | Initiation by a major bank suggests growing institutional validation of the company's technology. |
+            
+            
+                    ---
+                    NEWS ARTICLES (Assumed to be a list of objects):
+                    ${articlesText}
+                `
             }
         ];
 
