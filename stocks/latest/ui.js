@@ -308,11 +308,9 @@ export function setupEventListeners() {
             handleSaveManualFiling(ticker, '8-K');
         } else if (e.target.id === 'manual-10k-form') {
             handleSaveManualFiling(ticker, '10-K');
-        // --- START OF FIX 1: Add listener for 10-Q form submission ---
         } else if (e.target.id === 'manual-10q-form') {
             handleSaveManualFiling(ticker, '10-Q');
         }
-        // --- END OF FIX 1 ---
     });
 
     analysisModal.addEventListener('click', (e) => {
@@ -330,20 +328,16 @@ export function setupEventListeners() {
 		if (target.matches('.tab-button')) {
 		    const tabId = target.dataset.tab;
 		    
-		    // --- START OF FIX ---
-		    // Find the main scrollable container within the modal and reset its scroll position
 		    const scrollContainer = analysisModal.querySelector('.flex-grow.overflow-y-auto');
 		    if (scrollContainer) {
 		        scrollContainer.scrollTop = 0;
 		    }
-		    // --- END OF FIX ---
 		
 		    document.querySelectorAll('#rawDataViewerModal .tab-content').forEach(c => c.classList.add('hidden'));
 		    document.querySelectorAll('#rawDataViewerModal .tab-button').forEach(b => b.classList.remove('active'));
 		    document.getElementById(`${tabId}-tab`).classList.remove('hidden');
 		    target.classList.add('active');
 		
-		    // Lazy-load data on first click
 		    const ticker = document.getElementById('rawDataViewerModal').dataset.activeTicker;
 		    if (!ticker) return;
 		
@@ -356,12 +350,10 @@ export function setupEventListeners() {
 		    } else if (tabId === 'form-10k-analysis' && !target.dataset.loaded) {
 		        renderFilingAnalysisTab(ticker, '10-K');
 		        target.dataset.loaded = 'true';
-            // --- START OF FIX 2: Add lazy loading for 10-Q tab ---
             } else if (tabId === 'form-10q-analysis' && !target.dataset.loaded) {
                 renderFilingAnalysisTab(ticker, '10-Q');
                 target.dataset.loaded = 'true';
             }
-            // --- END OF FIX 2 ---
 		    return;
 		}
         
@@ -392,9 +384,7 @@ export function setupEventListeners() {
         if (target.id === 'garp-validation-button') handleGarpValidationRequest(symbol);
         if (target.id === 'analyze-latest-8k-button') handleFilingAnalysisRequest(symbol, '8-K');
         if (target.id === 'analyze-latest-10k-button') handleFilingAnalysisRequest(symbol, '10-K');
-        // --- START OF FIX 3: Add listener for 10-Q analyze button ---
         if (target.id === 'analyze-latest-10q-button') handleFilingAnalysisRequest(symbol, '10-Q');
-        // --- END OF FIX 3 ---
     });
 	
 	document.getElementById('manageBroadEndpointsModal')?.addEventListener('click', (e) => {
