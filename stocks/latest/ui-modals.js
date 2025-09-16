@@ -1,6 +1,5 @@
 import { CONSTANTS, state, ANALYSIS_ICONS } from './config.js';
 import { getFmpStockData, getGroupedFmpData } from './api.js';
-// ADD THIS IMPORT to get the list rendering function
 import { renderValuationHealthDashboard, renderThesisTracker, _renderGroupedStockList } from './ui-render.js'; 
 import { getDocs, query, collection, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
@@ -140,7 +139,6 @@ export function openSpaAnalysisModal() {
     openModal('spaAnalysisModal');
 }
 
-// --- REVISED FUNCTION ---
 /**
  * Opens a modal displaying a list of stocks, fetches their data, and renders the list.
  * @param {string} listType The type of list to display (e.g., 'Portfolio', 'Watchlist').
