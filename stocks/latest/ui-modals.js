@@ -313,6 +313,7 @@ export async function openRawDataViewer(ticker) {
             { reportType: 'StockPhoenix', text: 'The Phoenix', tooltip: 'Is this a fallen angel showing credible signs of a business turnaround?' },
             { reportType: 'StockLinchpin', text: 'The Linchpin', tooltip: 'Does this company control a vital, irreplaceable choke point in its industry?' },
             { reportType: 'StockUntouchables', text: 'The Untouchables', tooltip: 'Analyzes the power of a "cult" brand and its translation to durable profits.' },
+            { reportType: 'CompoundingMachine', text: 'The Compounder', tooltip: 'Does this business have the traits of a long-term "compounding machine"?' },
         ];
         const specializedButtons = [
              { reportType: 'CapitalAllocators', text: 'Capital Allocators', tooltip: 'Assesses management\'s skill in deploying capital.' },
@@ -365,6 +366,12 @@ export async function openRawDataViewer(ticker) {
                 Generate Income Memo
             </button>`;
 
+        const qualityMemoBtn = `
+            <button data-symbol="${ticker}" id="quality-compounder-memo-button" class="bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 px-6 rounded-lg flex items-center justify-center gap-2 transition-all duration-200 hover:shadow-lg text-base" data-tooltip="Synthesizes quality, growth, and risk reports into a final verdict for long-term investors. Requires the prerequisite reports to be saved first.">
+                ${ANALYSIS_ICONS['QualityCompounderMemo']}
+                Generate Quality Memo
+            </button>`;
+
         // Assemble the new single-column guided workflow layout
         aiButtonsContainer.innerHTML = `
             <div class="space-y-10">
@@ -408,6 +415,7 @@ export async function openRawDataViewer(ticker) {
                         ${garpValidationBtn}
                         ${garpMemoBtn}
                         ${incomeMemoBtn}
+                        ${qualityMemoBtn}
                     </div>
                 </div>
             </div>
