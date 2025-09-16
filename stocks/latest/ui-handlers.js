@@ -4,7 +4,7 @@ import { callApi, filterValidNews, callGeminiApi, generatePolishedArticle, gener
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { openModal, closeModal, displayMessageInModal, openConfirmationModal, openManageStockModal, openSpaAnalysisModal } from './ui-modals.js';
 import { renderPortfolioManagerList, renderFmpEndpointsList, renderBroadEndpointsList, renderNewsArticles, displayReport, updateReportStatus, updateBroadReportStatus, fetchAndCachePortfolioData, renderThesisTracker, renderFilingAnalysisTab } from './ui-render.js';
-import { _calculateUndervaluedMetrics, _calculateFinancialAnalysisMetrics, _calculateBullVsBearMetrics, _calculateMoatAnalysisMetrics, _calculateDividendDeepDiveMetrics, _calculateGrowthOutlookMetrics, _calculateRiskAssessmentMetrics, _calculateCapitalAllocatorsMetrics, _calculateNarrativeCatalystMetrics, _calculateGarpAnalysisMetrics, _calculateCompetitiveLandscapeMetrics, _calculateStockDisruptorMetrics, _calculateStockFortressMetrics, _calculateStockPhoenixMetrics, _calculateStockLinchpinMetrics, _calculateStockUntouchablesMetrics } from './analysis-helpers.js';
+import { _calculateUndervaluedMetrics, _calculateFinancialAnalysisMetrics, _calculateBullVsBearMetrics, _calculateMoatAnalysisMetrics, _calculateDividendDeepDiveMetrics, _calculateGrowthOutlookMetrics, _calculateRiskAssessmentMetrics, _calculateCapitalAllocatorsMetrics, _calculateNarrativeCatalystMetrics, _calculateGarpAnalysisMetrics, _calculateCompetitiveLandscapeMetrics, _calculateStockDisruptorMetrics, _calculateStockFortressMetrics, _calculateStockPhoenixMetrics, _calculateStockLinchpinMetrics, _calculateStockUntouchablesMetrics, _calculateIncomeMemoMetrics } from './analysis-helpers.js';
 
 // --- FMP API INTEGRATION & MANAGEMENT ---
 export async function handleRefreshFmpData(symbol) {
@@ -1353,13 +1353,19 @@ export async function handleIncomeMemoRequest(symbol, forceNew = false) {
         }).join('\n');
 
         const data = await getFmpStockData(symbol);
+        if (!data) {
+            throw new Error(`Could not retrieve FMP data for ${symbol} to generate metrics.`);
+        }
+
+        const metricsPayload = _calculateIncomeMemoMetrics(data);
         const profile = data.profile?.[0] || {};
         const companyName = profile.companyName || 'the company';
 
         const prompt = INCOME_MEMO_PROMPT
             .replace(/{companyName}/g, companyName)
             .replace(/{tickerSymbol}/g, symbol)
-            .replace('{allAnalysesData}', allAnalysesData);
+            .replace('{allAnalysesData}', allAnalysesData)
+            .replace('{jsonData}', JSON.stringify(metricsPayload, null, 2));
 
         loadingMessage.textContent = "AI is drafting the income investment memo...";
         const memoContent = await generatePolishedArticleForSynthesis(prompt, loadingMessage);
