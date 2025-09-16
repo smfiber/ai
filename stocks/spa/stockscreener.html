@@ -1228,7 +1228,7 @@ font-size: 0.75rem;
                 return;
             }
 
-            let url = `https://financialmodelingprep.com/api/v3/stock-screener?apikey=${appConfig.fmpApiKey}&limit=1000&isEtf=false&isFund=false`;
+            let url = `https://financialmodelingprep.com/api/v3/stock-screener?apikey=${appConfig.fmpApiKey}&limit=1000&isEtf=false&isFund=false&dividendYieldMoreThan=0.00001`;
             
             const formIds = ["marketCapMoreThan", "marketCapLowerThan", "betaMoreThan", "betaLowerThan", "volumeMoreThan", "volumeLowerThan", "dividendMoreThan", "dividendLowerThan", "sector", "industry", "exchange", "country"];
             const form = document.getElementById('advancedScreenerFilterForm');
@@ -1247,7 +1247,7 @@ font-size: 0.75rem;
                 data.forEach(stock => {
                     const cachedInfo = appConfig.cachedStockInfo[stock.symbol];
                     stock.cachedTimestamp = cachedInfo?.timestamp ? new Date(cachedInfo.timestamp).getTime() : null;
-                    stock.dividendYield = (stock.price > 0 && stock.lastAnnualDividend > 0) ? (stock.lastAnnualDividend / stock.price) * 100 : null;
+                    stock.dividendYield = stock.dividendYieldPercentage || null;
                 });
                 
                 advancedScreenerData = data;
