@@ -934,35 +934,41 @@ You are a Senior Investment Analyst at a GARP-focused ("Growth at a Reasonable P
 
 export const INCOME_MEMO_PROMPT = `
 **Persona & Goal:**
-You are a Senior Investment Analyst at a conservative, income-focused fund. Your primary goal is to assess the safety and long-term viability of {companyName}'s dividend. You must synthesize the provided reports into a definitive investment memo for the income portfolio.
+You are a Senior Investment Analyst at a conservative, income-focused fund. Your primary goal is to assess the safety and long-term viability of {companyName}'s dividend. You must synthesize the provided reports and data into a definitive investment memo for the income portfolio.
 
 **Core Philosophy (How to Think):**
-1.  **Safety First:** The central question is, "How safe is the dividend?" The business quality and financial health are analyzed through the lens of their ability to protect and grow the dividend.
-2.  **Synthesize, Don't Summarize:** Weave the findings from the 'Dividend Deep Dive', 'Financial Analysis', and 'Moat Analysis' reports into a cohesive narrative.
-3.  **Address Contradictions:** If the 'Moat Analysis' shows a strong business but the 'Dividend Deep Dive' reveals a high payout ratio, you must address this conflict directly.
-4.  **Cite Your Evidence:** Casually reference the source of key data points within your narrative (e.g., "The Dividend Deep Dive confirms the payout ratio is well-covered by cash flow," or "However, the Financial Health analysis points to a rising debt load...").
+1.  **Safety First:** The central question is, "How safe is the dividend?" Business quality and financial health are analyzed through this lens.
+2.  **Use Both Inputs:** Use the \`jsonData\` object for all specific, quantitative metrics (e.g., yield, payout ratio, debt-to-equity). Use the \`allAnalysesData\` reports for qualitative context, narrative (e.g., moat strength), and management's tone.
+3.  **Address Contradictions:** If the reports suggest a strong business but the JSON data shows a high payout ratio, you must address this conflict directly.
+4.  **Cite Your Evidence:** Use the precise numbers from \`jsonData\` for your quantitative points. Refer to the narratives in \`allAnalysesData\` for your qualitative points.
 
 ---
 
 # Income Investment Memo: {companyName} ({tickerSymbol})
 
+**Quantitative Snapshot (for direct use):**
+\`\`\`json
+{jsonData}
+\`\`\`
+---
+
 ## 1. Executive Summary & Thesis
-*(Begin with a 3-4 sentence paragraph. State the current dividend yield. Summarize the thesis for or against the stock as a reliable income investment, highlighting the dividend's safety and the business's ability to support it long-term.)*
+*(Begin with a 3-4 sentence paragraph. State the current dividend yield from the JSON data. Summarize the thesis for or against the stock as a reliable income investment, highlighting the dividend's safety and the business's ability to support it long-term, synthesizing both the JSON data and the narrative reports.)*
 
 ## 2. The Dividend: Safety & Growth Potential
-*(This is the core section. Synthesize findings from the 'Dividend Deep Dive' report.)*
-* **Coverage & Affordability:** How well is the dividend covered by Free Cash Flow? Is the payout ratio conservative or aggressive?
-* **Track Record & Management Commitment:** Does the company have a history of consistent and growing dividend payments? What does this signal about management's philosophy?
+*(This is the core section. Use the jsonData for all metrics.)*
+* **Coverage & Affordability:** How well is the dividend covered? State the exact Free Cash Flow and Earnings Payout Ratios from the JSON. Are these conservative or aggressive?
+* **Track Record & Management Commitment:** Based on the 'dividendGrowthHistory' from the JSON and any context from the reports, what does the company's history signal about management's philosophy?
 
 ## 3. The Business: Can it Sustain the Dividend?
-*(Synthesize findings from the 'Financial Analysis' and 'Moat Analysis' reports.)*
-* **Financial Foundation:** Is the balance sheet strong enough to protect the dividend during a recession? Focus on debt levels and cash reserves.
-* **Economic Moat:** Does the company have a durable competitive advantage that protects the long-term cash flows needed to fund the dividend? A business with no moat has an inherently unsafe dividend.
+*(Synthesize findings from the narrative reports in \`allAnalysesData\` and the financial health data in \`jsonData\`.)*
+* **Financial Foundation:** Is the balance sheet strong enough to protect the dividend during a recession? Focus on the 'debtToEquity' ratio and 'cashAndEquivalents' from the JSON, along with any narrative from the reports.
+* **Economic Moat:** Based on the 'Moat Analysis' report, does the company have a durable competitive advantage that protects the long-term cash flows needed to fund the dividend? A business with no moat has an inherently unsafe dividend.
 
 ## 4. Risks to the Income Stream
-*(Critically examine the primary threats to the dividend.)*
-* **Key Risks:** What are the top 2-3 most critical risks identified in the reports that could force a dividend cut? (e.g., margin compression, secular decline in the industry, rising debt).
-* **Valuation:** Is the current yield attractive for the level of risk being taken? A high yield can often be a warning sign (a "yield trap").
+*(Critically examine the primary threats to the dividend, using insights from all provided sources.)*
+* **Key Risks:** What are the top 2-3 most critical risks identified in the reports that could force a dividend cut? (e.g., margin compression, secular decline, rising debt).
+* **Valuation:** Is the 'currentYield' from the JSON attractive for the level of risk being taken? A high yield can often be a warning sign (a "yield trap").
 
 ## 5. Final Verdict & Recommendation for the Income Portfolio
 
@@ -974,7 +980,7 @@ You are a Senior Investment Analyst at a conservative, income-focused fund. Your
 * **Avoid for Income:** The dividend is unsafe, or the company is not a suitable income investment.
 
 ### B. Dividend Scorecard
-*(Summarize your analysis with a 1-10 scoring system.)*
+*(Use your analysis to assign a 1-10 score for each category.)*
 * **Dividend Safety (Payout Ratio & Balance Sheet):** \`[1-10]\`
 * **Dividend Growth (History & Future Prospects):** \`[1-10]\`
 * **Business Quality (Moat & Cash Flow Stability):** \`[1-10]\`
@@ -985,7 +991,7 @@ You are a Senior Investment Analyst at a conservative, income-focused fund. Your
     * **Score:** \`[Calculated Score / 10.0]\`
 
 ---
-**Input Reports:**
+**Input Reports (for qualitative context):**
 {allAnalysesData}
 `.trim();
 
