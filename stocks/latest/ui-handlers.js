@@ -1,4 +1,4 @@
-import { CONSTANTS, state, promptMap, NEWS_SENTIMENT_PROMPT, DISRUPTOR_ANALYSIS_PROMPT, MACRO_PLAYBOOK_PROMPT, INDUSTRY_CAPITAL_ALLOCATORS_PROMPT, INDUSTRY_DISRUPTOR_ANALYSIS_PROMPT, INDUSTRY_MACRO_PLAYBOOK_PROMPT, ONE_SHOT_INDUSTRY_TREND_PROMPT, FORTRESS_ANALYSIS_PROMPT, PHOENIX_ANALYSIS_PROMPT, PICK_AND_SHOVEL_PROMPT, LINCHPIN_ANALYSIS_PROMPT, HIDDEN_VALUE_PROMPT, UNTOUCHABLES_ANALYSIS_PROMPT, INVESTMENT_MEMO_PROMPT, INCOME_MEMO_PROMPT, GARP_VALIDATION_PROMPT, ENABLE_STARTER_PLAN_MODE, STARTER_SYMBOLS, ANALYSIS_REQUIREMENTS } from './config.js';
+import { CONSTANTS, state, promptMap, NEWS_SENTIMENT_PROMPT, DISRUPTOR_ANALYSIS_PROMPT, MACRO_PLAYBOOK_PROMPT, INDUSTRY_CAPITAL_ALLOCATORS_PROMPT, INDUSTRY_DISRUPTOR_ANALYSIS_PROMPT, INDUSTRY_MACRO_PLAYBOOK_PROMPT, ONE_SHOT_INDUSTRY_TREND_PROMPT, FORTRESS_ANALYSIS_PROMPT, PHOENIX_ANALYSIS_PROMPT, PICK_AND_SHOVEL_PROMPT, LINCHPIN_ANALYSIS_PROMPT, HIDDEN_VALUE_PROMPT, UNTOUCHABLES_ANALYSIS_PROMPT, INVESTMENT_MEMO_PROMPT, INCOME_MEMO_PROMPT, GARP_VALIDATION_PROMPT, ENABLE_STARTER_PLAN_MODE, STARTER_SYMBOLS, ANALYSIS_REQUIREMENTS, QUALITY_COMPOUNDER_MEMO_PROMPT } from './config.js';
 // --- MODIFICATION: Import the new refinement function ---
 import { callApi, filterValidNews, callGeminiApi, generatePolishedArticle, generateRefinedArticle, getDriveToken, getOrCreateDriveFolder, createDriveFile, findStocksByIndustry, searchSectorNews, findStocksBySector, synthesizeAndRankCompanies, generateDeepDiveReport, getFmpStockData, getCompetitorsFromGemini } from './api.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -1167,7 +1167,7 @@ export async function handleAnalysisRequest(symbol, reportType, promptConfig, fo
             payloadData = _calculateFinancialAnalysisMetrics(data);
         } else if (reportType === 'BullVsBear') {
             payloadData = _calculateBullVsBearMetrics(data);
-        } else if (reportType === 'MoatAnalysis') {
+        } else if (reportType === 'MoatAnalysis' || reportType === 'CompoundingMachine') {
             payloadData = _calculateMoatAnalysisMetrics(data);
         } else if (reportType === 'DividendDeepDive') {
             payloadData = _calculateDividendDeepDiveMetrics(data);
@@ -1208,7 +1208,7 @@ export async function handleAnalysisRequest(symbol, reportType, promptConfig, fo
         contentContainer.dataset.currentPrompt = prompt;
 
         // --- MODIFICATION: Use the new refinement function ---
-        const newReportContent = await generateRefinedArticle(prompt, loadingMessage);
+        const newReportContent = await generateRefinedArticle(prompt, loadingMessageElement);
         contentContainer.dataset.rawMarkdown = newReportContent;
         displayReport(contentContainer, newReportContent, prompt);
         updateReportStatus(statusContainer, [], null, { symbol, reportType, promptConfig });
@@ -1385,6 +1385,78 @@ export async function handleIncomeMemoRequest(symbol, forceNew = false) {
     }
 }
 
+export async function handleQualityCompounderMemoRequest(symbol, forceNew = false) {
+    const contentContainer = document.getElementById('ai-article-container');
+    const statusContainer = document.getElementById('report-status-container-ai');
+    contentContainer.innerHTML = '';
+    statusContainer.classList.add('hidden');
+
+    try {
+        const reportType = 'QualityCompounderMemo';
+        const savedReports = await getSavedReports(symbol, reportType);
+        const promptConfig = promptMap[reportType];
+
+        if (savedReports.length > 0 && !forceNew) {
+            const latestReport = savedReports[0];
+            displayReport(contentContainer, latestReport.content, latestReport.prompt);
+            contentContainer.dataset.currentPrompt = latestReport.prompt || '';
+            contentContainer.dataset.rawMarkdown = latestReport.content;
+            updateReportStatus(statusContainer, savedReports, latestReport.id, { symbol, reportType, promptConfig });
+            return;
+        }
+
+        openModal(CONSTANTS.MODAL_LOADING);
+        const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+
+        loadingMessage.textContent = "Gathering required analysis reports for Quality Compounder Memo...";
+        const requiredReports = ['CompoundingMachine', 'FinancialAnalysis', 'RiskAssessment', 'GrowthOutlook'];
+        
+        const reportPromises = requiredReports.map(type => getSavedReports(symbol, type).then(reports => reports[0]));
+        const latestReports = await Promise.all(reportPromises);
+
+        const missingReports = requiredReports.filter((type, index) => !latestReports[index]);
+        if (missingReports.length > 0) {
+            throw new Error(`Please generate and save the following required reports first: ${missingReports.join(', ')}`);
+        }
+
+        let allAnalysesData = latestReports.map(report => {
+            const reportTitle = report.content.match(/#\s*(.*)/)?.[1] || report.reportType;
+            return `--- REPORT: ${reportTitle} ---\n\n${report.content}\n\n`;
+        }).join('\n');
+
+        const data = await getFmpStockData(symbol);
+        const profile = data.profile?.[0] || {};
+        const companyName = profile.companyName || 'the company';
+
+        const prompt = QUALITY_COMPOUNDER_MEMO_PROMPT
+            .replace(/{companyName}/g, companyName)
+            .replace(/{tickerSymbol}/g, symbol)
+            .replace('{allAnalysesData}', allAnalysesData);
+
+        loadingMessage.textContent = "AI is drafting the Quality Compounder memo...";
+        const memoContent = await generatePolishedArticle(prompt, loadingMessage);
+        
+        await autoSaveReport(symbol, reportType, memoContent, prompt);
+        const refreshedReports = await getSavedReports(symbol, reportType);
+        const latestReport = refreshedReports[0];
+        
+        contentContainer.dataset.currentPrompt = prompt;
+        contentContainer.dataset.rawMarkdown = memoContent;
+        displayReport(contentContainer, memoContent, prompt);
+        
+        updateReportStatus(statusContainer, refreshedReports, latestReport.id, { symbol, reportType, promptConfig });
+
+    } catch (error) {
+        console.error("Error generating Quality Compounder Memo:", error);
+        displayMessageInModal(`Could not generate report: ${error.message}`, 'error');
+        contentContainer.innerHTML = `<p class="text-red-500">Failed to generate report: ${error.message}</p>`;
+    } finally {
+        if (document.getElementById(CONSTANTS.MODAL_LOADING).classList.contains('is-open')) {
+            closeModal(CONSTANTS.MODAL_LOADING);
+        }
+    }
+}
+
 export async function handleGarpValidationRequest(symbol, forceNew = false) {
     const contentContainer = document.getElementById('ai-article-container');
     const statusContainer = document.getElementById('report-status-container-ai');
@@ -1460,14 +1532,15 @@ export async function handleGarpValidationRequest(symbol, forceNew = false) {
 }
 
 export async function handleGenerateAllReportsRequest(symbol) {
-    // --- MODIFICATION: Focused report list and display names ---
     const reportTypes = [
         'GarpAnalysis',
         'FinancialAnalysis',
         'RiskAssessment',
         'MoatAnalysis',
         'CapitalAllocators',
-        'DividendDeepDive'
+        'DividendDeepDive',
+        'CompoundingMachine',
+        'GrowthOutlook'
     ];
     const reportDisplayNames = {
         'GarpAnalysis': 'GARP Analysis',
@@ -1475,9 +1548,10 @@ export async function handleGenerateAllReportsRequest(symbol) {
         'RiskAssessment': 'Risk Assessment',
         'MoatAnalysis': 'Moat Analysis',
         'CapitalAllocators': 'Capital Allocators',
-        'DividendDeepDive': 'Dividend Deep Dive'
+        'DividendDeepDive': 'Dividend Deep Dive',
+        'CompoundingMachine': 'Compounding Machine',
+        'GrowthOutlook': 'Growth Outlook'
     };
-    // --- END MODIFICATION ---
 
     const metricCalculators = {
         'FinancialAnalysis': _calculateFinancialAnalysisMetrics,
@@ -1485,6 +1559,7 @@ export async function handleGenerateAllReportsRequest(symbol) {
         'GarpAnalysis': _calculateGarpAnalysisMetrics,
         'BullVsBear': _calculateBullVsBearMetrics,
         'MoatAnalysis': _calculateMoatAnalysisMetrics,
+        'CompoundingMachine': _calculateMoatAnalysisMetrics,
         'DividendDeepDive': _calculateDividendDeepDiveMetrics,
         'GrowthOutlook': _calculateGrowthOutlookMetrics,
         'RiskAssessment': _calculateRiskAssessmentMetrics,
@@ -1528,7 +1603,7 @@ export async function handleGenerateAllReportsRequest(symbol) {
             let prompt;
 
             if (reportType.startsWith('Form')) {
-                 const formTypeMap = { 'Form8KAnalysis': '8-K', 'Form10KAnalysis': '10-K' };
+                 const formTypeMap = { 'Form8KAnalysis': '8-K', 'Form10KAnalysis': '10-K', 'Form10QAnalysis': '10-Q' };
                  const formType = formTypeMap[reportType];
                 const q = query(collection(state.db, CONSTANTS.DB_COLLECTION_MANUAL_FILINGS), where("ticker", "==", symbol), where("formType", "==", formType), orderBy("filingDate", "desc"), limit(1));
                 const manualFilingSnapshot = await getDocs(q);
@@ -1612,6 +1687,9 @@ export async function handleSaveReportToDb() {
     } else if (activeTab === 'form-10k-analysis') {
         contentContainer = document.getElementById('ai-article-container-10k');
         reportType = 'Form10KAnalysis';
+    } else if (activeTab === 'form-10q-analysis') {
+        contentContainer = document.getElementById('ai-article-container-10q');
+        reportType = 'Form10QAnalysis';
     }
 
     if (!symbol || !reportType || !contentContainer) {
@@ -1663,6 +1741,8 @@ export async function handleSaveReportToDb() {
             statusContainer = document.getElementById('report-status-container-8k');
         } else if (activeTab === 'form-10k-analysis') {
             statusContainer = document.getElementById('report-status-container-10k');
+        } else if (activeTab === 'form-10q-analysis') {
+            statusContainer = document.getElementById('report-status-container-10q');
         }
         updateReportStatus(statusContainer, savedReports, latestReport.id, { symbol, reportType, promptConfig });
 
