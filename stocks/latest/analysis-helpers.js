@@ -107,7 +107,7 @@ export function _calculateUndervaluedMetrics(data) {
         pb: {
             current: pbRatio ? pbRatio.toFixed(2) : 'N/A',
             historicalAverage: historicalPb ? historicalPb.toFixed(2) : 'N/A',
-            status: historicalPb && pbRatio ? (pbRatio > historicalPb ? 'Premium' : 'Discount') : 'N/A'
+            status: historicalPb && pbRatio ? (pbRatio > pbRatio ? 'Premium' : 'Discount') : 'N/A'
         }
     };
     
@@ -946,6 +946,67 @@ export function _calculateStockUntouchablesMetrics(data) {
         valuation: {
             peRatio: (latestMetrics.peRatioTTM ?? latestMetrics.peRatio)?.toFixed(2) || 'N/A',
             psRatio: (latestRatios.priceToSalesRatioTTM ?? latestRatios.priceToSalesRatio)?.toFixed(2) || 'N/A'
+        }
+    };
+}
+
+/**
+ * NEW: Calculates metrics for the "Income Memo" prompt.
+ * @param {object} data - The full FMP data object for a stock.
+ * @returns {object} A summary object with pre-calculated metrics.
+ */
+export function _calculateIncomeMemoMetrics(data) {
+    const ratios_annual = (data.ratios_annual || []).slice().reverse();
+    const keyMetrics_annual = (data.key_metrics_annual || []).slice().reverse();
+    const cashFlow_annual = (data.cash_flow_statement_annual || []).slice().reverse();
+    const balanceSheet_annual = (data.balance_sheet_statement_annual || []).slice().reverse();
+    
+    // Prioritize TTM data where available
+    const latestRatios = data.ratios_ttm?.[0] || ratios_annual[ratios_annual.length - 1] || {};
+    const latestKeyMetrics = data.key_metrics_ttm?.[0] || keyMetrics_annual[keyMetrics_annual.length - 1] || {};
+    const latestCashFlow = cashFlow_annual[cashFlow_annual.length - 1] || {};
+    const latestBalanceSheet = balanceSheet_annual[balanceSheet_annual.length - 1] || {};
+
+    // 1. Dividend Yield
+    const currentYieldValue = latestRatios.dividendYieldTTM ?? latestRatios.dividendYield;
+    const currentYield = currentYieldValue ? `${(currentYieldValue * 100).toFixed(2)}%` : 'N/A';
+
+    // 2. Payout Ratios
+    let fcfPayoutRatio = 'N/A';
+    if (latestCashFlow.freeCashFlow && latestCashFlow.dividendsPaid && latestCashFlow.freeCashFlow > 0) {
+        const ratio = (Math.abs(latestCashFlow.dividendsPaid) / latestCashFlow.freeCashFlow) * 100;
+        fcfPayoutRatio = `${ratio.toFixed(2)}%`;
+    }
+    const earningsPayoutRatio = latestKeyMetrics.payoutRatio ? `${(latestKeyMetrics.payoutRatio * 100).toFixed(2)}%` : 'N/A';
+
+    // 3. Dividend Growth History
+    const dividendGrowthHistory = (() => {
+        const dividendsPaid = cashFlow_annual.slice(-5).map(cf => Math.abs(cf.dividendsPaid || 0));
+        if (dividendsPaid.length < 3) return "Not enough data for a trend.";
+        
+        let growthCount = 0;
+        for (let i = 1; i < dividendsPaid.length; i++) {
+            if (dividendsPaid[i] > dividendsPaid[i - 1]) {
+                growthCount++;
+            }
+        }
+        if (growthCount >= dividendsPaid.length - 2) return "Consistent growth";
+        if (dividendsPaid[dividendsPaid.length - 1] >= dividendsPaid[dividendsPaid.length - 2]) return "Stable or growing recently";
+        return "Inconsistent or declining";
+    })();
+
+    // 4. Financial Health
+    const debtToEquity = latestKeyMetrics.debtToEquity ? latestKeyMetrics.debtToEquity.toFixed(2) : 'N/A';
+    const cashAndEquivalents = latestBalanceSheet.cashAndCashEquivalents ? formatLargeNumber(latestBalanceSheet.cashAndCashEquivalents) : 'N/A';
+    
+    return {
+        currentYield,
+        fcfPayoutRatio,
+        earningsPayoutRatio,
+        dividendGrowthHistory,
+        financialHealth: {
+            debtToEquity,
+            cashAndEquivalents
         }
     };
 }
