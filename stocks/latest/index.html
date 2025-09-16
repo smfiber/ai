@@ -156,6 +156,13 @@
                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
         </button>
+        <button id="analyze-spa-button" class="fixed w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-transform duration-200 hover:scale-110 bg-gray-600 hover:bg-gray-700 text-white z-30" style="bottom: 2rem; right: 7rem;" title="Analyze SPA Code">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 3.75H19.5a.75.75 0 0 1 .75.75v10.5a.75.75 0 0 1-.75.75H8.25a.75.75 0 0 1-.75-.75V4.5a.75.75 0 0 1 .75-.75Z" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 19.5a.75.75 0 0 0 .75-.75V8.25a.75.75 0 0 0-.75-.75H1.5a.75.75 0 0 0-.75.75v10.5A.75.75 0 0 0 1.5 21h3Z" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 7.5l-3.879 3.879a.75.75 0 0 1-1.06 0l-1.06-1.06a.75.75 0 0 0-1.06 0L3.75 15.75" />
+            </svg>
+        </button>
     </div>
 
     <div id="apiKeyModal" class="fixed inset-0 z-[100] items-center justify-center p-4 modal">
@@ -583,6 +590,18 @@
                 <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg">Save Thesis</button>
             </div>
         </form>
+    </div>
+</div>
+
+<div id="spaAnalysisModal" class="fixed inset-0 z-[105] items-center justify-center p-4 modal">
+    <div class="absolute inset-0 bg-gray-900 bg-opacity-75" id="close-spa-analysis-modal-bg"></div>
+    <div class="relative bg-white rounded-2xl shadow-lg border border-gray-200 flex flex-col w-full max-w-4xl h-full max-h-[90vh] m-4">
+        <div class="p-6 border-b border-gray-200 flex justify-between items-center">
+            <h2 class="text-2xl font-bold text-gray-800">AI Analysis of SPA Code</h2>
+            <button id="close-spa-analysis-modal" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+        </div>
+        <div id="spa-analysis-content" class="p-6 overflow-y-auto flex-grow prose max-w-none">
+            </div>
     </div>
 </div>
 
