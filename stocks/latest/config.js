@@ -785,7 +785,7 @@ const CAPITAL_ALLOCATORS_PROMPT = `
 	- **Conclude with a "Red Flags" section, highlighting any concerning trends in the data.**
 
 	When you mention a stock ticker, you MUST wrap it in a special tag like this: <stock-ticker>TICKER</stock-ticker>.
-`.trim();
+`;
 
 // --- NEW PROMPTS (v13.2.0) ---
 const NARRATIVE_CATALYST_PROMPT = `
@@ -937,7 +937,7 @@ You are a Senior Investment Analyst at a conservative, income-focused fund. Your
 
 **Core Philosophy (How to Think):**
 1.  **Safety First:** The central question is, "How safe is the dividend?" The business quality and financial health are analyzed through the lens of their ability to protect and grow the dividend.
-2.  **Synthesize, Don't Summarize:** Weave the findings from the 'Dividend Deep Dive', 'Financial Health', and 'Moat Analysis' reports into a cohesive narrative.
+2.  **Synthesize, Don't Summarize:** Weave the findings from the 'Dividend Deep Dive', 'Financial Analysis', and 'Moat Analysis' reports into a cohesive narrative.
 3.  **Address Contradictions:** If the 'Moat Analysis' shows a strong business but the 'Dividend Deep Dive' reveals a high payout ratio, you must address this conflict directly.
 4.  **Cite Your Evidence:** Casually reference the source of key data points within your narrative (e.g., "The Dividend Deep Dive confirms the payout ratio is well-covered by cash flow," or "However, the Financial Health analysis points to a rising debt load...").
 
@@ -954,7 +954,7 @@ You are a Senior Investment Analyst at a conservative, income-focused fund. Your
 * **Track Record & Management Commitment:** Does the company have a history of consistent and growing dividend payments? What does this signal about management's philosophy?
 
 ## 3. The Business: Can it Sustain the Dividend?
-*(Synthesize findings from the 'Financial Health' and 'Moat Analysis' reports.)*
+*(Synthesize findings from the 'Financial Analysis' and 'Moat Analysis' reports.)*
 * **Financial Foundation:** Is the balance sheet strong enough to protect the dividend during a recession? Focus on debt levels and cash reserves.
 * **Economic Moat:** Does the company have a durable competitive advantage that protects the long-term cash flows needed to fund the dividend? A business with no moat has an inherently unsafe dividend.
 
@@ -1720,7 +1720,7 @@ Your analysis must be structured as follows:
 - The market is rarely blind to a great brand. Briefly comment on the company's valuation. **Is it trading at a significant premium to its peers and the broader market? Is that premium justified by its superior profitability and growth prospects?**
 
 ## 6. The Long-Term Investment Thesis
-- Conclude by explaining why this powerful brand—**validated by its financial performance and after considering the risks and valuation**—creates a durable competitive advantage that is extremely difficult to replicate, leading to predictable long-term profits.
+- Conclude by explaining why this powerful brand—**validated by its financial performance and after considering the risks and valuation**—creates a durable competitive advantage that is extremely difficult to replicate, leading to predictable, long-term profits.
 
 When you mention a stock ticker, you MUST wrap it in a special tag like this: <stock-ticker>TICKER</stock-ticker>.
 `;
