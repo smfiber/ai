@@ -1488,63 +1488,6 @@ font-size: 0.75rem;
                     ${articlesText}`
             },
             {
-                title: "Insider Activity",
-                id: "insider-activity",
-                requiresSymbol: false,
-                prompt: (exchange, articlesText) => `
-                    Act as a financial analyst. Scan the provided news articles for any mentions of insider trading (buying or selling by executives) for companies on the ${exchange.toUpperCase()} exchange. 
-                    Summarize any significant findings for specific companies in a bulleted list. 
-                    If no mentions are found, or if the news article list is empty, state "No significant insider activity was mentioned in the provided news articles."
-                    NEWS ARTICLES:
-                    ${articlesText}`
-            },
-            {
-                title: "Battleground Stocks",
-                id: "battleground-stocks",
-                requiresSymbol: false,
-                prompt: (exchange, articlesText) => `
-                    Act as a quantitative financial analyst. Based on the provided news articles for the ${exchange.toUpperCase()} stock exchange, identify the top 2-3 "battleground stocks."
-                    These are stocks with the widest disparity in analyst price targets, indicating significant debate about their future value.
-                    If the provided "NEWS ARTICLES" list is empty or contains insufficient data to identify a clear price target range for any stock, you MUST respond with only this message: "Insufficient price target data was found to identify battleground stocks."
-                    If data is available, for each identified battleground stock, provide:
-                    -   **Stock Symbol:** The ticker symbol.
-                    -   **Price Target Range:** The highest and lowest price target issued in the provided data.
-                    -   **Analyst Disagreement:** A brief (1-2 sentence) summary of the likely reasons for the conflicting opinions, as inferred from the data.
-                    Conclude with a sentence on what this level of disagreement implies for investors. Format using Markdown.
-                    NEWS ARTICLES:
-                    ${articlesText}`
-            },
-            // Phase 3: Vetting a Specific Stock
-            {
-                title: "Financial Snapshot",
-                id: "financial-snapshot",
-                requiresSymbol: true,
-                prompt: (exchange, articlesText, symbol) => `
-                    Act as an equity analyst. For the stock symbol ${symbol.toUpperCase()}, provide a "News-Based Sentiment Summary" based ONLY on the provided news articles.
-                    Your response must be in Markdown and include:
-                    1.  **Overall Sentiment:** Based on the articles, classify the recent sentiment as Positive, Negative, or Neutral.
-                    2.  **Key News Drivers:** In a bulleted list, summarize 2-3 key topics or events driving the sentiment (e.g., "Positive analyst ratings," "Concerns about competition," "New product announcements").
-                    3.  **Qualitative Summary:** Provide a one-sentence qualitative summary of the company's perceived health based on the news (e.g., "Recent news suggests a positive outlook driven by strong analyst ratings," or "News flow indicates caution due to competitive pressures.").
-                    Do not use any external knowledge or data not present in the articles.
-                    NEWS ARTICLES for ${symbol.toUpperCase()}:
-                    ${articlesText}`
-            },
-            {
-                title: "Relative Valuation",
-                id: "relative-valuation",
-                requiresSymbol: true,
-                prompt: (exchange, articlesText, symbol) => `
-                    Act as an equity analyst. For the stock symbol ${symbol.toUpperCase()}, perform a "Peer Mention Analysis" based ONLY on the provided news articles.
-                    Scan the articles for any mentions of competitor companies.
-                    If no competitors are mentioned, respond with only this message: "No competitor mentions were found in the recent news for this stock."
-                    If competitors are mentioned, please provide:
-                    1.  A bulleted list of the competitor companies mentioned by name.
-                    2.  A brief summary of the context in which the competitors were mentioned (e.g., "Company X was mentioned as a key competitor in the cloud computing space," or "Analysts compared its growth to Company Y.").
-                    Do not use any external knowledge to identify competitors. Base your analysis solely on the text of the provided articles.
-                    NEWS ARTICLES for ${symbol.toUpperCase()}:
-                    ${articlesText}`
-            },
-            {
                 title: "Upgrades/Downgrades",
                 id: "upgrades-downgrades",
                 requiresSymbol: false,
@@ -1589,49 +1532,6 @@ font-size: 0.75rem;
                     -   **Highlight Call:** Mention their most optimistic or notable call from the dataset.
                     Format using Markdown.
                     NEWS ARTICLES:
-                    ${articlesText}`
-            },
-            {
-                title: "Firm Views",
-                id: "firm-views",
-                requiresSymbol: false,
-                prompt: (exchange, articlesText) => `
-                    Act as a financial markets strategist. I have provided a list of analyst actions on the ${exchange.toUpperCase()} stock exchange.
-                    Your task is to analyze the "house view" of the most active analyst firms.
-                    If the provided "NEWS ARTICLES" list is empty or no single firm has published multiple reports, you MUST respond with only this message: "Insufficient data to determine the house view for any analyst firm."
-                    If data is available:
-                    1.  Identify the 3 firms (e.g., "Wolfe Research", "Goldman Sachs") with the highest number of published ratings in the dataset.
-                    2.  For each of these top 3 firms, provide a 2-3 sentence summary of their overall stance.
-                    3.  Note whether they appear generally bullish, bearish, or focused on a specific sector. Mention one stock they are particularly positive or negative on, if the data shows a clear example. Format using Markdown.
-                    NEWS ARTICLES:
-                    ${articlesText}`
-            },
-            // Phase 4: Final Thesis
-            {
-                title: "Single-Stock Deep Dive",
-                id: "single-stock-deep-dive",
-                requiresSymbol: true,
-                prompt: (exchange, articlesText, symbol) => `
-                    Act as a senior equity research analyst. I will provide you with all recent news articles concerning the stock symbol ${symbol.toUpperCase()} from the last 30 days.
-                    Synthesize all the provided information into a professional "Deep Dive" summary.
-                    Your summary must include:
-                    -   **Analyst Consensus:** What is the general consensus (Buy, Hold, Sell)? What is the average or consensus price target from the data?
-                    -   **Bull Case Summary:** Briefly summarize the key arguments from analysts with positive ratings or high price targets.
-                    -   **Bear Case Summary:** Briefly summarize the key arguments or risks highlighted by analysts with more cautious ratings.
-                    -   **Recent Timeline:** Note any recent upgrades, downgrades, or target changes in chronological order.
-                    Format using Markdown.
-                    NEWS ARTICLES for ${symbol.toUpperCase()}:
-                    ${articlesText}`
-            },
-            {
-                title: "Risk Factors",
-                id: "risk-factors",
-                requiresSymbol: true,
-                prompt: (exchange, articlesText, symbol) => `
-                    Act as a risk analyst. Based on the provided news articles for ${symbol.toUpperCase()} and your general knowledge of the company, identify and summarize the top 3-5 key risks for the stock.
-                    Categorize the risks if possible (e.g., Market Risk, Competitive Risk, Regulatory Risk). Present your findings as a bulleted list in Markdown.
-                    If the provided articles do not contain enough information to identify specific risks, state that "No specific risk factors were highlighted in the provided news articles."
-                    NEWS ARTICLES for ${symbol.toUpperCase()}:
                     ${articlesText}`
             },
             {
