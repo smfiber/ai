@@ -1,6 +1,6 @@
 import { CONSTANTS, state, promptMap, NEWS_SENTIMENT_PROMPT, DISRUPTOR_ANALYSIS_PROMPT, MACRO_PLAYBOOK_PROMPT, INDUSTRY_CAPITAL_ALLOCATORS_PROMPT, INDUSTRY_DISRUPTOR_ANALYSIS_PROMPT, INDUSTRY_MACRO_PLAYBOOK_PROMPT, ONE_SHOT_INDUSTRY_TREND_PROMPT, FORTRESS_ANALYSIS_PROMPT, PHOENIX_ANALYSIS_PROMPT, PICK_AND_SHOVEL_PROMPT, LINCHPIN_ANALYSIS_PROMPT, HIDDEN_VALUE_PROMPT, UNTOUCHABLES_ANALYSIS_PROMPT, INVESTMENT_MEMO_PROMPT, INCOME_MEMO_PROMPT, GARP_VALIDATION_PROMPT, ENABLE_STARTER_PLAN_MODE, STARTER_SYMBOLS, ANALYSIS_REQUIREMENTS, QUALITY_COMPOUNDER_MEMO_PROMPT } from './config.js';
 // --- MODIFICATION: Import the new refinement function ---
-import { callApi, filterValidNews, callGeminiApi, generatePolishedArticle, generateRefinedArticle, getDriveToken, getOrCreateDriveFolder, createDriveFile, findStocksByIndustry, searchSectorNews, findStocksBySector, synthesizeAndRankCompanies, generateDeepDiveReport, getFmpStockData, getCompetitorsFromGemini } from './api.js';
+import { callApi, filterValidNews, callGeminiApi, generatePolishedArticle, generatePolishedArticleForSynthesis, generateRefinedArticle, getDriveToken, getOrCreateDriveFolder, createDriveFile, findStocksByIndustry, searchSectorNews, findStocksBySector, synthesizeAndRankCompanies, generateDeepDiveReport, getFmpStockData, getCompetitorsFromGemini } from './api.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { openModal, closeModal, displayMessageInModal, openConfirmationModal, openManageStockModal, openSpaAnalysisModal } from './ui-modals.js';
 import { renderPortfolioManagerList, renderFmpEndpointsList, renderBroadEndpointsList, renderNewsArticles, displayReport, updateReportStatus, updateBroadReportStatus, fetchAndCachePortfolioData, renderThesisTracker, renderFilingAnalysisTab } from './ui-render.js';
@@ -1288,7 +1288,7 @@ export async function handleInvestmentMemoRequest(symbol, forceNew = false) {
             .replace('{allAnalysesData}', allAnalysesData);
 
         loadingMessage.textContent = "AI is drafting the investment memo...";
-        const memoContent = await generatePolishedArticle(prompt, loadingMessage);
+        const memoContent = await generatePolishedArticleForSynthesis(prompt, loadingMessage);
         
         // --- ADDED FOR AUTO-SAVE ---
         await autoSaveReport(symbol, reportType, memoContent, prompt);
@@ -1362,7 +1362,7 @@ export async function handleIncomeMemoRequest(symbol, forceNew = false) {
             .replace('{allAnalysesData}', allAnalysesData);
 
         loadingMessage.textContent = "AI is drafting the income investment memo...";
-        const memoContent = await generatePolishedArticle(prompt, loadingMessage);
+        const memoContent = await generatePolishedArticleForSynthesis(prompt, loadingMessage);
         
         await autoSaveReport(symbol, reportType, memoContent, prompt);
         const refreshedReports = await getSavedReports(symbol, reportType);
@@ -1434,7 +1434,7 @@ export async function handleQualityCompounderMemoRequest(symbol, forceNew = fals
             .replace('{allAnalysesData}', allAnalysesData);
 
         loadingMessage.textContent = "AI is drafting the Quality Compounder memo...";
-        const memoContent = await generatePolishedArticle(prompt, loadingMessage);
+        const memoContent = await generatePolishedArticleForSynthesis(prompt, loadingMessage);
         
         await autoSaveReport(symbol, reportType, memoContent, prompt);
         const refreshedReports = await getSavedReports(symbol, reportType);
@@ -1506,7 +1506,7 @@ export async function handleGarpValidationRequest(symbol, forceNew = false) {
             .replace('{allAnalysesData}', allAnalysesData);
 
         loadingMessage.textContent = "AI is drafting the GARP validation report...";
-        const validationContent = await generatePolishedArticle(prompt, loadingMessage);
+        const validationContent = await generatePolishedArticleForSynthesis(prompt, loadingMessage);
         
         // --- ADDED FOR AUTO-SAVE ---
         await autoSaveReport(symbol, reportType, validationContent, prompt);
