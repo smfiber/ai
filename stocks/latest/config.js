@@ -618,6 +618,36 @@ Based on all the evidence, provide a concluding assessment. Classify the moat as
 - **No Moat:** The company has no clear, sustainable competitive advantage, **making it vulnerable to competition and price wars.**
 `.trim();
 
+const COMPOUNDING_MACHINE_PROMPT = `
+Role: You are a long-term, business-focused investor, in the style of Chuck Akre or Terry Smith. Your goal is to identify "compounding machines" – exceptional businesses that can be held for a decade or more. Your analysis is a series of critical questions that a quality-focused investor would ask.
+
+Data Instructions: Your analysis must be derived exclusively from the provided JSON data. You must answer every question.
+
+Output Format: A markdown report answering the following questions.
+
+JSON Data:
+{jsonData}
+
+# Quality Investor Checklist: Is {companyName} a Compounding Machine?
+
+### 1. Is this a truly exceptional business?
+- **Return on Invested Capital (ROIC):** Analyze the 'roicTrend'. Is it consistently high (ideally > 15-20%) and stable/increasing? This is the primary indicator of a great business.
+- **Profitability & Pricing Power:** Analyze the 'profitabilityTrends'. Are gross and net margins consistently high and stable? This demonstrates a durable competitive advantage.
+
+### 2. Does the company have a long runway for growth?
+- **Reinvestment Opportunity:** Analyze the 'reinvestmentTrends' (capex and R&D). Does the company have ample opportunities to reinvest its cash flow at high rates of return?
+- **Qualitative Clues:** Based on the 'qualitativeClues.description', does the business operate in a large and/or growing market?
+
+### 3. Is the balance sheet a fortress?
+- **Financial Health:** Analyze the 'balanceSheetHealth'. Is the debt-to-equity ratio low? A true compounder should not rely on excessive leverage.
+
+### 4. Final Verdict: The "Buy and Hold" Test
+Based on the answers above, synthesize a final verdict. Classify the company into one of the following categories and provide a brief justification.
+- **Exceptional Compounder:** Demonstrates consistently high ROIC, a long growth runway, and a pristine balance sheet. A true "buy and hold" candidate.
+- **High-Quality Business:** Shows strong profitability and a good balance sheet, but its runway for high-return reinvestment may be less certain.
+- **Cyclical/Average Business:** Does not exhibit the consistent, high returns on capital that define a true compounding machine.
+`.trim();
+
 const DIVIDEND_DEEP_DIVE_PROMPT = `
 Role: You are a conservative income investment analyst AI. Your goal is to explain dividend safety in simple, clear terms for an investor who relies on that income.
 Concept: Dividend safety analysis is all about figuring out how likely a company is to continue paying its dividend.
@@ -958,6 +988,64 @@ You are a Senior Investment Analyst at a conservative, income-focused fund. Your
 {allAnalysesData}
 `.trim();
 
+export const QUALITY_COMPOUNDER_MEMO_PROMPT = `
+**Persona & Goal:**
+You are a Senior Investment Analyst at a long-term, quality-focused fund. Your goal is to synthesize a dossier of reports on {companyName} to determine if it meets the high bar of a "Quality Compounder" – a business you would be comfortable owning for a decade.
+
+**Core Philosophy (How to Think):**
+1.  **Quality is Paramount:** Your primary focus is on the durability of the business's competitive advantages (moat) and its ability to generate high returns on capital. Valuation is a secondary, but still important, consideration.
+2.  **Synthesize, Don't Summarize:** Weave together insights from the 'Compounding Machine', 'Financial Health', 'Growth Outlook', and 'Risk' reports into a cohesive thesis.
+3.  **Weigh Contradictions:** Explicitly address conflicting data. For example, if the 'Growth Outlook' is strong but the 'Risk Assessment' highlights significant threats, you must reconcile these two views.
+4.  **Cite Your Evidence:** Casually reference the source of key data points within your narrative (e.g., "The Compounding Machine checklist confirms a consistently high ROIC," or "However, the Risk Assessment flags the company's high customer concentration...").
+
+---
+
+# Quality Compounder Memo: {companyName} ({tickerSymbol})
+
+## 1. Executive Summary & Investment Thesis
+*(Begin with a 3-4 sentence paragraph that concisely summarizes the investment thesis. Does the company have the DNA of a long-term compounder? What is the core reason to own it, and what is the primary risk to that thesis?)*
+
+## 2. The "Compounding Machine" Thesis
+*(This section should be a compelling narrative about the quality of the business. Synthesize the strongest points from the provided reports.)*
+* **Business Quality & Moat (from 'Compounding Machine' report):** What is the verdict on the company's competitive advantage? Is the ROIC exceptional and consistent? Is there evidence of strong pricing power?
+* **Growth Outlook (from 'Growth Outlook' report):** Does the company have a long runway for growth? What are the key drivers? Is management effectively reinvesting for the future?
+* **Financial Fortress (from 'Financial Health' report):** Is the business built on a rock-solid financial foundation? Comment on the debt levels and cash flow generation. A true compounder should not require excessive leverage to grow.
+
+## 3. Key Risks to Compounding
+*(This section critically examines the primary risks that could interrupt the long-term compounding story.)*
+* **Primary Threats (from 'Risk Assessment' report):** What are the top 2-3 most critical long-term risks? Are there credible threats to the company's moat (e.g., technological disruption, regulatory change)?
+* **Growth Deceleration:** Does the 'Growth Outlook' report suggest any potential for growth to slow down, which would impact the compounding thesis?
+
+## 4. Valuation: The Price of Quality
+*(Analyze whether the current price is a reasonable entry point for a long-term hold.)*
+* **Is Quality Already Priced In?** Acknowledge the company's valuation. Great businesses are rarely cheap. Is the current valuation justifiable given the quality and growth prospects, or is it in "priced for perfection" territory?
+* **Conclusion on Price:** Is the current price a fair price to pay for an exceptional business, or should we wait for a better entry point?
+
+## 5. Final Verdict & Actionable Recommendation
+
+### A. Recommendation
+*(Provide a clear, actionable recommendation for a long-term, quality-focused portfolio.)*
+* **Core Compounder:** A high-conviction, best-in-breed company. Recommend a full position.
+* **Initiate & Build:** A high-quality business at a fair price. Recommend building a starter position and adding over time.
+* **Quality Watchlist:** An exceptional company that is currently too expensive. Specify the conditions (e.g., a 20% pullback) under which you would become a buyer.
+* **Pass:** The business does not meet the high bar for quality, or the risks are too great.
+
+### B. Quality Scorecard
+*(Summarize your analysis with a 1-10 scoring system.)*
+* **Business Quality & Moat:** \`[1-10]\`
+* **Growth Runway & Reinvestment:** \`[1-10]\`
+* **Financial Health & Resilience:** \`[1-10]\`
+* **Valuation (Price vs. Quality):** \`[1-10]\`
+* ---
+* **Final Weighted Score:**
+    * **Calculation:** \`[(Business Quality * 0.4) + (Growth * 0.3) + (Financial Health * 0.2) + (Valuation * 0.1)] = Final Score\`
+    * **Score:** \`[Calculated Score / 10.0]\`
+
+---
+**Input Reports:**
+{allAnalysesData}
+`.trim();
+
 export const ALL_REPORTS_PROMPT = `
 Role: You are an expert financial analyst AI. Your task is to generate a comprehensive dossier of 10 distinct financial analysis reports for {companyName} ({tickerSymbol}).
 
@@ -1135,6 +1223,10 @@ export const promptMap = {
         prompt: MOAT_ANALYSIS_PROMPT,
         requires: ['profile', 'key_metrics_annual', 'income_statement_annual', 'cash_flow_statement_annual', 'ratios_annual']
     },
+    'CompoundingMachine': {
+        prompt: COMPOUNDING_MACHINE_PROMPT,
+        requires: ['profile', 'key_metrics_annual', 'income_statement_annual', 'cash_flow_statement_annual', 'ratios_annual']
+    },
     'DividendDeepDive': {
         prompt: DIVIDEND_DEEP_DIVE_PROMPT,
         requires: ['key_metrics_annual', 'cash_flow_statement_annual', 'income_statement_annual', 'balance_sheet_statement_annual', 'ratios_annual']
@@ -1202,6 +1294,10 @@ export const promptMap = {
     'GarpValidation': {
         prompt: GARP_VALIDATION_PROMPT,
         requires: [] // This prompt uses other reports, not raw FMP data.
+    },
+    'QualityCompounderMemo': {
+        prompt: QUALITY_COMPOUNDER_MEMO_PROMPT,
+        requires: [] // This prompt uses other reports, not raw FMP data.
     }
 };
 
@@ -1211,6 +1307,7 @@ export const ANALYSIS_ICONS = {
     'GarpAnalysis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18L9 11.25l1.5 1.5L13.5 6l3 3 4.5-4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`,
     'BullVsBear': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 15.75l-2.489-2.489m0 0a3.375 3.375 0 10-4.773-4.773 3.375 3.375 0 004.774 4.774zM21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`,
     'MoatAnalysis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.286zm0 13.036h.008v.008h-.008v-.008z" /></svg>`,
+    'CompoundingMachine': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h6.75M9 11.25h6.75M9 15.75h6.75" /></svg>`,
     'DividendDeepDive': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a2.25 2.25 0 00-2.25-2.25H15a3 3 0 11-6 0H5.25A2.25 2.25 0 003 12m18 0v6a2.25 2.25 0 01-2.25-2.25H5.25A2.25 2.25 0 013 18v-6m18 0V9M3 12V9m18 3a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 12m15 0a2.25 2.25 0 01-2.25 2.25H12a2.25 2.25 0 01-2.25-2.25" /></svg>`,
     'GrowthOutlook': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941" /></svg>`,
     'RiskAssessment': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" /></svg>`,
@@ -1225,7 +1322,8 @@ export const ANALYSIS_ICONS = {
     'Form8KAnalysis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h.01M15 12h.01M10.5 16.5h3m-6.75-3.75a3 3 0 013-3h3a3 3 0 013 3v3a3 3 0 01-3 3h-3a3 3 0 01-3-3v-3z" /><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`,
     'Form10KAnalysis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>`,
     'InvestmentMemo': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>`,
-    'IncomeMemo': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 00-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 01-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 003 15h-.75M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" /></svg>`
+    'IncomeMemo': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 00-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 01-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 003 15h-.75M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" /></svg>`,
+    'QualityCompounderMemo': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m6.75 12.75h4.875a2.25 2.25 0 0 0 2.25-2.25v-2.25a2.25 2.25 0 0 0-2.25-2.25H15M9 12l3 3m0 0 3-3m-3 3v-3m-3.75 6H5.625a2.25 2.25 0 0 1-2.25-2.25V7.875c0-1.242.984-2.25 2.25-2.25h4.5" /></svg>`
 };
 
 export const INDUSTRY_CAPITAL_ALLOCATORS_PROMPT = `
