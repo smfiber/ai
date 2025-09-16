@@ -2,7 +2,7 @@ import { CONSTANTS, state, promptMap, NEWS_SENTIMENT_PROMPT, DISRUPTOR_ANALYSIS_
 // --- MODIFICATION: Import the new refinement function ---
 import { callApi, filterValidNews, callGeminiApi, generatePolishedArticle, generateRefinedArticle, getDriveToken, getOrCreateDriveFolder, createDriveFile, findStocksByIndustry, searchSectorNews, findStocksBySector, synthesizeAndRankCompanies, generateDeepDiveReport, getFmpStockData, getCompetitorsFromGemini } from './api.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { openModal, closeModal, displayMessageInModal, openConfirmationModal, openManageStockModal } from './ui-modals.js';
+import { openModal, closeModal, displayMessageInModal, openConfirmationModal, openManageStockModal, openSpaAnalysisModal } from './ui-modals.js';
 import { renderPortfolioManagerList, renderFmpEndpointsList, renderBroadEndpointsList, renderNewsArticles, displayReport, updateReportStatus, updateBroadReportStatus, fetchAndCachePortfolioData, renderThesisTracker, renderFilingAnalysisTab } from './ui-render.js';
 import { _calculateUndervaluedMetrics, _calculateFinancialAnalysisMetrics, _calculateBullVsBearMetrics, _calculateMoatAnalysisMetrics, _calculateDividendDeepDiveMetrics, _calculateGrowthOutlookMetrics, _calculateRiskAssessmentMetrics, _calculateCapitalAllocatorsMetrics, _calculateNarrativeCatalystMetrics, _calculateGarpAnalysisMetrics, _calculateCompetitiveLandscapeMetrics, _calculateStockDisruptorMetrics, _calculateStockFortressMetrics, _calculateStockPhoenixMetrics, _calculateStockLinchpinMetrics, _calculateStockUntouchablesMetrics } from './analysis-helpers.js';
 
@@ -1208,7 +1208,7 @@ export async function handleAnalysisRequest(symbol, reportType, promptConfig, fo
         contentContainer.dataset.currentPrompt = prompt;
 
         // --- MODIFICATION: Use the new refinement function ---
-        const newReportContent = await generateRefinedArticle(prompt, loadingMessageElement);
+        const newReportContent = await generateRefinedArticle(prompt, loadingMessage);
         contentContainer.dataset.rawMarkdown = newReportContent;
         displayReport(contentContainer, newReportContent, prompt);
         updateReportStatus(statusContainer, [], null, { symbol, reportType, promptConfig });
@@ -2025,5 +2025,64 @@ export async function handleFilingAnalysisRequest(symbol, formType, forceNew = f
         if (document.getElementById(CONSTANTS.MODAL_LOADING).classList.contains('is-open')) {
             closeModal(CONSTANTS.MODAL_LOADING);
         }
+    }
+}
+
+export async function handleSpaAnalysisRequest() {
+    openModal(CONSTANTS.MODAL_LOADING);
+    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+    loadingMessage.textContent = "AI is analyzing the application code...";
+
+    try {
+        const fileNames = [
+            'index.html', 'style.css', 'main.js', 'config.js', 'api.js',
+            'sec-api.js', 'ui.js', 'ui-handlers.js', 'ui-modals.js',
+            'ui-render.js', 'analysis-helpers.js', 'monitoring.js'
+        ];
+
+        // This is a simulation since we can't read local files in the browser.
+        // We rely on the files being available in the context provided to the AI.
+        const allCode = state.allFileContentsForAnalysis; 
+
+        if (!allCode) {
+            throw new Error("Source code for analysis is not available in the current context.");
+        }
+
+        const prompt = `
+            Role: You are a senior full-stack software architect reviewing a new Single Page Application (SPA).
+            
+            Task: Analyze the complete source code provided below and generate a concise architectural review.
+            
+            Structure your response in markdown format as follows:
+            
+            ## 1. Core Feature Analysis
+            Based on the code, briefly explain the main purpose and key features of this "Stock Research Hub" application. What does it do for the user?
+            
+            ## 2. Architectural Overview
+            - **Frontend:** What libraries and patterns are used? (e.g., vanilla JS, TailwindCSS, module pattern).
+            - **Backend/Data:** What service is used for data persistence and authentication?
+            - **Data Flow:** How does data move through the application? (e.g., User action -> handler -> API call -> render function).
+            
+            ## 3. Recommendations for Improvement
+            Provide 3-5 specific, actionable recommendations for improving the application. For each recommendation, explain the weakness in the current code and how your suggestion would address it. Focus on areas like:
+            - **Code Maintainability & Scalability:** (e.g., state management, component structure)
+            - **User Experience (UX):** (e.g., perceived performance, error handling)
+            - **Security:** (e.g., API key handling, data validation)
+            
+            --- SOURCE CODE ---
+            ${allCode}
+        `;
+
+        const analysisContent = await generatePolishedArticle(prompt, loadingMessage);
+        
+        const contentContainer = document.getElementById('spa-analysis-content');
+        contentContainer.innerHTML = marked.parse(analysisContent);
+        openSpaAnalysisModal();
+
+    } catch (error) {
+        console.error("Error during SPA analysis:", error);
+        displayMessageInModal(`Could not complete the analysis: ${error.message}`, 'error');
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
     }
 }
