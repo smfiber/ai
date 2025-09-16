@@ -133,6 +133,13 @@ export function openManageBroadEndpointsModal() {
     openModal(CONSTANTS.MODAL_MANAGE_BROAD_ENDPOINTS);
 }
 
+/**
+ * Opens the "Analyze SPA" modal.
+ */
+export function openSpaAnalysisModal() {
+    openModal('spaAnalysisModal');
+}
+
 // --- REVISED FUNCTION ---
 /**
  * Opens a modal displaying a list of stocks, fetches their data, and renders the list.
