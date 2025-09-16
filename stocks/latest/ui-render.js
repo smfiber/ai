@@ -309,7 +309,6 @@ export function renderPortfolioManagerList() {
     container.innerHTML = html;
 }
 
-// MAKE THIS FUNCTION EXPORTABLE
 export async function _renderGroupedStockList(container, stocksWithData, listType) {
     container.innerHTML = ''; 
     if (stocksWithData.length === 0) {
@@ -910,11 +909,9 @@ export async function renderFilingAnalysisTab(ticker, formType) {
             filings = await getSecMaterialEvents(ticker);
         } else if (formType === '10-K') {
             filings = await getSecAnnualReports(ticker);
-        // --- START OF FIX ---
         } else if (formType === '10-Q') {
             filings = await getSecQuarterlyReports(ticker);
         }
-        // --- END OF FIX ---
         
         const topFilings = filings.slice(0, 2);
         if (topFilings.length > 0) {
