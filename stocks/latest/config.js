@@ -751,7 +751,7 @@ JSON Data:
 Based on the risks you identified above, provide a brief, 1-2 sentence summary highlighting the top 2-3 risks an investor should be most aware of.
 `.trim();
 
-const CAPITAL_ALLOCATORS_PROMPT = `
+export const INDUSTRY_CAPITAL_ALLOCATORS_PROMPT = `
 	Act as a senior analyst at a value-investing fund, channeling the analytical rigor of investors like Warren Buffett. Your analysis must be based *only* on the provided financial data for {companyName}.
 
 	Data Instructions: Your analysis requires deep trend analysis. Use the pre-calculated trends and historical data in the JSON payload for your analysis.
