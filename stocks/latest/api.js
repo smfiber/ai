@@ -130,7 +130,7 @@ export async function callGeminiApiWithTools(contents) {
 
     state.sessionLog.push({ type: 'prompt', timestamp: new Date(), content: JSON.stringify(contents, null, 2) });
 
-    const url = `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${state.geminiApiKey}`;
+    const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${state.geminiApiKey}`;
     const data = await callApi(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -388,7 +388,7 @@ export async function searchSectorNews({ sectorName, sectorStocks }) {
     if (!state.fmpApiKey) {
         throw new Error("FMP API Key is required for news search.");
     }
-    const url = `https://financialmodelingprep.com/stable/news/stock-latest?page=0&limit=20&apikey=${state.fmpApiKey}`;
+    const url = `https://financialmodelingprep.com/api/v3/stock_news?limit=50&apikey=${state.fmpApiKey}`;
     
     const newsData = await callApi(url);
     const validArticles = filterValidNews(newsData || []);
@@ -480,7 +480,9 @@ export async function findStocksByIndustry({ industryName }) {
     if (!state.fmpApiKey) {
         throw new Error("FMP API Key is required for this feature.");
     }
-    const url = `https://financialmodelingprep.com/stable/company-screener?industry=${encodeURIComponent(industryName)}&limit=100&apikey=${state.fmpApiKey}`;
+    // --- START OF FIX: Corrected the API URL path ---
+    const url = `https://financialmodelingprep.com/api/v3/stock-screener?industry=${encodeURIComponent(industryName)}&limit=100&apikey=${state.fmpApiKey}`;
+    // --- END OF FIX ---
     
     try {
         const stocks = await callApi(url);
@@ -498,7 +500,9 @@ export async function findStocksBySector({ sectorName }) {
     if (!state.fmpApiKey) {
         throw new Error("FMP API Key is required for this feature.");
     }
-    const url = `https://financialmodelingprep.com/stable/company-screener?sector=${encodeURIComponent(sectorName)}&limit=100&apikey=${state.fmpApiKey}`;
+    // --- START OF FIX: Corrected the API URL path ---
+    const url = `https://financialmodelingprep.com/api/v3/stock-screener?sector=${encodeURIComponent(sectorName)}&limit=100&apikey=${state.fmpApiKey}`;
+    // --- END OF FIX ---
     
     try {
         const stocks = await callApi(url);
