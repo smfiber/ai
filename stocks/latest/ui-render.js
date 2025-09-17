@@ -742,9 +742,18 @@ export function renderValuationHealthDashboard(container, ticker, fmpData) {
 
 export function renderThesisTracker(container, ticker) {
     if (!container) return;
-    
+
     const stock = state.portfolioCache.find(s => s.ticker === ticker);
-    const thesisContent = stock?.thesis || '';
+
+    // --- FIX START ---
+    // Add a guard clause to handle cases where the stock is not in the cache.
+    if (!stock) {
+        container.innerHTML = `<div class="p-4 text-center text-red-500">Error: Could not find data for ${ticker} in the cache.</div>`;
+        return;
+    }
+    // --- FIX END ---
+
+    const thesisContent = stock.thesis || ''; // We can now safely access stock.thesis
 
     let contentHtml = '';
     if (thesisContent) {
