@@ -595,6 +595,24 @@ export async function handleSaveReportToDb() {
     }
 }
 
+export function cancelFmpEndpointEdit() {
+    const form = document.getElementById('manage-fmp-endpoint-form');
+    form.reset();
+    document.getElementById('fmp-endpoint-id').value = '';
+    document.getElementById('cancel-fmp-endpoint-edit').classList.add('hidden');
+    const submitBtn = form.querySelector('button[type="submit"]');
+    if (submitBtn) submitBtn.textContent = 'Save Endpoint';
+}
+
+export function cancelBroadEndpointEdit() {
+    const form = document.getElementById('manage-broad-endpoint-form');
+    form.reset();
+    document.getElementById('broad-endpoint-id').value = '';
+    document.getElementById('cancel-broad-endpoint-edit').classList.add('hidden');
+    const submitBtn = form.querySelector('button[type="submit"]');
+    if (submitBtn) submitBtn.textContent = 'Save Endpoint';
+}
+
 export async function handleSaveToDrive(modalId) {
     if (!state.auth.currentUser || state.auth.currentUser.isAnonymous) {
         displayMessageInModal("Please log in with Google to save files to Drive.", "warning");
