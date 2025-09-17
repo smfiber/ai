@@ -956,6 +956,7 @@ export function _calculateStockUntouchablesMetrics(data) {
  * @returns {object} A summary object with pre-calculated metrics.
  */
 export function _calculateIncomeMemoMetrics(data) {
+    // Annual data, reversed for easy access to latest
     const ratios_annual = (data.ratios_annual || []).slice().reverse();
     const keyMetrics_annual = (data.key_metrics_annual || []).slice().reverse();
     const cashFlow_annual = (data.cash_flow_statement_annual || []).slice().reverse();
@@ -977,7 +978,8 @@ export function _calculateIncomeMemoMetrics(data) {
         const ratio = (Math.abs(latestCashFlow.dividendsPaid) / latestCashFlow.freeCashFlow) * 100;
         fcfPayoutRatio = `${ratio.toFixed(2)}%`;
     }
-    const earningsPayoutRatio = latestKeyMetrics.payoutRatio ? `${(latestKeyMetrics.payoutRatio * 100).toFixed(2)}%` : 'N/A';
+    const earningsPayoutRatioValue = latestKeyMetrics.payoutRatioTTM ?? latestKeyMetrics.payoutRatio;
+    const earningsPayoutRatio = earningsPayoutRatioValue ? `${(earningsPayoutRatioValue * 100).toFixed(2)}%` : 'N/A';
 
     // 3. Dividend Growth History
     const dividendGrowthHistory = (() => {
@@ -996,7 +998,8 @@ export function _calculateIncomeMemoMetrics(data) {
     })();
 
     // 4. Financial Health
-    const debtToEquity = latestKeyMetrics.debtToEquity ? latestKeyMetrics.debtToEquity.toFixed(2) : 'N/A';
+    const debtToEquityValue = latestKeyMetrics.debtToEquityTTM ?? latestKeyMetrics.debtToEquity;
+    const debtToEquity = debtToEquityValue ? debtToEquityValue.toFixed(2) : 'N/A';
     const cashAndEquivalents = latestBalanceSheet.cashAndCashEquivalents ? formatLargeNumber(latestBalanceSheet.cashAndCashEquivalents) : 'N/A';
     
     return {
