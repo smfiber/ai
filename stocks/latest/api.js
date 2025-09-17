@@ -388,7 +388,9 @@ export async function searchSectorNews({ sectorName, sectorStocks }) {
     if (!state.fmpApiKey) {
         throw new Error("FMP API Key is required for news search.");
     }
-    const url = `https://financialmodelingprep.com/api/v3/stock_news?limit=50&apikey=${state.fmpApiKey}`;
+    // --- START OF FIX: Reverted to the correct general news endpoint ---
+    const url = `https://financialmodelingprep.com/stable/news/stock-latest?page=0&limit=20&apikey=${state.fmpApiKey}`;
+    // --- END OF FIX ---
     
     const newsData = await callApi(url);
     const validArticles = filterValidNews(newsData || []);
