@@ -956,7 +956,8 @@ export function _calculateStockUntouchablesMetrics(data) {
  * @returns {object} A summary object with pre-calculated metrics.
  */
 export function _calculateIncomeMemoMetrics(data) {
-    // Annual data, reversed for easy access to latest
+    const profile = data.profile?.[0] || {};
+    const enterpriseValue = data.enterprise_value?.[0] || {};
     const ratios_annual = (data.ratios_annual || []).slice().reverse();
     const keyMetrics_annual = (data.key_metrics_annual || []).slice().reverse();
     const cashFlow_annual = (data.cash_flow_statement_annual || []).slice().reverse();
@@ -968,8 +969,16 @@ export function _calculateIncomeMemoMetrics(data) {
     const latestCashFlow = cashFlow_annual[cashFlow_annual.length - 1] || {};
     const latestBalanceSheet = balanceSheet_annual[balanceSheet_annual.length - 1] || {};
 
-    // 1. Dividend Yield
-    const currentYieldValue = latestRatios.dividendYieldTTM ?? latestRatios.dividendYield;
+    // 1. Dividend Yield (with manual fallback for MLPs)
+    let currentYieldValue = latestRatios.dividendYieldTTM ?? latestRatios.dividendYield;
+    // --- START OF FIX: Manual yield calculation for MLPs ---
+    if (!currentYieldValue && latestCashFlow.dividendsPaid && enterpriseValue.numberOfShares && profile.price) {
+        const dps = Math.abs(latestCashFlow.dividendsPaid) / enterpriseValue.numberOfShares;
+        if (profile.price > 0) {
+            currentYieldValue = dps / profile.price;
+        }
+    }
+    // --- END OF FIX ---
     const currentYield = currentYieldValue ? `${(currentYieldValue * 100).toFixed(2)}%` : 'N/A';
 
     // 2. Payout Ratios
@@ -978,14 +987,27 @@ export function _calculateIncomeMemoMetrics(data) {
         const ratio = (Math.abs(latestCashFlow.dividendsPaid) / latestCashFlow.freeCashFlow) * 100;
         fcfPayoutRatio = `${ratio.toFixed(2)}%`;
     }
+    // --- START OF FIX: Prioritize TTM payout ratio ---
     const earningsPayoutRatioValue = latestKeyMetrics.payoutRatioTTM ?? latestKeyMetrics.payoutRatio;
     const earningsPayoutRatio = earningsPayoutRatioValue ? `${(earningsPayoutRatioValue * 100).toFixed(2)}%` : 'N/A';
+    // --- END OF FIX ---
 
-    // 3. Dividend Growth History
+    // 3. Dividend Growth History (More robust logic)
     const dividendGrowthHistory = (() => {
         const dividendsPaid = cashFlow_annual.slice(-5).map(cf => Math.abs(cf.dividendsPaid || 0));
         if (dividendsPaid.length < 3) return "Not enough data for a trend.";
         
+        // --- START OF FIX: More robust dividend history logic ---
+        let hasCut = false;
+        for (let i = 1; i < dividendsPaid.length; i++) {
+            // Check for a meaningful cut (more than 2% reduction)
+            if (dividendsPaid[i] < dividendsPaid[i - 1] * 0.98) {
+                hasCut = true;
+                break;
+            }
+        }
+        if (hasCut) return "Has been cut in the past 5 years";
+
         let growthCount = 0;
         for (let i = 1; i < dividendsPaid.length; i++) {
             if (dividendsPaid[i] > dividendsPaid[i - 1]) {
@@ -993,13 +1015,16 @@ export function _calculateIncomeMemoMetrics(data) {
             }
         }
         if (growthCount >= dividendsPaid.length - 2) return "Consistent growth";
-        if (dividendsPaid[dividendsPaid.length - 1] >= dividendsPaid[dividendsPaid.length - 2]) return "Stable or growing recently";
-        return "Inconsistent or declining";
+        if (dividendsPaid.length >= 2 && dividendsPaid[dividendsPaid.length - 1] >= dividendsPaid[dividendsPaid.length - 2]) return "Stable or growing recently";
+        return "Inconsistent";
+        // --- END OF FIX ---
     })();
 
     // 4. Financial Health
+    // --- START OF FIX: Prioritize TTM Debt to Equity ---
     const debtToEquityValue = latestKeyMetrics.debtToEquityTTM ?? latestKeyMetrics.debtToEquity;
     const debtToEquity = debtToEquityValue ? debtToEquityValue.toFixed(2) : 'N/A';
+    // --- END OF FIX ---
     const cashAndEquivalents = latestBalanceSheet.cashAndCashEquivalents ? formatLargeNumber(latestBalanceSheet.cashAndCashEquivalents) : 'N/A';
     
     return {
