@@ -1,8 +1,9 @@
-import { CONSTANTS, state, ANALYSIS_ICONS } from './config.js';
+import { CONSTANTS, state } from './config.js'; 
 import { callApi, getFmpStockData } from './api.js';
 import { getSecInsiderTrading, getSecInstitutionalOwnership, getSecMaterialEvents, getSecAnnualReports, getSecQuarterlyReports } from './sec-api.js';
-import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { handleAnalysisRequest, handleInvestmentMemoRequest, handleGarpValidationRequest, handleFilingAnalysisRequest } from './ui-handlers.js';
+import { getFirestore, Timestamp, doc, collection, getDocs, query, limit, addDoc, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+// FIX: Removed 'handleGarpValidationRequest' which no longer exists in ui-handlers.js
+import { handleAnalysisRequest, handleInvestmentMemoRequest, handleFilingAnalysisRequest } from './ui-handlers.js';
 
 // --- UTILITY & SECURITY HELPERS ---
 
@@ -710,8 +711,6 @@ export function updateReportStatus(statusContainer, reports, activeReportId, ana
             // Add special handling for reports with custom generation logic
             if (analysisParams.reportType === 'InvestmentMemo') {
                 handleInvestmentMemoRequest(analysisParams.symbol, true);
-            } else if (analysisParams.reportType === 'GarpValidation') {
-                handleGarpValidationRequest(analysisParams.symbol, true);
             } else if (analysisParams.reportType.startsWith('Form')) {
                 let formType;
                 if (analysisParams.reportType.includes('8K')) formType = '8-K';
