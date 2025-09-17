@@ -751,41 +751,37 @@ JSON Data:
 Based on the risks you identified above, provide a brief, 1-2 sentence summary highlighting the top 2-3 risks an investor should be most aware of.
 `.trim();
 
-export const INDUSTRY_CAPITAL_ALLOCATORS_PROMPT = `
-	Act as a senior analyst at a value-investing fund, channeling the analytical rigor of investors like Warren Buffett. Your analysis must be based *only* on the provided financial data for {companyName}.
-
-	Data Instructions: Your analysis requires deep trend analysis. Use the pre-calculated trends and historical data in the JSON payload for your analysis.
-
-	Your task is to critically evaluate the management team of {companyName} ({tickerSymbol}) on their skill as capital allocators. Every claim you make must be substantiated with specific metrics, figures, or trends from the data.
+const CAPITAL_ALLOCATORS_PROMPT = `
+	Act as a discerning investment strategist, channeling the analytical rigor and long-term perspective of firms like Berkshire Hathaway. Your analysis must be in the style of a detailed shareholder letter and based *only* on the provided financial data for {companyName}. **Be critical; praise should be reserved for exceptional, data-backed performance.**
 
 	Article Title: "The Capital Allocators: A Deep Dive into the Financial Stewardship of {companyName}'s Leadership"
 
-    JSON Data:
-    {jsonData}
-
 	## 1. The CEO's Inferred Philosophy
-	Deduce the CEO's philosophy from the 'cashFlowPriorities' data. Based on where the cash has flowed over the last 5-10 years (e.g., CapEx vs. Acquisitions vs. Buybacks), what are their strategic priorities?
+	**Instead of their stated approach, deduce their *actual* philosophy from the numbers.** Based on the flow of capital over the last decade, what do their actions reveal about their priorities? Do they favor aggressive growth, maintaining a fortress balance sheet, or maximizing shareholder returns?
 
-	## 2. The Track Record: A Quantitative Analysis
-	Analyze their capital allocation decisions over the last 5-10 years across three key areas, using the provided data:
+	## 2. A Quantitative Analysis of the Track Record
+	Analyze their capital allocation decisions over the last 5-10 years, using specific metrics to judge their effectiveness:
 
-	- **Reinvestment in the Business:**
-		- Analyze the trends in **ROIC** and **ROE** from 'reinvestmentEffectiveness.roicTrend' and 'reinvestmentEffectiveness.roeTrend'. Have these metrics improved or declined as they've reinvested capital?
-		- Compare the growth in **CapEx** and **R&D spending** ('cashFlowPriorities') to the corresponding growth in revenue and gross profit ('reinvestmentEffectiveness.revenueGrowth', 'reinvestmentEffectiveness.grossProfitGrowth'). Is there a profitable link between investment and growth?
+	- **Reinvestment in the Business (The Primary Engine):**
+		- Analyze the trend in **Return on Invested Capital (ROIC)**. Is it consistently high and stable, or is it volatile or declining? **This is the single most important measure of internal investment skill.**
+		- Is the company's ROIC comfortably above its Weighted Average Cost of Capital (WACC)? **Value is only created when ROIC > WACC.**
 
 	- **Acquisitions (M&A):**
-		- Analyze the 'acquisitionHistory' data. Does a large increase in goodwill, following significant M&A spending, correlate with a subsequent decline or stagnation in ROIC, suggesting overpayment?
+		- Examine the company's **profit margins** and **ROIC** in the years immediately following major acquisitions. Did the deals enhance profitability (accretive) or dilute it (destructive)?
+		- Analyze the growth of **"goodwill"** on the balance sheet. A large increase in goodwill followed by stagnant or declining ROIC is a major red flag for overpayment ("diworsification").
 
 	- **Returning Capital to Shareholders:**
-		- **Stock Buybacks:** Analyze the 'shareholderReturns.buybacksWithValuation' data. **Did they opportunistically buy back shares when the stock was cheap (low P/E or P/B), or did they buy high?**
-		- **Dividends:** Analyze the 'shareholderReturns.fcfPayoutRatioTrend'. Is the dividend well-covered by free cash flow?
+		- **Stock Buybacks:** Correlate the timing and volume of share repurchases with the stock's historical valuation (e.g., Price-to-Earnings or Price-to-Book ratio). **Did they opportunistically buy back shares when the stock was cheap, or did they buy high?**
+		- **Dividends:** Analyze the **dividend payout ratio** against free cash flow. Is the dividend safely covered, and is its growth rational and sustainable?
 
-	## 3. The Scorecard & Investment Thesis
-	- **Provide a final letter grade (A through F) for the management team's overall skill as capital allocators.** Justify this grade by summarizing the strongest and weakest points from your analysis.
-	- Based *only* on this track record of capital allocation, formulate a concise investment thesis.
-	- **Conclude with a "Red Flags" section, highlighting any concerning trends in the data.**
+	## 3. Final Scorecard & Investment Thesis
+	- **Provide a final letter grade (A through F) for the management team's overall skill as capital allocators.** Justify this grade by summarizing the strongest and weakest points from your quantitative analysis above.
+	- Based on this track record, formulate a concise investment thesis. Why should (or shouldn't) an investor trust this team to be wise stewards of capital in the future?
+	- **Conclude with a "Key Risks & Red Flags" section**, highlighting any concerning trends (e.g., declining ROIC, value-destructive M&A, or ill-timed buybacks).
 
 	When you mention a stock ticker, you MUST wrap it in a special tag like this: <stock-ticker>TICKER</stock-ticker>.
+
+	Crucial Disclaimer: This article is for informational purposes only and should not be considered financial advice. Readers should consult with a qualified financial professional before making any investment decisions.
 `;
 
 // --- NEW PROMPTS (v13.2.0) ---
