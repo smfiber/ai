@@ -745,15 +745,14 @@ export function renderThesisTracker(container, ticker) {
 
     const stock = state.portfolioCache.find(s => s.ticker === ticker);
 
-    // --- FIX START ---
-    // Add a guard clause to handle cases where the stock is not in the cache.
+    // --- START OF FIX: Added a guard clause to prevent crash ---
     if (!stock) {
         container.innerHTML = `<div class="p-4 text-center text-red-500">Error: Could not find data for ${ticker} in the cache.</div>`;
         return;
     }
-    // --- FIX END ---
+    // --- END OF FIX ---
 
-    const thesisContent = stock.thesis || ''; // We can now safely access stock.thesis
+    const thesisContent = stock.thesis || ''; 
 
     let contentHtml = '';
     if (thesisContent) {
