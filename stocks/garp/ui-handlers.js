@@ -1,10 +1,10 @@
-import { CONSTANTS, state, promptMap, NEWS_SENTIMENT_PROMPT, DISRUPTOR_ANALYSIS_PROMPT, MACRO_PLAYBOOK_PROMPT, INDUSTRY_CAPITAL_ALLOCATORS_PROMPT, INDUSTRY_DISRUPTOR_ANALYSIS_PROMPT, INDUSTRY_MACRO_PLAYBOOK_PROMPT, ONE_SHOT_INDUSTRY_TREND_PROMPT, FORTRESS_ANALYSIS_PROMPT, PHOENIX_ANALYSIS_PROMPT, PICK_AND_SHOVEL_PROMPT, LINCHPIN_ANALYSIS_PROMPT, HIDDEN_VALUE_PROMPT, UNTOUCHABLES_ANALYSIS_PROMPT, INVESTMENT_MEMO_PROMPT, INCOME_MEMO_PROMPT, GARP_VALIDATION_PROMPT, ENABLE_STARTER_PLAN_MODE, STARTER_SYMBOLS, ANALYSIS_REQUIREMENTS, QUALITY_COMPOUNDER_MEMO_PROMPT } from './config.js';
+import { CONSTANTS, state, promptMap, NEWS_SENTIMENT_PROMPT, DISRUPTOR_ANALYSIS_PROMPT, MACRO_PLAYBOOK_PROMPT, INDUSTRY_CAPITAL_ALLOCATORS_PROMPT, INDUSTRY_DISRUPTOR_ANALYSIS_PROMPT, INDUSTRY_MACRO_PLAYBOOK_PROMPT, ONE_SHOT_INDUSTRY_TREND_PROMPT, FORTRESS_ANALYSIS_PROMPT, PHOENIX_ANALYSIS_PROMPT, PICK_AND_SHOVEL_PROMPT, LINCHPIN_ANALYSIS_PROMPT, HIDDEN_VALUE_PROMPT, UNTOUCHABLES_ANALYSIS_PROMPT, INVESTMENT_MEMO_PROMPT, GARP_VALIDATION_PROMPT, ENABLE_STARTER_PLAN_MODE, STARTER_SYMBOLS, ANALYSIS_REQUIREMENTS, QUALITY_COMPOUNDER_MEMO_PROMPT } from './config.js';
 // --- MODIFICATION: Import the new refinement function ---
 import { callApi, filterValidNews, callGeminiApi, generatePolishedArticle, generatePolishedArticleForSynthesis, generateRefinedArticle, getDriveToken, getOrCreateDriveFolder, createDriveFile, findStocksByIndustry, searchSectorNews, findStocksBySector, synthesizeAndRankCompanies, generateDeepDiveReport, getFmpStockData, getCompetitorsFromGemini } from './api.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { openModal, closeModal, displayMessageInModal, openConfirmationModal, openManageStockModal, openSpaAnalysisModal } from './ui-modals.js';
 import { renderPortfolioManagerList, renderFmpEndpointsList, renderBroadEndpointsList, renderNewsArticles, displayReport, updateReportStatus, updateBroadReportStatus, fetchAndCachePortfolioData, renderThesisTracker, renderFilingAnalysisTab } from './ui-render.js';
-import { _calculateUndervaluedMetrics, _calculateFinancialAnalysisMetrics, _calculateMoatAnalysisMetrics, _calculateDividendDeepDiveMetrics, _calculateGrowthOutlookMetrics, _calculateRiskAssessmentMetrics, _calculateCapitalAllocatorsMetrics, _calculateNarrativeCatalystMetrics, _calculateGarpAnalysisMetrics, _calculateCompetitiveLandscapeMetrics, _calculateStockDisruptorMetrics, _calculateStockFortressMetrics, _calculateStockPhoenixMetrics, _calculateStockLinchpinMetrics, _calculateStockUntouchablesMetrics, _calculateIncomeMemoMetrics } from './analysis-helpers.js';
+import { _calculateFinancialAnalysisMetrics, _calculateMoatAnalysisMetrics, _calculateGrowthOutlookMetrics, _calculateRiskAssessmentMetrics, _calculateCapitalAllocatorsMetrics, _calculateNarrativeCatalystMetrics, _calculateGarpAnalysisMetrics, _calculateCompetitiveLandscapeMetrics } from './analysis-helpers.js';
 
 // --- FMP API INTEGRATION & MANAGEMENT ---
 export async function handleRefreshFmpData(symbol) {
@@ -416,121 +416,32 @@ export function handleDeleteBroadEndpoint(id) {
 
 // --- SECTOR & INDUSTRY ANALYSIS HANDLERS ---
 
-async function handleMarketTrendsAnalysis(sectorName) {
-    openModal(CONSTANTS.MODAL_LOADING);
-    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
-    const contentArea = document.getElementById('custom-analysis-content');
+export async function handleBroadAnalysisSelection(contextName, contextType, buttonElement) {
+    const modalId = contextType === 'sector' ? CONSTANTS.MODAL_CUSTOM_ANALYSIS : CONSTANTS.MODAL_INDUSTRY_ANALYSIS;
+    const modal = document.getElementById(modalId);
+    const modalTitle = modal.querySelector('h2');
+    const selectorContainer = modal.querySelector('[id$="-selector-container"]');
+    const contentArea = modal.querySelector('.prose');
+    const statusContainer = modal.querySelector('[id^="report-status-container"]');
 
-    try {
-        loadingMessage.textContent = `Finding companies for the ${sectorName} sector...`;
-        contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">${loadingMessage.textContent}</div>`;
-        
-        const stocksResult = await findStocksBySector({ sectorName });
-        if (stocksResult.error || !stocksResult.stocks || stocksResult.stocks.length === 0) {
-            throw new Error(stocksResult.detail || `Could not find any companies for the ${sectorName} sector.`);
-        }
-        const sectorStocks = stocksResult.stocks;
-
-        loadingMessage.textContent = `Searching news for up to ${sectorStocks.length} companies...`;
-        contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">${loadingMessage.textContent}</div>`;
-        const newsResult = await searchSectorNews({ sectorName, sectorStocks });
-
-        if (newsResult.error || !newsResult.articles || newsResult.articles.length === 0) {
-            throw new Error(newsResult.detail || `Could not find any recent news for the ${sectorName} sector.`);
-        }
-        const validArticles = newsResult.articles;
-
-        loadingMessage.textContent = `AI is analyzing news and ranking companies...`;
-        contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">${loadingMessage.textContent}</div>`;
-        const synthesisResult = await synthesizeAndRankCompanies({ newsArticles: validArticles, sectorStocks });
-        
-        if (synthesisResult.error || !synthesisResult.topCompanies || synthesisResult.topCompanies.length === 0) {
-            throw new Error(synthesisResult.detail || "AI could not identify top companies from the news.");
-        }
-
-        loadingMessage.textContent = `AI is generating the final deep dive report...`;
-        contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">${loadingMessage.textContent}</div>`;
-        const reportResult = await generateDeepDiveReport({
-            companyAnalysis: synthesisResult,
-            sectorName: sectorName,
-            originalArticles: validArticles
-        });
-
-        contentArea.innerHTML = marked.parse(reportResult.report);
-
-    } catch (error) {
-        console.error("Error during AI agent sector analysis:", error);
-        displayMessageInModal(`Could not complete AI analysis: ${error.message}`, 'error');
-        contentArea.innerHTML = `<div class="p-4 text-center text-red-500">Error: ${error.message}</div>`;
-    } finally {
-        closeModal(CONSTANTS.MODAL_LOADING);
-    }
-}
-
-export async function handleSectorSelection(sectorName, buttonElement) {
-    const modal = document.getElementById(CONSTANTS.MODAL_CUSTOM_ANALYSIS);
-    const modalTitle = modal.querySelector('#custom-analysis-modal-title');
-    const selectorContainer = modal.querySelector('#custom-analysis-selector-container');
-    const contentArea = modal.querySelector('#custom-analysis-content');
-    const statusContainer = modal.querySelector('#report-status-container-sector');
-
-    modalTitle.textContent = `Sector Deep Dive | ${sectorName}`;
+    const titlePrefix = contextType.charAt(0).toUpperCase() + contextType.slice(1);
+    modalTitle.textContent = `${titlePrefix} Deep Dive | ${contextName}`;
     contentArea.innerHTML = `<div class="text-center text-gray-500 pt-16">Please select an analysis type above to begin.</div>`;
     statusContainer.classList.add('hidden');
-    modal.dataset.analysisName = 'Sector_Deep_Dive'; // Reset on new selection
-    
-    const savedReports = await getSavedBroadReports(sectorName, 'sector');
+    modal.dataset.analysisName = `${titlePrefix}_Deep_Dive`;
+
+    const savedReports = await getSavedBroadReports(contextName, contextType);
     const savedReportTypes = new Set(savedReports.map(doc => doc.reportType));
 
     const analysisTypes = [
-        {
-            name: 'Market Trends',
-            promptName: 'MarketTrends',
-            description: 'AI agent searches news, finds top companies in your portfolio for this sector, and generates a market summary.',
-            svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941" /></svg>`
-        },
-        {
-            name: 'The Disruptor',
-            promptName: 'DisruptorAnalysis',
-            description: "VC-style report on a high-growth, innovative company with potential to disrupt its industry.",
-            svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" /></svg>`
-        },
-        {
-            name: 'The Fortress',
-            promptName: 'FortressAnalysis',
-            description: 'Identifies a resilient, "all-weather" business with strong pricing power and a rock-solid balance sheet, built to withstand economic downturns.',
-            svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.286zm0 13.036h.008v.008h-.008v-.008z" /></svg>`
-        },
-        {
-            name: 'The Phoenix',
-            promptName: 'PhoenixAnalysis',
-            description: 'Analyzes a "fallen angel" company that has stumbled badly but is now showing credible, quantifiable signs of a fundamental business turnaround.',
-            svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.362 5.214A8.252 8.252 0 0112 21 8.25 8.25 0 016.038 7.048 8.287 8.287 0 009 9.62a8.983 8.983 0 013.362-3.867 8.262 8.262 0 013 2.456z" /><path stroke-linecap="round" stroke-linejoin="round" d="M12 18a3.75 3.75 0 00.495-7.467 5.99 5.99 0 00-1.925 3.546 5.974 5.974 0 01-2.133-1A3.75 3.75 0 0012 18z" /></svg>`
-        },
-        {
-            name: 'Pick & Shovel',
-            promptName: 'PickAndShovel',
-            description: 'Identifies essential suppliers that power an entire industry, a lower-risk way to invest in a trend.',
-            svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 17.25v-.228a4.5 4.5 0 00-.12-1.03l-2.268-9.64a3.375 3.375 0 00-3.285-2.602H7.923a3.375 3.375 0 00-3.285 2.602l-2.268 9.64a4.5 4.5 0 00-.12 1.03v.228m19.5 0a3 3 0 01-3 3H5.25a3 3 0 01-3-3m19.5 0a3 3 0 00-3-3H5.25a3 3 0 00-3 3m16.5 0h.008v.008h-.008v-.008zm-3 0h.008v.008h-.008v-.008z" /></svg>`
-        },
-        {
-            name: 'The Linchpin',
-            promptName: 'Linchpin',
-            description: 'Focuses on companies that control a vital, irreplaceable choke point in an industry’s value chain.',
-            svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.192 7.027a5.25 5.25 0 017.423 0L21 7.402a5.25 5.25 0 010 7.423l-.385.385a5.25 5.25 0 01-7.423 0L13.192 7.027zm-6.384 0a5.25 5.25 0 017.423 0L15 7.402a5.25 5.25 0 010 7.423l-5.385 5.385a5.25 5.25 0 01-7.423 0L2 19.973a5.25 5.25 0 010-7.423l.385-.385z" /><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6" /></svg>`
-        },
-        {
-            name: 'Hidden Value',
-            promptName: 'HiddenValue',
-            description: 'A sum-of-the-parts investigation to find complex companies the market may be undervaluing.',
-            svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3v11.25A2.25 2.25 0 006 16.5h12v-1.5M3.75 3h16.5v13.5A2.25 2.25 0 0118 18.75h-9.75A2.25 2.25 0 016 16.5v-1.5" /><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6h1.5m-1.5 3h1.5m-1.5 3h1.5" /></svg>`
-        },
-        {
-            name: 'The Untouchables',
-            promptName: 'Untouchables',
-            description: 'Deconstructs the "cult" brand moat of a company with fanatical customer loyalty, analyzing how that translates into durable pricing power and long-term profits.',
-            svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" /></svg>`
-        }
+        { name: 'Market Trends', promptName: 'MarketTrends', description: 'AI agent searches news, finds top companies, and generates a market summary.', svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941" /></svg>`},
+        { name: 'The Disruptor', promptName: 'DisruptorAnalysis', description: "VC-style report on a high-growth, innovative company with potential to disrupt its industry.", svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" /></svg>`},
+        { name: 'The Fortress', promptName: 'FortressAnalysis', description: 'Identifies a resilient, "all-weather" business built to withstand economic downturns.', svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.286zm0 13.036h.008v.008h-.008v-.008z" /></svg>`},
+        { name: 'The Phoenix', promptName: 'PhoenixAnalysis', description: 'Analyzes a company showing credible signs of a fundamental business turnaround.', svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.362 5.214A8.252 8.252 0 0112 21 8.25 8.25 0 016.038 7.048 8.287 8.287 0 009 9.62a8.983 8.983 0 013.362-3.867 8.262 8.262 0 013 2.456z" /><path stroke-linecap="round" stroke-linejoin="round" d="M12 18a3.75 3.75 0 00.495-7.467 5.99 5.99 0 00-1.925 3.546 5.974 5.974 0 01-2.133-1A3.75 3.75 0 0012 18z" /></svg>`},
+        { name: 'Pick & Shovel', promptName: 'PickAndShovel', description: 'Identifies essential suppliers that power an entire industry trend.', svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 17.25v-.228a4.5 4.5 0 00-.12-1.03l-2.268-9.64a3.375 3.375 0 00-3.285-2.602H7.923a3.375 3.375 0 00-3.285 2.602l-2.268 9.64a4.5 4.5 0 00-.12 1.03v.228m19.5 0a3 3 0 01-3 3H5.25a3 3 0 01-3-3m19.5 0a3 3 0 00-3-3H5.25a3 3 0 00-3 3m16.5 0h.008v.008h-.008v-.008zm-3 0h.008v.008h-.008v-.008z" /></svg>`},
+        { name: 'The Linchpin', promptName: 'Linchpin', description: 'Focuses on companies that control a vital choke point in an industry’s value chain.', svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.192 7.027a5.25 5.25 0 017.423 0L21 7.402a5.25 5.25 0 010 7.423l-.385.385a5.25 5.25 0 01-7.423 0L13.192 7.027zm-6.384 0a5.25 5.25 0 017.423 0L15 7.402a5.25 5.25 0 010 7.423l-5.385 5.385a5.25 5.25 0 01-7.423 0L2 19.973a5.25 5.25 0 010-7.423l.385-.385z" /><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6" /></svg>`},
+        { name: 'Hidden Value', promptName: 'HiddenValue', description: 'A sum-of-the-parts investigation to find complex companies the market may be undervaluing.', svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3v11.25A2.25 2.25 0 006 16.5h12v-1.5M3.75 3h16.5v13.5A2.25 2.25 0 0118 18.75h-9.75A2.25 2.25 0 016 16.5v-1.5" /><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6h1.5m-1.5 3h1.5m-1.5 3h1.5" /></svg>`},
+        { name: 'The Untouchables', promptName: 'Untouchables', description: 'Deconstructs the "cult" brand moat of a company with fanatical customer loyalty.', svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" /></svg>`}
     ];
 
     let html = `
@@ -541,7 +452,7 @@ export async function handleSectorSelection(sectorName, buttonElement) {
     analysisTypes.forEach(type => {
         const hasSaved = savedReportTypes.has(type.promptName) ? 'has-saved-report' : '';
         html += `
-            <button class="analysis-tile ${hasSaved}" data-sector="${sectorName}" data-prompt-name="${type.promptName}" data-tooltip="${type.description}">
+            <button class="analysis-tile ${hasSaved}" data-${contextType}="${contextName}" data-prompt-name="${type.promptName}" data-tooltip="${type.description}">
                 ${type.svgIcon}
                 <span class="tile-name">${type.name}</span>
             </button>
@@ -550,11 +461,11 @@ export async function handleSectorSelection(sectorName, buttonElement) {
 
     html += `</div></div>`;
     selectorContainer.innerHTML = html;
-    openModal(CONSTANTS.MODAL_CUSTOM_ANALYSIS);
+    openModal(modalId);
     
     try {
-        const docRef = doc(state.db, CONSTANTS.DB_COLLECTION_SCREENER_INTERACTIONS, sectorName);
-        await setDoc(docRef, { lastClicked: Timestamp.now(), contextType: 'sector' });
+        const docRef = doc(state.db, CONSTANTS.DB_COLLECTION_SCREENER_INTERACTIONS, contextName);
+        await setDoc(docRef, { lastClicked: Timestamp.now(), contextType: contextType });
         if (buttonElement) {
             const dateElement = buttonElement.querySelector('.last-clicked-date');
             if (dateElement) {
@@ -562,7 +473,65 @@ export async function handleSectorSelection(sectorName, buttonElement) {
             }
         }
     } catch (error) {
-        console.error(`Error updating last clicked for ${sectorName}:`, error);
+        console.error(`Error updating last clicked for ${contextName}:`, error);
+    }
+}
+
+async function handleMarketTrendsAnalysis(contextName, contextType) {
+    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+    const modalId = contextType === 'sector' ? 'customAnalysisModal' : 'industryAnalysisModal';
+    const contentArea = document.getElementById(modalId).querySelector('.prose');
+
+    openModal(CONSTANTS.MODAL_LOADING);
+
+    try {
+        loadingMessage.textContent = `Finding companies for the ${contextName} ${contextType}...`;
+        contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">${loadingMessage.textContent}</div>`;
+        
+        const stocksResult = contextType === 'sector' 
+            ? await findStocksBySector({ sectorName: contextName })
+            : await findStocksByIndustry({ industryName: contextName });
+
+        if (stocksResult.error || !stocksResult.stocks || stocksResult.stocks.length === 0) {
+            throw new Error(stocksResult.detail || `Could not find any companies for the ${contextName} ${contextType}.`);
+        }
+        const stocks = stocksResult.stocks;
+
+        loadingMessage.textContent = `Searching news for up to ${stocks.length} companies...`;
+        contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">${loadingMessage.textContent}</div>`;
+        const newsResult = await searchSectorNews({ sectorName: contextName, sectorStocks: stocks });
+
+        if (newsResult.error || !newsResult.articles || newsResult.articles.length === 0) {
+            throw new Error(newsResult.detail || `Could not find any recent news for the ${contextName} ${contextType}.`);
+        }
+        const validArticles = newsResult.articles;
+        
+        const prompt = ONE_SHOT_INDUSTRY_TREND_PROMPT
+            .replace(/{industryName}/g, contextName)
+            .replace('${industryStocks}', stocks.join(', '))
+            .replace('{newsArticlesJson}', JSON.stringify(validArticles, null, 2));
+
+        let finalReport = await generatePolishedArticle(prompt, loadingMessage);
+
+        finalReport = finalReport.replace(/\[Source: (?:Article )?(\d+)\]/g, (match, indexStr) => {
+            const index = parseInt(indexStr, 10);
+            const article = validArticles.find(a => a.articleIndex === index);
+            if (article) {
+                const sourceParts = article.source.split('.');
+                const sourceName = sourceParts.length > 1 ? sourceParts[sourceParts.length - 2] : article.source;
+                return `[(Source: ${sourceName}, ${article.publicationDate})](${article.link})`;
+            }
+            return match;
+        });
+        
+        contentArea.innerHTML = marked.parse(finalReport);
+
+    } catch (error) {
+        console.error(`Error during AI agent ${contextType} analysis:`, error);
+        displayMessageInModal(`Could not complete AI analysis: ${error.message}`, 'error');
+        contentArea.innerHTML = `<p class="p-4 text-center text-red-500">Error: ${error.message}</p>`;
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
     }
 }
 
@@ -570,11 +539,13 @@ async function handleDisruptorAnalysis(contextName, contextType) {
     openModal(CONSTANTS.MODAL_LOADING);
     const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
     const modalId = contextType === 'sector' ? 'customAnalysisModal' : 'industryAnalysisModal';
-    const contentArea = document.getElementById(modalId).querySelector(contextType === 'sector' ? '#custom-analysis-content' : '#industry-analysis-content');
+    const contentArea = document.getElementById(modalId).querySelector('.prose');
     contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">Generating AI article: "The Disruptor"...</div>`;
 
     try {
-        const prompt = DISRUPTOR_ANALYSIS_PROMPT.replace(/{sectorName}/g, contextName).replace(/{industryName}/g, contextName);
+        const prompt = (contextType === 'sector' ? DISRUPTOR_ANALYSIS_PROMPT : INDUSTRY_DISRUPTOR_ANALYSIS_PROMPT)
+            .replace(/{sectorName}/g, contextName)
+            .replace(/{industryName}/g, contextName);
         const report = await generatePolishedArticle(prompt, loadingMessage);
         contentArea.innerHTML = marked.parse(report);
     } catch (error) {
@@ -586,36 +557,11 @@ async function handleDisruptorAnalysis(contextName, contextType) {
     }
 }
 
-async function handleMacroPlaybookAnalysis(contextName, contextType) {
-    openModal(CONSTANTS.MODAL_LOADING);
-    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
-    const modalId = contextType === 'sector' ? 'customAnalysisModal' : 'industryAnalysisModal';
-    const contentArea = document.getElementById(modalId).querySelector(contextType === 'sector' ? '#custom-analysis-content' : '#industry-analysis-content');
-    contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">Generating AI article: "Macro Playbook"...</div>`;
-
-    try {
-        const standardDisclaimer = "This article is for informational purposes only and should not be considered financial advice. Readers should consult with a qualified financial professional before making any investment decisions.";
-        const prompt = (contextType === 'sector' ? MACRO_PLAYBOOK_PROMPT : INDUSTRY_MACRO_PLAYBOOK_PROMPT)
-            .replace(/{sectorName}/g, contextName)
-            .replace(/{industryName}/g, contextName)
-            .replace(/\[Include standard disclaimer\]/g, standardDisclaimer);
-        const report = await generatePolishedArticle(prompt, loadingMessage);
-        contentArea.innerHTML = marked.parse(report);
-    } catch (error) {
-        console.error(`Error generating macro playbook analysis for ${contextName}:`, error);
-        displayMessageInModal(`Could not generate AI article: ${error.message}`, 'error');
-        contentArea.innerHTML = `<div class="p-4 text-center text-red-500">Error: ${error.message}</div>`;
-    } finally {
-        closeModal(CONSTANTS.MODAL_LOADING);
-    }
-}
-
 async function handleFortressAnalysis(contextName, contextType) {
     openModal(CONSTANTS.MODAL_LOADING);
     const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
-
     const modalId = contextType === 'sector' ? 'customAnalysisModal' : 'industryAnalysisModal';
-    const contentArea = document.getElementById(modalId).querySelector(contextType === 'sector' ? '#custom-analysis-content' : '#industry-analysis-content');
+    const contentArea = document.getElementById(modalId).querySelector('.prose');
     contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">Generating AI article: "The Fortress"...</div>`;
 
     try {
@@ -636,9 +582,8 @@ async function handleFortressAnalysis(contextName, contextType) {
 async function handlePhoenixAnalysis(contextName, contextType) {
     openModal(CONSTANTS.MODAL_LOADING);
     const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
-    
     const modalId = contextType === 'sector' ? 'customAnalysisModal' : 'industryAnalysisModal';
-    const contentArea = document.getElementById(modalId).querySelector(contextType === 'sector' ? '#custom-analysis-content' : '#industry-analysis-content');
+    const contentArea = document.getElementById(modalId).querySelector('.prose');
     contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">Generating AI article: "The Phoenix"...</div>`;
 
     try {
@@ -660,7 +605,7 @@ async function handlePickAndShovelAnalysis(contextName, contextType) {
     openModal(CONSTANTS.MODAL_LOADING);
     const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
     const modalId = contextType === 'sector' ? 'customAnalysisModal' : 'industryAnalysisModal';
-    const contentArea = document.getElementById(modalId).querySelector(contextType === 'sector' ? '#custom-analysis-content' : '#industry-analysis-content');
+    const contentArea = document.getElementById(modalId).querySelector('.prose');
     contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">Generating AI article: "The Pick and Shovel Play"...</div>`;
 
     try {
@@ -682,7 +627,7 @@ async function handleLinchpinAnalysis(contextName, contextType) {
     openModal(CONSTANTS.MODAL_LOADING);
     const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
     const modalId = contextType === 'sector' ? 'customAnalysisModal' : 'industryAnalysisModal';
-    const contentArea = document.getElementById(modalId).querySelector(contextType === 'sector' ? '#custom-analysis-content' : '#industry-analysis-content');
+    const contentArea = document.getElementById(modalId).querySelector('.prose');
     contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">Generating AI article: "The Linchpin"...</div>`;
 
     try {
@@ -704,7 +649,7 @@ async function handleHiddenValueAnalysis(contextName, contextType) {
     openModal(CONSTANTS.MODAL_LOADING);
     const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
     const modalId = contextType === 'sector' ? 'customAnalysisModal' : 'industryAnalysisModal';
-    const contentArea = document.getElementById(modalId).querySelector(contextType === 'sector' ? '#custom-analysis-content' : '#industry-analysis-content');
+    const contentArea = document.getElementById(modalId).querySelector('.prose');
     contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">Generating AI article: "Hidden Value"...</div>`;
 
     try {
@@ -726,7 +671,7 @@ async function handleUntouchablesAnalysis(contextName, contextType) {
     openModal(CONSTANTS.MODAL_LOADING);
     const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
     const modalId = contextType === 'sector' ? 'customAnalysisModal' : 'industryAnalysisModal';
-    const contentArea = document.getElementById(modalId).querySelector(contextType === 'sector' ? '#custom-analysis-content' : '#industry-analysis-content');
+    const contentArea = document.getElementById(modalId).querySelector('.prose');
     contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">Generating AI article: "The Untouchables"...</div>`;
 
     try {
@@ -737,203 +682,6 @@ async function handleUntouchablesAnalysis(contextName, contextType) {
         contentArea.innerHTML = marked.parse(report);
     } catch (error) {
         console.error(`Error generating Untouchables analysis for ${contextName}:`, error);
-        displayMessageInModal(`Could not generate AI article: ${error.message}`, 'error');
-        contentArea.innerHTML = `<div class="p-4 text-center text-red-500">Error: ${error.message}</div>`;
-    } finally {
-        closeModal(CONSTANTS.MODAL_LOADING);
-    }
-}
-
-export async function handleIndustrySelection(industryName, buttonElement) {
-    const modal = document.getElementById(CONSTANTS.MODAL_INDUSTRY_ANALYSIS);
-    const modalTitle = modal.querySelector('#industry-analysis-modal-title');
-    const selectorContainer = modal.querySelector('#industry-analysis-selector-container');
-    const contentArea = modal.querySelector('#industry-analysis-content');
-    const statusContainer = modal.querySelector('#report-status-container-industry');
-
-    modalTitle.textContent = `Industry Deep Dive | ${industryName}`;
-    contentArea.innerHTML = `<div class="text-center text-gray-500 pt-16">Please select an analysis type above to begin.</div>`;
-    statusContainer.classList.add('hidden');
-    modal.dataset.analysisName = 'Industry_Deep_Dive'; // Reset on new selection
-    
-    const savedReports = await getSavedBroadReports(industryName, 'industry');
-    const savedReportTypes = new Set(savedReports.map(doc => doc.reportType));
-
-    const analysisTypes = [
-        {
-            name: 'Market Trends',
-            promptName: 'MarketTrends',
-            description: 'AI agent finds companies in this industry, searches news, and generates a market summary.',
-            svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941" /></svg>`
-        },
-        {
-            name: 'The Disruptor',
-            promptName: 'DisruptorAnalysis',
-            description: "VC-style report on a high-growth, innovative company with potential to disrupt its industry.",
-            svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" /></svg>`
-        },
-        {
-            name: 'The Fortress',
-            promptName: 'FortressAnalysis',
-            description: 'Identifies a resilient, "all-weather" business with strong pricing power and a rock-solid balance sheet, built to withstand economic downturns.',
-            svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.286zm0 13.036h.008v.008h-.008v-.008z" /></svg>`
-        },
-        {
-            name: 'The Phoenix',
-            promptName: 'PhoenixAnalysis',
-            description: 'Analyzes a "fallen angel" company that has stumbled badly but is now showing credible, quantifiable signs of a fundamental business turnaround.',
-            svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.362 5.214A8.252 8.252 0 0112 21 8.25 8.25 0 016.038 7.048 8.287 8.287 0 009 9.62a8.983 8.983 0 013.362-3.867 8.262 8.262 0 013 2.456z" /><path stroke-linecap="round" stroke-linejoin="round" d="M12 18a3.75 3.75 0 00.495-7.467 5.99 5.99 0 00-1.925 3.546 5.974 5.974 0 01-2.133-1A3.75 3.75 0 0012 18z" /></svg>`
-        },
-        {
-            name: 'Pick & Shovel',
-            promptName: 'PickAndShovel',
-            description: 'Identifies essential suppliers that power an entire industry, a lower-risk way to invest in a trend.',
-            svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 17.25v-.228a4.5 4.5 0 00-.12-1.03l-2.268-9.64a3.375 3.375 0 00-3.285-2.602H7.923a3.375 3.375 0 00-3.285 2.602l-2.268 9.64a4.5 4.5 0 00-.12 1.03v.228m19.5 0a3 3 0 01-3 3H5.25a3 3 0 01-3-3m19.5 0a3 3 0 00-3-3H5.25a3 3 0 00-3 3m16.5 0h.008v.008h-.008v-.008zm-3 0h.008v.008h-.008v-.008z" /></svg>`
-        },
-        {
-            name: 'The Linchpin',
-            promptName: 'Linchpin',
-            description: 'Focuses on companies that control a vital, irreplaceable choke point in an industry’s value chain.',
-            svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.192 7.027a5.25 5.25 0 017.423 0L21 7.402a5.25 5.25 0 010 7.423l-.385.385a5.25 5.25 0 01-7.423 0L13.192 7.027zm-6.384 0a5.25 5.25 0 017.423 0L15 7.402a5.25 5.25 0 010 7.423l-5.385 5.385a5.25 5.25 0 01-7.423 0L2 19.973a5.25 5.25 0 010-7.423l.385-.385z" /><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6" /></svg>`
-        },
-        {
-            name: 'Hidden Value',
-            promptName: 'HiddenValue',
-            description: 'A sum-of-the-parts investigation to find complex companies the market may be undervaluing.',
-            svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3v11.25A2.25 2.25 0 006 16.5h12v-1.5M3.75 3h16.5v13.5A2.25 2.25 0 0118 18.75h-9.75A2.25 2.25 0 016 16.5v-1.5" /><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6h1.5m-1.5 3h1.5m-1.5 3h1.5" /></svg>`
-        },
-        {
-            name: 'The Untouchables',
-            promptName: 'Untouchables',
-            description: 'Deconstructs the "cult" brand moat of a company with fanatical customer loyalty, analyzing how that translates into durable pricing power and long-term profits.',
-            svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" /></svg>`
-        }
-    ];
-
-    let html = `
-        <div class="text-center w-full">
-            <span class="block text-sm font-bold text-gray-500 uppercase mb-4">AI Analysis</span>
-            <div class="flex flex-wrap justify-center gap-4">`;
-
-    analysisTypes.forEach(type => {
-        const hasSaved = savedReportTypes.has(type.promptName) ? 'has-saved-report' : '';
-        html += `
-            <button class="analysis-tile ${hasSaved}" data-industry="${industryName}" data-prompt-name="${type.promptName}" data-tooltip="${type.description}">
-                ${type.svgIcon}
-                <span class="tile-name">${type.name}</span>
-            </button>
-        `;
-    });
-
-    html += `</div></div>`;
-    selectorContainer.innerHTML = html;
-    openModal(CONSTANTS.MODAL_INDUSTRY_ANALYSIS);
-
-    try {
-        const docRef = doc(state.db, CONSTANTS.DB_COLLECTION_SCREENER_INTERACTIONS, industryName);
-        await setDoc(docRef, { lastClicked: Timestamp.now(), contextType: 'industry' });
-        if (buttonElement) {
-            const dateElement = buttonElement.querySelector('.last-clicked-date');
-            if (dateElement) {
-                dateElement.textContent = `Last Clicked: ${new Date().toLocaleDateString()}`;
-            }
-        }
-    } catch (error) {
-        console.error(`Error updating last clicked for ${industryName}:`, error);
-    }
-}
-
-async function handleIndustryMarketTrendsAnalysis(industryName) {
-    openModal(CONSTANTS.MODAL_LOADING);
-    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
-    const contentArea = document.getElementById('industry-analysis-content');
-
-    try {
-        loadingMessage.textContent = `Finding companies in the ${industryName} industry...`;
-        contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">${loadingMessage.textContent}</div>`;
-
-        const stocksResult = await findStocksByIndustry({ industryName });
-        if (stocksResult.error || !stocksResult.stocks || stocksResult.stocks.length === 0) {
-            throw new Error(`Could not find any companies for the ${industryName} industry.`);
-        }
-        const industryStocks = stocksResult.stocks;
-
-        loadingMessage.textContent = `Searching news for up to ${industryStocks.length} companies...`;
-        contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">${loadingMessage.textContent}</div>`;
-        const newsResult = await searchSectorNews({ sectorName: industryName, sectorStocks: industryStocks });
-        if (newsResult.error || !newsResult.articles || newsResult.articles.length === 0) {
-            throw new Error(`Could not find any recent news for the ${industryName} industry.`);
-        }
-        const validArticles = newsResult.articles;
-
-        loadingMessage.textContent = `AI is analyzing news and generating the report...`;
-        contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">${loadingMessage.textContent}</div>`;
-
-        const prompt = ONE_SHOT_INDUSTRY_TREND_PROMPT
-            .replace(/{industryName}/g, industryName)
-            .replace('${industryStocks}', industryStocks.join(', '))
-            .replace('{newsArticlesJson}', JSON.stringify(validArticles, null, 2));
-
-        let finalReport = await generatePolishedArticle(prompt, loadingMessage);
-
-        finalReport = finalReport.replace(/\[Source: (?:Article )?(\d+)\]/g, (match, indexStr) => {
-            const index = parseInt(indexStr, 10);
-            const article = validArticles.find(a => a.articleIndex === index);
-            if (article) {
-                const sourceParts = article.source.split('.');
-                const sourceName = sourceParts.length > 1 ? sourceParts[sourceParts.length - 2] : article.source;
-                return `[(Source: ${sourceName}, ${article.publicationDate})](${article.link})`;
-            }
-            return match;
-        });
-
-        contentArea.innerHTML = marked.parse(finalReport);
-
-    } catch (error) {
-        console.error("Error during AI agent industry analysis:", error);
-        displayMessageInModal(`Could not complete AI analysis: ${error.message}`, 'error');
-        contentArea.innerHTML = `<p class="p-4 text-center text-red-500">Error: ${error.message}</p>`;
-    } finally {
-        closeModal(CONSTANTS.MODAL_LOADING);
-    }
-}
-
-async function handleIndustryDisruptorAnalysis(industryName) {
-    openModal(CONSTANTS.MODAL_LOADING);
-    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
-
-    const contentArea = document.getElementById('industry-analysis-content');
-    contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">Generating AI article: "Disruptor Analysis"...</div>`;
-
-    try {
-        const prompt = INDUSTRY_DISRUPTOR_ANALYSIS_PROMPT.replace(/{industryName}/g, industryName);
-        const report = await generatePolishedArticle(prompt, loadingMessage);
-        contentArea.innerHTML = marked.parse(report);
-    } catch (error) {
-        console.error(`Error generating disruptor analysis for ${industryName}:`, error);
-        displayMessageInModal(`Could not generate AI article: ${error.message}`, 'error');
-        contentArea.innerHTML = `<div class="p-4 text-center text-red-500">Error: ${error.message}</div>`;
-    } finally {
-        closeModal(CONSTANTS.MODAL_LOADING);
-    }
-}
-
-async function handleIndustryMacroPlaybookAnalysis(industryName) {
-    openModal(CONSTANTS.MODAL_LOADING);
-    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
-
-    const contentArea = document.getElementById('industry-analysis-content');
-    contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">Generating AI article: "Macro Playbook"...</div>`;
-
-    try {
-        const standardDisclaimer = "This article is for informational purposes only and should not be considered financial advice. Readers should consult with a qualified financial professional before making any investment decisions.";
-        const prompt = INDUSTRY_MACRO_PLAYBOOK_PROMPT
-            .replace(/{industryName}/g, industryName)
-            .replace(/\[Include standard disclaimer\]/g, standardDisclaimer);
-        const report = await generatePolishedArticle(prompt, loadingMessage);
-        contentArea.innerHTML = marked.parse(report);
-    } catch (error) {
-        console.error(`Error generating macro playbook analysis for ${industryName}:`, error);
         displayMessageInModal(`Could not generate AI article: ${error.message}`, 'error');
         contentArea.innerHTML = `<div class="p-4 text-center text-red-500">Error: ${error.message}</div>`;
     } finally {
@@ -1161,14 +909,10 @@ export async function handleAnalysisRequest(symbol, reportType, promptConfig, fo
         }
         
         let payloadData;
-        if (reportType === 'UndervaluedAnalysis') {
-            payloadData = _calculateUndervaluedMetrics(data);
-        } else if (reportType === 'FinancialAnalysis') {
+        if (reportType === 'FinancialAnalysis') {
             payloadData = _calculateFinancialAnalysisMetrics(data);
-        } else if (reportType === 'MoatAnalysis' || reportType === 'CompoundingMachine') {
+        } else if (reportType === 'MoatAnalysis') {
             payloadData = _calculateMoatAnalysisMetrics(data);
-        } else if (reportType === 'DividendDeepDive') {
-            payloadData = _calculateDividendDeepDiveMetrics(data);
         } else if (reportType === 'GrowthOutlook') {
             payloadData = _calculateGrowthOutlookMetrics(data);
         } else if (reportType === 'RiskAssessment') {
@@ -1179,16 +923,6 @@ export async function handleAnalysisRequest(symbol, reportType, promptConfig, fo
             payloadData = _calculateNarrativeCatalystMetrics(data);
         } else if (reportType === 'GarpAnalysis') {
             payloadData = _calculateGarpAnalysisMetrics(data);
-        } else if (reportType === 'StockDisruptor') {
-            payloadData = _calculateStockDisruptorMetrics(data);
-        } else if (reportType === 'StockFortress') {
-            payloadData = _calculateStockFortressMetrics(data);
-        } else if (reportType === 'StockPhoenix') {
-            payloadData = _calculateStockPhoenixMetrics(data);
-        } else if (reportType === 'StockLinchpin') {
-            payloadData = _calculateStockLinchpinMetrics(data);
-        } else if (reportType === 'StockUntouchables') {
-            payloadData = _calculateStockUntouchablesMetrics(data);
         } else {
             payloadData = buildAnalysisPayload(data, requiredEndpoints);
         }
@@ -1304,84 +1038,6 @@ export async function handleInvestmentMemoRequest(symbol, forceNew = false) {
         console.error("Error generating investment memo:", error);
         displayMessageInModal(`Could not generate memo: ${error.message}`, 'error');
         contentContainer.innerHTML = `<p class="text-red-500">Failed to generate memo: ${error.message}</p>`;
-    } finally {
-        if (document.getElementById(CONSTANTS.MODAL_LOADING).classList.contains('is-open')) {
-            closeModal(CONSTANTS.MODAL_LOADING);
-        }
-    }
-}
-
-export async function handleIncomeMemoRequest(symbol, forceNew = false) {
-    const contentContainer = document.getElementById('ai-article-container');
-    const statusContainer = document.getElementById('report-status-container-ai');
-    contentContainer.innerHTML = '';
-    statusContainer.classList.add('hidden');
-
-    try {
-        const reportType = 'IncomeMemo';
-        const savedReports = await getSavedReports(symbol, reportType);
-        const promptConfig = promptMap[reportType];
-
-        if (savedReports.length > 0 && !forceNew) {
-            const latestReport = savedReports[0];
-            displayReport(contentContainer, latestReport.content, latestReport.prompt);
-            contentContainer.dataset.currentPrompt = latestReport.prompt || '';
-            contentContainer.dataset.rawMarkdown = latestReport.content;
-            updateReportStatus(statusContainer, savedReports, latestReport.id, { symbol, reportType, promptConfig });
-            return;
-        }
-
-        openModal(CONSTANTS.MODAL_LOADING);
-        const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
-
-        loadingMessage.textContent = "Gathering required analysis reports for Income Memo...";
-        const requiredReports = ['DividendDeepDive', 'FinancialAnalysis', 'MoatAnalysis'];
-        
-        const reportPromises = requiredReports.map(type => getSavedReports(symbol, type).then(reports => reports[0]));
-        const latestReports = await Promise.all(reportPromises);
-
-        const missingReports = requiredReports.filter((type, index) => !latestReports[index]);
-        if (missingReports.length > 0) {
-            throw new Error(`Please generate and save the following required reports first: ${missingReports.join(', ')}`);
-        }
-
-        let allAnalysesData = latestReports.map(report => {
-            const reportTitle = report.content.match(/#\s*(.*)/)?.[1] || report.reportType;
-            return `--- REPORT: ${reportTitle} ---\n\n${report.content}\n\n`;
-        }).join('\n');
-
-        const data = await getFmpStockData(symbol);
-        if (!data) {
-            throw new Error(`Could not retrieve FMP data for ${symbol} to generate metrics.`);
-        }
-
-        const metricsPayload = _calculateIncomeMemoMetrics(data);
-        const profile = data.profile?.[0] || {};
-        const companyName = profile.companyName || 'the company';
-
-        const prompt = INCOME_MEMO_PROMPT
-            .replace(/{companyName}/g, companyName)
-            .replace(/{tickerSymbol}/g, symbol)
-            .replace('{allAnalysesData}', allAnalysesData)
-            .replace('{jsonData}', JSON.stringify(metricsPayload, null, 2));
-
-        loadingMessage.textContent = "AI is drafting the income investment memo...";
-        const memoContent = await generatePolishedArticleForSynthesis(prompt, loadingMessage);
-        
-        await autoSaveReport(symbol, reportType, memoContent, prompt);
-        const refreshedReports = await getSavedReports(symbol, reportType);
-        const latestReport = refreshedReports[0];
-        
-        contentContainer.dataset.currentPrompt = prompt;
-        contentContainer.dataset.rawMarkdown = memoContent;
-        displayReport(contentContainer, memoContent, prompt);
-        
-        updateReportStatus(statusContainer, refreshedReports, latestReport.id, { symbol, reportType, promptConfig });
-
-    } catch (error) {
-        console.error("Error generating Income Memo:", error);
-        displayMessageInModal(`Could not generate report: ${error.message}`, 'error');
-        contentContainer.innerHTML = `<p class="text-red-500">Failed to generate report: ${error.message}</p>`;
     } finally {
         if (document.getElementById(CONSTANTS.MODAL_LOADING).classList.contains('is-open')) {
             closeModal(CONSTANTS.MODAL_LOADING);
@@ -1542,8 +1198,6 @@ export async function handleGenerateAllReportsRequest(symbol) {
         'RiskAssessment',
         'MoatAnalysis',
         'CapitalAllocators',
-        'DividendDeepDive',
-        'CompoundingMachine',
         'GrowthOutlook'
     ];
     const reportDisplayNames = {
@@ -1552,27 +1206,17 @@ export async function handleGenerateAllReportsRequest(symbol) {
         'RiskAssessment': 'Risk Assessment',
         'MoatAnalysis': 'Moat Analysis',
         'CapitalAllocators': 'Capital Allocators',
-        'DividendDeepDive': 'Dividend Deep Dive',
-        'CompoundingMachine': 'Compounding Machine',
         'GrowthOutlook': 'Growth Outlook'
     };
 
     const metricCalculators = {
         'FinancialAnalysis': _calculateFinancialAnalysisMetrics,
-        'UndervaluedAnalysis': _calculateUndervaluedMetrics,
         'GarpAnalysis': _calculateGarpAnalysisMetrics,
         'MoatAnalysis': _calculateMoatAnalysisMetrics,
-        'CompoundingMachine': _calculateMoatAnalysisMetrics,
-        'DividendDeepDive': _calculateDividendDeepDiveMetrics,
         'GrowthOutlook': _calculateGrowthOutlookMetrics,
         'RiskAssessment': _calculateRiskAssessmentMetrics,
         'CapitalAllocators': _calculateCapitalAllocatorsMetrics,
         'NarrativeCatalyst': _calculateNarrativeCatalystMetrics,
-        'StockFortress': _calculateStockFortressMetrics,
-        'StockDisruptor': _calculateStockDisruptorMetrics,
-        'StockPhoenix': _calculateStockPhoenixMetrics,
-        'StockLinchpin': _calculateStockLinchpinMetrics,
-        'StockUntouchables': _calculateStockUntouchablesMetrics
     };
 
     openModal(CONSTANTS.MODAL_LOADING);
@@ -1822,8 +1466,8 @@ export async function handleBroadAnalysisRequest(contextName, contextType, promp
 
         // Map promptName to the correct handler function
         const analysisHandlers = {
-            'MarketTrends': contextType === 'sector' ? handleMarketTrendsAnalysis : handleIndustryMarketTrendsAnalysis,
-            'DisruptorAnalysis': contextType === 'sector' ? handleDisruptorAnalysis : handleIndustryDisruptorAnalysis,
+            'MarketTrends': handleMarketTrendsAnalysis,
+            'DisruptorAnalysis': handleDisruptorAnalysis,
             'FortressAnalysis': handleFortressAnalysis,
             'PhoenixAnalysis': handlePhoenixAnalysis,
             'PickAndShovel': handlePickAndShovelAnalysis,
