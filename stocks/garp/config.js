@@ -1,9 +1,8 @@
 // fileName: config.js
 // --- App Version ---
-export const APP_VERSION = "14.17.0";
+export const APP_VERSION = "15.0.0-GARP";
 
 // --- Shared State ---
-// This object will hold all the application's shared state.
 export const state = {
     db: null,
     auth: null,
@@ -12,37 +11,15 @@ export const state = {
     appIsInitialized: false,
     fmpApiKey: "",
     geminiApiKey: "",
-    searchApiKey: "",
-    searchEngineId: "",
     googleClientId: "",
-    secApiKey: "",
-    driveTokenClient: null,
-    driveFolderId: null,
     portfolioCache: [],
-    availableIndustries: [],
-    sessionLog: [] // To hold prompts and responses for the current session
+    sessionLog: []
 };
-
-// --- Starter Plan Symbol Limitation (v13.9.0) ---
-// Set to true to only fetch starter-plan-limited endpoints for symbols in the list below.
-export const ENABLE_STARTER_PLAN_MODE = true;
-export const STARTER_SYMBOLS = [
-    'AAL', 'AAPL', 'ABBV', 'ADBE', 'AMD', 'AMZN', 'ATVI', 'BA', 'BABA', 'BAC',
-    'BIDU', 'BILI', 'C', 'CARR', 'CCL', 'COIN', 'COST', 'CPRX', 'CSCO', 'CVX',
-    'DAL', 'DIS', 'DOCU', 'ET', 'ETSY', 'F', 'FDX', 'FUBO', 'GE', 'GM',
-    'GOOGL', 'GS', 'HCA', 'HOOD', 'INTC', 'JNJ', 'JPM', 'KO', 'LCID', 'LMT',
-    'META', 'MGM', 'MRNA', 'MRO', 'MSFT', 'NFLX', 'NIO', 'NKE', 'NOK', 'NVDA',
-    'PEP', 'PFE', 'PINS', 'PLTR', 'PYPL', 'RBLX', 'RIOT', 'RIVN', 'RKT', 'ROKU',
-    'SBUX', 'SHOP', 'SIRI', 'SNAP', 'SOFI', 'SONY', 'SPY', 'SPYG', 'SQ', 'T',
-    'TGT', 'TLRY', 'TSLA', 'TSM', 'TWTR', 'UAL', 'UBER', 'UNH', 'V', 'VIAC',
-    'VWO', 'VZ', 'WBA', 'WFC', 'WMT', 'XOM', 'ZM'
-];
 
 // Map specific AI analysis types to the FMP endpoints they require.
 export const ANALYSIS_REQUIREMENTS = {
     'ManagementScorecard': ['executive_compensation']
 };
-
 
 // --- Constants ---
 export const CONSTANTS = {
@@ -51,12 +28,7 @@ export const CONSTANTS = {
     MODAL_LOADING: 'loadingStateModal',
     MODAL_MESSAGE: 'messageModal',
     MODAL_CONFIRMATION: 'confirmationModal',
-    MODAL_CUSTOM_ANALYSIS: 'customAnalysisModal',
-    MODAL_INDUSTRY_ANALYSIS: 'industryAnalysisModal',
     MODAL_MANAGE_STOCK: 'manageStockModal',
-    MODAL_VIEW_FMP_DATA: 'viewFmpDataModal',
-    MODAL_MANAGE_FMP_ENDPOINTS: 'manageFmpEndpointsModal',
-    MODAL_MANAGE_BROAD_ENDPOINTS: 'manageBroadEndpointsModal',
     MODAL_PORTFOLIO_MANAGER: 'portfolioManagerModal',
     MODAL_STOCK_LIST: 'stockListModal',
     MODAL_SESSION_LOG: 'sessionLogModal',
@@ -66,71 +38,31 @@ export const CONSTANTS = {
     INPUT_TICKER: 'ticker-input',
     INPUT_GEMINI_KEY: 'geminiApiKeyInput',
     INPUT_GOOGLE_CLIENT_ID: 'googleClientIdInput',
-    INPUT_WEB_SEARCH_KEY: 'webSearchApiKeyInput',
-    INPUT_SEARCH_ENGINE_ID: 'searchEngineIdInput',
-    INPUT_SEC_KEY: 'secApiKeyInput',
     // Containers & Elements
-    CONTAINER_DYNAMIC_CONTENT: 'dynamic-content-container',
     CONTAINER_PORTFOLIO_LIST: 'portfolio-list-container',
-    ELEMENT_LOADING_MESSAGE: 'loading-message',
-    ELEMENT_FINANCIAL_ANALYSIS_CONTENT: 'financial-analysis-content',
-    ELEMENT_UNDERVALUED_ANALYSIS_CONTENT: 'undervalued-analysis-content',
-    // Buttons
-    BUTTON_SCROLL_TOP: 'scroll-to-top-button',
     // Classes
     CLASS_MODAL_OPEN: 'is-open',
     CLASS_BODY_MODAL_OPEN: 'modal-open',
     CLASS_HIDDEN: 'hidden',
     // Database Collections
     DB_COLLECTION_PORTFOLIO: 'portfolio_stocks',
-    DB_COLLECTION_SECTOR_ANALYSIS: 'sector_analysis_runs',
     DB_COLLECTION_FMP_CACHE: 'fmp_cached_data',
-    DB_COLLECTION_FMP_ENDPOINTS: 'fmp_endpoints',
-    DB_COLLECTION_BROAD_ENDPOINTS: 'broad_api_endpoints',
     DB_COLLECTION_AI_REPORTS: 'ai_analysis_reports',
-    DB_COLLECTION_MANUAL_FILINGS: 'manual_filings',
-    DB_COLLECTION_BROAD_REPORTS: 'ai_broad_reports',
-    DB_COLLECTION_SCREENER_INTERACTIONS: 'screener_interactions',
 };
-
-// --- Placeholders for prompts that were removed during cleanup ---
-// Please replace the placeholder content with your actual, detailed AI prompts.
-const NEWS_SENTIMENT_PROMPT = `[--- PROMPT CONTENT MISSING ---]`;
-const DISRUPTOR_ANALYSIS_PROMPT = `[--- PROMPT CONTENT MISSING ---]`;
-const MACRO_PLAYBOOK_PROMPT = `[--- PROMPT CONTENT MISSING ---]`;
-const INDUSTRY_DISRUPTOR_ANALYSIS_PROMPT = `[--- PROMPT CONTENT MISSING ---]`;
-const INDUSTRY_MACRO_PLAYBOOK_PROMPT = `[--- PROMPT CONTENT MISSING ---]`;
-const ONE_SHOT_INDUSTRY_TREND_PROMPT = `[--- PROMPT CONTENT MISSING ---]`;
-const FORTRESS_ANALYSIS_PROMPT = `[--- PROMPT CONTENT MISSING ---]`;
-const PHOENIX_ANALYSIS_PROMPT = `[--- PROMPT CONTENT MISSING ---]`;
-const PICK_AND_SHOVEL_PROMPT = `[--- PROMPT CONTENT MISSING ---]`;
-const LINCHPIN_ANALYSIS_PROMPT = `[--- PROMPT CONTENT MISSING ---]`;
-const HIDDEN_VALUE_PROMPT = `[--- PROMPT CONTENT MISSING ---]`;
-const UNTOUCHABLES_ANALYSIS_PROMPT = `[--- PROMPT CONTENT MISSING ---]`;
-const INCOME_MEMO_PROMPT = `[--- PROMPT CONTENT MISSING ---]`;
-const GARP_VALIDATION_PROMPT = `[--- PROMPT CONTENT MISSING ---]`;
-const QUALITY_COMPOUNDER_MEMO_PROMPT = `[--- PROMPT CONTENT MISSING ---]`;
-
 
 const FINANCIAL_ANALYSIS_PROMPT = `
 Role: You are a financial analyst AI who excels at explaining complex topics to everyday investors. Your purpose is to generate a rigorous, data-driven financial analysis that is also educational, objective, and easy to understand. Use relatable analogies to clarify financial concepts.
-
 Data Instructions: Your analysis MUST be based *exclusively* on the pre-calculated metrics and summaries provided in the JSON data below. Do NOT attempt to recalculate any values. If a specific data point is "N/A" or missing, state that clearly in your analysis.
-
 Output Format: The final report must be in professional markdown format. Use # for the main title, ## for major sections, ### for sub-sections, and bullet points for key data points.
-
 IMPORTANT: Do not include any HTML tags in your output. Generate pure markdown only.
-
 Based on the provided data for {companyName} (Ticker: {tickerSymbol}), generate a multi-faceted financial report. Follow the structure below, replacing all instructions with your analysis derived from the JSON data.
 
 JSON Data with Pre-Calculated Metrics:
 {jsonData}
 
 # Comprehensive Financial Analysis: {companyName} ({tickerSymbol})
-
 ## 1. Executive Summary
 Write a concise, one-paragraph summary synthesizing the most important takeaways about this company's financial health, performance, and overall story as a potential investment.
-
 ## 2. Company Profile & Market Context
 ### Business Description
 In simple terms, describe the company's business using the 'description', 'sector', and 'industry' from the JSON. Avoid jargon.
@@ -140,7 +72,6 @@ In simple terms, describe the company's business using the 'description', 'secto
 - **52-Week Price Range:** State the value from \`summary.priceRange\`.
 - **Analyst Consensus:** Report the analyst consensus from \`summary.analystConsensus\`.
 - **Insider Ownership:** Report the insider ownership from \`summary.insiderOwnership\`, stating if it's N/A.
-
 ## 3. Annual Performance & Profitability (The Long-Term View)
 ### 3.1. Annual Revenue & Earnings Trend
 - **Revenue Trend:** Describe the company's long-term top-line performance using the text from \`performance.revenueTrend\`.
@@ -150,27 +81,23 @@ In simple terms, describe the company's business using the 'description', 'secto
 ### 3.3. Annual Net Profitability & Returns
 - **Net Profit Margin:** Explain what this means. What is the trend according to the 'status' in \`performance.netProfitMargin\`?
 - **Return on Equity (ROE):** Explain ROE as a "report card" for how well management uses shareholder money. How effective is the company based on the 'quality' from \`performance.returnOnEquity\`?
-
 ## 4. Recent Quarterly Performance (The Latest Snapshot)
 This section provides a look at the company's most recent performance, which can indicate current momentum.
 - **Most Recent Quarter (MRQ):** State the quarter ending date from \`recentPerformance.mrqDate\`.
 - **MRQ Revenue & YoY Growth:** Report the revenue for the latest quarter from \`recentPerformance.mrqRevenue\` and its year-over-year growth from \`recentPerformance.revenueYoyGrowth\`. Explain what this growth rate signifies about the company's current sales trajectory.
 - **MRQ Net Income & YoY Growth:** Report the net income for the latest quarter from \`recentPerformance.mrqNetIncome\` and its year-over-year growth from \`recentPerformance.netIncomeYoyGrowth\`. Comment on the current profitability trend.
 - **Trailing Twelve Months (TTM) Net Income:** State the TTM Net Income from \`recentPerformance.ttmNetIncome\` and explain that this gives a better picture of recent full-year profitability than a single quarter alone.
-
 ## 5. Financial Health & Risk (Is the Company on Solid Ground?)
 ### 5.1. Liquidity Analysis
 - **Current Ratio:** Explain this as the ability to pay short-term bills. Using the 'status' from \`health.currentRatio\`, comment on the company's short-term financial position.
 ### 5.2. Solvency and Debt Structure
 - **Debt-to-Equity:** Explain this like a personal debt-to-income ratio. Based on the 'status' from \`health.debtToEquity\`, is the company conservatively or aggressively financed?
 - **Interest Coverage:** Explain this as the ability to pay interest on its debt. Using the 'status' from \`health.interestCoverage\`, comment on its ability to handle its debt payments.
-
 ## 6. Cash Flow Analysis (Following the Actual Cash)
 ### 6.1. Operating Cash Flow (OCF) & Quality of Earnings
 - Based on \`cashFlow.qualityOfEarnings\`, are the company's reported profits being converted into real cash?
 ### 6.2. Capital Allocation Story
 - Based on \`cashFlow.capitalAllocationStory\`, what is the company primarily doing with its cash? Is it in growth mode, return mode, or deleveraging mode?
-
 ## 7. Valuation Analysis (Is the Stock Price Fair?)
 For each valuation multiple below, report its status relative to its own historical trend.
 - **P/E Ratio:** Use the 'status' from the object in the \`valuation\` array where 'metric' is 'peRatio'.
@@ -178,7 +105,6 @@ For each valuation multiple below, report its status relative to its own histori
 - **Price-to-Book Ratio:** Use the 'status' from the object where 'metric' is 'pbRatio'.
 - **Enterprise Value to EBITDA:** Use the 'status' from the object where 'metric' is 'enterpriseValueToEBITDA'.
 After listing the statuses, briefly discuss what these comparisons imply. Is the stock trading at a premium or a discount to its own history overall?
-
 ## 8. The Long-Term Investment Thesis: Bull vs. Bear
 ### The Bull Case (Key Strengths)
 - Create a bulleted list using the points provided in \`thesis.bullCasePoints\`.
@@ -190,37 +116,29 @@ Based purely on this quantitative analysis, what is the primary story? Does the 
 
 export const GARP_ANALYSIS_PROMPT = `
 Role: You are a growth-oriented investment analyst, specializing in the "Growth at a Reasonable Price" (GARP) philosophy. Your task is to determine if a company's valuation is justified by its growth prospects.
-
 Data Instructions: Your analysis MUST be based *exclusively* on the pre-calculated metrics provided in the JSON data below.
-
 Output Format: The final report must be in professional markdown format. Use # for the main title, ## for major sections, and bullet points for key data points. Each bullet point MUST start on a new line.
-
 IMPORTANT: Do not include any HTML tags in your output. Generate pure markdown only.
-
 Conduct a GARP analysis for {companyName} (Ticker: {tickerSymbol}) using the provided data.
 
 JSON Data with Pre-Calculated Metrics:
 {jsonData}
 
 # GARP Analysis: Is {companyName} ({tickerSymbol}) Priced for Perfection?
-
 ## 1. The Valuation Question
 Start by framing the core debate. Is this a high-quality company whose growth justifies its price, or is it an over-hyped stock? Each bullet point below must start on a new line.
 - **Current P/E Ratio:** State the value from \`valuation.peRatio\`.
 - **Current P/S Ratio:** State the value from \`valuation.psRatio\`.
 - **Valuation vs. History:** Based on \`valuation.peStatusVsHistory\`, state whether the company is trading at a premium or discount to its own past.
-
 ## 2. The Growth Engine: Justifying the Price
 This section analyzes the growth that investors are paying for. Each bullet point below must start on a new line.
 - **Historical EPS Growth:** Based on \`growth.historicalEpsGrowth\`, state the recent track record of earnings growth.
 - **Forward EPS Growth (Analyst Forecast):** State the market's expectation for next year's earnings growth from \`growth.forwardEpsGrowth\`. This is the most critical number for the GARP thesis.
-
 ## 3. The PEG Ratio Verdict
 The Price/Earnings-to-Growth (PEG) ratio is a key tool for GARP investors. Each bullet point below must start on a new line.
 - **Explain the PEG Ratio:** Briefly explain that a PEG ratio of around 1.0 suggests a fair balance between a stock's P/E ratio and its expected earnings growth.
 - **Calculated PEG Ratio:** State the value from \`pegRatio.value\`.
 - **Interpretation:** Based on the \`pegRatio.verdict\`, describe whether the stock appears attractively priced, fairly priced, or expensive relative to its growth forecast.
-
 ## 4. Final Conclusion: The Investment Profile
 Synthesize all the points above into a final verdict.
 - **The Bull Case (GARP Opportunity):** Summarize the data points (e.g., strong forecast growth, PEG ratio below 1.2) that support the idea of this being a GARP opportunity.
@@ -231,27 +149,22 @@ Synthesize all the points above into a final verdict.
 const MOAT_ANALYSIS_PROMPT = `
 Role: You are a business strategist AI who excels at explaining complex business concepts in simple, relatable terms. Your task is to analyze {companyName}'s competitive advantages.
 Concept: An "economic moat" is a company's ability to maintain its competitive advantages and defend its long-term profits from competitors.
-
 Data Instructions: Your analysis must be derived exclusively from the provided JSON data, which contains pre-calculated trends and metrics.
-
 Output Format: Provide a brief report in markdown. Explain each point simply and conclude with a clear verdict on the moat's strength.
 
 JSON Data:
 {jsonData}
 
 # Economic Moat Analysis: {companyName} ({tickerSymbol})
-
 ## 1. What Gives This Company Its Edge? (Sources of the Moat)
 Analyze the data for signs of a durable competitive advantage. Discuss:
 - **Return on Invested Capital (ROIC):** Analyze the 'roicTrend' data. Explain this as the "gold standard" for moat analysis. A consistently high **and stable/rising** ROIC (>15%) is a strong sign of a moat.
 - **Pricing Power & Profitability:** Are the trends in 'profitabilityTrends' (net profit margin, operating income, gross profit margin) consistently high **and stable** over time? Explain this as a sign that the company can reliably charge more.
 - **Qualitative Clues (from Description):** Based on the 'qualitativeClues.description', what themes suggest a moat? Look for mentions of a "platform," "network," "marketplace," or "mission-critical" systems.
-
 ## 2. How Strong is the Castle Wall? (Moat Sustainability)
 Assess how sustainable this advantage might be by looking at:
 - **Reinvesting in the Defenses:** Are 'capex' and 'rdExpenses' significant in the 'reinvestmentTrends' data? Explain this as the company spending money to strengthen its moat.
 - **Financial Fortress:** Is the balance sheet strong (low 'debtToEquity' in 'balanceSheetHealth')? A company with low debt is better equipped to survive tough times.
-
 ## 3. The Verdict: How Wide is the Moat?
 Based on all the evidence, provide a concluding assessment. Classify the moat as **"Wide," "Narrow," or "None,"** and explain what this means for a long-term investor.
 - **Wide Moat:** The company has strong, sustainable advantages (like consistently high ROIC and clear pricing power) that are very difficult to replicate, **leading to highly predictable long-term profits.**
@@ -261,72 +174,55 @@ Based on all the evidence, provide a concluding assessment. Classify the moat as
 
 export const RISK_ASSESSMENT_PROMPT = `
 Role: You are a risk analyst AI. Your job is to act like a cautious inspector, identifying the most significant potential problems or "red flags" for {companyName} and explaining them simply.
-
 Data Instructions: Your analysis must be derived exclusively from the provided JSON data. For each potential risk listed below, evaluate the data. **Only include the bullet point in your final output if the data indicates a risk is present.**
-
 Output Format: You MUST return a prioritized, bulleted list in markdown, categorized by risk type. Do NOT use prose or paragraph format for the main analysis. Explain each risk in simple terms within the bullet points.
 
 JSON Data:
 {jsonData}
 
 # Uncovering the Risks: {companyName} ({tickerSymbol})
-
 ## 1. Financial Risks (Is the Foundation Solid?)
 - **Debt Load (Leverage):** Evaluate \`financialRisks.debtToEquity\`. If the ratio is high (e.g., > 1.0), state the value and explain the risk.
 - **Liquidity:** Evaluate \`financialRisks.currentRatio\`. If the ratio is low (e.g., < 1.5), state the value and explain the risk of paying short-term bills.
 - **Earnings Quality:** Compare \`financialRisks.earningsQuality.operating_cash_flow\` to \`financialRisks.earningsQuality.net_income\`. If operating cash flow is significantly lower, flag this as a potential red flag.
 - **Dividend Sustainability:** Compare the \`financialRisks.dividends_paid\` amount to \`financialRisks.net_income\`. If dividends paid are greater than net income, flag this as a major risk to the dividend.
-
 ## 2. Market & Stock Price Risks (Is the Stock Itself Risky?)
 - **Volatility:** Evaluate \`marketRisks.beta\`. If it is > 1.2, state the value and explain that the stock is more volatile than the market.
 - **Valuation Risk:** Evaluate \`marketRisks.valuation.peRatio\` and \`psRatio\`. If either is high for its industry, note this as a risk that the stock may be "priced for perfection."
 - **Analyst Pessimism:** Check the \`marketRisks.analystPessimism\` list. If it is not empty, list the pessimistic ratings as a risk.
-
 ## 3. Business Risks (Are There Cracks in the Operations?)
 - **Recession Sensitivity:** Based on \`businessRisks.recession_sensitivity_sector\`, explain the risk if it's a cyclical sector like 'Industrials' or 'Consumer Discretionary'.
 - **Margin Compression:** Analyze the \`businessRisks.marginTrend\`. If the net profit margin shows a clear downward trend over the last few years, identify this as a risk.
-
 ## 4. The Bottom Line: What Are the Biggest Worries?
 Based on the risks you identified above, provide a brief, 1-2 sentence summary highlighting the top 2-3 risks an investor should be most aware of.
 `.trim();
 
 const CAPITAL_ALLOCATORS_PROMPT = `
 	Act as a discerning investment strategist, channeling the analytical rigor and long-term perspective of firms like Berkshire Hathaway. Your analysis must be in the style of a detailed shareholder letter and based *only* on the provided financial data for {companyName}. **Be critical; praise should be reserved for exceptional, data-backed performance.**
-
 	Article Title: "The Capital Allocators: A Deep Dive into the Financial Stewardship of {companyName}'s Leadership"
-
 	## 1. The CEO's Inferred Philosophy
 	**Instead of their stated approach, deduce their *actual* philosophy from the numbers.** Based on the flow of capital over the last decade, what do their actions reveal about their priorities? Do they favor aggressive growth, maintaining a fortress balance sheet, or maximizing shareholder returns?
-
 	## 2. A Quantitative Analysis of the Track Record
 	Analyze their capital allocation decisions over the last 5-10 years, using specific metrics to judge their effectiveness:
-
 	- **Reinvestment in the Business (The Primary Engine):**
 		- Analyze the trend in **Return on Invested Capital (ROIC)**. Is it consistently high and stable, or is it volatile or declining? **This is the single most important measure of internal investment skill.**
 		- Is the company's ROIC comfortably above its Weighted Average Cost of Capital (WACC)? **Value is only created when ROIC > WACC.**
-
 	- **Acquisitions (M&A):**
 		- Examine the company's **profit margins** and **ROIC** in the years immediately following major acquisitions. Did the deals enhance profitability (accretive) or dilute it (destructive)?
 		- Analyze the growth of **"goodwill"** on the balance sheet. A large increase in goodwill followed by stagnant or declining ROIC is a major red flag for overpayment ("diworsification").
-
 	- **Returning Capital to Shareholders:**
 		- **Stock Buybacks:** Correlate the timing and volume of share repurchases with the stock's historical valuation (e.g., Price-to-Earnings or Price-to-Book ratio). **Did they opportunistically buy back shares when the stock was cheap, or did they buy high?**
 		- **Dividends:** Analyze the **dividend payout ratio** against free cash flow. Is the dividend safely covered, and is its growth rational and sustainable?
-
 	## 3. Final Scorecard & Investment Thesis
 	- **Provide a final letter grade (A through F) for the management team's overall skill as capital allocators.** Justify this grade by summarizing the strongest and weakest points from your quantitative analysis above.
 	- Based on this track record, formulate a concise investment thesis. Why should (or shouldn't) an investor trust this team to be wise stewards of capital in the future?
 	- **Conclude with a "Key Risks & Red Flags" section**, highlighting any concerning trends (e.g., declining ROIC, value-destructive M&A, or ill-timed buybacks).
-
-	When you mention a stock ticker, you MUST wrap it in a special tag like this: <stock-ticker>TICKER</stock-ticker>.
-
 	Crucial Disclaimer: This article is for informational purposes only and should not be considered financial advice. Readers should consult with a qualified financial professional before making any investment decisions.
 `;
 
 export const INVESTMENT_MEMO_PROMPT = `
 **Persona & Goal:**
 You are a Senior Investment Analyst at a GARP-focused ("Growth at a Reasonable Price") fund, channeling the analytical rigor and narrative style of top-tier investors. Your goal is to synthesize a dossier of qualitative and quantitative reports on {companyName} into a definitive and convincing investment memo. The final output must be a clear, thesis-driven analysis that determines if this is a quality growth company trading at a fair price.
-
 **Core Philosophy (How to Think):**
 1.  **Narrative Over Numbers:** The heart of this memo is the qualitative analysis. The scores are a summary, not the main event. Your primary task is to build a compelling investment case, not just fill out a scorecard.
 2.  **Synthesize, Don't Summarize:** Do not merely list findings from each report. Weave them together to form a cohesive bull case, bear case, and valuation assessment.
@@ -336,37 +232,30 @@ You are a Senior Investment Analyst at a GARP-focused ("Growth at a Reasonable P
 ---
 
 # Investment Memo: {companyName} ({tickerSymbol})
-
 ## 1. Executive Summary & Investment Thesis
 *(Begin with a 3-4 sentence paragraph that concisely summarizes the investment thesis. It should cover the core bull case, the primary risks (the bear case), and the final recommendation based on the current valuation. This is the "elevator pitch" for the entire memo.)*
-
 ## 2. The Bull Case: Why We Could Be Right
 *(This section should be a compelling narrative about the investment's upside potential. Synthesize the strongest points from the provided reports.)*
 * **Business Quality & Moat:** Analyze the company's competitive advantages. Is it a dominant leader with strong pricing power, or simply a good operator in a tough industry?
 * **Growth Outlook:** What are the key drivers of future growth? Are they secular (long-term tailwinds) or cyclical? How large is the total addressable market (TAM)?
 * **Management & Capital Allocation:** Is the leadership team proven and shareholder-aligned? Do they have a strong track record of intelligent capital allocation (e.g., high ROIC, smart M&A, opportunistic buybacks)?
-
 ## 3. The Bear Case: What Could Go Wrong
 *(This section critically examines the primary risks and counterarguments. Acknowledge the potential downsides mentioned in the reports.)*
 * **Key Risks & Competitive Threats:** What are the top 2-3 most critical risks? Are there credible threats to the company's moat?
 * **Financial Health Concerns:** Are there any red flags on the balance sheet (e.g., high leverage)? Is cash flow consistent? Are margins sustainable or at risk of compression?
 * **Potential Headwinds:** Are there any secular or cyclical headwinds that could derail the growth story?
-
 ## 4. Valuation: The GARP Fulcrum
 *(This is the deciding section. Analyze whether the current price is reasonable given the quality of the business and its growth prospects.)*
 * **Current Valuation Picture:** Based on the reports, what do key GARP metrics like the PEG ratio, P/FCF, or EV/EBITDA tell us?
 * **Margin of Safety:** Does the current price offer a sufficient margin of safety? Is the market overly optimistic or pessimistic about the company's future?
 * **Conclusion on Price:** Synthesize the bull and bear cases to answer the ultimate question: Is {companyName} a quality growth company trading at a fair price *today*?
-
 ## 5. Final Verdict & Actionable Recommendation
-
 ### A. Recommendation
 *(Provide a clear, actionable recommendation.)*
 * **High Conviction Buy:** A compelling opportunity; recommend a full position.
 * **Initiate Position:** A good opportunity; recommend building a starter (e.g., 1/3) position and adding on weakness.
 * **Add to Watchlist:** An interesting company, but the current price/risk profile isn't compelling. Specify the catalyst or price target you'd be waiting for.
 * **Pass:** The risks outweigh the potential rewards; not a suitable GARP investment at this time.
-
 ### B. Internal Scorecard Summary
 *(Here, you will summarize your analysis using the 1-10 scoring system as a final quantitative check. The rationale for each score is the detailed analysis you've already written above.)*
 * **Business Quality & Moat:** \`[1-10]\`
@@ -383,59 +272,6 @@ You are a Senior Investment Analyst at a GARP-focused ("Growth at a Reasonable P
 **Input Reports:**
 {allAnalysesData}
 `.trim();
-
-export const PEER_ANALYSIS_PROMPT = `
-Role: You are a market analyst AI. Your task is to identify the top publicly traded competitors for a given company.
-
-Instructions:
-1.  Identify the top 10 publicly traded competitors for **{companyName} (Ticker: {tickerSymbol})**.
-2.  Return the list as a single, clean JSON array of objects.
-3.  Each object in the array must have two keys: "companyName" and "ticker".
-4.  Do NOT include any commentary, introduction, or surrounding text. Only the JSON array is required.
-
-Example Output:
-[
-    { "companyName": "Competitor A Inc.", "ticker": "COMPA" },
-    { "companyName": "Competitor B Corp.", "ticker": "COMPB" }
-]
-`.trim();
-
-// NEW: Prompt for the GARP Exit Strategy Memo
-export const GARP_EXIT_STRATEGY_PROMPT = `
-Role: You are a disciplined "Growth at a Reasonable Price" (GARP) portfolio manager. Your task is to analyze the provided data to determine if it's time to sell a stock, based on a clear, data-driven framework.
-
-Data Instructions: Your analysis MUST be based *exclusively* on the pre-calculated metrics in the JSON data below. Do not invent data. If a metric is "N/A", state that.
-
-Output Format: Use professional markdown. Use ## for the main sections. For each category, create a bulleted list of your findings based on the data.
-
-JSON Data with Pre-Calculated Sell Signals:
-{jsonData}
-
-# GARP Sell Signal Analysis: {companyName} ({tickerSymbol})
-
-## 1. Valuation Check: Has the "Reasonable Price" Become Unreasonable?
-Analyze the data in \`valuationCheck\` to identify red flags.
-- **P/E vs. Peers:** Is the current P/E ratio (\`currentPe\`) significantly higher than the peer median (\`peerMedianPe\`)?
-- **P/E vs. History:** Is the current P/E ratio higher than its own historical average (\`historicalPe\`)?
-- **PEG Ratio:** Is the PEG ratio (\`pegRatio\`) approaching or exceeding 2.0, suggesting the price has outrun its forward growth expectations?
-
-## 2. Growth Check: Is the Growth Story Faltering?
-Analyze the data in \`growthCheck\`.
-- **Revenue Deceleration:** Does the \`revenueGrowthTrend\` show a clear and significant slowdown in recent years?
-- **Forward Growth:** Is the forward EPS growth forecast (\`forwardEpsGrowth\`) weak or decelerating compared to past performance?
-
-## 3. Fundamentals Check: Is the Business Health Deteriorating?
-Analyze the data in \`fundamentalsCheck\`.
-- **Margin Erosion:** Do the recent years in \`netMarginTrend\` show a pattern of declining profitability?
-- **Balance Sheet Risk:** Is the company taking on more debt, as shown by a rising trend in the \`debtToEquityTrend\`?
-
-## 4. Final Verdict: Synthesis & Recommendation
-Synthesize all the points above. Count the number of significant red flags identified. Based on the weight of the evidence, provide a clear, final recommendation.
-- **Hold:** The original GARP thesis remains largely intact. Few, if any, significant red flags are present.
-- **Monitor Closely (Take Partial Profits):** Some red flags are appearing (e.g., valuation is stretched, but fundamentals remain strong). The risk/reward profile has changed. It may be prudent to trim the position.
-- **Sell Candidate:** Multiple, significant red flags are present across valuation, growth, and fundamentals. The original reasons for owning the stock are no longer valid.
-`.trim();
-
 
 export const promptMap = {
     'FinancialAnalysis': {
@@ -462,42 +298,13 @@ export const promptMap = {
         prompt: INVESTMENT_MEMO_PROMPT,
         requires: [] // This prompt uses other reports, not raw FMP data.
     },
-    'PeerAnalysis': {
-        prompt: PEER_ANALYSIS_PROMPT,
-        requires: []
-    },
-    // NEW: Added for the Exit Strategy feature
-    'GarpExitStrategy': {
-        prompt: GARP_EXIT_STRATEGY_PROMPT,
-        requires: ['key_metrics_annual', 'ratios_annual', 'income_statement_annual', 'analyst_estimates', 'key_metrics_ttm', 'ratios_ttm']
-    },
-    // --- ADDED TO CENTRALIZE PROMPTS ---
-    'NewsSentiment': { prompt: NEWS_SENTIMENT_PROMPT, requires: [] },
-    'DisruptorAnalysis': { prompt: DISRUPTOR_ANALYSIS_PROMPT, requires: [] },
-    'MacroPlaybook': { prompt: MACRO_PLAYBOOK_PROMPT, requires: [] },
-    'IndustryDisruptorAnalysis': { prompt: INDUSTRY_DISRUPTOR_ANALYSIS_PROMPT, requires: [] },
-    'IndustryMacroPlaybook': { prompt: INDUSTRY_MACRO_PLAYBOOK_PROMPT, requires: [] },
-    'OneShotIndustryTrend': { prompt: ONE_SHOT_INDUSTRY_TREND_PROMPT, requires: [] },
-    'FortressAnalysis': { prompt: FORTRESS_ANALYSIS_PROMPT, requires: [] },
-    'PhoenixAnalysis': { prompt: PHOENIX_ANALYSIS_PROMPT, requires: [] },
-    'PickAndShovel': { prompt: PICK_AND_SHOVEL_PROMPT, requires: [] },
-    'Linchpin': { prompt: LINCHPIN_ANALYSIS_PROMPT, requires: [] },
-    'HiddenValue': { prompt: HIDDEN_VALUE_PROMPT, requires: [] },
-    'Untouchables': { prompt: UNTOUCHABLES_ANALYSIS_PROMPT, requires: [] },
-    'IncomeMemo': { prompt: INCOME_MEMO_PROMPT, requires: [] },
-    'GarpValidation': { prompt: GARP_VALIDATION_PROMPT, requires: [] },
-    'QualityCompounderMemo': { prompt: QUALITY_COMPOUNDER_MEMO_PROMPT, requires: [] },
 };
 
 export const ANALYSIS_ICONS = {
     'FinancialAnalysis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6a7.5 7.5 0 100 15 7.5 7.5 0 000-15z" /><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.2-5.2" /><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 10.5H10.5v.008H10.5V10.5zm.008 0h.008v4.502h-.008V10.5z" /></svg>`,
-    'GarpAnalysis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18L9 11.25l1.5 1.5L13.5 6l3 3 4.5-4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`,
+    'GarpAnalysis': `<svg xmlns="http://www.w.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18L9 11.25l1.5 1.5L13.5 6l3 3 4.5-4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`,
     'MoatAnalysis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.286zm0 13.036h.008v.008h-.008v-.008z" /></svg>`,
     'RiskAssessment': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" /></svg>`,
     'CapitalAllocators': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15.91 15.91a2.25 2.25 0 01-3.182 0l-3.03-3.03a.75.75 0 011.06-1.061l2.47 2.47 2.47-2.47a.75.75 0 011.06 1.06l-3.03 3.03z" /></svg>`,
     'InvestmentMemo': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>`,
-    'IncomeMemo': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414-.336.75-.75.75h-.75m0 0v-1.5m0 1.5v-1.5m0 0h.172c.22 0 .416.056.588.158a1.5 1.5 0 01.82 1.258V18.75M2.25 6H18m0 0h1.5M2.25 6h15.75M3.75 12h16.5M12 3.75h.008v.008H12V3.75z" /></svg>`,
-    'QualityCompounderMemo': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.471-2.471a.563.563 0 01.8 0l2.5 2.5a.563.563 0 010 .8l-2.47 2.471M11.42 15.17L5.877 21m6.46-6.462L8.625 12.5a.563.563 0 010-.8l2.5-2.5a.563.563 0 01.8 0l2.47 2.471m-5.877 5.877L5.88 15.171m5.541 5.541L3 21a2.652 2.652 0 01-2.849-3.849L8.625 9.62a.563.563 0 01.8 0l2.5 2.5a.563.563 0 010 .8l-2.47 2.471z" /></svg>`,
-    'CompetitiveLandscape': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 15.75l-2.489-2.489m0 0a3.375 3.375 0 10-4.773-4.773 3.375 3.375 0 004.774 4.774zM21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`,
-    'GarpExitStrategy': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`
 };
