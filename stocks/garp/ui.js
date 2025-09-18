@@ -282,7 +282,6 @@ export function setupEventListeners() {
         }
         
         if (target.id === 'investment-memo-button') handleInvestmentMemoRequest(symbol);
-        // NEW: Event listener for the Exit Memo button
         if (target.id === 'garp-exit-memo-button') handleGarpExitMemoRequest(symbol);
         if (target.id === 'generate-all-reports-button') handleGenerateAllReportsRequest(symbol);
         if (target.id === 'analyze-latest-8k-button') handleFilingAnalysisRequest(symbol, '8-K');
