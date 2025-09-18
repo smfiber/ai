@@ -845,3 +845,56 @@ export async function renderFilingAnalysisTab(ticker, formType) {
         recentListContainer.innerHTML = `<p class="text-red-500">Error loading data: ${error.message}</p>`;
     }
 }
+
+// NEW FUNCTION: Renders the user's position performance.
+export function renderMyPosition(container, ticker, fmpData) {
+    if (!container) return;
+
+    const stock = state.portfolioCache.find(s => s.ticker === ticker);
+    const profile = fmpData.profile?.[0] || {};
+    const currentPrice = profile.price;
+
+    // Check if we have the necessary data to render the component
+    if (!stock || !stock.purchasePrice || !stock.shareCount || !currentPrice) {
+        container.innerHTML = ''; // Clear the container if no position data
+        return;
+    }
+
+    const { purchasePrice, shareCount } = stock;
+
+    // Calculate performance metrics
+    const costBasis = purchasePrice * shareCount;
+    const marketValue = currentPrice * shareCount;
+    const gainLoss = marketValue - costBasis;
+    const gainLossPercent = costBasis > 0 ? (gainLoss / costBasis) * 100 : 0;
+
+    const gainLossClass = gainLoss >= 0 ? 'price-gain' : 'price-loss';
+    const gainLossSign = gainLoss >= 0 ? '+' : '';
+
+    // Helper for formatting currency
+    const formatCurrency = (num) => `$${num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+    container.innerHTML = `
+        <div class="mb-4">
+            <h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">My Position</h3>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center p-4 bg-gray-50 rounded-lg border">
+                <div>
+                    <p class="text-sm text-gray-500">Market Value</p>
+                    <p class="text-xl font-semibold text-gray-800">${formatCurrency(marketValue)}</p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500">Cost Basis</p>
+                    <p class="text-xl font-semibold text-gray-800">${formatCurrency(costBasis)}</p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500">Unrealized Gain/Loss</p>
+                    <p class="text-xl font-semibold ${gainLossClass}">${gainLossSign}${formatCurrency(Math.abs(gainLoss))}</p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500">Return</p>
+                    <p class="text-xl font-semibold ${gainLossClass}">${gainLossSign}${gainLossPercent.toFixed(2)}%</p>
+                </div>
+            </div>
+        </div>
+    `;
+}
