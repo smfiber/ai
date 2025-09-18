@@ -306,14 +306,24 @@ export async function openRawDataViewer(ticker) {
         // Build individual analysis tile buttons
         const quantButtons = [
             { reportType: 'FinancialAnalysis', text: 'Financial Analysis', tooltip: 'Deep dive into financial statements, ratios, and health.' },
+            { reportType: 'UndervaluedAnalysis', text: 'Undervalued', tooltip: 'Assess if the stock is a potential bargain based on valuation metrics.' },
             { reportType: 'GarpAnalysis', text: 'GARP', tooltip: 'Growth at a Reasonable Price. Is the valuation justified by its growth?' },
             { reportType: 'MoatAnalysis', text: 'Moat Analysis', tooltip: 'Evaluates the company\'s competitive advantages.' },
             { reportType: 'RiskAssessment', text: 'Risk Assessment', tooltip: 'Identifies potential financial, market, and business risks.' },
+            { reportType: 'BullVsBear', text: 'Bull vs. Bear', tooltip: 'Presents both the positive and negative investment arguments.' },
         ];
-        
+        const narrativeButtons = [
+            { reportType: 'StockFortress', text: 'The Fortress', tooltip: 'Is this a resilient, all-weather business with a rock-solid balance sheet?' },
+            { reportType: 'StockDisruptor', text: 'The Disruptor', tooltip: 'Is this a high-growth innovator with potential to redefine its industry?' },
+            { reportType: 'StockPhoenix', text: 'The Phoenix', tooltip: 'Is this a fallen angel showing credible signs of a business turnaround?' },
+            { reportType: 'StockLinchpin', text: 'The Linchpin', tooltip: 'Does this company control a vital, irreplaceable choke point in its industry?' },
+            { reportType: 'StockUntouchables', text: 'The Untouchables', tooltip: 'Analyzes the power of a "cult" brand and its translation to durable profits.' },
+            { reportType: 'CompoundingMachine', text: 'The Compounder', tooltip: 'Does this business have the traits of a long-term "compounding machine"?' },
+        ];
         const specializedButtons = [
              { reportType: 'CapitalAllocators', text: 'Capital Allocators', tooltip: 'Assesses management\'s skill in deploying capital.' },
              { reportType: 'GrowthOutlook', text: 'Growth Outlook', tooltip: 'Analyzes the company\'s future growth potential.' },
+             { reportType: 'DividendDeepDive', text: 'Dividend Deep Dive', tooltip: 'Assesses the safety and sustainability of the company\'s dividend.' },
              { reportType: 'NarrativeCatalyst', text: 'Catalysts', tooltip: 'Identifies the investment story and future catalysts.' },
         ];
         
@@ -327,6 +337,7 @@ export async function openRawDataViewer(ticker) {
         }).join('');
         
         const quantHtml = buildButtonHtml(quantButtons);
+        const narrativeHtml = buildButtonHtml(narrativeButtons);
         const specializedHtml = buildButtonHtml(specializedButtons);
 
         // Define the main workflow buttons
@@ -352,6 +363,12 @@ export async function openRawDataViewer(ticker) {
             <button data-symbol="${ticker}" id="investment-memo-button" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg flex items-center justify-center gap-2 transition-all duration-200 hover:shadow-lg text-base" data-tooltip="Synthesizes the core analysis reports into a final GARP-focused investment memo. Requires the prerequisite reports to be saved first.">
                 ${ANALYSIS_ICONS['InvestmentMemo']}
                 Generate GARP Memo
+            </button>`;
+
+        const incomeMemoBtn = `
+            <button data-symbol="${ticker}" id="income-memo-button" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 px-6 rounded-lg flex items-center justify-center gap-2 transition-all duration-200 hover:shadow-lg text-base" data-tooltip="Synthesizes Dividend, Financial Health, and Moat reports into a final verdict for income investors. Requires these 3 analyses to be saved first.">
+                ${ANALYSIS_ICONS['IncomeMemo']}
+                Generate Income Memo
             </button>`;
 
         const qualityMemoBtn = `
@@ -384,6 +401,10 @@ export async function openRawDataViewer(ticker) {
                             <div class="flex flex-wrap gap-2 justify-center">${quantHtml}</div>
                         </div>
                         <div>
+                            <h3 class="text-sm font-bold text-gray-500 uppercase text-center mb-3">Investment Thesis & Narrative Analysis</h3>
+                            <div class="flex flex-wrap gap-2 justify-center">${narrativeHtml}</div>
+                        </div>
+                        <div>
                             <h3 class="text-sm font-bold text-gray-500 uppercase text-center mb-3">Specialized Analysis</h3>
                             <div class="flex flex-wrap gap-2 justify-center">${specializedHtml}</div>
                         </div>
@@ -398,6 +419,7 @@ export async function openRawDataViewer(ticker) {
                     <div class="flex flex-wrap justify-center gap-4">
                         ${garpValidationBtn}
                         ${garpMemoBtn}
+                        ${incomeMemoBtn}
                         ${qualityMemoBtn}
                     </div>
                 </div>
@@ -442,4 +464,53 @@ export async function openRawDataViewer(ticker) {
         aiArticleContainer.innerHTML = `<p class="text-red-500 text-center">${error.message}</p>`;
         profileDisplayContainer.innerHTML = `<p class="text-red-500 text-center">${error.message}</p>`;
     }
+}
+
+export function openHelpModal() {
+    const contentContainer = document.getElementById('help-modal-content');
+    if (!contentContainer) return;
+
+    contentContainer.innerHTML = `
+        <h1>Welcome to the Stock Research Hub!</h1>
+        <p>This application is your personal market co-pilot, designed to streamline your investment research process from idea generation to long-term monitoring. Here’s how to get the most out of it.</p>
+        
+        <h2>The Core Workflow (GARP Focus)</h2>
+        <p>While the app supports many analysis types, the primary workflow is built around the <strong>Growth at a Reasonable Price (GARP)</strong> philosophy. Here is the recommended process:</p>
+        <ol>
+            <li><strong>Add a Stock:</strong> Use the "Add Stock" form on the main dashboard to add a company to your lists (Portfolio, Watchlist, etc.).</li>
+            <li><strong>Open the Analysis View:</strong> From any list, click the "View" button for a stock to open its detailed analysis modal.</li>
+            <li><strong>Run the GARP Analysis:</strong> Navigate to the "AI Analysis" tab and click the "GARP" button. This will generate a report on whether the stock's growth is worth the price.</li>
+            <li><strong>Create & Save a Thesis:</strong> The GARP report will automatically generate a quantifiable thesis. Click the "Insert into Thesis Tracker" button to save it. You can also write or edit your thesis manually on the "Dashboard" tab of the analysis modal.</li>
+            <li><strong>Monitor Your Investment:</strong> Periodically, use the new "Test Thesis" button on the "Dashboard" tab. This powerful feature uses the AI to compare your saved thesis against the latest financial data and tells you if your original argument still holds true.</li>
+        </ol>
+
+        <h2>Key Features Explained</h2>
+        <h3>Dashboard & Lists</h3>
+        <p>The main screen gives you an at-a-glance view of your different stock lists. You can manage which stocks are in which list using the "Manage Stock" modal, accessible from several places.</p>
+        
+        <h3>Stock, Sector & Industry Screeners</h3>
+        <p>Use these sections on the main page to find new investment ideas. The Sector and Industry screeners use AI to analyze recent news and highlight noteworthy companies, helping you discover opportunities.</p>
+        
+        <h3>The Analysis Modal</h3>
+        <ul>
+            <li><strong>Dashboard Tab:</strong> Your main hub for a single stock. It features a valuation & health dashboard, your saved investment thesis, and company profile information.</li>
+            <li><strong>AI Analysis Tab:</strong> A suite of over a dozen AI-powered reports. From deep financial breakdowns to narrative reports like "The Disruptor" or "The Fortress," these tools help you understand a company from multiple angles.</li>
+            <li><strong>SEC Filings Tabs:</strong> These tabs allow you to view recent SEC filings (8-K, 10-K, 10-Q), save the text of a filing, and use the AI to analyze and summarize it for you. The app also automatically checks for new filings for your stocks once a day.</li>
+        </ul>
+
+        <h3>Thesis Tracker & Validation</h3>
+        <ul>
+            <li><strong>Thesis Tracker:</strong> This is the foundation of your investment process. A good thesis is a specific, data-driven reason for owning a stock. The "AI-Generated Investment Thesis" from the GARP report is a great starting point.</li>
+            <li><strong>Test Thesis Feature:</strong> This is your primary monitoring tool. Instead of just reacting to price changes, you can proactively check if the fundamental business reasons for your investment are still valid.</li>
+        </ul>
+        
+        <h2>Best Practices</h2>
+        <ul>
+            <li><strong>Start with GARP:</strong> The GARP analysis and its automated thesis generation is the quickest way to establish a strong, data-driven foundation for an investment.</li>
+            <li><strong>Make Your Thesis Quantifiable:</strong> A thesis like "The company will grow" is untestable. A thesis like "The company's ROE will remain above 15%" is testable. The app is designed to help you create and test these specific claims.</li>
+            <li><strong>Trust the Process:</strong> Use the "Test Thesis" feature to make rational, data-driven decisions, rather than reacting emotionally to market volatility.</li>
+        </ul>
+    `;
+
+    openModal('helpModal');
 }
