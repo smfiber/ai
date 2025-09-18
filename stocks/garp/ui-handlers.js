@@ -1,9 +1,9 @@
-import { CONSTANTS, state, promptMap, ANALYSIS_REQUIREMENTS, INVESTMENT_MEMO_PROMPT, PEER_ANALYSIS_PROMPT } from './config.js';
+import { CONSTANTS, state, promptMap, ANALYSIS_REQUIREMENTS, INVESTMENT_MEMO_PROMPT, PEER_ANALYSIS_PROMPT, GARP_EXIT_STRATEGY_PROMPT } from './config.js';
 import { callApi, callGeminiApi, generateRefinedArticle, generatePolishedArticleForSynthesis, getFmpStockData } from './api.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { openModal, closeModal, displayMessageInModal, openConfirmationModal, openManageStockModal } from './ui-modals.js';
 import { renderPortfolioManagerList, displayReport, updateReportStatus, fetchAndCachePortfolioData, renderThesisTracker, renderFilingAnalysisTab } from './ui-render.js';
-import { _calculateFinancialAnalysisMetrics, _calculateMoatAnalysisMetrics, _calculateCapitalAllocatorsMetrics, _calculateGarpAnalysisMetrics, _calculateRiskAssessmentMetrics } from './analysis-helpers.js';
+import { _calculateFinancialAnalysisMetrics, _calculateMoatAnalysisMetrics, _calculateCapitalAllocatorsMetrics, _calculateGarpAnalysisMetrics, _calculateRiskAssessmentMetrics, _calculateGarpExitMetrics } from './analysis-helpers.js';
 
 // --- FMP API INTEGRATION & MANAGEMENT ---
 export async function handleRefreshFmpData(symbol) {
@@ -453,20 +453,26 @@ async function getPeersFromGemini(companyName, ticker) {
 }
 
 export async function handleGarpExitMemoRequest(symbol) {
+    const reportType = 'GarpExitStrategy';
+    const contentContainer = document.getElementById('ai-article-container');
+    const statusContainer = document.getElementById('report-status-container-ai');
+    contentContainer.innerHTML = '';
+    statusContainer.classList.add('hidden');
+
     openModal(CONSTANTS.MODAL_LOADING);
     const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
     
     try {
-        // --- Step 1: Generate Peer List ---
-        loadingMessage.textContent = `Step 1/3: Analyzing peers for ${symbol}...`;
-        const stockData = state.portfolioCache.find(s => s.ticker === symbol);
-        if (!stockData || !stockData.companyName) {
+        // Step 1: Generate Peer List
+        loadingMessage.textContent = `Step 1/4: Analyzing peers for ${symbol}...`;
+        const stockPortfolioData = state.portfolioCache.find(s => s.ticker === symbol);
+        if (!stockPortfolioData || !stockPortfolioData.companyName) {
             throw new Error(`Could not find company name for ${symbol} in cache.`);
         }
-        const peers = await getPeersFromGemini(stockData.companyName, symbol);
+        const peers = await getPeersFromGemini(stockPortfolioData.companyName, symbol);
 
-        // --- Step 2: Fetch Valuation Data for Peers ---
-        loadingMessage.textContent = `Step 2/3: Fetching valuation data for ${peers.length} peers...`;
+        // Step 2: Fetch Valuation Data for Peers
+        loadingMessage.textContent = `Step 2/4: Fetching valuation data for ${peers.length} peers...`;
         const peerValuationPromises = peers.map(async (peer) => {
             if (!peer.ticker) return null;
             const keyMetricsUrl = `https://financialmodelingprep.com/api/v3/key-metrics-ttm/${peer.ticker}?apikey=${state.fmpApiKey}`;
@@ -492,19 +498,34 @@ export async function handleGarpExitMemoRequest(symbol) {
             }
         });
         const peerValuations = (await Promise.all(peerValuationPromises)).filter(p => p !== null);
-        console.log("Peer Valuation Data:", peerValuations); // For testing
 
-        // --- Future Steps ---
-        // 3. Pre-process data with a new analysis helper (_calculateGarpExitMetrics).
-        // 4. Call Gemini with the main Exit Memo prompt.
-        // 5. Render the final report.
+        // Step 3: Process Data with Analysis Helper
+        loadingMessage.textContent = `Step 3/4: Processing sell signal metrics...`;
+        const targetFmpData = await getFmpStockData(symbol);
+        if (!targetFmpData) {
+            throw new Error(`Could not load cached FMP data for ${symbol}.`);
+        }
+        const payloadData = _calculateGarpExitMetrics(targetFmpData, peerValuations);
         
-        loadingMessage.textContent = `Step 3/3: Preparing analysis...`; // Placeholder for next step
-        displayMessageInModal(`Successfully fetched valuation data for ${peerValuations.length} peers. Check the console to review. The rest of the feature is pending implementation.`, 'info');
+        // Step 4: Generate and Display Report
+        loadingMessage.textContent = `Step 4/4: Generating GARP Exit Memo...`;
+        const promptConfig = promptMap[reportType];
+        const prompt = promptConfig.prompt
+            .replace(/{companyName}/g, stockPortfolioData.companyName)
+            .replace(/{tickerSymbol}/g, symbol)
+            .replace('{jsonData}', JSON.stringify(payloadData, null, 2));
+
+        const reportContent = await generateRefinedArticle(prompt, loadingMessage);
+        
+        displayReport(contentContainer, reportContent, prompt);
+        updateReportStatus(statusContainer, [], null, { symbol, reportType, promptConfig });
+        contentContainer.dataset.currentPrompt = prompt;
+        contentContainer.dataset.rawMarkdown = reportContent;
 
     } catch (error) {
         console.error("Error generating GARP Exit Memo:", error);
         displayMessageInModal(`Could not generate Exit Memo: ${error.message}`, 'error');
+        contentContainer.innerHTML = `<p class="text-red-500 text-center">Failed to generate memo: ${error.message}</p>`;
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
