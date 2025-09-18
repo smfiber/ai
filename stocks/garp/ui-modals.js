@@ -1,6 +1,6 @@
 import { CONSTANTS, state, ANALYSIS_ICONS } from './config.js';
 import { getFmpStockData, getGroupedFmpData } from './api.js';
-import { renderValuationHealthDashboard, renderThesisTracker, _renderGroupedStockList } from './ui-render.js'; 
+import { renderValuationHealthDashboard, renderThesisTracker, _renderGroupedStockList, renderMyPosition } from './ui-render.js'; 
 import { getDocs, query, collection, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- GENERIC MODAL HELPERS ---
@@ -96,6 +96,10 @@ export function openManageStockModal(stockData) {
     document.getElementById('manage-stock-sector').value = stockData.sector || 'N/A';
     document.getElementById('manage-stock-industry').value = stockData.industry || 'N/A';
     document.getElementById('manage-stock-status').value = stockData.status || 'Watchlist';
+    
+    // MODIFICATION: Populate new fields for position tracking
+    document.getElementById('manage-stock-shares').value = stockData.shareCount || '';
+    document.getElementById('manage-stock-price').value = stockData.purchasePrice || '';
     
     const deleteButton = document.getElementById('delete-stock-button');
     deleteButton.style.display = stockData.isEditMode ? 'block' : 'none';
@@ -206,12 +210,14 @@ export async function openRawDataViewer(ticker) {
     const aiArticleContainer = document.getElementById('ai-article-container');
     const profileDisplayContainer = document.getElementById('company-profile-display-container');
     const titleEl = document.getElementById('raw-data-viewer-modal-title');
+    const myPositionContainer = document.getElementById('my-position-container'); // Get the new container
     
     titleEl.textContent = `Analyzing ${ticker}...`;
     rawDataContainer.innerHTML = '<div class="loader mx-auto"></div>';
     aiButtonsContainer.innerHTML = '';
     aiArticleContainer.innerHTML = '';
     profileDisplayContainer.innerHTML = '';
+    myPositionContainer.innerHTML = ''; // Clear position container
     document.getElementById('valuation-health-container').innerHTML = '';
     document.getElementById('thesis-tracker-container').innerHTML = '';
     
@@ -310,7 +316,6 @@ export async function openRawDataViewer(ticker) {
             { reportType: 'GarpAnalysis', text: 'GARP', tooltip: 'Growth at a Reasonable Price. Is the valuation justified by its growth?' },
             { reportType: 'MoatAnalysis', text: 'Moat Analysis', tooltip: 'Evaluates the company\'s competitive advantages.' },
             { reportType: 'RiskAssessment', text: 'Risk Assessment', tooltip: 'Identifies potential financial, market, and business risks.' },
-            { reportType: 'BullVsBear', text: 'Bull vs. Bear', tooltip: 'Presents both the positive and negative investment arguments.' },
         ];
         const narrativeButtons = [
             { reportType: 'StockFortress', text: 'The Fortress', tooltip: 'Is this a resilient, all-weather business with a rock-solid balance sheet?' },
@@ -455,6 +460,7 @@ export async function openRawDataViewer(ticker) {
         profileDisplayContainer.innerHTML = profileHtml;
         
         // Render Dashboard tab content
+        renderMyPosition(myPositionContainer, ticker, fmpData); // Render the position
         renderValuationHealthDashboard(document.getElementById('valuation-health-container'), ticker, fmpData);
         renderThesisTracker(document.getElementById('thesis-tracker-container'), ticker);
 
