@@ -2,7 +2,6 @@ import { CONSTANTS, state } from './config.js';
 import { callApi, getFmpStockData } from './api.js';
 import { getSecInsiderTrading, getSecInstitutionalOwnership, getSecMaterialEvents, getSecAnnualReports, getSecQuarterlyReports } from './sec-api.js';
 import { getFirestore, Timestamp, doc, collection, getDocs, query, limit, addDoc, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-// FIX: Removed 'handleGarpValidationRequest' which no longer exists in ui-handlers.js
 import { handleAnalysisRequest, handleInvestmentMemoRequest, handleFilingAnalysisRequest } from './ui-handlers.js';
 
 // --- UTILITY & SECURITY HELPERS ---
