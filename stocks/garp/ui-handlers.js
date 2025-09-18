@@ -1,9 +1,8 @@
 import { CONSTANTS, state, promptMap, ANALYSIS_REQUIREMENTS, INVESTMENT_MEMO_PROMPT, PEER_ANALYSIS_PROMPT } from './config.js';
-// FIX: Removed 'getCompetitorsFromGemini' which no longer exists in api.js
 import { callApi, callGeminiApi, generateRefinedArticle, generatePolishedArticleForSynthesis, getFmpStockData } from './api.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { openModal, closeModal, displayMessageInModal, openConfirmationModal, openManageStockModal } from './ui-modals.js';
-import { renderPortfolioManagerList, renderFmpEndpointsList, renderBroadEndpointsList, displayReport, updateReportStatus, fetchAndCachePortfolioData, renderThesisTracker, renderFilingAnalysisTab } from './ui-render.js';
+import { renderPortfolioManagerList, displayReport, updateReportStatus, fetchAndCachePortfolioData, renderThesisTracker, renderFilingAnalysisTab } from './ui-render.js';
 import { _calculateFinancialAnalysisMetrics, _calculateMoatAnalysisMetrics, _calculateCapitalAllocatorsMetrics, _calculateGarpAnalysisMetrics, _calculateRiskAssessmentMetrics } from './analysis-helpers.js';
 
 // --- FMP API INTEGRATION & MANAGEMENT ---
@@ -420,7 +419,7 @@ export async function handleInvestmentMemoRequest(symbol, forceNew = false) {
     }
 }
 
-// NEW: Functions for the GARP Exit Strategy Memo
+// --- GARP EXIT STRATEGY MEMO FUNCTIONS ---
 /**
  * Uses Gemini to generate a list of competitor tickers for a given company.
  * @param {string} companyName The name of the company.
@@ -434,13 +433,11 @@ async function getPeersFromGemini(companyName, ticker) {
 
     const rawResponse = await callGeminiApi(prompt);
     
-    // Extract the JSON part of the response, even if the AI adds markdown backticks
     const jsonMatch = rawResponse.match(/```json\s*([\s\S]*?)\s*```|(\[[\s\S]*\])/);
     if (!jsonMatch) {
         throw new Error("Could not find a valid JSON array in the AI's response for peers.");
     }
     
-    // Use the first non-null capture group
     const jsonString = jsonMatch[1] || jsonMatch[2];
 
     try {
@@ -460,23 +457,50 @@ export async function handleGarpExitMemoRequest(symbol) {
     const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
     
     try {
-        loadingMessage.textContent = `Analyzing peers for ${symbol}...`;
-        
+        // --- Step 1: Generate Peer List ---
+        loadingMessage.textContent = `Step 1/3: Analyzing peers for ${symbol}...`;
         const stockData = state.portfolioCache.find(s => s.ticker === symbol);
         if (!stockData || !stockData.companyName) {
             throw new Error(`Could not find company name for ${symbol} in cache.`);
         }
-
         const peers = await getPeersFromGemini(stockData.companyName, symbol);
-        console.log("Generated Peers:", peers); // For testing this step
+
+        // --- Step 2: Fetch Valuation Data for Peers ---
+        loadingMessage.textContent = `Step 2/3: Fetching valuation data for ${peers.length} peers...`;
+        const peerValuationPromises = peers.map(async (peer) => {
+            if (!peer.ticker) return null;
+            const keyMetricsUrl = `https://financialmodelingprep.com/api/v3/key-metrics-ttm/${peer.ticker}?apikey=${state.fmpApiKey}`;
+            const ratiosUrl = `https://financialmodelingprep.com/api/v3/ratios-ttm/${peer.ticker}?apikey=${state.fmpApiKey}`;
+            try {
+                const [keyMetricsData, ratiosData] = await Promise.all([
+                    callApi(keyMetricsUrl),
+                    callApi(ratiosUrl)
+                ]);
+                const keyMetrics = keyMetricsData?.[0] || {};
+                const ratios = ratiosData?.[0] || {};
+                return {
+                    ticker: peer.ticker,
+                    companyName: peer.companyName,
+                    peRatio: keyMetrics.peRatioTTM,
+                    psRatio: ratios.priceToSalesRatioTTM,
+                    pbRatio: ratios.priceToBookRatioTTM,
+                    enterpriseValueMultiple: ratios.enterpriseValueMultipleTTM,
+                };
+            } catch (error) {
+                console.warn(`Could not fetch valuation data for peer ${peer.ticker}:`, error);
+                return null;
+            }
+        });
+        const peerValuations = (await Promise.all(peerValuationPromises)).filter(p => p !== null);
+        console.log("Peer Valuation Data:", peerValuations); // For testing
+
+        // --- Future Steps ---
+        // 3. Pre-process data with a new analysis helper (_calculateGarpExitMetrics).
+        // 4. Call Gemini with the main Exit Memo prompt.
+        // 5. Render the final report.
         
-        // --- The next steps will go here in our subsequent work ---
-        // 1. Fetch FMP valuation data for all peers.
-        // 2. Pre-process data with a new analysis helper.
-        // 3. Call Gemini with the main Exit Memo prompt.
-        // 4. Render the final report.
-        
-        displayMessageInModal(`Successfully generated a list of ${peers.length} peers. Check the console to review them.`, 'info');
+        loadingMessage.textContent = `Step 3/3: Preparing analysis...`; // Placeholder for next step
+        displayMessageInModal(`Successfully fetched valuation data for ${peerValuations.length} peers. Check the console to review. The rest of the feature is pending implementation.`, 'info');
 
     } catch (error) {
         console.error("Error generating GARP Exit Memo:", error);
