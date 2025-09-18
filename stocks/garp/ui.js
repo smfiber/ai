@@ -1,7 +1,7 @@
 import { CONSTANTS, state, promptMap } from './config.js';
 import { openModal, closeModal, openStockListModal, openSessionLogModal, openManageStockModal, openPortfolioManagerModal, openViewFmpDataModal, openManageFmpEndpointsModal, openManageBroadEndpointsModal, openRawDataViewer, openThesisTrackerModal, openSpaAnalysisModal } from './ui-modals.js';
 import { fetchAndCachePortfolioData, renderPortfolioManagerList, renderSecFilings, renderFilingAnalysisTab } from './ui-render.js';
-import { handleResearchSubmit, handleSaveStock, handleDeleteStock, handleRefreshFmpData, handleFetchNews, handleAnalysisRequest, handleInvestmentMemoRequest, handleIncomeMemoRequest, handleSaveReportToDb, handleSaveBroadReportToDb, handleSaveToDrive, handleSectorSelection, handleIndustrySelection, handleSaveFmpEndpoint, cancelFmpEndpointEdit, handleEditFmpEndpoint, handleDeleteFmpEndpoint, handleSaveBroadEndpoint, cancelBroadEndpointEdit, handleEditBroadEndpoint, handleDeleteBroadEndpoint, handleSaveThesis, handleBroadAnalysisRequest, handleGenerateAllReportsRequest, handleGarpValidationRequest, handleSaveManualFiling, handleFilingAnalysisRequest, handleQualityCompounderMemoRequest, handleSpaAnalysisRequest } from './ui-handlers.js';
+import { handleResearchSubmit, handleSaveStock, handleDeleteStock, handleRefreshFmpData, handleFetchNews, handleAnalysisRequest, handleInvestmentMemoRequest, handleIncomeMemoRequest, handleSaveReportToDb, handleSaveBroadReportToDb, handleSaveToDrive, handleSectorSelection, handleIndustrySelection, handleSaveFmpEndpoint, cancelFmpEndpointEdit, handleEditFmpEndpoint, handleDeleteFmpEndpoint, handleSaveBroadEndpoint, cancelBroadEndpointEdit, handleEditBroadEndpoint, handleDeleteBroadEndpoint, handleSaveThesis, handleBroadAnalysisRequest, handleGenerateAllReportsRequest, handleGarpValidationRequest, handleSaveManualFiling, handleFilingAnalysisRequest, handleQualityCompounderMemoRequest, handleSpaAnalysisRequest, handleTestThesis } from './ui-handlers.js';
 
 // --- PROMPT MAPPING ---
 // The main promptMap is now imported directly from config.js
@@ -323,6 +323,14 @@ export function setupEventListeners() {
                 openThesisTrackerModal(ticker);
             }
             return; 
+        }
+
+        if (target.id === 'test-thesis-button') {
+            const ticker = target.dataset.ticker;
+            if (ticker) {
+                handleTestThesis(ticker);
+            }
+            return;
         }
 		
 		if (target.matches('.tab-button')) {
