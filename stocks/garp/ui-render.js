@@ -1,4 +1,5 @@
 import { CONSTANTS, state } from './config.js';
+import { getDocs, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { handleAnalysisRequest, handleInvestmentMemoRequest } from './ui-handlers.js';
 
 // --- UTILITY & SECURITY HELPERS ---
