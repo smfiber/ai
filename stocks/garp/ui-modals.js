@@ -210,7 +210,6 @@ export async function openRawDataViewer(ticker) {
     profileDisplayContainer.innerHTML = '';
     document.getElementById('valuation-health-container').innerHTML = '';
     document.getElementById('thesis-tracker-container').innerHTML = '';
-    // NEW: Reset the position container
     document.getElementById('my-position-container').innerHTML = '';
     
     // Reset SEC tab content to loading placeholders
@@ -333,6 +332,13 @@ export async function openRawDataViewer(ticker) {
                 ${ANALYSIS_ICONS['InvestmentMemo']}
                 Generate GARP Memo
             </button>`;
+        
+        // NEW: Button for the GARP Exit Memo
+        const garpExitMemoBtn = `
+            <button data-symbol="${ticker}" id="garp-exit-memo-button" class="bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 px-6 rounded-lg flex items-center justify-center gap-2 transition-all duration-200 hover:shadow-lg text-base" data-tooltip="Analyzes the stock for GARP-based sell signals, such as stretched valuation or faltering growth.">
+                <svg xmlns="http://www.w3.org/2000/svg" class="tile-icon h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9" /></svg>
+                Generate Exit Memo
+            </button>`;
 
         // Assemble the new simplified workflow layout
         aiButtonsContainer.innerHTML = `
@@ -354,6 +360,7 @@ export async function openRawDataViewer(ticker) {
                     </div>
                     <div class="flex flex-wrap justify-center gap-4">
                         ${garpMemoBtn}
+                        ${garpExitMemoBtn}
                     </div>
                 </div>
             </div>
@@ -390,7 +397,6 @@ export async function openRawDataViewer(ticker) {
         // Render Dashboard tab content
         renderValuationHealthDashboard(document.getElementById('valuation-health-container'), ticker, fmpData);
         renderThesisTracker(document.getElementById('thesis-tracker-container'), ticker);
-        // NEW CALL: Render the position performance component
         renderMyPosition(document.getElementById('my-position-container'), ticker, fmpData);
 
     } catch (error) {
