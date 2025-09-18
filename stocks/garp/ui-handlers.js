@@ -2215,3 +2215,45 @@ export async function handleTestThesis(ticker) {
         }
     }
 }
+
+export async function handleAiEnhancementsRequest() {
+    openModal(CONSTANTS.MODAL_LOADING);
+    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+    loadingMessage.textContent = "AI is brainstorming feature enhancements...";
+
+    try {
+        const prompt = `
+            Role: You are a Senior Investment Analyst and Product Manager for a financial technology platform.
+            
+            Context: You are reviewing a "Stock Research Hub" SPA with the following features related to the GARP (Growth at a Reasonable Price) investment style:
+            - A "GARP Analysis" report that calculates PEG ratios.
+            - A "Thesis Tracker" for users to save their investment thesis.
+            - Automated generation of a quantifiable thesis from the GARP report.
+            - A "Test Thesis" feature to compare the saved thesis against new data.
+            
+            Task: Suggest 3-5 new, actionable feature ideas for this SPA.
+            
+            CRITICAL CONSTRAINT: Your suggestions must focus *exclusively* on new ways to manage **GARP exit strategies** or perform **portfolio-level GARP analysis**. Do not suggest adding more single-stock valuation metrics or different investment styles.
+            
+            For each suggestion, provide the following in markdown:
+            ### 1. [Feature Name]
+            * **Description:** A brief explanation of what the feature does.
+            * **GARP Value:** How this feature specifically helps a GARP investor make better sell decisions or manage their portfolio more effectively.
+        `;
+
+        const analysisContent = await generatePolishedArticle(prompt, loadingMessage);
+        
+        const contentContainer = document.getElementById('spa-analysis-content');
+        const modalTitle = document.querySelector('#spaAnalysisModal h2');
+        if (modalTitle) modalTitle.textContent = "AI-Powered Enhancement Ideas";
+        
+        contentContainer.innerHTML = marked.parse(analysisContent);
+        openSpaAnalysisModal();
+
+    } catch (error) {
+        console.error("Error during AI enhancements request:", error);
+        displayMessageInModal(`Could not complete the analysis: ${error.message}`, 'error');
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
