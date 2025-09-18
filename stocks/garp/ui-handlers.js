@@ -4,7 +4,7 @@ import { callApi, filterValidNews, callGeminiApi, generatePolishedArticle, gener
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { openModal, closeModal, displayMessageInModal, openConfirmationModal, openManageStockModal, openSpaAnalysisModal } from './ui-modals.js';
 import { renderPortfolioManagerList, renderFmpEndpointsList, renderBroadEndpointsList, renderNewsArticles, displayReport, updateReportStatus, updateBroadReportStatus, fetchAndCachePortfolioData, renderThesisTracker, renderFilingAnalysisTab } from './ui-render.js';
-import { _calculateUndervaluedMetrics, _calculateFinancialAnalysisMetrics, _calculateBullVsBearMetrics, _calculateMoatAnalysisMetrics, _calculateDividendDeepDiveMetrics, _calculateGrowthOutlookMetrics, _calculateRiskAssessmentMetrics, _calculateCapitalAllocatorsMetrics, _calculateNarrativeCatalystMetrics, _calculateGarpAnalysisMetrics, _calculateCompetitiveLandscapeMetrics, _calculateStockDisruptorMetrics, _calculateStockFortressMetrics, _calculateStockPhoenixMetrics, _calculateStockLinchpinMetrics, _calculateStockUntouchablesMetrics, _calculateIncomeMemoMetrics } from './analysis-helpers.js';
+import { _calculateUndervaluedMetrics, _calculateFinancialAnalysisMetrics, _calculateMoatAnalysisMetrics, _calculateDividendDeepDiveMetrics, _calculateGrowthOutlookMetrics, _calculateRiskAssessmentMetrics, _calculateCapitalAllocatorsMetrics, _calculateNarrativeCatalystMetrics, _calculateGarpAnalysisMetrics, _calculateCompetitiveLandscapeMetrics, _calculateStockDisruptorMetrics, _calculateStockFortressMetrics, _calculateStockPhoenixMetrics, _calculateStockLinchpinMetrics, _calculateStockUntouchablesMetrics, _calculateIncomeMemoMetrics } from './analysis-helpers.js';
 
 // --- FMP API INTEGRATION & MANAGEMENT ---
 export async function handleRefreshFmpData(symbol) {
@@ -1173,8 +1173,6 @@ export async function handleAnalysisRequest(symbol, reportType, promptConfig, fo
             payloadData = _calculateUndervaluedMetrics(data);
         } else if (reportType === 'FinancialAnalysis') {
             payloadData = _calculateFinancialAnalysisMetrics(data);
-        } else if (reportType === 'BullVsBear') {
-            payloadData = _calculateBullVsBearMetrics(data);
         } else if (reportType === 'MoatAnalysis' || reportType === 'CompoundingMachine') {
             payloadData = _calculateMoatAnalysisMetrics(data);
         } else if (reportType === 'DividendDeepDive') {
@@ -1632,7 +1630,6 @@ export async function handleGenerateAllReportsRequest(symbol) {
         'FinancialAnalysis': _calculateFinancialAnalysisMetrics,
         'UndervaluedAnalysis': _calculateUndervaluedMetrics,
         'GarpAnalysis': _calculateGarpAnalysisMetrics,
-        'BullVsBear': _calculateBullVsBearMetrics,
         'MoatAnalysis': _calculateMoatAnalysisMetrics,
         'CompoundingMachine': _calculateMoatAnalysisMetrics,
         'DividendDeepDive': _calculateDividendDeepDiveMetrics,
