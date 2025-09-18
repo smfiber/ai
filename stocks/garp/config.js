@@ -365,6 +365,24 @@ You are a Senior Investment Analyst at a GARP-focused ("Growth at a Reasonable P
 {allAnalysesData}
 `.trim();
 
+// NEW: Prompt for generating a peer list using AI
+export const PEER_ANALYSIS_PROMPT = `
+Role: You are a market analyst AI. Your task is to identify the top publicly traded competitors for a given company.
+
+Instructions:
+1.  Identify the top 10 publicly traded competitors for **{companyName} (Ticker: {tickerSymbol})**.
+2.  Return the list as a single, clean JSON array of objects.
+3.  Each object in the array must have two keys: "companyName" and "ticker".
+4.  Do NOT include any commentary, introduction, or surrounding text. Only the JSON array is required.
+
+Example Output:
+[
+    { "companyName": "Competitor A Inc.", "ticker": "COMPA" },
+    { "companyName": "Competitor B Corp.", "ticker": "COMPB" }
+]
+`.trim();
+
+
 export const promptMap = {
     'FinancialAnalysis': {
         prompt: FINANCIAL_ANALYSIS_PROMPT,
@@ -389,6 +407,11 @@ export const promptMap = {
     'InvestmentMemo': {
         prompt: INVESTMENT_MEMO_PROMPT,
         requires: [] // This prompt uses other reports, not raw FMP data.
+    },
+    // NEW: Added for consistency, though not used in the same way as others
+    'PeerAnalysis': {
+        prompt: PEER_ANALYSIS_PROMPT,
+        requires: []
     }
 };
 
