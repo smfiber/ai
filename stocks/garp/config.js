@@ -184,158 +184,6 @@ Synthesize all the points above to classify {companyName}'s competitive position
 - **Turnaround Play / Laggard:** The company significantly underperforms its peers on key metrics, suggesting it may be a higher-risk investment that needs to prove it can catch up.
 `;
 
-const STOCK_DISRUPTOR_PROMPT = `
-Role: You are an analyst for a forward-looking investment publication, analyzing if a specific company fits the "disruptor" profile.
-
-Task: Evaluate if {companyName} ({tickerSymbol}) is a true disruptor based *only* on the provided data.
-
-Output Format: A concise markdown report.
-
-JSON Data:
-{jsonData}
-
-# Disruptor Analysis: Is {companyName} a Market Shaker?
-
-## 1. The Disruptor's Edge
-Based on the company 'description', what is its unique advantage? Is it a **Technological Moat**, an innovative **Business Model**, or a powerful **Network Effect**?
-
-## 2. The Proof in the Numbers
-Does the quantitative data support the "disruptor" thesis?
-- **Growth:** Analyze the 'revenueGrowth' and 'netIncomeGrowth' trends. Are they consistently high and/or accelerating, as expected from a disruptor?
-- **Reinvestment:** Look at 'rdToRevenue' and 'capexToRevenue'. Is the company aggressively reinvesting capital to fuel innovation and solidify its lead?
-
-## 3. The Price of Innovation
-- **Valuation:** Review the 'peRatio' and 'psRatio'. Is the company trading at high multiples? Acknowledge if the market is already pricing in significant future growth.
-
-## 4. Verdict: Is It a True Disruptor?
-Based on the synthesis of the narrative and the numbers, provide a final verdict. Classify the company as one of the following and briefly justify your choice.
-- **Confirmed Disruptor:** High growth, aggressive reinvestment, and a clear competitive edge are evident.
-- **Potential Disruptor:** Shows some signs, but the data is not yet conclusive (e.g., growth is lumpy, reinvestment is low).
-- **Legacy Player:** The company does not fit the high-growth, innovative profile of a disruptor.
-`;
-
-const STOCK_FORTRESS_PROMPT = `
-Role: You are a conservative, risk-averse investment analyst evaluating if a company is a resilient "all-weather" business.
-
-Task: Evaluate if {companyName} ({tickerSymbol}) fits the "Fortress" profile based *only* on the provided data.
-
-Output Format: A concise markdown report.
-
-JSON Data:
-{jsonData}
-
-# Fortress Analysis: Is {companyName} Built to Last?
-
-## 1. Pillar 1: Pricing Power
-- A true fortress can pass costs to customers. Is there evidence of this in the 'grossMarginTrend' and 'netMarginTrend'? Are margins consistently high and stable/expanding?
-
-## 2. Pillar 2: Impenetrable Balance Sheet
-- Analyze its financial health. Is the 'debtToEquity' ratio low and stable/decreasing? Is the 'currentRatio' strong?
-
-## 3. Pillar 3: Superior Profitability
-- A fortress is a superior money-maker. Is the 'roeTrend' consistently high (>15%) and stable?
-
-## 4. The Price of Safety
-- Review the 'peRatio' and 'pbRatio'. Is the stock trading at a premium valuation that reflects its quality, or does it offer a reasonable margin of safety?
-
-## 5. Verdict: Is It a True Fortress?
-Based on the data, provide a final verdict. Classify the company as one of the following and briefly justify your choice.
-- **Confirmed Fortress:** Demonstrates high margins, a rock-solid balance sheet, and superior profitability.
-- **Solid Contender:** Strong in some areas but shows minor weaknesses in others (e.g., moderate debt, slightly inconsistent margins).
-- **Not a Fortress:** Lacks the consistent profitability and balance sheet strength required.
-`;
-
-const STOCK_PHOENIX_PROMPT = `
-Role: You are a special situations analyst looking for high-risk, high-reward turnaround stories.
-
-Task: Evaluate if {companyName} ({tickerSymbol}) shows signs of a "Phoenix" (a fundamental business turnaround) based *only* on the provided data.
-
-Output Format: A concise markdown report.
-
-JSON Data:
-{jsonData}
-
-# Phoenix Analysis: Is {companyName} Rising from the Ashes?
-
-## 1. The Fall (Historical Context)
-- Briefly check the long-term 'revenueTrend' and 'netIncomeTrend'. Does the data show a period of significant decline or stagnation in the past that would necessitate a turnaround?
-
-## 2. Early "Green Shoots" of a Turnaround
-This is the most critical section. Look for recent, quantifiable evidence of improvement.
-- **Renewed Growth:** Is the most recent 'revenueYoyGrowth' positive and accelerating compared to previous years?
-- **Margin Improvement:** Are the 'netProfitMargin' and 'operatingMargin' in the 'profitabilityTrend' showing a clear positive inflection in the most recent year(s)?
-- **Financial Triage:** Is the 'debtToEquity' ratio improving (decreasing)?
-
-## 3. The Valuation Opportunity
-- Does the 'peRatio' or 'psRatio' still appear low relative to historical levels or the company's newfound growth, suggesting the market hasn't fully bought into the turnaround story yet?
-
-## 4. Verdict: Is It a Potential Phoenix?
-Based on the evidence of a business inflection, provide a final verdict.
-- **Credible Phoenix:** There is clear, multi-faceted data (improving growth, margins, AND balance sheet) suggesting a turnaround is underway.
-- **Early Smoke Signal:** There are tentative signs in one or two areas, but the turnaround is not yet confirmed across the business.
-- **Still in the Ashes:** There is no clear quantitative evidence of a fundamental business improvement.
-`;
-
-const STOCK_LINCHPIN_PROMPT = `
-Role: You are a business strategist analyzing a company's structural competitive advantages.
-
-Task: Evaluate if {companyName} ({tickerSymbol}) acts as a "Linchpin" (a company controlling a vital choke point in its industry) based *only* on the provided data.
-
-Output Format: A concise markdown report.
-
-JSON Data:
-{jsonData}
-
-# Linchpin Analysis: Does {companyName} Control a Choke Point?
-
-## 1. The Choke Point Moat (Proof in the Numbers)
-A true linchpin should have financials that are superior to typical companies.
-- **Superior Profitability:** Are the 'grossProfitMargin' and 'netProfitMargin' trends from the 'profitabilityTrends' object consistently high and stable? This signals pricing power.
-- **Exceptional Returns on Capital:** Is the 'roicTrend' consistently high (e.g., >20%)? This indicates a powerful, hard-to-replicate business model.
-
-## 2. Qualitative Clues
-- Based on the company 'description', does it mention controlling a "platform," "standard," "ecosystem," or providing a "mission-critical" component that other businesses in its industry depend on?
-
-## 3. The Price of Power
-- Is the company's strategic importance reflected in a premium valuation? Briefly comment on its 'peRatio' and 'psRatio'.
-
-## 4. Verdict: Is It a Linchpin?
-Based on the synthesis of its financial superiority and qualitative description, provide a final verdict.
-- **Confirmed Linchpin:** The company exhibits both exceptional, sustained profitability/ROIC and has a clear strategic role described in its profile.
-- **Potential Linchpin:** The company has strong financials but its strategic choke point is not immediately obvious from the description.
-- **Supplier, Not a Linchpin:** The company is part of the value chain but lacks the extraordinary financial metrics that would indicate a true choke point.
-`;
-
-const STOCK_UNTOUCHABLES_PROMPT = `
-Role: You are a brand strategist analyzing companies with powerful, "cult-like" brands.
-
-Task: Evaluate if {companyName} ({tickerSymbol}) fits "The Untouchables" profile (a company with a fanatical customer base that translates into durable profits) based *only* on the provided data.
-
-Output Format: A concise markdown report.
-
-JSON Data:
-{jsonData}
-
-# The Untouchables: Deconstructing {companyName}'s Brand Moat
-
-## 1. The Financial Fingerprints of a Great Brand
-A powerful brand should be visible in the financial statements.
-- **Pricing Power:** Is the 'grossMargin' in the 'profitabilityMetrics' object consistently high? This is the clearest sign that customers are willing to pay more for the brand.
-- **Marketing Efficiency:** Is the 'rdToRevenue' ratio high while the 'sgnaToRevenue' ratio is stable or declining? This can suggest the brand's reputation does the heavy lifting, allowing for efficient marketing spend focused on innovation.
-
-## 2. Qualitative Clues
-- Does the company 'description' mention themes like "community," "loyalty," "design," "experience," or a strong "mission"? These often point to a powerful brand identity.
-
-## 3. The Price of Perfection
-- Powerful brands are rarely cheap. Briefly comment on the company's valuation ('peRatio', 'psRatio'). Does the market already award the stock a significant premium for its brand strength?
-
-## 4. Verdict: Is It an Untouchable?
-Based on the financial evidence and qualitative clues, provide a final verdict.
-- **Confirmed Untouchable:** The company shows clear evidence of pricing power (high gross margins) and its description aligns with a strong brand ethos.
-- **Strong Brand, Unconfirmed Moat:** The company has qualitative signs of a strong brand, but the financial proof (e.g., high margins) is not yet consistently demonstrated.
-- **Product, Not a Brand:** The company competes primarily on product features or price, not on brand loyalty.
-`;
-
 const FINANCIAL_ANALYSIS_PROMPT = `
 Role: You are a financial analyst AI who excels at explaining complex topics to everyday investors. Your purpose is to generate a rigorous, data-driven financial analysis that is also educational, objective, and easy to understand. Use relatable analogies to clarify financial concepts.
 
@@ -410,68 +258,6 @@ After listing the statuses, briefly discuss what these comparisons imply. Is the
 - Create a bulleted list using the points provided in \`thesis.bearCasePoints\`.
 ### Final Verdict: The "Moat"
 Based purely on this quantitative analysis, what is the primary story? Does the \`thesis.moatIndicator\` suggest the company has a strong competitive advantage (a "moat")? Conclude with a final statement on its profile as a potential long-term holding.
-`.trim();
-
-export const UNDERVALUED_ANALYSIS_PROMPT = `
-Role: You are a financial analyst AI who excels at explaining complex topics to everyday investors. Your purpose is to conduct a clear, data-driven valuation analysis to determine if a stock is a potential bargain. Use relatable analogies and explain all financial terms simply.
-
-Data Instructions: Your analysis MUST be based *exclusively* on the pre-calculated metrics provided in the JSON data below. Do NOT attempt to recalculate any values. If a specific data point is "N/A" or missing, state that clearly in your analysis.
-
-Output Format: The final report must be in professional markdown format. Use # for the main title, ## for major sections, ### for sub-sections, and bullet points for key data points.
-
-IMPORTANT: Do not include any HTML tags in your output. Generate pure markdown only.
-
-Conduct a comprehensive valuation analysis for {companyName} (Ticker: {tickerSymbol}) using the pre-calculated financial summary provided below.
-
-JSON Data with Pre-Calculated Metrics:
-{jsonData}
-
-Based on the provided data, generate the following in-depth report:
-# Investment Valuation Report: Is {companyName} ({tickerSymbol}) a Bargain?
-
-## 1. The Bottom Line: Our Verdict
-Provide a concise, one-paragraph conclusion that immediately answers the main question: Based on the data, does this stock seem **Undervalued, Fairly Valued, or Overvalued?** Briefly mention the top 1-2 reasons for this verdict in plain English, using the provided \`summary\` data.
-
-## 2. Fundamental Analysis: The Engine Behind the Price
-Let's look at the company's performance and health to understand the "why" behind its valuation.
-### 2.1. Growth & Profitability Trends
-- **Revenue Growth Trend:** Using the \`revenueGrowthTrend\` data, describe the year-over-year revenue growth. State the actual growth percentages for recent years. Is the company accelerating, stable, or slowing down?
-- **Profitability Trend:** Using the \`profitabilityTrend\` data, analyze the trend in net profit margins. State clearly whether the company's profitability is improving, stable, or declining.
-
-### 2.2. Financial Health Check
-- **Return on Equity (ROE) Trend:** Using the \`roeTrend\` data, analyze the trend of ROE. Explain this as a "report card" for the business. A consistently high ROE suggests a high-quality, efficient company.
-- **Debt-to-Equity Ratio:** Use the \`debtToEquity\` value. Explain this like a personal debt-to-income ratio. A high number means the company relies heavily on debt, which can be risky.
-
-### 2.3. Getting Paid to Wait (Dividend Analysis)
-- **Dividend Yield:** Use the \`dividendYield\`. Explain this as the annual return you get from dividends.
-- **Is the Dividend Safe?** Use the \`cashFlowPayoutRatio\`. A low number (<60%) is a good sign that the dividend is well-covered by actual cash.
-
-## 3. Valuation: What Are You Paying for That Engine?
-Now we'll look at the "price tag" using several common metrics.
-### 3.1. Core Valuation Multiples
-- **Price-to-Earnings (P/E) Ratio:** [Use \`peRatio\`] - The price you pay for $1 of profit.
-- **Price-to-Sales (P/S) Ratio:** [Use \`psRatio\`] - The price you pay for $1 of sales.
-- **Price-to-Book (P/B) Ratio:** [Use \`pbRatio\`] - The price compared to the company's net worth on paper.
-
-### 3.2. Valuation in Context: Relative Analysis
-A stock's valuation is only meaningful with context.
-- **Comparison to History:** Use the \`valuationRelativeToHistory\` object. For P/E, P/S, and P/B, state whether the stock is trading at a premium or discount to its own history, using the provided \`status\` and \`historicalAverage\` for each.
-- **Comparison to Industry:** Using the company's \`industry\`, comment on whether these multiples are generally high or low for this type of business.
-
-### 3.3. Deep Value Check (The Graham Number)
-- **Graham Number:** Use the \`grahamNumberAnalysis\` object. Explain this as a theoretical intrinsic value for defensive investors. State the result of the comparison: does the stock appear OVERVALUED or UNDERVALUED by this specific metric, based on the provided \`verdict\`?
-
-## 4. Market Sentiment & Wall Street View
-- **Analyst Consensus:** Review the \`analystConsensus\` data. What is the general sentiment from Wall Street analysts?
-- **Future Expectations:** Does the \`analystEstimatesSummary\` data provide a sense of future expectations?
-
-## 5. Final Conclusion: The Investment Case
-### The Case for a Bargain (Bull)
-Summarize the key data points (e.g., strong growth, low valuation vs. history, price below Graham Number) that suggest the stock is undervalued.
-### The Case for Caution (Bear)
-Summarize the key risks or red flags (e.g., high debt, slowing growth, high valuation vs. peers) that suggest caution is warranted.
-### Final Takeaway
-End with a clear, final statement that **classifies the stock's profile.** For example: "While the market is cautious, the data suggests this is a **'classic value'** opportunity," or "This appears to be a **'growth at a reasonable price'** story," or "High debt and slowing growth suggest this could be a **'potential value trap.'**"
 `.trim();
 
 export const GARP_ANALYSIS_PROMPT = `
@@ -584,73 +370,6 @@ Based on all the evidence, provide a concluding assessment. Classify the moat as
 - **Wide Moat:** The company has strong, sustainable advantages (like consistently high ROIC and clear pricing power) that are very difficult to replicate, **leading to highly predictable long-term profits.**
 - **Narrow Moat:** The company has some advantages, but they could be overcome by competitors over time, **making future profits less certain.**
 - **No Moat:** The company has no clear, sustainable competitive advantage, **making it vulnerable to competition and price wars.**
-`.trim();
-
-const COMPOUNDING_MACHINE_PROMPT = `
-Role: You are a long-term, business-focused investor, in the style of Chuck Akre or Terry Smith. Your goal is to identify "compounding machines" – exceptional businesses that can be held for a decade or more. Your analysis is a series of critical questions that a quality-focused investor would ask.
-
-Data Instructions: Your analysis must be derived exclusively from the provided JSON data. You must answer every question.
-
-Output Format: A markdown report answering the following questions.
-
-JSON Data:
-{jsonData}
-
-# Quality Investor Checklist: Is {companyName} a Compounding Machine?
-
-### 1. Is this a truly exceptional business?
-- **Return on Invested Capital (ROIC):** Analyze the 'roicTrend'. Is it consistently high (ideally > 15-20%) and stable/increasing? This is the primary indicator of a great business.
-- **Profitability & Pricing Power:** Analyze the 'profitabilityTrends'. Are gross and net margins consistently high and stable? This demonstrates a durable competitive advantage.
-
-### 2. Does the company have a long runway for growth?
-- **Reinvestment Opportunity:** Analyze the 'reinvestmentTrends' (capex and R&D). Does the company have ample opportunities to reinvest its cash flow at high rates of return?
-- **Qualitative Clues:** Based on the 'qualitativeClues.description', does the business operate in a large and/or growing market?
-
-### 3. Is the balance sheet a fortress?
-- **Financial Health:** Analyze the 'balanceSheetHealth'. Is the debt-to-equity ratio low? A true compounder should not rely on excessive leverage.
-
-### 4. Final Verdict: The "Buy and Hold" Test
-Based on the answers above, synthesize a final verdict. Classify the company into one of the following categories and provide a brief justification.
-- **Exceptional Compounder:** Demonstrates consistently high ROIC, a long growth runway, and a pristine balance sheet. A true "buy and hold" candidate.
-- **High-Quality Business:** Shows strong profitability and a good balance sheet, but its runway for high-return reinvestment may be less certain.
-- **Cyclical/Average Business:** Does not exhibit the consistent, high returns on capital that define a true compounding machine.
-`.trim();
-
-const DIVIDEND_DEEP_DIVE_PROMPT = `
-Role: You are a conservative income investment analyst AI. Your goal is to explain dividend safety in simple, clear terms for an investor who relies on that income.
-Concept: Dividend safety analysis is all about figuring out how likely a company is to continue paying its dividend.
-
-Data Instructions: Your analysis must be derived exclusively from the provided JSON data, which contains pre-calculated metrics and trends.
-
-Output Format: Create a markdown report. Explain each point using simple analogies and conclude with a clear safety rating.
-
-JSON Data:
-{jsonData}
-
-# Dividend Deep Dive: {companyName} ({tickerSymbol})
-
-## 1. The Payout: What Are You Earning?
-- **Current Dividend Yield:** [Use 'currentYield' value]%. Explain this as the annual return you get from dividends.
-
-## 2. Can the Company Afford Its Dividend? (Payout Ratios)
-This is the most important test.
-- **Free Cash Flow (FCF) Payout Ratio:** Use the 'payoutRatios.fcfPayoutRatio' value. Explain this as the most conservative test: "Is the dividend covered by the true discretionary cash left after running and growing the business?"
-- **Earnings Payout Ratio:** Use the 'payoutRatios.earningsPayoutRatio' value. Explain this as: "For every $1 of profit, how much is paid out as a dividend?" A ratio over 100% is a red flag.
-
-## 3. What is the Track Record? (History & Consistency)
-A company's past behavior is a good indicator of its future commitment.
-- **Dividend Growth:** Analyze the trend of 'dividendsPaid' in the 'dividendHistory' data. Has the company consistently increased its dividend payment year-over-year?
-
-## 4. Does the Company Have a Safety Net? (Balance Sheet Health)
-A strong company can protect its dividend even when times get tough.
-- **Debt Load Trend:** Analyze the trend of the 'debtToEquityTrend' data. Is the debt load stable, increasing, or decreasing?
-- **Cash Cushion Trend:** Examine the trend in 'cashTrend' data. Is the company's cash pile growing or shrinking?
-
-## 5. The Final Verdict: How Safe Are Your Dividend Checks?
-Conclude with a clear rating and a simple, one-sentence justification.
-- **"Very Safe":** The dividend has a history of growth, is easily covered by free cash flow, and the balance sheet is strong.
-- **"Safe":** The dividend is covered, but may lack a long history of growth or there might be a minor concern to watch.
-- **"At Risk":** The payout ratios are high, the dividend isn't growing, and/or the balance sheet is weak. The dividend could be cut.
 `.trim();
 
 const GROWTH_OUTLOOK_PROMPT = `
@@ -895,69 +614,6 @@ You are a Senior Investment Analyst at a GARP-focused ("Growth at a Reasonable P
 {allAnalysesData}
 `.trim();
 
-export const INCOME_MEMO_PROMPT = `
-**Persona & Goal:**
-You are a Senior Investment Analyst at a conservative, income-focused fund. Your primary goal is to assess the safety and long-term viability of {companyName}'s dividend. You must synthesize the provided reports and data into a definitive investment memo for the income portfolio.
-
-**Core Philosophy (How to Think):**
-1.  **Safety First:** The central question is, "How safe is the dividend?" Business quality and financial health are analyzed through this lens.
-2.  **Use Both Inputs:** Use the \`jsonData\` object for all specific, quantitative metrics (e.g., yield, payout ratio, debt-to-equity). Use the \`allAnalysesData\` reports for qualitative context, narrative (e.g., moat strength), and management's tone.
-3.  **Address Contradictions:** If the reports suggest a strong business but the JSON data shows a high payout ratio, you must address this conflict directly.
-4.  **Cite Your Evidence:** Use the precise numbers from \`jsonData\` for your quantitative points. Refer to the narratives in \`allAnalysesData\` for your qualitative points.
-
----
-
-# Income Investment Memo: {companyName} ({tickerSymbol})
-
-**Quantitative Snapshot (for direct use):**
-\`\`\`json
-{jsonData}
-\`\`\`
----
-
-## 1. Executive Summary & Thesis
-*(Begin with a 3-4 sentence paragraph. State the current dividend yield from the JSON data. Summarize the thesis for or against the stock as a reliable income investment, highlighting the dividend's safety and the business's ability to support it long-term, synthesizing both the JSON data and the narrative reports.)*
-
-## 2. The Dividend: Safety & Growth Potential
-*(This is the core section. Use the jsonData for all metrics.)*
-* **Coverage & Affordability:** How well is the dividend covered? State the exact Free Cash Flow and Earnings Payout Ratios from the JSON. Are these conservative or aggressive?
-* **Track Record & Management Commitment:** Based on the 'dividendGrowthHistory' from the JSON and any context from the reports, what does the company's history signal about management's philosophy?
-
-## 3. The Business: Can it Sustain the Dividend?
-*(Synthesize findings from the narrative reports in \`allAnalysesData\` and the financial health data in \`jsonData\`.)*
-* **Financial Foundation:** Is the balance sheet strong enough to protect the dividend during a recession? Focus on the 'debtToEquity' ratio and 'cashAndEquivalents' from the JSON, along with any narrative from the reports.
-* **Economic Moat:** Based on the 'Moat Analysis' report, does the company have a durable competitive advantage that protects the long-term cash flows needed to fund the dividend? A business with no moat has an inherently unsafe dividend.
-
-## 4. Risks to the Income Stream
-*(Critically examine the primary threats to the dividend, using insights from all provided sources.)*
-* **Key Risks:** What are the top 2-3 most critical risks identified in the reports that could force a dividend cut? (e.g., margin compression, secular decline, rising debt).
-* **Valuation:** Is the 'currentYield' from the JSON attractive for the level of risk being taken? A high yield can often be a warning sign (a "yield trap").
-
-## 5. Final Verdict & Recommendation for the Income Portfolio
-
-### A. Recommendation
-*(Provide a clear, actionable recommendation for an income-focused portfolio.)*
-* **Core Income Holding:** A blue-chip quality stock with a very safe and growing dividend.
-* **Accumulate for Income:** A solid company with a well-covered dividend; a good candidate for the portfolio.
-* **Monitor / High Yield Watch:** The yield is attractive but comes with elevated risks. Keep on a watchlist, but do not add to the core portfolio.
-* **Avoid for Income:** The dividend is unsafe, or the company is not a suitable income investment.
-
-### B. Dividend Scorecard
-*(Use your analysis to assign a 1-10 score for each category.)*
-* **Dividend Safety (Payout Ratio & Balance Sheet):** \`[1-10]\`
-* **Dividend Growth (History & Future Prospects):** \`[1-10]\`
-* **Business Quality (Moat & Cash Flow Stability):** \`[1-10]\`
-* **Yield Attractiveness (Yield vs. Risk):** \`[1-10]\`
-* ---
-* **Final Weighted Score:**
-    * **Calculation:** \`[(Safety * 0.4) + (Business Quality * 0.3) + (Growth * 0.2) + (Yield * 0.1)] = Final Score\`
-    * **Score:** \`[Calculated Score / 10.0]\`
-
----
-**Input Reports (for qualitative context):**
-{allAnalysesData}
-`.trim();
-
 export const QUALITY_COMPOUNDER_MEMO_PROMPT = `
 **Persona & Goal:**
 You are a Senior Investment Analyst at a long-term, quality-focused fund. Your goal is to synthesize a dossier of reports on {companyName} to determine if it meets the high bar of a "Quality Compounder" – a business you would be comfortable owning for a decade.
@@ -1043,6 +699,10 @@ JSON Data with All Pre-Calculated Metrics:
 --- REPORT: GarpAnalysis ---
 # GARP Analysis: Is {companyName} ({tickerSymbol}) Priced for Perfection?
 (Follow the full instructions from the GARP_ANALYSIS_PROMPT to generate this report section based on the provided JSON data.)
+
+--- REPORT: BullVsBear ---
+# The Investment Debate: {companyName} ({tickerSymbol})
+(Follow the full instructions from the BULL_VS_BEAR_PROMPT to generate this report section based on the provided JSON data.)
 
 --- REPORT: MoatAnalysis ---
 # Economic Moat Analysis: {companyName} ({tickerSymbol})
@@ -1173,10 +833,6 @@ export const promptMap = {
         prompt: FINANCIAL_ANALYSIS_PROMPT,
         requires: ['profile', 'key_metrics_annual', 'stock_grade_news', 'income_statement_annual', 'cash_flow_statement_annual', 'income_statement_quarterly']
     },
-    'UndervaluedAnalysis': {
-        prompt: UNDERVALUED_ANALYSIS_PROMPT,
-        requires: ['profile', 'key_metrics_annual', 'income_statement_annual', 'cash_flow_statement_annual', 'stock_grade_news', 'analyst_estimates', 'ratios_annual']
-    },
     'GarpAnalysis': {
         prompt: GARP_ANALYSIS_PROMPT,
         requires: ['profile', 'key_metrics_annual', 'ratios_annual', 'analyst_estimates', 'income_statement_annual']
@@ -1184,14 +840,6 @@ export const promptMap = {
     'MoatAnalysis': {
         prompt: MOAT_ANALYSIS_PROMPT,
         requires: ['profile', 'key_metrics_annual', 'income_statement_annual', 'cash_flow_statement_annual', 'ratios_annual']
-    },
-    'CompoundingMachine': {
-        prompt: COMPOUNDING_MACHINE_PROMPT,
-        requires: ['profile', 'key_metrics_annual', 'income_statement_annual', 'cash_flow_statement_annual', 'ratios_annual']
-    },
-    'DividendDeepDive': {
-        prompt: DIVIDEND_DEEP_DIVE_PROMPT,
-        requires: ['key_metrics_annual', 'cash_flow_statement_annual', 'income_statement_annual', 'balance_sheet_statement_annual', 'ratios_annual']
     },
     'GrowthOutlook': {
         prompt: GROWTH_OUTLOOK_PROMPT,
@@ -1213,26 +861,6 @@ export const promptMap = {
         prompt: COMPETITIVE_LANDSCAPE_PROMPT,
         requires: ['profile', 'key_metrics_annual', 'ratios_annual']
     },
-    'StockDisruptor': {
-        prompt: STOCK_DISRUPTOR_PROMPT,
-        requires: ['profile', 'income_statement_annual', 'key_metrics_annual']
-    },
-    'StockFortress': {
-        prompt: STOCK_FORTRESS_PROMPT,
-        requires: ['ratios_annual', 'key_metrics_annual']
-    },
-    'StockPhoenix': {
-        prompt: STOCK_PHOENIX_PROMPT,
-        requires: ['income_statement_annual', 'income_statement_quarterly', 'ratios_annual', 'key_metrics_annual']
-    },
-    'StockLinchpin': {
-        prompt: STOCK_LINCHPIN_PROMPT,
-        requires: ['profile', 'ratios_annual', 'key_metrics_annual']
-    },
-    'StockUntouchables': {
-        prompt: STOCK_UNTOUCHABLES_PROMPT,
-        requires: ['profile', 'income_statement_annual', 'ratios_annual']
-    },
     'Form8KAnalysis': {
         prompt: FORM_8K_ANALYSIS_PROMPT,
         requires: [] // This will be based on manually provided text
@@ -1249,10 +877,6 @@ export const promptMap = {
         prompt: INVESTMENT_MEMO_PROMPT,
         requires: [] // This prompt uses other reports, not raw FMP data.
     },
-    'IncomeMemo': {
-        prompt: INCOME_MEMO_PROMPT,
-        requires: [] // This prompt uses other reports, not raw FMP data.
-    },
     'GarpValidation': {
         prompt: GARP_VALIDATION_PROMPT,
         requires: [] // This prompt uses other reports, not raw FMP data.
@@ -1265,25 +889,16 @@ export const promptMap = {
 
 export const ANALYSIS_ICONS = {
     'FinancialAnalysis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6a7.5 7.5 0 100 15 7.5 7.5 0 000-15z" /><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.2-5.2" /><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 10.5H10.5v.008H10.5V10.5zm.008 0h.008v4.502h-.008V10.5z" /></svg>`,
-    'UndervaluedAnalysis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0l.879-.659M7.5 14.25l6-6M4.5 12l6-6m6 6l-6 6" /></svg>`,
     'GarpAnalysis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18L9 11.25l1.5 1.5L13.5 6l3 3 4.5-4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`,
     'MoatAnalysis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.286zm0 13.036h.008v.008h-.008v-.008z" /></svg>`,
-    'CompoundingMachine': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h6.75M9 11.25h6.75M9 15.75h6.75" /></svg>`,
-    'DividendDeepDive': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a2.25 2.25 0 00-2.25-2.25H15a3 3 0 11-6 0H5.25A2.25 2.25 0 003 12m18 0v6a2.25 2.25 0 01-2.25-2.25H5.25A2.25 2.25 0 013 18v-6m18 0V9M3 12V9m18 3a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 12m15 0a2.25 2.25 0 01-2.25 2.25H12a2.25 2.25 0 01-2.25-2.25" /></svg>`,
     'GrowthOutlook': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941" /></svg>`,
     'RiskAssessment': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" /></svg>`,
     'CapitalAllocators': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15.91 15.91a2.25 2.25 0 01-3.182 0l-3.03-3.03a.75.75 0 011.06-1.061l2.47 2.47 2.47-2.47a.75.75 0 011.06 1.06l-3.03 3.03z" /></svg>`,
     'NarrativeCatalyst': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.362 5.214A8.252 8.252 0 0112 21 8.25 8.25 0 016.038 7.048 8.287 8.287 0 009 9.62a8.983 8.983 0 013.362-3.867 8.262 8.262 0 013 2.456z" /><path stroke-linecap="round" stroke-linejoin="round" d="M12 18a3.75 3.75 0 00.495-7.467 5.99 5.99 0 00-1.925 3.546 5.974 5.974 0 01-2.133-1A3.75 3.75 0 0012 18z" /></svg>`,
     'CompetitiveLandscape': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m-7.284-2.72a3 3 0 00-4.682 2.72 9.094 9.094 0 003.741.479m7.284-2.72a3 3 0 01-4.682-2.72 9.094 9.094 0 013.741-.479m-7.284 2.72a9.094 9.094 0 00-3.741-.479 3 3 0 004.682 2.72M12 12a3 3 0 11-6 0 3 3 0 016 0zm6 0a3 3 0 11-6 0 3 3 0 016 0z" /></svg>`,
-    'StockDisruptor': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" /></svg>`,
-    'StockFortress': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.286zm0 13.036h.008v.008h-.008v-.008z" /></svg>`,
-    'StockPhoenix': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.362 5.214A8.252 8.252 0 0112 21 8.25 8.25 0 016.038 7.048 8.287 8.287 0 009 9.62a8.983 8.983 0 013.362-3.867 8.262 8.262 0 013 2.456z" /><path stroke-linecap="round" stroke-linejoin="round" d="M12 18a3.75 3.75 0 00.495-7.467 5.99 5.99 0 00-1.925 3.546 5.974 5.974 0 01-2.133-1A3.75 3.75 0 0012 18z" /></svg>`,
-    'StockLinchpin': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.192 7.027a5.25 5.25 0 017.423 0L21 7.402a5.25 5.25 0 010 7.423l-.385.385a5.25 5.25 0 01-7.423 0L13.192 7.027zm-6.384 0a5.25 5.25 0 017.423 0L15 7.402a5.25 5.25 0 010 7.423l-5.385 5.385a5.25 5.25 0 01-7.423 0L2 19.973a5.25 5.25 0 010-7.423l.385-.385z" /><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6" /></svg>`,
-    'StockUntouchables': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" /></svg>`,
     'Form8KAnalysis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h.01M15 12h.01M10.5 16.5h3m-6.75-3.75a3 3 0 013-3h3a3 3 0 013 3v3a3 3 0 01-3 3h-3a3 3 0 01-3-3v-3z" /><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`,
     'Form10KAnalysis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>`,
     'InvestmentMemo': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>`,
-    'IncomeMemo': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 00-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 01-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 003 15h-.75M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" /></svg>`,
     'QualityCompounderMemo': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m6.75 12.75h4.875a2.25 2.25 0 0 0 2.25-2.25v-2.25a2.25 2.25 0 0 0-2.25-2.25H15M9 12l3 3m0 0 3-3m-3 3v-3m-3.75 6H5.625a2.25 2.25 0 0 1-2.25-2.25V7.875c0-1.242.984-2.25 2.25-2.25h4.5" /></svg>`
 };
 
