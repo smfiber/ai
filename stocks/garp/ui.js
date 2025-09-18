@@ -1,5 +1,5 @@
 import { CONSTANTS, state, promptMap } from './config.js';
-import { openModal, closeModal, openStockListModal, openSessionLogModal, openManageStockModal, openPortfolioManagerModal, openRawDataViewer, openThesisTrackerModal } from './ui-modals.js';
+import { openModal, closeModal, openStockListModal, openManageStockModal, openPortfolioManagerModal, openRawDataViewer, openThesisTrackerModal } from './ui-modals.js';
 import { fetchAndCachePortfolioData, renderPortfolioManagerList } from './ui-render.js';
 import { handleResearchSubmit, handleSaveStock, handleDeleteStock, handleRefreshFmpData, handleAnalysisRequest, handleInvestmentMemoRequest, handleSaveReportToDb, handleSaveThesis, handleGenerateAllReportsRequest, handleTestThesis } from './ui-handlers.js';
 
@@ -136,7 +136,6 @@ export function setupEventListeners() {
     });
 
     document.getElementById('manage-all-stocks-button')?.addEventListener('click', openPortfolioManagerModal);
-    document.getElementById('session-log-button')?.addEventListener('click', openSessionLogModal);
 
     const modalsToClose = [
         { modal: CONSTANTS.MODAL_MANAGE_STOCK, bg: 'close-manage-stock-modal-bg'},
