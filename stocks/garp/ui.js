@@ -1,7 +1,7 @@
 import { CONSTANTS, state, promptMap } from './config.js';
-import { openModal, closeModal, openStockListModal, openSessionLogModal, openManageStockModal, openPortfolioManagerModal, openViewFmpDataModal, openManageFmpEndpointsModal, openManageBroadEndpointsModal, openRawDataViewer, openThesisTrackerModal, openSpaAnalysisModal, openHelpModal } from './ui-modals.js';
+import { openModal, closeModal, openStockListModal, openSessionLogModal, openManageStockModal, openPortfolioManagerModal, openViewFmpDataModal, openManageFmpEndpointsModal, openManageBroadEndpointsModal, openRawDataViewer, openThesisTrackerModal, openSpaAnalysisModal } from './ui-modals.js';
 import { fetchAndCachePortfolioData, renderPortfolioManagerList, renderSecFilings, renderFilingAnalysisTab } from './ui-render.js';
-import { handleResearchSubmit, handleSaveStock, handleDeleteStock, handleRefreshFmpData, handleFetchNews, handleAnalysisRequest, handleInvestmentMemoRequest, handleIncomeMemoRequest, handleSaveReportToDb, handleSaveBroadReportToDb, handleSaveToDrive, handleSectorSelection, handleIndustrySelection, handleSaveFmpEndpoint, cancelFmpEndpointEdit, handleEditFmpEndpoint, handleDeleteFmpEndpoint, handleSaveBroadEndpoint, cancelBroadEndpointEdit, handleEditBroadEndpoint, handleDeleteBroadEndpoint, handleSaveThesis, handleBroadAnalysisRequest, handleGenerateAllReportsRequest, handleGarpValidationRequest, handleSaveManualFiling, handleFilingAnalysisRequest, handleQualityCompounderMemoRequest, handleSpaAnalysisRequest, handleTestThesis, handleAiEnhancementsRequest } from './ui-handlers.js';
+import { handleResearchSubmit, handleSaveStock, handleDeleteStock, handleRefreshFmpData, handleFetchNews, handleAnalysisRequest, handleSaveReportToDb, handleSaveBroadReportToDb, handleSaveToDrive, handleBroadAnalysisSelection, handleSaveFmpEndpoint, cancelFmpEndpointEdit, handleEditFmpEndpoint, handleDeleteFmpEndpoint, handleSaveBroadEndpoint, cancelBroadEndpointEdit, handleEditBroadEndpoint, handleDeleteBroadEndpoint, handleSaveThesis, handleBroadAnalysisRequest, handleGenerateAllReportsRequest, handleGarpValidationRequest, handleSaveManualFiling, handleFilingAnalysisRequest, handleQualityCompounderMemoRequest, handleSpaAnalysisRequest } from './ui-handlers.js';
 
 // --- PROMPT MAPPING ---
 // The main promptMap is now imported directly from config.js
@@ -254,11 +254,8 @@ export function setupEventListeners() {
     document.getElementById('manage-broad-endpoints-button')?.addEventListener('click', openManageBroadEndpointsModal);
     document.getElementById('session-log-button')?.addEventListener('click', openSessionLogModal);
     document.getElementById('analyze-spa-button')?.addEventListener('click', handleSpaAnalysisRequest);
-    document.getElementById('help-button')?.addEventListener('click', openHelpModal);
-    document.getElementById('ai-enhancements-button')?.addEventListener('click', handleAiEnhancementsRequest);
 
     const modalsToClose = [
-        { modal: 'helpModal', button: 'close-help-modal', bg: 'close-help-modal-bg' },
         { modal: CONSTANTS.MODAL_CUSTOM_ANALYSIS, button: 'close-custom-analysis-modal', bg: 'close-custom-analysis-modal-bg' },
         { modal: CONSTANTS.MODAL_INDUSTRY_ANALYSIS, button: 'close-industry-analysis-modal', bg: 'close-industry-analysis-modal-bg' },
         { modal: CONSTANTS.MODAL_MANAGE_STOCK, bg: 'close-manage-stock-modal-bg'},
@@ -289,14 +286,14 @@ export function setupEventListeners() {
     document.getElementById('sector-buttons-container')?.addEventListener('click', (e) => {
         const target = e.target.closest('button');
         if (target && target.dataset.sector) {
-            handleSectorSelection(target.dataset.sector, target);
+            handleBroadAnalysisSelection(target.dataset.sector, 'sector', target);
         }
     });
 
     document.getElementById('industry-buttons-container')?.addEventListener('click', (e) => {
         const target = e.target.closest('button');
         if (target && target.dataset.industry) {
-            handleIndustrySelection(target.dataset.industry, target);
+            handleBroadAnalysisSelection(target.dataset.industry, 'industry', target);
         }
     });
 
@@ -326,14 +323,6 @@ export function setupEventListeners() {
                 openThesisTrackerModal(ticker);
             }
             return; 
-        }
-
-        if (target.id === 'test-thesis-button') {
-            const ticker = target.dataset.ticker;
-            if (ticker) {
-                handleTestThesis(ticker);
-            }
-            return;
         }
 		
 		if (target.matches('.tab-button')) {
@@ -389,7 +378,6 @@ export function setupEventListeners() {
         }
         
         if (target.id === 'investment-memo-button') handleInvestmentMemoRequest(symbol);
-        if (target.id === 'income-memo-button') handleIncomeMemoRequest(symbol);
         if (target.id === 'quality-compounder-memo-button') handleQualityCompounderMemoRequest(symbol);
         if (target.id === 'generate-all-reports-button') handleGenerateAllReportsRequest(symbol);
         if (target.id === 'garp-validation-button') handleGarpValidationRequest(symbol);
