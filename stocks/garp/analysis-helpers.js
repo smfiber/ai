@@ -240,6 +240,45 @@ export function _calculateMoatAnalysisMetrics(data) {
 }
 
 /**
+ * NEW: Calculates metrics for the "Growth Outlook" prompt.
+ */
+export function _calculateGrowthOutlookMetrics(data) {
+    const income = (data.income_statement_annual || []).slice(0, 5);
+    const metrics = (data.key_metrics_annual || []).slice(0, 5);
+    const grades = (data.stock_grade_news || []).slice(0, 10);
+    const estimates = (data.analyst_estimates || []).slice(0, 5);
+    const ratios = (data.ratios_annual || []).slice(0, 5);
+
+    // MODIFICATION: Prioritize TTM data.
+    const latestRatios = data.ratios_ttm?.[0] || ratios[ratios.length - 1] || {};
+    const latestMetrics = data.key_metrics_ttm?.[0] || metrics[metrics.length - 1] || {};
+
+    return {
+        historicalGrowth: {
+            revenue_trend: income.map(i => ({ year: i.calendarYear, value: formatLargeNumber(i.revenue) })),
+            net_income_trend: income.map(i => ({ year: i.calendarYear, value: formatLargeNumber(i.netIncome) }))
+        },
+        valuation: {
+            // MODIFICATION: Use TTM values with fallback.
+            peRatio: (latestMetrics.peRatioTTM ?? latestMetrics.peRatio)?.toFixed(2) || 'N/A',
+            evToSalesRatio: (latestRatios.enterpriseValueMultipleTTM ?? latestRatios.enterpriseValueMultiple)?.toFixed(2) || 'N/A'
+        },
+        reinvestment: {
+            rdToRevenue: latestMetrics.researchAndDevelopmentToRevenue ? `${(latestMetrics.researchAndDevelopmentToRevenue * 100).toFixed(2)}%` : 'N/A',
+            capexToRevenue: latestMetrics.capexToRevenue ? `${(latestMetrics.capexToRevenue * 100).toFixed(2)}%` : 'N/A'
+        },
+        analystView: {
+            grades: grades.map(g => ({ date: g.date, company: g.gradingCompany, action: g.action, from: g.previousGrade, to: g.newGrade })),
+            estimates: estimates.map(e => ({
+                date: e.date,
+                revenue_avg: formatLargeNumber(e.estimatedRevenueAvg),
+                eps_avg: e.estimatedEpsAvg?.toFixed(2)
+            }))
+        }
+    };
+}
+
+/**
  * NEW: Calculates metrics for the "Risk Assessment" prompt.
  */
 export function _calculateRiskAssessmentMetrics(data) {
@@ -352,6 +391,47 @@ export function _calculateCapitalAllocatorsMetrics(data) {
 
 
 /**
+ * NEW: Calculates metrics for the "Narrative & Catalyst" prompt.
+ */
+export function _calculateNarrativeCatalystMetrics(data) {
+    const profile = data.profile?.[0] || {};
+    const metrics = (data.key_metrics_annual || []).slice(0, 5);
+    const cashFlow = (data.cash_flow_statement_annual || []).slice(0, 5);
+    const income = (data.income_statement_annual || []).slice(0, 5);
+    const grades = (data.stock_grade_news || []).slice(0, 10);
+    const ratios = (data.ratios_annual || []).slice(0, 5);
+
+    const latestCashFlow = cashFlow[cashFlow.length - 1] || {};
+    const latestIncome = income[income.length - 1] || {};
+    // MODIFICATION: Prioritize TTM data.
+    const latestMetrics = data.key_metrics_ttm?.[0] || metrics[metrics.length - 1] || {};
+
+    const isGrowthAccelerating = () => {
+        if (income.length < 3) return false;
+        const yoy = (arr, key) => ((arr[arr.length - 1][key] / arr[arr.length - 2][key]) - 1);
+        const latestGrowth = yoy(income, 'revenue');
+        const prevGrowth = yoy(income.slice(0, -1), 'revenue');
+        return latestGrowth > prevGrowth;
+    };
+
+    const isMarginExpanding = () => {
+        if (ratios.length < 2) return false;
+        return ratios[ratios.length - 1].operatingProfitMargin > ratios[ratios.length - 2].operatingProfitMargin;
+    };
+
+    return {
+        description: profile.description,
+        industry: profile.industry,
+        isProfitable: (latestIncome.netIncome || 0) > 0,
+        isCashFlowPositive: (latestCashFlow.freeCashFlow || 0) > 0,
+        manageableDebt: (latestMetrics.debtToEquity || 0) < 2.0,
+        isGrowthAccelerating: isGrowthAccelerating(),
+        isMarginExpanding: isMarginExpanding(),
+        hasRecentUpgrades: grades.filter(g => g.action && g.action.toLowerCase() === 'upgrade').length > 0
+    };
+}
+
+/**
  * NEW: Calculates metrics for the "GARP Analysis" prompt.
  */
 export function _calculateGarpAnalysisMetrics(data) {
@@ -360,10 +440,13 @@ export function _calculateGarpAnalysisMetrics(data) {
     const estimates = (data.analyst_estimates || []).slice().reverse();
     const income = (data.income_statement_annual || []).slice().reverse();
 
+    // MODIFICATION: Prioritize TTM data.
     const latestMetrics = data.key_metrics_ttm?.[0] || keyMetrics[keyMetrics.length - 1] || {};
     const latestRatios = data.ratios_ttm?.[0] || ratios[ratios.length - 1] || {};
     const lastActualIncome = income[income.length - 1] || {};
     
+    // Valuation
+    // MODIFICATION: Prioritize TTM PE/PS ratios.
     const peRatio = latestMetrics.peRatioTTM ?? latestMetrics.peRatio;
     const psRatio = latestRatios.priceToSalesRatioTTM ?? latestRatios.priceToSalesRatio;
 
@@ -374,6 +457,7 @@ export function _calculateGarpAnalysisMetrics(data) {
         (peRatio > historicalPeAvg ? 'trading at a premium to its history' : 'trading at a discount to its history')
         : 'N/A';
 
+    // Growth
     const lastActualEps = lastActualIncome.eps;
     let historicalEpsGrowth = 'N/A';
     if (income.length >= 2) {
@@ -389,6 +473,7 @@ export function _calculateGarpAnalysisMetrics(data) {
         forwardEpsGrowth = `${(((nextYearEstimate.estimatedEpsAvg / lastActualEps) - 1) * 100).toFixed(2)}%`;
     }
 
+    // PEG Ratio
     let pegValue = 'N/A';
     let pegVerdict = 'Not applicable';
     const forwardGrowthRate = parseFloat(forwardEpsGrowth);
@@ -421,79 +506,69 @@ export function _calculateGarpAnalysisMetrics(data) {
     };
 }
 
-/**
- * NEW: Calculates metrics for the "GARP Exit Strategy Memo" prompt.
- * @param {object} targetFmpData - The full FMP data object for the target stock.
- * @param {Array<object>} peerValuations - An array of valuation objects for the peer companies.
- * @returns {object} A summary object with pre-calculated sell signal metrics.
- */
-export function _calculateGarpExitMetrics(targetFmpData, peerValuations) {
-    // --- 1. Target Company Analysis ---
-    const keyMetrics = (targetFmpData.key_metrics_annual || []).slice().reverse();
-    const ratios = (targetFmpData.ratios_annual || []).slice().reverse();
-    const income = (targetFmpData.income_statement_annual || []).slice().reverse();
-    const estimates = (targetFmpData.analyst_estimates || []).slice().reverse();
+// --- NEW NARRATIVE & COMPARATIVE HELPERS (v14.17.0) ---
 
-    const latestMetrics = targetFmpData.key_metrics_ttm?.[0] || keyMetrics[keyMetrics.length - 1] || {};
-    const latestRatios = targetFmpData.ratios_ttm?.[0] || ratios[ratios.length - 1] || {};
-    const lastActualIncome = income[income.length - 1] || {};
+export function _calculateCompetitiveLandscapeMetrics(targetData, peersData) {
+    const metricsToCompare = [
+        { key: 'peRatio', ttmKey: 'peRatioTTM', name: 'P/E Ratio', source: 'key_metrics' },
+        { key: 'priceToSalesRatio', ttmKey: 'priceToSalesRatioTTM', name: 'P/S Ratio', source: 'ratios' },
+        { key: 'returnOnEquity', ttmKey: 'roeTTM', name: 'ROE', source: 'key_metrics', isPercent: true, fallbackKey: 'roe' },
+        { key: 'netProfitMargin', ttmKey: 'netProfitMarginTTM', name: 'Net Profit Margin', source: 'ratios', isPercent: true },
+        { key: 'debtToEquity', ttmKey: 'debtToEquityTTM', name: 'Debt/Equity', source: 'key_metrics' }
+    ];
 
-    // Valuation vs. History
-    const peRatio = latestMetrics.peRatioTTM;
-    const peHistory = keyMetrics.slice(-5).map(m => m.peRatio).filter(pe => typeof pe === 'number');
-    const historicalPeAvg = peHistory.length > 0 ? peHistory.reduce((a, b) => a + b, 0) / peHistory.length : null;
+    const getLatestMetric = (data, metricInfo) => {
+        const sourceData = metricInfo.source === 'key_metrics'
+            ? data?.key_metrics_ttm?.[0] || data?.key_metrics_annual?.[0]
+            : data?.ratios_ttm?.[0] || data?.ratios_annual?.[0];
 
-    // Growth & PEG
-    const nextYearEstimate = estimates.find(e => new Date(e.date).getFullYear() > new Date(lastActualIncome.date).getFullYear());
-    let forwardEpsGrowthRate = null;
-    if (nextYearEstimate && lastActualIncome.eps && lastActualIncome.eps !== 0) {
-        forwardEpsGrowthRate = ((nextYearEstimate.estimatedEpsAvg / lastActualIncome.eps) - 1) * 100;
-    }
-    const pegRatio = (peRatio > 0 && forwardEpsGrowthRate > 0) ? (peRatio / forwardEpsGrowthRate) : null;
+        const value = sourceData ? (sourceData[metricInfo.ttmKey] ?? sourceData[metricInfo.key] ?? sourceData[metricInfo.fallbackKey]) : null;
 
-    // Growth Deceleration
-    const revenueGrowthHistory = [];
-    if (income.length >= 2) {
-        for (let i = 1; i < income.length; i++) {
-            const prevRevenue = income[i-1].revenue;
-            const currRevenue = income[i].revenue;
-            if (prevRevenue && currRevenue && prevRevenue !== 0) {
-                const growth = ((currRevenue / prevRevenue) - 1) * 100;
-                revenueGrowthHistory.push({ year: income[i].calendarYear, growth: `${growth.toFixed(2)}%` });
-            }
-        }
-    }
-
-    // Fundamental Health Trend
-    const netMarginTrend = ratios.slice(-5).map(r => ({ year: r.calendarYear, margin: r.netProfitMargin ? `${(r.netProfitMargin * 100).toFixed(2)}%` : 'N/A' }));
-    const debtToEquityTrend = keyMetrics.slice(-5).map(m => ({ year: m.calendarYear, ratio: m.debtToEquity ? m.debtToEquity.toFixed(2) : 'N/A' }));
-
-    // --- 2. Peer Analysis ---
-    const getMedian = (arr) => {
-        if (arr.length === 0) return null;
-        const sorted = arr.slice().sort((a, b) => a - b);
-        const mid = Math.floor(sorted.length / 2);
-        return sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+        if (typeof value !== 'number') return 'N/A';
+        return metricInfo.isPercent ? `${(value * 100).toFixed(2)}%` : value.toFixed(2);
     };
 
-    const validPeers = peerValuations.filter(p => p && typeof p.peRatio === 'number');
-    const peerMedianPe = getMedian(validPeers.map(p => p.peRatio));
+    const getRawMetric = (data, metricInfo) => {
+        const sourceData = metricInfo.source === 'key_metrics'
+            ? data?.key_metrics_ttm?.[0] || data?.key_metrics_annual?.[0]
+            : data?.ratios_ttm?.[0] || data?.ratios_annual?.[0];
 
-    // --- 3. Assemble Payload ---
-    return {
-        valuationCheck: {
-            currentPe: peRatio ? peRatio.toFixed(2) : 'N/A',
-            historicalPe: historicalPeAvg ? historicalPeAvg.toFixed(2) : 'N/A',
-            peerMedianPe: peerMedianPe ? peerMedianPe.toFixed(2) : 'N/A',
-            pegRatio: pegRatio ? pegRatio.toFixed(2) : 'N/A'
-        },
-        growthCheck: {
-            revenueGrowthTrend: revenueGrowthHistory.slice(-3), // Last 3 years
-            forwardEpsGrowth: forwardEpsGrowthRate ? `${forwardEpsGrowthRate.toFixed(2)}%` : 'N/A'
-        },
-        fundamentalsCheck: {
-            netMarginTrend: netMarginTrend.slice(-3), // Last 3 years
-            debtToEquityTrend: debtToEquityTrend.slice(-3) // Last 3 years
+        return sourceData ? (sourceData[metricInfo.ttmKey] ?? sourceData[metricInfo.key] ?? sourceData[metricInfo.fallbackKey]) : null;
+    };
+    
+    // Target Company Metrics
+    const targetCompanyMetrics = { ticker: targetData.profile?.[0]?.symbol };
+    metricsToCompare.forEach(m => {
+        targetCompanyMetrics[m.key] = getLatestMetric(targetData, m);
+    });
+
+    // Peer Metrics
+    const peerMetricsList = peersData.map(peer => {
+        const metrics = { ticker: peer.ticker };
+        metricsToCompare.forEach(m => {
+            metrics[m.key] = getLatestMetric(peer.data, m);
+        });
+        return metrics;
+    });
+
+    // Peer Average Calculation
+    const peerAverage = {};
+    metricsToCompare.forEach(m => {
+        const validPeerValues = peersData
+            .map(p => getRawMetric(p.data, m))
+            .filter(v => typeof v === 'number');
+        
+        if (validPeerValues.length > 0) {
+            const avg = validPeerValues.reduce((a, b) => a + b, 0) / validPeerValues.length;
+            peerAverage[m.key] = m.isPercent ? `${(avg * 100).toFixed(2)}%` : avg.toFixed(2);
+        } else {
+            peerAverage[m.key] = 'N/A';
         }
+    });
+
+    return {
+        targetCompany: targetCompanyMetrics,
+        peers: peerMetricsList,
+        peerAverage: peerAverage
     };
 }
