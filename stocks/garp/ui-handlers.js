@@ -1,4 +1,4 @@
-import { CONSTANTS, state, promptMap, ANALYSIS_REQUIREMENTS, INVESTMENT_MEMO_PROMPT } from './config.js';
+import { CONSTANTS, state, promptMap, ANALYSIS_REQUIREMENTS, INVESTMENT_MEMO_PROMPT, PEER_ANALYSIS_PROMPT } from './config.js';
 // FIX: Removed 'getCompetitorsFromGemini' which no longer exists in api.js
 import { callApi, callGeminiApi, generateRefinedArticle, generatePolishedArticleForSynthesis, getFmpStockData } from './api.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -77,7 +77,6 @@ export async function handleSaveStock(e) {
         return;
     }
 
-    // NEW: Get position tracking values
     const purchasePriceInput = document.getElementById('manage-stock-purchase-price').value;
     const shareCountInput = document.getElementById('manage-stock-share-count').value;
 
@@ -88,7 +87,6 @@ export async function handleSaveStock(e) {
         status: document.getElementById('manage-stock-status').value.trim(),
         sector: document.getElementById('manage-stock-sector').value.trim(),
         industry: document.getElementById('manage-stock-industry').value.trim(),
-        // NEW: Add parsed numbers to the data object, store null if empty
         purchasePrice: purchasePriceInput ? parseFloat(purchasePriceInput) : null,
         shareCount: shareCountInput ? parseFloat(shareCountInput) : null,
     };
@@ -421,6 +419,73 @@ export async function handleInvestmentMemoRequest(symbol, forceNew = false) {
         }
     }
 }
+
+// NEW: Functions for the GARP Exit Strategy Memo
+/**
+ * Uses Gemini to generate a list of competitor tickers for a given company.
+ * @param {string} companyName The name of the company.
+ * @param {string} ticker The ticker symbol of the company.
+ * @returns {Promise<Array<{companyName: string, ticker: string}>>} A promise that resolves to an array of peer objects.
+ */
+async function getPeersFromGemini(companyName, ticker) {
+    const prompt = PEER_ANALYSIS_PROMPT
+        .replace('{companyName}', companyName)
+        .replace('{tickerSymbol}', ticker);
+
+    const rawResponse = await callGeminiApi(prompt);
+    
+    // Extract the JSON part of the response, even if the AI adds markdown backticks
+    const jsonMatch = rawResponse.match(/```json\s*([\s\S]*?)\s*```|(\[[\s\S]*\])/);
+    if (!jsonMatch) {
+        throw new Error("Could not find a valid JSON array in the AI's response for peers.");
+    }
+    
+    // Use the first non-null capture group
+    const jsonString = jsonMatch[1] || jsonMatch[2];
+
+    try {
+        const peers = JSON.parse(jsonString);
+        if (!Array.isArray(peers)) {
+            throw new Error("The parsed peer data is not an array.");
+        }
+        return peers;
+    } catch (error) {
+        console.error("Failed to parse JSON from peer response:", jsonString);
+        throw new Error(`The AI's response for peers was not valid JSON. Details: ${error.message}`);
+    }
+}
+
+export async function handleGarpExitMemoRequest(symbol) {
+    openModal(CONSTANTS.MODAL_LOADING);
+    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+    
+    try {
+        loadingMessage.textContent = `Analyzing peers for ${symbol}...`;
+        
+        const stockData = state.portfolioCache.find(s => s.ticker === symbol);
+        if (!stockData || !stockData.companyName) {
+            throw new Error(`Could not find company name for ${symbol} in cache.`);
+        }
+
+        const peers = await getPeersFromGemini(stockData.companyName, symbol);
+        console.log("Generated Peers:", peers); // For testing this step
+        
+        // --- The next steps will go here in our subsequent work ---
+        // 1. Fetch FMP valuation data for all peers.
+        // 2. Pre-process data with a new analysis helper.
+        // 3. Call Gemini with the main Exit Memo prompt.
+        // 4. Render the final report.
+        
+        displayMessageInModal(`Successfully generated a list of ${peers.length} peers. Check the console to review them.`, 'info');
+
+    } catch (error) {
+        console.error("Error generating GARP Exit Memo:", error);
+        displayMessageInModal(`Could not generate Exit Memo: ${error.message}`, 'error');
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
 
 export async function handleGenerateAllReportsRequest(symbol) {
     const reportTypes = [
