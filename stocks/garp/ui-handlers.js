@@ -4,7 +4,7 @@ import { callApi, filterValidNews, callGeminiApi, generatePolishedArticle, gener
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { openModal, closeModal, displayMessageInModal, openConfirmationModal, openManageStockModal, openSpaAnalysisModal } from './ui-modals.js';
 import { renderPortfolioManagerList, renderFmpEndpointsList, renderBroadEndpointsList, renderNewsArticles, displayReport, updateReportStatus, updateBroadReportStatus, fetchAndCachePortfolioData, renderThesisTracker, renderFilingAnalysisTab } from './ui-render.js';
-import { _calculateUndervaluedMetrics, _calculateFinancialAnalysisMetrics, _calculateBullVsBearMetrics, _calculateMoatAnalysisMetrics, _calculateDividendDeepDiveMetrics, _calculateGrowthOutlookMetrics, _calculateRiskAssessmentMetrics, _calculateCapitalAllocatorsMetrics, _calculateNarrativeCatalystMetrics, _calculateGarpAnalysisMetrics, _calculateCompetitiveLandscapeMetrics, _calculateStockDisruptorMetrics, _calculateStockFortressMetrics, _calculateStockPhoenixMetrics, _calculateStockLinchpinMetrics, _calculateStockUntouchablesMetrics, _calculateIncomeMemoMetrics } from './analysis-helpers.js';
+import { _calculateUndervaluedMetrics, _calculateFinancialAnalysisMetrics, _calculateMoatAnalysisMetrics, _calculateDividendDeepDiveMetrics, _calculateGrowthOutlookMetrics, _calculateRiskAssessmentMetrics, _calculateCapitalAllocatorsMetrics, _calculateNarrativeCatalystMetrics, _calculateGarpAnalysisMetrics, _calculateCompetitiveLandscapeMetrics, _calculateStockDisruptorMetrics, _calculateStockFortressMetrics, _calculateStockPhoenixMetrics, _calculateStockLinchpinMetrics, _calculateStockUntouchablesMetrics, _calculateIncomeMemoMetrics } from './analysis-helpers.js';
 
 // --- FMP API INTEGRATION & MANAGEMENT ---
 export async function handleRefreshFmpData(symbol) {
@@ -942,13 +942,14 @@ async function handleIndustryMacroPlaybookAnalysis(industryName) {
 }
 
 // --- THESIS TRACKER ---
-// This is a new, reusable helper function
-async function _saveThesisContent(ticker, thesisContent) {
+export async function handleSaveThesis(e) {
+    e.preventDefault();
+    const ticker = document.getElementById('thesis-tracker-ticker').value;
+    const thesisContent = document.getElementById('thesis-tracker-content').value.trim();
+
     if (!ticker) {
-        throw new Error('Ticker is missing, cannot save thesis.');
-    }
-    if (!thesisContent) {
-        throw new Error('Thesis content is empty, cannot save.');
+        displayMessageInModal('Ticker is missing, cannot save thesis.', 'error');
+        return;
     }
 
     openModal(CONSTANTS.MODAL_LOADING);
@@ -960,30 +961,22 @@ async function _saveThesisContent(ticker, thesisContent) {
             thesis: thesisContent
         });
         
-        await fetchAndCachePortfolioData(); // Refresh the cache with the new thesis
+        closeModal('thesisTrackerModal');
+        
+        await fetchAndCachePortfolioData();
         const thesisContainer = document.getElementById('thesis-tracker-container');
         if (thesisContainer && document.getElementById('rawDataViewerModal').dataset.activeTicker === ticker) {
-            renderThesisTracker(thesisContainer, ticker); // Re-render the dashboard view
+            renderThesisTracker(thesisContainer, ticker);
         }
 
         displayMessageInModal('Thesis saved successfully!', 'info');
 
     } catch (error) {
-        console.error("Error in _saveThesisContent:", error);
+        console.error("Error saving thesis:", error);
         displayMessageInModal(`Could not save thesis: ${error.message}`, 'error');
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
-}
-
-// This is the updated version of the existing function
-export async function handleSaveThesis(e) {
-    e.preventDefault();
-    const ticker = document.getElementById('thesis-tracker-ticker').value;
-    const thesisContent = document.getElementById('thesis-tracker-content').value.trim();
-
-    await _saveThesisContent(ticker, thesisContent);
-    closeModal('thesisTrackerModal');
 }
 
 // --- AI ANALYSIS REPORT GENERATORS ---
@@ -1172,8 +1165,6 @@ export async function handleAnalysisRequest(symbol, reportType, promptConfig, fo
             payloadData = _calculateUndervaluedMetrics(data);
         } else if (reportType === 'FinancialAnalysis') {
             payloadData = _calculateFinancialAnalysisMetrics(data);
-        } else if (reportType === 'BullVsBear') {
-            payloadData = _calculateBullVsBearMetrics(data);
         } else if (reportType === 'MoatAnalysis' || reportType === 'CompoundingMachine') {
             payloadData = _calculateMoatAnalysisMetrics(data);
         } else if (reportType === 'DividendDeepDive') {
@@ -1214,71 +1205,10 @@ export async function handleAnalysisRequest(symbol, reportType, promptConfig, fo
 
         contentContainer.dataset.currentPrompt = prompt;
 
-        // --- NEW LOGIC FOR GARP ANALYSIS & THESIS INSERTION ---
-        let finalReportContent;
-        let generatedThesis = ''; // To hold the thesis text
-
-        if (reportType === 'GarpAnalysis') {
-            loadingMessage.textContent = "AI is drafting the GARP Analysis report...";
-            const garpReportContent = await generateRefinedArticle(prompt, loadingMessage);
-
-            const thesisSynthesisPrompt = `
-Role: You are a concise investment writer.
-Context: You are given a full GARP analysis report and the source JSON data used to create it.
-Task: Synthesize these two sources into a formal investment thesis suitable for a thesis tracker. The thesis must consist of 2-3 bullet points, and each point must be quantified with specific data from the JSON source.
-
-GARP Report:
-${garpReportContent}
-
-Source JSON:
-${JSON.stringify(payloadData, null, 2)}
-            `;
-
-            loadingMessage.textContent = "AI is synthesizing the investment thesis...";
-            generatedThesis = await callGeminiApi(thesisSynthesisPrompt); // Store the raw thesis text
-
-            finalReportContent = `
-${garpReportContent}
-
----
-
-<div class="flex justify-between items-center my-4">
-    <h2 class="text-2xl font-bold !my-0">AI-Generated Investment Thesis</h2>
-    <button id="insert-thesis-button" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg text-sm">Insert into Thesis Tracker</button>
-</div>
-
-${marked.parse(generatedThesis)}
-
----
-
-## Source JSON Data
-\`\`\`json
-${JSON.stringify(payloadData, null, 2)}
-\`\`\`
-            `;
-        } else {
-            // Original flow for all other report types
-            finalReportContent = await generateRefinedArticle(prompt, loadingMessage);
-        }
-        // --- END OF NEW LOGIC ---
-
-        contentContainer.dataset.rawMarkdown = finalReportContent;
-        displayReport(contentContainer, finalReportContent, prompt);
-
-        // --- NEW: Event listener for the insert button ---
-        if (reportType === 'GarpAnalysis') {
-            const insertButton = document.getElementById('insert-thesis-button');
-            if (insertButton) {
-                insertButton.addEventListener('click', async () => {
-                    await _saveThesisContent(symbol, generatedThesis);
-                    insertButton.textContent = 'Thesis Saved!';
-                    insertButton.disabled = true;
-                    insertButton.classList.add('bg-green-600', 'hover:bg-green-600');
-                    insertButton.classList.remove('bg-indigo-600', 'hover:bg-indigo-700');
-                }, { once: true }); // Ensure the listener only fires once
-            }
-        }
-        
+        // --- MODIFICATION: Use the new refinement function ---
+        const newReportContent = await generateRefinedArticle(prompt, loadingMessage);
+        contentContainer.dataset.rawMarkdown = newReportContent;
+        displayReport(contentContainer, newReportContent, prompt);
         updateReportStatus(statusContainer, [], null, { symbol, reportType, promptConfig });
 
     } catch (error) {
@@ -1631,7 +1561,6 @@ export async function handleGenerateAllReportsRequest(symbol) {
         'FinancialAnalysis': _calculateFinancialAnalysisMetrics,
         'UndervaluedAnalysis': _calculateUndervaluedMetrics,
         'GarpAnalysis': _calculateGarpAnalysisMetrics,
-        'BullVsBear': _calculateBullVsBearMetrics,
         'MoatAnalysis': _calculateMoatAnalysisMetrics,
         'CompoundingMachine': _calculateMoatAnalysisMetrics,
         'DividendDeepDive': _calculateDividendDeepDiveMetrics,
@@ -2155,103 +2084,6 @@ export async function handleSpaAnalysisRequest() {
 
     } catch (error) {
         console.error("Error during SPA analysis:", error);
-        displayMessageInModal(`Could not complete the analysis: ${error.message}`, 'error');
-    } finally {
-        closeModal(CONSTANTS.MODAL_LOADING);
-    }
-}
-
-export async function handleTestThesis(ticker) {
-    const resultContainer = document.getElementById('thesis-test-result-container');
-    if (!resultContainer) return;
-
-    resultContainer.innerHTML = `<div class="flex items-center justify-center p-4 bg-gray-100 rounded-md"><div class="loader"></div><p class="ml-4 text-gray-600 font-semibold">AI is testing thesis...</p></div>`;
-    
-    try {
-        const stock = state.portfolioCache.find(s => s.ticker === ticker);
-        const originalThesis = stock?.thesis;
-
-        if (!originalThesis) {
-            throw new Error("No saved thesis found for this stock. Please write one on the Dashboard tab.");
-        }
-
-        // Step 1: Refresh data to get the latest numbers
-        await handleRefreshFmpData(ticker);
-        
-        // Step 2: Get the newly refreshed data and create a summary
-        const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
-        loadingMessage.textContent = `Summarizing new data for AI...`; // This message will show if the modal is still open
-        const newData = await getFmpStockData(ticker);
-        const newDataJson = _calculateFinancialAnalysisMetrics(newData); 
-
-        // Step 3: Build the prompt
-        const prompt = `
-            **Role:** You are a skeptical investment analyst. Your task is to determine if new financial data challenges a previously established investment thesis.
-            
-            **1. Original Investment Thesis:**
-            ---
-            ${originalThesis}
-            ---
-
-            **2. New Financial Data Summary (TTM and Latest Annual):**
-            ---
-            ${JSON.stringify(newDataJson, null, 2)}
-            ---
-
-            **Task:**
-            Carefully compare the 'New Financial Data Summary' against the specific, quantitative claims made in the 'Original Investment Thesis'. Provide your analysis in a concise markdown report. Structure your report with a section for each pillar of the original thesis, assessing whether the new data supports or contradicts it. Conclude with a final "Verdict" of "Thesis Intact", "Monitor Closely", or "Thesis Broken".
-        `;
-        
-        // Step 4: Call AI and display result
-        const analysisResult = await generateRefinedArticle(prompt, loadingMessage);
-        resultContainer.innerHTML = `<div class="prose prose-sm max-w-none p-4 bg-blue-50 rounded-lg border border-blue-200">${marked.parse(analysisResult)}</div>`;
-
-    } catch (error) {
-        console.error("Error testing thesis:", error);
-        resultContainer.innerHTML = `<p class="p-4 text-center text-red-500 bg-red-50 rounded-md border border-red-200">${error.message}</p>`;
-    } finally {
-        if (document.getElementById(CONSTANTS.MODAL_LOADING).classList.contains('is-open')) {
-            closeModal(CONSTANTS.MODAL_LOADING);
-        }
-    }
-}
-
-export async function handleAiEnhancementsRequest() {
-    openModal(CONSTANTS.MODAL_LOADING);
-    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
-    loadingMessage.textContent = "AI is brainstorming feature enhancements...";
-
-    try {
-        const prompt = `
-            Role: You are a Senior Investment Analyst and Product Manager for a financial technology platform.
-            
-            Context: You are reviewing a "Stock Research Hub" SPA with the following features related to the GARP (Growth at a Reasonable Price) investment style:
-            - A "GARP Analysis" report that calculates PEG ratios.
-            - A "Thesis Tracker" for users to save their investment thesis.
-            - Automated generation of a quantifiable thesis from the GARP report.
-            - A "Test Thesis" feature to compare the saved thesis against new data.
-            
-            Task: Suggest 3-5 new, actionable feature ideas for this SPA.
-            
-            CRITICAL CONSTRAINT: Your suggestions must focus *exclusively* on new ways to manage **GARP exit strategies** or perform **portfolio-level GARP analysis**. Do not suggest adding more single-stock valuation metrics or different investment styles.
-            
-            For each suggestion, provide the following in markdown:
-            ### 1. [Feature Name]
-            * **Description:** A brief explanation of what the feature does.
-            * **GARP Value:** How this feature specifically helps a GARP investor make better sell decisions or manage their portfolio more effectively.
-        `;
-
-        const analysisContent = await generatePolishedArticle(prompt, loadingMessage);
-        
-        const contentContainer = document.getElementById('spa-analysis-content');
-        const modalTitle = document.querySelector('#spaAnalysisModal h2');
-        if (modalTitle) modalTitle.textContent = "AI-Powered Enhancement Ideas";
-        
-        contentContainer.innerHTML = marked.parse(analysisContent);
-        openSpaAnalysisModal();
-
-    } catch (error) {
-        console.error("Error during AI enhancements request:", error);
         displayMessageInModal(`Could not complete the analysis: ${error.message}`, 'error');
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
