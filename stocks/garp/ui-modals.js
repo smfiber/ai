@@ -97,6 +97,10 @@ export function openManageStockModal(stockData) {
     document.getElementById('manage-stock-industry').value = stockData.industry || 'N/A';
     document.getElementById('manage-stock-status').value = stockData.status || 'Watchlist';
     
+    // NEW: Populate position tracking fields
+    document.getElementById('manage-stock-purchase-price').value = stockData.purchasePrice || '';
+    document.getElementById('manage-stock-share-count').value = stockData.shareCount || '';
+
     const deleteButton = document.getElementById('delete-stock-button');
     deleteButton.style.display = stockData.isEditMode ? 'block' : 'none';
 
