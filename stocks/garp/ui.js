@@ -1,7 +1,8 @@
 import { CONSTANTS, state, promptMap } from './config.js';
 import { openModal, closeModal, openStockListModal, openSessionLogModal, openManageStockModal, openPortfolioManagerModal, openViewFmpDataModal, openManageFmpEndpointsModal, openManageBroadEndpointsModal, openRawDataViewer, openThesisTrackerModal } from './ui-modals.js';
 import { fetchAndCachePortfolioData, renderPortfolioManagerList, renderSecFilings, renderFilingAnalysisTab } from './ui-render.js';
-import { handleResearchSubmit, handleSaveStock, handleDeleteStock, handleRefreshFmpData, handleAnalysisRequest, handleInvestmentMemoRequest, handleSaveReportToDb, handleSaveToDrive, handleSaveFmpEndpoint, cancelFmpEndpointEdit, handleEditFmpEndpoint, handleDeleteFmpEndpoint, handleSaveBroadEndpoint, cancelBroadEndpointEdit, handleEditBroadEndpoint, handleDeleteBroadEndpoint, handleSaveThesis, handleGenerateAllReportsRequest, handleSaveManualFiling, handleFilingAnalysisRequest } from './ui-handlers.js';
+// FIX: Removed imports for functions that no longer exist in ui-handlers.js
+import { handleResearchSubmit, handleSaveStock, handleDeleteStock, handleRefreshFmpData, handleAnalysisRequest, handleInvestmentMemoRequest, handleSaveReportToDb, handleSaveToDrive, cancelFmpEndpointEdit, cancelBroadEndpointEdit, handleSaveThesis, handleGenerateAllReportsRequest, handleSaveManualFiling, handleFilingAnalysisRequest } from './ui-handlers.js';
 
 // --- DYNAMIC TOOLTIPS ---
 function initializeTooltips() {
@@ -147,6 +148,8 @@ function setupGlobalEventListeners() {
         }
     });
     
+    // FIX: Commented out as the handler functions were removed.
+    /*
     document.getElementById('manageFmpEndpointsModal')?.addEventListener('click', (e) => {
         const target = e.target.closest('button');
         if (!target) return;
@@ -158,6 +161,7 @@ function setupGlobalEventListeners() {
             handleDeleteFmpEndpoint(id);
         }
     });
+    */
 }
 
 export function setupEventListeners() {
@@ -174,10 +178,11 @@ export function setupEventListeners() {
         }
     });
 
-    document.getElementById('manage-fmp-endpoint-form')?.addEventListener('submit', handleSaveFmpEndpoint);
+    // FIX: Commented out as the handler functions were removed.
+    // document.getElementById('manage-fmp-endpoint-form')?.addEventListener('submit', handleSaveFmpEndpoint);
     document.getElementById('cancel-fmp-endpoint-edit')?.addEventListener('click', cancelFmpEndpointEdit);
 
-    document.getElementById('manage-broad-endpoint-form')?.addEventListener('submit', handleSaveBroadEndpoint);
+    // document.getElementById('manage-broad-endpoint-form')?.addEventListener('submit', handleSaveBroadEndpoint);
     document.getElementById('cancel-broad-endpoint-edit')?.addEventListener('click', cancelBroadEndpointEdit);
 
     document.querySelectorAll('.save-to-drive-button').forEach(button => {
@@ -302,6 +307,8 @@ export function setupEventListeners() {
         if (target.id === 'analyze-latest-10q-button') handleFilingAnalysisRequest(symbol, '10-Q');
     });
 	
+    // FIX: Commented out as the handler functions were removed.
+    /*
 	document.getElementById('manageBroadEndpointsModal')?.addEventListener('click', (e) => {
         const target = e.target.closest('button');
         if (!target) return;
@@ -313,6 +320,7 @@ export function setupEventListeners() {
             handleDeleteBroadEndpoint(id);
         }
     });
+    */
     
     document.getElementById('thesis-tracker-form')?.addEventListener('submit', handleSaveThesis);
 
