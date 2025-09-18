@@ -365,7 +365,6 @@ You are a Senior Investment Analyst at a GARP-focused ("Growth at a Reasonable P
 {allAnalysesData}
 `.trim();
 
-// NEW: Prompt for generating a peer list using AI
 export const PEER_ANALYSIS_PROMPT = `
 Role: You are a market analyst AI. Your task is to identify the top publicly traded competitors for a given company.
 
@@ -380,6 +379,42 @@ Example Output:
     { "companyName": "Competitor A Inc.", "ticker": "COMPA" },
     { "companyName": "Competitor B Corp.", "ticker": "COMPB" }
 ]
+`.trim();
+
+// NEW: Prompt for the GARP Exit Strategy Memo
+export const GARP_EXIT_STRATEGY_PROMPT = `
+Role: You are a disciplined "Growth at a Reasonable Price" (GARP) portfolio manager. Your task is to analyze the provided data to determine if it's time to sell a stock, based on a clear, data-driven framework.
+
+Data Instructions: Your analysis MUST be based *exclusively* on the pre-calculated metrics in the JSON data below. Do not invent data. If a metric is "N/A", state that.
+
+Output Format: Use professional markdown. Use ## for the main sections. For each category, create a bulleted list of your findings based on the data.
+
+JSON Data with Pre-Calculated Sell Signals:
+{jsonData}
+
+# GARP Sell Signal Analysis: {companyName} ({tickerSymbol})
+
+## 1. Valuation Check: Has the "Reasonable Price" Become Unreasonable?
+Analyze the data in \`valuationCheck\` to identify red flags.
+- **P/E vs. Peers:** Is the current P/E ratio (\`currentPe\`) significantly higher than the peer median (\`peerMedianPe\`)?
+- **P/E vs. History:** Is the current P/E ratio higher than its own historical average (\`historicalPe\`)?
+- **PEG Ratio:** Is the PEG ratio (\`pegRatio\`) approaching or exceeding 2.0, suggesting the price has outrun its forward growth expectations?
+
+## 2. Growth Check: Is the Growth Story Faltering?
+Analyze the data in \`growthCheck\`.
+- **Revenue Deceleration:** Does the \`revenueGrowthTrend\` show a clear and significant slowdown in recent years?
+- **Forward Growth:** Is the forward EPS growth forecast (\`forwardEpsGrowth\`) weak or decelerating compared to past performance?
+
+## 3. Fundamentals Check: Is the Business Health Deteriorating?
+Analyze the data in \`fundamentalsCheck\`.
+- **Margin Erosion:** Do the recent years in \`netMarginTrend\` show a pattern of declining profitability?
+- **Balance Sheet Risk:** Is the company taking on more debt, as shown by a rising trend in the \`debtToEquityTrend\`?
+
+## 4. Final Verdict: Synthesis & Recommendation
+Synthesize all the points above. Count the number of significant red flags identified. Based on the weight of the evidence, provide a clear, final recommendation.
+- **Hold:** The original GARP thesis remains largely intact. Few, if any, significant red flags are present.
+- **Monitor Closely (Take Partial Profits):** Some red flags are appearing (e.g., valuation is stretched, but fundamentals remain strong). The risk/reward profile has changed. It may be prudent to trim the position.
+- **Sell Candidate:** Multiple, significant red flags are present across valuation, growth, and fundamentals. The original reasons for owning the stock are no longer valid.
 `.trim();
 
 
@@ -408,15 +443,19 @@ export const promptMap = {
         prompt: INVESTMENT_MEMO_PROMPT,
         requires: [] // This prompt uses other reports, not raw FMP data.
     },
-    // NEW: Added for consistency, though not used in the same way as others
     'PeerAnalysis': {
         prompt: PEER_ANALYSIS_PROMPT,
         requires: []
+    },
+    // NEW: Added for the Exit Strategy feature
+    'GarpExitStrategy': {
+        prompt: GARP_EXIT_STRATEGY_PROMPT,
+        requires: ['key_metrics_annual', 'ratios_annual', 'income_statement_annual', 'analyst_estimates', 'key_metrics_ttm', 'ratios_ttm']
     }
 };
 
 export const ANALYSIS_ICONS = {
-    'FinancialAnalysis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6a7.5 7.5 0 100 15 7.5 7.5 0 000-15z" /><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.2-5.2" /><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 10.5H10.5v.008H10.5V10.5zm.008 0h.008v4.502h-.008V10.5z" /></svg>`,
+    'FinancialAnalysis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 FONT_WEIGHT="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6a7.5 7.5 0 100 15 7.5 7.5 0 000-15z" /><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.2-5.2" /><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 10.5H10.5v.008H10.5V10.5zm.008 0h.008v4.502h-.008V10.5z" /></svg>`,
     'GarpAnalysis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18L9 11.25l1.5 1.5L13.5 6l3 3 4.5-4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`,
     'MoatAnalysis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.286zm0 13.036h.008v.008h-.008v-.008z" /></svg>`,
     'RiskAssessment': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" /></svg>`,
