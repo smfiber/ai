@@ -1,7 +1,7 @@
 import { CONSTANTS, state, promptMap } from './config.js';
-import { openModal, closeModal, openStockListModal, openSessionLogModal, openManageStockModal, openPortfolioManagerModal, openViewFmpDataModal, openManageFmpEndpointsModal, openManageBroadEndpointsModal, openRawDataViewer, openThesisTrackerModal, openSpaAnalysisModal } from './ui-modals.js';
+import { openModal, closeModal, openStockListModal, openSessionLogModal, openManageStockModal, openPortfolioManagerModal, openViewFmpDataModal, openManageFmpEndpointsModal, openManageBroadEndpointsModal, openRawDataViewer, openThesisTrackerModal, openSpaAnalysisModal, openHelpModal } from './ui-modals.js';
 import { fetchAndCachePortfolioData, renderPortfolioManagerList, renderSecFilings, renderFilingAnalysisTab } from './ui-render.js';
-import { handleResearchSubmit, handleSaveStock, handleDeleteStock, handleRefreshFmpData, handleFetchNews, handleAnalysisRequest, handleInvestmentMemoRequest, handleIncomeMemoRequest, handleSaveReportToDb, handleSaveBroadReportToDb, handleSaveToDrive, handleSectorSelection, handleIndustrySelection, handleSaveFmpEndpoint, cancelFmpEndpointEdit, handleEditFmpEndpoint, handleDeleteFmpEndpoint, handleSaveBroadEndpoint, cancelBroadEndpointEdit, handleEditBroadEndpoint, handleDeleteBroadEndpoint, handleSaveThesis, handleBroadAnalysisRequest, handleGenerateAllReportsRequest, handleGarpValidationRequest, handleSaveManualFiling, handleFilingAnalysisRequest, handleQualityCompounderMemoRequest, handleSpaAnalysisRequest, handleTestThesis } from './ui-handlers.js';
+import { handleResearchSubmit, handleSaveStock, handleDeleteStock, handleRefreshFmpData, handleFetchNews, handleAnalysisRequest, handleInvestmentMemoRequest, handleIncomeMemoRequest, handleSaveReportToDb, handleSaveBroadReportToDb, handleSaveToDrive, handleSectorSelection, handleIndustrySelection, handleSaveFmpEndpoint, cancelFmpEndpointEdit, handleEditFmpEndpoint, handleDeleteFmpEndpoint, handleSaveBroadEndpoint, cancelBroadEndpointEdit, handleEditBroadEndpoint, handleDeleteBroadEndpoint, handleSaveThesis, handleBroadAnalysisRequest, handleGenerateAllReportsRequest, handleGarpValidationRequest, handleSaveManualFiling, handleFilingAnalysisRequest, handleQualityCompounderMemoRequest, handleSpaAnalysisRequest, handleTestThesis, handleAiEnhancementsRequest } from './ui-handlers.js';
 
 // --- PROMPT MAPPING ---
 // The main promptMap is now imported directly from config.js
@@ -254,8 +254,11 @@ export function setupEventListeners() {
     document.getElementById('manage-broad-endpoints-button')?.addEventListener('click', openManageBroadEndpointsModal);
     document.getElementById('session-log-button')?.addEventListener('click', openSessionLogModal);
     document.getElementById('analyze-spa-button')?.addEventListener('click', handleSpaAnalysisRequest);
+    document.getElementById('help-button')?.addEventListener('click', openHelpModal);
+    document.getElementById('ai-enhancements-button')?.addEventListener('click', handleAiEnhancementsRequest);
 
     const modalsToClose = [
+        { modal: 'helpModal', button: 'close-help-modal', bg: 'close-help-modal-bg' },
         { modal: CONSTANTS.MODAL_CUSTOM_ANALYSIS, button: 'close-custom-analysis-modal', bg: 'close-custom-analysis-modal-bg' },
         { modal: CONSTANTS.MODAL_INDUSTRY_ANALYSIS, button: 'close-industry-analysis-modal', bg: 'close-industry-analysis-modal-bg' },
         { modal: CONSTANTS.MODAL_MANAGE_STOCK, bg: 'close-manage-stock-modal-bg'},
