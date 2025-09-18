@@ -1,8 +1,9 @@
-// ADD _renderGroupedStockList to the export list
-import { CONSTANTS, SECTORS, SECTOR_ICONS, state, ANALYSIS_ICONS } from './config.js'; 
+import { CONSTANTS, state } from './config.js'; 
 import { callApi, getFmpStockData } from './api.js';
 import { getSecInsiderTrading, getSecInstitutionalOwnership, getSecMaterialEvents, getSecAnnualReports, getSecQuarterlyReports } from './sec-api.js';
-import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, Timestamp, doc, collection, getDocs, query, limit, addDoc, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+// FIX: Removed 'handleGarpValidationRequest' which no longer exists in ui-handlers.js
+import { handleAnalysisRequest, handleInvestmentMemoRequest, handleFilingAnalysisRequest } from './ui-handlers.js';
 
 // --- UTILITY & SECURITY HELPERS ---
 
@@ -11,20 +12,6 @@ function sanitizeText(text) {
     const tempDiv = document.createElement('div');
     tempDiv.textContent = text;
     return tempDiv.innerHTML;
-}
-
-async function getScreenerInteractions() {
-    const interactions = {};
-    if (!state.db) return interactions;
-    try {
-        const querySnapshot = await getDocs(collection(state.db, CONSTANTS.DB_COLLECTION_SCREENER_INTERACTIONS));
-        querySnapshot.forEach(doc => {
-            interactions[doc.id] = doc.data();
-        });
-    } catch (error) {
-        console.error("Error fetching screener interactions:", error);
-    }
-    return interactions;
 }
 
 // --- DATA FETCHING & CACHING ---
@@ -56,63 +43,6 @@ export async function fetchAndCachePortfolioData() {
 
 
 // --- UI RENDERING ---
-
-export async function renderSectorButtons() {
-    const container = document.getElementById('sector-buttons-container');
-    if (!container) return;
-    
-    const interactions = await getScreenerInteractions();
-
-    container.innerHTML = SECTORS.map(sector => {
-        const icon = SECTOR_ICONS[sector] || '';
-        const interaction = interactions[sector];
-        const lastClickedDate = interaction?.lastClicked ? interaction.lastClicked.toDate().toLocaleDateString() : 'Never';
-        return `
-            <button class="flex flex-col items-center justify-center p-4 text-center bg-sky-100 text-sky-800 hover:bg-sky-200 rounded-lg shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-1" data-sector="${sanitizeText(sector)}">
-                ${icon}
-                <span class="mt-2 font-semibold text-sm">${sanitizeText(sector)}</span>
-                <span class="mt-1 text-xs text-sky-600 last-clicked-date">Last Clicked: ${lastClickedDate}</span>
-            </button>
-        `
-    }).join('');
-}
-
-export async function displayIndustryScreener() {
-    try {
-        const url = `https://financialmodelingprep.com/stable/available-industries?apikey=${state.fmpApiKey}`;
-        const industryData = await callApi(url);
-        if (Array.isArray(industryData)) {
-            // FIX: Handle both object array and string array formats from the API.
-            state.availableIndustries = industryData.map(item => (typeof item === 'object' && item.industry) ? item.industry : item).filter(Boolean).sort();
-            await renderIndustryButtons();
-        }
-    } catch (error) {
-        console.error("Error fetching available industries:", error);
-        const container = document.getElementById('industry-buttons-container');
-        if (container) {
-            container.innerHTML = `<p class="text-red-500 col-span-full">Could not load industry data.</p>`;
-        }
-    }
-}
-
-async function renderIndustryButtons() {
-    const container = document.getElementById('industry-buttons-container');
-    if (!container) return;
-    
-    const interactions = await getScreenerInteractions();
-    const genericIcon = `<svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>`; // Using Industrials icon as generic
-
-    container.innerHTML = state.availableIndustries.map(industry => {
-        const interaction = interactions[industry];
-        const lastClickedDate = interaction?.lastClicked ? interaction.lastClicked.toDate().toLocaleDateString() : 'Never';
-        return `
-        <button class="flex flex-col items-center justify-center p-4 text-center bg-teal-100 text-teal-800 hover:bg-teal-200 rounded-lg shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-1" data-industry="${sanitizeText(industry)}">
-            ${genericIcon}
-            <span class="mt-2 font-semibold text-sm">${sanitizeText(industry)}</span>
-            <span class="mt-1 text-xs text-teal-600 last-clicked-date">Last Clicked: ${lastClickedDate}</span>
-        </button>
-    `}).join('');
-}
 
 export function renderOverviewCard(data, symbol, status) {
     const profile = data.profile?.[0] || {};
@@ -181,65 +111,11 @@ export function renderOverviewCard(data, symbol, status) {
             <div class="mt-6 border-t pt-4 flex items-center flex-wrap gap-x-4 gap-y-2 justify-center">
                 <button data-symbol="${symbol}" class="refresh-fmp-button text-sm bg-cyan-100 text-cyan-700 hover:bg-cyan-200 font-semibold py-2 px-4 rounded-lg">Refresh FMP</button>
                 <button data-symbol="${symbol}" class="view-fmp-data-button text-sm bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg">View FMP Data</button>
-                <button data-symbol="${symbol}" class="fetch-news-button text-sm bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg">Fetch News</button>
             </div>
             <div class="text-right text-xs text-gray-400 mt-4">
                 <div>${fmpTimestampString}</div>
             </div>
         </div>`;
-}
-
-function getSentimentDisplay(sentiment) {
-    switch (sentiment) {
-        case 'Bullish':
-        case 'Positive':
-            return { icon: '総', colorClass: 'text-green-600', bgClass: 'bg-green-100', textClass: 'text-green-800' };
-        case 'Bearish':
-        case 'Negative':
-            return { icon: '綜', colorClass: 'text-red-600', bgClass: 'bg-red-100', textClass: 'text-red-800' };
-        case 'Neutral':
-            return { icon: '', colorClass: 'text-gray-600', bgClass: 'bg-gray-100', textClass: 'text-gray-800' };
-        default:
-            return { icon: '', colorClass: '', bgClass: '', textClass: '' };
-    }
-}
-
-export function renderNewsArticles(articlesWithSentiment, summaryMarkdown, symbol) {
-    const card = document.getElementById(`card-${symbol}`);
-    if (!card) return;
-
-    let existingNewsContainer = card.querySelector('.news-container');
-    if (existingNewsContainer) existingNewsContainer.remove();
-
-    const newsContainer = document.createElement('div');
-    newsContainer.className = 'news-container mt-4 border-t pt-4';
-
-    if (articlesWithSentiment.length === 0) {
-        newsContainer.innerHTML = `<p class="text-sm text-gray-500">No recent news articles found in the last 30 days.</p>`;
-    } else {
-        const impactColorMap = { 'High': 'bg-red-500', 'Medium': 'bg-yellow-500', 'Low': 'bg-blue-500' };
-        const articlesHtml = articlesWithSentiment.map(article => {
-            const { bgClass: sentimentBg, textClass: sentimentText } = getSentimentDisplay(article.sentiment);
-            const impactColor = impactColorMap[article.impact] || 'bg-gray-500';
-
-            return `
-                <div class="mb-4 p-4 rounded-lg border border-gray-200 bg-white shadow-sm">
-                    <a href="${sanitizeText(article.url)}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:underline font-semibold block mb-2">${sanitizeText(article.title)}</a>
-                    <p class="text-sm text-gray-700 mb-3">"${sanitizeText(article.summary)}"</p>
-                    <div class="flex flex-wrap items-center gap-2 text-xs font-medium">
-                        <span class="px-2 py-1 rounded-full ${sentimentBg} ${sentimentText}">${sanitizeText(article.sentiment)}</span>
-                        <span class="px-2 py-1 rounded-full text-white ${impactColor}">Impact: ${sanitizeText(article.impact)}</span>
-                        <span class="px-2 py-1 rounded-full bg-gray-200 text-gray-800">${sanitizeText(article.category)}</span>
-                        <span class="px-2 py-1 rounded-full bg-gray-200 text-gray-800">${sanitizeText(article.date)}</span>
-                    </div>
-                </div>
-            `;
-        }).join('');
-        
-        const summaryHtml = summaryMarkdown ? marked.parse(summaryMarkdown) : '';
-        newsContainer.innerHTML = `<h3 class="text-lg font-bold text-gray-700 mb-3">Recent News Analysis</h3>${articlesHtml}${summaryHtml}`;
-    }
-    card.appendChild(newsContainer);
 }
 
 export function renderPortfolioManagerList() {
@@ -744,12 +620,10 @@ export function renderThesisTracker(container, ticker) {
 
     const stock = state.portfolioCache.find(s => s.ticker === ticker);
 
-    // --- START OF FIX: Added a guard clause to prevent crash ---
     if (!stock) {
         container.innerHTML = `<div class="p-4 text-center text-red-500">Error: Could not find data for ${ticker} in the cache.</div>`;
         return;
     }
-    // --- END OF FIX ---
 
     const thesisContent = stock.thesis || ''; 
 
@@ -767,11 +641,17 @@ export function renderThesisTracker(container, ticker) {
     container.innerHTML = `
         <div class="flex justify-between items-center mb-4 border-b pb-2">
              <h3 class="text-xl font-bold text-gray-800">My Investment Thesis</h3>
-             <button id="edit-thesis-button" data-ticker="${ticker}" class="bg-indigo-100 hover:bg-indigo-200 text-indigo-700 font-semibold py-1 px-4 rounded-lg text-sm">
-                ${thesisContent ? 'Edit Thesis' : 'Write Thesis'}
-             </button>
+             <div class="flex items-center gap-2">
+                <button id="test-thesis-button" data-ticker="${ticker}" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-1 px-4 rounded-lg text-sm disabled:bg-gray-400 disabled:cursor-not-allowed" ${!thesisContent ? 'disabled' : ''} title="Use AI to test this thesis against the latest data">
+                    Test Thesis
+                </button>
+                <button id="edit-thesis-button" data-ticker="${ticker}" class="bg-indigo-100 hover:bg-indigo-200 text-indigo-700 font-semibold py-1 px-4 rounded-lg text-sm">
+                    ${thesisContent ? 'Edit Thesis' : 'Write Thesis'}
+                </button>
+             </div>
         </div>
         ${contentHtml}
+        <div id="thesis-test-result-container" class="mt-4"></div>
     `;
 }
 
@@ -833,25 +713,20 @@ export function updateReportStatus(statusContainer, reports, activeReportId, ana
 
     const generateNewBtn = document.getElementById(`generate-new-${analysisParams.reportType}`);
     if (generateNewBtn) {
-        generateNewBtn.addEventListener('click', async () => {
-            // Dynamically import the handlers only when needed
-            const handlers = await import('./ui-handlers.js');
-            
+        generateNewBtn.addEventListener('click', () => {
             // Add special handling for reports with custom generation logic
             if (analysisParams.reportType === 'InvestmentMemo') {
-                handlers.handleInvestmentMemoRequest(analysisParams.symbol, true);
-            } else if (analysisParams.reportType === 'GarpValidation') {
-                handlers.handleGarpValidationRequest(analysisParams.symbol, true);
+                handleInvestmentMemoRequest(analysisParams.symbol, true);
             } else if (analysisParams.reportType.startsWith('Form')) {
                 let formType;
                 if (analysisParams.reportType.includes('8K')) formType = '8-K';
                 else if (analysisParams.reportType.includes('10K')) formType = '10-K';
                 else if (analysisParams.reportType.includes('10Q')) formType = '10-Q';
                 if (formType) {
-                    handlers.handleFilingAnalysisRequest(analysisParams.symbol, formType, true);
+                    handleFilingAnalysisRequest(analysisParams.symbol, formType, true);
                 }
             } else {
-                handlers.handleAnalysisRequest(analysisParams.symbol, analysisParams.reportType, analysisParams.promptConfig, true);
+                handleAnalysisRequest(analysisParams.symbol, analysisParams.reportType, analysisParams.promptConfig, true);
             }
         });
     }
@@ -890,13 +765,6 @@ export function updateBroadReportStatus(statusContainer, reports, activeReportId
                 displayReport(contentContainer, selectedReport.content);
                 updateBroadReportStatus(statusContainer, reports, selectedReport.id, analysisParams);
             }
-        });
-    }
-
-    const generateNewBtn = document.getElementById(`broad-generate-new-${analysisParams.reportType}`);
-    if (generateNewBtn) {
-        generateNewBtn.addEventListener('click', () => {
-            handleBroadAnalysisRequest(analysisParams.contextName, analysisParams.contextType, analysisParams.reportType, true);
         });
     }
 }
@@ -982,4 +850,57 @@ export async function renderFilingAnalysisTab(ticker, formType) {
         console.error(`Error rendering ${formType} tab:`, error);
         recentListContainer.innerHTML = `<p class="text-red-500">Error loading data: ${error.message}</p>`;
     }
+}
+
+// NEW FUNCTION: Renders the user's position performance.
+export function renderMyPosition(container, ticker, fmpData) {
+    if (!container) return;
+
+    const stock = state.portfolioCache.find(s => s.ticker === ticker);
+    const profile = fmpData.profile?.[0] || {};
+    const currentPrice = profile.price;
+
+    // Check if we have the necessary data to render the component
+    if (!stock || !stock.purchasePrice || !stock.shareCount || !currentPrice) {
+        container.innerHTML = ''; // Clear the container if no position data
+        return;
+    }
+
+    const { purchasePrice, shareCount } = stock;
+
+    // Calculate performance metrics
+    const costBasis = purchasePrice * shareCount;
+    const marketValue = currentPrice * shareCount;
+    const gainLoss = marketValue - costBasis;
+    const gainLossPercent = costBasis > 0 ? (gainLoss / costBasis) * 100 : 0;
+
+    const gainLossClass = gainLoss >= 0 ? 'price-gain' : 'price-loss';
+    const gainLossSign = gainLoss >= 0 ? '+' : '';
+
+    // Helper for formatting currency
+    const formatCurrency = (num) => `$${num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+    container.innerHTML = `
+        <div class="mb-4">
+            <h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">My Position</h3>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center p-4 bg-gray-50 rounded-lg border">
+                <div>
+                    <p class="text-sm text-gray-500">Market Value</p>
+                    <p class="text-xl font-semibold text-gray-800">${formatCurrency(marketValue)}</p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500">Cost Basis</p>
+                    <p class="text-xl font-semibold text-gray-800">${formatCurrency(costBasis)}</p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500">Unrealized Gain/Loss</p>
+                    <p class="text-xl font-semibold ${gainLossClass}">${gainLossSign}${formatCurrency(Math.abs(gainLoss))}</p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500">Return</p>
+                    <p class="text-xl font-semibold ${gainLossClass}">${gainLossSign}${gainLossPercent.toFixed(2)}%</p>
+                </div>
+            </div>
+        </div>
+    `;
 }
