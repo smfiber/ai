@@ -1,6 +1,6 @@
 import { CONSTANTS, state, ANALYSIS_ICONS } from './config.js';
 import { getFmpStockData, getGroupedFmpData } from './api.js';
-import { renderValuationHealthDashboard, renderThesisTracker, _renderGroupedStockList, renderMyPosition } from './ui-render.js';
+import { renderValuationHealthDashboard, renderThesisTracker, _renderGroupedStockList } from './ui-render.js'; 
 import { getDocs, query, collection, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- GENERIC MODAL HELPERS ---
@@ -97,9 +97,6 @@ export function openManageStockModal(stockData) {
     document.getElementById('manage-stock-industry').value = stockData.industry || 'N/A';
     document.getElementById('manage-stock-status').value = stockData.status || 'Watchlist';
     
-    document.getElementById('manage-stock-purchase-price').value = stockData.purchasePrice || '';
-    document.getElementById('manage-stock-share-count').value = stockData.shareCount || '';
-
     const deleteButton = document.getElementById('delete-stock-button');
     deleteButton.style.display = stockData.isEditMode ? 'block' : 'none';
 
@@ -133,6 +130,13 @@ export function openManageFmpEndpointsModal() {
  */
 export function openManageBroadEndpointsModal() {
     openModal(CONSTANTS.MODAL_MANAGE_BROAD_ENDPOINTS);
+}
+
+/**
+ * Opens the "Analyze SPA" modal.
+ */
+export function openSpaAnalysisModal() {
+    openModal('spaAnalysisModal');
 }
 
 /**
@@ -210,7 +214,6 @@ export async function openRawDataViewer(ticker) {
     profileDisplayContainer.innerHTML = '';
     document.getElementById('valuation-health-container').innerHTML = '';
     document.getElementById('thesis-tracker-container').innerHTML = '';
-    document.getElementById('my-position-container').innerHTML = '';
     
     // Reset SEC tab content to loading placeholders
     document.getElementById('insider-trading-container').innerHTML = `<h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Recent Insider Activity (Form 4)</h3><div class="content-placeholder text-center text-gray-500 py-8">Loading...</div>`;
@@ -298,17 +301,32 @@ export async function openRawDataViewer(ticker) {
              rawDataContainer.innerHTML = '<p class="text-center text-gray-500 py-8">Could not load grouped raw data.</p>';
         }
 
-        // --- START OF UI REFACTOR (GARP-focused) ---
+        // --- START OF UI REFACTOR ---
 
-        // Define the required buttons for the GARP Memo
-        const requiredButtons = [
-            { reportType: 'GarpAnalysis', text: 'GARP', tooltip: 'Growth at a Reasonable Price. Is the valuation justified by its growth?' },
+        // Build individual analysis tile buttons
+        const quantButtons = [
             { reportType: 'FinancialAnalysis', text: 'Financial Analysis', tooltip: 'Deep dive into financial statements, ratios, and health.' },
-            { reportType: 'RiskAssessment', text: 'Risk Assessment', tooltip: 'Identifies potential financial, market, and business risks.' },
+            { reportType: 'UndervaluedAnalysis', text: 'Undervalued', tooltip: 'Assess if the stock is a potential bargain based on valuation metrics.' },
+            { reportType: 'GarpAnalysis', text: 'GARP', tooltip: 'Growth at a Reasonable Price. Is the valuation justified by its growth?' },
             { reportType: 'MoatAnalysis', text: 'Moat Analysis', tooltip: 'Evaluates the company\'s competitive advantages.' },
-            { reportType: 'CapitalAllocators', text: 'Capital Allocators', tooltip: 'Assesses management\'s skill in deploying capital.' }
+            { reportType: 'RiskAssessment', text: 'Risk Assessment', tooltip: 'Identifies potential financial, market, and business risks.' },
+            { reportType: 'BullVsBear', text: 'Bull vs. Bear', tooltip: 'Presents both the positive and negative investment arguments.' },
         ];
-
+        const narrativeButtons = [
+            { reportType: 'StockFortress', text: 'The Fortress', tooltip: 'Is this a resilient, all-weather business with a rock-solid balance sheet?' },
+            { reportType: 'StockDisruptor', text: 'The Disruptor', tooltip: 'Is this a high-growth innovator with potential to redefine its industry?' },
+            { reportType: 'StockPhoenix', text: 'The Phoenix', tooltip: 'Is this a fallen angel showing credible signs of a business turnaround?' },
+            { reportType: 'StockLinchpin', text: 'The Linchpin', tooltip: 'Does this company control a vital, irreplaceable choke point in its industry?' },
+            { reportType: 'StockUntouchables', text: 'The Untouchables', tooltip: 'Analyzes the power of a "cult" brand and its translation to durable profits.' },
+            { reportType: 'CompoundingMachine', text: 'The Compounder', tooltip: 'Does this business have the traits of a long-term "compounding machine"?' },
+        ];
+        const specializedButtons = [
+             { reportType: 'CapitalAllocators', text: 'Capital Allocators', tooltip: 'Assesses management\'s skill in deploying capital.' },
+             { reportType: 'GrowthOutlook', text: 'Growth Outlook', tooltip: 'Analyzes the company\'s future growth potential.' },
+             { reportType: 'DividendDeepDive', text: 'Dividend Deep Dive', tooltip: 'Assesses the safety and sustainability of the company\'s dividend.' },
+             { reportType: 'NarrativeCatalyst', text: 'Catalysts', tooltip: 'Identifies the investment story and future catalysts.' },
+        ];
+        
         const buildButtonHtml = (buttons) => buttons.map((btn) => {
              const hasSaved = savedReportTypes.has(btn.reportType) ? 'has-saved-report' : '';
              const icon = ANALYSIS_ICONS[btn.reportType] || '';
@@ -318,49 +336,91 @@ export async function openRawDataViewer(ticker) {
                      </button>`;
         }).join('');
         
-        const requiredHtml = buildButtonHtml(requiredButtons);
+        const quantHtml = buildButtonHtml(quantButtons);
+        const narrativeHtml = buildButtonHtml(narrativeButtons);
+        const specializedHtml = buildButtonHtml(specializedButtons);
 
         // Define the main workflow buttons
+        const peerAnalysisBtn = `
+            <button data-symbol="${ticker}" data-report-type="CompetitiveLandscape" class="ai-analysis-button bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg flex items-center justify-center gap-2 transition-all duration-200 hover:shadow-lg text-base" data-tooltip="How does this company stack up against its main competitors?">
+                ${ANALYSIS_ICONS['CompetitiveLandscape']}
+                Run Peer Analysis
+            </button>`;
+            
         const generateAllBtn = `
-            <button data-symbol="${ticker}" id="generate-all-reports-button" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg flex items-center justify-center gap-2 transition-all duration-200 hover:shadow-lg text-base" data-tooltip="Generates the 5 core reports required for the GARP Memo analysis.">
+            <button data-symbol="${ticker}" id="generate-all-reports-button" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg flex items-center justify-center gap-2 transition-all duration-200 hover:shadow-lg text-base" data-tooltip="Generates the core reports required for the GARP and Income Memo analyses.">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m.75 12l3 3m0 0 3-3m-3 3v-6m-1.5-9H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" /></svg>
                 Generate Prerequisite Reports
             </button>`;
 
+        const garpValidationBtn = `
+            <button data-symbol="${ticker}" id="garp-validation-button" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg flex items-center justify-center gap-2 transition-all duration-200 hover:shadow-lg text-base" data-tooltip="Synthesizes GARP, Financial, and Risk reports into a final verdict. Requires these 3 analyses to be saved first.">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+                GARP Validation Report
+            </button>`;
+            
         const garpMemoBtn = `
-            <button data-symbol="${ticker}" id="investment-memo-button" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg flex items-center justify-center gap-2 transition-all duration-200 hover:shadow-lg text-base" data-tooltip="Synthesizes the 5 core analysis reports into a final GARP-focused investment memo. Requires the prerequisite reports to be saved first.">
+            <button data-symbol="${ticker}" id="investment-memo-button" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg flex items-center justify-center gap-2 transition-all duration-200 hover:shadow-lg text-base" data-tooltip="Synthesizes the core analysis reports into a final GARP-focused investment memo. Requires the prerequisite reports to be saved first.">
                 ${ANALYSIS_ICONS['InvestmentMemo']}
                 Generate GARP Memo
             </button>`;
-        
-        // NEW: Button for the GARP Exit Memo
-        const garpExitMemoBtn = `
-            <button data-symbol="${ticker}" id="garp-exit-memo-button" class="bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 px-6 rounded-lg flex items-center justify-center gap-2 transition-all duration-200 hover:shadow-lg text-base" data-tooltip="Analyzes the stock for GARP-based sell signals, such as stretched valuation or faltering growth.">
-                <svg xmlns="http://www.w3.org/2000/svg" class="tile-icon h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9" /></svg>
-                Generate Exit Memo
+
+        const incomeMemoBtn = `
+            <button data-symbol="${ticker}" id="income-memo-button" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 px-6 rounded-lg flex items-center justify-center gap-2 transition-all duration-200 hover:shadow-lg text-base" data-tooltip="Synthesizes Dividend, Financial Health, and Moat reports into a final verdict for income investors. Requires these 3 analyses to be saved first.">
+                ${ANALYSIS_ICONS['IncomeMemo']}
+                Generate Income Memo
             </button>`;
 
-        // Assemble the new simplified workflow layout
+        const qualityMemoBtn = `
+            <button data-symbol="${ticker}" id="quality-compounder-memo-button" class="bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 px-6 rounded-lg flex items-center justify-center gap-2 transition-all duration-200 hover:shadow-lg text-base" data-tooltip="Synthesizes quality, growth, and risk reports into a final verdict for long-term investors. Requires the prerequisite reports to be saved first.">
+                ${ANALYSIS_ICONS['QualityCompounderMemo']}
+                Generate Quality Memo
+            </button>`;
+
+        // Assemble the new single-column guided workflow layout
         aiButtonsContainer.innerHTML = `
             <div class="space-y-10">
                 <div>
+                    <div class="relative text-center mb-4">
+                        <span class="absolute inset-x-0 top-1/2 h-px bg-gray-200" aria-hidden="true"></span>
+                        <span class="relative bg-white px-4 text-sm font-bold text-gray-500 uppercase">Step 1: Start with the Competitive Landscape</span>
+                    </div>
+                    <div class="flex justify-center">${peerAnalysisBtn}</div>
+                </div>
+
+                <div>
                     <div class="relative text-center mb-6">
                         <span class="absolute inset-x-0 top-1/2 h-px bg-gray-200" aria-hidden="true"></span>
-                        <span class="relative bg-white px-4 text-sm font-bold text-gray-500 uppercase">Step 1: Perform Foundational Analysis</span>
+                        <span class="relative bg-white px-4 text-sm font-bold text-gray-500 uppercase">Step 2: Perform Foundational Analysis</span>
                     </div>
                     <div class="flex justify-center mb-6">${generateAllBtn}</div>
                     <p class="text-center text-sm text-gray-500 mb-4 italic">...or run individual analyses:</p>
-                    <div class="flex flex-wrap gap-2 justify-center">${requiredHtml}</div>
+                    <div class="space-y-6">
+                        <div>
+                            <h3 class="text-sm font-bold text-gray-500 uppercase text-center mb-3">Quantitative Analysis</h3>
+                            <div class="flex flex-wrap gap-2 justify-center">${quantHtml}</div>
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-bold text-gray-500 uppercase text-center mb-3">Investment Thesis & Narrative Analysis</h3>
+                            <div class="flex flex-wrap gap-2 justify-center">${narrativeHtml}</div>
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-bold text-gray-500 uppercase text-center mb-3">Specialized Analysis</h3>
+                            <div class="flex flex-wrap gap-2 justify-center">${specializedHtml}</div>
+                        </div>
+                    </div>
                 </div>
 
                 <div>
                     <div class="relative text-center mb-4">
                         <span class="absolute inset-x-0 top-1/2 h-px bg-gray-200" aria-hidden="true"></span>
-                        <span class="relative bg-white px-4 text-sm font-bold text-gray-500 uppercase">Step 2: Synthesize & Conclude</span>
+                        <span class="relative bg-white px-4 text-sm font-bold text-gray-500 uppercase">Step 3: Synthesize & Conclude</span>
                     </div>
                     <div class="flex flex-wrap justify-center gap-4">
+                        ${garpValidationBtn}
                         ${garpMemoBtn}
-                        ${garpExitMemoBtn}
+                        ${incomeMemoBtn}
+                        ${qualityMemoBtn}
                     </div>
                 </div>
             </div>
@@ -397,7 +457,6 @@ export async function openRawDataViewer(ticker) {
         // Render Dashboard tab content
         renderValuationHealthDashboard(document.getElementById('valuation-health-container'), ticker, fmpData);
         renderThesisTracker(document.getElementById('thesis-tracker-container'), ticker);
-        renderMyPosition(document.getElementById('my-position-container'), ticker, fmpData);
 
     } catch (error) {
         console.error('Error opening raw data viewer:', error);
@@ -405,4 +464,53 @@ export async function openRawDataViewer(ticker) {
         aiArticleContainer.innerHTML = `<p class="text-red-500 text-center">${error.message}</p>`;
         profileDisplayContainer.innerHTML = `<p class="text-red-500 text-center">${error.message}</p>`;
     }
+}
+
+export function openHelpModal() {
+    const contentContainer = document.getElementById('help-modal-content');
+    if (!contentContainer) return;
+
+    contentContainer.innerHTML = `
+        <h1>Welcome to the Stock Research Hub!</h1>
+        <p>This application is your personal market co-pilot, designed to streamline your investment research process from idea generation to long-term monitoring. Here’s how to get the most out of it.</p>
+        
+        <h2>The Core Workflow (GARP Focus)</h2>
+        <p>While the app supports many analysis types, the primary workflow is built around the <strong>Growth at a Reasonable Price (GARP)</strong> philosophy. Here is the recommended process:</p>
+        <ol>
+            <li><strong>Add a Stock:</strong> Use the "Add Stock" form on the main dashboard to add a company to your lists (Portfolio, Watchlist, etc.).</li>
+            <li><strong>Open the Analysis View:</strong> From any list, click the "View" button for a stock to open its detailed analysis modal.</li>
+            <li><strong>Run the GARP Analysis:</strong> Navigate to the "AI Analysis" tab and click the "GARP" button. This will generate a report on whether the stock's growth is worth the price.</li>
+            <li><strong>Create & Save a Thesis:</strong> The GARP report will automatically generate a quantifiable thesis. Click the "Insert into Thesis Tracker" button to save it. You can also write or edit your thesis manually on the "Dashboard" tab of the analysis modal.</li>
+            <li><strong>Monitor Your Investment:</strong> Periodically, use the new "Test Thesis" button on the "Dashboard" tab. This powerful feature uses the AI to compare your saved thesis against the latest financial data and tells you if your original argument still holds true.</li>
+        </ol>
+
+        <h2>Key Features Explained</h2>
+        <h3>Dashboard & Lists</h3>
+        <p>The main screen gives you an at-a-glance view of your different stock lists. You can manage which stocks are in which list using the "Manage Stock" modal, accessible from several places.</p>
+        
+        <h3>Stock, Sector & Industry Screeners</h3>
+        <p>Use these sections on the main page to find new investment ideas. The Sector and Industry screeners use AI to analyze recent news and highlight noteworthy companies, helping you discover opportunities.</p>
+        
+        <h3>The Analysis Modal</h3>
+        <ul>
+            <li><strong>Dashboard Tab:</strong> Your main hub for a single stock. It features a valuation & health dashboard, your saved investment thesis, and company profile information.</li>
+            <li><strong>AI Analysis Tab:</strong> A suite of over a dozen AI-powered reports. From deep financial breakdowns to narrative reports like "The Disruptor" or "The Fortress," these tools help you understand a company from multiple angles.</li>
+            <li><strong>SEC Filings Tabs:</strong> These tabs allow you to view recent SEC filings (8-K, 10-K, 10-Q), save the text of a filing, and use the AI to analyze and summarize it for you. The app also automatically checks for new filings for your stocks once a day.</li>
+        </ul>
+
+        <h3>Thesis Tracker & Validation</h3>
+        <ul>
+            <li><strong>Thesis Tracker:</strong> This is the foundation of your investment process. A good thesis is a specific, data-driven reason for owning a stock. The "AI-Generated Investment Thesis" from the GARP report is a great starting point.</li>
+            <li><strong>Test Thesis Feature:</strong> This is your primary monitoring tool. Instead of just reacting to price changes, you can proactively check if the fundamental business reasons for your investment are still valid.</li>
+        </ul>
+        
+        <h2>Best Practices</h2>
+        <ul>
+            <li><strong>Start with GARP:</strong> The GARP analysis and its automated thesis generation is the quickest way to establish a strong, data-driven foundation for an investment.</li>
+            <li><strong>Make Your Thesis Quantifiable:</strong> A thesis like "The company will grow" is untestable. A thesis like "The company's ROE will remain above 15%" is testable. The app is designed to help you create and test these specific claims.</li>
+            <li><strong>Trust the Process:</strong> Use the "Test Thesis" feature to make rational, data-driven decisions, rather than reacting emotionally to market volatility.</li>
+        </ul>
+    `;
+
+    openModal('helpModal');
 }
