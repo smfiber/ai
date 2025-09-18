@@ -641,11 +641,17 @@ export function renderThesisTracker(container, ticker) {
     container.innerHTML = `
         <div class="flex justify-between items-center mb-4 border-b pb-2">
              <h3 class="text-xl font-bold text-gray-800">My Investment Thesis</h3>
-             <button id="edit-thesis-button" data-ticker="${ticker}" class="bg-indigo-100 hover:bg-indigo-200 text-indigo-700 font-semibold py-1 px-4 rounded-lg text-sm">
-                ${thesisContent ? 'Edit Thesis' : 'Write Thesis'}
-             </button>
+             <div class="flex items-center gap-2">
+                <button id="test-thesis-button" data-ticker="${ticker}" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-1 px-4 rounded-lg text-sm disabled:bg-gray-400 disabled:cursor-not-allowed" ${!thesisContent ? 'disabled' : ''} title="Use AI to test this thesis against the latest data">
+                    Test Thesis
+                </button>
+                <button id="edit-thesis-button" data-ticker="${ticker}" class="bg-indigo-100 hover:bg-indigo-200 text-indigo-700 font-semibold py-1 px-4 rounded-lg text-sm">
+                    ${thesisContent ? 'Edit Thesis' : 'Write Thesis'}
+                </button>
+             </div>
         </div>
         ${contentHtml}
+        <div id="thesis-test-result-container" class="mt-4"></div>
     `;
 }
 
