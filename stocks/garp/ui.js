@@ -1,8 +1,7 @@
 import { CONSTANTS, state, promptMap } from './config.js';
 import { openModal, closeModal, openStockListModal, openSessionLogModal, openManageStockModal, openPortfolioManagerModal, openViewFmpDataModal, openManageFmpEndpointsModal, openManageBroadEndpointsModal, openRawDataViewer, openThesisTrackerModal } from './ui-modals.js';
 import { fetchAndCachePortfolioData, renderPortfolioManagerList, renderSecFilings, renderFilingAnalysisTab } from './ui-render.js';
-// FIX: Removed imports for functions that no longer exist in ui-handlers.js
-import { handleResearchSubmit, handleSaveStock, handleDeleteStock, handleRefreshFmpData, handleAnalysisRequest, handleInvestmentMemoRequest, handleSaveReportToDb, handleSaveToDrive, cancelFmpEndpointEdit, cancelBroadEndpointEdit, handleSaveThesis, handleGenerateAllReportsRequest, handleSaveManualFiling, handleFilingAnalysisRequest } from './ui-handlers.js';
+import { handleResearchSubmit, handleSaveStock, handleDeleteStock, handleRefreshFmpData, handleAnalysisRequest, handleInvestmentMemoRequest, handleSaveReportToDb, handleSaveToDrive, cancelFmpEndpointEdit, cancelBroadEndpointEdit, handleSaveThesis, handleGenerateAllReportsRequest, handleSaveManualFiling, handleFilingAnalysisRequest, handleGarpExitMemoRequest } from './ui-handlers.js';
 
 // --- DYNAMIC TOOLTIPS ---
 function initializeTooltips() {
@@ -148,20 +147,6 @@ function setupGlobalEventListeners() {
         }
     });
     
-    // FIX: Commented out as the handler functions were removed.
-    /*
-    document.getElementById('manageFmpEndpointsModal')?.addEventListener('click', (e) => {
-        const target = e.target.closest('button');
-        if (!target) return;
-
-        const id = target.dataset.id;
-        if (target.classList.contains('edit-fmp-endpoint-btn')) {
-            handleEditFmpEndpoint(id, target.dataset.name, target.dataset.url);
-        } else if (target.classList.contains('delete-fmp-endpoint-btn')) {
-            handleDeleteFmpEndpoint(id);
-        }
-    });
-    */
 }
 
 export function setupEventListeners() {
@@ -178,11 +163,7 @@ export function setupEventListeners() {
         }
     });
 
-    // FIX: Commented out as the handler functions were removed.
-    // document.getElementById('manage-fmp-endpoint-form')?.addEventListener('submit', handleSaveFmpEndpoint);
     document.getElementById('cancel-fmp-endpoint-edit')?.addEventListener('click', cancelFmpEndpointEdit);
-
-    // document.getElementById('manage-broad-endpoint-form')?.addEventListener('submit', handleSaveBroadEndpoint);
     document.getElementById('cancel-broad-endpoint-edit')?.addEventListener('click', cancelBroadEndpointEdit);
 
     document.querySelectorAll('.save-to-drive-button').forEach(button => {
@@ -301,27 +282,14 @@ export function setupEventListeners() {
         }
         
         if (target.id === 'investment-memo-button') handleInvestmentMemoRequest(symbol);
+        // NEW: Event listener for the Exit Memo button
+        if (target.id === 'garp-exit-memo-button') handleGarpExitMemoRequest(symbol);
         if (target.id === 'generate-all-reports-button') handleGenerateAllReportsRequest(symbol);
         if (target.id === 'analyze-latest-8k-button') handleFilingAnalysisRequest(symbol, '8-K');
         if (target.id === 'analyze-latest-10k-button') handleFilingAnalysisRequest(symbol, '10-K');
         if (target.id === 'analyze-latest-10q-button') handleFilingAnalysisRequest(symbol, '10-Q');
     });
 	
-    // FIX: Commented out as the handler functions were removed.
-    /*
-	document.getElementById('manageBroadEndpointsModal')?.addEventListener('click', (e) => {
-        const target = e.target.closest('button');
-        if (!target) return;
-
-        const id = target.dataset.id;
-        if (target.classList.contains('edit-broad-endpoint-btn')) {
-            handleEditBroadEndpoint(id, target.dataset.name, target.dataset.url);
-        } else if (target.classList.contains('delete-broad-endpoint-btn')) {
-            handleDeleteBroadEndpoint(id);
-        }
-    });
-    */
-    
     document.getElementById('thesis-tracker-form')?.addEventListener('submit', handleSaveThesis);
 
     setupGlobalEventListeners();
