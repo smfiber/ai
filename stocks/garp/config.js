@@ -93,6 +93,25 @@ export const CONSTANTS = {
     DB_COLLECTION_SCREENER_INTERACTIONS: 'screener_interactions',
 };
 
+// --- Placeholders for prompts that were removed during cleanup ---
+// Please replace the placeholder content with your actual, detailed AI prompts.
+const NEWS_SENTIMENT_PROMPT = `[--- PROMPT CONTENT MISSING ---]`;
+const DISRUPTOR_ANALYSIS_PROMPT = `[--- PROMPT CONTENT MISSING ---]`;
+const MACRO_PLAYBOOK_PROMPT = `[--- PROMPT CONTENT MISSING ---]`;
+const INDUSTRY_DISRUPTOR_ANALYSIS_PROMPT = `[--- PROMPT CONTENT MISSING ---]`;
+const INDUSTRY_MACRO_PLAYBOOK_PROMPT = `[--- PROMPT CONTENT MISSING ---]`;
+const ONE_SHOT_INDUSTRY_TREND_PROMPT = `[--- PROMPT CONTENT MISSING ---]`;
+const FORTRESS_ANALYSIS_PROMPT = `[--- PROMPT CONTENT MISSING ---]`;
+const PHOENIX_ANALYSIS_PROMPT = `[--- PROMPT CONTENT MISSING ---]`;
+const PICK_AND_SHOVEL_PROMPT = `[--- PROMPT CONTENT MISSING ---]`;
+const LINCHPIN_ANALYSIS_PROMPT = `[--- PROMPT CONTENT MISSING ---]`;
+const HIDDEN_VALUE_PROMPT = `[--- PROMPT CONTENT MISSING ---]`;
+const UNTOUCHABLES_ANALYSIS_PROMPT = `[--- PROMPT CONTENT MISSING ---]`;
+const INCOME_MEMO_PROMPT = `[--- PROMPT CONTENT MISSING ---]`;
+const GARP_VALIDATION_PROMPT = `[--- PROMPT CONTENT MISSING ---]`;
+const QUALITY_COMPOUNDER_MEMO_PROMPT = `[--- PROMPT CONTENT MISSING ---]`;
+
+
 const FINANCIAL_ANALYSIS_PROMPT = `
 Role: You are a financial analyst AI who excels at explaining complex topics to everyday investors. Your purpose is to generate a rigorous, data-driven financial analysis that is also educational, objective, and easy to understand. Use relatable analogies to clarify financial concepts.
 
@@ -451,14 +470,34 @@ export const promptMap = {
     'GarpExitStrategy': {
         prompt: GARP_EXIT_STRATEGY_PROMPT,
         requires: ['key_metrics_annual', 'ratios_annual', 'income_statement_annual', 'analyst_estimates', 'key_metrics_ttm', 'ratios_ttm']
-    }
+    },
+    // --- ADDED TO CENTRALIZE PROMPTS ---
+    'NewsSentiment': { prompt: NEWS_SENTIMENT_PROMPT, requires: [] },
+    'DisruptorAnalysis': { prompt: DISRUPTOR_ANALYSIS_PROMPT, requires: [] },
+    'MacroPlaybook': { prompt: MACRO_PLAYBOOK_PROMPT, requires: [] },
+    'IndustryDisruptorAnalysis': { prompt: INDUSTRY_DISRUPTOR_ANALYSIS_PROMPT, requires: [] },
+    'IndustryMacroPlaybook': { prompt: INDUSTRY_MACRO_PLAYBOOK_PROMPT, requires: [] },
+    'OneShotIndustryTrend': { prompt: ONE_SHOT_INDUSTRY_TREND_PROMPT, requires: [] },
+    'FortressAnalysis': { prompt: FORTRESS_ANALYSIS_PROMPT, requires: [] },
+    'PhoenixAnalysis': { prompt: PHOENIX_ANALYSIS_PROMPT, requires: [] },
+    'PickAndShovel': { prompt: PICK_AND_SHOVEL_PROMPT, requires: [] },
+    'Linchpin': { prompt: LINCHPIN_ANALYSIS_PROMPT, requires: [] },
+    'HiddenValue': { prompt: HIDDEN_VALUE_PROMPT, requires: [] },
+    'Untouchables': { prompt: UNTOUCHABLES_ANALYSIS_PROMPT, requires: [] },
+    'IncomeMemo': { prompt: INCOME_MEMO_PROMPT, requires: [] },
+    'GarpValidation': { prompt: GARP_VALIDATION_PROMPT, requires: [] },
+    'QualityCompounderMemo': { prompt: QUALITY_COMPOUNDER_MEMO_PROMPT, requires: [] },
 };
 
 export const ANALYSIS_ICONS = {
-    'FinancialAnalysis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 FONT_WEIGHT="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6a7.5 7.5 0 100 15 7.5 7.5 0 000-15z" /><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.2-5.2" /><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 10.5H10.5v.008H10.5V10.5zm.008 0h.008v4.502h-.008V10.5z" /></svg>`,
+    'FinancialAnalysis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6a7.5 7.5 0 100 15 7.5 7.5 0 000-15z" /><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.2-5.2" /><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 10.5H10.5v.008H10.5V10.5zm.008 0h.008v4.502h-.008V10.5z" /></svg>`,
     'GarpAnalysis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18L9 11.25l1.5 1.5L13.5 6l3 3 4.5-4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`,
     'MoatAnalysis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.286zm0 13.036h.008v.008h-.008v-.008z" /></svg>`,
     'RiskAssessment': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" /></svg>`,
     'CapitalAllocators': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15.91 15.91a2.25 2.25 0 01-3.182 0l-3.03-3.03a.75.75 0 011.06-1.061l2.47 2.47 2.47-2.47a.75.75 0 011.06 1.06l-3.03 3.03z" /></svg>`,
-    'InvestmentMemo': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>`
+    'InvestmentMemo': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>`,
+    'IncomeMemo': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414-.336.75-.75.75h-.75m0 0v-1.5m0 1.5v-1.5m0 0h.172c.22 0 .416.056.588.158a1.5 1.5 0 01.82 1.258V18.75M2.25 6H18m0 0h1.5M2.25 6h15.75M3.75 12h16.5M12 3.75h.008v.008H12V3.75z" /></svg>`,
+    'QualityCompounderMemo': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.471-2.471a.563.563 0 01.8 0l2.5 2.5a.563.563 0 010 .8l-2.47 2.471M11.42 15.17L5.877 21m6.46-6.462L8.625 12.5a.563.563 0 010-.8l2.5-2.5a.563.563 0 01.8 0l2.47 2.471m-5.877 5.877L5.88 15.171m5.541 5.541L3 21a2.652 2.652 0 01-2.849-3.849L8.625 9.62a.563.563 0 01.8 0l2.5 2.5a.563.563 0 010 .8l-2.47 2.471z" /></svg>`,
+    'CompetitiveLandscape': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 15.75l-2.489-2.489m0 0a3.375 3.375 0 10-4.773-4.773 3.375 3.375 0 004.774 4.774zM21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`,
+    'GarpExitStrategy': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`
 };
