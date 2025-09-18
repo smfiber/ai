@@ -1,4 +1,4 @@
-import { CONSTANTS, state, promptMap, NEWS_SENTIMENT_PROMPT, DISRUPTOR_ANALYSIS_PROMPT, MACRO_PLAYBOOK_PROMPT, INDUSTRY_CAPITAL_ALLOCATORS_PROMPT, INDUSTRY_DISRUPTOR_ANALYSIS_PROMPT, INDUSTRY_MACRO_PLAYBOOK_PROMPT, ONE_SHOT_INDUSTRY_TREND_PROMPT, FORTRESS_ANALYSIS_PROMPT, PHOENIX_ANALYSIS_PROMPT, PICK_AND_SHOVEL_PROMPT, LINCHPIN_ANALYSIS_PROMPT, HIDDEN_VALUE_PROMPT, UNTOUCHABLES_ANALYSIS_PROMPT, INVESTMENT_MEMO_PROMPT, INCOME_MEMO_PROMPT, GARP_VALIDATION_PROMPT, ENABLE_STARTER_PLAN_MODE, STARTER_SYMBOLS, ANALYSIS_REQUIREMENTS, QUALITY_COMPOUNDER_MEMO_PROMPT } from './config.js';
+import { CONSTANTS, state, promptMap, ANALYSIS_REQUIREMENTS, ENABLE_STARTER_PLAN_MODE, STARTER_SYMBOLS } from './config.js';
 // --- MODIFICATION: Import the new refinement function ---
 import { callApi, filterValidNews, callGeminiApi, generatePolishedArticle, generatePolishedArticleForSynthesis, generateRefinedArticle, getDriveToken, getOrCreateDriveFolder, createDriveFile, findStocksByIndustry, searchSectorNews, findStocksBySector, synthesizeAndRankCompanies, generateDeepDiveReport, getFmpStockData, getCompetitorsFromGemini } from './api.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -261,7 +261,7 @@ export async function handleFetchNews(symbol) {
                 publicationDate: a.publishedDate ? a.publishedDate.split(' ')[0] : 'N/A' 
             }));
 
-            const prompt = NEWS_SENTIMENT_PROMPT
+            const prompt = promptMap.NewsSentiment.prompt
                 .replace('{companyName}', companyName)
                 .replace('{tickerSymbol}', symbol)
                 .replace('{news_articles_json}', JSON.stringify(articlesForPrompt, null, 2));
@@ -574,7 +574,7 @@ async function handleDisruptorAnalysis(contextName, contextType) {
     contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">Generating AI article: "The Disruptor"...</div>`;
 
     try {
-        const prompt = DISRUPTOR_ANALYSIS_PROMPT.replace(/{sectorName}/g, contextName).replace(/{industryName}/g, contextName);
+        const prompt = promptMap.DisruptorAnalysis.prompt.replace(/{sectorName}/g, contextName).replace(/{industryName}/g, contextName);
         const report = await generatePolishedArticle(prompt, loadingMessage);
         contentArea.innerHTML = marked.parse(report);
     } catch (error) {
@@ -595,7 +595,8 @@ async function handleMacroPlaybookAnalysis(contextName, contextType) {
 
     try {
         const standardDisclaimer = "This article is for informational purposes only and should not be considered financial advice. Readers should consult with a qualified financial professional before making any investment decisions.";
-        const prompt = (contextType === 'sector' ? MACRO_PLAYBOOK_PROMPT : INDUSTRY_MACRO_PLAYBOOK_PROMPT)
+        const promptTemplate = contextType === 'sector' ? promptMap.MacroPlaybook.prompt : promptMap.IndustryMacroPlaybook.prompt;
+        const prompt = promptTemplate
             .replace(/{sectorName}/g, contextName)
             .replace(/{industryName}/g, contextName)
             .replace(/\[Include standard disclaimer\]/g, standardDisclaimer);
@@ -619,7 +620,7 @@ async function handleFortressAnalysis(contextName, contextType) {
     contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">Generating AI article: "The Fortress"...</div>`;
 
     try {
-        const prompt = FORTRESS_ANALYSIS_PROMPT
+        const prompt = promptMap.FortressAnalysis.prompt
             .replace(/{contextName}/g, contextName)
             .replace(/{contextType}/g, contextType);
         const report = await generatePolishedArticle(prompt, loadingMessage);
@@ -642,7 +643,7 @@ async function handlePhoenixAnalysis(contextName, contextType) {
     contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">Generating AI article: "The Phoenix"...</div>`;
 
     try {
-        const prompt = PHOENIX_ANALYSIS_PROMPT
+        const prompt = promptMap.PhoenixAnalysis.prompt
             .replace(/{contextName}/g, contextName)
             .replace(/{contextType}/g, contextType);
         const report = await generatePolishedArticle(prompt, loadingMessage);
@@ -664,7 +665,7 @@ async function handlePickAndShovelAnalysis(contextName, contextType) {
     contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">Generating AI article: "The Pick and Shovel Play"...</div>`;
 
     try {
-        const prompt = PICK_AND_SHOVEL_PROMPT
+        const prompt = promptMap.PickAndShovel.prompt
             .replace(/{contextName}/g, contextName)
             .replace(/{contextType}/g, contextType);
         const report = await generatePolishedArticle(prompt, loadingMessage);
@@ -686,7 +687,7 @@ async function handleLinchpinAnalysis(contextName, contextType) {
     contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">Generating AI article: "The Linchpin"...</div>`;
 
     try {
-        const prompt = LINCHPIN_ANALYSIS_PROMPT
+        const prompt = promptMap.Linchpin.prompt
             .replace(/{contextName}/g, contextName)
             .replace(/{contextType}/g, contextType);
         const report = await generatePolishedArticle(prompt, loadingMessage);
@@ -708,7 +709,7 @@ async function handleHiddenValueAnalysis(contextName, contextType) {
     contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">Generating AI article: "Hidden Value"...</div>`;
 
     try {
-        const prompt = HIDDEN_VALUE_PROMPT
+        const prompt = promptMap.HiddenValue.prompt
             .replace(/{contextName}/g, contextName)
             .replace(/{contextType}/g, contextType);
         const report = await generatePolishedArticle(prompt, loadingMessage);
@@ -730,7 +731,7 @@ async function handleUntouchablesAnalysis(contextName, contextType) {
     contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">Generating AI article: "The Untouchables"...</div>`;
 
     try {
-        const prompt = UNTOUCHABLES_ANALYSIS_PROMPT
+        const prompt = promptMap.Untouchables.prompt
             .replace(/{contextName}/g, contextName)
             .replace(/{contextType}/g, contextType);
         const report = await generatePolishedArticle(prompt, loadingMessage);
@@ -869,7 +870,7 @@ async function handleIndustryMarketTrendsAnalysis(industryName) {
         loadingMessage.textContent = `AI is analyzing news and generating the report...`;
         contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">${loadingMessage.textContent}</div>`;
 
-        const prompt = ONE_SHOT_INDUSTRY_TREND_PROMPT
+        const prompt = promptMap.OneShotIndustryTrend.prompt
             .replace(/{industryName}/g, industryName)
             .replace('${industryStocks}', industryStocks.join(', '))
             .replace('{newsArticlesJson}', JSON.stringify(validArticles, null, 2));
@@ -906,7 +907,7 @@ async function handleIndustryDisruptorAnalysis(industryName) {
     contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">Generating AI article: "Disruptor Analysis"...</div>`;
 
     try {
-        const prompt = INDUSTRY_DISRUPTOR_ANALYSIS_PROMPT.replace(/{industryName}/g, industryName);
+        const prompt = promptMap.IndustryDisruptorAnalysis.prompt.replace(/{industryName}/g, industryName);
         const report = await generatePolishedArticle(prompt, loadingMessage);
         contentArea.innerHTML = marked.parse(report);
     } catch (error) {
@@ -927,7 +928,7 @@ async function handleIndustryMacroPlaybookAnalysis(industryName) {
 
     try {
         const standardDisclaimer = "This article is for informational purposes only and should not be considered financial advice. Readers should consult with a qualified financial professional before making any investment decisions.";
-        const prompt = INDUSTRY_MACRO_PLAYBOOK_PROMPT
+        const prompt = promptMap.IndustryMacroPlaybook.prompt
             .replace(/{industryName}/g, industryName)
             .replace(/\[Include standard disclaimer\]/g, standardDisclaimer);
         const report = await generatePolishedArticle(prompt, loadingMessage);
@@ -1350,7 +1351,7 @@ export async function handleInvestmentMemoRequest(symbol, forceNew = false) {
         const profile = data.profile?.[0] || {};
         const companyName = profile.companyName || 'the company';
 
-        const prompt = INVESTMENT_MEMO_PROMPT
+        const prompt = promptMap.InvestmentMemo.prompt
             .replace(/{companyName}/g, companyName)
             .replace(/{tickerSymbol}/g, symbol)
             .replace('{allAnalysesData}', allAnalysesData);
@@ -1429,7 +1430,7 @@ export async function handleIncomeMemoRequest(symbol, forceNew = false) {
         const profile = data.profile?.[0] || {};
         const companyName = profile.companyName || 'the company';
 
-        const prompt = INCOME_MEMO_PROMPT
+        const prompt = promptMap.IncomeMemo.prompt
             .replace(/{companyName}/g, companyName)
             .replace(/{tickerSymbol}/g, symbol)
             .replace('{allAnalysesData}', allAnalysesData)
@@ -1502,7 +1503,7 @@ export async function handleQualityCompounderMemoRequest(symbol, forceNew = fals
         const profile = data.profile?.[0] || {};
         const companyName = profile.companyName || 'the company';
 
-        const prompt = QUALITY_COMPOUNDER_MEMO_PROMPT
+        const prompt = promptMap.QualityCompounderMemo.prompt
             .replace(/{companyName}/g, companyName)
             .replace(/{tickerSymbol}/g, symbol)
             .replace('{allAnalysesData}', allAnalysesData);
@@ -1574,7 +1575,7 @@ export async function handleGarpValidationRequest(symbol, forceNew = false) {
         const profile = data.profile?.[0] || {};
         const companyName = profile.companyName || 'the company';
 
-        const prompt = GARP_VALIDATION_PROMPT
+        const prompt = promptMap.GarpValidation.prompt
             .replace(/{companyName}/g, companyName)
             .replace(/{tickerSymbol}/g, symbol)
             .replace('{allAnalysesData}', allAnalysesData);
