@@ -159,12 +159,6 @@ export async function getFmpStockData(symbol) {
 }
 
 export async function getGroupedFmpData(symbol) {
-    const endpointsSnapshot = await getDocs(collection(state.db, CONSTANTS.DB_COLLECTION_FMP_ENDPOINTS));
-    const endpointNames = {};
-    endpointsSnapshot.forEach(doc => {
-        endpointNames[doc.id] = doc.data().name || 'Unnamed Endpoint';
-    });
-
     const fmpCacheRef = collection(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, symbol, 'endpoints');
     const fmpCacheSnapshot = await getDocs(fmpCacheRef);
 
@@ -176,91 +170,10 @@ export async function getGroupedFmpData(symbol) {
     const groupedData = {};
     fmpCacheSnapshot.forEach(docSnap => {
         const endpointId = docSnap.id;
-        const endpointName = endpointNames[endpointId] || `Unknown (${endpointId})`;
+        const endpointName = endpointId.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
         const docData = docSnap.data();
         groupedData[endpointName] = docData.data;
     });
 
     return groupedData;
-}
-
-// --- GOOGLE DRIVE FUNCTIONS ---
-export function getDriveToken() {
-    return new Promise((resolve, reject) => {
-        if (!state.driveTokenClient) {
-            return reject(new Error("Drive token client not initialized."));
-        }
-        
-        try {
-            state.driveTokenClient.callback = (tokenResponse) => {
-                if (tokenResponse.error) {
-                    return reject(new Error(`Error getting drive token: ${tokenResponse.error}`));
-                }
-                resolve(tokenResponse.access_token);
-            };
-        
-            state.driveTokenClient.requestAccessToken({ prompt: '' });
-        } catch (e) {
-            reject(e);
-        }
-    });
-}
-
-export async function getOrCreateDriveFolder() {
-    let folderId = state.driveFolderId;
-    if (folderId) return folderId;
-
-    const folderName = "Stock Evaluations";
-    
-    const response = await gapi.client.drive.files.list({
-        q: `mimeType='application/vnd.google-apps.folder' and name='${folderName}' and trashed=false`,
-        fields: 'files(id, name)',
-    });
-
-    if (response.result.files && response.result.files.length > 0) {
-        folderId = response.result.files[0].id;
-    } else {
-        const fileMetadata = {
-            'name': folderName,
-            'mimeType': 'application/vnd.google-apps.folder'
-        };
-        const createResponse = await gapi.client.drive.files.create({
-            resource: fileMetadata,
-            fields: 'id'
-        });
-        folderId = createResponse.result.id;
-    }
-    state.driveFolderId = folderId;
-    return folderId;
-}
-
-export async function createDriveFile(folderId, fileName, content) {
-    const boundary = '-------314159265358979323846';
-    const delimiter = `\r\n--${boundary}\r\n`;
-    const close_delim = `\r\n--${boundary}--`;
-
-    const metadata = {
-        name: fileName,
-        mimeType: 'text/markdown',
-        parents: [folderId]
-    };
-
-    const multipartRequestBody =
-        delimiter +
-        'Content-Type: application/json; charset=UTF-8\r\n\r\n' +
-        JSON.stringify(metadata) +
-        delimiter +
-        'Content-Type: text/markdown\r\n\r\n' +
-        content +
-        close_delim;
-
-    const response = await gapi.client.request({
-        path: '/upload/drive/v3/files',
-        method: 'POST',
-        params: { uploadType: 'multipart' },
-        headers: { 'Content-Type': 'multipart/related; boundary="' + boundary + '"' },
-        body: multipartRequestBody,
-    });
-    
-    return response;
 }
