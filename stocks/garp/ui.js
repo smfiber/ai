@@ -1,12 +1,16 @@
 import { CONSTANTS, state, promptMap } from './config.js';
-import { openModal, closeModal, openStockListModal, openSessionLogModal, openManageStockModal, openPortfolioManagerModal, openViewFmpDataModal, openManageFmpEndpointsModal, openManageBroadEndpointsModal, openRawDataViewer, openThesisTrackerModal } from './ui-modals.js';
+import { openModal, closeModal, openStockListModal, openSessionLogModal, openManageStockModal, openPortfolioManagerModal, openViewFmpDataModal, openManageFmpEndpointsModal, openManageBroadEndpointsModal, openRawDataViewer, openThesisTrackerModal, openSpaAnalysisModal } from './ui-modals.js';
 import { fetchAndCachePortfolioData, renderPortfolioManagerList, renderSecFilings, renderFilingAnalysisTab } from './ui-render.js';
-import { handleResearchSubmit, handleSaveStock, handleDeleteStock, handleRefreshFmpData, handleAnalysisRequest, handleInvestmentMemoRequest, handleSaveReportToDb, handleSaveToDrive, cancelFmpEndpointEdit, cancelBroadEndpointEdit, handleSaveThesis, handleGenerateAllReportsRequest, handleSaveManualFiling, handleFilingAnalysisRequest, handleGarpExitMemoRequest } from './ui-handlers.js';
+import { handleResearchSubmit, handleSaveStock, handleDeleteStock, handleRefreshFmpData, handleFetchNews, handleAnalysisRequest, handleInvestmentMemoRequest, handleIncomeMemoRequest, handleSaveReportToDb, handleSaveBroadReportToDb, handleSaveToDrive, handleSectorSelection, handleIndustrySelection, handleSaveFmpEndpoint, cancelFmpEndpointEdit, handleEditFmpEndpoint, handleDeleteFmpEndpoint, handleSaveBroadEndpoint, cancelBroadEndpointEdit, handleEditBroadEndpoint, handleDeleteBroadEndpoint, handleSaveThesis, handleBroadAnalysisRequest, handleGenerateAllReportsRequest, handleGarpValidationRequest, handleSaveManualFiling, handleFilingAnalysisRequest, handleQualityCompounderMemoRequest, handleSpaAnalysisRequest } from './ui-handlers.js';
+
+// --- PROMPT MAPPING ---
+// The main promptMap is now imported directly from config.js
 
 // --- DYNAMIC TOOLTIPS ---
 function initializeTooltips() {
     let tooltipElement;
 
+    // Use event delegation on the body for efficiency
     document.body.addEventListener('mouseover', e => {
         const target = e.target.closest('[data-tooltip]');
         if (!target) return;
@@ -14,13 +18,16 @@ function initializeTooltips() {
         const tooltipText = target.getAttribute('data-tooltip');
         if (!tooltipText) return;
 
+        // Create and append tooltip element
         tooltipElement = document.createElement('div');
         tooltipElement.className = 'custom-tooltip';
         tooltipElement.textContent = tooltipText;
         document.body.appendChild(tooltipElement);
         
+        // Position the tooltip dynamically
         positionTooltip(target, tooltipElement);
 
+        // Use requestAnimationFrame to ensure the element is in the DOM before animating opacity
         requestAnimationFrame(() => {
             tooltipElement.style.opacity = '1';
         });
@@ -28,24 +35,30 @@ function initializeTooltips() {
 
     document.body.addEventListener('mouseout', e => {
         const target = e.target.closest('[data-tooltip]');
+        // Hide and remove the tooltip when the mouse leaves the target
         if (target && tooltipElement) {
             tooltipElement.remove();
             tooltipElement = null;
         }
     });
     
+    // Helper function to calculate the best position for the tooltip
     function positionTooltip(target, tooltip) {
         const targetRect = target.getBoundingClientRect();
+        // Get tooltip dimensions *after* adding content but before making it visible
         const tooltipRect = tooltip.getBoundingClientRect(); 
-        const margin = 8;
+        const margin = 8; // Space between the target and the tooltip
 
+        // Default position: centered above the target
         let top = targetRect.top - tooltipRect.height - margin;
         let left = targetRect.left + (targetRect.width / 2) - (tooltipRect.width / 2);
 
+        // If the tooltip would go off the top of the screen, place it below the target instead
         if (top < 0) {
             top = targetRect.bottom + margin;
         }
 
+        // Adjust horizontally to keep it within the viewport
         if (left < 0) {
             left = margin;
         } else if (left + tooltipRect.width > window.innerWidth) {
@@ -127,8 +140,43 @@ function setupGlobalEventListeners() {
         const symbol = target.dataset.symbol || target.dataset.ticker;
         if (!symbol) return;
 
+        if (target.classList.contains('fetch-news-button')) handleFetchNews(symbol);
         if (target.classList.contains('refresh-fmp-button')) handleRefreshFmpData(symbol);
         if (target.classList.contains('view-fmp-data-button')) openViewFmpDataModal(symbol);
+    });
+
+    document.getElementById('customAnalysisModal').addEventListener('click', (e) => {
+        const button = e.target.closest('button[data-prompt-name]');
+        if (button) {
+            const sector = button.dataset.sector;
+            const promptName = button.dataset.promptName;
+            const analysisName = button.querySelector('.tile-name')?.textContent || promptName;
+
+            const modal = document.getElementById('customAnalysisModal');
+            modal.dataset.analysisName = analysisName;
+            modal.dataset.contextName = sector;
+            modal.dataset.contextType = 'sector';
+            modal.dataset.reportType = promptName;
+            
+            handleBroadAnalysisRequest(sector, 'sector', promptName, false);
+        }
+    });
+
+    document.getElementById('industryAnalysisModal').addEventListener('click', (e) => {
+        const button = e.target.closest('button[data-prompt-name]');
+        if (button) {
+            const industry = button.dataset.industry;
+            const promptName = button.dataset.promptName;
+            const analysisName = button.querySelector('.tile-name')?.textContent || promptName;
+            
+            const modal = document.getElementById('industryAnalysisModal');
+            modal.dataset.analysisName = analysisName;
+            modal.dataset.contextName = industry;
+            modal.dataset.contextType = 'industry';
+            modal.dataset.reportType = promptName;
+
+            handleBroadAnalysisRequest(industry, 'industry', promptName, false);
+        }
     });
 
     document.getElementById('portfolioManagerModal').addEventListener('click', (e) => {
@@ -147,6 +195,17 @@ function setupGlobalEventListeners() {
         }
     });
     
+    document.getElementById('manageFmpEndpointsModal')?.addEventListener('click', (e) => {
+        const target = e.target.closest('button');
+        if (!target) return;
+
+        const id = target.dataset.id;
+        if (target.classList.contains('edit-fmp-endpoint-btn')) {
+            handleEditFmpEndpoint(id, target.dataset.name, target.dataset.url);
+        } else if (target.classList.contains('delete-fmp-endpoint-btn')) {
+            handleDeleteFmpEndpoint(id);
+        }
+    });
 }
 
 export function setupEventListeners() {
@@ -163,7 +222,10 @@ export function setupEventListeners() {
         }
     });
 
+    document.getElementById('manage-fmp-endpoint-form')?.addEventListener('submit', handleSaveFmpEndpoint);
     document.getElementById('cancel-fmp-endpoint-edit')?.addEventListener('click', cancelFmpEndpointEdit);
+
+    document.getElementById('manage-broad-endpoint-form')?.addEventListener('submit', handleSaveBroadEndpoint);
     document.getElementById('cancel-broad-endpoint-edit')?.addEventListener('click', cancelBroadEndpointEdit);
 
     document.querySelectorAll('.save-to-drive-button').forEach(button => {
@@ -175,7 +237,12 @@ export function setupEventListeners() {
     
     document.querySelectorAll('.save-to-db-button').forEach(button => {
         button.addEventListener('click', (e) => {
-            handleSaveReportToDb();
+            const modalId = e.target.dataset.modalId;
+            if (modalId === 'rawDataViewerModal') {
+                handleSaveReportToDb();
+            } else {
+                handleSaveBroadReportToDb(modalId);
+            }
         });
     });
 
@@ -186,8 +253,11 @@ export function setupEventListeners() {
     document.getElementById('manage-fmp-endpoints-button')?.addEventListener('click', openManageFmpEndpointsModal);
     document.getElementById('manage-broad-endpoints-button')?.addEventListener('click', openManageBroadEndpointsModal);
     document.getElementById('session-log-button')?.addEventListener('click', openSessionLogModal);
+    document.getElementById('analyze-spa-button')?.addEventListener('click', handleSpaAnalysisRequest);
 
     const modalsToClose = [
+        { modal: CONSTANTS.MODAL_CUSTOM_ANALYSIS, button: 'close-custom-analysis-modal', bg: 'close-custom-analysis-modal-bg' },
+        { modal: CONSTANTS.MODAL_INDUSTRY_ANALYSIS, button: 'close-industry-analysis-modal', bg: 'close-industry-analysis-modal-bg' },
         { modal: CONSTANTS.MODAL_MANAGE_STOCK, bg: 'close-manage-stock-modal-bg'},
         { modal: CONSTANTS.MODAL_CONFIRMATION, button: 'cancel-button'},
         { modal: CONSTANTS.MODAL_PORTFOLIO_MANAGER, button: 'close-portfolio-manager-modal', bg: 'close-portfolio-manager-modal-bg' },
@@ -199,6 +269,7 @@ export function setupEventListeners() {
         { modal: CONSTANTS.MODAL_STOCK_LIST, button: 'close-stock-list-modal', bg: 'close-stock-list-modal-bg' },
         { modal: CONSTANTS.MODAL_SESSION_LOG, button: 'close-session-log-modal', bg: 'close-session-log-modal-bg' },
         { modal: 'thesisTrackerModal', button: 'cancel-thesis-tracker-button', bg: 'close-thesis-tracker-modal-bg' },
+        { modal: 'spaAnalysisModal', button: 'close-spa-analysis-modal', bg: 'close-spa-analysis-modal-bg' },
     ];
 
     modalsToClose.forEach(item => {
@@ -212,6 +283,20 @@ export function setupEventListeners() {
         if (btn) btn.classList.toggle(CONSTANTS.CLASS_HIDDEN, window.scrollY <= 300);
     });
     
+    document.getElementById('sector-buttons-container')?.addEventListener('click', (e) => {
+        const target = e.target.closest('button');
+        if (target && target.dataset.sector) {
+            handleSectorSelection(target.dataset.sector, target);
+        }
+    });
+
+    document.getElementById('industry-buttons-container')?.addEventListener('click', (e) => {
+        const target = e.target.closest('button');
+        if (target && target.dataset.industry) {
+            handleIndustrySelection(target.dataset.industry, target);
+        }
+    });
+
     const analysisModal = document.getElementById('rawDataViewerModal');
 
     analysisModal.addEventListener('submit', (e) => {
@@ -277,18 +362,43 @@ export function setupEventListeners() {
 
         if (target.matches('.ai-analysis-button')) {
             const reportType = target.dataset.reportType;
-            const promptConfig = promptMap[reportType];
-            if (promptConfig) handleAnalysisRequest(symbol, reportType, promptConfig);
+            if (reportType === 'Form8KAnalysis' || reportType === 'Form10KAnalysis') {
+                let tabName;
+                if (reportType === 'Form8KAnalysis') tabName = 'form-8k-analysis';
+                else if (reportType === 'Form10KAnalysis') tabName = 'form-10k-analysis';
+                
+                if(tabName) {
+                    const tabButton = document.querySelector(`.tab-button[data-tab='${tabName}']`);
+                    if (tabButton) tabButton.click();
+                }
+            } else {
+                const promptConfig = promptMap[reportType];
+                if (promptConfig) handleAnalysisRequest(symbol, reportType, promptConfig);
+            }
         }
         
         if (target.id === 'investment-memo-button') handleInvestmentMemoRequest(symbol);
-        if (target.id === 'garp-exit-memo-button') handleGarpExitMemoRequest(symbol);
+        if (target.id === 'income-memo-button') handleIncomeMemoRequest(symbol);
+        if (target.id === 'quality-compounder-memo-button') handleQualityCompounderMemoRequest(symbol);
         if (target.id === 'generate-all-reports-button') handleGenerateAllReportsRequest(symbol);
+        if (target.id === 'garp-validation-button') handleGarpValidationRequest(symbol);
         if (target.id === 'analyze-latest-8k-button') handleFilingAnalysisRequest(symbol, '8-K');
         if (target.id === 'analyze-latest-10k-button') handleFilingAnalysisRequest(symbol, '10-K');
         if (target.id === 'analyze-latest-10q-button') handleFilingAnalysisRequest(symbol, '10-Q');
     });
 	
+	document.getElementById('manageBroadEndpointsModal')?.addEventListener('click', (e) => {
+        const target = e.target.closest('button');
+        if (!target) return;
+
+        const id = target.dataset.id;
+        if (target.classList.contains('edit-broad-endpoint-btn')) {
+            handleEditBroadEndpoint(id, target.dataset.name, target.dataset.url);
+        } else if (target.classList.contains('delete-broad-endpoint-btn')) {
+            handleDeleteBroadEndpoint(id);
+        }
+    });
+    
     document.getElementById('thesis-tracker-form')?.addEventListener('submit', handleSaveThesis);
 
     setupGlobalEventListeners();
