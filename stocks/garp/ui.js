@@ -1,33 +1,25 @@
 import { CONSTANTS, state, promptMap } from './config.js';
-import { openModal, closeModal, openStockListModal, openSessionLogModal, openManageStockModal, openPortfolioManagerModal, openViewFmpDataModal, openManageFmpEndpointsModal, openManageBroadEndpointsModal, openRawDataViewer, openThesisTrackerModal, openSpaAnalysisModal, openHelpModal } from './ui-modals.js';
-import { fetchAndCachePortfolioData, renderPortfolioManagerList, renderSecFilings, renderFilingAnalysisTab } from './ui-render.js';
-import { handleResearchSubmit, handleSaveStock, handleDeleteStock, handleRefreshFmpData, handleFetchNews, handleAnalysisRequest, handleInvestmentMemoRequest, handleIncomeMemoRequest, handleSaveReportToDb, handleSaveBroadReportToDb, handleSaveToDrive, handleSectorSelection, handleIndustrySelection, handleSaveFmpEndpoint, cancelFmpEndpointEdit, handleEditFmpEndpoint, handleDeleteFmpEndpoint, handleSaveBroadEndpoint, cancelBroadEndpointEdit, handleEditBroadEndpoint, handleDeleteBroadEndpoint, handleSaveThesis, handleBroadAnalysisRequest, handleGenerateAllReportsRequest, handleGarpValidationRequest, handleSaveManualFiling, handleFilingAnalysisRequest, handleQualityCompounderMemoRequest, handleSpaAnalysisRequest, handleTestThesis, handleAiEnhancementsRequest } from './ui-handlers.js';
-
-// --- PROMPT MAPPING ---
-// The main promptMap is now imported directly from config.js
+import { openModal, closeModal, openStockListModal, openSessionLogModal, openManageStockModal, openPortfolioManagerModal, openRawDataViewer, openThesisTrackerModal } from './ui-modals.js';
+import { fetchAndCachePortfolioData, renderPortfolioManagerList } from './ui-render.js';
+import { handleResearchSubmit, handleSaveStock, handleDeleteStock, handleRefreshFmpData, handleAnalysisRequest, handleInvestmentMemoRequest, handleSaveReportToDb, handleSaveThesis, handleGenerateAllReportsRequest, handleTestThesis } from './ui-handlers.js';
 
 // --- DYNAMIC TOOLTIPS ---
 function initializeTooltips() {
     let tooltipElement;
 
-    // Use event delegation on the body for efficiency
     document.body.addEventListener('mouseover', e => {
         const target = e.target.closest('[data-tooltip]');
         if (!target) return;
-
         const tooltipText = target.getAttribute('data-tooltip');
         if (!tooltipText) return;
 
-        // Create and append tooltip element
         tooltipElement = document.createElement('div');
         tooltipElement.className = 'custom-tooltip';
         tooltipElement.textContent = tooltipText;
         document.body.appendChild(tooltipElement);
         
-        // Position the tooltip dynamically
         positionTooltip(target, tooltipElement);
 
-        // Use requestAnimationFrame to ensure the element is in the DOM before animating opacity
         requestAnimationFrame(() => {
             tooltipElement.style.opacity = '1';
         });
@@ -35,30 +27,23 @@ function initializeTooltips() {
 
     document.body.addEventListener('mouseout', e => {
         const target = e.target.closest('[data-tooltip]');
-        // Hide and remove the tooltip when the mouse leaves the target
         if (target && tooltipElement) {
             tooltipElement.remove();
             tooltipElement = null;
         }
     });
     
-    // Helper function to calculate the best position for the tooltip
     function positionTooltip(target, tooltip) {
         const targetRect = target.getBoundingClientRect();
-        // Get tooltip dimensions *after* adding content but before making it visible
         const tooltipRect = tooltip.getBoundingClientRect(); 
-        const margin = 8; // Space between the target and the tooltip
+        const margin = 8;
 
-        // Default position: centered above the target
         let top = targetRect.top - tooltipRect.height - margin;
         let left = targetRect.left + (targetRect.width / 2) - (tooltipRect.width / 2);
 
-        // If the tooltip would go off the top of the screen, place it below the target instead
         if (top < 0) {
             top = targetRect.bottom + margin;
         }
-
-        // Adjust horizontally to keep it within the viewport
         if (left < 0) {
             left = margin;
         } else if (left + tooltipRect.width > window.innerWidth) {
@@ -85,24 +70,6 @@ function setupGlobalEventListeners() {
             openStockListModal('Portfolio');
             return;
         }
-
-        const watchlistButton = e.target.closest('#open-watchlist-modal-button');
-        if (watchlistButton) {
-            openStockListModal('Watchlist');
-            return;
-        }
-
-        const revisit3MonthsButton = e.target.closest('#open-revisit-3-months-modal-button');
-        if (revisit3MonthsButton) {
-            openStockListModal('Revisit 3 months');
-            return;
-        }
-
-        const revisit6MonthsButton = e.target.closest('#open-revisit-6-months-modal-button');
-        if (revisit6MonthsButton) {
-            openStockListModal('Revisit 6 months');
-            return;
-        }
     });
 
     document.getElementById(CONSTANTS.MODAL_STOCK_LIST).addEventListener('click', (e) => {
@@ -110,11 +77,11 @@ function setupGlobalEventListeners() {
         if (!target) return;
 
         if (target.id === 'expand-all-button') {
-            document.querySelectorAll('#stock-list-modal-content .sector-group').forEach(d => d.open = true);
+            document.querySelectorAll('#stock-list-modal-content details').forEach(d => d.open = true);
             return;
         }
         if (target.id === 'collapse-all-button') {
-            document.querySelectorAll('#stock-list-modal-content .sector-group').forEach(d => d.open = false);
+            document.querySelectorAll('#stock-list-modal-content details').forEach(d => d.open = false);
             return;
         }
         
@@ -133,52 +100,6 @@ function setupGlobalEventListeners() {
         }
     });
 
-    document.getElementById(CONSTANTS.CONTAINER_DYNAMIC_CONTENT).addEventListener('click', (e) => {
-        const target = e.target.closest('button');
-        if (!target) return;
-        
-        const symbol = target.dataset.symbol || target.dataset.ticker;
-        if (!symbol) return;
-
-        if (target.classList.contains('fetch-news-button')) handleFetchNews(symbol);
-        if (target.classList.contains('refresh-fmp-button')) handleRefreshFmpData(symbol);
-        if (target.classList.contains('view-fmp-data-button')) openViewFmpDataModal(symbol);
-    });
-
-    document.getElementById('customAnalysisModal').addEventListener('click', (e) => {
-        const button = e.target.closest('button[data-prompt-name]');
-        if (button) {
-            const sector = button.dataset.sector;
-            const promptName = button.dataset.promptName;
-            const analysisName = button.querySelector('.tile-name')?.textContent || promptName;
-
-            const modal = document.getElementById('customAnalysisModal');
-            modal.dataset.analysisName = analysisName;
-            modal.dataset.contextName = sector;
-            modal.dataset.contextType = 'sector';
-            modal.dataset.reportType = promptName;
-            
-            handleBroadAnalysisRequest(sector, 'sector', promptName, false);
-        }
-    });
-
-    document.getElementById('industryAnalysisModal').addEventListener('click', (e) => {
-        const button = e.target.closest('button[data-prompt-name]');
-        if (button) {
-            const industry = button.dataset.industry;
-            const promptName = button.dataset.promptName;
-            const analysisName = button.querySelector('.tile-name')?.textContent || promptName;
-            
-            const modal = document.getElementById('industryAnalysisModal');
-            modal.dataset.analysisName = analysisName;
-            modal.dataset.contextName = industry;
-            modal.dataset.contextType = 'industry';
-            modal.dataset.reportType = promptName;
-
-            handleBroadAnalysisRequest(industry, 'industry', promptName, false);
-        }
-    });
-
     document.getElementById('portfolioManagerModal').addEventListener('click', (e) => {
         const target = e.target.closest('button');
         if (!target) return;
@@ -192,18 +113,6 @@ function setupGlobalEventListeners() {
             }
         } else if (target.classList.contains('delete-stock-btn')) {
             handleDeleteStock(ticker);
-        }
-    });
-    
-    document.getElementById('manageFmpEndpointsModal')?.addEventListener('click', (e) => {
-        const target = e.target.closest('button');
-        if (!target) return;
-
-        const id = target.dataset.id;
-        if (target.classList.contains('edit-fmp-endpoint-btn')) {
-            handleEditFmpEndpoint(id, target.dataset.name, target.dataset.url);
-        } else if (target.classList.contains('delete-fmp-endpoint-btn')) {
-            handleDeleteFmpEndpoint(id);
         }
     });
 }
@@ -222,57 +131,22 @@ export function setupEventListeners() {
         }
     });
 
-    document.getElementById('manage-fmp-endpoint-form')?.addEventListener('submit', handleSaveFmpEndpoint);
-    document.getElementById('cancel-fmp-endpoint-edit')?.addEventListener('click', cancelFmpEndpointEdit);
-
-    document.getElementById('manage-broad-endpoint-form')?.addEventListener('submit', handleSaveBroadEndpoint);
-    document.getElementById('cancel-broad-endpoint-edit')?.addEventListener('click', cancelBroadEndpointEdit);
-
-    document.querySelectorAll('.save-to-drive-button').forEach(button => {
-        button.addEventListener('click', (e) => {
-            const modalId = e.target.dataset.modalId;
-            handleSaveToDrive(modalId);
-        });
-    });
-    
     document.querySelectorAll('.save-to-db-button').forEach(button => {
-        button.addEventListener('click', (e) => {
-            const modalId = e.target.dataset.modalId;
-            if (modalId === 'rawDataViewerModal') {
-                handleSaveReportToDb();
-            } else {
-                handleSaveBroadReportToDb(modalId);
-            }
-        });
+        button.addEventListener('click', handleSaveReportToDb);
     });
-
-    const scrollTopBtn = document.getElementById(CONSTANTS.BUTTON_SCROLL_TOP);
-    if (scrollTopBtn) scrollTopBtn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
 
     document.getElementById('manage-all-stocks-button')?.addEventListener('click', openPortfolioManagerModal);
-    document.getElementById('manage-fmp-endpoints-button')?.addEventListener('click', openManageFmpEndpointsModal);
-    document.getElementById('manage-broad-endpoints-button')?.addEventListener('click', openManageBroadEndpointsModal);
     document.getElementById('session-log-button')?.addEventListener('click', openSessionLogModal);
-    document.getElementById('analyze-spa-button')?.addEventListener('click', handleSpaAnalysisRequest);
-    document.getElementById('help-button')?.addEventListener('click', openHelpModal);
-    document.getElementById('ai-enhancements-button')?.addEventListener('click', handleAiEnhancementsRequest);
 
     const modalsToClose = [
-        { modal: 'helpModal', button: 'close-help-modal', bg: 'close-help-modal-bg' },
-        { modal: CONSTANTS.MODAL_CUSTOM_ANALYSIS, button: 'close-custom-analysis-modal', bg: 'close-custom-analysis-modal-bg' },
-        { modal: CONSTANTS.MODAL_INDUSTRY_ANALYSIS, button: 'close-industry-analysis-modal', bg: 'close-industry-analysis-modal-bg' },
         { modal: CONSTANTS.MODAL_MANAGE_STOCK, bg: 'close-manage-stock-modal-bg'},
         { modal: CONSTANTS.MODAL_CONFIRMATION, button: 'cancel-button'},
         { modal: CONSTANTS.MODAL_PORTFOLIO_MANAGER, button: 'close-portfolio-manager-modal', bg: 'close-portfolio-manager-modal-bg' },
-        { modal: CONSTANTS.MODAL_VIEW_FMP_DATA, button: 'close-view-fmp-data-modal', bg: 'close-view-fmp-data-modal-bg' },
-        { modal: CONSTANTS.MODAL_MANAGE_FMP_ENDPOINTS, button: 'close-manage-fmp-endpoints-modal', bg: 'close-manage-fmp-endpoints-modal-bg' },
-        { modal: CONSTANTS.MODAL_MANAGE_BROAD_ENDPOINTS, button: 'close-manage-broad-endpoints-modal', bg: 'close-manage-broad-endpoints-modal-bg' },
         { modal: 'rawDataViewerModal', button: 'close-raw-data-viewer-modal-button', bg: 'close-raw-data-viewer-modal-bg' },
         { modal: 'rawDataViewerModal', button: 'close-raw-data-viewer-modal' },
         { modal: CONSTANTS.MODAL_STOCK_LIST, button: 'close-stock-list-modal', bg: 'close-stock-list-modal-bg' },
         { modal: CONSTANTS.MODAL_SESSION_LOG, button: 'close-session-log-modal', bg: 'close-session-log-modal-bg' },
         { modal: 'thesisTrackerModal', button: 'cancel-thesis-tracker-button', bg: 'close-thesis-tracker-modal-bg' },
-        { modal: 'spaAnalysisModal', button: 'close-spa-analysis-modal', bg: 'close-spa-analysis-modal-bg' },
     ];
 
     modalsToClose.forEach(item => {
@@ -281,40 +155,7 @@ export function setupEventListeners() {
         if (item.bg) document.getElementById(item.bg)?.addEventListener('click', close);
     });
 
-    window.addEventListener('scroll', () => {
-        const btn = document.getElementById(CONSTANTS.BUTTON_SCROLL_TOP);
-        if (btn) btn.classList.toggle(CONSTANTS.CLASS_HIDDEN, window.scrollY <= 300);
-    });
-    
-    document.getElementById('sector-buttons-container')?.addEventListener('click', (e) => {
-        const target = e.target.closest('button');
-        if (target && target.dataset.sector) {
-            handleSectorSelection(target.dataset.sector, target);
-        }
-    });
-
-    document.getElementById('industry-buttons-container')?.addEventListener('click', (e) => {
-        const target = e.target.closest('button');
-        if (target && target.dataset.industry) {
-            handleIndustrySelection(target.dataset.industry, target);
-        }
-    });
-
     const analysisModal = document.getElementById('rawDataViewerModal');
-
-    analysisModal.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const ticker = analysisModal.dataset.activeTicker;
-        if (!ticker) return;
-
-        if (e.target.id === 'manual-8k-form') {
-            handleSaveManualFiling(ticker, '8-K');
-        } else if (e.target.id === 'manual-10k-form') {
-            handleSaveManualFiling(ticker, '10-K');
-        } else if (e.target.id === 'manual-10q-form') {
-            handleSaveManualFiling(ticker, '10-Q');
-        }
-    });
 
     analysisModal.addEventListener('click', (e) => {
         const target = e.target.closest('button');
@@ -349,22 +190,6 @@ export function setupEventListeners() {
 		    document.getElementById(`${tabId}-tab`).classList.remove('hidden');
 		    target.classList.add('active');
 		
-		    const ticker = document.getElementById('rawDataViewerModal').dataset.activeTicker;
-		    if (!ticker) return;
-		
-		    if (tabId === 'sec-filings' && !target.dataset.loaded) {
-		        renderSecFilings(ticker);
-		        target.dataset.loaded = 'true';
-		    } else if (tabId === 'form-8k-analysis' && !target.dataset.loaded) {
-		        renderFilingAnalysisTab(ticker, '8-K');
-		        target.dataset.loaded = 'true';
-		    } else if (tabId === 'form-10k-analysis' && !target.dataset.loaded) {
-		        renderFilingAnalysisTab(ticker, '10-K');
-		        target.dataset.loaded = 'true';
-            } else if (tabId === 'form-10q-analysis' && !target.dataset.loaded) {
-                renderFilingAnalysisTab(ticker, '10-Q');
-                target.dataset.loaded = 'true';
-            }
 		    return;
 		}
         
@@ -373,41 +198,14 @@ export function setupEventListeners() {
 
         if (target.matches('.ai-analysis-button')) {
             const reportType = target.dataset.reportType;
-            if (reportType === 'Form8KAnalysis' || reportType === 'Form10KAnalysis') {
-                let tabName;
-                if (reportType === 'Form8KAnalysis') tabName = 'form-8k-analysis';
-                else if (reportType === 'Form10KAnalysis') tabName = 'form-10k-analysis';
-                
-                if(tabName) {
-                    const tabButton = document.querySelector(`.tab-button[data-tab='${tabName}']`);
-                    if (tabButton) tabButton.click();
-                }
-            } else {
-                const promptConfig = promptMap[reportType];
-                if (promptConfig) handleAnalysisRequest(symbol, reportType, promptConfig);
+            const promptConfig = promptMap[reportType];
+            if (promptConfig) {
+                handleAnalysisRequest(symbol, reportType, promptConfig);
             }
         }
         
         if (target.id === 'investment-memo-button') handleInvestmentMemoRequest(symbol);
-        if (target.id === 'income-memo-button') handleIncomeMemoRequest(symbol);
-        if (target.id === 'quality-compounder-memo-button') handleQualityCompounderMemoRequest(symbol);
         if (target.id === 'generate-all-reports-button') handleGenerateAllReportsRequest(symbol);
-        if (target.id === 'garp-validation-button') handleGarpValidationRequest(symbol);
-        if (target.id === 'analyze-latest-8k-button') handleFilingAnalysisRequest(symbol, '8-K');
-        if (target.id === 'analyze-latest-10k-button') handleFilingAnalysisRequest(symbol, '10-K');
-        if (target.id === 'analyze-latest-10q-button') handleFilingAnalysisRequest(symbol, '10-Q');
-    });
-	
-	document.getElementById('manageBroadEndpointsModal')?.addEventListener('click', (e) => {
-        const target = e.target.closest('button');
-        if (!target) return;
-
-        const id = target.dataset.id;
-        if (target.classList.contains('edit-broad-endpoint-btn')) {
-            handleEditBroadEndpoint(id, target.dataset.name, target.dataset.url);
-        } else if (target.classList.contains('delete-broad-endpoint-btn')) {
-            handleDeleteBroadEndpoint(id);
-        }
     });
     
     document.getElementById('thesis-tracker-form')?.addEventListener('submit', handleSaveThesis);
