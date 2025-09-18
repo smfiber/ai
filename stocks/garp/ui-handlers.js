@@ -77,6 +77,10 @@ export async function handleSaveStock(e) {
         return;
     }
 
+    // NEW: Get position tracking values
+    const purchasePriceInput = document.getElementById('manage-stock-purchase-price').value;
+    const shareCountInput = document.getElementById('manage-stock-share-count').value;
+
     const stockData = {
         ticker: newTicker,
         companyName: document.getElementById('manage-stock-name').value.trim(),
@@ -84,6 +88,9 @@ export async function handleSaveStock(e) {
         status: document.getElementById('manage-stock-status').value.trim(),
         sector: document.getElementById('manage-stock-sector').value.trim(),
         industry: document.getElementById('manage-stock-industry').value.trim(),
+        // NEW: Add parsed numbers to the data object, store null if empty
+        purchasePrice: purchasePriceInput ? parseFloat(purchasePriceInput) : null,
+        shareCount: shareCountInput ? parseFloat(shareCountInput) : null,
     };
 
     openModal(CONSTANTS.MODAL_LOADING);
