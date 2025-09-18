@@ -1,6 +1,6 @@
 import { CONSTANTS, state, ANALYSIS_ICONS } from './config.js';
 import { getFmpStockData, getGroupedFmpData } from './api.js';
-import { renderValuationHealthDashboard, renderThesisTracker, _renderGroupedStockList } from './ui-render.js';
+import { renderValuationHealthDashboard, renderThesisTracker, _renderGroupedStockList, renderMyPosition } from './ui-render.js';
 import { getDocs, query, collection, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- GENERIC MODAL HELPERS ---
@@ -97,7 +97,6 @@ export function openManageStockModal(stockData) {
     document.getElementById('manage-stock-industry').value = stockData.industry || 'N/A';
     document.getElementById('manage-stock-status').value = stockData.status || 'Watchlist';
     
-    // NEW: Populate position tracking fields
     document.getElementById('manage-stock-purchase-price').value = stockData.purchasePrice || '';
     document.getElementById('manage-stock-share-count').value = stockData.shareCount || '';
 
@@ -211,6 +210,8 @@ export async function openRawDataViewer(ticker) {
     profileDisplayContainer.innerHTML = '';
     document.getElementById('valuation-health-container').innerHTML = '';
     document.getElementById('thesis-tracker-container').innerHTML = '';
+    // NEW: Reset the position container
+    document.getElementById('my-position-container').innerHTML = '';
     
     // Reset SEC tab content to loading placeholders
     document.getElementById('insider-trading-container').innerHTML = `<h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Recent Insider Activity (Form 4)</h3><div class="content-placeholder text-center text-gray-500 py-8">Loading...</div>`;
@@ -389,6 +390,8 @@ export async function openRawDataViewer(ticker) {
         // Render Dashboard tab content
         renderValuationHealthDashboard(document.getElementById('valuation-health-container'), ticker, fmpData);
         renderThesisTracker(document.getElementById('thesis-tracker-container'), ticker);
+        // NEW CALL: Render the position performance component
+        renderMyPosition(document.getElementById('my-position-container'), ticker, fmpData);
 
     } catch (error) {
         console.error('Error opening raw data viewer:', error);
