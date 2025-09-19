@@ -1,6 +1,6 @@
 import { CONSTANTS, state, ANALYSIS_ICONS } from './config.js';
 import { getFmpStockData, getGroupedFmpData } from './api.js';
-import { renderValuationHealthDashboard, _renderGroupedStockList, renderPortfolioManagerList, renderGarpScorecardDashboard, renderGarpAnalysisSummary, updateGarpCandidacyStatus } from './ui-render.js'; 
+import { renderValuationHealthDashboard, _renderGroupedStockList, renderPortfolioManagerList, renderGarpScorecardDashboard, renderGarpAnalysisSummary, updateGarpCandidacyStatus, renderCandidacyAnalysis } from './ui-render.js'; 
 import { getDocs, query, collection, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getSavedReports } from './ui-handlers.js';
 
@@ -272,7 +272,7 @@ export async function openRawDataViewer(ticker) {
         if (savedCandidacyReports.length > 0) {
             const latestReport = savedCandidacyReports[0];
             const resultContainer = document.getElementById('garp-analysis-container');
-            resultContainer.innerHTML = marked.parse(latestReport.content);
+            renderCandidacyAnalysis(resultContainer, latestReport.content, latestReport.prompt);
             updateGarpCandidacyStatus(document.getElementById('garp-candidacy-status-container'), savedCandidacyReports, latestReport.id, ticker);
         }
 
