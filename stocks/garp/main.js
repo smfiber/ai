@@ -1,10 +1,11 @@
 import { setupEventListeners } from './ui.js';
 import { openModal, closeModal, displayMessageInModal } from './ui-modals.js';
-import { fetchAndCachePortfolioData } from './ui-render.js';
+import { fetchAndCachePortfolioData, renderSectorButtons, displayIndustryScreener, renderPortfolioScorecard } from './ui-render.js';
 import { CONSTANTS, APP_VERSION, state } from './config.js';
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, signOut, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { checkForNewFilings } from './monitoring.js';
 
 // --- CONFIG & INITIALIZATION ---
 function safeParseConfig(str) {
@@ -25,8 +26,23 @@ async function initializeAppContent() {
     
     document.getElementById('dashboard-section').classList.remove(CONSTANTS.CLASS_HIDDEN);
     document.getElementById('stock-screener-section').classList.remove(CONSTANTS.CLASS_HIDDEN);
+    document.getElementById('sector-screener-section').classList.remove(CONSTANTS.CLASS_HIDDEN);
+    document.getElementById('industry-screener-section').classList.remove(CONSTANTS.CLASS_HIDDEN);
     
-    await fetchAndCachePortfolioData();
+    const lastCheckTimestamp = localStorage.getItem('lastFilingCheck');
+    const twentyFourHours = 24 * 60 * 60 * 1000;
+    const now = new Date().getTime();
+
+    if (!lastCheckTimestamp || (now - parseInt(lastCheckTimestamp) > twentyFourHours)) {
+        await checkForNewFilings();
+        localStorage.setItem('lastFilingCheck', now.toString());
+    } else {
+        await fetchAndCachePortfolioData();
+    }
+    
+    await renderSectorButtons();
+    await displayIndustryScreener();
+    await renderPortfolioScorecard();
 }
 
 async function initializeFirebase() {
@@ -48,6 +64,7 @@ async function initializeFirebase() {
                     displayMessageInModal("Your session has expired. Please log in again to continue.", "warning");
                 }
                 state.appIsInitialized = false;
+                document.getElementById(CONSTANTS.CONTAINER_DYNAMIC_CONTENT).innerHTML = '';
             }
             setupAuthUI(user);
         });
@@ -67,10 +84,13 @@ async function handleApiKeySubmit(e) {
     state.fmpApiKey = document.getElementById('fmpApiKeyInput').value.trim();
     state.geminiApiKey = document.getElementById(CONSTANTS.INPUT_GEMINI_KEY).value.trim();
     state.googleClientId = document.getElementById(CONSTANTS.INPUT_GOOGLE_CLIENT_ID).value.trim();
+    state.searchApiKey = document.getElementById(CONSTANTS.INPUT_WEB_SEARCH_KEY).value.trim();
+    state.searchEngineId = document.getElementById(CONSTANTS.INPUT_SEARCH_ENGINE_ID).value.trim();
+    state.secApiKey = document.getElementById(CONSTANTS.INPUT_SEC_KEY).value.trim();
     const tempFirebaseConfigText = document.getElementById('firebaseConfigInput').value.trim();
     let tempFirebaseConfig;
 
-    if (!state.fmpApiKey || !state.geminiApiKey || !state.googleClientId || !tempFirebaseConfigText) {
+    if (!state.fmpApiKey || !state.geminiApiKey || !state.googleClientId || !state.searchApiKey || !state.searchEngineId || !state.secApiKey || !tempFirebaseConfigText) {
         displayMessageInModal("All API Keys, Client ID, and the Firebase Config are required.", "warning");
         return;
     }
@@ -108,7 +128,7 @@ function initializeGoogleSignIn() {
 
 async function handleCredentialResponse(response) {
     openModal(CONSTANTS.MODAL_LOADING);
-    document.getElementById('loading-message').textContent = "Verifying login...";
+    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = "Verifying login...";
     try {
         const credential = GoogleAuthProvider.credential(response.credential);
         await signInWithCredential(state.auth, credential);
@@ -117,6 +137,19 @@ async function handleCredentialResponse(response) {
         displayMessageInModal(`Login failed: ${error.message}`, 'error');
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
+function initializeDriveTokenClient() {
+    if (!state.googleClientId) return;
+    try {
+        state.driveTokenClient = google.accounts.oauth2.initTokenClient({
+            client_id: state.googleClientId,
+            scope: 'https://www.googleapis.com/auth/drive.file',
+            callback: '', // Callback is handled by the promise in getDriveToken
+        });
+    } catch (error) {
+        console.error("Drive token client initialization failed:", error);
     }
 }
 
@@ -134,7 +167,7 @@ function setupAuthUI(user) {
     const appContainer = document.getElementById('app-container');
     if (!authStatusEl || !appContainer) return;
 
-    authStatusEl.innerHTML = '';
+    authStatusEl.innerHTML = ''; // Clear previous state
 
     if (user && !user.isAnonymous) {
         appContainer.classList.remove(CONSTANTS.CLASS_HIDDEN);
@@ -154,6 +187,7 @@ function setupAuthUI(user) {
                 <button id="logout-button" class="bg-white/20 hover:bg-white/40 text-white font-semibold py-1 px-3 rounded-full" title="Sign Out">Logout</button>
             </div>`;
         document.getElementById('logout-button').addEventListener('click', handleLogout);
+        initializeDriveTokenClient();
     } else {
         appContainer.classList.add(CONSTANTS.CLASS_HIDDEN);
         if (typeof google !== 'undefined' && google.accounts) {
