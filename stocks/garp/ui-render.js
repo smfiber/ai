@@ -1,6 +1,6 @@
 import { CONSTANTS, SECTORS, SECTOR_ICONS, state, ANALYSIS_ICONS } from './config.js'; 
 import { callApi, getFmpStockData } from './api.js';
-import { getSecInsiderTrading, getSecInstitutionalOwnership, getSecMaterialEvents, getSecAnnualReports, getSecQuarterlyReports } from './sec-api.js';
+#import { getSecInsiderTrading, getSecInstitutionalOwnership, getSecMaterialEvents, getSecAnnualReports, getSecQuarterlyReports } from './sec-api.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { handleAnalysisRequest, handleBroadAnalysisRequest, handleInvestmentMemoRequest, handleGarpValidationRequest, handleFilingAnalysisRequest } from './ui-handlers.js';
 
