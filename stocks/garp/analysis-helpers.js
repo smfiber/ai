@@ -28,10 +28,12 @@ export function _calculateGarpScorecardMetrics(data) {
     const profile = data.profile?.[0] || {};
     const income = (data.income_statement_annual || []).slice().reverse();
     const metricsTtm = data.key_metrics_ttm?.[0] || {};
-    const ratios = data.ratios_ttm?.[0] || {};
+    const ratiosTtm = data.ratios_ttm?.[0] || {};
     const estimates = data.analyst_estimates?.[0] || {};
     const keyMetricsAnnual = (data.key_metrics_annual || []).slice().reverse();
     const latestAnnualMetrics = keyMetricsAnnual[keyMetricsAnnual.length - 1] || {};
+    const ratiosAnnual = (data.ratios_annual || []).slice().reverse();
+    const latestAnnualRatios = ratiosAnnual[ratiosAnnual.length - 1] || {};
 
     const getCagr = (startValue, endValue, periods) => {
         if (typeof startValue !== 'number' || typeof endValue !== 'number' || startValue <= 0 || periods <= 0) return null;
@@ -49,9 +51,15 @@ export function _calculateGarpScorecardMetrics(data) {
     const roic = metricsTtm.roic ?? latestAnnualMetrics.roic;
     const pe = metricsTtm.peRatioTTM ?? latestAnnualMetrics.peRatio;
     const de = metricsTtm.debtToEquity ?? latestAnnualMetrics.debtToEquity;
+    const ps = ratiosTtm.priceToSalesRatioTTM ?? latestAnnualRatios.priceToSalesRatio;
 
-    const ps = ratios.priceToSalesRatio;
-    const epsNext5y = estimates.estimatedEpsGrowth5Y;
+    // Manually calculate the forward 1-year EPS growth rate.
+    let epsNext5y = null;
+    const lastActualEps = income.length > 0 ? income[lastIndex].eps : null;
+    const forwardEpsForGrowth = estimates.estimatedEpsAvg;
+    if (lastActualEps > 0 && forwardEpsForGrowth > 0) {
+        epsNext5y = (forwardEpsForGrowth / lastActualEps) - 1;
+    }
 
     // Calculate Forward P/E manually from current price and estimated forward EPS.
     let forwardPe = null;
@@ -70,7 +78,7 @@ export function _calculateGarpScorecardMetrics(data) {
     // --- CRITERIA CHECKS ---
     return {
         'EPS Growth (5Y)': { value: eps5y, isMet: eps5y > 0.10, format: 'percent' },
-        'EPS Growth (Next 5Y)': { value: epsNext5y, isMet: epsNext5y > 0.10, format: 'percent' },
+        'EPS Growth (Next 1Y)': { value: epsNext5y, isMet: epsNext5y > 0.10, format: 'percent' },
         'Revenue Growth (5Y)': { value: rev5y, isMet: rev5y > 0.05, format: 'percent' },
         'Return on Equity': { value: roe, isMet: roe > 0.15, format: 'percent' },
         'Return on Invested Capital': { value: roic, isMet: roic > 0.12, format: 'percent' },
