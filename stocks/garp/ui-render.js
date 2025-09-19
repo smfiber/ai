@@ -331,18 +331,9 @@ export function updateGarpCandidacyStatus(statusContainer, reports, activeReport
 export function renderCandidacyAnalysis(container, reportContent, prompt) {
     let accordionHtml = '';
     if (prompt) {
-        const promptJsonRegex = /```json\n([\s\S]*?)\n```/;
-        const match = prompt.match(promptJsonRegex);
-        const jsonDataString = match ? match[1].trim() : '{"error": "Could not extract JSON from prompt."}';
         const sanitizedPrompt = sanitizeText(prompt);
-        const sanitizedJson = sanitizeText(jsonDataString);
-
         accordionHtml = `
-            <div class="space-y-2 mb-4 border-b pb-4">
-                <details class="border rounded-md">
-                    <summary class="p-2 font-semibold text-sm text-gray-700 cursor-pointer hover:bg-gray-50 bg-gray-100">View JSON Data Sent to AI</summary>
-                    <pre class="text-xs whitespace-pre-wrap break-all bg-gray-900 text-white p-3 rounded-b-md">${sanitizedJson}</pre>
-                </details>
+            <div class="mb-4 border-b pb-4">
                 <details class="border rounded-md">
                     <summary class="p-2 font-semibold text-sm text-gray-700 cursor-pointer hover:bg-gray-50 bg-gray-100">View Full Prompt Sent to AI</summary>
                     <pre class="text-xs whitespace-pre-wrap break-all bg-gray-900 text-white p-3 rounded-b-md">${sanitizedPrompt}</pre>
