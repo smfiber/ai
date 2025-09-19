@@ -2,7 +2,7 @@ import { CONSTANTS, state, promptMap, ANALYSIS_REQUIREMENTS } from './config.js'
 import { callApi, callGeminiApi, generateRefinedArticle, generatePolishedArticleForSynthesis, getFmpStockData } from './api.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { openModal, closeModal, displayMessageInModal, openConfirmationModal, openManageStockModal } from './ui-modals.js';
-import { renderPortfolioManagerList, displayReport, updateReportStatus, fetchAndCachePortfolioData, updateGarpCandidacyStatus } from './ui-render.js';
+import { renderPortfolioManagerList, displayReport, updateReportStatus, fetchAndCachePortfolioData, updateGarpCandidacyStatus, renderCandidacyAnalysis } from './ui-render.js';
 import { _calculateFinancialAnalysisMetrics, _calculateMoatAnalysisMetrics, _calculateRiskAssessmentMetrics, _calculateCapitalAllocatorsMetrics, _calculateGarpAnalysisMetrics, _calculateGarpScorecardMetrics } from './analysis-helpers.js';
 
 // --- FMP API INTEGRATION & MANAGEMENT ---
@@ -635,7 +635,7 @@ export async function handleGarpCandidacyRequest(ticker) {
         `;
         
         const analysisResult = await generateRefinedArticle(prompt);
-        resultContainer.innerHTML = marked.parse(analysisResult);
+        renderCandidacyAnalysis(resultContainer, analysisResult, prompt);
         
         const reportType = 'GarpCandidacy';
         await autoSaveReport(ticker, reportType, analysisResult, prompt);
