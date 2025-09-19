@@ -1,7 +1,8 @@
 import { CONSTANTS, state, ANALYSIS_ICONS } from './config.js';
 import { getFmpStockData, getGroupedFmpData } from './api.js';
-import { renderValuationHealthDashboard, _renderGroupedStockList, renderPortfolioManagerList, renderGarpScorecardDashboard, renderGarpAnalysisSummary } from './ui-render.js'; 
+import { renderValuationHealthDashboard, _renderGroupedStockList, renderPortfolioManagerList, renderGarpScorecardDashboard, renderGarpAnalysisSummary, updateGarpCandidacyStatus } from './ui-render.js'; 
 import { getDocs, query, collection, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getSavedReports } from './ui-handlers.js';
 
 // --- GENERIC MODAL HELPERS ---
 
@@ -187,8 +188,11 @@ export async function openRawDataViewer(ticker) {
         const fmpDataPromise = getFmpStockData(ticker);
         const groupedDataPromise = getGroupedFmpData(ticker);
         const savedReportsPromise = getDocs(query(collection(state.db, CONSTANTS.DB_COLLECTION_AI_REPORTS), where("ticker", "==", ticker)));
+        const candidacyReportType = 'GarpCandidacy';
+        const savedCandidacyReportsPromise = getSavedReports(ticker, candidacyReportType);
 
-        const [fmpData, groupedFmpData, savedReportsSnapshot] = await Promise.all([fmpDataPromise, groupedDataPromise, savedReportsPromise]);
+
+        const [fmpData, groupedFmpData, savedReportsSnapshot, savedCandidacyReports] = await Promise.all([fmpDataPromise, groupedDataPromise, savedReportsPromise, savedCandidacyReportsPromise]);
 
         if (!fmpData || !fmpData.profile || fmpData.profile.length === 0) {
             closeModal(modalId);
@@ -263,6 +267,14 @@ export async function openRawDataViewer(ticker) {
         renderGarpScorecardDashboard(garpScorecardContainer, ticker, fmpData);
         renderValuationHealthDashboard(document.getElementById('valuation-health-container'), ticker, fmpData);
         renderGarpAnalysisSummary(document.getElementById('ai-garp-summary-container'), ticker);
+
+        // If saved candidacy reports exist, load the latest one
+        if (savedCandidacyReports.length > 0) {
+            const latestReport = savedCandidacyReports[0];
+            const resultContainer = document.getElementById('garp-analysis-container');
+            resultContainer.innerHTML = marked.parse(latestReport.content);
+            updateGarpCandidacyStatus(document.getElementById('garp-candidacy-status-container'), savedCandidacyReports, latestReport.id, ticker);
+        }
 
     } catch (error) {
         console.error('Error opening raw data viewer:', error);
