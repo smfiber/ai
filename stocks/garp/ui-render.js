@@ -318,7 +318,7 @@ export function updateGarpCandidacyStatus(statusContainer, reports, activeReport
         const selectedReport = reports.find(r => r.id === e.target.value);
         if (selectedReport) {
             const contentContainer = document.getElementById('garp-analysis-container');
-            contentContainer.innerHTML = marked.parse(selectedReport.content);
+            renderCandidacyAnalysis(contentContainer, selectedReport.content, selectedReport.prompt);
             updateGarpCandidacyStatus(statusContainer, reports, selectedReport.id, ticker);
         }
     });
@@ -326,6 +326,31 @@ export function updateGarpCandidacyStatus(statusContainer, reports, activeReport
     document.getElementById('generate-new-candidacy')?.addEventListener('click', (e) => {
         handleGarpCandidacyRequest(e.target.dataset.ticker);
     });
+}
+
+export function renderCandidacyAnalysis(container, reportContent, prompt) {
+    let accordionHtml = '';
+    if (prompt) {
+        const promptJsonRegex = /```json\n([\s\S]*?)\n```/;
+        const match = prompt.match(promptJsonRegex);
+        const jsonDataString = match ? match[1].trim() : '{"error": "Could not extract JSON from prompt."}';
+        const sanitizedPrompt = sanitizeText(prompt);
+        const sanitizedJson = sanitizeText(jsonDataString);
+
+        accordionHtml = `
+            <div class="space-y-2 mb-4 border-b pb-4">
+                <details class="border rounded-md">
+                    <summary class="p-2 font-semibold text-sm text-gray-700 cursor-pointer hover:bg-gray-50 bg-gray-100">View JSON Data Sent to AI</summary>
+                    <pre class="text-xs whitespace-pre-wrap break-all bg-gray-900 text-white p-3 rounded-b-md">${sanitizedJson}</pre>
+                </details>
+                <details class="border rounded-md">
+                    <summary class="p-2 font-semibold text-sm text-gray-700 cursor-pointer hover:bg-gray-50 bg-gray-100">View Full Prompt Sent to AI</summary>
+                    <pre class="text-xs whitespace-pre-wrap break-all bg-gray-900 text-white p-3 rounded-b-md">${sanitizedPrompt}</pre>
+                </details>
+            </div>
+        `;
+    }
+    container.innerHTML = accordionHtml + marked.parse(reportContent || '');
 }
 
 
