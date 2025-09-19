@@ -21,7 +21,9 @@ function initializeTooltips() {
         positionTooltip(target, tooltipElement);
 
         requestAnimationFrame(() => {
-            tooltipElement.style.opacity = '1';
+            if (tooltipElement) {
+                tooltipElement.style.opacity = '1';
+            }
         });
     });
 
