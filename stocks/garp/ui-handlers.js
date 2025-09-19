@@ -187,6 +187,66 @@ export async function handleResearchSubmit(e) {
 
 // --- AI ANALYSIS REPORT GENERATORS ---
 
+/**
+ * NEW: Handles the AI analysis request for the entire portfolio.
+ */
+export async function handlePortfolioGarpAnalysisRequest() {
+    const container = document.getElementById('portfolio-garp-ai-summary-container');
+    if (!container) return;
+
+    container.innerHTML = `<div class="flex items-center justify-center p-4"><div class="loader"></div><p class="ml-4 text-gray-600 font-semibold">AI is analyzing portfolio...</p></div>`;
+
+    try {
+        const portfolioStocks = state.portfolioCache.filter(s => s.status === 'Portfolio');
+        if (portfolioStocks.length === 0) {
+            container.innerHTML = `<p class="text-center text-gray-500 italic">No stocks in portfolio to analyze.</p>`;
+            return;
+        }
+
+        const stocksWithData = await Promise.all(
+            portfolioStocks.map(async (stock) => {
+                const fmpData = await getFmpStockData(stock.ticker);
+                if (!fmpData) return null;
+                const metrics = _calculateGarpScorecardMetrics(fmpData);
+                return { stock, metrics };
+            })
+        );
+        
+        const validStocks = stocksWithData.filter(Boolean);
+
+        const payload = validStocks.map(({ stock, metrics }) => {
+            const criteriaMet = Object.values(metrics).filter(m => m.isMet).length;
+            const totalCriteria = Object.keys(metrics).length;
+            const simplifiedScorecard = {};
+            for (const [key, data] of Object.entries(metrics)) {
+                simplifiedScorecard[key] = {
+                    value: (typeof data.value === 'number' && isFinite(data.value))
+                        ? (data.format === 'percent' ? `${(data.value * 100).toFixed(2)}%` : data.value.toFixed(2))
+                        : 'N/A',
+                    isMet: data.isMet
+                };
+            }
+            return {
+                companyName: stock.companyName,
+                ticker: stock.ticker,
+                criteriaMet,
+                totalCriteria,
+                scorecard: simplifiedScorecard
+            };
+        });
+        
+        const promptConfig = promptMap['PortfolioGarpAnalysis'];
+        const prompt = promptConfig.prompt.replace('{jsonData}', JSON.stringify(payload, null, 2));
+
+        const analysisResult = await generateRefinedArticle(prompt);
+        container.innerHTML = marked.parse(analysisResult);
+
+    } catch (error) {
+        console.error("Error during portfolio GARP analysis:", error);
+        container.innerHTML = `<p class="text-red-500">Could not complete analysis: ${error.message}</p>`;
+    }
+}
+
 export async function getSavedReports(ticker, reportType) {
     const reportsRef = collection(state.db, CONSTANTS.DB_COLLECTION_AI_REPORTS);
     const q = query(reportsRef, where("ticker", "==", ticker), where("reportType", "==", reportType), orderBy("savedAt", "desc"));
