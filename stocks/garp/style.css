@@ -77,6 +77,57 @@ body.modal-open {
     color: #dc2626; /* text-red-600 */
 }
 
+/* --- INTERPRETATION BADGES --- */
+.interp-badge {
+    display: inline-block;
+    padding: 0.2rem 0.6rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.interp-badge.hyper-growth,
+.interp-badge.exceptional-quality {
+    background-color: #166534; /* green-800 */
+    color: #f0fdf4; /* green-50 */
+}
+
+.interp-badge.garp-sweet-spot,
+.interp-badge.high-quality,
+.interp-badge.solid-growth,
+.interp-badge.fairly-priced,
+.interp-badge.low-leverage,
+.interp-badge.fortress-balance-sheet {
+    background-color: #22c55e; /* green-500 */
+    color: #f0fdf4; /* green-50 */
+}
+
+.interp-badge.modest-growth,
+.interp-badge.reasonable-price,
+.interp-badge.potentially-undervalued {
+    background-color: #eab308; /* yellow-500 */
+    color: #78350f; /* yellow-900 */
+}
+
+.interp-badge.warning-sign,
+.interp-badge.potential-value-trap,
+.interp-badge.priced-for-perfection {
+    background-color: #f97316; /* orange-500 */
+    color: #fff7ed; /* orange-50 */
+}
+
+.interp-badge.negative-growth,
+.interp-badge.low-quality,
+.interp-badge.expensive,
+.interp-badge.high-leverage {
+    background-color: #dc2626; /* red-600 */
+    color: #fef2f2; /* red-50 */
+}
+
+
 /* --- VALUATION HEALTH DASHBOARD --- */
 .health-dashboard-grid {
     display: grid;
