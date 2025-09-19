@@ -46,7 +46,7 @@ export function _calculateGarpScorecardMetrics(data) {
     // Prioritize TTM data but fall back to the latest annual data if unavailable.
     const roe = metricsTtm.roe ?? latestAnnualMetrics.roe;
     const roic = metricsTtm.roic ?? latestAnnualMetrics.roic;
-    const pe = metricsTtm.peRatio ?? latestAnnualMetrics.peRatio;
+    const pe = metricsTtm.peRatioTTM ?? latestAnnualMetrics.peRatio;
     const peg = metricsTtm.pegRatio ?? latestAnnualMetrics.pegRatio;
     const de = metricsTtm.debtToEquity ?? latestAnnualMetrics.debtToEquity;
 
@@ -381,7 +381,30 @@ export function _calculateCapitalAllocatorsMetrics(data) {
             roeTrend: formatPercentTrend(metricsWithNormalizedKeys, 'returnOnEquity'),
             revenueGrowth: income.map(i => ({ year: i.calendarYear, revenue: formatLargeNumber(i.revenue) })),
             grossProfitGrowth: income.map(i => ({ year: i.calendarYear, grossProfit: formatLargeNumber(i.grossProfit) }))
-      _calculateGarpAnalysisMetrics(data) {
+        },
+        acquisitionHistory: balanceSheet.map(bs => ({
+            year: bs.calendarYear,
+            goodwill: formatLargeNumber(bs.goodwill),
+            acquisitions: formatLargeNumber(cashFlow.find(cf => cf.calendarYear === bs.calendarYear)?.acquisitionsNet)
+        })),
+        shareholderReturns: {
+            buybacksWithValuation: buybacksWithValuation,
+            fcfPayoutRatioTrend: cashFlow.map(cf => {
+                const dividends = Math.abs(cf.dividendsPaid || 0);
+                const fcf = cf.freeCashFlow;
+                return {
+                    year: cf.calendarYear,
+                    ratio: (fcf && fcf > 0) ? `${((dividends / fcf) * 100).toFixed(2)}%` : 'N/A'
+                };
+            })
+        }
+    };
+}
+
+/**
+ * NEW: Calculates metrics for the "GARP Analysis" prompt.
+ */
+export function _calculateGarpAnalysisMetrics(data) {
     const keyMetrics = (data.key_metrics_annual || []).slice().reverse();
     const ratios = (data.ratios_annual || []).slice().reverse();
     const estimates = (data.analyst_estimates || []).slice().reverse();
