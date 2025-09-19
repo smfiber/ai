@@ -278,39 +278,19 @@ export function renderValuationHealthDashboard(container, ticker, fmpData) {
         <div class="health-dashboard-grid">${tilesHtml}</div>`;
 }
 
-export function renderThesisTracker(container, ticker) {
+export function renderGarpAnalysisSummary(container, ticker) {
     if (!container) return;
 
-    const stock = state.portfolioCache.find(s => s.ticker === ticker);
-
-    if (!stock) {
-        container.innerHTML = `<div class="p-4 text-center text-red-500">Error: Could not find data for ${ticker} in the cache.</div>`;
-        return;
-    }
-
-    const thesisContent = stock.thesis || ''; 
-
-    let contentHtml = '';
-    if (thesisContent) {
-        contentHtml = `<div class="prose prose-sm max-w-none bg-gray-50 p-4 rounded-md border">${marked.parse(thesisContent)}</div>`;
-    } else {
-        contentHtml = `<p class="text-gray-500 italic">You haven't written an investment thesis for this stock yet.</p>`;
-    }
-    
     container.innerHTML = `
         <div class="flex justify-between items-center mb-4 border-b pb-2">
-             <h3 class="text-xl font-bold text-gray-800">My Investment Thesis</h3>
-             <div class="flex items-center gap-2">
-                <button id="test-thesis-button" data-ticker="${ticker}" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-1 px-4 rounded-lg text-sm disabled:bg-gray-400 disabled:cursor-not-allowed" ${!thesisContent ? 'disabled' : ''} title="Use AI to test this thesis against the latest data">
-                    Test Thesis
-                </button>
-                <button id="edit-thesis-button" data-ticker="${ticker}" class="bg-indigo-100 hover:bg-indigo-200 text-indigo-700 font-semibold py-1 px-4 rounded-lg text-sm">
-                    ${thesisContent ? 'Edit Thesis' : 'Write Thesis'}
-                </button>
-             </div>
+             <h3 class="text-xl font-bold text-gray-800">AI GARP Candidacy Analysis</h3>
+             <button id="analyze-garp-button" data-ticker="${ticker}" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-1 px-4 rounded-lg text-sm">
+                Analyze Candidacy
+            </button>
         </div>
-        ${contentHtml}
-        <div id="thesis-test-result-container" class="mt-4"></div>
+        <div id="garp-analysis-container" class="prose prose-sm max-w-none bg-gray-50 p-4 rounded-md border min-h-[100px]">
+            <p class="text-gray-500 italic">Click the button to have AI analyze this stock's GARP characteristics based on the scorecard data.</p>
+        </div>
     `;
 }
 
