@@ -137,7 +137,7 @@ export function _calculateGarpScorecardMetrics(data) {
         'Return on Invested Capital': { value: roic, isMet: roic > 0.12, format: 'percent' },
         'P/E (TTM)': { value: pe, isMet: pe < 25, format: 'decimal' },
         'Forward P/E': { value: forwardPe, isMet: forwardPe < 20, format: 'decimal' },
-        'PEG Ratio': { value: peg, isMet: peg > 0.5 && peg < 1.5, format: 'decimal' },
+        'PEG Ratio': { value: peg, isMet: peg > 0 && peg < 1.5, format: 'decimal' },
         'P/S Ratio': { value: ps, isMet: ps < 2.5, format: 'decimal' },
         'Debt-to-Equity': { value: de, isMet: de < 0.7, format: 'decimal' },
     };
