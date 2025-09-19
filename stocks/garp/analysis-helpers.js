@@ -47,12 +47,17 @@ export function _calculateGarpScorecardMetrics(data) {
     const roe = metricsTtm.roe ?? latestAnnualMetrics.roe;
     const roic = metricsTtm.roic ?? latestAnnualMetrics.roic;
     const pe = metricsTtm.peRatioTTM ?? latestAnnualMetrics.peRatio;
-    const peg = metricsTtm.pegRatio ?? latestAnnualMetrics.pegRatio;
     const de = metricsTtm.debtToEquity ?? latestAnnualMetrics.debtToEquity;
 
     const forwardPe = estimates.forwardPE;
     const ps = ratios.priceToSalesRatio;
     const epsNext5y = estimates.estimatedEpsGrowth5Y;
+
+    // Calculate PEG Ratio manually from P/E and estimated growth.
+    let peg = null;
+    if (pe > 0 && epsNext5y > 0) {
+        peg = pe / (epsNext5y * 100);
+    }
 
     // --- CRITERIA CHECKS ---
     return {
