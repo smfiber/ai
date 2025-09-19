@@ -631,7 +631,15 @@ export async function handleGarpCandidacyRequest(ticker) {
             \`\`\`
 
             **Task:**
-            Write a concise, one-paragraph analysis based *only* on the provided data. Start by stating how many criteria the stock passes. Then, briefly interpret the stock's profile, highlighting its key strengths (areas where it passes) and weaknesses (areas where it fails) according to the GARP philosophy. Conclude with a definitive statement on whether it appears to be a strong, weak, or borderline GARP candidate at this moment.
+            Act as a decisive analyst and deliver a verdict in a single, dense paragraph. Follow this exact structure:
+            1.  Start with the final verdict in bold: **Strong GARP Candidate**, **Borderline GARP Candidate**, or **Not a GARP Candidate**.
+            2.  Immediately follow with the scorecard result, like "(Passes X out of 10 criteria)".
+            3.  Justify the verdict by synthesizing the data. Briefly state the bull case (the growth/profitability metrics that pass) and the bear case (the valuation metrics that fail).
+            4.  Conclude with a single sentence explaining the core tension (e.g., "This is a classic case of a high-quality, high-growth company whose valuation has gotten ahead of itself, preventing a strong GARP rating at its current price.").
+            5.  Do not add a title or any text before the bolded verdict.
+
+            **Example Output:**
+            "**Borderline GARP Candidate** (Passes 7 out of 10 criteria). The company demonstrates exceptional growth and profitability, with strong historical and forward EPS growth and a high ROE. However, its current valuation is a concern; a P/E (TTM) over 25 and a P/S ratio well above 2.5 suggest the market has already priced in this growth. This is a high-quality company, but it lacks the 'reasonable price' component essential for a true GARP investment today."
         `;
         
         const analysisResult = await generateRefinedArticle(prompt);
