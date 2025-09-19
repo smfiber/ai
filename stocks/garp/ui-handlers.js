@@ -704,19 +704,22 @@ export async function handleGarpCandidacyRequest(ticker) {
             (1 paragraph)
             Identify the critical risks and fundamental weaknesses revealed by the failing metrics. Emphasize the "why" behind the poor numbers (e.g., "low profitability suggests a weak competitive moat"). Directly cite the specific data points that give you pause and explain their negative implications for a long-term GARP investor.
             
-            FINAL SYNTHESIS: Profile & Strategic Recommendation
+            FINAL SYNTHESIS & RECOMMENDATION
             
-            (2 paragraphs)
-            Conclude by synthesizing the bull and bear cases into a final, actionable takeaway.
-            
+            (1 paragraph)
             Investment Profile & The Deciding Factor: Classify the stock's profile (e.g., is this a high-risk 'Turnaround Story' or a steady 'Compounder'?). Then, state the single most critical question or tension an investor must resolve before committing capital.
+
+            Strategic Recommendation: (1 line) A bolded, single-line recommendation. Must be one of: **High Conviction Buy**, **Initiate Position**, **Add to Watchlist**, or **Pass/Sell**.
             
+            (1 paragraph)
             Actionable Diligence Questions: Based on your analysis, propose 2-3 specific, forward-looking questions that must be answered in the next stage of due diligence. These should directly address the risks and uncertainties you've identified.
             
             6. Critical Guidelines & Constraints:
             
             Handle the PEG Ratio Nuance: A PEG ratio below 0.5 is a potential sign of extreme undervaluation relative to growth. You must interpret this as a significant positive in your analysis, not as a failure to meet a 0.5-1.5 range.
             
+            Synthesize Related Metrics: Directly address the relationship between valuation (P/E ratios), growth (EPS Growth), and the combined metric (PEG ratio). For instance, if the PEG ratio is strong, explain how this provides context for a P/E ratio that might otherwise appear high. Do not treat these metrics in isolation.
+
             Data-Driven: Your analysis must be grounded in the provided data. Directly reference at least four specific numerical data points from the scorecard to substantiate your claims.
             
             Contextual Awareness: Briefly integrate the current market context (as of late 2025) into your reasoning. For example, how might prevailing interest rates or economic growth forecasts affect the company's debt load or growth prospects?
