@@ -20,7 +20,64 @@ function formatLargeNumber(value, precision = 2) {
 }
 
 /**
- * NEW: Calculates metrics for the GARP Scorecard dashboard.
+ * NEW: Analyzes a metric's value against GARP criteria to provide a qualitative interpretation.
+ * @param {string} metricName The name of the metric being analyzed.
+ * @param {number|null} value The calculated value of the metric.
+ * @returns {object} An object containing the category and explanatory text.
+ */
+function _getMetricInterpretation(metricName, value) {
+    if (value === null || !isFinite(value)) {
+        return { category: 'No Data', text: 'Data was not available to generate an interpretation for this metric.' };
+    }
+
+    switch (metricName) {
+        case 'EPS Growth (5Y)':
+        case 'EPS Growth (Next 1Y)':
+            if (value > 0.3) return { category: 'Hyper-Growth', text: 'Signals a hyper-growth company. The key question is sustainability, as this often comes with a premium valuation.' };
+            if (value > 0.1) return { category: 'GARP Sweet Spot', text: 'Indicates strong, steady, and likely sustainable growth. A key sign of a well-managed business.' };
+            if (value > 0.0) return { category: 'Modest Growth', text: 'Could highlight a value or turnaround opportunity if the valuation is very low, but requires investigation.' };
+            return { category: 'Negative Growth', text: 'A significant red flag indicating potential business decline or cyclical weakness.' };
+
+        case 'Revenue Growth (5Y)':
+            if (value > 0.15) return { category: 'Strong Growth', text: 'Indicates a company rapidly expanding its market share or operating in a strong industry.' };
+            if (value > 0.05) return { category: 'Solid Growth', text: 'Represents healthy, sustainable top-line growth that supports the investment thesis.' };
+            return { category: 'Slow Growth', text: 'A potential concern. The company may be in a mature industry or losing market share.' };
+
+        case 'Return on Equity':
+        case 'Return on Invested Capital':
+            if (value > 0.3) return { category: 'Exceptional Quality', text: 'Indicates a dominant, best-in-breed business with a very strong competitive moat. Finding this at a reasonable price is rare.' };
+            if (value > 0.15) return { category: 'High Quality', text: 'The sign of a strong, well-run company with a solid competitive advantage and efficient management.' };
+            if (value > 0.1) return { category: 'Warning Sign', text: 'Suggests the company operates in a competitive industry or is less effective at deploying capital. Profitability may be a concern.' };
+            return { category: 'Low Quality', text: 'Indicates poor profitability and likely a weak or non-existent competitive moat.' };
+            
+        case 'P/E (TTM)':
+        case 'Forward P/E':
+            if (value < 12) return { category: 'Potential Value Trap', text: 'Appears very cheap, but this could be a red flag. Requires deep investigation to ensure it isn\'t cheap for a good reason.' };
+            if (value < 25) return { category: 'Reasonable Price', text: 'The valuation appears reasonable or attractive given the company\'s growth prospects. A classic GARP profile.' };
+            return { category: 'Expensive', text: 'The stock is trading at a premium. The investment thesis relies heavily on future growth meeting high expectations.' };
+
+        case 'PEG Ratio':
+            if (value < 0.5) return { category: 'Potentially Undervalued', text: 'The stock may be deeply undervalued relative to its growth, but check if growth estimates are realistic.' };
+            if (value <= 1.5) return { category: 'Fairly Priced', text: 'Suggests a balanced risk/reward profile where the price is justified by the expected growth.' };
+            return { category: 'Priced for Perfection', text: 'Indicates the price may have run ahead of growth expectations, reducing the margin of safety.' };
+
+        case 'P/S Ratio':
+            if (value < 1.0) return { category: 'Potentially Undervalued', text: 'May indicate the company\'s sales are undervalued by the market, especially for growing, not-yet-profitable companies.' };
+            if (value < 2.5) return { category: 'Reasonable Price', text: 'A healthy valuation that suggests the market price is not excessive relative to the company\'s revenue.' };
+            return { category: 'Expensive', text: 'The stock is trading at a high multiple of its sales, suggesting high expectations are priced in.' };
+            
+        case 'Debt-to-Equity':
+            if (value < 0.3) return { category: 'Fortress Balance Sheet', text: 'A sign of financial conservatism, making the company highly resilient to economic downturns.' };
+            if (value < 0.7) return { category: 'Low Leverage', text: 'Indicates a healthy and manageable debt level, reducing financial risk.' };
+            return { category: 'High Leverage', text: 'A potential red flag. The company relies heavily on debt, which increases risk during economic weakness.' };
+
+        default:
+            return { category: 'N/A', text: '' };
+    }
+}
+
+/**
+ * Calculates metrics for the GARP Scorecard dashboard.
  * @param {object} data - The full FMP data object for a stock.
  * @returns {object} An object containing GARP metrics with their values and pass/fail status.
  */
@@ -46,22 +103,19 @@ export function _calculateGarpScorecardMetrics(data) {
     const eps5y = income.length >= 6 ? getCagr(income[startIndex].eps, income[lastIndex].eps, 5) : null;
     const rev5y = income.length >= 6 ? getCagr(income[startIndex].revenue, income[lastIndex].revenue, 5) : null;
     
-    // Prioritize TTM data but fall back to the latest annual data if unavailable.
     const roe = metricsTtm.roe ?? latestAnnualMetrics.roe;
     const roic = metricsTtm.roic ?? latestAnnualMetrics.roic;
     const pe = metricsTtm.peRatioTTM ?? latestAnnualMetrics.peRatio;
     const de = metricsTtm.debtToEquity ?? latestAnnualMetrics.debtToEquity;
     const ps = ratiosTtm.priceToSalesRatioTTM ?? latestAnnualRatios.priceToSalesRatio;
 
-    // Manually calculate the forward 1-year EPS growth rate.
-    let epsNext5y = null;
+    let epsNext1y = null;
     const lastActualEps = income.length > 0 ? income[lastIndex].eps : null;
     const forwardEpsForGrowth = estimates.estimatedEpsAvg;
     if (lastActualEps > 0 && forwardEpsForGrowth > 0) {
-        epsNext5y = (forwardEpsForGrowth / lastActualEps) - 1;
+        epsNext1y = (forwardEpsForGrowth / lastActualEps) - 1;
     }
 
-    // Calculate Forward P/E manually from current price and estimated forward EPS.
     let forwardPe = null;
     const forwardEps = estimates.estimatedEpsAvg;
     const currentPrice = profile.price;
@@ -69,16 +123,15 @@ export function _calculateGarpScorecardMetrics(data) {
         forwardPe = currentPrice / forwardEps;
     }
 
-    // Calculate PEG Ratio manually from P/E and estimated growth.
     let peg = null;
-    if (pe > 0 && epsNext5y > 0) {
-        peg = pe / (epsNext5y * 100);
+    if (pe > 0 && epsNext1y > 0) {
+        peg = pe / (epsNext1y * 100);
     }
 
-    // --- CRITERIA CHECKS ---
-    return {
+    // --- CRITERIA CHECKS & INTERPRETATIONS ---
+    const metrics = {
         'EPS Growth (5Y)': { value: eps5y, isMet: eps5y > 0.10, format: 'percent' },
-        'EPS Growth (Next 1Y)': { value: epsNext5y, isMet: epsNext5y > 0.10, format: 'percent' },
+        'EPS Growth (Next 1Y)': { value: epsNext1y, isMet: epsNext1y > 0.10, format: 'percent' },
         'Revenue Growth (5Y)': { value: rev5y, isMet: rev5y > 0.05, format: 'percent' },
         'Return on Equity': { value: roe, isMet: roe > 0.15, format: 'percent' },
         'Return on Invested Capital': { value: roic, isMet: roic > 0.12, format: 'percent' },
@@ -88,6 +141,13 @@ export function _calculateGarpScorecardMetrics(data) {
         'P/S Ratio': { value: ps, isMet: ps < 2.5, format: 'decimal' },
         'Debt-to-Equity': { value: de, isMet: de < 0.7, format: 'decimal' },
     };
+
+    // Add interpretation to each metric
+    for (const key in metrics) {
+        metrics[key].interpretation = _getMetricInterpretation(key, metrics[key].value);
+    }
+    
+    return metrics;
 }
 
 
@@ -131,13 +191,11 @@ export function _calculateFinancialAnalysisMetrics(data) {
     const grades = (data.stock_grade_news || []).slice(0, 15);
     const ratios = (data.ratios_annual || []).slice().reverse();
 
-    // MODIFICATION: Prioritize TTM data.
-    const latestIncome = incomeStatements[incomeStatements.length - 1] || {};
+    const latestIncome = incomeStatements[incomeStatements.length - 1] || {};
     const latestMetrics = data.key_metrics_ttm?.[0] || keyMetrics[keyMetrics.length - 1] || {};
     const latestCashFlow = cashFlows[cashFlows.length - 1] || {};
     const latestRatios = data.ratios_ttm?.[0] || ratios[ratios.length - 1] || {};
 
-    // 2.5 Quarterly Performance Calculations
     const incomeQuarterly = data.income_statement_quarterly || [];
     let recentPerformance = {
         mrqDate: 'N/A',
@@ -186,7 +244,6 @@ export function _calculateFinancialAnalysisMetrics(data) {
         return `Generally ${buys > sells ? 'positive' : 'neutral'}, with ${buys} buys, ${holds} holds, and ${sells} sells in the last ${grades.length} ratings.`;
     })();
 
-    // MODIFICATION: Prioritize TTM ROE.
     const latestRoe = latestMetrics.roeTTM ?? latestMetrics.roe ?? latestMetrics.returnOnEquity;
     const highRoe = keyMetrics.slice(-5).every(k => (k.roe ?? k.returnOnEquity) > 0.15);
 
@@ -322,7 +379,6 @@ export function _calculateRiskAssessmentMetrics(data) {
     const grades = (data.stock_grade_news || []).slice(0, 10);
     const ratios = (data.ratios_annual || []).slice(0, 5);
 
-    // MODIFICATION: Prioritize TTM data.
     const latestRatios = data.ratios_ttm?.[0] || ratios[ratios.length - 1] || {};
     const latestCashFlow = cashFlow[cashFlow.length - 1] || {};
     const latestIncome = income[income.length - 1] || {};
@@ -342,7 +398,6 @@ export function _calculateRiskAssessmentMetrics(data) {
         marketRisks: {
             beta: profile.beta?.toFixed(2) || 'N/A',
             valuation: {
-                // MODIFICATION: Use TTM values with fallback.
                 peRatio: (latestMetrics.peRatioTTM ?? latestMetrics.peRatio)?.toFixed(2) || 'N/A',
                 psRatio: (latestRatios.priceToSalesRatioTTM ?? latestRatios.priceToSalesRatio)?.toFixed(2) || 'N/A'
             },
