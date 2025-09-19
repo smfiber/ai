@@ -20,6 +20,50 @@ function formatLargeNumber(value, precision = 2) {
 }
 
 /**
+ * NEW: Calculates metrics for the GARP Scorecard dashboard.
+ * @param {object} data - The full FMP data object for a stock.
+ * @returns {object} An object containing GARP metrics with their values and pass/fail status.
+ */
+export function _calculateGarpScorecardMetrics(data) {
+    const income = (data.income_statement_annual || []).slice().reverse();
+    const metrics = data.key_metrics_ttm?.[0] || {};
+    const ratios = data.ratios_ttm?.[0] || {};
+    const estimates = (data.analyst_estimates || []).find(e => e.estimatedEpsGrowth5Y) || {};
+
+    const getCagr = (startValue, endValue, periods) => {
+        if (typeof startValue !== 'number' || typeof endValue !== 'number' || startValue <= 0 || periods <= 0) return null;
+        return Math.pow(endValue / startValue, 1 / periods) - 1;
+    };
+
+    // --- CALCULATIONS ---
+    const eps5y = income.length >= 6 ? getCagr(income[0].eps, income[5].eps, 5) : null;
+    const rev5y = income.length >= 6 ? getCagr(income[0].revenue, income[5].revenue, 5) : null;
+    const roe = metrics.roe;
+    const roic = metrics.roic;
+    const pe = metrics.peRatio;
+    const forwardPe = estimates.forwardPE;
+    const peg = metrics.pegRatio;
+    const ps = ratios.priceToSalesRatio;
+    const de = metrics.debtToEquity;
+    const epsNext5y = estimates.estimatedEpsGrowth5Y;
+
+    // --- CRITERIA CHECKS ---
+    return {
+        'EPS Growth (5Y)': { value: eps5y, isMet: eps5y > 0.10, format: 'percent' },
+        'EPS Growth (Next 5Y)': { value: epsNext5y, isMet: epsNext5y > 0.10, format: 'percent' },
+        'Revenue Growth (5Y)': { value: rev5y, isMet: rev5y > 0.05, format: 'percent' },
+        'Return on Equity': { value: roe, isMet: roe > 0.15, format: 'percent' },
+        'Return on Invested Capital': { value: roic, isMet: roic > 0.12, format: 'percent' },
+        'P/E (TTM)': { value: pe, isMet: pe < 25, format: 'decimal' },
+        'Forward P/E': { value: forwardPe, isMet: forwardPe < 20, format: 'decimal' },
+        'PEG Ratio': { value: peg, isMet: peg > 0.5 && peg < 1.5, format: 'decimal' },
+        'P/S Ratio': { value: ps, isMet: ps < 2.5, format: 'decimal' },
+        'Debt-to-Equity': { value: de, isMet: de < 0.7, format: 'decimal' },
+    };
+}
+
+
+/**
  * Calculates a comprehensive summary of metrics for the "Financial Analysis" prompt.
  * @param {object} data - The full FMP data object for a stock.
  * @returns {object} A summary object with pre-calculated metrics and trends.
