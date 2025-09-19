@@ -67,9 +67,12 @@ function setupGlobalEventListeners() {
             return;
         }
         
-        const portfolioButton = e.target.closest('#open-portfolio-modal-button');
-        if (portfolioButton) {
-            openStockListModal('Portfolio');
+        const listButton = e.target.closest('.dashboard-list-button');
+        if (listButton) {
+            const status = listButton.dataset.status;
+            if (status) {
+                openStockListModal(status);
+            }
             return;
         }
     });
