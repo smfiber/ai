@@ -148,7 +148,7 @@ export function renderGarpScorecardDashboard(container, ticker, fmpData) {
         let valueDisplay = 'N/A';
         let colorClass = 'text-gray-500 italic'; // Muted gray for N/A
 
-        if (typeof data.value === 'number') {
+        if (typeof data.value === 'number' && isFinite(data.value)) {
             colorClass = data.isMet ? 'price-gain' : 'price-loss'; // Green for pass, Red for fail
             if (data.format === 'percent') {
                 valueDisplay = `${(data.value * 100).toFixed(2)}%`;
