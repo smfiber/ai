@@ -263,7 +263,62 @@ export function renderGarpScorecardDashboard(container, ticker, fmpData) {
     container.innerHTML = `
         <h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">GARP Scorecard</h3>
         <div class="grid grid-cols-2 md:grid-cols-5 gap-4">${tilesHtml}</div>`;
+    
+    return metrics; // Return metrics for reuse
 }
+
+/**
+ * NEW: Renders the qualitative interpretation of the GARP scorecard.
+ * @param {HTMLElement} container The container to render the content into.
+ * @param {object} metrics The enhanced metrics object from _calculateGarpScorecardMetrics.
+ */
+export function renderGarpInterpretationAnalysis(container, metrics) {
+    if (!container || !metrics) {
+        container.innerHTML = '';
+        return;
+    };
+
+    const toKebabCase = (str) => str.replace(/\s+/g, '-').toLowerCase();
+
+    const metricGroups = {
+        'Growth': ['EPS Growth (5Y)', 'EPS Growth (Next 1Y)', 'Revenue Growth (5Y)'],
+        'Profitability': ['Return on Equity', 'Return on Invested Capital'],
+        'Valuation & Debt': ['P/E (TTM)', 'Forward P/E', 'PEG Ratio', 'P/S Ratio', 'Debt-to-Equity']
+    };
+
+    let html = '<h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">GARP Criteria Interpretation</h3>';
+    html += '<div class="space-y-6">';
+
+    for (const groupName in metricGroups) {
+        html += '<div>';
+        html += `<h4 class="text-lg font-semibold text-gray-700 mb-3">${groupName} Analysis</h4>`;
+        html += '<div class="space-y-4">';
+
+        metricGroups[groupName].forEach(metricName => {
+            const metricData = metrics[metricName];
+            if (metricData && metricData.interpretation) {
+                const interp = metricData.interpretation;
+                const badgeClass = toKebabCase(interp.category);
+                
+                html += `
+                    <div class="p-3 bg-gray-50 rounded-lg border">
+                        <p class="font-semibold text-gray-800 flex items-center gap-3">
+                            ${metricName}
+                            <span class="interp-badge ${badgeClass}">${interp.category}</span>
+                        </p>
+                        <p class="text-sm text-gray-600 mt-1">${interp.text}</p>
+                    </div>
+                `;
+            }
+        });
+
+        html += '</div></div>';
+    }
+    
+    html += '</div>';
+    container.innerHTML = html;
+}
+
 
 export function renderValuationHealthDashboard(container, ticker, fmpData) {
     if (!container) return;
