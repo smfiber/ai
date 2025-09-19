@@ -666,37 +666,60 @@ export async function handleGarpCandidacyRequest(ticker) {
         }
 
             const prompt = `
-            **Role:** You are a sharp-witted financial analyst specializing in Growth at a Reasonable Price (GARP) investing.
-
-            **Context:** You are given a set of GARP criteria and the calculated scorecard data for a specific stock. Your analysis must account for the natural tension between high growth and low valuation; it is rare for a company to be perfect on all metrics.
-
-            **GARP Criteria:**
-            - EPS Growth (Last 5 Years) > 10%
-            - EPS Growth (Next 1 Year, Analyst Estimates) > 10%
-            - Revenue Growth (Last 5 Years) > 5%
-            - Return on Equity (ROE) > 15%
-            - Return on Invested Capital (ROIC) > 12%
-            - P/E (TTM) < 25
-            - Forward P/E < 20
-            - PEG Ratio between 0.5 and 1.5
-            - P/S Ratio < 2.5
-            - Debt-to-Equity < 0.7
-
-            **Stock's Scorecard Data:**
+            1. Persona & Role:
+            
+            You are a senior investment analyst at "Reasonable Growth Capital," a firm that strictly adheres to the Growth at a Reasonable Price (GARP) philosophy. Your analysis is respected for its clarity, data-driven conviction, and ability to distill complex financial data into a decisive investment thesis. You are pragmatic, recognizing that no stock is perfect, and your goal is to weigh the evidence objectively.
+            
+            2. Objective:
+            
+            You are preparing a concise pre-read for the firm's weekly investment committee. Your objective is to deliver a definitive GARP assessment of the provided stock, enabling the committee to make a clear "pursue further diligence" or "pass" decision.
+            3. Input Data:
+            
+            You will be given a JSON object containing a scorecard with key financial metrics and a criteriaInterpretation explaining what each metric signifies within our GARP framework.
             \`\`\`json
             ${JSON.stringify(cleanData, null, 2)}
             \`\`\`
 
-            **Task:**
-            Your entire response MUST be a single paragraph. It MUST begin with one of these three bolded phrases: **Strong GARP Candidate**, **Borderline GARP Candidate**, or **Not a GARP Candidate**. Do not add a title.
-
-            Here is the structure to follow precisely:
-            1.  Start with the bolded verdict.
-            2.  Follow immediately with the scorecard result in parentheses, which you must calculate by counting how many criteria have "isMet": true.
-            3.  Justify the verdict by synthesizing the data's bull case (passing metrics) and bear case (failing metrics).
-            4.  **Special Instruction:** If the verdict is 'Borderline' or 'Not a GARP Candidate' but the stock shows exceptional strength in certain areas (e.g., growth rates > 30% or ROE > 30%), attempt to classify its profile. For example, is it a high-risk **'Hyper-Growth Prospect'** or a potential **'Fallen Angel'** value play?
-            5.  **Valuation Nuance:** Pay close attention to the PEG ratio. A PEG below the 0.5 threshold is technically a miss of the '0.5-1.5' rule, but you MUST interpret it as a significant positive, indicating potential undervaluation relative to growth. Contrast this with high P/E or P/S ratios, which indicate the market's high expectations.
-            6.  Conclude with a single sentence that explains the core tension between the bull and bear cases.
+            4. Required Output Structure & Content:
+            
+            Generate a comprehensive GARP assessment using precise markdown formatting.
+            
+            EXECUTIVE SUMMARY
+            
+            Verdict: (1 line) A bolded, single-line verdict. Must be one of: Strong GARP Candidate, Borderline GARP Candidate, or Not a GARP Candidate.
+            
+            GARP Score: (1 line) The scorecard result in parentheses, e.g., (7/10 Criteria Met).
+            
+            Core Thesis: (1 line) A single, concise sentence summarizing the primary investment thesis.
+            
+            THE BULL CASE: The Growth & Value Narrative
+            
+            (1 paragraph)
+            Synthesize the stock's strengths into a compelling narrative. Do not just list the passing metrics; explain how they work together. Focus on the synergy between the forward-looking growth projections and the current valuation. Directly reference the most impressive numbers from the scorecard to build your case.
+            
+            THE BEAR CASE: The Risks & Quality Concerns
+            
+            (1 paragraph)
+            Identify the critical risks and fundamental weaknesses revealed by the failing metrics. Emphasize the "why" behind the poor numbers (e.g., "low profitability suggests a weak competitive moat"). Directly cite the specific data points that give you pause and explain their negative implications for a long-term GARP investor.
+            
+            FINAL SYNTHESIS: Profile & Strategic Recommendation
+            
+            (1 paragraph)
+            Conclude by synthesizing the bull and bear cases into a final, actionable takeaway.
+            
+            Investment Profile: Classify the stock's profile based on its unique mix of strengths and weaknesses (e.g., is this a high-risk 'Turnaround Story', a steady 'Compounder', or a potential 'Fallen Angel'?).
+            
+            The Deciding Factor: State the single most critical question or tension an investor must resolve before committing capital. This should encapsulate the core trade-off presented by the stock.
+            
+            5. Critical Guidelines & Constraints:
+            
+            Handle the PEG Ratio Nuance: A PEG ratio below 0.5 is a potential sign of extreme undervaluation relative to growth. You must interpret this as a significant positive in your analysis, not as a failure to meet a 0.5-1.5 range.
+            
+            Data-Driven: Your analysis must be grounded in the provided data. Directly reference at least four specific numerical data points from the scorecard to substantiate your claims.
+            
+            Tone: Maintain a professional, analytical, and objective tone. Avoid speculative hype. Your confidence should stem from the data.
+            
+            Formatting: Adhere strictly to the markdown structure, including bolding, horizontal lines, and paragraph breaks as specified.
         `;
         
         const analysisResult = await generateRefinedArticle(prompt);
