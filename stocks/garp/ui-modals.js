@@ -1,6 +1,6 @@
-import { CONSTANTS, state, ANALYSIS_ICONS } from './config.js';
+import { CONSTANTS, state } from './config.js';
 import { getFmpStockData, getGroupedFmpData } from './api.js';
-import { renderValuationHealthDashboard, renderThesisTracker, _renderGroupedStockList } from './ui-render.js';
+import { renderValuationHealthDashboard, renderThesisTracker, _renderGroupedStockList, renderPortfolioManagerList, renderGarpScorecardDashboard } from './ui-render.js'; 
 import { getDocs, query, collection, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- GENERIC MODAL HELPERS ---
@@ -25,6 +25,7 @@ export function closeModal(modalId) {
     const modal = document.getElementById(modalId);
     if (modal) {
         modal.classList.remove(CONSTANTS.CLASS_MODAL_OPEN);
+        // Only remove the body class if no other modals are open
         const anyModalOpen = document.querySelector('.modal.is-open');
         if (!anyModalOpen) {
             document.body.classList.remove(CONSTANTS.CLASS_BODY_MODAL_OPEN);
@@ -68,6 +69,7 @@ export function openConfirmationModal(title, message, onConfirm) {
     document.getElementById('confirmation-message').textContent = message;
 
     const confirmButton = document.getElementById('confirm-button');
+    // Clone and replace the button to remove old event listeners
     const newConfirmButton = confirmButton.cloneNode(true);
     confirmButton.parentNode.replaceChild(newConfirmButton, confirmButton);
 
@@ -105,6 +107,7 @@ export function openManageStockModal(stockData) {
  * Opens the "Portfolio & Watchlist Manager" modal.
  */
 export function openPortfolioManagerModal() {
+    renderPortfolioManagerList();
     openModal(CONSTANTS.MODAL_PORTFOLIO_MANAGER);
 }
 
@@ -119,20 +122,24 @@ export async function openStockListModal(listType) {
 
     if (!titleEl || !contentContainer) return;
 
+    // Set title and loading state immediately
     titleEl.textContent = listType;
     contentContainer.innerHTML = '<div class="loader mx-auto my-8"></div>';
     openModal(modalId);
 
     try {
+        // Filter the cached stocks based on the list type
         const filteredStocks = state.portfolioCache.filter(s => s.status === listType);
 
+        // Enrich the filtered stocks with their cached FMP data
         const stocksWithData = await Promise.all(
             filteredStocks.map(async (stock) => {
                 const fmpData = await getFmpStockData(stock.ticker);
-                return { ...stock, fmpData };
+                return { ...stock, fmpData }; // Combine portfolio data with FMP data
             })
         );
         
+        // Render the fully populated list
         await _renderGroupedStockList(contentContainer, stocksWithData, listType);
 
     } catch (error) {
@@ -149,6 +156,7 @@ export function openThesisTrackerModal(ticker) {
     openModal('thesisTrackerModal');
 }
 
+
 // --- SPECIFIC, COMPLEX MODAL CONTROLLERS ---
 
 export async function openRawDataViewer(ticker) {
@@ -156,25 +164,30 @@ export async function openRawDataViewer(ticker) {
     openModal(modalId);
 
     const modal = document.getElementById(modalId);
-    modal.dataset.activeTicker = ticker;
+    modal.dataset.activeTicker = ticker; // Store ticker for later use
     
     const rawDataContainer = document.getElementById('raw-data-accordion-container');
     const aiButtonsContainer = document.getElementById('ai-buttons-container');
     const aiArticleContainer = document.getElementById('ai-article-container');
     const profileDisplayContainer = document.getElementById('company-profile-display-container');
     const titleEl = document.getElementById('raw-data-viewer-modal-title');
+    const garpScorecardContainer = document.getElementById('garp-scorecard-container');
     
     titleEl.textContent = `Analyzing ${ticker}...`;
     rawDataContainer.innerHTML = '<div class="loader mx-auto"></div>';
     aiButtonsContainer.innerHTML = '';
     aiArticleContainer.innerHTML = '';
     profileDisplayContainer.innerHTML = '';
+    garpScorecardContainer.innerHTML = '';
     document.getElementById('valuation-health-container').innerHTML = '';
     document.getElementById('thesis-tracker-container').innerHTML = '';
     
     // Reset tabs to default state
     document.querySelectorAll('#rawDataViewerModal .tab-content').forEach(c => c.classList.add('hidden'));
-    document.querySelectorAll('#rawDataViewerModal .tab-button').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('#rawDataViewerModal .tab-button').forEach(b => {
+        b.classList.remove('active');
+        b.removeAttribute('data-loaded');
+    });
     document.getElementById('dashboard-tab').classList.remove('hidden');
     document.querySelector('.tab-button[data-tab="dashboard"]').classList.add('active');
 
@@ -187,7 +200,10 @@ export async function openRawDataViewer(ticker) {
 
         if (!fmpData || !fmpData.profile || fmpData.profile.length === 0) {
             closeModal(modalId);
-            displayMessageInModal(`Crucial data is missing for ${ticker}. Please use the "Refresh FMP" button for this stock, then try again.`, 'warning');
+            displayMessageInModal(
+                `Crucial data is missing for ${ticker}. Please use the "Refresh FMP" button for this stock, then try again.`,
+                'warning'
+            );
             return;
         }
 
@@ -196,7 +212,6 @@ export async function openRawDataViewer(ticker) {
         
         titleEl.textContent = `Analysis for ${ticker}`;
 
-        // Build nested accordions for raw data
         let accordionHtml = '';
         if (groupedFmpData) {
             const sortedKeys = Object.keys(groupedFmpData).sort();
@@ -213,7 +228,6 @@ export async function openRawDataViewer(ticker) {
              rawDataContainer.innerHTML = '<p class="text-center text-gray-500 py-8">Could not load grouped raw data.</p>';
         }
 
-        // Build AI analysis buttons
         const prerequisiteButtons = [
             { reportType: 'FinancialAnalysis', text: 'Financial Analysis', tooltip: 'Deep dive into financial statements, ratios, and health.' },
             { reportType: 'GarpAnalysis', text: 'GARP Analysis', tooltip: 'Growth at a Reasonable Price. Is the valuation justified by its growth?' },
@@ -249,13 +263,12 @@ export async function openRawDataViewer(ticker) {
                 </div>
             </div>
         `;
-
-        // Render the company profile section
-        const imageUrl = profile.image || '';
+        
         const description = profile.description || 'No description available.';
         profileDisplayContainer.innerHTML = `<div class="mt-6 border-t pt-4"><p class="text-sm text-gray-700 mb-4">${description}</p></div>`;
         
         // Render Dashboard tab content
+        renderGarpScorecardDashboard(garpScorecardContainer, ticker, fmpData);
         renderValuationHealthDashboard(document.getElementById('valuation-health-container'), ticker, fmpData);
         renderThesisTracker(document.getElementById('thesis-tracker-container'), ticker);
 
