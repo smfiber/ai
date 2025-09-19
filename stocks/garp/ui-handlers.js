@@ -2,7 +2,7 @@ import { CONSTANTS, state, promptMap, ANALYSIS_REQUIREMENTS } from './config.js'
 import { callApi, callGeminiApi, generateRefinedArticle, generatePolishedArticleForSynthesis, getFmpStockData } from './api.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { openModal, closeModal, displayMessageInModal, openConfirmationModal, openManageStockModal } from './ui-modals.js';
-import { renderPortfolioManagerList, displayReport, updateReportStatus, fetchAndCachePortfolioData } from './ui-render.js';
+import { renderPortfolioManagerList, displayReport, updateReportStatus, fetchAndCachePortfolioData, updateGarpCandidacyStatus } from './ui-render.js';
 import { _calculateFinancialAnalysisMetrics, _calculateMoatAnalysisMetrics, _calculateRiskAssessmentMetrics, _calculateCapitalAllocatorsMetrics, _calculateGarpAnalysisMetrics, _calculateGarpScorecardMetrics } from './analysis-helpers.js';
 
 // --- FMP API INTEGRATION & MANAGEMENT ---
@@ -187,12 +187,13 @@ export async function handleResearchSubmit(e) {
 
 // --- AI ANALYSIS REPORT GENERATORS ---
 
-async function getSavedReports(ticker, reportType) {
+export async function getSavedReports(ticker, reportType) {
     const reportsRef = collection(state.db, CONSTANTS.DB_COLLECTION_AI_REPORTS);
     const q = query(reportsRef, where("ticker", "==", ticker), where("reportType", "==", reportType), orderBy("savedAt", "desc"));
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
+
 
 function buildAnalysisPayload(fullData, requiredEndpoints) {
     const payload = {};
@@ -581,9 +582,11 @@ export async function handleSaveReportToDb() {
 
 export async function handleGarpCandidacyRequest(ticker) {
     const resultContainer = document.getElementById('garp-analysis-container');
+    const statusContainer = document.getElementById('garp-candidacy-status-container');
     if (!resultContainer) return;
 
     resultContainer.innerHTML = `<div class="flex items-center justify-center p-4"><div class="loader"></div><p class="ml-4 text-gray-600 font-semibold">AI is analyzing...</p></div>`;
+    statusContainer.classList.add('hidden');
     
     try {
         const fmpData = await getFmpStockData(ticker);
@@ -594,7 +597,7 @@ export async function handleGarpCandidacyRequest(ticker) {
         const cleanData = {};
         for (const [key, value] of Object.entries(scorecardData)) {
             let formattedValue;
-            if (typeof value.value === 'number') {
+            if (typeof value.value === 'number' && isFinite(value.value)) {
                 formattedValue = value.format === 'percent' ? `${(value.value * 100).toFixed(2)}%` : value.value.toFixed(2);
             } else {
                 formattedValue = 'N/A';
@@ -633,6 +636,14 @@ export async function handleGarpCandidacyRequest(ticker) {
         
         const analysisResult = await generateRefinedArticle(prompt);
         resultContainer.innerHTML = marked.parse(analysisResult);
+        
+        const reportType = 'GarpCandidacy';
+        await autoSaveReport(ticker, reportType, analysisResult, prompt);
+        
+        const reports = await getSavedReports(ticker, reportType);
+        if (reports.length > 0) {
+            updateGarpCandidacyStatus(statusContainer, reports, reports[0].id, ticker);
+        }
 
     } catch (error) {
         console.error("Error in GARP Candidacy Request:", error);
