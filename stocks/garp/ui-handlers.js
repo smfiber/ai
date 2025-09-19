@@ -668,7 +668,7 @@ export async function handleGarpCandidacyRequest(ticker) {
             const prompt = `
             **Role:** You are a sharp-witted financial analyst specializing in Growth at a Reasonable Price (GARP) investing.
 
-            **Context:** You are given a set of GARP criteria and the calculated scorecard data for a specific stock.
+            **Context:** You are given a set of GARP criteria and the calculated scorecard data for a specific stock. Your analysis must account for the natural tension between high growth and low valuation; it is rare for a company to be perfect on all metrics.
 
             **GARP Criteria:**
             - EPS Growth (Last 5 Years) > 10%
@@ -695,7 +695,8 @@ export async function handleGarpCandidacyRequest(ticker) {
             2.  Follow immediately with the scorecard result in parentheses, which you must calculate by counting how many criteria have "isMet": true.
             3.  Justify the verdict by synthesizing the data's bull case (passing metrics) and bear case (failing metrics).
             4.  **Special Instruction:** If the verdict is 'Borderline' or 'Not a GARP Candidate' but the stock shows exceptional strength in certain areas (e.g., growth rates > 30% or ROE > 30%), attempt to classify its profile. For example, is it a high-risk **'Hyper-Growth Prospect'** or a potential **'Fallen Angel'** value play?
-            5.  Conclude with a single sentence that explains the core tension between the bull and bear cases.
+            5.  **Valuation Nuance:** Pay close attention to the PEG ratio. A PEG below the 0.5 threshold is technically a miss of the '0.5-1.5' rule, but you MUST interpret it as a significant positive, indicating potential undervaluation relative to growth. Contrast this with high P/E or P/S ratios, which indicate the market's high expectations.
+            6.  Conclude with a single sentence that explains the core tension between the bull and bear cases.
         `;
         
         const analysisResult = await generateRefinedArticle(prompt);
