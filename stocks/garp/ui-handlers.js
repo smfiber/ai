@@ -187,9 +187,6 @@ export async function handleResearchSubmit(e) {
 
 // --- AI ANALYSIS REPORT GENERATORS ---
 
-/**
- * NEW: Handles the AI analysis request for the entire portfolio.
- */
 export async function handlePortfolioGarpAnalysisRequest() {
     const container = document.getElementById('portfolio-garp-ai-summary-container');
     if (!container) return;
@@ -697,7 +694,8 @@ export async function handleGarpCandidacyRequest(ticker) {
             1.  Start with the bolded verdict.
             2.  Follow immediately with the scorecard result in parentheses, which you must calculate by counting how many criteria have "isMet": true.
             3.  Justify the verdict by synthesizing the data's bull case (passing metrics) and bear case (failing metrics).
-            4.  Conclude with a single sentence that explains the core tension between the bull and bear cases.
+            4.  **Special Instruction:** If the verdict is 'Borderline' or 'Not a GARP Candidate' but the stock shows exceptional strength in certain areas (e.g., growth rates > 30% or ROE > 30%), attempt to classify its profile. For example, is it a high-risk **'Hyper-Growth Prospect'** or a potential **'Fallen Angel'** value play?
+            5.  Conclude with a single sentence that explains the core tension between the bull and bear cases.
         `;
         
         const analysisResult = await generateRefinedArticle(prompt);
