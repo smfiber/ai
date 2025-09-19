@@ -2,8 +2,8 @@ import { CONSTANTS, state, promptMap, ANALYSIS_REQUIREMENTS } from './config.js'
 import { callApi, callGeminiApi, generateRefinedArticle, generatePolishedArticleForSynthesis, getFmpStockData } from './api.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { openModal, closeModal, displayMessageInModal, openConfirmationModal, openManageStockModal } from './ui-modals.js';
-import { renderPortfolioManagerList, displayReport, updateReportStatus, fetchAndCachePortfolioData, renderThesisTracker } from './ui-render.js';
-import { _calculateFinancialAnalysisMetrics, _calculateMoatAnalysisMetrics, _calculateRiskAssessmentMetrics, _calculateCapitalAllocatorsMetrics, _calculateGarpAnalysisMetrics } from './analysis-helpers.js';
+import { renderPortfolioManagerList, displayReport, updateReportStatus, fetchAndCachePortfolioData } from './ui-render.js';
+import { _calculateFinancialAnalysisMetrics, _calculateMoatAnalysisMetrics, _calculateRiskAssessmentMetrics, _calculateCapitalAllocatorsMetrics, _calculateGarpAnalysisMetrics, _calculateGarpScorecardMetrics } from './analysis-helpers.js';
 
 // --- FMP API INTEGRATION & MANAGEMENT ---
 export async function handleRefreshFmpData(symbol) {
@@ -183,45 +183,6 @@ export async function handleResearchSubmit(e) {
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
-}
-
-// --- THESIS TRACKER ---
-async function _saveThesisContent(ticker, thesisContent) {
-    if (!ticker) throw new Error('Ticker is missing, cannot save thesis.');
-    if (!thesisContent) throw new Error('Thesis content is empty, cannot save.');
-
-    openModal(CONSTANTS.MODAL_LOADING);
-    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Saving thesis for ${ticker}...`;
-
-    try {
-        const docRef = doc(state.db, CONSTANTS.DB_COLLECTION_PORTFOLIO, ticker);
-        await updateDoc(docRef, {
-            thesis: thesisContent
-        });
-        
-        await fetchAndCachePortfolioData();
-        const thesisContainer = document.getElementById('thesis-tracker-container');
-        if (thesisContainer && document.getElementById('rawDataViewerModal').dataset.activeTicker === ticker) {
-            renderThesisTracker(thesisContainer, ticker);
-        }
-
-        displayMessageInModal('Thesis saved successfully!', 'info');
-
-    } catch (error) {
-        console.error("Error in _saveThesisContent:", error);
-        displayMessageInModal(`Could not save thesis: ${error.message}`, 'error');
-    } finally {
-        closeModal(CONSTANTS.MODAL_LOADING);
-    }
-}
-
-export async function handleSaveThesis(e) {
-    e.preventDefault();
-    const ticker = document.getElementById('thesis-tracker-ticker').value;
-    const thesisContent = document.getElementById('thesis-tracker-content').value.trim();
-
-    await _saveThesisContent(ticker, thesisContent);
-    closeModal('thesisTrackerModal');
 }
 
 // --- AI ANALYSIS REPORT GENERATORS ---
@@ -618,53 +579,63 @@ export async function handleSaveReportToDb() {
     }
 }
 
-export async function handleTestThesis(ticker) {
-    const resultContainer = document.getElementById('thesis-test-result-container');
+export async function handleGarpCandidacyRequest(ticker) {
+    const resultContainer = document.getElementById('garp-analysis-container');
     if (!resultContainer) return;
 
-    resultContainer.innerHTML = `<div class="flex items-center justify-center p-4 bg-gray-100 rounded-md"><div class="loader"></div><p class="ml-4 text-gray-600 font-semibold">AI is testing thesis...</p></div>`;
+    resultContainer.innerHTML = `<div class="flex items-center justify-center p-4"><div class="loader"></div><p class="ml-4 text-gray-600 font-semibold">AI is analyzing...</p></div>`;
     
     try {
-        const stock = state.portfolioCache.find(s => s.ticker === ticker);
-        const originalThesis = stock?.thesis;
-
-        if (!originalThesis) {
-            throw new Error("No saved thesis found for this stock. Please write one on the Dashboard tab.");
-        }
-
-        await handleRefreshFmpData(ticker);
+        const fmpData = await getFmpStockData(ticker);
+        if (!fmpData) throw new Error("Could not retrieve financial data to perform analysis.");
         
-        const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
-        loadingMessage.textContent = `Summarizing new data for AI...`;
-        const newData = await getFmpStockData(ticker);
-        const newDataJson = _calculateFinancialAnalysisMetrics(newData); 
+        const scorecardData = _calculateGarpScorecardMetrics(fmpData);
+
+        const cleanData = {};
+        for (const [key, value] of Object.entries(scorecardData)) {
+            let formattedValue;
+            if (typeof value.value === 'number') {
+                formattedValue = value.format === 'percent' ? `${(value.value * 100).toFixed(2)}%` : value.value.toFixed(2);
+            } else {
+                formattedValue = 'N/A';
+            }
+            cleanData[key] = {
+                value: formattedValue,
+                isMet: value.isMet
+            };
+        }
 
         const prompt = `
-            **Role:** You are a skeptical investment analyst. Your task is to determine if new financial data challenges a previously established investment thesis.
-            
-            **1. Original Investment Thesis:**
-            ---
-            ${originalThesis}
-            ---
+            **Role:** You are a sharp-witted financial analyst specializing in Growth at a Reasonable Price (GARP) investing.
 
-            **2. New Financial Data Summary (TTM and Latest Annual):**
-            ---
-            ${JSON.stringify(newDataJson, null, 2)}
-            ---
+            **Context:** You are given a set of GARP criteria and the calculated scorecard data for a specific stock. Your task is to provide a brief, insightful analysis.
+
+            **GARP Criteria:**
+            - EPS Growth (Last 5 Years) > 10%
+            - EPS Growth (Next 1 Year) > 10%
+            - Revenue Growth (Last 5 Years) > 5%
+            - Return on Equity (ROE) > 15%
+            - Return on Invested Capital (ROIC) > 12%
+            - P/E (TTM) < 25
+            - Forward P/E < 20
+            - PEG Ratio between 0.5 and 1.5
+            - P/S Ratio < 2.5
+            - Debt-to-Equity < 0.7
+
+            **Stock's Scorecard Data:**
+            \`\`\`json
+            ${JSON.stringify(cleanData, null, 2)}
+            \`\`\`
 
             **Task:**
-            Carefully compare the 'New Financial Data Summary' against the specific, quantitative claims made in the 'Original Investment Thesis'. Provide your analysis in a concise markdown report. Structure your report with a section for each pillar of the original thesis, assessing whether the new data supports or contradicts it. Conclude with a final "Verdict" of "Thesis Intact", "Monitor Closely", or "Thesis Broken".
+            Write a concise, one-paragraph analysis based *only* on the provided data. Start by stating how many criteria the stock passes. Then, briefly interpret the stock's profile, highlighting its key strengths (areas where it passes) and weaknesses (areas where it fails) according to the GARP philosophy. Conclude with a definitive statement on whether it appears to be a strong, weak, or borderline GARP candidate at this moment.
         `;
         
-        const analysisResult = await generateRefinedArticle(prompt, loadingMessage);
-        resultContainer.innerHTML = `<div class="prose prose-sm max-w-none p-4 bg-blue-50 rounded-lg border border-blue-200">${marked.parse(analysisResult)}</div>`;
+        const analysisResult = await generateRefinedArticle(prompt);
+        resultContainer.innerHTML = marked.parse(analysisResult);
 
     } catch (error) {
-        console.error("Error testing thesis:", error);
-        resultContainer.innerHTML = `<p class="p-4 text-center text-red-500 bg-red-50 rounded-md border border-red-200">${error.message}</p>`;
-    } finally {
-        if (document.getElementById(CONSTANTS.MODAL_LOADING).classList.contains('is-open')) {
-            closeModal(CONSTANTS.MODAL_LOADING);
-        }
+        console.error("Error in GARP Candidacy Request:", error);
+        resultContainer.innerHTML = `<p class="text-center text-red-500 p-4">${error.message}</p>`;
     }
 }
