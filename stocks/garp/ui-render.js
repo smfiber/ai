@@ -1,5 +1,6 @@
 import { CONSTANTS, state } from './config.js';
 import { getDocs, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { _calculateGarpScorecardMetrics } from './analysis-helpers.js';
 import { handleAnalysisRequest, handleInvestmentMemoRequest } from './ui-handlers.js';
 
 // --- UTILITY & SECURITY HELPERS ---
@@ -136,6 +137,37 @@ export async function _renderGroupedStockList(container, stocksWithData, listTyp
         html += `</ul></div></details>`;
     });
     container.innerHTML = html;
+}
+
+export function renderGarpScorecardDashboard(container, ticker, fmpData) {
+    if (!container) return;
+
+    const metrics = _calculateGarpScorecardMetrics(fmpData);
+    
+    const tilesHtml = Object.entries(metrics).map(([name, data]) => {
+        let valueDisplay = 'N/A';
+        let colorClass = 'text-gray-800';
+
+        if (typeof data.value === 'number') {
+            colorClass = data.isMet ? 'price-gain' : 'price-loss';
+            if (data.format === 'percent') {
+                valueDisplay = `${(data.value * 100).toFixed(2)}%`;
+            } else {
+                valueDisplay = data.value.toFixed(2);
+            }
+        }
+        
+        return `
+            <div class="metric-tile p-4">
+                <p class="metric-title text-sm">${name}</p>
+                <p class="metric-value text-2xl ${colorClass}">${valueDisplay}</p>
+            </div>
+        `;
+    }).join('');
+
+    container.innerHTML = `
+        <h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">GARP Scorecard</h3>
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-4">${tilesHtml}</div>`;
 }
 
 export function renderValuationHealthDashboard(container, ticker, fmpData) {
