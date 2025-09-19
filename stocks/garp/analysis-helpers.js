@@ -25,10 +25,11 @@ function formatLargeNumber(value, precision = 2) {
  * @returns {object} An object containing GARP metrics with their values and pass/fail status.
  */
 export function _calculateGarpScorecardMetrics(data) {
+    const profile = data.profile?.[0] || {};
     const income = (data.income_statement_annual || []).slice().reverse();
     const metricsTtm = data.key_metrics_ttm?.[0] || {};
     const ratios = data.ratios_ttm?.[0] || {};
-    const estimates = (data.analyst_estimates || []).find(e => e.estimatedEpsGrowth5Y) || {};
+    const estimates = data.analyst_estimates?.[0] || {};
     const keyMetricsAnnual = (data.key_metrics_annual || []).slice().reverse();
     const latestAnnualMetrics = keyMetricsAnnual[keyMetricsAnnual.length - 1] || {};
 
@@ -49,9 +50,16 @@ export function _calculateGarpScorecardMetrics(data) {
     const pe = metricsTtm.peRatioTTM ?? latestAnnualMetrics.peRatio;
     const de = metricsTtm.debtToEquity ?? latestAnnualMetrics.debtToEquity;
 
-    const forwardPe = estimates.forwardPE;
     const ps = ratios.priceToSalesRatio;
     const epsNext5y = estimates.estimatedEpsGrowth5Y;
+
+    // Calculate Forward P/E manually from current price and estimated forward EPS.
+    let forwardPe = null;
+    const forwardEps = estimates.estimatedEpsAvg;
+    const currentPrice = profile.price;
+    if (currentPrice > 0 && forwardEps > 0) {
+        forwardPe = currentPrice / forwardEps;
+    }
 
     // Calculate PEG Ratio manually from P/E and estimated growth.
     let peg = null;
