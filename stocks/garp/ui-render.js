@@ -39,72 +39,94 @@ export async function fetchAndCachePortfolioData() {
 
 // --- UI RENDERING ---
 
-/**
- * NEW: Renders GARP Scorecard overviews for all portfolio stocks.
- */
 export async function renderPortfolioGarpOverview() {
-    const container = document.getElementById('portfolio-garp-overview-container');
-    if (!container) return;
+    const overviewContainer = document.getElementById('portfolio-garp-overview-container');
+    const breakdownContainer = document.getElementById('portfolio-garp-breakdown-container');
+    const aiSummaryContainer = document.getElementById('portfolio-garp-ai-summary-container');
 
-    container.innerHTML = '<div class="loader mx-auto"></div>'; // Show loader
+    if (!overviewContainer || !breakdownContainer || !aiSummaryContainer) return;
+
+    overviewContainer.innerHTML = '<div class="loader mx-auto"></div>';
+    breakdownContainer.innerHTML = '';
+    aiSummaryContainer.innerHTML = '';
 
     try {
         const portfolioStocks = state.portfolioCache.filter(s => s.status === 'Portfolio');
 
         if (portfolioStocks.length === 0) {
-            container.innerHTML = `<p class="text-center text-gray-500 py-8">Add stocks to your portfolio to see the GARP overview.</p>`;
+            overviewContainer.innerHTML = `<p class="text-center text-gray-500 py-8">Add stocks to your portfolio to see the GARP overview.</p>`;
             return;
         }
 
-        // Fetch all FMP data concurrently for better performance
         const stocksWithData = await Promise.all(
             portfolioStocks.map(async (stock) => {
                 const fmpData = await getFmpStockData(stock.ticker);
                 if (!fmpData) return { ...stock, metrics: null, error: true };
+                
                 const metrics = _calculateGarpScorecardMetrics(fmpData);
-                return { ...stock, metrics, error: false };
+                const criteriaMet = Object.values(metrics).filter(m => m.isMet).length;
+                const totalCriteria = Object.keys(metrics).length;
+
+                return { ...stock, metrics, criteriaMet, totalCriteria, error: false };
             })
         );
         
-        let html = '';
-        for (const stock of stocksWithData) {
-            html += `
-                <div class="border rounded-lg p-4 bg-gray-50/50">
-                    <h3 class="font-bold text-gray-800">${sanitizeText(stock.companyName)} (${sanitizeText(stock.ticker)})</h3>
+        // Render Score Breakdown
+        const groupedByScore = stocksWithData.reduce((acc, stock) => {
+            if (stock.error) return acc;
+            const score = stock.criteriaMet;
+            if (!acc[score]) acc[score] = [];
+            acc[score].push(stock);
+            return acc;
+        }, {});
+
+        let breakdownHtml = '<h4 class="text-sm font-bold text-gray-600 mb-2">Score Breakdown</h4><div class="space-y-1">';
+        Object.keys(groupedByScore).sort((a, b) => b - a).forEach(score => {
+            const stocks = groupedByScore[score];
+            breakdownHtml += `
+                <div class="flex items-center gap-2 text-sm">
+                    <span class="font-bold text-gray-800 w-16 text-right">${score}/${stocks[0].totalCriteria} Met:</span>
+                    <div class="flex flex-wrap gap-1">
+                        ${stocks.map(s => `<span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800">${s.ticker}</span>`).join('')}
+                    </div>
+                </div>
             `;
+        });
+        breakdownHtml += '</div>';
+        breakdownContainer.innerHTML = breakdownHtml;
+
+        // Render Individual Scorecards
+        let overviewHtml = '';
+        for (const stock of stocksWithData) {
+            overviewHtml += `
+                <div class="border rounded-lg p-4 bg-gray-50/50">
+                    <h3 class="font-bold text-gray-800">${sanitizeText(stock.companyName)} (${sanitizeText(stock.ticker)})</h3>`;
             
             if (stock.error || !stock.metrics) {
-                html += `<p class="text-sm text-red-500 italic mt-2">Could not load scorecard data. Please refresh this stock's data via the 'View Portfolio' modal.</p>`;
+                overviewHtml += `<p class="text-sm text-red-500 italic mt-2">Could not load scorecard data. Please refresh this stock's data via the 'View Portfolio' modal.</p>`;
             } else {
-                const metrics = stock.metrics;
-                const tilesHtml = Object.entries(metrics).map(([name, data]) => {
+                const tilesHtml = Object.entries(stock.metrics).map(([name, data]) => {
                     let valueDisplay = 'N/A';
-                    let colorClass = 'text-gray-500'; // Default for N/A
-
+                    let colorClass = 'text-gray-500';
                     if (typeof data.value === 'number' && isFinite(data.value)) {
                         colorClass = data.isMet ? 'price-gain' : 'price-loss';
                         valueDisplay = data.format === 'percent' ? `${(data.value * 100).toFixed(2)}%` : data.value.toFixed(2);
                     }
-                    
                     return `
                         <div class="text-center p-2 bg-white rounded-md border">
                             <p class="text-xs font-semibold text-gray-500 truncate" title="${name}">${name}</p>
                             <p class="text-lg font-bold ${colorClass}">${valueDisplay}</p>
-                        </div>
-                    `;
+                        </div>`;
                 }).join('');
-
-                html += `<div class="grid grid-cols-5 gap-2 mt-3">${tilesHtml}</div>`;
+                overviewHtml += `<div class="grid grid-cols-5 gap-2 mt-3">${tilesHtml}</div>`;
             }
-
-            html += `</div>`;
+            overviewHtml += `</div>`;
         }
-
-        container.innerHTML = html;
+        overviewContainer.innerHTML = overviewHtml;
 
     } catch (error) {
         console.error("Error rendering portfolio GARP overview:", error);
-        container.innerHTML = `<p class="text-center text-red-500 py-8">Could not load the overview: ${error.message}</p>`;
+        overviewContainer.innerHTML = `<p class="text-center text-red-500 py-8">Could not load the overview: ${error.message}</p>`;
     }
 }
 
