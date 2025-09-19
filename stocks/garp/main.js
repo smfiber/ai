@@ -5,7 +5,6 @@ import { CONSTANTS, APP_VERSION, state } from './config.js';
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, signOut, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { checkForNewFilings } from './monitoring.js';
 
 // --- CONFIG & INITIALIZATION ---
 function safeParseConfig(str) {
@@ -29,16 +28,8 @@ async function initializeAppContent() {
     document.getElementById('sector-screener-section').classList.remove(CONSTANTS.CLASS_HIDDEN);
     document.getElementById('industry-screener-section').classList.remove(CONSTANTS.CLASS_HIDDEN);
     
-    const lastCheckTimestamp = localStorage.getItem('lastFilingCheck');
-    const twentyFourHours = 24 * 60 * 60 * 1000;
-    const now = new Date().getTime();
-
-    if (!lastCheckTimestamp || (now - parseInt(lastCheckTimestamp) > twentyFourHours)) {
-        await checkForNewFilings();
-        localStorage.setItem('lastFilingCheck', now.toString());
-    } else {
-        await fetchAndCachePortfolioData();
-    }
+    // The checkForNewFilings logic has been removed from the startup sequence.
+    await fetchAndCachePortfolioData();
     
     await renderSectorButtons();
     await displayIndustryScreener();
