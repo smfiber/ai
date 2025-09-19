@@ -608,10 +608,10 @@ export async function handleGarpCandidacyRequest(ticker) {
             };
         }
 
-        const prompt = `
+            const prompt = `
             **Role:** You are a sharp-witted financial analyst specializing in Growth at a Reasonable Price (GARP) investing.
 
-            **Context:** You are given a set of GARP criteria and the calculated scorecard data for a specific stock. Your task is to provide a brief, insightful analysis.
+            **Context:** You are given a set of GARP criteria and the calculated scorecard data for a specific stock.
 
             **GARP Criteria:**
             - EPS Growth (Last 5 Years) > 10%
@@ -631,15 +631,13 @@ export async function handleGarpCandidacyRequest(ticker) {
             \`\`\`
 
             **Task:**
-            Act as a decisive analyst and deliver a verdict in a single, dense paragraph. Follow this exact structure:
-            1.  Your response MUST begin with the final verdict in bold: **Strong GARP Candidate**, **Borderline GARP Candidate**, or **Not a GARP Candidate**.
-            2.  Immediately follow with the scorecard result, like "(Passes X out of 10 criteria)".
-            3.  Justify the verdict by synthesizing the data. Briefly state the bull case (the growth/profitability metrics that pass) and the bear case (the valuation metrics that fail).
-            4.  Conclude with a single sentence explaining the core tension (e.g., "This is a classic case of a high-quality, high-growth company whose valuation has gotten ahead of itself, preventing a strong GARP rating at its current price.").
-            5.  Do not add a title or any text before the bolded verdict.
+            Your entire response MUST be a single paragraph. It MUST begin with one of these three bolded phrases: **Strong GARP Candidate**, **Borderline GARP Candidate**, or **Not a GARP Candidate**. Do not add a title.
 
-            **Example Output:**
-            "**Borderline GARP Candidate** (Passes 7 out of 10 criteria). The company demonstrates exceptional growth and profitability, with strong historical and forward EPS growth and a high ROE. However, its current valuation is a concern; a P/E (TTM) over 25 and a P/S ratio well above 2.5 suggest the market has already priced in this growth. This is a high-quality company, but it lacks the 'reasonable price' component essential for a true GARP investment today."
+            Here is the structure to follow precisely:
+            1.  Start with the bolded verdict.
+            2.  Follow immediately with the scorecard result in parentheses, which you must calculate by counting how many criteria have "isMet": true.
+            3.  Justify the verdict by synthesizing the data's bull case (passing metrics) and bear case (failing metrics).
+            4.  Conclude with a single sentence that explains the core tension between the bull and bear cases.
         `;
         
         const analysisResult = await generateRefinedArticle(prompt);
