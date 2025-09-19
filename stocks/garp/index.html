@@ -36,7 +36,7 @@
 
             <div id="dashboard-section" class="grid grid-cols-1 lg:grid-cols-2 gap-8 hidden">
                 <div>
-                     <div class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 h-full">
+                     <div class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
                         <h2 class="text-xl font-bold mb-4 pb-2 border-b text-indigo-800 flex justify-between items-center">
                             <span>My Portfolio (<span id="portfolio-count">0</span>)</span>
                              <button class="dashboard-refresh-button p-1 rounded-full hover:bg-indigo-100" title="Refresh Dashboard">
@@ -46,9 +46,35 @@
                             </button>
                         </h2>
                         <div>
-                            <button id="open-portfolio-modal-button" class="w-full h-48 bg-indigo-50 hover:bg-indigo-100 rounded-lg flex items-center justify-center transition-colors duration-200">
+                            <button data-status="Portfolio" class="dashboard-list-button w-full h-48 bg-indigo-50 hover:bg-indigo-100 rounded-lg flex items-center justify-center transition-colors duration-200">
                                 <span class="text-2xl font-bold text-indigo-700">View Portfolio</span>
                             </button>
+                        </div>
+                    </div>
+
+                    <div class="mt-8 grid grid-cols-1 gap-6">
+                        <div class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
+                            <h3 class="text-lg font-bold text-gray-800 mb-3">Other Lists</h3>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <h4 class="font-semibold text-gray-600">Watchlist (<span id="watchlist-count">0</span>)</h4>
+                                    <button data-status="Watchlist" class="dashboard-list-button mt-2 w-full h-24 bg-gray-50 hover:bg-gray-100 rounded-lg flex items-center justify-center transition-colors duration-200">
+                                        <span class="text-lg font-bold text-gray-700">View List</span>
+                                    </button>
+                                </div>
+                                <div>
+                                    <h4 class="font-semibold text-gray-600">Revisit 3 Mo. (<span id="revisit-3-months-count">0</span>)</h4>
+                                    <button data-status="Revisit 3 months" class="dashboard-list-button mt-2 w-full h-24 bg-gray-50 hover:bg-gray-100 rounded-lg flex items-center justify-center transition-colors duration-200">
+                                        <span class="text-lg font-bold text-gray-700">View List</span>
+                                    </button>
+                                </div>
+                                <div class="sm:col-span-2">
+                                     <h4 class="font-semibold text-gray-600">Revisit 6 Mo. (<span id="revisit-6-months-count">0</span>)</h4>
+                                    <button data-status="Revisit 6 months" class="dashboard-list-button mt-2 w-full h-24 bg-gray-50 hover:bg-gray-100 rounded-lg flex items-center justify-center transition-colors duration-200">
+                                        <span class="text-lg font-bold text-gray-700">View List</span>
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
