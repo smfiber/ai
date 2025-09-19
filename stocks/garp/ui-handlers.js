@@ -667,21 +667,24 @@ export async function handleGarpCandidacyRequest(ticker) {
 
             const prompt = `
             1. Persona & Role:
-            
-            You are a senior investment analyst at "Reasonable Growth Capital," a firm that strictly adheres to the Growth at a Reasonable Price (GARP) philosophy. Your analysis is respected for its clarity, data-driven conviction, and ability to distill complex financial data into a decisive investment thesis. You are pragmatic, recognizing that no stock is perfect, and your goal is to weigh the evidence objectively.
+            You are a senior investment analyst at "Reasonable Growth Capital," a firm that strictly adheres to the Growth at a Rasonable Price (GARP) philosophy. Your analysis is respected for its clarity, data-driven conviction, and ability to distill complex financial data into a decisive investment thesis. You are pragmatic, recognizing that no stock is perfect, and your goal is to weigh the evidence objectively.
             
             2. Objective:
+            You are preparing a concise pre-read for the firm's weekly investment committee meeting on Friday, September 19, 2025. Your objective is to deliver a definitive GARP assessment of the provided stock, enabling the committee to make a clear "pursue further diligence" or "pass" decision.
             
-            You are preparing a concise pre-read for the firm's weekly investment committee. Your objective is to deliver a definitive GARP assessment of the provided stock, enabling the committee to make a clear "pursue further diligence" or "pass" decision.
-            3. Input Data:
+            3. Contextual Grounding:
             
+            Company & Ticker: [e.g., Innovate Dynamics Inc. (INVT)]
+            
+            Sector: [e.g., Enterprise Software]
+            
+            4. Input Data:
             You will be given a JSON object containing a scorecard with key financial metrics and a criteriaInterpretation explaining what each metric signifies within our GARP framework.
             \`\`\`json
             ${JSON.stringify(cleanData, null, 2)}
             \`\`\`
 
-            4. Required Output Structure & Content:
-            
+            5. Required Output Structure & Content:
             Generate a comprehensive GARP assessment using precise markdown formatting.
             
             EXECUTIVE SUMMARY
@@ -704,22 +707,37 @@ export async function handleGarpCandidacyRequest(ticker) {
             
             FINAL SYNTHESIS: Profile & Strategic Recommendation
             
-            (1 paragraph)
+            (2 paragraphs)
             Conclude by synthesizing the bull and bear cases into a final, actionable takeaway.
             
-            Investment Profile: Classify the stock's profile based on its unique mix of strengths and weaknesses (e.g., is this a high-risk 'Turnaround Story', a steady 'Compounder', or a potential 'Fallen Angel'?).
+            Investment Profile & The Deciding Factor: Classify the stock's profile (e.g., is this a high-risk 'Turnaround Story' or a steady 'Compounder'?). Then, state the single most critical question or tension an investor must resolve before committing capital.
             
-            The Deciding Factor: State the single most critical question or tension an investor must resolve before committing capital. This should encapsulate the core trade-off presented by the stock.
+            Actionable Diligence Questions: Based on your analysis, propose 2-3 specific, forward-looking questions that must be answered in the next stage of due diligence. These should directly address the risks and uncertainties you've identified.
             
-            5. Critical Guidelines & Constraints:
+            6. Critical Guidelines & Constraints:
             
             Handle the PEG Ratio Nuance: A PEG ratio below 0.5 is a potential sign of extreme undervaluation relative to growth. You must interpret this as a significant positive in your analysis, not as a failure to meet a 0.5-1.5 range.
             
             Data-Driven: Your analysis must be grounded in the provided data. Directly reference at least four specific numerical data points from the scorecard to substantiate your claims.
             
+            Contextual Awareness: Briefly integrate the current market context (as of late 2025) into your reasoning. For example, how might prevailing interest rates or economic growth forecasts affect the company's debt load or growth prospects?
+            
+            Peer Comparison: Where relevant, briefly contextualize a key metric against typical industry peers. For example, is the P/S ratio high or low for its sector? This demonstrates a deeper level of analysis beyond the company's own data.
+            
             Tone: Maintain a professional, analytical, and objective tone. Avoid speculative hype. Your confidence should stem from the data.
             
-            Formatting: Adhere strictly to the markdown structure, including bolding, horizontal lines, and paragraph breaks as specified.
+            Formatting: Adhere strictly to the markdown structure, including bolding and paragraph breaks as specified.
+            
+            Summary of Adjustments and Why They Work:
+            Added Contextual Grounding: This small addition makes the task more realistic. An analyst is never looking at numbers in a vacuum; they know the company, ticker, and sector, which immediately informs their judgment.
+            
+            Added Actionable Diligence Questions: This is the most critical change. It transforms the output from a static report into a dynamic tool that guides the team's next steps. It proves the analyst has thought about "what's next?"
+            
+            Added Contextual Awareness Guideline: This forces the model to think like a real-world analyst who is aware of the current date and economic environment, adding a layer of sophisticated, timely relevance.
+            
+            Added Peer Comparison Guideline: This prevents the analysis from being myopic. A company’s metrics are only truly meaningful when compared to their direct competitors, and this guideline encourages that crucial step.
+            
+            Split FINAL SYNTHESIS into two paragraphs: This improves readability and logically separates the summary conclusion from the forward-looking action items.
         `;
         
         const analysisResult = await generateRefinedArticle(prompt);
