@@ -1,6 +1,6 @@
 import { CONSTANTS, state, ANALYSIS_ICONS } from './config.js';
 import { getFmpStockData, getGroupedFmpData } from './api.js';
-import { renderValuationHealthDashboard, _renderGroupedStockList, renderPortfolioManagerList, renderGarpScorecardDashboard, renderGarpAnalysisSummary, updateGarpCandidacyStatus, renderCandidacyAnalysis } from './ui-render.js'; 
+import { renderValuationHealthDashboard, _renderGroupedStockList, renderPortfolioManagerList, renderGarpScorecardDashboard, renderGarpAnalysisSummary, updateGarpCandidacyStatus, renderCandidacyAnalysis, renderGarpInterpretationAnalysis } from './ui-render.js'; 
 import { getDocs, query, collection, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getSavedReports } from './ui-handlers.js';
 
@@ -165,6 +165,7 @@ export async function openRawDataViewer(ticker) {
     const profileDisplayContainer = document.getElementById('company-profile-display-container');
     const titleEl = document.getElementById('raw-data-viewer-modal-title');
     const garpScorecardContainer = document.getElementById('garp-scorecard-container');
+    const garpInterpretationContainer = document.getElementById('garp-interpretation-container');
     
     titleEl.textContent = `Analyzing ${ticker}...`;
     rawDataContainer.innerHTML = '<div class="loader mx-auto"></div>';
@@ -172,6 +173,7 @@ export async function openRawDataViewer(ticker) {
     aiArticleContainer.innerHTML = '';
     profileDisplayContainer.innerHTML = '';
     garpScorecardContainer.innerHTML = '';
+    garpInterpretationContainer.innerHTML = '';
     document.getElementById('valuation-health-container').innerHTML = '';
     document.getElementById('ai-garp-summary-container').innerHTML = '';
     
@@ -264,7 +266,8 @@ export async function openRawDataViewer(ticker) {
         profileDisplayContainer.innerHTML = `<div class="mt-6 border-t pt-4"><p class="text-sm text-gray-700 mb-4">${description}</p></div>`;
         
         // Render Dashboard tab content
-        renderGarpScorecardDashboard(garpScorecardContainer, ticker, fmpData);
+        const metrics = renderGarpScorecardDashboard(garpScorecardContainer, ticker, fmpData);
+        renderGarpInterpretationAnalysis(garpInterpretationContainer, metrics);
         renderValuationHealthDashboard(document.getElementById('valuation-health-container'), ticker, fmpData);
         renderGarpAnalysisSummary(document.getElementById('ai-garp-summary-container'), ticker);
 
