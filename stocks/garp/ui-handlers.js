@@ -615,7 +615,7 @@ export async function handleGarpCandidacyRequest(ticker) {
 
             **GARP Criteria:**
             - EPS Growth (Last 5 Years) > 10%
-            - EPS Growth (Next 1 Year) > 10%
+            - EPS Growth (Next 1 Year, Analyst Estimates) > 10%
             - Revenue Growth (Last 5 Years) > 5%
             - Return on Equity (ROE) > 15%
             - Return on Invested Capital (ROIC) > 12%
@@ -632,7 +632,7 @@ export async function handleGarpCandidacyRequest(ticker) {
 
             **Task:**
             Act as a decisive analyst and deliver a verdict in a single, dense paragraph. Follow this exact structure:
-            1.  Start with the final verdict in bold: **Strong GARP Candidate**, **Borderline GARP Candidate**, or **Not a GARP Candidate**.
+            1.  Your response MUST begin with the final verdict in bold: **Strong GARP Candidate**, **Borderline GARP Candidate**, or **Not a GARP Candidate**.
             2.  Immediately follow with the scorecard result, like "(Passes X out of 10 criteria)".
             3.  Justify the verdict by synthesizing the data. Briefly state the bull case (the growth/profitability metrics that pass) and the bear case (the valuation metrics that fail).
             4.  Conclude with a single sentence explaining the core tension (e.g., "This is a classic case of a high-quality, high-growth company whose valuation has gotten ahead of itself, preventing a strong GARP rating at its current price.").
