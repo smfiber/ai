@@ -1,7 +1,7 @@
 import { CONSTANTS, state, promptMap } from './config.js';
-import { openModal, closeModal, openStockListModal, openManageStockModal, openPortfolioManagerModal, openRawDataViewer, openThesisTrackerModal } from './ui-modals.js';
+import { openModal, closeModal, openStockListModal, openManageStockModal, openPortfolioManagerModal, openRawDataViewer } from './ui-modals.js';
 import { fetchAndCachePortfolioData, renderPortfolioManagerList } from './ui-render.js';
-import { handleResearchSubmit, handleSaveStock, handleDeleteStock, handleRefreshFmpData, handleAnalysisRequest, handleInvestmentMemoRequest, handleSaveReportToDb, handleSaveThesis, handleGenerateAllReportsRequest, handleTestThesis } from './ui-handlers.js';
+import { handleResearchSubmit, handleSaveStock, handleDeleteStock, handleRefreshFmpData, handleAnalysisRequest, handleInvestmentMemoRequest, handleSaveReportToDb, handleGenerateAllReportsRequest, handleGarpCandidacyRequest } from './ui-handlers.js';
 
 // --- DYNAMIC TOOLTIPS ---
 function initializeTooltips() {
@@ -145,7 +145,6 @@ export function setupEventListeners() {
         { modal: 'rawDataViewerModal', button: 'close-raw-data-viewer-modal' },
         { modal: CONSTANTS.MODAL_STOCK_LIST, button: 'close-stock-list-modal', bg: 'close-stock-list-modal-bg' },
         { modal: CONSTANTS.MODAL_SESSION_LOG, button: 'close-session-log-modal', bg: 'close-session-log-modal-bg' },
-        { modal: 'thesisTrackerModal', button: 'cancel-thesis-tracker-button', bg: 'close-thesis-tracker-modal-bg' },
     ];
 
     modalsToClose.forEach(item => {
@@ -160,18 +159,10 @@ export function setupEventListeners() {
         const target = e.target.closest('button');
         if (!target) return;
 
-        if (target.id === 'edit-thesis-button') {
+        if (target.id === 'analyze-garp-button') {
             const ticker = target.dataset.ticker;
             if (ticker) {
-                openThesisTrackerModal(ticker);
-            }
-            return; 
-        }
-
-        if (target.id === 'test-thesis-button') {
-            const ticker = target.dataset.ticker;
-            if (ticker) {
-                handleTestThesis(ticker);
+                handleGarpCandidacyRequest(ticker);
             }
             return;
         }
@@ -207,7 +198,5 @@ export function setupEventListeners() {
         if (target.id === 'generate-all-reports-button') handleGenerateAllReportsRequest(symbol);
     });
     
-    document.getElementById('thesis-tracker-form')?.addEventListener('submit', handleSaveThesis);
-
     setupGlobalEventListeners();
 }
