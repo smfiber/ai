@@ -651,6 +651,11 @@ export async function handleGarpCandidacyRequest(ticker) {
         
         const scorecardData = _calculateGarpScorecardMetrics(fmpData);
 
+        const profile = fmpData.profile?.[0] || {};
+        const companyName = profile.companyName || ticker;
+        const tickerSymbol = profile.symbol || ticker;
+        const sector = profile.sector || 'N/A';
+
         const cleanData = {};
         for (const [key, value] of Object.entries(scorecardData)) {
             let formattedValue;
@@ -674,9 +679,9 @@ export async function handleGarpCandidacyRequest(ticker) {
             
             3. Contextual Grounding:
             
-            Company & Ticker: [e.g., Innovate Dynamics Inc. (INVT)]
+            Company & Ticker: ${companyName} (${tickerSymbol})
             
-            Sector: [e.g., Enterprise Software]
+            Sector: ${sector}
             
             4. Input Data:
             You will be given a JSON object containing a scorecard with key financial metrics and a criteriaInterpretation explaining what each metric signifies within our GARP framework.
