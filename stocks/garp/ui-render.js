@@ -146,10 +146,10 @@ export function renderGarpScorecardDashboard(container, ticker, fmpData) {
     
     const tilesHtml = Object.entries(metrics).map(([name, data]) => {
         let valueDisplay = 'N/A';
-        let colorClass = 'text-gray-800';
+        let colorClass = 'text-gray-500 italic'; // Muted gray for N/A
 
         if (typeof data.value === 'number') {
-            colorClass = data.isMet ? 'price-gain' : 'price-loss';
+            colorClass = data.isMet ? 'price-gain' : 'price-loss'; // Green for pass, Red for fail
             if (data.format === 'percent') {
                 valueDisplay = `${(data.value * 100).toFixed(2)}%`;
             } else {
