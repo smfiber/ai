@@ -1,6 +1,6 @@
 import { CONSTANTS, state, ANALYSIS_ICONS } from './config.js';
 import { getFmpStockData, getGroupedFmpData } from './api.js';
-import { renderValuationHealthDashboard, renderThesisTracker, _renderGroupedStockList, renderPortfolioManagerList, renderGarpScorecardDashboard } from './ui-render.js'; 
+import { renderValuationHealthDashboard, _renderGroupedStockList, renderPortfolioManagerList, renderGarpScorecardDashboard, renderGarpAnalysisSummary } from './ui-render.js'; 
 import { getDocs, query, collection, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- GENERIC MODAL HELPERS ---
@@ -148,14 +148,6 @@ export async function openStockListModal(listType) {
     }
 }
 
-/**
- * Opens the "Thesis Tracker" modal.
- * @param {string} ticker The stock ticker symbol.
- */
-export function openThesisTrackerModal(ticker) {
-    openModal('thesisTrackerModal');
-}
-
 
 // --- SPECIFIC, COMPLEX MODAL CONTROLLERS ---
 
@@ -180,7 +172,7 @@ export async function openRawDataViewer(ticker) {
     profileDisplayContainer.innerHTML = '';
     garpScorecardContainer.innerHTML = '';
     document.getElementById('valuation-health-container').innerHTML = '';
-    document.getElementById('thesis-tracker-container').innerHTML = '';
+    document.getElementById('ai-garp-summary-container').innerHTML = '';
     
     // Reset tabs to default state
     document.querySelectorAll('#rawDataViewerModal .tab-content').forEach(c => c.classList.add('hidden'));
@@ -270,7 +262,7 @@ export async function openRawDataViewer(ticker) {
         // Render Dashboard tab content
         renderGarpScorecardDashboard(garpScorecardContainer, ticker, fmpData);
         renderValuationHealthDashboard(document.getElementById('valuation-health-container'), ticker, fmpData);
-        renderThesisTracker(document.getElementById('thesis-tracker-container'), ticker);
+        renderGarpAnalysisSummary(document.getElementById('ai-garp-summary-container'), ticker);
 
     } catch (error) {
         console.error('Error opening raw data viewer:', error);
