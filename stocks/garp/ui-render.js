@@ -1,7 +1,7 @@
 import { CONSTANTS, state } from './config.js';
 import { getDocs, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { _calculateGarpScorecardMetrics } from './analysis-helpers.js';
-import { handleAnalysisRequest, handleInvestmentMemoRequest } from './ui-handlers.js';
+import { handleAnalysisRequest, handleInvestmentMemoRequest, handleGarpCandidacyRequest } from './ui-handlers.js';
 
 // --- UTILITY & SECURITY HELPERS ---
 
@@ -288,11 +288,46 @@ export function renderGarpAnalysisSummary(container, ticker) {
                 Analyze Candidacy
             </button>
         </div>
+        <div id="garp-candidacy-status-container" class="hidden p-2 mb-2 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between gap-4"></div>
         <div id="garp-analysis-container" class="prose prose-sm max-w-none bg-gray-50 p-4 rounded-md border min-h-[100px]">
             <p class="text-gray-500 italic">Click the button to have AI analyze this stock's GARP characteristics based on the scorecard data.</p>
         </div>
     `;
 }
+
+export function updateGarpCandidacyStatus(statusContainer, reports, activeReportId, ticker) {
+    statusContainer.classList.remove('hidden');
+    let statusHtml = '';
+
+    const activeReport = reports.find(r => r.id === activeReportId) || reports[0];
+    const savedDate = activeReport.savedAt.toDate().toLocaleString();
+    
+    statusHtml = `
+        <div class="flex items-center gap-2">
+            <span class="text-sm font-semibold text-blue-800">Displaying report from:</span>
+            <select id="version-selector-candidacy" class="text-sm border-gray-300 rounded-md">
+                ${reports.map(r => `<option value="${r.id}" ${r.id === activeReport.id ? 'selected' : ''}>${r.savedAt.toDate().toLocaleString()}</option>`).join('')}
+            </select>
+        </div>
+        <button id="generate-new-candidacy" data-ticker="${ticker}" class="bg-green-500 hover:bg-green-600 text-white text-xs font-semibold py-1 px-3 rounded-full">Generate New</button>
+    `;
+    
+    statusContainer.innerHTML = statusHtml;
+
+    document.getElementById('version-selector-candidacy')?.addEventListener('change', (e) => {
+        const selectedReport = reports.find(r => r.id === e.target.value);
+        if (selectedReport) {
+            const contentContainer = document.getElementById('garp-analysis-container');
+            contentContainer.innerHTML = marked.parse(selectedReport.content);
+            updateGarpCandidacyStatus(statusContainer, reports, selectedReport.id, ticker);
+        }
+    });
+
+    document.getElementById('generate-new-candidacy')?.addEventListener('click', (e) => {
+        handleGarpCandidacyRequest(e.target.dataset.ticker);
+    });
+}
+
 
 export function displayReport(container, content, prompt = null) {
     let finalHtml = '';
