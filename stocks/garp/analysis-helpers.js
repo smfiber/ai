@@ -36,8 +36,8 @@ export function _calculateGarpScorecardMetrics(data) {
     };
 
     // --- CALCULATIONS ---
-    const eps5y = income.length >= 6 ? getCagr(income[0].eps, income[5].eps, 5) : null;
-    const rev5y = income.length >= 6 ? getCagr(income[0].revenue, income[5].revenue, 5) : null;
+    const eps5y = income.length >= 6 ? getCagr(income[5].eps, income[0].eps, 5) : null;
+    const rev5y = income.length >= 6 ? getCagr(income[5].revenue, income[0].revenue, 5) : null;
     const roe = metrics.roe;
     const roic = metrics.roic;
     const pe = metrics.peRatio;
