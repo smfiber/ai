@@ -573,6 +573,56 @@ export function displayReport(container, content, prompt = null) {
     container.innerHTML = finalHtml;
 }
 
+export function renderDiligenceLog(container, reports) {
+    if (!container) return;
+
+    if (reports.length === 0) {
+        container.innerHTML = `
+            <h3 class="text-lg font-semibold text-gray-800 mb-2">Diligence Log</h3>
+            <p class="text-sm text-center text-gray-500 italic p-4 bg-gray-50 rounded-md">No saved investigations for this stock yet.</p>
+        `;
+        return;
+    }
+
+    const itemsHtml = reports.map(report => {
+        const prompt = report.prompt || '';
+        const question = prompt.split('Diligence Question from User:')[1]?.trim() || 'Could not parse question.';
+        const savedDate = report.savedAt.toDate().toLocaleDateString();
+
+        return `
+            <li class="diligence-log-item p-3 hover:bg-indigo-50 cursor-pointer" data-report-id="${report.id}">
+                <p class="font-semibold text-sm text-indigo-700 truncate" title="${sanitizeText(question)}">${sanitizeText(question)}</p>
+                <p class="text-xs text-gray-400">Saved: ${savedDate}</p>
+            </li>
+        `;
+    }).join('');
+
+    container.innerHTML = `
+         <details class="border rounded-lg bg-white" open>
+            <summary class="p-3 font-semibold text-gray-700 cursor-pointer hover:bg-gray-50 text-lg">Diligence Log (${reports.length})</summary>
+            <ul class="divide-y divide-gray-200 max-h-48 overflow-y-auto">
+                ${itemsHtml}
+            </ul>
+        </details>
+    `;
+
+    container.querySelectorAll('.diligence-log-item').forEach(item => {
+        item.addEventListener('click', () => {
+            const reportId = item.dataset.reportId;
+            const report = reports.find(r => r.id === reportId);
+            if (report) {
+                const articleContainer = document.getElementById('ai-article-container');
+                const statusContainer = document.getElementById('report-status-container-ai');
+                
+                displayReport(articleContainer, report.content, report.prompt);
+                
+                statusContainer.classList.remove('hidden');
+                statusContainer.innerHTML = `<span class="text-sm font-semibold text-blue-800">Displaying saved Diligence Investigation from: ${report.savedAt.toDate().toLocaleString()}</span>`;
+            }
+        });
+    });
+}
+
 export function updateReportStatus(statusContainer, reports, activeReportId, analysisParams) {
     statusContainer.classList.remove('hidden');
     statusContainer.dataset.activeReportType = analysisParams.reportType;
