@@ -32,6 +32,7 @@ export const CONSTANTS = {
     MODAL_PORTFOLIO_MANAGER: 'portfolioManagerModal',
     MODAL_STOCK_LIST: 'stockListModal',
     MODAL_SESSION_LOG: 'sessionLogModal',
+    MODAL_HELP: 'helpModal',
     // Forms & Inputs
     FORM_API_KEY: 'apiKeyForm',
     FORM_STOCK_RESEARCH: 'stock-research-form',
@@ -366,4 +367,16 @@ export const ANALYSIS_ICONS = {
     'RiskAssessment': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" /></svg>`,
     'CapitalAllocators': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15.91 15.91a2.25 2.25 0 01-3.182 0l-3.03-3.03a.75.75 0 011.06-1.061l2.47 2.47 2.47-2.47a.75.75 0 011.06 1.06l-3.03 3.03z" /></svg>`,
     'InvestmentMemo': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>`,
+};
+
+export const ANALYSIS_NAMES = {
+    'FinancialAnalysis': 'Financial Analysis',
+    'GarpAnalysis': 'GARP Analysis',
+    'MoatAnalysis': 'Moat Analysis',
+    'RiskAssessment': 'Risk Assessment',
+    'CapitalAllocators': 'Capital Allocators',
+    'InvestmentMemo': 'Investment Memo',
+    'GarpCandidacy': 'GARP Candidacy Report',
+    'PositionAnalysis': 'Position Analysis',
+    'PortfolioGarpAnalysis': 'Portfolio GARP Analysis'
 };
