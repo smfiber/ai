@@ -306,8 +306,25 @@ export async function openRawDataViewer(ticker) {
         if (savedCandidacyReports.length > 0) {
             const latestReport = savedCandidacyReports[0];
             const resultContainer = document.getElementById('garp-analysis-container');
-            renderCandidacyAnalysis(resultContainer, latestReport.content, latestReport.prompt);
-            updateGarpCandidacyStatus(document.getElementById('garp-candidacy-status-container'), savedCandidacyReports, latestReport.id, ticker);
+            const statusContainer = document.getElementById('garp-candidacy-status-container');
+            
+            updateGarpCandidacyStatus(statusContainer, savedCandidacyReports, latestReport.id, ticker);
+
+            const savedDate = latestReport.savedAt.toDate().toLocaleString();
+            const tempContainer = document.createElement('div');
+            renderCandidacyAnalysis(tempContainer, latestReport.content, latestReport.prompt);
+            const accordionContent = tempContainer.innerHTML;
+
+            resultContainer.innerHTML = `
+                <details class="border rounded-md bg-gray-50/50">
+                    <summary class="p-3 font-semibold text-gray-700 cursor-pointer hover:bg-gray-100">
+                        View Latest Saved Report (from ${savedDate})
+                    </summary>
+                    <div class="p-4 border-t bg-white">
+                        ${accordionContent}
+                    </div>
+                </details>
+            `;
         }
 
     } catch (error) {
