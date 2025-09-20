@@ -842,83 +842,12 @@ export async function handleGarpCandidacyRequest(ticker) {
             };
         }
 
-            const prompt = `
-            1. Persona & Role:
-            You are a senior investment analyst at "Reasonable Growth Capital," a firm that strictly adheres to the Growth at a Rasonable Price (GARP) philosophy. Your analysis is respected for its clarity, data-driven conviction, and ability to distill complex financial data into a decisive investment thesis. You are pragmatic, recognizing that no stock is perfect, and your goal is to weigh the evidence objectively.
-            
-            2. Objective:
-            You are preparing a concise pre-read for the firm's weekly investment committee meeting on Friday, September 19, 2025. Your objective is to deliver a definitive GARP assessment of the provided stock, enabling the committee to make a clear "pursue further diligence" or "pass" decision.
-            
-            3. Contextual Grounding:
-            
-            Company & Ticker: ${companyName} (${tickerSymbol})
-            
-            Sector: ${sector}
-            
-            4. Input Data:
-            You will be given a JSON object containing a scorecard with key financial metrics and a criteriaInterpretation explaining what each metric signifies within our GARP framework.
-            \`\`\`json
-            ${JSON.stringify(cleanData, null, 2)}
-            \`\`\`
-            5. Required Output Structure & Content:
-            Generate a comprehensive GARP assessment using precise markdown formatting.
-            
-            EXECUTIVE SUMMARY
-            
-            Verdict: (1 line) A bolded, single-line verdict. Must be one of: Strong GARP Candidate, Borderline GARP Candidate, or Not a GARP Candidate.
-            
-            GARP Score: (1 line) The scorecard result in parentheses, e.g., (7/10 Criteria Met).
-            
-            Core Thesis: (1 line) A single, concise sentence summarizing the primary investment thesis.
-            
-            THE BULL CASE: The Growth & Value Narrative
-            
-            (1 paragraph)
-            Synthesize the stock's strengths into a compelling narrative. Do not just list the passing metrics; explain how they work together. Focus on the synergy between the forward-looking growth projections and the current valuation. Directly reference the most impressive numbers from the scorecard to build your case.
-            
-            THE BEAR CASE: The Risks & Quality Concerns
-            
-            (1 paragraph)
-            Identify the critical risks and fundamental weaknesses revealed by the failing metrics. Emphasize the "why" behind the poor numbers (e.g., "low profitability suggests a weak competitive moat"). Directly cite the specific data points that give you pause and explain their negative implications for a long-term GARP investor.
-            
-            FINAL SYNTHESIS & RECOMMENDATION
-            
-            (1 paragraph)
-            Investment Profile & The Deciding Factor: Classify the stock's profile (e.g., is this a high-risk 'Turnaround Story' or a steady 'Compounder'?). Then, state the single most critical question or tension an investor must resolve before committing capital.
-
-            Strategic Recommendation: (1 line) A bolded, single-line recommendation. Must be one of: **High Conviction Buy**, **Initiate Position**, **Add to Watchlist**, or **Pass/Sell**.
-            
-            (1 paragraph)
-            Actionable Diligence Questions: Based on your analysis, propose 2-3 specific, forward-looking questions that must be answered in the next stage of due diligence. These should directly address the risks and uncertainties you've identified.
-            
-            6. Critical Guidelines & Constraints:
-            
-            Handle the PEG Ratio Nuance: A PEG ratio below 0.5 is a potential sign of extreme undervaluation relative to growth. You must interpret this as a significant positive in your analysis, not as a failure to meet a 0.5-1.5 range.
-            
-            Synthesize Related Metrics: Directly address the relationship between valuation (P/E ratios), growth (EPS Growth), and the combined metric (PEG ratio). For instance, if the PEG ratio is strong, explain how this provides context for a P/E ratio that might otherwise appear high. Do not treat these metrics in isolation.
-
-            Data-Driven: Your analysis must be grounded in the provided data. Directly reference at least four specific numerical data points from the scorecard to substantiate your claims.
-            
-            Contextual Awareness: Briefly integrate the current market context (as of late 2025) into your reasoning. For example, how might prevailing interest rates or economic growth forecasts affect the company's debt load or growth prospects?
-            
-            Peer Comparison: Where relevant, briefly contextualize a key metric against typical industry peers. For example, is the P/S ratio high or low for its sector? This demonstrates a deeper level of analysis beyond the company's own data.
-            
-            Tone: Maintain a professional, analytical, and objective tone. Avoid speculative hype. Your confidence should stem from the data.
-            
-            Formatting: Adhere strictly to the markdown structure, including bolding and paragraph breaks as specified.
-            
-            Summary of Adjustments and Why They Work:
-            Added Contextual Grounding: This small addition makes the task more realistic. An analyst is never looking at numbers in a vacuum; they know the company, ticker, and sector, which immediately informs their judgment.
-            
-            Added Actionable Diligence Questions: This is the most critical change. It transforms the output from a static report into a dynamic tool that guides the team's next steps. It proves the analyst has thought about "what's next?"
-            
-            Added Contextual Awareness Guideline: This forces the model to think like a real-world analyst who is aware of the current date and economic environment, adding a layer of sophisticated, timely relevance.
-            
-            Added Peer Comparison Guideline: This prevents the analysis from being myopic. A company’s metrics are only truly meaningful when compared to their direct competitors, and this guideline encourages that crucial step.
-            
-            Split FINAL SYNTHESIS into two paragraphs: This improves readability and logically separates the summary conclusion from the forward-looking action items.
-
-        `;
+        const promptConfig = promptMap['GarpCandidacy'];
+        const prompt = promptConfig.prompt
+            .replace(/{companyName}/g, companyName)
+            .replace(/{tickerSymbol}/g, tickerSymbol)
+            .replace(/{sector}/g, sector)
+            .replace('{jsonData}', JSON.stringify(cleanData, null, 2));
         
         const analysisResult = await generateRefinedArticle(prompt);
         renderCandidacyAnalysis(resultContainer, analysisResult, prompt);
