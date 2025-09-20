@@ -193,6 +193,73 @@ export async function handleResearchSubmit(e) {
 
 // --- AI ANALYSIS REPORT GENERATORS ---
 
+export async function handlePositionAnalysisRequest(ticker) {
+    const container = document.getElementById('position-analysis-content-container');
+    if (!container) return;
+
+    container.innerHTML = `<div class="flex items-center justify-center p-4"><div class="loader"></div><p class="ml-4 text-gray-600 font-semibold">AI is analyzing your position...</p></div>`;
+
+    try {
+        const portfolioData = state.portfolioCache.find(s => s.ticker === ticker);
+        const fmpData = await getFmpStockData(ticker);
+        const candidacyReports = await getSavedReports(ticker, 'GarpCandidacy');
+
+        if (!fmpData || !fmpData.profile || fmpData.profile.length === 0) {
+            throw new Error(`Could not retrieve the latest price data for ${ticker}.`);
+        }
+        if (candidacyReports.length === 0) {
+            throw new Error(`The foundational 'GARP Candidacy Report' has not been generated yet. Please generate it from the 'Dashboard' or 'AI Analysis' tab first.`);
+        }
+
+        const currentPrice = fmpData.profile[0].price;
+        const candidacyReportContent = candidacyReports[0].content;
+        
+        const { shares, costPerShare, purchaseDate, companyName } = portfolioData;
+        const costBasis = shares * costPerShare;
+        const marketValue = shares * currentPrice;
+        const unrealizedGainLoss = marketValue - costBasis;
+        const unrealizedGainLossPct = (unrealizedGainLoss / costBasis) * 100;
+
+        const pDate = new Date(purchaseDate);
+        const now = new Date();
+        const diffTime = Math.abs(now - pDate);
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        const years = Math.floor(diffDays / 365);
+        const months = Math.floor((diffDays % 365) / 30.44); // Average days in month
+        
+        let holdingPeriod = '';
+        if (years > 0) holdingPeriod += `${years} year(s), `;
+        if (months > 0) holdingPeriod += `${months} month(s)`;
+        if (holdingPeriod === '') holdingPeriod = `${diffDays} day(s)`;
+        holdingPeriod = holdingPeriod.replace(/, $/, '');
+
+        const positionDetails = {
+            purchaseDate,
+            shares,
+            costPerShare: costPerShare.toFixed(2),
+            totalCostBasis: `$${costBasis.toFixed(2)}`,
+            currentMarketValue: `$${marketValue.toFixed(2)}`,
+            unrealizedGainLoss: `$${unrealizedGainLoss.toFixed(2)} (${unrealizedGainLossPct.toFixed(2)}%)`,
+            holdingPeriod
+        };
+        
+        const promptConfig = promptMap['PositionAnalysis'];
+        const prompt = promptConfig.prompt
+            .replace(/{companyName}/g, companyName)
+            .replace(/{tickerSymbol}/g, ticker)
+            .replace('{candidacyReport}', candidacyReportContent)
+            .replace('{positionDetails}', JSON.stringify(positionDetails, null, 2))
+            .replace('{currentPrice}', `$${currentPrice.toFixed(2)}`);
+
+        const analysisResult = await generateRefinedArticle(prompt);
+        container.innerHTML = marked.parse(analysisResult);
+
+    } catch (error) {
+        console.error("Error during Position Analysis:", error);
+        container.innerHTML = `<p class="text-red-500 p-4">Could not complete analysis: ${error.message}</p>`;
+    }
+}
+
 export async function handlePortfolioGarpAnalysisRequest() {
     const container = document.getElementById('portfolio-garp-ai-summary-container');
     if (!container) return;
