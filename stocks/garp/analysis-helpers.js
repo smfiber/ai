@@ -128,24 +128,34 @@ export function _calculateGarpScorecardMetrics(data) {
         peg = pe / (epsNext1y * 100);
     }
 
-    // --- CRITERIA CHECKS & INTERPRETATIONS ---
+    // --- CRITERIA CHECKS & WEIGHTS ---
     const metrics = {
-        'EPS Growth (5Y)': { value: eps5y, isMet: eps5y > 0.10, format: 'percent' },
-        'EPS Growth (Next 1Y)': { value: epsNext1y, isMet: epsNext1y > 0.10, format: 'percent' },
-        'Revenue Growth (5Y)': { value: rev5y, isMet: rev5y > 0.05, format: 'percent' },
-        'Return on Equity': { value: roe, isMet: roe > 0.15, format: 'percent' },
-        'Return on Invested Capital': { value: roic, isMet: roic > 0.12, format: 'percent' },
-        'P/E (TTM)': { value: pe, isMet: pe < 25, format: 'decimal' },
-        'Forward P/E': { value: forwardPe, isMet: forwardPe < 20, format: 'decimal' },
-        'PEG Ratio': { value: peg, isMet: peg > 0 && peg < 1.5, format: 'decimal' },
-        'P/S Ratio': { value: ps, isMet: ps < 2.5, format: 'decimal' },
-        'Debt-to-Equity': { value: de, isMet: de < 0.7, format: 'decimal' },
+        'EPS Growth (5Y)': { value: eps5y, isMet: eps5y > 0.10, format: 'percent', weight: 8 },
+        'EPS Growth (Next 1Y)': { value: epsNext1y, isMet: epsNext1y > 0.10, format: 'percent', weight: 15 },
+        'Revenue Growth (5Y)': { value: rev5y, isMet: rev5y > 0.05, format: 'percent', weight: 8 },
+        'Return on Equity': { value: roe, isMet: roe > 0.15, format: 'percent', weight: 12 },
+        'Return on Invested Capital': { value: roic, isMet: roic > 0.12, format: 'percent', weight: 12 },
+        'P/E (TTM)': { value: pe, isMet: pe > 0 && pe < 25, format: 'decimal', weight: 5 },
+        'Forward P/E': { value: forwardPe, isMet: forwardPe > 0 && forwardPe < 20, format: 'decimal', weight: 8 },
+        'PEG Ratio': { value: peg, isMet: peg > 0 && peg < 1.5, format: 'decimal', weight: 15 },
+        'P/S Ratio': { value: ps, isMet: ps > 0 && ps < 2.5, format: 'decimal', weight: 5 },
+        'Debt-to-Equity': { value: de, isMet: de < 0.7, format: 'decimal', weight: 5 },
     };
 
-    // Add interpretation to each metric
+    // --- CONVICTION SCORE CALCULATION ---
+    let score = 0;
+    let totalWeight = 0;
     for (const key in metrics) {
+        totalWeight += metrics[key].weight;
+        if (metrics[key].isMet) {
+            score += metrics[key].weight;
+        }
+        // Add interpretation to each metric
         metrics[key].interpretation = _getMetricInterpretation(key, metrics[key].value);
     }
+
+    const convictionScore = (score / totalWeight) * 100;
+    metrics.garpConvictionScore = isNaN(convictionScore) ? 0 : Math.round(convictionScore);
     
     return metrics;
 }
