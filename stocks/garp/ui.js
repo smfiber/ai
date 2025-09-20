@@ -194,6 +194,11 @@ export function setupEventListeners() {
         const symbol = target.dataset.symbol || analysisModal.dataset.activeTicker;
         if (!symbol) return;
 
+        if (target.matches('.generate-candidacy-button')) {
+            handleGarpCandidacyRequest(symbol);
+            return;
+        }
+
         if (target.matches('.ai-analysis-button')) {
             const reportType = target.dataset.reportType;
             const promptConfig = promptMap[reportType];
