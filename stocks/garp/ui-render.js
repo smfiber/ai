@@ -72,7 +72,7 @@ export async function renderPortfolioGarpOverview() {
                 
                 const metrics = _calculateGarpScorecardMetrics(fmpData);
                 const criteriaMet = Object.values(metrics).filter(m => m.isMet).length;
-                const totalCriteria = Object.keys(metrics).length;
+                const totalCriteria = Object.keys(metrics).length -1;
 
                 return { ...stock, metrics, criteriaMet, totalCriteria, error: false };
             })
@@ -80,19 +80,20 @@ export async function renderPortfolioGarpOverview() {
         
         // Render Score Breakdown
         const groupedByScore = stocksWithData.reduce((acc, stock) => {
-            if (stock.error) return acc;
-            const score = stock.criteriaMet;
-            if (!acc[score]) acc[score] = [];
-            acc[score].push(stock);
+            if (stock.error || !stock.garpConvictionScore) return acc;
+            const score = stock.garpConvictionScore;
+            const bracket = Math.floor(score / 10) * 10;
+            if (!acc[bracket]) acc[bracket] = [];
+            acc[bracket].push(stock);
             return acc;
         }, {});
 
-        let breakdownHtml = '<h4 class="text-sm font-bold text-gray-600 mb-2">Score Breakdown</h4><div class="space-y-2">';
-        Object.keys(groupedByScore).sort((a, b) => b - a).forEach(score => {
-            const stocks = groupedByScore[score];
+        let breakdownHtml = '<h4 class="text-sm font-bold text-gray-600 mb-2">Conviction Score Breakdown</h4><div class="space-y-2">';
+        Object.keys(groupedByScore).sort((a, b) => b - a).forEach(bracket => {
+            const stocks = groupedByScore[bracket];
             breakdownHtml += `
                 <div class="grid grid-cols-[auto,1fr] items-start gap-x-2 text-sm">
-                    <span class="font-bold text-gray-800 text-right whitespace-nowrap">${score}/${stocks[0].totalCriteria} Met:</span>
+                    <span class="font-bold text-gray-800 text-right whitespace-nowrap">${bracket}-${parseInt(bracket)+10}:</span>
                     <div class="flex flex-wrap gap-1">
                         ${stocks.map(s => `<span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800">${s.ticker}</span>`).join('')}
                     </div>
@@ -104,15 +105,33 @@ export async function renderPortfolioGarpOverview() {
 
         // Render Individual Scorecards
         let overviewHtml = '';
+        stocksWithData.sort((a, b) => (b.garpConvictionScore || 0) - (a.garpConvictionScore || 0));
+
         for (const stock of stocksWithData) {
+            const score = stock.garpConvictionScore;
+            let scoreClass = 'low';
+            if (score > 75) scoreClass = 'high';
+            else if (score > 50) scoreClass = 'medium';
+
+            const scoreHtml = score ? `
+                <div class="conviction-score-display ${scoreClass}">
+                    <div class="text-sm font-bold text-gray-600">CONVICTION SCORE</div>
+                    <div class="score-value">${score}</div>
+                </div>
+            ` : '';
+
             overviewHtml += `
                 <div class="border rounded-lg p-4 bg-gray-50/50">
-                    <h3 class="font-bold text-gray-800">${sanitizeText(stock.companyName)} (${sanitizeText(stock.ticker)})</h3>`;
+                    <div class="flex justify-between items-start">
+                        <h3 class="font-bold text-gray-800">${sanitizeText(stock.companyName)} (${sanitizeText(stock.ticker)})</h3>
+                        ${scoreHtml}
+                    </div>`;
             
             if (stock.error || !stock.metrics) {
                 overviewHtml += `<p class="text-sm text-red-500 italic mt-2">Could not load scorecard data. Please refresh this stock's data via the 'View Portfolio' modal.</p>`;
             } else {
                 const tilesHtml = Object.entries(stock.metrics).map(([name, data]) => {
+                    if (name === 'garpConvictionScore') return '';
                     let valueDisplay = 'N/A';
                     let colorClass = 'text-gray-500';
                     if (typeof data.value === 'number' && isFinite(data.value)) {
@@ -207,7 +226,7 @@ export async function _renderGroupedStockList(container, stocksWithData, listTyp
 
     let html = '';
     sortedSectors.forEach(sector => {
-        const stocks = groupedBySector[sector].sort((a, b) => a.companyName.localeCompare(b.companyName));
+        const stocks = groupedBySector[sector].sort((a, b) => (b.garpConvictionScore || 0) - (a.garpConvictionScore || 0));
         html += `
             <details class="border-b" open>
                 <summary class="p-3 font-semibold cursor-pointer hover:bg-gray-50 flex justify-between">
@@ -219,11 +238,23 @@ export async function _renderGroupedStockList(container, stocksWithData, listTyp
         
         stocks.forEach(stock => {
             const refreshedAt = stock.fmpData?.cachedAt ? stock.fmpData.cachedAt.toDate().toLocaleString() : 'N/A';
+            const score = stock.garpConvictionScore;
+            let scoreBadgeHtml = '';
+            if (score) {
+                let scoreClass = 'low';
+                if (score > 75) scoreClass = 'high';
+                else if (score > 50) scoreClass = 'medium';
+                scoreBadgeHtml = `<span class="conviction-score-badge ${scoreClass}">${score}</span>`;
+            }
+
             html += `
                 <li class="p-4 flex justify-between items-center">
-                    <div>
-                        <p class="font-bold text-indigo-700">${sanitizeText(stock.companyName)}</p>
-                        <p class="text-sm text-gray-600">${sanitizeText(stock.ticker)}</p>
+                    <div class="flex items-center gap-3">
+                        ${scoreBadgeHtml}
+                        <div>
+                            <p class="font-bold text-indigo-700">${sanitizeText(stock.companyName)}</p>
+                            <p class="text-sm text-gray-600">${sanitizeText(stock.ticker)}</p>
+                        </div>
                     </div>
                     <div class="text-right">
                         <div class="flex items-center justify-end gap-2">
@@ -247,6 +278,7 @@ export function renderGarpScorecardDashboard(container, ticker, fmpData) {
     const metrics = _calculateGarpScorecardMetrics(fmpData);
     
     const tilesHtml = Object.entries(metrics).map(([name, data]) => {
+        if (name === 'garpConvictionScore') return '';
         let valueDisplay = 'N/A';
         let colorClass = 'text-gray-500 italic'; // Muted gray for N/A
 
@@ -267,8 +299,23 @@ export function renderGarpScorecardDashboard(container, ticker, fmpData) {
         `;
     }).join('');
 
+    const score = metrics.garpConvictionScore;
+    let scoreClass = 'low';
+    if (score > 75) scoreClass = 'high';
+    else if (score > 50) scoreClass = 'medium';
+
+    const scoreHtml = `
+        <div class="conviction-score-display ${scoreClass}">
+            <div class="text-sm font-bold text-gray-600">CONVICTION SCORE</div>
+            <div class="score-value">${score}</div>
+        </div>
+    `;
+
     container.innerHTML = `
-        <h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">GARP Scorecard</h3>
+        <div class="flex justify-between items-start mb-4 border-b pb-2">
+            <h3 class="text-xl font-bold text-gray-800">GARP Scorecard</h3>
+            ${scoreHtml}
+        </div>
         <div class="grid grid-cols-2 md:grid-cols-5 gap-4">${tilesHtml}</div>`;
     
     return metrics; // Return metrics for reuse
