@@ -26,7 +26,14 @@ export async function fetchAndCachePortfolioData() {
 
         // Update dashboard counts
         const portfolioCount = state.portfolioCache.filter(s => s.status === 'Portfolio').length;
+        const watchlistCount = state.portfolioCache.filter(s => s.status === 'Watchlist').length;
+        const revisit3MonthsCount = state.portfolioCache.filter(s => s.status === 'Revisit 3 months').length;
+        const revisit6MonthsCount = state.portfolioCache.filter(s => s.status === 'Revisit 6 months').length;
+
         document.getElementById('portfolio-count').textContent = portfolioCount;
+        document.getElementById('watchlist-count').textContent = watchlistCount;
+        document.getElementById('revisit-3-months-count').textContent = revisit3MonthsCount;
+        document.getElementById('revisit-6-months-count').textContent = revisit6MonthsCount;
         
         // Render the new overview card after data is fetched
         await renderPortfolioGarpOverview();
@@ -80,12 +87,12 @@ export async function renderPortfolioGarpOverview() {
             return acc;
         }, {});
 
-        let breakdownHtml = '<h4 class="text-sm font-bold text-gray-600 mb-2">Score Breakdown</h4><div class="space-y-1">';
+        let breakdownHtml = '<h4 class="text-sm font-bold text-gray-600 mb-2">Score Breakdown</h4><div class="space-y-2">';
         Object.keys(groupedByScore).sort((a, b) => b - a).forEach(score => {
             const stocks = groupedByScore[score];
             breakdownHtml += `
-                <div class="flex items-center gap-2 text-sm">
-                    <span class="font-bold text-gray-800 w-16 text-right">${score}/${stocks[0].totalCriteria} Met:</span>
+                <div class="grid grid-cols-[auto,1fr] items-start gap-x-2 text-sm">
+                    <span class="font-bold text-gray-800 text-right whitespace-nowrap">${score}/${stocks[0].totalCriteria} Met:</span>
                     <div class="flex flex-wrap gap-1">
                         ${stocks.map(s => `<span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800">${s.ticker}</span>`).join('')}
                     </div>
