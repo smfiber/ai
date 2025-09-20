@@ -240,7 +240,24 @@ export async function handleReportHelpRequest(reportType) {
         `;
 
         const explanation = await callGeminiApi(metaPrompt);
-        helpContent.innerHTML = marked.parse(explanation);
+        
+        const sanitizeText = (text) => {
+            if (typeof text !== 'string') return '';
+            const tempDiv = document.createElement('div');
+            tempDiv.textContent = text;
+            return tempDiv.innerHTML;
+        };
+
+        const accordionHtml = `
+            <details class="mb-4 border rounded-md bg-gray-50/50">
+                <summary class="p-2 font-semibold text-sm text-gray-700 cursor-pointer hover:bg-gray-100">
+                    View Full Prompt Sent to AI
+                </summary>
+                <pre class="text-xs whitespace-pre-wrap break-all bg-gray-900 text-white p-3 rounded-b-md">${sanitizeText(metaPrompt)}</pre>
+            </details>
+        `;
+
+        helpContent.innerHTML = accordionHtml + marked.parse(explanation);
 
     } catch (error) {
         console.error('Error generating help content:', error);
@@ -374,30 +391,33 @@ export async function handlePortfolioGarpAnalysisRequest() {
                 const fmpData = await getFmpStockData(stock.ticker);
                 if (!fmpData) return null;
                 const metrics = _calculateGarpScorecardMetrics(fmpData);
-                return { stock, metrics };
+                return { stock, metrics, fmpData };
             })
         );
         
         const validStocks = stocksWithData.filter(Boolean);
 
-        const payload = validStocks.map(({ stock, metrics }) => {
-            const criteriaMet = Object.values(metrics).filter(m => m.isMet).length;
-            const totalCriteria = Object.keys(metrics).length;
-            const simplifiedScorecard = {};
+        const payload = validStocks.map(({ stock, metrics, fmpData }) => {
+            const profile = fmpData.profile?.[0] || {};
+            const cleanScorecard = {};
             for (const [key, data] of Object.entries(metrics)) {
-                simplifiedScorecard[key] = {
+                if (key === 'garpConvictionScore') continue;
+                 cleanScorecard[key] = {
                     value: (typeof data.value === 'number' && isFinite(data.value))
                         ? (data.format === 'percent' ? `${(data.value * 100).toFixed(2)}%` : data.value.toFixed(2))
                         : 'N/A',
-                    isMet: data.isMet
+                    isMet: data.isMet,
+                    interpretation: data.interpretation
                 };
             }
+
             return {
                 companyName: stock.companyName,
                 ticker: stock.ticker,
-                criteriaMet,
-                totalCriteria,
-                scorecard: simplifiedScorecard
+                sector: stock.sector,
+                mktCap: profile.mktCap,
+                garpConvictionScore: metrics.garpConvictionScore,
+                scorecard: cleanScorecard
             };
         });
         
