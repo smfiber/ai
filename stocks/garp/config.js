@@ -389,7 +389,9 @@ Actionable Diligence Questions: Based on your analysis, propose 2-3 specific, fo
 
 6. Critical Guidelines & Constraints:
 
-Handle the PEG Ratio Nuance: A PEG ratio below 0.5 is a potential sign of extreme undervaluation relative to growth. You must interpret this as a significant positive in your analysis, not as a failure to meet a 0.5-1.5 range.
+Handle the PEG Ratio Nuance: A PEG ratio below 0.5 indicates potential deep undervaluation but also carries significant risk. You must interpret this as a high-stakes scenario that requires careful scrutiny of the growth forecast, not as a simple 'buy' signal.
+
+Handle Rebound Growth Scenarios: If a company shows extremely high forward growth (>100%), recognize this is likely a statistical rebound from a low base. In your analysis, you should question the sustainability of this growth rate and consider the longer-term historical average as a more realistic baseline.
 
 Synthesize Related Metrics: Directly address the relationship between valuation (P/E ratios), growth (EPS Growth), and the combined metric (PEG ratio). For instance, if the PEG ratio is strong, explain how this provides context for a P/E ratio that might otherwise appear high. Do not treat these metrics in isolation.
 
@@ -498,5 +500,5 @@ export const CALCULATION_SUMMARIES = {
     'GarpCandidacy': 'Calculates a 10-point GARP scorecard, checking key metrics like EPS & Revenue Growth, Profitability (ROE, ROIC), and Valuation (P/E, PEG, P/S, D/E) against predefined thresholds to determine if a stock qualifies as a GARP candidate.',
     'PositionAnalysis': 'This report does not perform new calculations. It uses the previously generated "GARP Candidacy Report" as the original investment thesis and compares it against the user\'s specific position details (cost basis, shares) and the current market price.',
     'PortfolioGarpAnalysis': 'This report aggregates the pre-calculated GARP scorecards for every stock currently in the user\'s "Portfolio" status. It then prepares this aggregated data for an AI to analyze.',
-    'GarpConvictionScore': 'The GARP Conviction Score is a proprietary metric calculated out of 100. It evaluates a stock against 10 key criteria for Growth, Profitability, and Valuation. Each criterion is assigned a weight based on its importance to the GARP philosophy. The final score represents the percentage of the total weighted criteria that the stock successfully meets, providing a quick measure of its alignment with the GARP strategy.'
+    'GarpConvictionScore': 'The GARP Conviction Score is a proprietary metric calculated out of 100, designed to provide a nuanced view of a company\'s quality. Instead of a simple pass/fail, it uses a scaled scoring system. Each of the 10 GARP criteria (covering Growth, Profitability, and Valuation) is graded on its performance, earning a score multiplier (e.g., 0x for poor, 1.0x for good, 1.2x for exceptional). The final score is the weighted sum of these graded results, providing a more precise measure of a company\'s alignment with the GARP strategy.'
 };
