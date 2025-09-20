@@ -373,3 +373,62 @@ body.modal-open {
     border-radius: 9999px;
     border: 2px solid white;
 }
+
+/*
+ * =================================================================
+ * GARP CONVICTION SCORE
+ * =================================================================
+ */
+.conviction-score-display {
+    text-align: center;
+    padding: 0.5rem;
+    border-radius: 0.5rem;
+    border-width: 2px;
+    border-style: solid;
+}
+.conviction-score-display .score-value {
+    font-size: 2.25rem;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.conviction-score-badge {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 9999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: white;
+    flex-shrink: 0;
+}
+
+/* Score Colors */
+.conviction-score-display.high, .conviction-score-badge.high {
+    border-color: #16a34a;
+    color: #166534;
+}
+.conviction-score-badge.high {
+    background-color: #16a34a;
+    color: white;
+}
+
+.conviction-score-display.medium, .conviction-score-badge.medium {
+    border-color: #f59e0b;
+    color: #b45309;
+}
+.conviction-score-badge.medium {
+    background-color: #f59e0b;
+    color: white;
+}
+
+.conviction-score-display.low, .conviction-score-badge.low {
+    border-color: #ef4444;
+    color: #b91c1c;
+}
+.conviction-score-badge.low {
+    background-color: #ef4444;
+    color: white;
+}
