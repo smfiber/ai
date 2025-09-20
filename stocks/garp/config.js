@@ -402,6 +402,13 @@ Added Peer Comparison Guideline: This prevents the analysis from being myopic. A
 Split FINAL SYNTHESIS into two paragraphs: This improves readability and logically separates the summary conclusion from the forward-looking action items.
 `.trim();
 
+const GARP_CONVICTION_SCORE_PROMPT = `
+Role: You are an AI assistant skilled at explaining financial metrics.
+Task: Explain the GARP Conviction Score based on the provided data summary.
+Data Summary:
+{jsonData}
+`.trim();
+
 
 export const promptMap = {
     'FinancialAnalysis': {
@@ -439,6 +446,10 @@ export const promptMap = {
     'GarpCandidacy': {
         prompt: GARP_CANDIDACY_PROMPT,
         requires: [] // This analysis calculates its own data, doesn't need pre-filtered FMP endpoints
+    },
+    'GarpConvictionScore': {
+        prompt: GARP_CONVICTION_SCORE_PROMPT,
+        requires: []
     }
 };
 
@@ -460,5 +471,6 @@ export const ANALYSIS_NAMES = {
     'InvestmentMemo': 'Investment Memo',
     'GarpCandidacy': 'GARP Candidacy Report',
     'PositionAnalysis': 'Position Analysis',
-    'PortfolioGarpAnalysis': 'Portfolio GARP Analysis'
+    'PortfolioGarpAnalysis': 'Portfolio GARP Analysis',
+    'GarpConvictionScore': 'GARP Conviction Score'
 };
