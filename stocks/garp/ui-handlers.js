@@ -450,32 +450,26 @@ export async function handleInvestmentMemoRequest(symbol, forceNew = false) {
         openModal(CONSTANTS.MODAL_LOADING);
         const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
 
-        loadingMessage.textContent = "Gathering all latest analysis reports from the database...";
+        loadingMessage.textContent = "Gathering data for memo synthesis...";
         
-        const reportTypes = ['GarpAnalysis', 'FinancialAnalysis', 'RiskAssessment', 'MoatAnalysis', 'CapitalAllocators'];
-        const reportPromises = reportTypes.map(type => getSavedReports(symbol, type).then(reports => reports[0]));
-        const allLatestReports = await Promise.all(reportPromises);
-
-        const foundReports = allLatestReports.filter(Boolean);
-        const missingReports = reportTypes.filter((type, index) => !allLatestReports[index]);
-
-        if (missingReports.length > 0) {
-            throw new Error(`Cannot generate memo. Please generate and save the following reports first: ${missingReports.join(', ')}`);
+        const candidacyReports = await getSavedReports(symbol, 'GarpCandidacy');
+        if (candidacyReports.length === 0) {
+            throw new Error(`Cannot generate memo. Please generate the "GARP Candidacy Report" from Step 1 first.`);
         }
+        const candidacyReportContent = candidacyReports[0].content;
 
-        let allAnalysesData = foundReports.map(report => {
-            const reportTitle = report.content.match(/#\s*(.*)/)?.[1] || report.reportType;
-            return `--- REPORT: ${reportTitle} ---\n\n${report.content}\n\n`;
-        }).join('\n');
-        
         const data = await getFmpStockData(symbol);
+        if (!data) throw new Error(`Could not retrieve financial data for ${symbol}.`);
+        const scorecardData = _calculateGarpScorecardMetrics(data);
+
         const profile = data.profile?.[0] || {};
         const companyName = profile.companyName || 'the company';
 
         const prompt = promptMap.InvestmentMemo.prompt
             .replace(/{companyName}/g, companyName)
             .replace(/{tickerSymbol}/g, symbol)
-            .replace('{allAnalysesData}', allAnalysesData);
+            .replace('{candidacyReport}', candidacyReportContent)
+            .replace('{scorecardJson}', JSON.stringify(scorecardData, null, 2));
 
         loadingMessage.textContent = "AI is drafting the investment memo...";
         const memoContent = await generatePolishedArticleForSynthesis(prompt, loadingMessage);
