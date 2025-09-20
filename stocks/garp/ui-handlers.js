@@ -951,3 +951,43 @@ export async function handleDiligenceInvestigationRequest(symbol) {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
 }
+
+export async function handleDeleteDiligenceLog(reportId, ticker) {
+    openConfirmationModal(
+        'Delete Log Entry?',
+        'Are you sure you want to permanently delete this Q&A entry? This action cannot be undone.',
+        async () => {
+            openModal(CONSTANTS.MODAL_LOADING);
+            document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Deleting entry...`;
+            try {
+                await deleteDoc(doc(state.db, CONSTANTS.DB_COLLECTION_AI_REPORTS, reportId));
+
+                const diligenceReports = await getSavedReports(ticker, 'DiligenceInvestigation');
+                const diligenceLogContainer = document.getElementById('diligence-log-container');
+                renderDiligenceLog(diligenceLogContainer, diligenceReports);
+
+                const articleContainer = document.getElementById('ai-article-container');
+                const statusContainer = document.getElementById('report-status-container-ai');
+                articleContainer.innerHTML = '';
+                statusContainer.classList.add('hidden');
+
+                displayMessageInModal('Diligence log entry deleted.', 'info');
+            } catch (error) {
+                console.error("Error deleting diligence log:", error);
+                displayMessageInModal(`Could not delete entry: ${error.message}`, 'error');
+            } finally {
+                closeModal(CONSTANTS.MODAL_LOADING);
+            }
+        }
+    );
+}
+
+export function handleRerunDiligenceQuery(question, symbol) {
+    const questionInput = document.getElementById('diligence-question-input');
+    if (questionInput) {
+        questionInput.value = question;
+        handleDiligenceInvestigationRequest(symbol);
+    } else {
+        displayMessageInModal('Could not find the investigation input box.', 'error');
+    }
+}
