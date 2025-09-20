@@ -1,7 +1,7 @@
 import { CONSTANTS, state, promptMap } from './config.js';
 import { openModal, closeModal, openStockListModal, openManageStockModal, openPortfolioManagerModal, openRawDataViewer } from './ui-modals.js';
 import { fetchAndCachePortfolioData, renderPortfolioManagerList } from './ui-render.js';
-import { handleResearchSubmit, handleSaveStock, handleDeleteStock, handleRefreshFmpData, handleAnalysisRequest, handleInvestmentMemoRequest, handleSaveReportToDb, handleGenerateAllReportsRequest, handleGarpCandidacyRequest, handlePortfolioGarpAnalysisRequest, handlePositionAnalysisRequest, handleReportHelpRequest, handleDiligenceInvestigationRequest } from './ui-handlers.js';
+import { handleResearchSubmit, handleSaveStock, handleDeleteStock, handleRefreshFmpData, handleAnalysisRequest, handleInvestmentMemoRequest, handleSaveReportToDb, handleGenerateAllReportsRequest, handleGarpCandidacyRequest, handlePortfolioGarpAnalysisRequest, handlePositionAnalysisRequest, handleReportHelpRequest, handleDiligenceInvestigationRequest, handleDeleteDiligenceLog, handleRerunDiligenceQuery } from './ui-handlers.js';
 
 // --- DYNAMIC TOOLTIPS ---
 function initializeTooltips() {
@@ -212,6 +212,25 @@ export function setupEventListeners() {
         
         const symbol = target.dataset.symbol || analysisModal.dataset.activeTicker;
         if (!symbol) return;
+        
+        // Diligence Log Management
+        const deleteBtn = e.target.closest('.diligence-delete-btn');
+        if (deleteBtn) {
+            const reportId = deleteBtn.dataset.reportId;
+            if (reportId) {
+                handleDeleteDiligenceLog(reportId, symbol);
+            }
+            return;
+        }
+
+        const rerunBtn = e.target.closest('.diligence-rerun-btn');
+        if (rerunBtn) {
+            const question = rerunBtn.dataset.question;
+            if (question) {
+                handleRerunDiligenceQuery(question, symbol);
+            }
+            return;
+        }
 
         if (target.id === 'investigate-diligence-button') {
             handleDiligenceInvestigationRequest(symbol);
