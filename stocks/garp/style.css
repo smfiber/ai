@@ -107,7 +107,9 @@ body.modal-open {
 
 .interp-badge.modest-growth,
 .interp-badge.reasonable-price,
-.interp-badge.potentially-undervalued {
+.interp-badge.potentially-undervalued,
+.interp-badge.investigate,
+.interp-badge.rebound-growth {
     background-color: #eab308; /* yellow-500 */
     color: #78350f; /* yellow-900 */
 }
