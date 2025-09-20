@@ -216,6 +216,7 @@ export async function openRawDataViewer(ticker) {
         const profile = fmpData.profile[0];
         
         titleEl.textContent = `Analysis for ${ticker}`;
+        const helpIconHtml = `<button data-report-type="PositionAnalysis" class="ai-help-button p-1 rounded-full hover:bg-indigo-100" title="What is this?"><svg class="w-5 h-5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" /></svg></button>`;
 
         // Conditionally show and populate the Position Analysis tab
         const portfolioData = state.portfolioCache.find(s => s.ticker === ticker);
@@ -223,9 +224,12 @@ export async function openRawDataViewer(ticker) {
             positionAnalysisTabButton.classList.remove('hidden');
             positionAnalysisContainer.innerHTML = `
                 <div class="text-center p-8 bg-gray-50 rounded-lg">
-                    <h3 class="text-xl font-bold text-gray-800 mb-2">Position Review</h3>
+                    <div class="flex justify-center items-center gap-2 mb-2">
+                        <h3 class="text-xl font-bold text-gray-800">Position Review</h3>
+                        ${helpIconHtml}
+                    </div>
                     <p class="text-gray-600 mb-6 max-w-2xl mx-auto">Re-evaluate the original GARP thesis for this holding based on your actual cost basis and the current market price.</p>
-                    <button id="generate-position-analysis-button" data-symbol="${ticker}" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg text-base shadow-md transition-transform hover:scale-105">
+                    <button id="generate-position-analysis-button" data-symbol="${ticker}" data-report-type="PositionAnalysis" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg text-base shadow-md transition-transform hover:scale-105">
                         Generate Position Analysis
                     </button>
                 </div>
@@ -260,34 +264,47 @@ export async function openRawDataViewer(ticker) {
         const buildButtonHtml = (buttons) => buttons.map((btn) => {
              const hasSaved = savedReportTypes.has(btn.reportType) ? 'has-saved-report' : '';
              const icon = ANALYSIS_ICONS[btn.reportType] || '';
-             return `<button data-symbol="${ticker}" data-report-type="${btn.reportType}" class="ai-analysis-button analysis-tile ${hasSaved}" data-tooltip="${btn.tooltip}">
-                         ${icon}
-                         <span class="tile-name">${btn.text}</span>
-                     </button>`;
+             const helpIconSvg = `<svg class="w-5 h-5 text-indigo-500 group-hover:text-indigo-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" /></svg>`;
+             
+             return `<div class="relative group">
+                         <button data-symbol="${ticker}" data-report-type="${btn.reportType}" class="ai-analysis-button analysis-tile ${hasSaved}" data-tooltip="${btn.tooltip}">
+                             ${icon}
+                             <span class="tile-name">${btn.text}</span>
+                         </button>
+                         <button data-report-type="${btn.reportType}" class="ai-help-button absolute -top-2 -right-2 bg-white p-1 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity" title="What is this report?">
+                             ${helpIconSvg}
+                         </button>
+                     </div>`;
         }).join('');
         
         const deepDiveHtml = buildButtonHtml(deepDiveButtons);
             
         const candidacyBtn = `<button data-symbol="${ticker}" data-report-type="GarpCandidacy" class="generate-candidacy-button bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg text-base">Generate GARP Candidacy Report</button>`;
         const generateAllBtn = `<button data-symbol="${ticker}" id="generate-all-reports-button" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg">Generate All Deep Dives</button>`;
-        const garpMemoBtn = `<button data-symbol="${ticker}" id="investment-memo-button" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg text-base">Generate GARP Memo</button>`;
+        const garpMemoBtn = `<button data-symbol="${ticker}" id="investment-memo-button" data-report-type="InvestmentMemo" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg text-base">Generate GARP Memo</button>`;
 
         aiButtonsContainer.innerHTML = `
             <div class="space-y-8 text-center bg-gray-50 p-4 rounded-lg">
                 <div class="p-4 bg-white rounded-lg border shadow-sm">
-                    <h3 class="text-lg font-bold text-gray-800 mb-4">Step 1: Initial Assessment (Required)</h3>
+                    <div class="flex justify-center items-center gap-2 mb-4">
+                        <h3 class="text-lg font-bold text-gray-800">Step 1: Initial Assessment (Required)</h3>
+                        <button data-report-type="GarpCandidacy" class="ai-help-button p-1 rounded-full hover:bg-indigo-100" title="What is this?"><svg class="w-5 h-5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" /></svg></button>
+                    </div>
                     <div class="flex justify-center">${candidacyBtn}</div>
                 </div>
 
                 <div class="p-4 bg-white rounded-lg border shadow-sm">
                     <h3 class="text-lg font-bold text-gray-800 mb-4">Step 2: Deep Dive Analysis (Optional)</h3>
                     <p class="text-sm text-gray-500 mb-4">Generate these reports for more detail after a promising candidacy assessment.</p>
-                    <div class="flex flex-wrap gap-2 justify-center">${deepDiveHtml}</div>
+                    <div class="flex flex-wrap gap-4 justify-center">${deepDiveHtml}</div>
                     <div class="text-center mt-4">${generateAllBtn}</div>
                 </div>
 
                 <div class="p-4 bg-white rounded-lg border shadow-sm">
-                    <h3 class="text-lg font-bold text-gray-800 mb-4">Step 3: Synthesize Final Memo</h3>
+                    <div class="flex justify-center items-center gap-2 mb-4">
+                        <h3 class="text-lg font-bold text-gray-800">Step 3: Synthesize Final Memo</h3>
+                        <button data-report-type="InvestmentMemo" class="ai-help-button p-1 rounded-full hover:bg-indigo-100" title="What is this?"><svg class="w-5 h-5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" /></svg></button>
+                    </div>
                     <div class="flex justify-center">${garpMemoBtn}</div>
                 </div>
             </div>
