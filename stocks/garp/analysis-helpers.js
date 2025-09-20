@@ -33,6 +33,7 @@ function _getMetricInterpretation(metricName, value) {
     switch (metricName) {
         case 'EPS Growth (5Y)':
         case 'EPS Growth (Next 1Y)':
+            if (value > 1.0) return { category: 'Rebound Growth', text: 'An extremely high growth forecast, often due to a recovery from a prior period of very low earnings. This figure requires scrutiny to determine the true, sustainable long-term growth rate.' };
             if (value > 0.3) return { category: 'Hyper-Growth', text: 'Signals a hyper-growth company. The key question is sustainability, as this often comes with a premium valuation.' };
             if (value > 0.1) return { category: 'GARP Sweet Spot', text: 'Indicates strong, steady, and likely sustainable growth. A key sign of a well-managed business.' };
             if (value > 0.0) return { category: 'Modest Growth', text: 'Could highlight a value or turnaround opportunity if the valuation is very low, but requires investigation.' };
@@ -57,7 +58,7 @@ function _getMetricInterpretation(metricName, value) {
             return { category: 'Expensive', text: 'The stock is trading at a premium. The investment thesis relies heavily on future growth meeting high expectations.' };
 
         case 'PEG Ratio':
-            if (value < 0.5) return { category: 'Potentially Undervalued', text: 'The stock may be deeply undervalued relative to its growth, but check if growth estimates are realistic.' };
+            if (value < 0.5) return { category: 'Investigate', text: 'The stock appears extremely cheap relative to its growth forecast. This is a potential red flag that requires deep investigation to confirm the growth estimates are realistic and not based on one-time factors.' };
             if (value <= 1.5) return { category: 'Fairly Priced', text: 'Suggests a balanced risk/reward profile where the price is justified by the expected growth.' };
             return { category: 'Priced for Perfection', text: 'Indicates the price may have run ahead of growth expectations, reducing the margin of safety.' };
 
@@ -75,6 +76,77 @@ function _getMetricInterpretation(metricName, value) {
             return { category: 'N/A', text: '' };
     }
 }
+
+
+/**
+ * Calculates a score multiplier (0.0 to 1.2) for a given metric based on its performance.
+ * @param {string} metricName - The name of the metric.
+ * @param {number|null} value - The value of the metric.
+ * @returns {number} The score multiplier.
+ */
+function _getMetricScoreMultiplier(metricName, value) {
+    if (value === null || !isFinite(value)) return 0;
+
+    switch (metricName) {
+        case 'EPS Growth (5Y)':
+            if (value > 0.20) return 1.2;
+            if (value > 0.10) return 1.0;
+            if (value > 0.05) return 0.5;
+            return 0;
+
+        case 'EPS Growth (Next 1Y)':
+            if (value > 1.0) return 0.5; // Rebound Growth (Partial Credit)
+            if (value > 0.25) return 1.2;
+            if (value > 0.10) return 1.0;
+            if (value > 0.05) return 0.5;
+            return 0;
+
+        case 'Revenue Growth (5Y)':
+            if (value > 0.15) return 1.2;
+            if (value > 0.05) return 1.0;
+            if (value > 0.0) return 0.5;
+            return 0;
+
+        case 'Return on Equity':
+        case 'Return on Invested Capital':
+            if (value > 0.30) return 1.2;
+            if (value > 0.15) return 1.0;
+            if (value > 0.10) return 0.5;
+            return 0;
+        
+        case 'P/E (TTM)':
+        case 'Forward P/E':
+            if (value <= 0) return 0;
+            if (value < 15) return 1.2;
+            if (value < 25) return 1.0;
+            if (value < 40) return 0.5;
+            return 0;
+
+        case 'PEG Ratio':
+            if (value <= 0) return 0;
+            if (value < 0.5) return 0.5; // Investigate (Partial Credit)
+            if (value <= 1.5) return 1.0;
+            if (value <= 2.5) return 0.5;
+            return 0;
+
+        case 'P/S Ratio':
+             if (value <= 0) return 0;
+             if (value < 1.5) return 1.2;
+             if (value < 2.5) return 1.0;
+             if (value < 4.0) return 0.5;
+             return 0;
+        
+        case 'Debt-to-Equity':
+            if (value < 0.3) return 1.2;
+            if (value < 0.7) return 1.0;
+            if (value < 1.0) return 0.5;
+            return 0;
+
+        default:
+            return 0;
+    }
+}
+
 
 /**
  * Calculates metrics for the GARP Scorecard dashboard.
@@ -128,30 +200,30 @@ export function _calculateGarpScorecardMetrics(data) {
         peg = pe / (epsNext1y * 100);
     }
 
-    // --- CRITERIA CHECKS & WEIGHTS ---
+    // --- METRICS DEFINITION ---
     const metrics = {
-        'EPS Growth (5Y)': { value: eps5y, isMet: eps5y > 0.10, format: 'percent', weight: 8 },
-        'EPS Growth (Next 1Y)': { value: epsNext1y, isMet: epsNext1y > 0.10, format: 'percent', weight: 15 },
-        'Revenue Growth (5Y)': { value: rev5y, isMet: rev5y > 0.05, format: 'percent', weight: 8 },
-        'Return on Equity': { value: roe, isMet: roe > 0.15, format: 'percent', weight: 12 },
-        'Return on Invested Capital': { value: roic, isMet: roic > 0.12, format: 'percent', weight: 12 },
-        'P/E (TTM)': { value: pe, isMet: pe > 0 && pe < 25, format: 'decimal', weight: 5 },
-        'Forward P/E': { value: forwardPe, isMet: forwardPe > 0 && forwardPe < 20, format: 'decimal', weight: 8 },
-        'PEG Ratio': { value: peg, isMet: peg > 0 && peg < 1.5, format: 'decimal', weight: 15 },
-        'P/S Ratio': { value: ps, isMet: ps > 0 && ps < 2.5, format: 'decimal', weight: 5 },
-        'Debt-to-Equity': { value: de, isMet: de < 0.7, format: 'decimal', weight: 5 },
+        'EPS Growth (5Y)': { value: eps5y, format: 'percent', weight: 8 },
+        'EPS Growth (Next 1Y)': { value: epsNext1y, format: 'percent', weight: 15 },
+        'Revenue Growth (5Y)': { value: rev5y, format: 'percent', weight: 8 },
+        'Return on Equity': { value: roe, format: 'percent', weight: 12 },
+        'Return on Invested Capital': { value: roic, format: 'percent', weight: 12 },
+        'P/E (TTM)': { value: pe, format: 'decimal', weight: 5 },
+        'Forward P/E': { value: forwardPe, format: 'decimal', weight: 8 },
+        'PEG Ratio': { value: peg, format: 'decimal', weight: 15 },
+        'P/S Ratio': { value: ps, format: 'decimal', weight: 5 },
+        'Debt-to-Equity': { value: de, format: 'decimal', weight: 5 },
     };
 
     // --- CONVICTION SCORE CALCULATION ---
     let score = 0;
     let totalWeight = 0;
     for (const key in metrics) {
-        totalWeight += metrics[key].weight;
-        if (metrics[key].isMet) {
-            score += metrics[key].weight;
-        }
+        const metric = metrics[key];
+        totalWeight += metric.weight;
+        score += metric.weight * _getMetricScoreMultiplier(key, metric.value);
+        
         // Add interpretation to each metric
-        metrics[key].interpretation = _getMetricInterpretation(key, metrics[key].value);
+        metric.interpretation = _getMetricInterpretation(key, metric.value);
     }
 
     const convictionScore = (score / totalWeight) * 100;
