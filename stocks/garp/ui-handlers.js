@@ -73,6 +73,9 @@ export async function handleSaveStock(e) {
         return;
     }
 
+    const sharesValue = document.getElementById('manage-stock-shares').value;
+    const costValue = document.getElementById('manage-stock-cost').value;
+
     const stockData = {
         ticker: newTicker,
         companyName: document.getElementById('manage-stock-name').value.trim(),
@@ -80,6 +83,9 @@ export async function handleSaveStock(e) {
         status: document.getElementById('manage-stock-status').value.trim(),
         sector: document.getElementById('manage-stock-sector').value.trim(),
         industry: document.getElementById('manage-stock-industry').value.trim(),
+        purchaseDate: document.getElementById('manage-stock-date').value || null,
+        shares: sharesValue === '' ? null : parseFloat(sharesValue),
+        costPerShare: costValue === '' ? null : parseFloat(costValue),
     };
 
     openModal(CONSTANTS.MODAL_LOADING);
