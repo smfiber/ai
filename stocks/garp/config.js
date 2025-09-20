@@ -276,12 +276,25 @@ You are a Senior Investment Analyst at a GARP-focused ("Growth at a Reasonable P
 `.trim();
 
 const PORTFOLIO_GARP_ANALYSIS_PROMPT = `
-Role: You are a sharp and concise portfolio analyst specializing in GARP (Growth at a Reasonable Price) investing.
-Context: You are reviewing a portfolio of companies. For each company, you have their GARP scorecard, which checks 10 specific criteria.
+Role: You are a sharp and insightful portfolio analyst specializing in GARP (Growth at a Reasonable Price) investing.
+Context: You are reviewing a portfolio of companies. For each company, you have their GARP scorecard, including a weighted "garpConvictionScore", qualitative interpretations for each metric, sector, and market cap.
 Task: Your analysis must be data-driven and directly reference the provided JSON. Follow this structure precisely:
-1.  **Top Performers:** In a section titled "## Top GARP Candidates", identify the 2-3 companies with the highest number of "criteriaMet". For each company, create a bullet point stating its name, ticker, and score (e.g., "9/10"). In a brief sub-bullet, explain *why* it's strong by mentioning 1-2 of its most impressive passing metrics from the scorecard data (e.g., "Excellent forward growth and a low PEG ratio.").
-2.  **Companies to Review:** In a section titled "## Companies to Review", identify 2-3 companies with the lowest number of "criteriaMet". For each, create a bullet point with its name, ticker, and score. In a sub-bullet, explain the primary concern by highlighting 1-2 of its most significant failing metrics (e.g., "High P/E ratio and declining revenue growth.").
-3.  **Portfolio Overview:** In a final section titled "## Portfolio Health Summary", write a single paragraph that summarizes the portfolio's overall GARP health. Is it generally strong, mixed, or leaning towards poor value? Reference the distribution of scores to support your conclusion.
+
+## 1. Portfolio Health Summary
+Write a single paragraph that summarizes the portfolio's overall GARP health. Is it generally strong, mixed, or leaning towards poor value? Reference the distribution of "garpConvictionScore" values to support your conclusion.
+
+## 2. Portfolio Construction Analysis
+### Sector Allocation
+- Based on the "sector" data for each stock, identify the top 2-3 most heavily represented sectors in the portfolio.
+- Briefly comment on whether the portfolio appears diversified or concentrated.
+### Market Cap Distribution
+- Based on the "mktCap" data, briefly describe the portfolio's composition. Is it primarily large-cap, mid-cap, or a mix?
+
+## 3. Top GARP Candidates
+Identify the 2-3 companies with the **highest "garpConvictionScore"**. For each company, create a bullet point stating its name, ticker, and score. In a brief sub-bullet, explain *why* it's strong by referencing the qualitative "interpretation.text" of its most impressive metrics from the scorecard data (e.g., "Its 'GARP Sweet Spot' growth and 'Fortress Balance Sheet' make it a high-quality holding.").
+
+## 4. Companies to Review
+Identify the 2-3 companies with the **lowest "garpConvictionScore"**. For each company, create a bullet point stating its name, ticker, and score. In a brief sub-bullet, explain the primary concern by referencing the qualitative "interpretation.text" of its most significant failing metrics (e.g., "Concerns center on its 'Expensive' valuation and 'High Leverage', which increase risk.").
 
 JSON Data for the Entire Portfolio:
 {jsonData}
