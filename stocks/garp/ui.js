@@ -1,7 +1,7 @@
 import { CONSTANTS, state, promptMap } from './config.js';
 import { openModal, closeModal, openStockListModal, openManageStockModal, openPortfolioManagerModal, openRawDataViewer } from './ui-modals.js';
 import { fetchAndCachePortfolioData, renderPortfolioManagerList } from './ui-render.js';
-import { handleResearchSubmit, handleSaveStock, handleDeleteStock, handleRefreshFmpData, handleAnalysisRequest, handleInvestmentMemoRequest, handleSaveReportToDb, handleGenerateAllReportsRequest, handleGarpCandidacyRequest, handlePortfolioGarpAnalysisRequest, handlePositionAnalysisRequest } from './ui-handlers.js';
+import { handleResearchSubmit, handleSaveStock, handleDeleteStock, handleRefreshFmpData, handleAnalysisRequest, handleInvestmentMemoRequest, handleSaveReportToDb, handleGenerateAllReportsRequest, handleGarpCandidacyRequest, handlePortfolioGarpAnalysisRequest, handlePositionAnalysisRequest, handleReportHelpRequest } from './ui-handlers.js';
 
 // --- DYNAMIC TOOLTIPS ---
 function initializeTooltips() {
@@ -72,6 +72,15 @@ function setupGlobalEventListeners() {
             const status = listButton.dataset.status;
             if (status) {
                 openStockListModal(status);
+            }
+            return;
+        }
+
+        const helpButton = e.target.closest('.ai-help-button');
+        if (helpButton) {
+            const reportType = helpButton.dataset.reportType;
+            if (reportType) {
+                handleReportHelpRequest(reportType);
             }
             return;
         }
@@ -153,6 +162,8 @@ export function setupEventListeners() {
         { modal: 'rawDataViewerModal', button: 'close-raw-data-viewer-modal' },
         { modal: CONSTANTS.MODAL_STOCK_LIST, button: 'close-stock-list-modal', bg: 'close-stock-list-modal-bg' },
         { modal: CONSTANTS.MODAL_SESSION_LOG, button: 'close-session-log-modal', bg: 'close-session-log-modal-bg' },
+        { modal: CONSTANTS.MODAL_HELP, button: 'close-help-modal-button', bg: 'close-help-modal-bg' },
+        { modal: CONSTANTS.MODAL_HELP, button: 'close-help-modal' },
     ];
 
     modalsToClose.forEach(item => {
@@ -166,6 +177,14 @@ export function setupEventListeners() {
     analysisModal.addEventListener('click', (e) => {
         const target = e.target.closest('button');
         if (!target) return;
+
+        if (target.matches('.ai-help-button')) {
+            const reportType = target.dataset.reportType;
+            if (reportType) {
+                handleReportHelpRequest(reportType);
+            }
+            return;
+        }
 
         if (target.id === 'analyze-garp-button') {
             const ticker = target.dataset.ticker;
