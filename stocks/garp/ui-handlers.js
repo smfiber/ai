@@ -1,9 +1,9 @@
-import { CONSTANTS, state, promptMap, ANALYSIS_REQUIREMENTS } from './config.js';
+import { CONSTANTS, state, promptMap, ANALYSIS_REQUIREMENTS, ANALYSIS_NAMES } from './config.js';
 import { callApi, callGeminiApi, generateRefinedArticle, generatePolishedArticleForSynthesis, getFmpStockData } from './api.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { openModal, closeModal, displayMessageInModal, openConfirmationModal, openManageStockModal } from './ui-modals.js';
 import { renderPortfolioManagerList, displayReport, updateReportStatus, fetchAndCachePortfolioData, updateGarpCandidacyStatus, renderCandidacyAnalysis } from './ui-render.js';
-import { _calculateFinancialAnalysisMetrics, _calculateMoatAnalysisMetrics, _calculateRiskAssessmentMetrics, _calculateCapitalAllocatorsMetrics, _calculateGarpAnalysisMetrics, _calculateGarpScorecardMetrics } from './analysis-helpers.js';
+import { _calculateFinancialAnalysisMetrics, _calculateMoatAnalysisMetrics, _calculateRiskAssessmentMetrics, _calculateCapitalAllocatorsMetrics, _calculateGarpAnalysisMetrics, _calculateGarpScorecardMetrics, CALCULATION_SUMMARIES } from './analysis-helpers.js';
 
 // --- FMP API INTEGRATION & MANAGEMENT ---
 export async function handleRefreshFmpData(symbol) {
@@ -192,6 +192,61 @@ export async function handleResearchSubmit(e) {
 }
 
 // --- AI ANALYSIS REPORT GENERATORS ---
+
+export async function handleReportHelpRequest(reportType) {
+    const reportName = ANALYSIS_NAMES[reportType];
+    const prompt = promptMap[reportType]?.prompt;
+    const calcSummary = CALCULATION_SUMMARIES[reportType];
+
+    if (!reportName || !prompt || !calcSummary) {
+        displayMessageInModal(`Could not find help configuration for report type: ${reportType}`, 'error');
+        return;
+    }
+
+    const helpModal = document.getElementById(CONSTANTS.MODAL_HELP);
+    const helpTitle = helpModal.querySelector('#help-modal-title');
+    const helpContent = helpModal.querySelector('#help-modal-content');
+
+    helpTitle.textContent = `Explanation for: ${reportName}`;
+    helpContent.innerHTML = '<div class="flex justify-center items-center p-8"><div class="loader"></div></div>';
+    openModal(CONSTANTS.MODAL_HELP);
+
+    try {
+        const metaPrompt = `
+        Role: You are an AI assistant who excels at explaining the purpose and methodology of financial analysis reports to everyday investors. Your tone should be educational, clear, and encouraging.
+
+        Task: Based on the provided "Core Prompt" and "Data Summary" for a report called "${reportName}", generate a concise explanation for the user. The explanation must be in markdown and follow this structure precisely:
+
+        ## What is the "${reportName}" Report?
+        (Provide a one-paragraph, high-level summary of the report's main goal. Use a relatable analogy if it helps.)
+
+        ## Key Questions It Answers
+        (Create a bulleted list of 2-4 key questions the user can expect this report to answer.)
+
+        ## How It Works
+        (In one paragraph, briefly explain the methodology. Mention the key data points it uses based on the "Data Summary" and what the AI is instructed to do based on the "Core Prompt".)
+
+        ---
+
+        **Core Prompt (The instructions given to the analysis AI):**
+        \`\`\`
+        ${prompt}
+        \`\`\`
+
+        **Data Summary (A description of the data prepared for the AI):**
+        \`\`\`
+        ${calcSummary}
+        \`\`\`
+        `;
+
+        const explanation = await callGeminiApi(metaPrompt);
+        helpContent.innerHTML = marked.parse(explanation);
+
+    } catch (error) {
+        console.error('Error generating help content:', error);
+        helpContent.innerHTML = `<p class="text-red-500">Sorry, I couldn't generate an explanation at this time. Error: ${error.message}</p>`;
+    }
+}
 
 export async function handlePositionAnalysisRequest(ticker, forceNew = false) {
     const container = document.getElementById('position-analysis-content-container');
