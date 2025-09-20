@@ -53,7 +53,7 @@ function _getMetricInterpretation(metricName, value) {
             
         case 'P/E (TTM)':
         case 'Forward P/E':
-            if (value < 12) return { category: 'Potential Value Trap', text: 'Appears very cheap, but this could be a red flag. Requires deep investigation to ensure it isn\'t cheap for a good reason.' };
+            if (value < 12) return { category: 'Potentially Undervalued', text: 'Appears very cheap, but this could be a red flag. Requires deep investigation to ensure it isn\'t cheap for a good reason.' };
             if (value < 25) return { category: 'Reasonable Price', text: 'The valuation appears reasonable or attractive given the company\'s growth prospects. A classic GARP profile.' };
             return { category: 'Expensive', text: 'The stock is trading at a premium. The investment thesis relies heavily on future growth meeting high expectations.' };
 
@@ -219,15 +219,24 @@ export function _calculateGarpScorecardMetrics(data) {
     let totalWeight = 0;
     for (const key in metrics) {
         const metric = metrics[key];
+        const multiplier = _getMetricScoreMultiplier(key, metric.value);
+        
         totalWeight += metric.weight;
-        score += metric.weight * _getMetricScoreMultiplier(key, metric.value);
+        score += metric.weight * multiplier;
+
+        // Restore the isMet property for UI coloring (pass >= 1.0)
+        metric.isMet = multiplier >= 1.0;
         
         // Add interpretation to each metric
         metric.interpretation = _getMetricInterpretation(key, metric.value);
     }
 
     const convictionScore = (score / totalWeight) * 100;
-    metrics.garpConvictionScore = isNaN(convictionScore) ? 0 : Math.round(convictionScore);
+
+    // Cap the final score at 100
+    const finalScore = Math.min(100, convictionScore);
+
+    metrics.garpConvictionScore = isNaN(finalScore) ? 0 : Math.round(finalScore);
     
     return metrics;
 }
