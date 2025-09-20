@@ -289,12 +289,22 @@ export async function handlePositionAnalysisRequest(ticker, forceNew = false) {
         const portfolioData = state.portfolioCache.find(s => s.ticker === ticker);
         const fmpData = await getFmpStockData(ticker);
         const candidacyReports = await getSavedReports(ticker, 'GarpCandidacy');
+        const diligenceReports = await getSavedReports(ticker, 'DiligenceInvestigation');
 
         if (!fmpData || !fmpData.profile || !fmpData.profile.length === 0) {
             throw new Error(`Could not retrieve the latest price data for ${ticker}.`);
         }
         if (candidacyReports.length === 0) {
             throw new Error(`The foundational 'GARP Candidacy Report' has not been generated yet. Please generate it from the 'Dashboard' or 'AI Analysis' tab first.`);
+        }
+        
+        let diligenceLog = 'No recent diligence is available.';
+        if (diligenceReports.length > 0) {
+            diligenceLog = diligenceReports.map(report => {
+                const question = report.prompt.split('Diligence Question from User:')[1]?.trim() || 'Question not found.';
+                const answer = report.content;
+                return `**Question:** ${question}\n\n**Answer:**\n${answer}\n\n---`;
+            }).join('\n\n');
         }
 
         const currentPrice = fmpData.profile[0].price;
@@ -335,7 +345,8 @@ export async function handlePositionAnalysisRequest(ticker, forceNew = false) {
             .replace(/{tickerSymbol}/g, ticker)
             .replace('{candidacyReport}', candidacyReportContent)
             .replace('{positionDetails}', JSON.stringify(positionDetails, null, 2))
-            .replace('{currentPrice}', `$${currentPrice.toFixed(2)}`);
+            .replace('{currentPrice}', `$${currentPrice.toFixed(2)}`)
+            .replace('{diligenceLog}', diligenceLog);
 
         const analysisResult = await generateRefinedArticle(prompt);
         
