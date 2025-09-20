@@ -314,6 +314,10 @@ Context & Data:
     \`\`\`
 3.  **Current Market Price:**
     - {tickerSymbol}: {currentPrice}
+4.  **Recent Diligence Log (Q&A):** This contains new information gathered since the original thesis was formed. If empty, state that no recent diligence is available.
+    \`\`\`markdown
+    {diligenceLog}
+    \`\`\`
 
 Task & Required Output Structure:
 Generate a concise position review memo in markdown format.
@@ -321,7 +325,7 @@ Generate a concise position review memo in markdown format.
 # Position Review: {companyName} ({tickerSymbol})
 ## 1. Thesis Re-evaluation
 (1 paragraph)
-Briefly summarize the core thesis from the original GARP report. Then, analyze if that thesis is still intact given the stock's move from our purchase price to the current market price. Does the current valuation still represent "Growth at a Reasonable Price," or has it become too expensive (or even cheaper)?
+Briefly summarize the core thesis from the original GARP report. Then, using new information from the **Recent Diligence Log**, analyze if that original thesis is still intact. Does the new information strengthen, weaken, or otherwise invalidate the original thesis? Finally, consider the stock's move from our purchase price to the current market price. Does the current valuation still represent "Growth at a Reasonable Price," or has it become too expensive (or even cheaper)?
 
 ## 2. Quantitative Snapshot
 - **Cost Basis:** State the total cost basis.
@@ -331,11 +335,11 @@ Briefly summarize the core thesis from the original GARP report. Then, analyze i
 
 ## 3. Recommendation & Justification
 (1 paragraph)
-Based on your re-evaluation, provide a single, clear, bolded recommendation from the list below. Follow it with a 2-3 sentence justification that directly references the GARP thesis and the current valuation.
-- **Hold:** The current price is fair, and the GARP thesis remains intact.
-- **Acquire More:** The stock is still undervalued relative to its growth prospects; the GARP thesis is strong.
+Based on your re-evaluation, provide a single, clear, bolded recommendation from the list below. Follow it with a 2-3 sentence justification that directly references the GARP thesis, the current valuation, and any critical new findings from the Diligence Log.
+- **Hold:** The current price is fair, and the GARP thesis remains intact and supported by recent diligence.
+- **Acquire More:** The stock is still undervalued, and recent diligence strengthens the original thesis.
 - **Trim Position:** The stock has become overvalued, and the price no longer reflects a reasonable entry point. It's prudent to take some profits.
-- **Sell:** The GARP thesis is broken, or the stock has become significantly overvalued.
+- **Sell:** The GARP thesis is broken, weakened by recent diligence, or the stock has become significantly overvalued.
 `.trim();
 
 const GARP_CANDIDACY_PROMPT = `
