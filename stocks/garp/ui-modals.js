@@ -96,6 +96,9 @@ export function openManageStockModal(stockData) {
     document.getElementById('manage-stock-exchange').value = stockData.exchange || '';
     document.getElementById('manage-stock-sector').value = stockData.sector || 'N/A';
     document.getElementById('manage-stock-industry').value = stockData.industry || 'N/A';
+    document.getElementById('manage-stock-date').value = stockData.purchaseDate || '';
+    document.getElementById('manage-stock-shares').value = stockData.shares || '';
+    document.getElementById('manage-stock-cost').value = stockData.costPerShare || '';
     document.getElementById('manage-stock-status').value = stockData.status || 'Portfolio';
     
     const deleteButton = document.getElementById('delete-stock-button');
