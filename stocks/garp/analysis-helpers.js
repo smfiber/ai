@@ -215,28 +215,26 @@ export function _calculateGarpScorecardMetrics(data) {
     };
 
     // --- CONVICTION SCORE CALCULATION ---
-    let score = 0;
+    let weightedScore = 0;
     let totalWeight = 0;
+
     for (const key in metrics) {
         const metric = metrics[key];
         const multiplier = _getMetricScoreMultiplier(key, metric.value);
-        
+
         totalWeight += metric.weight;
-        score += metric.weight * multiplier;
+        weightedScore += metric.weight * multiplier;
 
         // Restore the isMet property for UI coloring (pass >= 1.0)
         metric.isMet = multiplier >= 1.0;
         
-        // Add interpretation to each metric
         metric.interpretation = _getMetricInterpretation(key, metric.value);
     }
 
-    const convictionScore = (score / totalWeight) * 100;
-
-    // Cap the final score at 100
-    const finalScore = Math.min(100, convictionScore);
-
-    metrics.garpConvictionScore = isNaN(finalScore) ? 0 : Math.round(finalScore);
+    const rawScore = (weightedScore / totalWeight) * 100;
+    
+    // Cap the final score at 100 and handle potential NaN results
+    metrics.garpConvictionScore = Math.round(Math.min(100, rawScore) || 0);
     
     return metrics;
 }
