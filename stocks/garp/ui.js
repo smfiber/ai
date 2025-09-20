@@ -1,7 +1,7 @@
 import { CONSTANTS, state, promptMap } from './config.js';
 import { openModal, closeModal, openStockListModal, openManageStockModal, openPortfolioManagerModal, openRawDataViewer } from './ui-modals.js';
 import { fetchAndCachePortfolioData, renderPortfolioManagerList } from './ui-render.js';
-import { handleResearchSubmit, handleSaveStock, handleDeleteStock, handleRefreshFmpData, handleAnalysisRequest, handleInvestmentMemoRequest, handleSaveReportToDb, handleGenerateAllReportsRequest, handleGarpCandidacyRequest, handlePortfolioGarpAnalysisRequest, handlePositionAnalysisRequest, handleReportHelpRequest } from './ui-handlers.js';
+import { handleResearchSubmit, handleSaveStock, handleDeleteStock, handleRefreshFmpData, handleAnalysisRequest, handleInvestmentMemoRequest, handleSaveReportToDb, handleGenerateAllReportsRequest, handleGarpCandidacyRequest, handlePortfolioGarpAnalysisRequest, handlePositionAnalysisRequest, handleReportHelpRequest, handleDiligenceInvestigationRequest } from './ui-handlers.js';
 
 // --- DYNAMIC TOOLTIPS ---
 function initializeTooltips() {
@@ -212,6 +212,11 @@ export function setupEventListeners() {
         
         const symbol = target.dataset.symbol || analysisModal.dataset.activeTicker;
         if (!symbol) return;
+
+        if (target.id === 'investigate-diligence-button') {
+            handleDiligenceInvestigationRequest(symbol);
+            return;
+        }
 
         if (target.id === 'generate-position-analysis-button') {
             handlePositionAnalysisRequest(symbol);
