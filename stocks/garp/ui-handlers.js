@@ -194,10 +194,10 @@ export async function handleResearchSubmit(e) {
 // --- AI ANALYSIS REPORT GENERATORS ---
 
 export async function handlePositionAnalysisRequest(ticker) {
-    const container = document.getElementById('position-analysis-content-container');
-    if (!container) return;
+    const reportContainer = document.getElementById('position-analysis-report-container');
+    if (!reportContainer) return;
 
-    container.innerHTML = `<div class="flex items-center justify-center p-4"><div class="loader"></div><p class="ml-4 text-gray-600 font-semibold">AI is analyzing your position...</p></div>`;
+    reportContainer.innerHTML = `<div class="flex items-center justify-center p-4"><div class="loader"></div><p class="ml-4 text-gray-600 font-semibold">AI is analyzing your position...</p></div>`;
 
     try {
         const portfolioData = state.portfolioCache.find(s => s.ticker === ticker);
@@ -225,7 +225,7 @@ export async function handlePositionAnalysisRequest(ticker) {
         const diffTime = Math.abs(now - pDate);
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
         const years = Math.floor(diffDays / 365);
-        const months = Math.floor((diffDays % 365) / 30.44); // Average days in month
+        const months = Math.floor((diffDays % 365) / 30.44);
         
         let holdingPeriod = '';
         if (years > 0) holdingPeriod += `${years} year(s), `;
@@ -252,11 +252,28 @@ export async function handlePositionAnalysisRequest(ticker) {
             .replace('{currentPrice}', `$${currentPrice.toFixed(2)}`);
 
         const analysisResult = await generateRefinedArticle(prompt);
-        container.innerHTML = marked.parse(analysisResult);
+        
+        const sanitizeText = (text) => {
+            if (typeof text !== 'string') return '';
+            const tempDiv = document.createElement('div');
+            tempDiv.textContent = text;
+            return tempDiv.innerHTML;
+        };
+
+        const accordionHtml = `
+            <div class="mb-4 border-b pb-4">
+                <details class="border rounded-md">
+                    <summary class="p-2 font-semibold text-sm text-gray-700 cursor-pointer hover:bg-gray-50 bg-gray-100">View Full Prompt Sent to AI</summary>
+                    <pre class="text-xs whitespace-pre-wrap break-all bg-gray-900 text-white p-3 rounded-b-md">${sanitizeText(prompt)}</pre>
+                </details>
+            </div>
+        `;
+
+        reportContainer.innerHTML = accordionHtml + marked.parse(analysisResult);
 
     } catch (error) {
         console.error("Error during Position Analysis:", error);
-        container.innerHTML = `<p class="text-red-500 p-4">Could not complete analysis: ${error.message}</p>`;
+        reportContainer.innerHTML = `<p class="text-red-500 p-4">Could not complete analysis: ${error.message}</p>`;
     }
 }
 
