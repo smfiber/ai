@@ -862,12 +862,17 @@ export async function handleGarpCandidacyRequest(ticker) {
             };
         }
 
+        const payload = {
+            scorecard: cleanData,
+            garpConvictionScore: scorecardData.garpConvictionScore
+        };
+
         const promptConfig = promptMap['GarpCandidacy'];
         const prompt = promptConfig.prompt
             .replace(/{companyName}/g, companyName)
             .replace(/{tickerSymbol}/g, tickerSymbol)
             .replace(/{sector}/g, sector)
-            .replace('{jsonData}', JSON.stringify(cleanData, null, 2));
+            .replace('{jsonData}', JSON.stringify(payload, null, 2));
         
         const analysisResult = await generateRefinedArticle(prompt);
         renderCandidacyAnalysis(resultContainer, analysisResult, prompt);
