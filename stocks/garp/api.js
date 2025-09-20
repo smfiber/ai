@@ -82,6 +82,42 @@ export async function callSynthesisGeminiApi(prompt) {
     throw new Error("Failed to parse the response from the Gemini API.");
 }
 
+export async function callGeminiApiWithSearch(prompt) {
+    if (!state.geminiApiKey) throw new Error("Gemini API key is not configured.");
+
+    state.sessionLog.push({ type: 'prompt', timestamp: new Date(), content: prompt });
+
+    const url = `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${state.geminiApiKey}`;
+    const body = {
+        contents: [{ parts: [{ "text": prompt }] }],
+        "tools": [
+            {
+                "google_search_retrieval": {}
+            }
+        ]
+    };
+    
+    const data = await callApi(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+    });
+
+    const candidate = data.candidates?.[0];
+    if (candidate?.content?.parts?.[0]?.text) {
+        const responseText = candidate.content.parts[0].text;
+        state.sessionLog.push({ type: 'response', timestamp: new Date(), content: responseText });
+        return responseText;
+    }
+    if (candidate?.finishReason && candidate.finishReason !== 'STOP') {
+        throw new Error(`The API call was terminated. Reason: ${candidate.finishReason}.`);
+    }
+
+    console.error("Unexpected Gemini API response structure:", data);
+    throw new Error("Failed to parse the response from the Gemini API.");
+}
+
+
 /**
  * Generates a two-pass refined article from the AI.
  * @param {string} initialPrompt The prompt for the AI.
