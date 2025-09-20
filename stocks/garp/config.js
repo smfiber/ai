@@ -474,3 +474,16 @@ export const ANALYSIS_NAMES = {
     'PortfolioGarpAnalysis': 'Portfolio GARP Analysis',
     'GarpConvictionScore': 'GARP Conviction Score'
 };
+
+export const CALCULATION_SUMMARIES = {
+    'FinancialAnalysis': 'Calculates a comprehensive financial overview by analyzing multi-year trends in revenue and income, recent quarterly performance (YoY growth), financial health ratios (e.g., Debt-to-Equity), cash flow quality, and how the current stock valuation compares to its own historical average.',
+    'GarpAnalysis': 'Focuses on the Growth at a Reasonable Price (GARP) philosophy by calculating historical and forward-looking EPS growth, the current P/E ratio, and synthesizes them into a Price/Earnings-to-Growth (PEG) ratio to determine if the stock\'s growth justifies its price.',
+    'MoatAnalysis': 'Assesses a company\'s competitive advantage ("moat") by calculating 10-year historical trends for key quality metrics like Return on Invested Capital (ROIC), profitability margins (net, operating, gross), and reinvestment rates (e.g., CapEx, R&D expenses).',
+    'RiskAssessment': 'Identifies potential red flags by calculating financial health ratios (e.g., Debt-to-Equity, Current Ratio), checking for earnings quality (cash flow vs. net income), assessing stock volatility (Beta), and looking for signs of high valuation or negative analyst sentiment.',
+    'CapitalAllocators': 'Evaluates management\'s effectiveness by analyzing historical data on how they prioritize cash flow (e.g., CapEx vs. buybacks), the effectiveness of their investments (ROIC trends), their acquisition history (goodwill), and how they return capital to shareholders (dividends and buybacks).',
+    'InvestmentMemo': 'This report does not perform new calculations. Instead, it synthesizes the existing "GARP Candidacy Report" and the "GARP Scorecard" data into a formal, thesis-driven investment memo.',
+    'GarpCandidacy': 'Calculates a 10-point GARP scorecard, checking key metrics like EPS & Revenue Growth, Profitability (ROE, ROIC), and Valuation (P/E, PEG, P/S, D/E) against predefined thresholds to determine if a stock qualifies as a GARP candidate.',
+    'PositionAnalysis': 'This report does not perform new calculations. It uses the previously generated "GARP Candidacy Report" as the original investment thesis and compares it against the user\'s specific position details (cost basis, shares) and the current market price.',
+    'PortfolioGarpAnalysis': 'This report aggregates the pre-calculated GARP scorecards for every stock currently in the user\'s "Portfolio" status. It then prepares this aggregated data for an AI to analyze.',
+    'GarpConvictionScore': 'The GARP Conviction Score is a proprietary metric calculated out of 100. It evaluates a stock against 10 key criteria for Growth, Profitability, and Valuation. Each criterion is assigned a weight based on its importance to the GARP philosophy. The final score represents the percentage of the total weighted criteria that the stock successfully meets, providing a quick measure of its alignment with the GARP strategy.'
+};
