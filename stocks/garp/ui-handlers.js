@@ -96,7 +96,7 @@ export async function handleSaveStock(e) {
             await deleteDoc(doc(state.db, CONSTANTS.DB_COLLECTION_PORTFOLIO, originalTicker));
         }
 
-        await setDoc(doc(state.db, CONSTANTS.DB_COLLECTION_PORTFOLIO, newTicker), stockData);
+        await setDoc(doc(state.db, CONSTANTS.DB_COLLECTION_PORTFOLIO, newTicker), stockData, { merge: true });
 
         const fmpCacheRef = collection(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, newTicker, 'endpoints');
         const fmpSnapshot = await getDocs(query(fmpCacheRef, limit(1)));
@@ -813,6 +813,14 @@ export async function handleGarpCandidacyRequest(ticker) {
         if (!fmpData) throw new Error("Could not retrieve financial data to perform analysis.");
         
         const scorecardData = _calculateGarpScorecardMetrics(fmpData);
+        const newScore = scorecardData.garpConvictionScore;
+
+        // Save the new score to the database
+        const stockDocRef = doc(state.db, CONSTANTS.DB_COLLECTION_PORTFOLIO, ticker);
+        await updateDoc(stockDocRef, { garpConvictionScore: newScore });
+        
+        // Refresh local cache to reflect the change immediately
+        await fetchAndCachePortfolioData();
 
         const profile = fmpData.profile?.[0] || {};
         const companyName = profile.companyName || ticker;
@@ -821,6 +829,7 @@ export async function handleGarpCandidacyRequest(ticker) {
 
         const cleanData = {};
         for (const [key, value] of Object.entries(scorecardData)) {
+             if (key === 'garpConvictionScore') continue;
             let formattedValue;
             if (typeof value.value === 'number' && isFinite(value.value)) {
                 formattedValue = value.format === 'percent' ? `${(value.value * 100).toFixed(2)}%` : value.value.toFixed(2);
