@@ -363,7 +363,7 @@ EXECUTIVE SUMMARY
 
 Verdict: (1 line) A bolded, single-line verdict. Must be one of: Strong GARP Candidate, Borderline GARP Candidate, or Not a GARP Candidate.
 
-GARP Score: (1 line) The scorecard result in parentheses, e.g., (7/10 Criteria Met).
+GARP Conviction Score: (1 line) The final weighted and scaled score, e.g., (Conviction Score: 97).
 
 Core Thesis: (1 line) A single, concise sentence summarizing the primary investment thesis.
 
