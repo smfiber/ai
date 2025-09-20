@@ -1,8 +1,8 @@
 import { CONSTANTS, state, promptMap, ANALYSIS_REQUIREMENTS, ANALYSIS_NAMES } from './config.js';
-import { callApi, callGeminiApi, generateRefinedArticle, generatePolishedArticleForSynthesis, getFmpStockData } from './api.js';
+import { callApi, callGeminiApi, generateRefinedArticle, generatePolishedArticleForSynthesis, getFmpStockData, callGeminiApiWithSearch } from './api.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { openModal, closeModal, displayMessageInModal, openConfirmationModal, openManageStockModal } from './ui-modals.js';
-import { renderPortfolioManagerList, displayReport, updateReportStatus, fetchAndCachePortfolioData, updateGarpCandidacyStatus, renderCandidacyAnalysis } from './ui-render.js';
+import { renderPortfolioManagerList, displayReport, updateReportStatus, fetchAndCachePortfolioData, updateGarpCandidacyStatus, renderCandidacyAnalysis, renderDiligenceLog } from './ui-render.js';
 import { _calculateFinancialAnalysisMetrics, _calculateMoatAnalysisMetrics, _calculateRiskAssessmentMetrics, _calculateCapitalAllocatorsMetrics, _calculateGarpAnalysisMetrics, _calculateGarpScorecardMetrics, CALCULATION_SUMMARIES } from './analysis-helpers.js';
 
 // --- FMP API INTEGRATION & MANAGEMENT ---
@@ -888,5 +888,55 @@ export async function handleGarpCandidacyRequest(ticker) {
     } catch (error) {
         console.error("Error in GARP Candidacy Request:", error);
         resultContainer.innerHTML = `<p class="text-center text-red-500 p-4">${error.message}</p>`;
+    }
+}
+
+export async function handleDiligenceInvestigationRequest(symbol) {
+    const questionInput = document.getElementById('diligence-question-input');
+    const question = questionInput.value.trim();
+
+    if (!question) {
+        displayMessageInModal("Please enter a diligence question before investigating.", "warning");
+        return;
+    }
+
+    openModal(CONSTANTS.MODAL_LOADING);
+    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+    loadingMessage.textContent = "AI is investigating your question using Google Search...";
+
+    const articleContainer = document.getElementById('ai-article-container');
+    const statusContainer = document.getElementById('report-status-container-ai');
+    articleContainer.innerHTML = '';
+    statusContainer.classList.add('hidden');
+
+    try {
+        const fmpData = await getFmpStockData(symbol);
+        const profile = fmpData?.profile?.[0] || {};
+        const companyName = profile.companyName || symbol;
+
+        const promptConfig = promptMap['DiligenceInvestigation'];
+        const prompt = promptConfig.prompt
+            .replace(/{companyName}/g, companyName)
+            .replace(/{tickerSymbol}/g, symbol)
+            .replace('{diligenceQuestion}', question);
+
+        const investigationResult = await callGeminiApiWithSearch(prompt);
+
+        displayReport(articleContainer, investigationResult, prompt);
+        
+        await autoSaveReport(symbol, 'DiligenceInvestigation', investigationResult, prompt);
+
+        const diligenceReports = await getSavedReports(symbol, 'DiligenceInvestigation');
+        const diligenceLogContainer = document.getElementById('diligence-log-container');
+        renderDiligenceLog(diligenceLogContainer, diligenceReports);
+
+        questionInput.value = '';
+
+    } catch (error) {
+        console.error("Error during Diligence Investigation:", error);
+        displayMessageInModal(`Could not complete investigation: ${error.message}`, 'error');
+        articleContainer.innerHTML = `<p class="text-red-500 p-4">Failed to generate report: ${error.message}</p>`;
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
     }
 }
