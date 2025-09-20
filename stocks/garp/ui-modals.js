@@ -229,7 +229,7 @@ export async function openRawDataViewer(ticker) {
              rawDataContainer.innerHTML = '<p class="text-center text-gray-500 py-8">Could not load grouped raw data.</p>';
         }
 
-        const prerequisiteButtons = [
+        const deepDiveButtons = [
             { reportType: 'FinancialAnalysis', text: 'Financial Analysis', tooltip: 'Deep dive into financial statements, ratios, and health.' },
             { reportType: 'GarpAnalysis', text: 'GARP Analysis', tooltip: 'Growth at a Reasonable Price. Is the valuation justified by its growth?' },
             { reportType: 'MoatAnalysis', text: 'Moat Analysis', tooltip: 'Evaluates the company\'s competitive advantages.' },
@@ -246,21 +246,29 @@ export async function openRawDataViewer(ticker) {
                      </button>`;
         }).join('');
         
-        const prerequisiteHtml = buildButtonHtml(prerequisiteButtons);
+        const deepDiveHtml = buildButtonHtml(deepDiveButtons);
             
-        const generateAllBtn = `<button data-symbol="${ticker}" id="generate-all-reports-button" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg">Generate All Prerequisites</button>`;
+        const candidacyBtn = `<button data-symbol="${ticker}" data-report-type="GarpCandidacy" class="generate-candidacy-button bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg text-base">Generate GARP Candidacy Report</button>`;
+        const generateAllBtn = `<button data-symbol="${ticker}" id="generate-all-reports-button" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg">Generate All Deep Dives</button>`;
         const garpMemoBtn = `<button data-symbol="${ticker}" id="investment-memo-button" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg text-base">Generate GARP Memo</button>`;
 
         aiButtonsContainer.innerHTML = `
-            <div class="space-y-8">
-                <div>
-                    <h3 class="text-lg font-bold text-gray-700 text-center mb-4">Step 1: Generate Prerequisite Reports</h3>
-                    <div class="flex flex-wrap gap-2 justify-center">${prerequisiteHtml}</div>
+            <div class="space-y-8 text-center bg-gray-50 p-4 rounded-lg">
+                <div class="p-4 bg-white rounded-lg border shadow-sm">
+                    <h3 class="text-lg font-bold text-gray-800 mb-4">Step 1: Initial Assessment (Required)</h3>
+                    <div class="flex justify-center">${candidacyBtn}</div>
+                </div>
+
+                <div class="p-4 bg-white rounded-lg border shadow-sm">
+                    <h3 class="text-lg font-bold text-gray-800 mb-4">Step 2: Deep Dive Analysis (Optional)</h3>
+                    <p class="text-sm text-gray-500 mb-4">Generate these reports for more detail after a promising candidacy assessment.</p>
+                    <div class="flex flex-wrap gap-2 justify-center">${deepDiveHtml}</div>
                     <div class="text-center mt-4">${generateAllBtn}</div>
                 </div>
-                <div>
-                    <h3 class="text-lg font-bold text-gray-700 text-center mb-4">Step 2: Synthesize Final Memo</h3>
-                     <div class="flex justify-center">${garpMemoBtn}</div>
+
+                <div class="p-4 bg-white rounded-lg border shadow-sm">
+                    <h3 class="text-lg font-bold text-gray-800 mb-4">Step 3: Synthesize Final Memo</h3>
+                    <div class="flex justify-center">${garpMemoBtn}</div>
                 </div>
             </div>
         `;
