@@ -266,7 +266,7 @@ export async function openRawDataViewer(ticker) {
         `;
         
         const description = profile.description || 'No description available.';
-        profileDisplayContainer.innerHTML = `<div class="mt-8 border-t pt-6"><h3 class="text-xl font-bold text-gray-800 mb-4">Company Overview</h3><p class="text-sm text-gray-700 mb-4">${description}</p></div>`;
+        profileDisplayContainer.innerHTML = `<h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Company Overview</h3><p class="text-sm text-gray-700">${description}</p>`;
         
         // Render Dashboard tab content
         const metrics = renderGarpScorecardDashboard(garpScorecardContainer, ticker, fmpData);
