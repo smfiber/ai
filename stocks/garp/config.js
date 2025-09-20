@@ -424,6 +424,23 @@ Data Summary:
 {jsonData}
 `.trim();
 
+const DILIGENCE_INVESTIGATION_PROMPT = `
+Role: You are a Senior Research Analyst for an investment fund. Your task is to provide a clear, data-driven, and concise answer to a specific diligence question.
+Context: You are investigating {companyName} ({tickerSymbol}). The user has provided a critical question that needs to be answered before an investment decision can be made.
+Instructions:
+1.  Your primary goal is to directly answer the user's question.
+2.  You MUST use your search capabilities to find the most recent and relevant information from official and highly reliable sources. Prioritize the following source types:
+    - The company's most recent SEC filings (10-K, 10-Q).
+    - Recent earnings call transcripts.
+    - Official investor presentations and press releases.
+3.  Synthesize the information from these sources into a direct answer. Do not provide generic information.
+4.  Where possible, quote key phrases or data points and state the source (e.g., "According to the Q3 2025 earnings call...").
+5.  The final output must be in professional markdown format.
+
+Diligence Question from User:
+{diligenceQuestion}
+`.trim();
+
 
 export const promptMap = {
     'FinancialAnalysis': {
@@ -465,6 +482,10 @@ export const promptMap = {
     'GarpConvictionScore': {
         prompt: GARP_CONVICTION_SCORE_PROMPT,
         requires: []
+    },
+    'DiligenceInvestigation': {
+        prompt: DILIGENCE_INVESTIGATION_PROMPT,
+        requires: []
     }
 };
 
@@ -487,5 +508,6 @@ export const ANALYSIS_NAMES = {
     'GarpCandidacy': 'GARP Candidacy Report',
     'PositionAnalysis': 'Position Analysis',
     'PortfolioGarpAnalysis': 'Portfolio GARP Analysis',
-    'GarpConvictionScore': 'GARP Conviction Score'
+    'GarpConvictionScore': 'GARP Conviction Score',
+    'DiligenceInvestigation': 'Diligence Investigation'
 };
