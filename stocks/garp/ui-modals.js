@@ -169,6 +169,8 @@ export async function openRawDataViewer(ticker) {
     const titleEl = document.getElementById('raw-data-viewer-modal-title');
     const garpScorecardContainer = document.getElementById('garp-scorecard-container');
     const garpInterpretationContainer = document.getElementById('garp-interpretation-container');
+    const positionAnalysisTabButton = document.querySelector('.tab-button[data-tab="position-analysis"]');
+    const positionAnalysisContainer = document.getElementById('position-analysis-content-container');
     
     titleEl.textContent = `Analyzing ${ticker}...`;
     rawDataContainer.innerHTML = '<div class="loader mx-auto"></div>';
@@ -177,6 +179,7 @@ export async function openRawDataViewer(ticker) {
     profileDisplayContainer.innerHTML = '';
     garpScorecardContainer.innerHTML = '';
     garpInterpretationContainer.innerHTML = '';
+    positionAnalysisContainer.innerHTML = '';
     document.getElementById('valuation-health-container').innerHTML = '';
     document.getElementById('ai-garp-summary-container').innerHTML = '';
     
@@ -186,6 +189,7 @@ export async function openRawDataViewer(ticker) {
         b.classList.remove('active');
         b.removeAttribute('data-loaded');
     });
+    positionAnalysisTabButton.classList.add('hidden');
     document.getElementById('dashboard-tab').classList.remove('hidden');
     document.querySelector('.tab-button[data-tab="dashboard"]').classList.add('active');
 
@@ -212,6 +216,22 @@ export async function openRawDataViewer(ticker) {
         const profile = fmpData.profile[0];
         
         titleEl.textContent = `Analysis for ${ticker}`;
+
+        // Conditionally show and populate the Position Analysis tab
+        const portfolioData = state.portfolioCache.find(s => s.ticker === ticker);
+        if (portfolioData && portfolioData.status === 'Portfolio' && portfolioData.shares > 0 && portfolioData.costPerShare > 0) {
+            positionAnalysisTabButton.classList.remove('hidden');
+            positionAnalysisContainer.innerHTML = `
+                <div class="text-center p-8 bg-gray-50 rounded-lg">
+                    <h3 class="text-xl font-bold text-gray-800 mb-2">Position Review</h3>
+                    <p class="text-gray-600 mb-6 max-w-2xl mx-auto">Re-evaluate the original GARP thesis for this holding based on your actual cost basis and the current market price.</p>
+                    <button id="generate-position-analysis-button" data-symbol="${ticker}" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg text-base shadow-md transition-transform hover:scale-105">
+                        Generate Position Analysis
+                    </button>
+                </div>
+                <div id="position-analysis-report-container" class="prose max-w-none mt-6"></div>
+            `;
+        }
 
         let accordionHtml = '';
         if (groupedFmpData) {
