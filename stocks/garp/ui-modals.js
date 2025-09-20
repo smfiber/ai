@@ -1,6 +1,6 @@
 import { CONSTANTS, state, ANALYSIS_ICONS } from './config.js';
 import { getFmpStockData, getGroupedFmpData } from './api.js';
-import { renderValuationHealthDashboard, _renderGroupedStockList, renderPortfolioManagerList, renderGarpScorecardDashboard, renderGarpAnalysisSummary, updateGarpCandidacyStatus, renderCandidacyAnalysis, renderGarpInterpretationAnalysis } from './ui-render.js'; 
+import { renderValuationHealthDashboard, _renderGroupedStockList, renderPortfolioManagerList, renderGarpScorecardDashboard, renderGarpAnalysisSummary, updateGarpCandidacyStatus, renderCandidacyAnalysis, renderGarpInterpretationAnalysis, renderDiligenceLog } from './ui-render.js'; 
 import { getDocs, query, collection, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getSavedReports } from './ui-handlers.js';
 
@@ -213,6 +213,7 @@ export async function openRawDataViewer(ticker) {
         }
 
         const savedReportTypes = new Set(savedReportsSnapshot.docs.map(doc => doc.data().reportType));
+        const allSavedReports = savedReportsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         const profile = fmpData.profile[0];
         
         titleEl.textContent = `Analysis for ${ticker}`;
@@ -310,6 +311,34 @@ export async function openRawDataViewer(ticker) {
             </div>
         `;
         
+        const aiAnalysisTab = document.getElementById('ai-analysis-tab');
+        if (aiAnalysisTab) {
+            const oldContainer = document.getElementById('diligence-container');
+            if (oldContainer) {
+                oldContainer.remove();
+            }
+
+            const diligenceHtml = `
+                <div id="diligence-container" class="mt-8 pt-6 border-t border-gray-200">
+                    <div id="diligence-log-container" class="mb-6">
+                        </div>
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-800 mb-2">Diligence Investigation</h3>
+                        <p class="text-sm text-gray-500 mb-4">Copy a question from a generated report (or write your own) and use AI to find answers from recent public documents.</p>
+                        <textarea id="diligence-question-input" class="w-full border border-gray-300 rounded-lg p-2 text-sm" rows="4" placeholder="e.g., What are the specific operational and strategic drivers behind the projected EPS growth for the next fiscal year?"></textarea>
+                        <div class="text-right mt-2">
+                             <button id="investigate-diligence-button" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg">Investigate with AI</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            aiAnalysisTab.insertAdjacentHTML('beforeend', diligenceHtml);
+            
+            const diligenceReports = allSavedReports.filter(r => r.reportType === 'DiligenceInvestigation');
+            const diligenceLogContainer = document.getElementById('diligence-log-container');
+            renderDiligenceLog(diligenceLogContainer, diligenceReports);
+        }
+
         const description = profile.description || 'No description available.';
         profileDisplayContainer.innerHTML = `<h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Company Overview</h3><p class="text-sm text-gray-700">${description}</p>`;
         
