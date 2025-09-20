@@ -590,9 +590,15 @@ export function renderDiligenceLog(container, reports) {
         const savedDate = report.savedAt.toDate().toLocaleDateString();
 
         return `
-            <li class="diligence-log-item p-3 hover:bg-indigo-50 cursor-pointer" data-report-id="${report.id}">
-                <p class="font-semibold text-sm text-indigo-700 truncate" title="${sanitizeText(question)}">${sanitizeText(question)}</p>
-                <p class="text-xs text-gray-400">Saved: ${savedDate}</p>
+            <li class="p-3 hover:bg-indigo-50 flex justify-between items-center">
+                <div class="flex-grow min-w-0">
+                     <p class="font-semibold text-sm text-indigo-700 truncate cursor-pointer view-diligence-answer" title="${sanitizeText(question)}" data-report-id="${report.id}">${sanitizeText(question)}</p>
+                     <p class="text-xs text-gray-400">Saved: ${savedDate}</p>
+                </div>
+                <div class="flex items-center gap-2 flex-shrink-0 ml-4">
+                    <button class="diligence-rerun-btn text-xs font-semibold py-1 px-3 rounded-full bg-blue-100 text-blue-800 hover:bg-blue-200" title="Re-run this query" data-report-id="${report.id}" data-question="${sanitizeText(question)}">Re-run</button>
+                    <button class="diligence-delete-btn text-xs font-semibold py-1 px-3 rounded-full bg-red-100 text-red-800 hover:bg-red-200" title="Delete this entry" data-report-id="${report.id}">Delete</button>
+                </div>
             </li>
         `;
     }).join('');
@@ -606,7 +612,7 @@ export function renderDiligenceLog(container, reports) {
         </details>
     `;
 
-    container.querySelectorAll('.diligence-log-item').forEach(item => {
+    container.querySelectorAll('.view-diligence-answer').forEach(item => {
         item.addEventListener('click', () => {
             const reportId = item.dataset.reportId;
             const report = reports.find(r => r.id === reportId);
