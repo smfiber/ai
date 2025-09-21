@@ -1071,6 +1071,18 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+    function getRatingDateHtml(symbol) {
+        const timestamp = appConfig.cachedStockInfo[symbol]?.timestamp;
+        if (!timestamp) return '';
+        return `<span class="text-xs text-gray-400">as of ${formatDate(timestamp)}</span>`;
+    }
+
+    function updateRatingDateDisplayForSymbol(symbol) {
+        document.querySelectorAll(`[data-rating-date-symbol="${symbol}"]`).forEach(el => {
+            el.innerHTML = getRatingDateHtml(symbol);
+        });
+    }
+
     function renderSimpleStockTable(data, container) {
         if (!container) return;
         if (!data || data.length === 0) {
@@ -1222,21 +1234,30 @@ document.addEventListener("DOMContentLoaded", () => {
                 html += `<div class="mt-4"><h5 class="text-md font-medium text-gray-600 mb-3 ml-2">${industry}</h5><div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">`;
                 grouped[sector][industry].forEach(stock => {
                     const isSaved = savedStocks.has(stock.symbol);
-                    html += `<div class="bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
-                                <div class="flex justify-between items-baseline mb-1">
-                                    <div class="flex items-center truncate">
-                                        <button class="save-stock-btn ${isSaved ? 'saved' : ''}" data-symbol="${stock.symbol}" title="Save Stock">
-                                            <i class="${isSaved ? 'fas' : 'far'} fa-star"></i>
-                                        </button>
-                                        <p class="font-bold text-sm text-indigo-600 truncate pr-2">
-                                            <button class="ticker-details-btn text-left w-full" data-symbol="${stock.symbol}">${stock.symbol}
-                                                <span class="viewed-indicator" data-indicator-symbol="${stock.symbol}"></span>
+                    html += `<div class="bg-white border border-gray-200 rounded-lg p-3 shadow-sm flex flex-col justify-between h-full">
+                                <div>
+                                    <div class="flex justify-between items-start mb-1">
+                                        <div class="flex items-center truncate">
+                                            <button class="save-stock-btn ${isSaved ? 'saved' : ''}" data-symbol="${stock.symbol}" title="Save Stock">
+                                                <i class="${isSaved ? 'fas' : 'far'} fa-star"></i>
                                             </button>
-                                        </p>
+                                            <p class="font-bold text-sm text-indigo-600 truncate pr-2">
+                                                <button class="ticker-details-btn text-left w-full" data-symbol="${stock.symbol}">${stock.symbol}
+                                                    <span class="viewed-indicator" data-indicator-symbol="${stock.symbol}"></span>
+                                                </button>
+                                            </p>
+                                        </div>
+                                        <p class="text-xs font-semibold text-gray-700 whitespace-nowrap">${formatMarketCap(stock.marketCap)}</p>
                                     </div>
-                                    <p class="text-xs font-semibold text-gray-700 whitespace-nowrap">${formatMarketCap(stock.marketCap)}</p>
+                                    <p class="text-xs text-gray-500 truncate" title="${formatText(stock.companyName)}">${formatText(stock.companyName)}</p>
                                 </div>
-                                <p class="text-xs text-gray-500 truncate" title="${formatText(stock.companyName)}">${formatText(stock.companyName)}</p>
+                                <div class="mt-2 pt-2 border-t border-gray-100 flex justify-between items-end">
+                                    <div>
+                                        <span class="text-xs text-gray-500">Conviction Score</span>
+                                        <div data-rating-date-symbol="${stock.symbol}">${getRatingDateHtml(stock.symbol)}</div>
+                                    </div>
+                                    <span class="font-bold text-lg" data-rating-symbol="${stock.symbol}">${getRatingHtml(stock.symbol)}</span>
+                                </div>
                             </div>`;
                 });
                 html += `</div></div>`;
@@ -1326,6 +1347,9 @@ document.addEventListener("DOMContentLoaded", () => {
                     const dataToSave = { ...liveData, garpConvictionScore: metrics.garpConvictionScore, timestamp: new Date().toISOString() };
                     await saveTickerDetailsToFirebase(symbol, dataToSave);
                     appConfig.cachedStockInfo[symbol] = { rating: metrics.garpConvictionScore, timestamp: dataToSave.timestamp };
+                    
+                    updateRatingDisplayForSymbol(symbol);
+                    updateRatingDateDisplayForSymbol(symbol);
                     updateScreenerAndRerender(symbol, new Date(dataToSave.timestamp).getTime());
                 } else {
                     document.getElementById('modal-key-metrics-content').innerHTML = '<p class="text-center text-red-500">Could not refresh data.</p>';
@@ -1387,6 +1411,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 const dataToSave = { ...garpData, news: liveData.news, garpConvictionScore: metrics.garpConvictionScore, timestamp: newTimestamp };
                 await saveTickerDetailsToFirebase(symbol, dataToSave);
                 appConfig.cachedStockInfo[symbol] = { rating: metrics.garpConvictionScore, timestamp: newTimestamp };
+                
+                updateRatingDisplayForSymbol(symbol);
+                updateRatingDateDisplayForSymbol(symbol);
                 updateScreenerAndRerender(symbol, new Date(newTimestamp).getTime());
             } else {
                  document.getElementById('modal-key-metrics-content').innerHTML = '<p class="text-center text-red-500">Could not fetch financial data.</p>';
