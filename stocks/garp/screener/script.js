@@ -848,7 +848,7 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-        const oneDay = 24 * 60 * 60 * 1000;
+        const thirtyDays = 30 * 24 * 60 * 60 * 1000;
         let processedCount = 0;
         let skippedCount = 0;
 
@@ -858,7 +858,13 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             const cached = appConfig.cachedStockInfo[symbol];
-            if (cached && cached.timestamp && (new Date() - new Date(cached.timestamp)) < oneDay) {
+            const hasRecentValidScore = cached &&
+                                      cached.timestamp &&
+                                      (new Date() - new Date(cached.timestamp)) < thirtyDays &&
+                                      cached.rating !== null && 
+                                      typeof cached.rating !== 'undefined';
+
+            if (hasRecentValidScore) {
                 skippedCount++;
                 continue;
             }
@@ -934,11 +940,12 @@ document.addEventListener("DOMContentLoaded", () => {
             if (snapshot.exists()) {
                 const allDetails = snapshot.val();
                 for (const symbol in allDetails) {
+                    const stockData = allDetails[symbol];
                     // Check for the new garpConvictionScore, otherwise don't cache a rating
-                    if (allDetails[symbol].garpConvictionScore && allDetails[symbol].timestamp) {
+                    if (stockData.hasOwnProperty('garpConvictionScore') && stockData.timestamp) {
                         appConfig.cachedStockInfo[symbol] = { 
-                            rating: allDetails[symbol].garpConvictionScore, // Store score as 'rating' for UI
-                            timestamp: allDetails[symbol].timestamp 
+                            rating: stockData.garpConvictionScore, // Store score as 'rating' for UI
+                            timestamp: stockData.timestamp 
                         };
                     }
                 }
