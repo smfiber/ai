@@ -532,8 +532,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const tabMap = {
             'screener-tab-button': 'screener-tab-content',
             'advanced-screener-tab-button': 'advanced-screener-tab-content',
-            'saved-stocks-tab-button': 'saved-stocks-tab-content',
-            'news-tab-button': 'news-tab-content'
+            'saved-stocks-tab-button': 'saved-stocks-tab-content'
         };
 
         const setActiveTab = (activeButtonId) => {
@@ -576,7 +575,6 @@ document.addEventListener("DOMContentLoaded", () => {
         setupFinancialsModalListeners();
         advancedScreenerFilterForm.addEventListener('submit', handleAdvancedScreenerRun);
         document.getElementById('advanced-screener-data-container').addEventListener('click', handleSortClick);
-        document.getElementById('checkFmpApiBtn').addEventListener('click', checkFmpApiStatus);
         populateIndustryDropdown();
         
         appContent.addEventListener('click', (e) => {
@@ -644,43 +642,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
     
-    async function checkFmpApiStatus() {
-        const resultEl = document.getElementById('fmpApiCheckResult');
-        if (!resultEl) return;
-
-        resultEl.style.display = 'block';
-        resultEl.className = 'mt-4 text-sm font-medium p-3 rounded-md bg-yellow-100 text-yellow-800';
-        resultEl.textContent = 'Checking API status for AAPL...';
-
-        if (!appConfig.fmpApiKey) {
-            resultEl.className = 'mt-4 text-sm font-medium p-3 rounded-md bg-red-100 text-red-800';
-            resultEl.textContent = 'Error: Financial Modeling Prep API Key is missing.';
-            return;
-        }
-
-        const testUrl = `https://financialmodelingprep.com/stable/price-target-news?symbol=AAPL&limit=1&apikey=${appConfig.fmpApiKey}`;
-
-        try {
-            const response = await fetch(testUrl);
-            if (!response.ok) {
-                throw new Error(`API request failed with status: ${response.status} ${response.statusText}`);
-            }
-
-            const data = await response.json();
-
-            if (Array.isArray(data) && data.length > 0 && data[0].symbol === 'AAPL' && data[0].newsTitle) {
-                 resultEl.className = 'mt-4 text-sm font-medium p-3 rounded-md bg-green-100 text-green-800';
-                 resultEl.innerHTML = `<strong>Success!</strong> API is responding correctly. Received valid data for AAPL.`;
-            } else {
-                throw new Error('API response received, but data format is unexpected.');
-            }
-        } catch (error) {
-            console.error("FMP API Check Error:", error);
-            resultEl.className = 'mt-4 text-sm font-medium p-3 rounded-md bg-red-100 text-red-800';
-            resultEl.innerHTML = `<strong>Failed.</strong> Could not get a valid response from the API. <br><strong>Error:</strong> ${error.message}`;
-        }
-    }
-
     // --- 8. Saved Stocks Logic ---
     function loadSavedStocks() {
         const stored = localStorage.getItem('magickalOracleSavedStocks');
@@ -726,32 +687,13 @@ document.addEventListener("DOMContentLoaded", () => {
         const screenerAccordionButton = document.getElementById(`${exchange}-accordion-button`);
         const screenerAccordionContent = document.getElementById(`${exchange}-accordion-content`);
         const screenerAccordionIcon = document.getElementById(`${exchange}-accordion-icon`);
-        // News Accordion
-        const newsAccordionButton = document.getElementById(`${exchange}-news-accordion-button`);
-        const newsAccordionContent = document.getElementById(`${exchange}-news-accordion-content`);
-        const newsAccordionIcon = document.getElementById(`${exchange}-news-accordion-icon`);
         // Data Containers
         const tableContainer = document.getElementById(`${exchange}-screener-data-container`);
         const cardContainer = document.getElementById(`${exchange}-card-view`);
-        const newsContainer = document.getElementById(`${exchange}-news-container`);
-        const refreshButton = document.getElementById(`refresh-${exchange}-news`);
 
         setupAccordionToggle(screenerAccordionButton, screenerAccordionContent, screenerAccordionIcon);
-        setupAccordionToggle(newsAccordionButton, newsAccordionContent, newsAccordionIcon);
         
-        const screenerData = await fetchSimpleStockScreener(exchangeUpperCase, tableContainer, cardContainer);
-        
-        const loadedFromCache = await loadNewsFromFirebase(exchange, newsContainer, screenerData);
-        if (!loadedFromCache) {
-            newsContainer.innerHTML = `<p class="text-gray-500 p-4">No cached news found. Please click 'Refresh News' to fetch the latest price target news.</p>`;
-        }
-
-        refreshButton.addEventListener('click', async (e) => {
-            e.stopPropagation();
-            newsContainer.innerHTML = `<p class="text-indigo-500 font-semibold p-4">Refreshing news for ${exchangeUpperCase}...</p>`;
-            const refreshedScreenerData = await fetchSimpleStockScreener(exchangeUpperCase, tableContainer, cardContainer);
-            fetchAndRenderPriceTargetNews(refreshedScreenerData, newsContainer, exchange, true);
-        });
+        await fetchSimpleStockScreener(exchangeUpperCase, tableContainer, cardContainer);
     }
 
     // --- 10. Accordion Toggle Logic ---
@@ -880,87 +822,7 @@ document.addEventListener("DOMContentLoaded", () => {
         renderAdvancedStockTable(sortedData, document.getElementById('advanced-screener-data-container'));
     }
 
-    // --- 12. Fetch and Render Price Target News ---
-    async function fetchAndRenderPriceTargetNews(screenerData, newsContainer, exchange, forceGenAiRefresh = false) {
-        const symbols = screenerData.map(stock => stock.symbol);
-
-        if (symbols.length === 0) {
-            newsContainer.innerHTML = `<p class="text-gray-500">No stocks found to fetch news for.</p>`;
-            return;
-        }
-
-        let allNews = [];
-        for (const [index, symbol] of symbols.entries()) {
-            try {
-                const url = `https://financialmodelingprep.com/stable/price-target-news?symbol=${symbol}&page=0&limit=10&apikey=${appConfig.fmpApiKey}`;
-                newsContainer.innerHTML = `<p class="text-gray-500 p-4">Fetching news for ${symbol} (${index + 1} of ${symbols.length})...<br><code class="text-xs text-indigo-500">${url}</code></p>`;
-                
-                const response = await fetch(url);
-
-                if (response.status === 429) {
-                    console.error(`Rate limit exceeded when fetching news for ${symbol}. Stopping further requests.`);
-                    newsContainer.innerHTML += `<p class="text-red-500 p-4 font-semibold">API rate limit reached. Please wait a moment and try refreshing again.</p>`;
-                    break;
-                }
-
-                if(response.ok) {
-                    const newsItems = await response.json();
-                    if (newsItems && newsItems.length > 0) {
-                        allNews.push(...newsItems);
-                    }
-                } else {
-                    console.warn(`Could not fetch news for ${symbol}: ${response.status} ${response.statusText}`);
-                }
-                await delay(600);
-            } catch (loopError) {
-                console.error(`An error occurred in the news fetching loop for ${symbol}:`, loopError);
-            }
-        }
-
-        let filteredNews = allNews.flat().filter(item => item && item.newsTitle && item.publishedDate && item.newsURL);
-
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-        filteredNews = filteredNews.filter(newsItem => {
-            const newsDate = new Date(newsItem.publishedDate);
-            return newsDate >= thirtyDaysAgo;
-        });
-        
-        filteredNews.sort((a, b) => new Date(b.publishedDate) - new Date(a.publishedDate));
-
-        renderNewsCards(filteredNews, newsContainer);
-        await saveNewsToFirebase(exchange, filteredNews);
-    }
-    
     // --- 13. Firebase Functions ---
-    async function saveNewsToFirebase(exchange, newsData) {
-        if (!db) return;
-        try {
-            await db.ref(`news/${exchange}`).set(newsData);
-            console.log(`News for ${exchange.toUpperCase()} saved to Firebase.`);
-        } catch (error) {
-            console.error(`Failed to save news for ${exchange} to Firebase:`, error);
-        }
-    }
-
-    async function loadNewsFromFirebase(exchange, newsContainer, screenerData) {
-        if (!db) return false;
-        try {
-            const snapshot = await db.ref(`news/${exchange}`).get();
-            if (snapshot.exists()) {
-                const newsData = snapshot.val();
-                console.log(`Loaded news for ${exchange.toUpperCase()} from Firebase.`);
-                renderNewsCards(newsData, newsContainer);
-                return true;
-            }
-            return false;
-        } catch (error) {
-            console.error(`Failed to load news for ${exchange} from Firebase:`, error);
-            return false;
-        }
-    }
-    
     async function saveTickerDetailsToFirebase(symbol, data) {
         if (!db) return;
         try {
@@ -1266,30 +1128,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         container.innerHTML = html;
         updateViewedIndicators();
-    }
-
-    function renderNewsCards(newsData, container) {
-        if (!container) return;
-        if (!newsData || newsData.length === 0) {
-            container.innerHTML = '<p class="text-gray-500 p-4">No recent price target news found for the selected stocks in this exchange for the last 30 days. Click "Refresh News" to fetch the latest.</p>';
-            return;
-        }
-        const newsHtml = newsData.map(news => `
-            <a href="${news.newsURL}" target="_blank" rel="noopener noreferrer" class="block bg-gray-50 p-4 rounded-lg shadow-sm hover:bg-gray-100 transition-colors">
-                <div class="flex justify-between items-start mb-1">
-                    <p class="font-bold text-indigo-600">${formatText(news.symbol)}</p>
-                    <p class="text-xs text-gray-500">${new Date(news.publishedDate).toLocaleDateString()}</p>
-                </div>
-                <h4 class="font-semibold text-gray-800">${formatText(news.newsTitle)}</h4>
-                <div class="text-xs text-gray-500 flex flex-wrap gap-x-4 gap-y-1 mt-2">
-                    <span><strong>Publisher:</strong> ${formatText(news.newsPublisher)}</span>
-                    <span><strong>Analyst:</strong> ${formatText(news.analystName) || 'N/A'} @ ${formatText(news.analystCompany)}</span>
-                    <span><strong>Posted Price:</strong> ${news.priceWhenPosted ? '$'+news.priceWhenPosted.toFixed(2) : 'N/A'}</span>
-                    <span><strong>Target Price:</strong> ${news.priceTarget ? '$'+news.priceTarget.toFixed(2) : 'N/A'}</span>
-                </div>
-            </a>
-        `).join('');
-        container.innerHTML = newsHtml;
     }
 
     // --- 17. Financials Modal Logic ---
