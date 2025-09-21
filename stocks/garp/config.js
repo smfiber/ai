@@ -395,7 +395,14 @@ Investment Profile & The Deciding Factor: Classify the stock's profile (e.g., is
 Strategic Recommendation: (1 line) A bolded, single-line recommendation. Must be one of: **High Conviction Buy**, **Initiate Position**, **Add to Watchlist**, or **Pass/Sell**.
 
 (1 paragraph)
-Actionable Diligence Questions: Based on your analysis, propose 2-3 specific, forward-looking questions that must be answered in the next stage of due diligence. These should directly address the risks and uncertainties you've identified.
+Actionable Diligence Questions:
+Based on your analysis, propose 2-3 critical diligence questions. For each question, you MUST provide two parts:
+1.  **Human-Led Question:** A high-level, strategic question for an analyst to answer through deeper research and judgment.
+2.  **Suggested AI Investigation Query:** A specific, fact-based query designed to be used with a search-enabled AI (like the 'Diligence Investigation' tool) to find source material. This query should target information from recent earnings calls, SEC filings (10-K, 10-Q), or investor presentations.
+
+Format each item precisely like this:
+- **Human-Led Question:** [Your strategic question here]
+- **Suggested AI Investigation Query:** "[Your specific, fact-based query here]"
 
 6. Critical Guidelines & Constraints:
 
