@@ -283,6 +283,18 @@ export async function openRawDataViewer(ticker) {
         const candidacyBtn = `<button data-symbol="${ticker}" data-report-type="GarpCandidacy" class="generate-candidacy-button bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg text-base">Generate GARP Candidacy Report</button>`;
         const generateAllBtn = `<button data-symbol="${ticker}" id="generate-all-reports-button" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg">Generate All Deep Dives</button>`;
         const garpMemoBtn = `<button data-symbol="${ticker}" id="investment-memo-button" data-report-type="InvestmentMemo" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg text-base">Generate GARP Memo</button>`;
+        
+        const diligenceLogContainerHtml = `<div id="diligence-log-container" class="mb-6 text-left"></div>`;
+        const diligenceInvestigationHtml = `
+            <div class="text-left">
+                <h3 class="text-lg font-semibold text-gray-800 mb-2">Diligence Investigation</h3>
+                <p class="text-sm text-gray-500 mb-4">Copy a question from a generated report (or write your own) and use AI to find answers from recent public documents.</p>
+                <textarea id="diligence-question-input" class="w-full border border-gray-300 rounded-lg p-2 text-sm" rows="4" placeholder="e.g., What are the specific operational and strategic drivers behind the projected EPS growth for the next fiscal year?"></textarea>
+                <div class="text-right mt-2">
+                     <button id="investigate-diligence-button" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg">Investigate with AI</button>
+                </div>
+            </div>
+        `;
 
         aiButtonsContainer.innerHTML = `
             <div class="space-y-8 text-center bg-gray-50 p-4 rounded-lg">
@@ -303,7 +315,16 @@ export async function openRawDataViewer(ticker) {
 
                 <div class="p-4 bg-white rounded-lg border shadow-sm">
                     <div class="flex justify-center items-center gap-2 mb-4">
-                        <h3 class="text-lg font-bold text-gray-800">Step 3: Synthesize Final Memo</h3>
+                        <h3 class="text-lg font-bold text-gray-800">Step 3: Diligence Investigation (Optional)</h3>
+                        <button data-report-type="DiligenceInvestigation" class="ai-help-button p-1 rounded-full hover:bg-indigo-100" title="What is this?"><svg class="w-5 h-5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" /></svg></button>
+                    </div>
+                    ${diligenceLogContainerHtml}
+                    ${diligenceInvestigationHtml}
+                </div>
+
+                <div class="p-4 bg-white rounded-lg border shadow-sm">
+                    <div class="flex justify-center items-center gap-2 mb-4">
+                        <h3 class="text-lg font-bold text-gray-800">Step 4: Synthesize Final Memo</h3>
                         <button data-report-type="InvestmentMemo" class="ai-help-button p-1 rounded-full hover:bg-indigo-100" title="What is this?"><svg class="w-5 h-5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" /></svg></button>
                     </div>
                     <div class="flex justify-center">${garpMemoBtn}</div>
@@ -311,31 +332,10 @@ export async function openRawDataViewer(ticker) {
             </div>
         `;
         
-        const aiAnalysisTab = document.getElementById('ai-analysis-tab');
-        if (aiAnalysisTab) {
-            const oldContainer = document.getElementById('diligence-container');
-            if (oldContainer) {
-                oldContainer.remove();
-            }
-
-            const diligenceHtml = `
-                <div id="diligence-container" class="mt-8 pt-6 border-t border-gray-200">
-                    <div id="diligence-log-container" class="mb-6">
-                        </div>
-                    <div>
-                        <h3 class="text-lg font-semibold text-gray-800 mb-2">Diligence Investigation</h3>
-                        <p class="text-sm text-gray-500 mb-4">Copy a question from a generated report (or write your own) and use AI to find answers from recent public documents.</p>
-                        <textarea id="diligence-question-input" class="w-full border border-gray-300 rounded-lg p-2 text-sm" rows="4" placeholder="e.g., What are the specific operational and strategic drivers behind the projected EPS growth for the next fiscal year?"></textarea>
-                        <div class="text-right mt-2">
-                             <button id="investigate-diligence-button" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg">Investigate with AI</button>
-                        </div>
-                    </div>
-                </div>
-            `;
-            aiAnalysisTab.insertAdjacentHTML('beforeend', diligenceHtml);
-            
-            const diligenceReports = allSavedReports.filter(r => r.reportType === 'DiligenceInvestigation');
-            const diligenceLogContainer = document.getElementById('diligence-log-container');
+        // Render the diligence log into its new home
+        const diligenceReports = allSavedReports.filter(r => r.reportType === 'DiligenceInvestigation');
+        const diligenceLogContainer = document.getElementById('diligence-log-container');
+        if (diligenceLogContainer) {
             renderDiligenceLog(diligenceLogContainer, diligenceReports);
         }
 
