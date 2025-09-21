@@ -652,6 +652,16 @@ export async function handleInvestmentMemoRequest(symbol, forceNew = false) {
         }
         const candidacyReportContent = candidacyReports[0].content;
 
+        const diligenceReports = await getSavedReports(symbol, 'DiligenceInvestigation');
+        let diligenceLog = 'No recent diligence is available.';
+        if (diligenceReports.length > 0) {
+            diligenceLog = diligenceReports.map(report => {
+                const question = report.prompt.split('Diligence Question from User:')[1]?.trim() || 'Question not found.';
+                const answer = report.content;
+                return `**Question:** ${question}\n\n**Answer:**\n${answer}\n\n---`;
+            }).join('\n\n');
+        }
+
         const data = await getFmpStockData(symbol);
         if (!data) throw new Error(`Could not retrieve financial data for ${symbol}.`);
         const scorecardData = _calculateGarpScorecardMetrics(data);
@@ -663,7 +673,8 @@ export async function handleInvestmentMemoRequest(symbol, forceNew = false) {
             .replace(/{companyName}/g, companyName)
             .replace(/{tickerSymbol}/g, symbol)
             .replace('{candidacyReport}', candidacyReportContent)
-            .replace('{scorecardJson}', JSON.stringify(scorecardData, null, 2));
+            .replace('{scorecardJson}', JSON.stringify(scorecardData, null, 2))
+            .replace('{diligenceLog}', diligenceLog);
 
         loadingMessage.textContent = "AI is drafting the investment memo...";
         const memoContent = await generatePolishedArticleForSynthesis(prompt, loadingMessage);
