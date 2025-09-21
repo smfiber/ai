@@ -737,7 +737,7 @@ document.addEventListener("DOMContentLoaded", () => {
             return [];
         }
 
-        const url = `https://financialmodelingprep.com/api/v3/stock-screener?marketCapMoreThan=1000000000&exchange=${exchange}&limit=1000&apikey=${appConfig.fmpApiKey}`;
+        const url = `https://financialmodelingprep.com/api/v3/stock-screener?marketCapMoreThan=1000000000&exchange=${exchange}&limit=1000&isEtf=false&isFund=false&apikey=${appConfig.fmpApiKey}`;
         try {
             const response = await fetch(url);
             if (!response.ok) throw new Error(`API request failed: ${response.status}`);
