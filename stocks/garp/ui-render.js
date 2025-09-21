@@ -50,104 +50,56 @@ export async function renderPortfolioGarpOverview() {
     const overviewContainer = document.getElementById('portfolio-garp-overview-container');
     const breakdownContainer = document.getElementById('portfolio-garp-breakdown-container');
     const aiSummaryContainer = document.getElementById('portfolio-garp-ai-summary-container');
-
-    if (!overviewContainer || !breakdownContainer || !aiSummaryContainer) return;
-
-    overviewContainer.innerHTML = '<div class="loader mx-auto"></div>';
-    breakdownContainer.innerHTML = '';
-    aiSummaryContainer.innerHTML = '';
+    
+    // Clear old content from containers we are replacing
+    if (overviewContainer) overviewContainer.innerHTML = '';
+    if (breakdownContainer) breakdownContainer.innerHTML = '';
+    if (aiSummaryContainer) aiSummaryContainer.innerHTML = ''; // Clear previous AI summary
 
     try {
         const portfolioStocks = state.portfolioCache.filter(s => s.status === 'Portfolio');
 
         if (portfolioStocks.length === 0) {
-            overviewContainer.innerHTML = `<p class="text-center text-gray-500 py-8">Add stocks to your portfolio to see the GARP overview.</p>`;
+            overviewContainer.innerHTML = `<p class="text-center text-gray-500 py-8">Add stocks to your portfolio to see a summary here.</p>`;
             return;
         }
-
-        const stocksWithData = await Promise.all(
-            portfolioStocks.map(async (stock) => {
-                const fmpData = await getFmpStockData(stock.ticker);
-                if (!fmpData) return { ...stock, metrics: null, error: true };
-                
-                const metrics = _calculateGarpScorecardMetrics(fmpData);
-                const criteriaMet = Object.values(metrics).filter(m => m.isMet).length;
-                const totalCriteria = Object.keys(metrics).length -1;
-
-                return { ...stock, metrics, criteriaMet, totalCriteria, error: false };
-            })
-        );
         
-        // Render Score Breakdown
-        const groupedByScore = stocksWithData.reduce((acc, stock) => {
-            if (stock.error || !stock.garpConvictionScore) return acc;
+        // Sort by score, putting stocks without a score at the bottom
+        portfolioStocks.sort((a, b) => (b.garpConvictionScore || 0) - (a.garpConvictionScore || 0));
+
+        let overviewHtml = '<ul class="divide-y divide-gray-200 border rounded-lg bg-white">';
+        
+        for (const stock of portfolioStocks) {
             const score = stock.garpConvictionScore;
-            const bracket = Math.floor(score / 10) * 10;
-            if (!acc[bracket]) acc[bracket] = [];
-            acc[bracket].push(stock);
-            return acc;
-        }, {});
+            let scoreBadgeHtml = '<span class="conviction-score-badge low" data-tooltip="Generate a GARP Candidacy Report to get a score.">N/A</span>';
 
-        let breakdownHtml = '<h4 class="text-sm font-bold text-gray-600 mb-2">Conviction Score Breakdown</h4><div class="space-y-2">';
-        Object.keys(groupedByScore).sort((a, b) => b - a).forEach(bracket => {
-            const stocks = groupedByScore[bracket];
-            breakdownHtml += `
-                <div class="grid grid-cols-[auto,1fr] items-start gap-x-2 text-sm">
-                    <span class="font-bold text-gray-800 text-right whitespace-nowrap">${bracket}-${parseInt(bracket)+10}:</span>
-                    <div class="flex flex-wrap gap-1">
-                        ${stocks.map(s => `<span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800">${s.ticker}</span>`).join('')}
-                    </div>
-                </div>
-            `;
-        });
-        breakdownHtml += '</div>';
-        breakdownContainer.innerHTML = breakdownHtml;
-
-        // Render Individual Scorecards
-        let overviewHtml = '';
-        stocksWithData.sort((a, b) => (b.garpConvictionScore || 0) - (a.garpConvictionScore || 0));
-
-        for (const stock of stocksWithData) {
-            const score = stock.garpConvictionScore;
-            let scoreClass = 'low';
-            if (score > 75) scoreClass = 'high';
-            else if (score > 50) scoreClass = 'medium';
-
-            const scoreHtml = score ? `
-                <div class="conviction-score-display ${scoreClass}">
-                    <div class="text-sm font-bold text-gray-600">CONVICTION SCORE</div>
-                    <div class="score-value">${score}</div>
-                </div>
-            ` : '';
+            if (score) {
+                let scoreClass = 'low';
+                let scoreTooltip = 'Score indicates a low alignment with GARP principles.';
+                if (score > 75) {
+                    scoreClass = 'high';
+                    scoreTooltip = 'Score indicates a high alignment with GARP principles.';
+                } else if (score > 50) {
+                    scoreClass = 'medium';
+                    scoreTooltip = 'Score indicates a medium alignment with GARP principles.';
+                }
+                scoreBadgeHtml = `<span class="conviction-score-badge ${scoreClass}" data-tooltip="${scoreTooltip}">${score}</span>`;
+            }
 
             overviewHtml += `
-                <div class="border rounded-lg p-4 bg-gray-50/50">
-                    <div class="flex justify-between items-start">
-                        <h3 class="font-bold text-gray-800">${sanitizeText(stock.companyName)} (${sanitizeText(stock.ticker)})</h3>
-                        ${scoreHtml}
-                    </div>`;
-            
-            if (stock.error || !stock.metrics) {
-                overviewHtml += `<p class="text-sm text-red-500 italic mt-2">Could not load scorecard data. Please refresh this stock's data via the 'View Portfolio' modal.</p>`;
-            } else {
-                const tilesHtml = Object.entries(stock.metrics).map(([name, data]) => {
-                    if (name === 'garpConvictionScore') return '';
-                    let valueDisplay = 'N/A';
-                    let colorClass = 'text-gray-500';
-                    if (typeof data.value === 'number' && isFinite(data.value)) {
-                        colorClass = data.isMet ? 'price-gain' : 'price-loss';
-                        valueDisplay = data.format === 'percent' ? `${(data.value * 100).toFixed(2)}%` : data.value.toFixed(2);
-                    }
-                    return `
-                        <div class="text-center p-2 bg-white rounded-md border">
-                            <p class="text-xs font-semibold text-gray-500 truncate" title="${name}">${name}</p>
-                            <p class="text-lg font-bold ${colorClass}">${valueDisplay}</p>
-                        </div>`;
-                }).join('');
-                overviewHtml += `<div class="grid grid-cols-5 gap-2 mt-3">${tilesHtml}</div>`;
-            }
-            overviewHtml += `</div>`;
+                <li class="p-3 flex justify-between items-center hover:bg-gray-50">
+                    <div class="flex items-center gap-4">
+                        ${scoreBadgeHtml}
+                        <div>
+                            <p class="font-semibold text-gray-800">${sanitizeText(stock.companyName)} (${sanitizeText(stock.ticker)})</p>
+                            <p class="text-sm text-gray-500">${sanitizeText(stock.sector) || 'N/A'}</p>
+                        </div>
+                    </div>
+                </li>
+            `;
         }
+        
+        overviewHtml += '</ul>';
         overviewContainer.innerHTML = overviewHtml;
 
     } catch (error) {
@@ -304,7 +256,198 @@ export function renderGarpScorecardDashboard(container, ticker, fmpData) {
     if (score > 75) scoreClass = 'high';
     else if (score > 50) scoreClass = 'medium';
     
-    const helpIconSvg = `<button data-report-type="GarpConvictionScore" class="ai-help-button p-1 rounded-full hover:bg-indigo-100" title="What is this?"><svg class="w-5 h-5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" /></svg></button>`;
+    const helpIconSvg = `<button data-report-type="GarpConvictionScore" class="ai-help-button p-1 rounded-full hover:bg-indigo-100" title="What is this?"><svg class="w-5 h-5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.rawDataViewerModal .tab-button.active {
+    color: var(--color-primary);
+    border-bottom-color: var(--color-primary);
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/*
+ * =================================================================
+ * AI-GENERATED CONTENT STYLES
+ * =================================================================
+ */
+.prose {
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+    color: #374151;
+}
+
+.prose h1, .prose h2, .prose h3, .prose h4 {
+    color: #1f2937;
+    font-weight: 700;
+}
+
+.prose h1 { font-size: 1.875rem; margin-top: 1.5em; margin-bottom: 0.8em; }
+.prose h2 { font-size: 1.5rem; margin-top: 1.75em; margin-bottom: 1em; border-bottom: 1px solid #e5e7eb; padding-bottom: 0.3em;}
+.prose h3 { font-size: 1.25rem; margin-top: 1.5em; margin-bottom: 0.5em; }
+.prose h4 { font-size: 1.125rem; margin-top: 1.25em; margin-bottom: 0.5em; }
+
+.prose p, .prose ul, .prose ol {
+    margin-bottom: 1em;
+    line-height: 1.6;
+}
+
+.prose ul, .prose ol {
+    padding-left: 1.5em;
+}
+.prose ul { list-style-type: disc; }
+.prose ol { list-style-type: decimal; }
+
+.prose ul li, .prose ol li {
+    margin-bottom: 0.5em;
+}
+
+.prose strong {
+    font-weight: 600;
+    color: #111827;
+}
+
+.prose pre {
+    background-color: #1f2937;
+    color: #e5e7eb;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    overflow-x: auto;
+    margin-top: 1.5em;
+    margin-bottom: 1.5em;
+}
+
+/*
+ * =================================================================
+ * COMPONENT STYLES
+ * =================================================================
+ */
+
+.analysis-tile {
+    width: 7.5rem;
+    height: 7.5rem;
+    padding: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    background-color: white;
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    border: 1px solid #e5e7eb;
+    transition: all 0.2s ease-in-out;
+    position: relative;
+}
+.analysis-tile:hover {
+    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    border-color: #4f46e5;
+    transform: translateY(-4px);
+}
+.analysis-tile .tile-icon {
+    width: 2.5rem;
+    height: 2.5rem;
+    margin-bottom: 0.5rem;
+    color: #4f46e5;
+}
+.analysis-tile .tile-name {
+    font-weight: 600;
+    color: #374151;
+    font-size: 0.875rem;
+}
+
+.custom-tooltip {
+    position: absolute;
+    background-color: #1f2937;
+    color: white;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.375rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    white-space: normal;
+    max-width: 250px;
+    text-align: center;
+    z-index: 9999;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s ease-in-out;
+}
+
+.analysis-tile.has-saved-report::before {
+    content: '';
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    width: 0.75rem;
+    height: 0.75rem;
+    background-color: #22c55e;
+    border-radius: 9999px;
+    border: 2px solid white;
+}
+
+/*
+ * =================================================================
+ * GARP CONVICTION SCORE
+ * =================================================================
+ */
+.conviction-score-display {
+    text-align: center;
+    padding: 0.5rem;
+    border-radius: 0.5rem;
+    border-width: 2px;
+    border-style: solid;
+}
+.conviction-score-display .score-value {
+    font-size: 2.25rem;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.conviction-score-badge {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 9999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: white;
+    flex-shrink: 0;
+}
+
+/* Score Colors */
+.conviction-score-display.high, .conviction-score-badge.high {
+    border-color: #16a34a;
+    color: #166534;
+}
+.conviction-score-badge.high {
+    background-color: #16a34a;
+    color: white;
+}
+
+.conviction-score-display.medium, .conviction-score-badge.medium {
+    border-color: #f59e0b;
+    color: #b45309;
+}
+.conviction-score-badge.medium {
+    background-color: #f59e0b;
+    color: white;
+}
+
+.conviction-score-display.low, .conviction-score-badge.low {
+    border-color: #ef4444;
+    color: #b91c1c;
+}
+.conviction-score-badge.low {
+    background-color: #ef4444;
+    color: white;
+}
+```442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" /></svg></button>`;
 
     const scoreHtml = `
         <div class="conviction-score-display ${scoreClass}">
