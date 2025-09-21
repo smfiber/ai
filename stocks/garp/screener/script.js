@@ -45,6 +45,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const signOutBtn = document.getElementById('signOutBtn');
     const authUserInfo = document.getElementById('auth-user-info');
     const userEmailSpan = document.getElementById('user-email');
+    // Batch Calculation Elements
+    const calculateSimpleScreenerScoresBtn = document.getElementById('calculateSimpleScreenerScoresBtn');
+    const simpleScreenerStatus = document.getElementById('simpleScreenerStatus');
+    const calculateAdvancedScreenerScoresBtn = document.getElementById('calculateAdvancedScreenerScoresBtn');
+    const advancedScreenerStatus = document.getElementById('advancedScreenerStatus');
+
 
     // --- NEW: DATA PROCESSING LOGIC FROM STOCK RESEARCH HUB ---
 
@@ -576,6 +582,18 @@ document.addEventListener("DOMContentLoaded", () => {
         advancedScreenerFilterForm.addEventListener('submit', handleAdvancedScreenerRun);
         document.getElementById('advanced-screener-data-container').addEventListener('click', handleSortClick);
         populateIndustryDropdown();
+
+        calculateSimpleScreenerScoresBtn.addEventListener('click', () => {
+            const symbolNodes = document.querySelectorAll('#screener-tab-content .ticker-details-btn');
+            const symbols = Array.from(symbolNodes).map(btn => btn.dataset.symbol);
+            const uniqueSymbols = [...new Set(symbols)];
+            runBatchConvictionScores(uniqueSymbols, 'simpleScreenerStatus');
+        });
+
+        calculateAdvancedScreenerScoresBtn.addEventListener('click', () => {
+            const symbols = advancedScreenerData.map(stock => stock.symbol);
+            runBatchConvictionScores(symbols, 'advancedScreenerStatus');
+        });
         
         appContent.addEventListener('click', (e) => {
             const saveBtn = e.target.closest('.save-stock-btn');
@@ -820,6 +838,54 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         });
         renderAdvancedStockTable(sortedData, document.getElementById('advanced-screener-data-container'));
+    }
+
+    // --- 12. Batch Score Calculation ---
+    async function runBatchConvictionScores(symbols, statusElementId) {
+        const statusEl = document.getElementById(statusElementId);
+        if (!symbols || symbols.length === 0) {
+            if (statusEl) statusEl.textContent = 'No stocks to process.';
+            return;
+        }
+
+        const oneDay = 24 * 60 * 60 * 1000;
+        let processedCount = 0;
+        let skippedCount = 0;
+
+        for (const [index, symbol] of symbols.entries()) {
+            if (statusEl) {
+                statusEl.innerHTML = `Processing ${index + 1} of ${symbols.length}: <strong>${symbol}</strong>...`;
+            }
+
+            const cached = appConfig.cachedStockInfo[symbol];
+            if (cached && cached.timestamp && (new Date() - new Date(cached.timestamp)) < oneDay) {
+                skippedCount++;
+                continue;
+            }
+
+            const liveData = await fetchTickerDetails(symbol);
+            if (liveData) {
+                const garpData = mapDataForGarp(liveData);
+                const metrics = _calculateGarpScorecardMetrics(garpData);
+                
+                const newTimestamp = new Date().toISOString();
+                const dataToSave = { ...garpData, news: liveData.news, garpConvictionScore: metrics.garpConvictionScore, timestamp: newTimestamp };
+                
+                await saveTickerDetailsToFirebase(symbol, dataToSave);
+                appConfig.cachedStockInfo[symbol] = { rating: metrics.garpConvictionScore, timestamp: newTimestamp };
+                
+                updateRatingDisplayForSymbol(symbol);
+                updateRatingDateDisplayForSymbol(symbol);
+                updateScreenerAndRerender(symbol, new Date(newTimestamp).getTime());
+                processedCount++;
+            }
+            
+            await delay(600);
+        }
+
+        if (statusEl) {
+            statusEl.textContent = `Batch complete. Processed: ${processedCount}, Skipped (recent): ${skippedCount}.`;
+        }
     }
 
     // --- 13. Firebase Functions ---
