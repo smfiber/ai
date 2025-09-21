@@ -874,9 +874,15 @@ document.addEventListener("DOMContentLoaded", () => {
                 await saveTickerDetailsToFirebase(symbol, dataToSave);
                 appConfig.cachedStockInfo[symbol] = { rating: metrics.garpConvictionScore, timestamp: newTimestamp };
                 
+                const stockInScreener = advancedScreenerData.find(s => s.symbol === symbol);
+                if (stockInScreener) {
+                    stockInScreener.cachedTimestamp = new Date(newTimestamp).getTime();
+                }
+
                 updateRatingDisplayForSymbol(symbol);
                 updateRatingDateDisplayForSymbol(symbol);
-                updateScreenerAndRerender(symbol, new Date(newTimestamp).getTime());
+                updateViewedIndicatorForSymbol(symbol);
+                updateCachedOnDisplayForSymbol(symbol);
                 processedCount++;
             }
             
@@ -1011,6 +1017,13 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+    function updateCachedOnDisplayForSymbol(symbol) {
+        const timestamp = appConfig.cachedStockInfo[symbol]?.timestamp;
+        document.querySelectorAll(`[data-cached-on-symbol="${symbol}"]`).forEach(cell => {
+            cell.textContent = formatDate(timestamp);
+        });
+    }
+
     function renderSimpleStockTable(data, container) {
         if (!container) return;
         if (!data || data.length === 0) {
@@ -1087,7 +1100,7 @@ document.addEventListener("DOMContentLoaded", () => {
                  <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-right">${stock.price ? '$'+stock.price.toFixed(2) : 'N/A'}</td>
                  <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-right">${stock.lastAnnualDividend ? '$'+stock.lastAnnualDividend.toFixed(2) : 'N/A'}</td>
                  <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-right">${stock.dividendYield ? stock.dividendYield.toFixed(2) + '%' : 'N/A'}</td>
-                 <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${formatDate(stock.cachedTimestamp)}</td>
+                 <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500" data-cached-on-symbol="${stock.symbol}">${formatDate(stock.cachedTimestamp)}</td>
             </tr>`;
         }).join('');
         container.innerHTML = `<div class="overflow-y-auto max-h-[60vh]"><table class="w-full table-fixed divide-y divide-gray-200"><thead class="bg-gray-50 sticky top-0"><tr>${headers}</tr></thead><tbody class="bg-white divide-y divide-gray-200">${tableRows}</tbody></table></div>`;
