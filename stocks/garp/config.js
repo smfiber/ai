@@ -464,6 +464,7 @@ Synthesize Related Metrics: Directly address the relationship between valuation 
 Tone: Maintain a professional, analytical, and objective tone. Avoid speculative hype. Your confidence should stem from the data.
 
 Formatting: Adhere strictly to the markdown structure, including bolding and paragraph breaks as specified.
+IMPORTANT: Your entire response must be pure markdown. Do not wrap your final output in markdown code fences (\`\`\`).
 
 Summary of Adjustments and Why They Work:
 Added Contextual Grounding: This small addition makes the task more realistic. An analyst is never looking at numbers in a vacuum; they know the company, ticker, and sector, which immediately informs their judgment.
