@@ -239,7 +239,7 @@ const CAPITAL_ALLOCATORS_PROMPT = `
 	- Based on this track record, formulate a concise investment thesis. Why should (or shouldn't) an investor trust this team to be wise stewards of capital in the future?
 	- **Conclude with a "Key Risks & Red Flags" section**, highlighting any concerning trends (e.g., declining ROIC, value-destructive M&A, or ill-timed buybacks).
 	Crucial Disclaimer: This article is for informational purposes only and should not be considered financial advice. Readers should consult with a qualified financial professional before making any investment decisions.
-`;
+`.trim();
 
 export const INVESTMENT_MEMO_PROMPT = `
 **Persona & Goal:**
