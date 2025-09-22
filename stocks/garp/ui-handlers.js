@@ -192,6 +192,44 @@ export async function handleResearchSubmit(e) {
 }
 
 // --- AI ANALYSIS REPORT GENERATORS ---
+export function handleWorkflowHelpRequest() {
+    const helpModal = document.getElementById(CONSTANTS.MODAL_HELP);
+    const helpTitle = helpModal.querySelector('#help-modal-title');
+    const helpContent = helpModal.querySelector('#help-modal-content');
+
+    helpTitle.textContent = 'Recommended GARP Analysis Workflow';
+    
+    helpContent.innerHTML = `
+        <div>
+            <h3 class="text-lg font-bold text-gray-800 mb-2">Step 1: Add Stock & Initial Data Cache</h3>
+            <p class="text-sm text-gray-600 mb-4">
+                Begin by adding a stock using the "Add Stock to Portfolio" form on the main dashboard. This fetches the company's profile and saves it to one of your lists, creating its initial entry in the database.
+            </p>
+
+            <h3 class="text-lg font-bold text-gray-800 mb-2">Step 2: Generate the GARP Candidacy Report</h3>
+            <p class="text-sm text-gray-600 mb-4">
+                This is the most critical step for an initial assessment. In the stock's analysis panel, go to the "Dashboard" tab and click "Analyze Candidacy". This calculates the stock's key metrics, generates the proprietary <strong>GARP Conviction Score</strong>, and creates an initial bull/bear case. This step answers the question: "Is this stock even a potential GARP candidate?"
+            </p>
+
+            <h3 class="text-lg font-bold text-gray-800 mb-2">Step 3: Fetch Peer Comparison</h3>
+            <p class="text-sm text-gray-600 mb-4">
+                To ground the scorecard numbers in reality, click the "Fetch Peer Data" button on the "Dashboard" tab. This uses AI to identify direct competitors and compares key metrics against the peer average. This step provides crucial <strong>context</strong> to the company's valuation and performance.
+            </p>
+
+            <h3 class="text-lg font-bold text-gray-800 mb-2">Step 4: Conduct Deeper Diligence (Optional)</h3>
+            <p class="text-sm text-gray-600 mb-4">
+                If the stock still looks promising, use the tools in the "AI Analysis" tab to build higher conviction. You can run specialized "Deep Dive" reports (like Moat or Risk Assessment) or use the "Diligence Investigation" tool to ask the AI specific questions that arose during your analysis.
+            </p>
+
+            <h3 class="text-lg font-bold text-gray-800 mb-2">Step 5: Synthesize the Investment Memo</h3>
+            <p class="text-sm text-gray-600">
+                This is the final step where all research comes together. Clicking "Generate GARP Memo" synthesizes the Candidacy Report, the quantitative scorecard, your diligence log, and the peer comparison data into a formal investment memo with a clear buy, sell, or hold recommendation.
+            </p>
+        </div>
+    `;
+
+    openModal(CONSTANTS.MODAL_HELP);
+}
 
 export async function handleReportHelpRequest(reportType) {
     const reportName = ANALYSIS_NAMES[reportType];
