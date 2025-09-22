@@ -1,7 +1,7 @@
 import { CONSTANTS, state, promptMap } from './config.js';
 import { openModal, closeModal, openStockListModal, openManageStockModal, openPortfolioManagerModal, openRawDataViewer } from './ui-modals.js';
 import { fetchAndCachePortfolioData, renderPortfolioManagerList } from './ui-render.js';
-import { handleResearchSubmit, handleSaveStock, handleDeleteStock, handleRefreshFmpData, handleAnalysisRequest, handleInvestmentMemoRequest, handleSaveReportToDb, handleGenerateAllReportsRequest, handleGarpCandidacyRequest, handlePortfolioGarpAnalysisRequest, handlePositionAnalysisRequest, handleReportHelpRequest, handleDiligenceInvestigationRequest, handleDeleteDiligenceLog, handleRerunDiligenceQuery } from './ui-handlers.js';
+import { handleResearchSubmit, handleSaveStock, handleDeleteStock, handleRefreshFmpData, handleAnalysisRequest, handleInvestmentMemoRequest, handleSaveReportToDb, handleGenerateAllReportsRequest, handleGarpCandidacyRequest, handlePortfolioGarpAnalysisRequest, handlePositionAnalysisRequest, handleReportHelpRequest, handleDiligenceInvestigationRequest, handleDeleteDiligenceLog, handleRerunDiligenceQuery, handlePeerAnalysisRequest } from './ui-handlers.js';
 
 // --- DYNAMIC TOOLTIPS ---
 function initializeTooltips() {
@@ -182,6 +182,14 @@ export function setupEventListeners() {
             const reportType = target.dataset.reportType;
             if (reportType) {
                 handleReportHelpRequest(reportType);
+            }
+            return;
+        }
+
+        if (target.id === 'fetch-peer-analysis-button') {
+            const ticker = target.dataset.ticker;
+            if (ticker) {
+                handlePeerAnalysisRequest(ticker);
             }
             return;
         }
