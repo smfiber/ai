@@ -73,8 +73,16 @@ export async function handleSaveStock(e) {
         return;
     }
 
-    const sharesValue = document.getElementById('manage-stock-shares').value;
-    const costValue = document.getElementById('manage-stock-cost').value;
+    const transactionRows = document.querySelectorAll('#transaction-list-container .transaction-row');
+    const transactions = [];
+    transactionRows.forEach(row => {
+        const date = row.querySelector('.transaction-date-input').value;
+        const shares = parseFloat(row.querySelector('.transaction-shares-input').value);
+        const costPerShare = parseFloat(row.querySelector('.transaction-cost-input').value);
+        if (date && !isNaN(shares) && !isNaN(costPerShare)) {
+            transactions.push({ date, shares, costPerShare });
+        }
+    });
 
     const stockData = {
         ticker: newTicker,
@@ -83,9 +91,11 @@ export async function handleSaveStock(e) {
         status: document.getElementById('manage-stock-status').value.trim(),
         sector: document.getElementById('manage-stock-sector').value.trim(),
         industry: document.getElementById('manage-stock-industry').value.trim(),
-        purchaseDate: document.getElementById('manage-stock-date').value || null,
-        shares: sharesValue === '' ? null : parseFloat(sharesValue),
-        costPerShare: costValue === '' ? null : parseFloat(costValue),
+        transactions: transactions,
+        // Set old fields to null to clean up data model
+        purchaseDate: null, 
+        shares: null,
+        costPerShare: null
     };
 
     openModal(CONSTANTS.MODAL_LOADING);
@@ -348,31 +358,46 @@ export async function handlePositionAnalysisRequest(ticker, forceNew = false) {
 
         const currentPrice = fmpData.profile[0].price;
         const candidacyReportContent = candidacyReports[0].content;
-        
-        const { shares, costPerShare, purchaseDate, companyName } = portfolioData;
-        const costBasis = shares * costPerShare;
-        const marketValue = shares * currentPrice;
-        const unrealizedGainLoss = marketValue - costBasis;
-        const unrealizedGainLossPct = (unrealizedGainLoss / costBasis) * 100;
+        const { companyName, transactions } = portfolioData;
 
-        const pDate = new Date(purchaseDate);
-        const now = new Date();
-        const diffTime = Math.abs(now - pDate);
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        const years = Math.floor(diffDays / 365);
-        const months = Math.floor((diffDays % 365) / 30.44);
+        // --- Calculate position details from transactions ---
+        let totalShares = 0;
+        let totalCost = 0;
+        let earliestDate = null;
+
+        transactions.forEach(t => {
+            totalShares += t.shares;
+            totalCost += t.shares * t.costPerShare;
+            if (!earliestDate || new Date(t.date) < new Date(earliestDate)) {
+                earliestDate = t.date;
+            }
+        });
+
+        const avgCostPerShare = totalShares > 0 ? totalCost / totalShares : 0;
+        const marketValue = totalShares * currentPrice;
+        const unrealizedGainLoss = marketValue - totalCost;
+        const unrealizedGainLossPct = totalCost > 0 ? (unrealizedGainLoss / totalCost) * 100 : 0;
         
-        let holdingPeriod = '';
-        if (years > 0) holdingPeriod += `${years} year(s), `;
-        if (months > 0) holdingPeriod += `${months} month(s)`;
-        if (holdingPeriod === '') holdingPeriod = `${diffDays} day(s)`;
-        holdingPeriod = holdingPeriod.replace(/, $/, '');
+        let holdingPeriod = 'N/A';
+        if (earliestDate) {
+            const pDate = new Date(earliestDate);
+            const now = new Date();
+            const diffTime = Math.abs(now - pDate);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            const years = Math.floor(diffDays / 365);
+            const months = Math.floor((diffDays % 365) / 30.44);
+            
+            let periodStr = '';
+            if (years > 0) periodStr += `${years} year(s), `;
+            if (months > 0) periodStr += `${months} month(s)`;
+            if (periodStr === '') periodStr = `${diffDays} day(s)`;
+            holdingPeriod = periodStr.replace(/, $/, '');
+        }
 
         const positionDetails = {
-            purchaseDate,
-            shares,
-            costPerShare: costPerShare.toFixed(2),
-            totalCostBasis: `$${costBasis.toFixed(2)}`,
+            totalShares: totalShares.toFixed(3),
+            averageCostPerShare: `$${avgCostPerShare.toFixed(2)}`,
+            totalCostBasis: `$${totalCost.toFixed(2)}`,
             currentMarketValue: `$${marketValue.toFixed(2)}`,
             unrealizedGainLoss: `$${unrealizedGainLoss.toFixed(2)} (${unrealizedGainLossPct.toFixed(2)}%)`,
             holdingPeriod
