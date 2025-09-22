@@ -1,7 +1,7 @@
 import { CONSTANTS, state, ANALYSIS_ICONS } from './config.js';
 import { getFmpStockData, getGroupedFmpData } from './api.js';
-import { renderValuationHealthDashboard, _renderGroupedStockList, renderPortfolioManagerList, renderGarpScorecardDashboard, renderGarpAnalysisSummary, updateGarpCandidacyStatus, renderCandidacyAnalysis, renderGarpInterpretationAnalysis, renderDiligenceLog } from './ui-render.js'; 
-import { getDocs, query, collection, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { renderValuationHealthDashboard, _renderGroupedStockList, renderPortfolioManagerList, renderGarpScorecardDashboard, renderGarpAnalysisSummary, updateGarpCandidacyStatus, renderCandidacyAnalysis, renderGarpInterpretationAnalysis, renderDiligenceLog, renderPeerComparisonTable } from './ui-render.js'; 
+import { getDocs, query, collection, where, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getSavedReports } from './ui-handlers.js';
 
 // --- GENERIC MODAL HELPERS ---
@@ -171,6 +171,7 @@ export async function openRawDataViewer(ticker) {
     const garpInterpretationContainer = document.getElementById('garp-interpretation-container');
     const positionAnalysisTabButton = document.querySelector('.tab-button[data-tab="position-analysis"]');
     const positionAnalysisContainer = document.getElementById('position-analysis-content-container');
+    const peerAnalysisContainer = document.getElementById('peer-analysis-section-container');
     
     titleEl.textContent = `Analyzing ${ticker}...`;
     rawDataContainer.innerHTML = '<div class="loader mx-auto"></div>';
@@ -180,9 +181,9 @@ export async function openRawDataViewer(ticker) {
     garpScorecardContainer.innerHTML = '';
     garpInterpretationContainer.innerHTML = '';
     positionAnalysisContainer.innerHTML = '';
+    peerAnalysisContainer.innerHTML = '';
     document.getElementById('valuation-health-container').innerHTML = '';
     document.getElementById('ai-garp-summary-container').innerHTML = '';
-    document.getElementById('peer-analysis-section-container').innerHTML = '';
     
     // Reset tabs to default state
     document.querySelectorAll('#rawDataViewerModal .tab-content').forEach(c => c.classList.add('hidden'));
@@ -333,7 +334,6 @@ export async function openRawDataViewer(ticker) {
             </div>
         `;
         
-        // Render the diligence log into its new home
         const diligenceReports = allSavedReports.filter(r => r.reportType === 'DiligenceInvestigation');
         const diligenceLogContainer = document.getElementById('diligence-log-container');
         if (diligenceLogContainer) {
@@ -343,16 +343,37 @@ export async function openRawDataViewer(ticker) {
         const description = profile.description || 'No description available.';
         profileDisplayContainer.innerHTML = `<h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Company Overview</h3><p class="text-sm text-gray-700">${description}</p>`;
         
-        // Render Dashboard tab content
-        const peerAnalysisContainer = document.getElementById('peer-analysis-section-container');
-        if (peerAnalysisContainer) {
-             peerAnalysisContainer.innerHTML = `
+        const metrics = renderGarpScorecardDashboard(garpScorecardContainer, ticker, fmpData);
+        renderGarpInterpretationAnalysis(garpInterpretationContainer, metrics);
+        renderValuationHealthDashboard(document.getElementById('valuation-health-container'), ticker, fmpData);
+        renderGarpAnalysisSummary(document.getElementById('ai-garp-summary-container'), ticker);
+        
+        const peerDocRef = doc(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, ticker, 'analysis', 'peer_comparison');
+        const peerDocSnap = await getDoc(peerDocRef);
+        const peerHelpIcon = `<button data-report-type="PeerComparison" class="ai-help-button p-1 rounded-full hover:bg-indigo-100" title="What is this?"><svg class="w-5 h-5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z"></path></svg></button>`;
+
+        if (peerDocSnap.exists()) {
+            const peerData = peerDocSnap.data();
+            peerAnalysisContainer.innerHTML = `
                 <div class="flex justify-between items-center mb-4 border-b pb-2">
                     <div class="flex items-center gap-2">
                         <h3 class="text-xl font-bold text-gray-800">Peer Comparison</h3>
-                        <button data-report-type="PeerComparison" class="ai-help-button p-1 rounded-full hover:bg-indigo-100" title="What is this?">
-                            <svg class="w-5 h-5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z"></path></svg>
-                        </button>
+                        ${peerHelpIcon}
+                    </div>
+                    <button id="fetch-peer-analysis-button" data-ticker="${ticker}" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-1 px-4 rounded-lg text-sm">
+                        Refresh Peer Data
+                    </button>
+                </div>
+                <div id="peer-analysis-content-container"></div>
+            `;
+            const contentContainer = peerAnalysisContainer.querySelector('#peer-analysis-content-container');
+            renderPeerComparisonTable(contentContainer, ticker, metrics, peerData);
+        } else {
+            peerAnalysisContainer.innerHTML = `
+                <div class="flex justify-between items-center mb-4 border-b pb-2">
+                     <div class="flex items-center gap-2">
+                        <h3 class="text-xl font-bold text-gray-800">Peer Comparison</h3>
+                        ${peerHelpIcon}
                     </div>
                     <button id="fetch-peer-analysis-button" data-ticker="${ticker}" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-1 px-4 rounded-lg text-sm">
                         Fetch Peer Data
@@ -364,12 +385,7 @@ export async function openRawDataViewer(ticker) {
             `;
         }
 
-        const metrics = renderGarpScorecardDashboard(garpScorecardContainer, ticker, fmpData);
-        renderGarpInterpretationAnalysis(garpInterpretationContainer, metrics);
-        renderValuationHealthDashboard(document.getElementById('valuation-health-container'), ticker, fmpData);
-        renderGarpAnalysisSummary(document.getElementById('ai-garp-summary-container'), ticker);
 
-        // If saved candidacy reports exist, load the latest one
         if (savedCandidacyReports.length > 0) {
             const latestReport = savedCandidacyReports[0];
             const resultContainer = document.getElementById('garp-analysis-container');
