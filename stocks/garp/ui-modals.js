@@ -182,6 +182,7 @@ export async function openRawDataViewer(ticker) {
     positionAnalysisContainer.innerHTML = '';
     document.getElementById('valuation-health-container').innerHTML = '';
     document.getElementById('ai-garp-summary-container').innerHTML = '';
+    document.getElementById('peer-analysis-section-container').innerHTML = '';
     
     // Reset tabs to default state
     document.querySelectorAll('#rawDataViewerModal .tab-content').forEach(c => c.classList.add('hidden'));
@@ -343,11 +344,16 @@ export async function openRawDataViewer(ticker) {
         profileDisplayContainer.innerHTML = `<h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Company Overview</h3><p class="text-sm text-gray-700">${description}</p>`;
         
         // Render Dashboard tab content
-        const dashboardTab = document.getElementById('dashboard-tab');
-        const peerAnalysisSection = `
-            <div id="peer-analysis-section-container" class="bg-white p-6 rounded-2xl shadow-lg border border-gray-200">
+        const peerAnalysisContainer = document.getElementById('peer-analysis-section-container');
+        if (peerAnalysisContainer) {
+             peerAnalysisContainer.innerHTML = `
                 <div class="flex justify-between items-center mb-4 border-b pb-2">
-                    <h3 class="text-xl font-bold text-gray-800">Peer Comparison</h3>
+                    <div class="flex items-center gap-2">
+                        <h3 class="text-xl font-bold text-gray-800">Peer Comparison</h3>
+                        <button data-report-type="PeerComparison" class="ai-help-button p-1 rounded-full hover:bg-indigo-100" title="What is this?">
+                            <svg class="w-5 h-5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z"></path></svg>
+                        </button>
+                    </div>
                     <button id="fetch-peer-analysis-button" data-ticker="${ticker}" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-1 px-4 rounded-lg text-sm">
                         Fetch Peer Data
                     </button>
@@ -355,9 +361,8 @@ export async function openRawDataViewer(ticker) {
                 <div id="peer-analysis-content-container">
                     <p class="text-gray-500 italic">Click the button to identify competitors and compare key metrics.</p>
                 </div>
-            </div>
-        `;
-        dashboardTab.insertAdjacentHTML('beforeend', peerAnalysisSection);
+            `;
+        }
 
         const metrics = renderGarpScorecardDashboard(garpScorecardContainer, ticker, fmpData);
         renderGarpInterpretationAnalysis(garpInterpretationContainer, metrics);
