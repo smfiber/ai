@@ -46,6 +46,80 @@ export async function fetchAndCachePortfolioData() {
 
 // --- UI RENDERING ---
 
+export function renderPeerComparisonTable(container, ticker, companyMetrics, peerData) {
+    if (!container || !companyMetrics || !peerData || !peerData.averages) {
+        container.innerHTML = '<p class="text-center text-gray-500 p-4">Could not render peer comparison data.</p>';
+        return;
+    }
+
+    const metricsToCompare = [
+        { key: 'P/E (TTM)', label: 'P/E Ratio', higherIsBetter: false, format: 'decimal' },
+        { key: 'P/S Ratio', label: 'P/S Ratio', higherIsBetter: false, format: 'decimal' },
+        { key: 'Price to FCF', label: 'P/FCF Ratio', higherIsBetter: false, format: 'decimal' },
+        { key: 'Return on Equity', label: 'ROE', higherIsBetter: true, format: 'percent' }
+    ];
+
+    const formatValue = (value, format) => {
+        if (typeof value !== 'number' || !isFinite(value)) return 'N/A';
+        if (format === 'percent') return `${(value * 100).toFixed(1)}%`;
+        return value.toFixed(2);
+    };
+
+    let tableRowsHtml = '';
+    for (const metric of metricsToCompare) {
+        const companyValue = companyMetrics[metric.key]?.value;
+        const peerValue = peerData.averages[metric.key];
+        
+        let premiumHtml = '<td class="text-center text-gray-500">N/A</td>';
+        if (typeof companyValue === 'number' && typeof peerValue === 'number' && peerValue !== 0) {
+            const premium = (companyValue / peerValue) - 1;
+            let premiumClass = '';
+            
+            if (premium > 0.001) { // Company is higher
+                premiumClass = metric.higherIsBetter ? 'price-gain' : 'price-loss';
+            } else if (premium < -0.001) { // Company is lower
+                premiumClass = metric.higherIsBetter ? 'price-loss' : 'price-gain';
+            }
+            premiumHtml = `<td class="text-center font-semibold ${premiumClass}">${(premium * 100).toFixed(1)}%</td>`;
+        }
+        
+        tableRowsHtml += `
+            <tr class="border-b">
+                <td class="py-2 px-3 font-semibold text-gray-700">${metric.label}</td>
+                <td class="text-center">${formatValue(companyValue, metric.format)}</td>
+                <td class="text-center">${formatValue(peerValue, metric.format)}</td>
+                ${premiumHtml}
+            </tr>
+        `;
+    }
+
+    const peerList = peerData.peers.join(', ');
+    const lastUpdated = peerData.cachedAt ? `Last updated: ${peerData.cachedAt.toDate().toLocaleDateString()}` : '';
+
+    container.innerHTML = `
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="bg-gray-100">
+                        <th class="text-left py-2 px-3">Metric</th>
+                        <th class="text-center">${ticker}</th>
+                        <th class="text-center">Peer Average</th>
+                        <th class="text-center">Premium / (Discount)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${tableRowsHtml}
+                </tbody>
+            </table>
+        </div>
+        <div class="mt-3 text-xs text-gray-500">
+            <p><strong>Peers:</strong> ${peerList}</p>
+            <p>${lastUpdated}</p>
+        </div>
+    `;
+}
+
+
 export async function renderPortfolioGarpOverview() {
     const overviewContainer = document.getElementById('portfolio-garp-overview-container');
     const breakdownContainer = document.getElementById('portfolio-garp-breakdown-container');
@@ -294,7 +368,7 @@ export function renderGarpInterpretationAnalysis(container, metrics) {
     const metricGroups = {
         'Growth': ['EPS Growth (5Y)', 'EPS Growth (Next 1Y)', 'Revenue Growth (5Y)'],
         'Profitability': ['Return on Equity', 'Return on Invested Capital'],
-        'Valuation & Debt': ['P/E (TTM)', 'Forward P/E', 'PEG Ratio', 'P/S Ratio', 'Debt-to-Equity']
+        'Valuation & Debt': ['P/E (TTM)', 'Forward P/E', 'PEG Ratio', 'P/S Ratio', 'Price to FCF', 'Debt-to-Equity']
     };
 
     let html = '<h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">GARP Criteria Interpretation</h3>';
