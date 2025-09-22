@@ -2,7 +2,7 @@ import { CONSTANTS, state, promptMap, ANALYSIS_REQUIREMENTS, ANALYSIS_NAMES } fr
 import { callApi, callGeminiApi, generateRefinedArticle, generatePolishedArticleForSynthesis, getFmpStockData, callGeminiApiWithSearch } from './api.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { openModal, closeModal, displayMessageInModal, openConfirmationModal, openManageStockModal } from './ui-modals.js';
-import { renderPortfolioManagerList, displayReport, updateReportStatus, fetchAndCachePortfolioData, updateGarpCandidacyStatus, renderCandidacyAnalysis, renderDiligenceLog } from './ui-render.js';
+import { renderPortfolioManagerList, displayReport, updateReportStatus, fetchAndCachePortfolioData, updateGarpCandidacyStatus, renderCandidacyAnalysis, renderDiligenceLog, renderPeerComparisonTable } from './ui-render.js';
 import { _calculateFinancialAnalysisMetrics, _calculateMoatAnalysisMetrics, _calculateRiskAssessmentMetrics, _calculateCapitalAllocatorsMetrics, _calculateGarpAnalysisMetrics, _calculateGarpScorecardMetrics, CALCULATION_SUMMARIES } from './analysis-helpers.js';
 
 // --- FMP API INTEGRATION & MANAGEMENT ---
@@ -1039,5 +1039,76 @@ export function handleRerunDiligenceQuery(question, symbol) {
         handleDiligenceInvestigationRequest(symbol);
     } else {
         displayMessageInModal('Could not find the investigation input box.', 'error');
+    }
+}
+
+export async function handlePeerAnalysisRequest(ticker) {
+    const container = document.getElementById('peer-analysis-content-container');
+    if (!container) return;
+
+    container.innerHTML = `<div class="flex items-center justify-center p-4"><div class="loader"></div><p class="ml-4 text-gray-600 font-semibold">AI is identifying peers and fetching data...</p></div>`;
+
+    try {
+        const companyFmpData = await getFmpStockData(ticker);
+        if (!companyFmpData || !companyFmpData.profile || !companyFmpData.profile[0]) {
+            throw new Error(`Could not fetch profile for ${ticker}.`);
+        }
+        const profile = companyFmpData.profile[0];
+
+        const peerPromptConfig = promptMap['PeerIdentification'];
+        const peerIdPrompt = peerPromptConfig.prompt
+            .replace('{companyName}', profile.companyName)
+            .replace('{tickerSymbol}', profile.symbol)
+            .replace('{description}', profile.description);
+        
+        const peerResponse = await callGeminiApi(peerIdPrompt);
+        const peerTickers = JSON.parse(peerResponse.trim());
+
+        if (!Array.isArray(peerTickers) || peerTickers.length === 0) {
+            throw new Error("AI did not return a valid list of competitor tickers.");
+        }
+
+        const peerDataPromises = peerTickers.map(peerTicker => getFmpStockData(peerTicker));
+        const allPeerFmpData = await Promise.all(peerDataPromises);
+
+        const peerMetricsList = allPeerFmpData.filter(Boolean).map(fmpData => {
+            return _calculateGarpScorecardMetrics(fmpData);
+        });
+
+        if (peerMetricsList.length === 0) {
+            throw new Error("Could not calculate metrics for any identified peers.");
+        }
+
+        const peerAverages = {};
+        const metricKeys = Object.keys(peerMetricsList[0]);
+        
+        for (const key of metricKeys) {
+            if (key === 'garpConvictionScore') continue; 
+            const values = peerMetricsList
+                .map(metrics => metrics[key]?.value)
+                .filter(v => typeof v === 'number' && isFinite(v));
+            
+            if (values.length > 0) {
+                peerAverages[key] = values.reduce((sum, v) => sum + v, 0) / values.length;
+            } else {
+                 peerAverages[key] = null;
+            }
+        }
+        
+        const companyMetrics = _calculateGarpScorecardMetrics(companyFmpData);
+        const finalPeerDataObject = {
+            peers: peerTickers,
+            averages: peerAverages,
+            cachedAt: Timestamp.now()
+        };
+
+        const peerDocRef = doc(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, ticker, 'analysis', 'peer_comparison');
+        await setDoc(peerDocRef, finalPeerDataObject);
+        
+        renderPeerComparisonTable(container, ticker, companyMetrics, finalPeerDataObject);
+
+    } catch (error) {
+        console.error("Error handling peer analysis request:", error);
+        container.innerHTML = `<p class="text-red-500 p-4">Could not complete peer analysis: ${error.message}</p>`;
     }
 }
