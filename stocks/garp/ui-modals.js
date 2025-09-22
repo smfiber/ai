@@ -96,13 +96,61 @@ export function openManageStockModal(stockData) {
     document.getElementById('manage-stock-exchange').value = stockData.exchange || '';
     document.getElementById('manage-stock-sector').value = stockData.sector || 'N/A';
     document.getElementById('manage-stock-industry').value = stockData.industry || 'N/A';
-    document.getElementById('manage-stock-date').value = stockData.purchaseDate || '';
-    document.getElementById('manage-stock-shares').value = stockData.shares || '';
-    document.getElementById('manage-stock-cost').value = stockData.costPerShare || '';
     document.getElementById('manage-stock-status').value = stockData.status || 'Portfolio';
     
     const deleteButton = document.getElementById('delete-stock-button');
     deleteButton.style.display = stockData.isEditMode ? 'block' : 'none';
+
+    // --- New Transaction Logic ---
+    const transactionContainer = document.getElementById('transaction-list-container');
+    transactionContainer.innerHTML = ''; // Clear previous rows
+
+    const addTransactionRow = (transaction = {}) => {
+        const row = document.createElement('div');
+        row.className = 'transaction-row grid grid-cols-12 gap-2 items-center';
+        row.innerHTML = `
+            <div class="col-span-4">
+                <input type="date" class="transaction-date-input mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm" value="${transaction.date || ''}">
+            </div>
+            <div class="col-span-3">
+                <input type="number" step="any" class="transaction-shares-input mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm" placeholder="Shares" value="${transaction.shares || ''}">
+            </div>
+            <div class="col-span-3">
+                <input type="number" step="any" class="transaction-cost-input mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm" placeholder="Cost/Share" value="${transaction.costPerShare || ''}">
+            </div>
+            <div class="col-span-2 text-right">
+                <button type="button" class="remove-transaction-button text-red-500 hover:text-red-700 font-bold text-xl">&times;</button>
+            </div>
+        `;
+        transactionContainer.appendChild(row);
+    };
+
+    // Populate with existing transactions or create a backward-compatible entry
+    if (stockData.transactions && stockData.transactions.length > 0) {
+        stockData.transactions.forEach(addTransactionRow);
+    } else if (stockData.purchaseDate || stockData.shares || stockData.costPerShare) {
+        // Backward compatibility for old single-entry data
+        addTransactionRow({ 
+            date: stockData.purchaseDate, 
+            shares: stockData.shares, 
+            costPerShare: stockData.costPerShare 
+        });
+    } else {
+        // Add one blank row for a new stock
+        addTransactionRow();
+    }
+
+    // Event listeners for the Add/Remove buttons
+    const addButton = document.getElementById('add-transaction-button');
+    const newAddButton = addButton.cloneNode(true); // Remove old listeners
+    addButton.parentNode.replaceChild(newAddButton, addButton);
+    newAddButton.addEventListener('click', () => addTransactionRow());
+
+    transactionContainer.addEventListener('click', (e) => {
+        if (e.target.closest('.remove-transaction-button')) {
+            e.target.closest('.transaction-row').remove();
+        }
+    });
 
     openModal(CONSTANTS.MODAL_MANAGE_STOCK);
 }
@@ -223,7 +271,7 @@ export async function openRawDataViewer(ticker) {
 
         // Conditionally show and populate the Position Analysis tab
         const portfolioData = state.portfolioCache.find(s => s.ticker === ticker);
-        if (portfolioData && portfolioData.status === 'Portfolio' && portfolioData.shares > 0 && portfolioData.costPerShare > 0) {
+        if (portfolioData && (portfolioData.transactions?.length > 0 || portfolioData.shares > 0)) {
             positionAnalysisTabButton.classList.remove('hidden');
             positionAnalysisContainer.innerHTML = `
                 <div class="text-center p-8 bg-gray-50 rounded-lg">
