@@ -343,6 +343,22 @@ export async function openRawDataViewer(ticker) {
         profileDisplayContainer.innerHTML = `<h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Company Overview</h3><p class="text-sm text-gray-700">${description}</p>`;
         
         // Render Dashboard tab content
+        const dashboardTab = document.getElementById('dashboard-tab');
+        const peerAnalysisSection = `
+            <div id="peer-analysis-section-container" class="bg-white p-6 rounded-2xl shadow-lg border border-gray-200">
+                <div class="flex justify-between items-center mb-4 border-b pb-2">
+                    <h3 class="text-xl font-bold text-gray-800">Peer Comparison</h3>
+                    <button id="fetch-peer-analysis-button" data-ticker="${ticker}" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-1 px-4 rounded-lg text-sm">
+                        Fetch Peer Data
+                    </button>
+                </div>
+                <div id="peer-analysis-content-container">
+                    <p class="text-gray-500 italic">Click the button to identify competitors and compare key metrics.</p>
+                </div>
+            </div>
+        `;
+        dashboardTab.insertAdjacentHTML('beforeend', peerAnalysisSection);
+
         const metrics = renderGarpScorecardDashboard(garpScorecardContainer, ticker, fmpData);
         renderGarpInterpretationAnalysis(garpInterpretationContainer, metrics);
         renderValuationHealthDashboard(document.getElementById('valuation-health-container'), ticker, fmpData);
