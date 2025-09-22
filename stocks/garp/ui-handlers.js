@@ -233,13 +233,14 @@ export function handleWorkflowHelpRequest() {
 
 export async function handleReportHelpRequest(reportType) {
     const reportName = ANALYSIS_NAMES[reportType];
-    const prompt = promptMap[reportType]?.prompt;
+    const promptConfig = promptMap[reportType];
     const calcSummary = CALCULATION_SUMMARIES[reportType];
 
-    if (!reportName || !prompt || !calcSummary) {
+    if (!reportName || !promptConfig || !calcSummary) {
         displayMessageInModal(`Could not find help configuration for report type: ${reportType}`, 'error');
         return;
     }
+    const prompt = promptConfig.prompt;
 
     const helpModal = document.getElementById(CONSTANTS.MODAL_HELP);
     const helpTitle = helpModal.querySelector('#help-modal-title');
@@ -707,12 +708,24 @@ export async function handleInvestmentMemoRequest(symbol, forceNew = false) {
         const profile = data.profile?.[0] || {};
         const companyName = profile.companyName || 'the company';
 
+        // Fetch peer data
+        const peerDocRef = doc(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, symbol, 'analysis', 'peer_comparison');
+        const peerDocSnap = await getDoc(peerDocRef);
+        let peerAverages = { "note": "Peer data has not been generated for this stock yet." };
+        if (peerDocSnap.exists()) {
+            peerAverages = peerDocSnap.data().averages || peerAverages;
+        }
+        
+        let peerDataChanges = {}; // Placeholder for now
+
         const prompt = promptMap.InvestmentMemo.prompt
             .replace(/{companyName}/g, companyName)
             .replace(/{tickerSymbol}/g, symbol)
             .replace('{candidacyReport}', candidacyReportContent)
             .replace('{scorecardJson}', JSON.stringify(scorecardData, null, 2))
-            .replace('{diligenceLog}', diligenceLog);
+            .replace('{diligenceLog}', diligenceLog)
+            .replace('{peerAverages}', JSON.stringify(peerAverages, null, 2))
+            .replace('{peerDataChanges}', JSON.stringify(peerDataChanges, null, 2));
 
         loadingMessage.textContent = "AI is drafting the investment memo...";
         const memoContent = await generatePolishedArticleForSynthesis(prompt, loadingMessage);
