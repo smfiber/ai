@@ -574,5 +574,6 @@ export const ANALYSIS_NAMES = {
     'PortfolioGarpAnalysis': 'Portfolio GARP Analysis',
     'GarpConvictionScore': 'GARP Conviction Score',
     'DiligenceInvestigation': 'Diligence Investigation',
-    'PeerIdentification': 'Peer Identification'
+    'PeerIdentification': 'Peer Identification',
+    'PeerComparison': 'Peer Comparison'
 };
