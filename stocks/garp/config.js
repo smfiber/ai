@@ -252,15 +252,27 @@ You are a Senior Investment Analyst at a GARP-focused ("Growth at a Reasonable P
 *(This is the deciding section. Analyze whether the current price is reasonable given the quality of the business and its growth prospects.)*
 * **Synthesize the 'PEG Ratio' and 'Forward P/E' from the JSON with the growth narrative from the 'Candidacy Report'. Answer the ultimate question: Based on all this evidence, is {companyName} a quality growth company trading at a fair price *today*?*
 
-## 5. Final Verdict & Actionable Recommendation
-### A. Recommendation
-*(Provide a clear, actionable recommendation based on your synthesis.)*
-* **High Conviction Buy**
-* **Initiate Position**
-* **Add to Watchlist**
-* **Pass**
-### B. Justification
-*(Provide a 1-2 sentence justification for your recommendation, explicitly referencing the most critical trade-off between the bull and bear case, and any pivotal findings from the diligence log.)*
+## 5. Foundational Q&A and Final Verdict
+(First, provide a direct answer to the following five foundational questions based on all the provided reports and data.)
+
+1.  **Is the company’s forward growth rate both significant and believable?**
+    * [Your Answer Here]
+2.  **Is the valuation reasonable enough to provide a margin of safety?**
+    * [Your Answer Here]
+3.  **Does the business possess a durable competitive advantage (moat)?**
+    * [Your Answer Here]
+4.  **How effectively is management allocating capital?**
+    * [Your Answer Here]
+5.  **What is the primary risk, and is it manageable?**
+    * [Your Answer Here]
+
+(Now, synthesize your answers above into a final verdict.)
+
+### Recommendation
+**[Provide one of the following recommendations: High Conviction Buy, Initiate Position, Add to Watchlist, or Pass]**
+
+### Justification
+[Provide a 1-2 sentence justification for your recommendation, explicitly referencing the trade-offs revealed in the Q&A above.]
 
 ---
 **INPUTS:**
