@@ -239,7 +239,7 @@ const CAPITAL_ALLOCATORS_PROMPT = `
 	- Based on this track record, formulate a concise investment thesis. Why should (or shouldn't) an investor trust this team to be wise stewards of capital in the future?
 	- **Conclude with a "Key Risks & Red Flags" section**, highlighting any concerning trends (e.g., declining ROIC, value-destructive M&A, or ill-timed buybacks).
 	Crucial Disclaimer: This article is for informational purposes only and should not be considered financial advice. Readers should consult with a qualified financial professional before making any investment decisions.
-`.trim();
+`;
 
 export const INVESTMENT_MEMO_PROMPT = `
 **Persona & Goal:**
@@ -261,16 +261,16 @@ You are a Senior Investment Analyst at a GARP-focused ("Growth at a Reasonable P
 
 ## 2. The Bull Case: Why We Could Be Right
 *(This section should be a compelling narrative about the investment's upside potential, drawing its themes from the 'Candidacy Report' and backing them with data.)*
-* **Business Quality & Growth:** Based on the qualitative report, what is the story behind the company's growth? Substantiate claims with metrics like 'EPS Growth (Next 1Y)' and 'Return on Equity' from the JSON. How does its growth and profitability compare to its peers, using the `{peerAverages}` data?
+* **Business Quality & Growth:** Based on the qualitative report, what is the story behind the company's growth? Substantiate claims with metrics like 'EPS Growth (Next 1Y)' and 'Return on Equity' from the JSON. How does its growth and profitability compare to its peers, using the \`{peerAverages}\` data?
 * **Financial Strength:** Does the qualitative report suggest a strong business? Prove it. Cite the 'Debt-to-Equity' ratio from the JSON. Is its balance sheet stronger or weaker than its peers?
 
 ## 3. The Bear Case: What Could Go Wrong
 *(This section critically examines the primary risks, using both the qualitative report and quantitative data.)*
-* **Key Risks & Concerns:** What are the top 2-3 risks identified? Quantify these risks using the weakest data points from the JSON and the `{peerAverages}`. For example, if valuation is a concern, is it just high, or is it high *relative to its peers*? Does the `{peerDataChanges}` data show the company's valuation is becoming less attractive over time?
+* **Key Risks & Concerns:** What are the top 2-3 risks identified? Quantify these risks using the weakest data points from the JSON and the \`{peerAverages}\`. For example, if valuation is a concern, is it just high, or is it high *relative to its peers*? Does the \`{peerDataChanges}\` data show the company's valuation is becoming less attractive over time?
 
 ## 4. Valuation: The GARP Fulcrum
 *(This is the deciding section. Analyze whether the current price is reasonable given the quality, growth, and peer context.)*
-* **Synthesize the 'PEG Ratio', 'Forward P/E', and 'Price to FCF' from the JSON with the `{peerAverages}` data. Answer the ultimate question: Based on all this evidence, is {companyName} a quality growth company trading at a fair price *today*? Use the `{peerDataChanges}` data to comment on the direction of its relative value.*
+* **Synthesize the 'PEG Ratio', 'Forward P/E', and 'Price to FCF' from the JSON with the \`{peerAverages}\` data. Answer the ultimate question: Based on all this evidence, is {companyName} a quality growth company trading at a fair price *today*? Use the \`{peerDataChanges}\` data to comment on the direction of its relative value.*
 
 ## 5. Foundational Q&A and Final Verdict
 (First, provide a direct answer to the following five foundational questions based on all the provided reports and data.)
@@ -428,12 +428,12 @@ Generate a comprehensive GARP assessment using precise markdown formatting. Your
 ## THE BULL CASE: The Growth & Value Narrative
 
 (1 paragraph)
-Synthesize the stock's strengths into a compelling narrative. Explain how the passing metrics work together. Focus on the synergy between growth projections and valuation. **Critically, compare the company's strongest metrics (e.g., ROE, Growth) to the `{peerAverages}` to demonstrate its relative strength.** Use the `{peerDataChanges}` to highlight any positive momentum.
+Synthesize the stock's strengths into a compelling narrative. Explain how the passing metrics work together. Focus on the synergy between growth projections and valuation. **Critically, compare the company's strongest metrics (e.g., ROE, Growth) to the \`{peerAverages}\` to demonstrate its relative strength.** Use the \`{peerDataChanges}\` to highlight any positive momentum.
 
 ## THE BEAR CASE: The Risks & Quality Concerns
 
 (1 paragraph)
-Identify the critical risks and weaknesses revealed by the failing metrics. **Directly compare the company's weakest metrics to the `{peerAverages}`.** For example, is its P/E ratio just high, or is it significantly higher than its competitors? Use the `{peerDataChanges}` to flag any negative trends, such as its valuation becoming less attractive relative to its peers over time.
+Identify the critical risks and weaknesses revealed by the failing metrics. **Directly compare the company's weakest metrics to the \`{peerAverages}\`.** For example, is its P/E ratio just high, or is it significantly higher than its competitors? Use the \`{peerDataChanges}\` to flag any negative trends, such as its valuation becoming less attractive relative to its peers over time.
 
 ## FINAL SYNTHESIS & RECOMMENDATION
 
