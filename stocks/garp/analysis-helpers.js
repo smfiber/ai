@@ -72,6 +72,11 @@ function _getMetricInterpretation(metricName, value) {
             if (value < 0.7) return { category: 'Low Leverage', text: 'Indicates a healthy and manageable debt level, reducing financial risk.' };
             return { category: 'High Leverage', text: 'A potential red flag. The company relies heavily on debt, which increases risk during economic weakness.' };
 
+        case 'Price to FCF':
+            if (value < 15) return { category: 'Potentially Undervalued', text: 'The market price appears low relative to the company\'s ability to generate cash, a strong sign of value.' };
+            if (value < 25) return { category: 'Reasonable Price', text: 'A healthy valuation that suggests the market price is not excessive relative to the company\'s cash flow.' };
+            return { category: 'Expensive', text: 'The stock is trading at a high multiple of its cash flow, suggesting high expectations are priced in.' };
+
         default:
             return { category: 'N/A', text: '' };
     }
@@ -143,6 +148,13 @@ function _getMetricScoreMultiplier(metricName, value) {
             if (value < 1.0) return 0.5;
             return 0;
 
+        case 'Price to FCF':
+            if (value <= 0) return 0;
+            if (value < 15) return 1.2;
+            if (value < 25) return 1.0;
+            if (value < 40) return 0.5;
+            return 0;
+
         default:
             return 0;
     }
@@ -200,6 +212,13 @@ export function _calculateGarpScorecardMetrics(data) {
     if (pe > 0 && epsNext1y > 0) {
         peg = pe / (epsNext1y * 100);
     }
+    
+    let pfcf = null;
+    const fcfPerShareTtm = metricsTtm.freeCashFlowPerShareTTM;
+    if (currentPrice > 0 && fcfPerShareTtm > 0) {
+        pfcf = currentPrice / fcfPerShareTtm;
+    }
+
 
     // --- METRICS DEFINITION ---
     const metrics = {
@@ -212,6 +231,7 @@ export function _calculateGarpScorecardMetrics(data) {
         'Forward P/E': { value: forwardPe, format: 'decimal', weight: 8 },
         'PEG Ratio': { value: peg, format: 'decimal', weight: 15 },
         'P/S Ratio': { value: ps, format: 'decimal', weight: 5 },
+        'Price to FCF': { value: pfcf, format: 'decimal', weight: 10 },
         'Debt-to-Equity': { value: de, format: 'decimal', weight: 5 },
     };
 
