@@ -74,13 +74,19 @@ export function renderPeerComparisonTable(container, ticker, companyMetrics, pee
         if (typeof companyValue === 'number' && typeof peerValue === 'number' && peerValue !== 0) {
             const premium = (companyValue / peerValue) - 1;
             let premiumClass = '';
-            
-            if (!metric.higherIsBetter && companyValue < 0) {
-                premiumClass = 'price-loss'; 
-            } else if (premium > 0.001) {
+
+            if (companyValue > 0 && peerValue < 0) {
                 premiumClass = metric.higherIsBetter ? 'price-gain' : 'price-loss';
-            } else if (premium < -0.001) {
+            } else if (companyValue < 0 && peerValue > 0) {
                 premiumClass = metric.higherIsBetter ? 'price-loss' : 'price-gain';
+            } else {
+                if (!metric.higherIsBetter && companyValue < 0) {
+                    premiumClass = 'price-loss'; 
+                } else if (premium > 0.001) {
+                    premiumClass = metric.higherIsBetter ? 'price-gain' : 'price-loss';
+                } else if (premium < -0.001) {
+                    premiumClass = metric.higherIsBetter ? 'price-loss' : 'price-gain';
+                }
             }
             premiumHtml = `<td class="text-center font-semibold ${premiumClass}">${(premium * 100).toFixed(1)}%</td>`;
         }
