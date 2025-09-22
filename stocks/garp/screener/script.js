@@ -166,10 +166,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 return 0;
 
             case 'EPS Growth (Next 1Y)':
-                if (value > 1.0) return 0.5; // Rebound Growth (Partial Credit)
-                if (value > 0.25) return 1.2;
-                if (value > 0.10) return 1.0;
-                if (value > 0.05) return 0.5;
+                if (value > 1.0) return 0.5;    // Rebound Growth > 100% (Partial Credit)
+                if (value > 0.40) return 0.8;    // Suspicious Growth 40%-100% (Reduced Credit)
+                if (value > 0.20) return 1.2;    // Exceptional Growth 20%-40% (Bonus)
+                if (value > 0.10) return 1.0;    // Strong Growth 10%-20% (Full Credit)
+                if (value > 0.05) return 0.5;    // Modest Growth 5%-10% (Partial Credit)
                 return 0;
 
             case 'Revenue Growth (5Y)':
@@ -848,7 +849,7 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-        const thirtyDays = 30 * 24 * 60 * 60 * 1000;
+        const thirtyDays = .5 * 24 * 60 * 60 * 1000;
         let processedCount = 0;
         let skippedCount = 0;
 
