@@ -265,7 +265,7 @@ export async function _renderGroupedStockList(container, stocksWithData, listTyp
                     <ul class="divide-y divide-gray-200">`;
         
         stocks.forEach(stock => {
-            const refreshedAt = stock.fmpData?.cachedAt ? stock.fmpData.cachedAt.toLocaleString() : 'N/A';
+            const refreshedAt = stock.fmpData?.cachedAt ? stock.fmpData.cachedAt.toDate().toLocaleString() : 'N/A';
             const score = stock.garpConvictionScore;
             let scoreBadgeHtml = '';
             if (score) {
