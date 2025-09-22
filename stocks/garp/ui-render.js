@@ -75,9 +75,11 @@ export function renderPeerComparisonTable(container, ticker, companyMetrics, pee
             const premium = (companyValue / peerValue) - 1;
             let premiumClass = '';
             
-            if (premium > 0.001) { // Company is higher
+            if (!metric.higherIsBetter && companyValue < 0) {
+                premiumClass = 'price-loss'; 
+            } else if (premium > 0.001) {
                 premiumClass = metric.higherIsBetter ? 'price-gain' : 'price-loss';
-            } else if (premium < -0.001) { // Company is lower
+            } else if (premium < -0.001) {
                 premiumClass = metric.higherIsBetter ? 'price-loss' : 'price-gain';
             }
             premiumHtml = `<td class="text-center font-semibold ${premiumClass}">${(premium * 100).toFixed(1)}%</td>`;
@@ -263,7 +265,7 @@ export async function _renderGroupedStockList(container, stocksWithData, listTyp
                     <ul class="divide-y divide-gray-200">`;
         
         stocks.forEach(stock => {
-            const refreshedAt = stock.fmpData?.cachedAt ? stock.fmpData.cachedAt.toDate().toLocaleString() : 'N/A';
+            const refreshedAt = stock.fmpData?.cachedAt ? stock.fmpData.cachedAt.toLocaleString() : 'N/A';
             const score = stock.garpConvictionScore;
             let scoreBadgeHtml = '';
             if (score) {
