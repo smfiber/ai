@@ -367,35 +367,36 @@ You will be given a JSON object containing a scorecard with key financial metric
 {jsonData}
 \`\`\`
 5. Required Output Structure & Content:
-Generate a comprehensive GARP assessment using precise markdown formatting.
+Generate a comprehensive GARP assessment using precise markdown formatting. Your response MUST follow the specified markdown structure.
 
-EXECUTIVE SUMMARY
+## EXECUTIVE SUMMARY
 
-Verdict: (1 line) A bolded, single-line verdict. Must be one of: Strong GARP Candidate, Borderline GARP Candidate, or Not a GARP Candidate.
+(Your output for this section MUST follow this markdown structure exactly. Replace the bracketed text with your analysis.)
 
-GARP Conviction Score: (1 line) The final weighted and scaled score, e.g., (Conviction Score: 97).
+**Verdict:** [Insert bolded verdict: Strong GARP Candidate, Borderline GARP Candidate, or Not a GARP Candidate]
+**GARP Conviction Score:** [Insert the score]
+**Core Thesis:** [Insert the single, concise sentence thesis]
 
-Core Thesis: (1 line) A single, concise sentence summarizing the primary investment thesis.
-
-THE BULL CASE: The Growth & Value Narrative
+## THE BULL CASE: The Growth & Value Narrative
 
 (1 paragraph)
 Synthesize the stock's strengths into a compelling narrative. Do not just list the passing metrics; explain how they work together. Focus on the synergy between the forward-looking growth projections and the current valuation. Directly reference the most impressive numbers from the scorecard to build your case.
 
-THE BEAR CASE: The Risks & Quality Concerns
+## THE BEAR CASE: The Risks & Quality Concerns
 
 (1 paragraph)
 Identify the critical risks and fundamental weaknesses revealed by the failing metrics. Emphasize the "why" behind the poor numbers (e.g., "low profitability suggests a weak competitive moat"). Directly cite the specific data points that give you pause and explain their negative implications for a long-term GARP investor.
 
-FINAL SYNTHESIS & RECOMMENDATION
+## FINAL SYNTHESIS & RECOMMENDATION
 
 (1 paragraph)
 Investment Profile & The Deciding Factor: Classify the stock's profile (e.g., is this a high-risk 'Turnaround Story' or a steady 'Compounder'?). Then, state the single most critical question or tension an investor must resolve before committing capital.
 
-Strategic Recommendation: (1 line) A bolded, single-line recommendation. Must be one of: **High Conviction Buy**, **Initiate Position**, **Add to Watchlist**, or **Pass/Sell**.
+**Strategic Recommendation:** [Insert a single bolded recommendation: High Conviction Buy, Initiate Position, Add to Watchlist, or Pass/Sell]
+
+## Actionable Diligence Questions
 
 (1 paragraph)
-Actionable Diligence Questions:
 Based on your analysis, propose 2-3 critical diligence questions. For each question, you MUST provide two parts:
 1.  **Human-Led Question:** A high-level, strategic question for an analyst to answer through deeper research and judgment.
 2.  **Suggested AI Investigation Query:** A specific, fact-based query designed to be used with a search-enabled AI (like the 'Diligence Investigation' tool) to find source material. This query should target information from recent earnings calls, SEC filings (10-K, 10-Q), or investor presentations.
