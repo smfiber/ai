@@ -1,543 +1,1005 @@
-// fileName: config.js
-// --- App Version ---
-export const APP_VERSION = "15.0.0-GARP";
-
-// --- Shared State ---
-export const state = {
-    db: null,
-    auth: null,
-    userId: null,
-    firebaseConfig: null,
-    appIsInitialized: false,
-    fmpApiKey: "",
-    geminiApiKey: "",
-    googleClientId: "",
-    portfolioCache: [],
-    sessionLog: []
-};
-
-// Map specific AI analysis types to the FMP endpoints they require.
-export const ANALYSIS_REQUIREMENTS = {
-    'ManagementScorecard': ['executive_compensation']
-};
-
-// --- Constants ---
-export const CONSTANTS = {
-    // Modals
-    MODAL_API_KEY: 'apiKeyModal',
-    MODAL_LOADING: 'loadingStateModal',
-    MODAL_MESSAGE: 'messageModal',
-    MODAL_CONFIRMATION: 'confirmationModal',
-    MODAL_MANAGE_STOCK: 'manageStockModal',
-    MODAL_PORTFOLIO_MANAGER: 'portfolioManagerModal',
-    MODAL_STOCK_LIST: 'stockListModal',
-    MODAL_SESSION_LOG: 'sessionLogModal',
-    MODAL_HELP: 'helpModal',
-    // Forms & Inputs
-    FORM_API_KEY: 'apiKeyForm',
-    FORM_STOCK_RESEARCH: 'stock-research-form',
-    INPUT_TICKER: 'ticker-input',
-    INPUT_GEMINI_KEY: 'geminiApiKeyInput',
-    INPUT_GOOGLE_CLIENT_ID: 'googleClientIdInput',
-    // Containers & Elements
-    CONTAINER_PORTFOLIO_LIST: 'portfolio-list-container',
-    ELEMENT_LOADING_MESSAGE: 'loading-message',
-    // Classes
-    CLASS_MODAL_OPEN: 'is-open',
-    CLASS_BODY_MODAL_OPEN: 'modal-open',
-    CLASS_HIDDEN: 'hidden',
-    // Database Collections
-    DB_COLLECTION_PORTFOLIO: 'portfolio_stocks',
-    DB_COLLECTION_FMP_CACHE: 'fmp_cached_data',
-    DB_COLLECTION_AI_REPORTS: 'ai_analysis_reports',
-};
-
-const FINANCIAL_ANALYSIS_PROMPT = `
-Role: You are a financial analyst AI who excels at explaining complex topics to everyday investors. Your purpose is to generate a rigorous, data-driven financial analysis that is also educational, objective, and easy to understand. Use relatable analogies to clarify financial concepts.
-Data Instructions: Your analysis MUST be based *exclusively* on the pre-calculated metrics and summaries provided in the JSON data below. Do NOT attempt to recalculate any values. If a specific data point is "N/A" or missing, state that clearly in your analysis.
-Output Format: The final report must be in professional markdown format. Use # for the main title, ## for major sections, ### for sub-sections, and bullet points for key data points.
-IMPORTANT: Do not include any HTML tags in your output. Generate pure markdown only.
-Based on the provided data for {companyName} (Ticker: {tickerSymbol}), generate a multi-faceted financial report. Follow the structure below, replacing all instructions with your analysis derived from the JSON data.
-
-JSON Data with Pre-Calculated Metrics:
-{jsonData}
-
-# Comprehensive Financial Analysis: {companyName} ({tickerSymbol})
-## 1. Executive Summary
-Write a concise, one-paragraph summary synthesizing the most important takeaways about this company's financial health, performance, and overall story as a potential investment.
-## 2. Company Profile & Market Context
-### Business Description
-In simple terms, describe the company's business using the 'description', 'sector', and 'industry' from the JSON. Avoid jargon.
-### Market Snapshot
-- **Market Capitalization:** State the value from \`summary.marketCap\`.
-- **Latest Price:** State the value from \`summary.price\`.
-- **52-Week Price Range:** State the value from \`summary.priceRange\`.
-- **Analyst Consensus:** Report the analyst consensus from \`summary.analystConsensus\`.
-- **Insider Ownership:** Report the insider ownership from \`summary.insiderOwnership\`, stating if it's N/A.
-## 3. Annual Performance & Profitability (The Long-Term View)
-### 3.1. Annual Revenue & Earnings Trend
-- **Revenue Trend:** Describe the company's long-term top-line performance using the text from \`performance.revenueTrend\`.
-- **Net Income Trend:** Describe the company's long-term bottom-line performance using the text from \`performance.netIncomeTrend\`.
-### 3.2. Annual Margin Analysis (The Quality of Sales)
-- **Gross & Operating Margins:** Explain what these margins represent. Describe the trend in the company's core profitability by using the 'status' from \`performance.grossProfitMargin\` and \`performance.operatingProfitMargin\`.
-### 3.3. Annual Net Profitability & Returns
-- **Net Profit Margin:** Explain what this means. What is the trend according to the 'status' in \`performance.netProfitMargin\`?
-- **Return on Equity (ROE):** Explain ROE as a "report card" for how well management uses shareholder money. How effective is the company based on the 'quality' from \`performance.returnOnEquity\`?
-## 4. Recent Quarterly Performance (The Latest Snapshot)
-This section provides a look at the company's most recent performance, which can indicate current momentum.
-- **Most Recent Quarter (MRQ):** State the quarter ending date from \`recentPerformance.mrqDate\`.
-- **MRQ Revenue & YoY Growth:** Report the revenue for the latest quarter from \`recentPerformance.mrqRevenue\` and its year-over-year growth from \`recentPerformance.revenueYoyGrowth\`. Explain what this growth rate signifies about the company's current sales trajectory.
-- **MRQ Net Income & YoY Growth:** Report the net income for the latest quarter from \`recentPerformance.mrqNetIncome\` and its year-over-year growth from \`recentPerformance.netIncomeYoyGrowth\`. Comment on the current profitability trend.
-- **Trailing Twelve Months (TTM) Net Income:** State the TTM Net Income from \`recentPerformance.ttmNetIncome\` and explain that this gives a better picture of recent full-year profitability than a single quarter alone.
-## 5. Financial Health & Risk (Is the Company on Solid Ground?)
-### 5.1. Liquidity Analysis
-- **Current Ratio:** Explain this as the ability to pay short-term bills. Using the 'status' from \`health.currentRatio\`, comment on the company's short-term financial position.
-### 5.2. Solvency and Debt Structure
-- **Debt-to-Equity:** Explain this like a personal debt-to-income ratio. Based on the 'status' from \`health.debtToEquity\`, is the company conservatively or aggressively financed?
-- **Interest Coverage:** Explain this as the ability to pay interest on its debt. Using the 'status' from \`health.interestCoverage\`, comment on its ability to handle its debt payments.
-## 6. Cash Flow Analysis (Following the Actual Cash)
-### 6.1. Operating Cash Flow (OCF) & Quality of Earnings
-- Based on \`cashFlow.qualityOfEarnings\`, are the company's reported profits being converted into real cash?
-### 6.2. Capital Allocation Story
-- Based on \`cashFlow.capitalAllocationStory\`, what is the company primarily doing with its cash? Is it in growth mode, return mode, or deleveraging mode?
-## 7. Valuation Analysis (Is the Stock Price Fair?)
-For each valuation multiple below, report its status relative to its own historical trend.
-- **P/E Ratio:** Use the 'status' from the object in the \`valuation\` array where 'metric' is 'peRatio'.
-- **Price-to-Sales Ratio:** Use the 'status' from the object where 'metric' is 'priceToSalesRatio'.
-- **Price-to-Book Ratio:** Use the 'status' from the object where 'metric' is 'pbRatio'.
-- **Enterprise Value to EBITDA:** Use the 'status' from the object where 'metric' is 'enterpriseValueToEBITDA'.
-After listing the statuses, briefly discuss what these comparisons imply. Is the stock trading at a premium or a discount to its own history overall?
-## 8. The Long-Term Investment Thesis: Bull vs. Bear
-### The Bull Case (Key Strengths)
-- Create a bulleted list using the points provided in \`thesis.bullCasePoints\`.
-### The Bear Case (Potential Risks)
-- Create a bulleted list using the points provided in \`thesis.bearCasePoints\`.
-### Final Verdict: The "Moat"
-Based purely on this quantitative analysis, what is the primary story? Does the \`thesis.moatIndicator\` suggest the company has a strong competitive advantage (a "moat")? Conclude with a final statement on its profile as a potential long-term holding.
-`.trim();
-
-export const GARP_ANALYSIS_PROMPT = `
-Role: You are a growth-oriented investment analyst, specializing in the "Growth at a Reasonable Price" (GARP) philosophy. Your task is to determine if a company's valuation is justified by its growth prospects.
-Data Instructions: Your analysis MUST be based *exclusively* on the pre-calculated metrics provided in the JSON data below.
-Output Format: The final report must be in professional markdown format. Use # for the main title, ## for major sections, and bullet points for key data points. Each bullet point MUST start on a new line.
-IMPORTANT: Do not include any HTML tags in your output. Generate pure markdown only.
-Conduct a GARP analysis for {companyName} (Ticker: {tickerSymbol}) using the provided data.
-
-JSON Data with Pre-Calculated Metrics:
-{jsonData}
-
-# GARP Analysis: Is {companyName} ({tickerSymbol}) Priced for Perfection?
-## 1. The Valuation Question
-Start by framing the core debate. Is this a high-quality company whose growth justifies its price, or is it an over-hyped stock? Each bullet point below must start on a new line.
-- **Current P/E Ratio:** State the value from \`valuation.peRatio\`.
-- **Current P/S Ratio:** State the value from \`valuation.psRatio\`.
-- **Valuation vs. History:** Based on \`valuation.peStatusVsHistory\`, state whether the company is trading at a premium or discount to its own past.
-## 2. The Growth Engine: Justifying the Price
-This section analyzes the growth that investors are paying for. Each bullet point below must start on a new line.
-- **Historical EPS Growth:** Based on \`growth.historicalEpsGrowth\`, state the recent track record of earnings growth.
-- **Forward EPS Growth (Analyst Forecast):** State the market's expectation for next year's earnings growth from \`growth.forwardEpsGrowth\`. This is the most critical number for the GARP thesis.
-## 3. The PEG Ratio Verdict
-The Price/Earnings-to-Growth (PEG) ratio is a key tool for GARP investors. Each bullet point below must start on a new line.
-- **Explain the PEG Ratio:** Briefly explain that a PEG ratio of around 1.0 suggests a fair balance between a stock's P/E ratio and its expected earnings growth.
-- **Calculated PEG Ratio:** State the value from \`pegRatio.value\`.
-- **Interpretation:** Based on the \`pegRatio.verdict\`, describe whether the stock appears attractively priced, fairly priced, or expensive relative to its growth forecast.
-## 4. Final Conclusion: The Investment Profile
-Synthesize all the points above into a final verdict.
-- **The Bull Case (GARP Opportunity):** Summarize the data points (e.g., strong forecast growth, PEG ratio below 1.2) that support the idea of this being a GARP opportunity.
-- **The Bear Case (Priced for Perfection):** Summarize the data points (e.g., very high P/E, slowing growth, PEG ratio above 2.0) that suggest the stock is priced for perfection and carries high expectations.
-- **Final Takeaway:** Classify the stock's profile based on this analysis. For example: "This appears to be a classic **GARP opportunity**, where strong future growth is available at a reasonable price," or "The analysis suggests this stock is **priced for perfection**, and any slowdown in growth could pose a significant risk to the share price."
-`.trim();
-
-const MOAT_ANALYSIS_PROMPT = `
-Role: You are a business strategist AI who excels at explaining complex business concepts in simple, relatable terms. Your task is to analyze {companyName}'s competitive advantages.
-Concept: An "economic moat" is a company's ability to maintain its competitive advantages and defend its long-term profits from competitors.
-Data Instructions: Your analysis must be derived exclusively from the provided JSON data, which contains pre-calculated trends and metrics.
-Output Format: Provide a brief report in markdown. Explain each point simply and conclude with a clear verdict on the moat's strength.
-
-JSON Data:
-{jsonData}
-
-# Economic Moat Analysis: {companyName} ({tickerSymbol})
-## 1. What Gives This Company Its Edge? (Sources of the Moat)
-Analyze the data for signs of a durable competitive advantage. Discuss:
-- **Return on Invested Capital (ROIC):** Analyze the 'roicTrend' data. Explain this as the "gold standard" for moat analysis. A consistently high **and stable/rising** ROIC (>15%) is a strong sign of a moat.
-- **Pricing Power & Profitability:** Are the trends in 'profitabilityTrends' (net profit margin, operating income, gross profit margin) consistently high **and stable** over time? Explain this as a sign that the company can reliably charge more.
-- **Qualitative Clues (from Description):** Based on the 'qualitativeClues.description', what themes suggest a moat? Look for mentions of a "platform," "network," "marketplace," or "mission-critical" systems.
-## 2. How Strong is the Castle Wall? (Moat Sustainability)
-Assess how sustainable this advantage might be by looking at:
-- **Reinvesting in the Defenses:** Are 'capex' and 'rdExpenses' significant in the 'reinvestmentTrends' data? Explain this as the company spending money to strengthen its moat.
-- **Financial Fortress:** Is the balance sheet strong (low 'debtToEquity' in 'balanceSheetHealth')? A company with low debt is better equipped to survive tough times.
-## 3. The Verdict: How Wide is the Moat?
-Based on all the evidence, provide a concluding assessment. Classify the moat as **"Wide," "Narrow," or "None,"** and explain what this means for a long-term investor.
-- **Wide Moat:** The company has strong, sustainable advantages (like consistently high ROIC and clear pricing power) that are very difficult to replicate, **leading to highly predictable long-term profits.**
-- **Narrow Moat:** The company has some advantages, but they could be overcome by competitors over time, **making future profits less certain.**
-- **No Moat:** The company has no clear, sustainable competitive advantage, **making it vulnerable to competition and price wars.**
-`.trim();
-
-export const RISK_ASSESSMENT_PROMPT = `
-Role: You are a risk analyst AI. Your job is to act like a cautious inspector, identifying the most significant potential problems or "red flags" for {companyName} and explaining them simply.
-Data Instructions: Your analysis must be derived exclusively from the provided JSON data. For each potential risk listed below, evaluate the data. **Only include the bullet point in your final output if the data indicates a risk is present.**
-Output Format: You MUST return a prioritized, bulleted list in markdown, categorized by risk type. Do NOT use prose or paragraph format for the main analysis. Explain each risk in simple terms within the bullet points.
-
-JSON Data:
-{jsonData}
-
-# Uncovering the Risks: {companyName} ({tickerSymbol})
-## 1. Financial Risks (Is the Foundation Solid?)
-- **Debt Load (Leverage):** Evaluate \`financialRisks.debtToEquity\`. If the ratio is high (e.g., > 1.0), state the value and explain the risk.
-- **Liquidity:** Evaluate \`financialRisks.currentRatio\`. If the ratio is low (e.g., < 1.5), state the value and explain the risk of paying short-term bills.
-- **Earnings Quality:** Compare \`financialRisks.earningsQuality.operating_cash_flow\` to \`financialRisks.earningsQuality.net_income\`. If operating cash flow is significantly lower, flag this as a potential red flag.
-- **Dividend Sustainability:** Compare the \`financialRisks.dividends_paid\` amount to \`financialRisks.net_income\`. If dividends paid are greater than net income, flag this as a major risk to the dividend.
-## 2. Market & Stock Price Risks (Is the Stock Itself Risky?)
-- **Volatility:** Evaluate \`marketRisks.beta\`. If it is > 1.2, state the value and explain that the stock is more volatile than the market.
-- **Valuation Risk:** Evaluate \`marketRisks.valuation.peRatio\` and \`psRatio\`. If either is high for its industry, note this as a risk that the stock may be "priced for perfection."
-- **Analyst Pessimism:** Check the \`marketRisks.analystPessimism\` list. If it is not empty, list the pessimistic ratings as a risk.
-## 3. Business Risks (Are There Cracks in the Operations?)
-- **Recession Sensitivity:** Based on \`businessRisks.recession_sensitivity_sector\`, explain the risk if it's a cyclical sector like 'Industrials' or 'Consumer Discretionary'.
-- **Margin Compression:** Analyze the \`businessRisks.marginTrend\`. If the net profit margin shows a clear downward trend over the last few years, identify this as a risk.
-## 4. The Bottom Line: What Are the Biggest Worries?
-Based on the risks you identified above, provide a brief, 1-2 sentence summary highlighting the top 2-3 risks an investor should be most aware of.
-`.trim();
-
-const CAPITAL_ALLOCATORS_PROMPT = `
-	Act as a discerning investment strategist, channeling the analytical rigor and long-term perspective of firms like Berkshire Hathaway. Your analysis must be in the style of a detailed shareholder letter and based *only* on the provided financial data for {companyName}. **Be critical; praise should be reserved for exceptional, data-backed performance.**
-	Article Title: "The Capital Allocators: A Deep Dive into the Financial Stewardship of {companyName}'s Leadership"
-	## 1. The CEO's Inferred Philosophy
-	**Instead of their stated approach, deduce their *actual* philosophy from the numbers.** Based on the flow of capital over the last decade, what do their actions reveal about their priorities? Do they favor aggressive growth, maintaining a fortress balance sheet, or maximizing shareholder returns?
-	## 2. A Quantitative Analysis of the Track Record
-	Analyze their capital allocation decisions over the last 5-10 years, using specific metrics to judge their effectiveness:
-	- **Reinvestment in the Business (The Primary Engine):**
-		- Analyze the trend in **Return on Invested Capital (ROIC)**. Is it consistently high and stable, or is it volatile or declining? **This is the single most important measure of internal investment skill.**
-		- Is the company's ROIC comfortably above its Weighted Average Cost of Capital (WACC)? **Value is only created when ROIC > WACC.**
-	- **Acquisitions (M&A):**
-		- Examine the company's **profit margins** and **ROIC** in the years immediately following major acquisitions. Did the deals enhance profitability (accretive) or dilute it (destructive)?
-		- Analyze the growth of **"goodwill"** on the balance sheet. A large increase in goodwill followed by stagnant or declining ROIC is a major red flag for overpayment ("diworsification").
-	- **Returning Capital to Shareholders:**
-		- **Stock Buybacks:** Correlate the timing and volume of share repurchases with the stock's historical valuation (e.g., Price-to-Earnings or Price-to-Book ratio). **Did they opportunistically buy back shares when the stock was cheap, or did they buy high?**
-		- **Dividends:** Analyze the **dividend payout ratio** against free cash flow. Is the dividend safely covered, and is its growth rational and sustainable?
-	## 3. Final Scorecard & Investment Thesis
-	- **Provide a final letter grade (A through F) for the management team's overall skill as capital allocators.** Justify this grade by summarizing the strongest and weakest points from your quantitative analysis above.
-	- Based on this track record, formulate a concise investment thesis. Why should (or shouldn't) an investor trust this team to be wise stewards of capital in the future?
-	- **Conclude with a "Key Risks & Red Flags" section**, highlighting any concerning trends (e.g., declining ROIC, value-destructive M&A, or ill-timed buybacks).
-	Crucial Disclaimer: This article is for informational purposes only and should not be considered financial advice. Readers should consult with a qualified financial professional before making any investment decisions.
-`;
-
-export const INVESTMENT_MEMO_PROMPT = `
-**Persona & Goal:**
-You are a Senior Investment Analyst at a GARP-focused ("Growth at a Reasonable Price") fund. Your task is to synthesize a quantitative scorecard, a qualitative candidacy report, and a diligence log on {companyName} into a definitive and convincing investment memo. The final output must be a clear, thesis-driven analysis that determines if this is a quality growth company trading at a fair price.
-
-**Core Philosophy (How to Think):**
-1.  **Data-Driven Narrative:** The heart of this memo is a compelling narrative built from the qualitative 'Candidacy Report'. However, every key assertion in your narrative MUST be backed by a specific, quantifiable data point from the 'Scorecard JSON'. Do not just list numbers; weave them into your prose to support your arguments.
-2.  **Synthesize, Don't Summarize:** Do not merely restate findings from the reports. Your primary task is to integrate the quantitative data (the "what") with the qualitative analysis (the "so what") to form a cohesive bull case, bear case, and final recommendation.
-3.  **Address Contradictions:** If the qualitative report is optimistic but a quantitative metric is poor (or vice-versa), you must address this tension directly. Explain which factor carries more weight in your final analysis and why.
-4.  **Incorporate New Information:** The 'Diligence Log' contains the most recent findings. This information should be used to challenge or reinforce the original thesis. If the log reveals a critical new risk or catalyst, it must be prominently featured in your analysis.
-
----
-
-# Investment Memo: {companyName} ({tickerSymbol})
-
-## 1. Executive Summary & Investment Thesis
-*(Begin with a 3-4 sentence paragraph that concisely summarizes the investment thesis. It should cover the core bull case (supported by key metrics from the JSON), the primary risks (highlighted by weak metrics from the JSON), and the final recommendation. Crucially, incorporate any major findings from the diligence log that materially impact the thesis.)*
-
-## 2. The Bull Case: Why We Could Be Right
-*(This section should be a compelling narrative about the investment's upside potential, drawing its themes from the 'Candidacy Report'.)*
-* **Business Quality & Growth:** Based on the qualitative report, what is the story behind the company's growth and competitive position? Substantiate claims about growth and profitability with specific metrics like 'EPS Growth (Next 1Y)' and 'Return on Equity' from the JSON. Does the diligence log provide new evidence to support this narrative?
-* **Financial Strength:** Does the qualitative report suggest a strong business? Prove it with data. Cite the 'Debt-to-Equity' ratio from the JSON to support claims about the balance sheet.
-
-## 3. The Bear Case: What Could Go Wrong
-*(This section critically examines the primary risks and counterarguments, drawing its themes from the 'Candidacy Report'.)*
-* **Key Risks & Concerns:** What are the top 2-3 risks identified in the qualitative report? Quantify these risks using the weakest data points from the JSON. For example, if the report mentions valuation concerns, cite the 'P/E (TTM)' and 'PEG Ratio'. Has the diligence log uncovered any new risks or provided more detail on existing ones?
-
-## 4. Valuation: The GARP Fulcrum
-*(This is the deciding section. Analyze whether the current price is reasonable given the quality of the business and its growth prospects.)*
-* **Synthesize the 'PEG Ratio' and 'Forward P/E' from the JSON with the growth narrative from the 'Candidacy Report'. Answer the ultimate question: Based on all this evidence, is {companyName} a quality growth company trading at a fair price *today*?*
-
-## 5. Foundational Q&A and Final Verdict
-(First, provide a direct answer to the following five foundational questions based on all the provided reports and data.)
-
-1.  **Is the company’s forward growth rate both significant and believable?**
-    * [Your Answer Here]
-2.  **Is the valuation reasonable enough to provide a margin of safety?**
-    * [Your Answer Here]
-3.  **Does the business possess a durable competitive advantage (moat)?**
-    * [Your Answer Here]
-4.  **How effectively is management allocating capital?**
-    * [Your Answer Here]
-5.  **What is the primary risk, and is it manageable?**
-    * [Your Answer Here]
-
-(Now, synthesize your answers above into a final verdict.)
-
-### Recommendation
-**[Provide one of the following recommendations: High Conviction Buy, Initiate Position, Add to Watchlist, or Pass]**
-
-### Justification
-[Provide a 1-2 sentence justification for your recommendation, explicitly referencing the trade-offs revealed in the Q&A above.]
-
----
-**INPUTS:**
-
-**1. Quantitative GARP Scorecard (JSON):**
-\`\`\`json
-{scorecardJson}
-\`\`\`
-
-**2. Qualitative AI GARP Candidacy Report (Markdown):**
-\`\`\`markdown
-{candidacyReport}
-\`\`\`
-
-**3. Recent Diligence Log (Q&A):**
-\`\`\`markdown
-{diligenceLog}
-\`\`\`
-`.trim();
-
-const PORTFOLIO_GARP_ANALYSIS_PROMPT = `
-Role: You are a sharp and insightful portfolio analyst specializing in GARP (Growth at a Reasonable Price) investing.
-Context: You are reviewing a portfolio of companies. For each company, you have their GARP scorecard, including a weighted "garpConvictionScore", qualitative interpretations for each metric, sector, and market cap.
-Task: Your analysis must be data-driven and directly reference the provided JSON. Follow this structure precisely:
-
-## 1. Portfolio Health Summary
-Write a single paragraph that summarizes the portfolio's overall GARP health. Is it generally strong, mixed, or leaning towards poor value? Reference the distribution of "garpConvictionScore" values to support your conclusion.
-
-## 2. Portfolio Construction Analysis
-### Sector Allocation
-- Based on the "sector" data for each stock, identify the top 2-3 most heavily represented sectors in the portfolio.
-- Briefly comment on whether the portfolio appears diversified or concentrated.
-### Market Cap Distribution
-- Based on the "mktCap" data, briefly describe the portfolio's composition. Is it primarily large-cap, mid-cap, or a mix?
-
-## 3. Top GARP Candidates
-Identify the 2-3 companies with the **highest "garpConvictionScore"**. For each company, create a bullet point stating its name, ticker, and score. In a brief sub-bullet, explain *why* it's strong by referencing the qualitative "interpretation.text" of its most impressive metrics from the scorecard data (e.g., "Its 'GARP Sweet Spot' growth and 'Fortress Balance Sheet' make it a high-quality holding.").
-
-## 4. Companies to Review
-Identify the 2-3 companies with the **lowest "garpConvictionScore"**. For each company, create a bullet point stating its name, ticker, and score. In a brief sub-bullet, explain the primary concern by referencing the qualitative "interpretation.text" of its most significant failing metrics (e.g., "Concerns center on its 'Expensive' valuation and 'High Leverage', which increase risk.").
-
-JSON Data for the Entire Portfolio:
-{jsonData}
-`.trim();
-
-const POSITION_ANALYSIS_PROMPT = `
-Role: You are a pragmatic Portfolio Manager with a strict adherence to the GARP (Growth at a Reasonable Price) investment philosophy.
-Objective: Review an existing position in {companyName} ({tickerSymbol}) to determine the best course of action today, September 20, 2025. You must re-evaluate the original investment thesis in the context of the current market price and the specifics of our position.
-Context & Data:
-1.  **Original GARP Candidacy Report:** This was the initial analysis recommending the stock as a GARP candidate.
-    \`\`\`markdown
-    {candidacyReport}
-    \`\`\`
-2.  **Our Current Position:**
-    \`\`\`json
-    {positionDetails}
-    \`\`\`
-3.  **Current Market Price:**
-    - {tickerSymbol}: {currentPrice}
-4.  **Recent Diligence Log (Q&A):** This contains new information gathered since the original thesis was formed. If empty, state that no recent diligence is available.
-    \`\`\`markdown
-    {diligenceLog}
-    \`\`\`
-
-Task & Required Output Structure:
-Generate a concise position review memo in markdown format.
-
-# Position Review: {companyName} ({tickerSymbol})
-## 1. Thesis Re-evaluation
-(1 paragraph)
-Briefly summarize the core thesis from the original GARP report. Then, using new information from the **Recent Diligence Log**, analyze if that original thesis is still intact. Does the new information strengthen, weaken, or otherwise invalidate the original thesis? Finally, consider the stock's move from our purchase price to the current market price. Does the current valuation still represent "Growth at a Reasonable Price," or has it become too expensive (or even cheaper)?
-
-## 2. Quantitative Snapshot
-- **Cost Basis:** State the total cost basis.
-- **Current Market Value:** State the current market value.
-- **Unrealized Gain/Loss:** State the unrealized gain or loss in both dollar and percentage terms.
-- **Holding Period:** State how long the position has been held.
-
-## 3. Recommendation & Justification
-(1 paragraph)
-Based on your re-evaluation, provide a single, clear, bolded recommendation from the list below. Follow it with a 2-3 sentence justification that directly references the GARP thesis, the current valuation, and any critical new findings from the Diligence Log.
-- **Hold:** The current price is fair, and the GARP thesis remains intact and supported by recent diligence.
-- **Acquire More:** The stock is still undervalued, and recent diligence strengthens the original thesis.
-- **Trim Position:** The stock has become overvalued, and the price no longer reflects a reasonable entry point. It's prudent to take some profits.
-- **Sell:** The GARP thesis is broken, weakened by recent diligence, or the stock has become significantly overvalued.
-`.trim();
-
-const GARP_CANDIDACY_PROMPT = `
-1. Persona & Role:
-You are a senior investment analyst at "Reasonable Growth Capital," a firm that strictly adheres to the Growth at a Rasonable Price (GARP) philosophy. Your analysis is respected for its clarity, data-driven conviction, and ability to distill complex financial data into a decisive investment thesis. You are pragmatic, recognizing that no stock is perfect, and your goal is to weigh the evidence objectively.
-
-2. Objective:
-You are preparing a concise pre-read for the firm's weekly investment committee meeting on Friday, September 19, 2025. Your objective is to deliver a definitive GARP assessment of the provided stock, enabling the committee to make a clear "pursue further diligence" or "pass" decision.
-
-3. Contextual Grounding:
-
-Company & Ticker: {companyName} ({tickerSymbol})
-
-Sector: {sector}
-
-4. Input Data:
-You will be given a JSON object containing a scorecard with key financial metrics and a criteriaInterpretation explaining what each metric signifies within our GARP framework.
-\`\`\`json
-{jsonData}
-\`\`\`
-5. Required Output Structure & Content:
-Generate a comprehensive GARP assessment using precise markdown formatting. Your response MUST follow the specified markdown structure.
-
-## EXECUTIVE SUMMARY
-
-(Your output for this section MUST follow this markdown structure exactly. Replace the bracketed text with your analysis.)
-
-**Verdict:** [Insert bolded verdict: Strong GARP Candidate, Borderline GARP Candidate, or Not a GARP Candidate]
-**GARP Conviction Score:** [Insert the score]
-**Core Thesis:** [Insert the single, concise sentence thesis]
-
-## THE BULL CASE: The Growth & Value Narrative
-
-(1 paragraph)
-Synthesize the stock's strengths into a compelling narrative. Do not just list the passing metrics; explain how they work together. Focus on the synergy between the forward-looking growth projections and the current valuation. Directly reference the most impressive numbers from the scorecard to build your case.
-
-## THE BEAR CASE: The Risks & Quality Concerns
-
-(1 paragraph)
-Identify the critical risks and fundamental weaknesses revealed by the failing metrics. Emphasize the "why" behind the poor numbers (e.g., "low profitability suggests a weak competitive moat"). Directly cite the specific data points that give you pause and explain their negative implications for a long-term GARP investor.
-
-## FINAL SYNTHESIS & RECOMMENDATION
-
-(1 paragraph)
-Investment Profile & The Deciding Factor: Classify the stock's profile (e.g., is this a high-risk 'Turnaround Story' or a steady 'Compounder'?). Then, state the single most critical question or tension an investor must resolve before committing capital.
-
-**Strategic Recommendation:** [Insert a single bolded recommendation: High Conviction Buy, Initiate Position, Add to Watchlist, or Pass/Sell]
-
-## Actionable Diligence Questions
-
-(1 paragraph)
-Based on your analysis, propose 2-3 critical diligence questions. For each question, you MUST provide two parts:
-1.  **Human-Led Question:** A high-level, strategic question for an analyst to answer through deeper research and judgment.
-2.  **Suggested AI Investigation Query:** A specific, fact-based query designed to be used with a search-enabled AI (like the 'Diligence Investigation' tool) to find source material. This query should target information from recent earnings calls, SEC filings (10-K, 10-Q), or investor presentations.
-
-Format each item precisely like this:
-- **Human-Led Question:** [Your strategic question here]
-- **Suggested AI Investigation Query:** "[Your specific, fact-based query here]"
-
-6. Critical Guidelines & Constraints:
-
-Handle the PEG Ratio Nuance: A PEG ratio below 0.5 indicates potential deep undervaluation but also carries significant risk. You must interpret this as a high-stakes scenario that requires careful scrutiny of the growth forecast, not as a simple 'buy' signal.
-
-Handle Rebound Growth Scenarios: If a company shows extremely high forward growth (>100%), recognize this is likely a statistical rebound from a low base. In your analysis, you should question the sustainability of this growth rate and consider the longer-term historical average as a more realistic baseline.
-
-Synthesize Related Metrics: Directly address the relationship between valuation (P/E ratios), growth (EPS Growth), and the combined metric (PEG ratio). For instance, if the PEG ratio is strong, explain how this provides context for a P/E ratio that might otherwise appear high. Do not treat these metrics in isolation.
-
-Data-Driven: Your analysis must be grounded in the provided data. Directly reference at least four specific numerical data points from the scorecard to substantiate your claims.
-
-Contextual Awareness: Briefly integrate the current market context (as of late 2025) into your reasoning. For example, how might prevailing interest rates or economic growth forecasts affect the company's debt load or growth prospects?
-
-Peer Comparison: Where relevant, briefly contextualize a key metric against typical industry peers. For example, is the P/S ratio high or low for its sector? This demonstrates a deeper level of analysis beyond the company's own data.
-
-Tone: Maintain a professional, analytical, and objective tone. Avoid speculative hype. Your confidence should stem from the data.
-
-Formatting: Adhere strictly to the markdown structure, including bolding and paragraph breaks as specified.
-
-Summary of Adjustments and Why They Work:
-Added Contextual Grounding: This small addition makes the task more realistic. An analyst is never looking at numbers in a vacuum; they know the company, ticker, and sector, which immediately informs their judgment.
-
-Added Actionable Diligence Questions: This is the most critical change. It transforms the output from a static report into a dynamic tool that guides the team's next steps. It proves the analyst has thought about "what's next?"
-
-Added Contextual Awareness Guideline: This forces the model to think like a real-world analyst who is aware of the current date and economic environment, adding a layer of sophisticated, timely relevance.
-
-Added Peer Comparison Guideline: This prevents the analysis from being myopic. A company’s metrics are only truly meaningful when compared to their direct competitors, and this guideline encourages that crucial step.
-
-Split FINAL SYNTHESIS into two paragraphs: This improves readability and logically separates the summary conclusion from the forward-looking action items.
-`.trim();
-
-const GARP_CONVICTION_SCORE_PROMPT = `
-Role: You are an AI assistant skilled at explaining financial metrics.
-Task: Explain the GARP Conviction Score based on the provided data summary.
-Data Summary:
-{jsonData}
-`.trim();
-
-const DILIGENCE_INVESTIGATION_PROMPT = `
-Role: You are a Senior Research Analyst for an investment fund. Your task is to provide a clear, data-driven, and concise answer to a specific diligence question.
-Context: You are investigating {companyName} ({tickerSymbol}). The user has provided a critical question that needs to be answered before an investment decision can be made.
-Instructions:
-1.  Your primary goal is to directly answer the user's question.
-2.  You MUST use your search capabilities to find the most recent and relevant information from official and highly reliable sources. Prioritize the following source types:
-    - The company's most recent SEC filings (10-K, 10-Q).
-    - Recent earnings call transcripts.
-    - Official investor presentations and press releases.
-3.  Synthesize the information from these sources into a direct answer. Do not provide generic information.
-4.  Where possible, quote key phrases or data points and state the source (e.g., "According to the Q3 2025 earnings call...").
-5.  The final output must be in professional markdown format.
-
-Diligence Question from User:
-{diligenceQuestion}
-`.trim();
-
-
-export const promptMap = {
-    'FinancialAnalysis': {
-        prompt: FINANCIAL_ANALYSIS_PROMPT,
-        requires: ['profile', 'key_metrics_annual', 'stock_grade_news', 'income_statement_annual', 'cash_flow_statement_annual', 'income_statement_quarterly']
-    },
-    'GarpAnalysis': {
-        prompt: GARP_ANALYSIS_PROMPT,
-        requires: ['profile', 'key_metrics_annual', 'ratios_annual', 'analyst_estimates', 'income_statement_annual']
-    },
-    'MoatAnalysis': {
-        prompt: MOAT_ANALYSIS_PROMPT,
-        requires: ['profile', 'key_metrics_annual', 'income_statement_annual', 'cash_flow_statement_annual', 'ratios_annual']
-    },
-    'RiskAssessment': {
-        prompt: RISK_ASSESSMENT_PROMPT,
-        requires: ['profile', 'key_metrics_annual', 'cash_flow_statement_annual', 'income_statement_annual', 'stock_grade_news', 'ratios_annual']
-    },
-    'CapitalAllocators': {
-        prompt: CAPITAL_ALLOCATORS_PROMPT,
-        requires: ['cash_flow_statement_annual', 'key_metrics_annual', 'income_statement_annual', 'balance_sheet_statement_annual', 'ratios_annual']
-    },
-    'InvestmentMemo': {
-        prompt: INVESTMENT_MEMO_PROMPT,
-        requires: []
-    },
-    'PortfolioGarpAnalysis': {
-        prompt: PORTFOLIO_GARP_ANALYSIS_PROMPT,
-        requires: []
-    },
-    'PositionAnalysis': {
-        prompt: POSITION_ANALYSIS_PROMPT,
-        requires: []
-    },
-    'GarpCandidacy': {
-        prompt: GARP_CANDIDACY_PROMPT,
-        requires: [] // This analysis calculates its own data, doesn't need pre-filtered FMP endpoints
-    },
-    'GarpConvictionScore': {
-        prompt: GARP_CONVICTION_SCORE_PROMPT,
-        requires: []
-    },
-    'DiligenceInvestigation': {
-        prompt: DILIGENCE_INVESTIGATION_PROMPT,
-        requires: []
+import { CONSTANTS, state, promptMap, ANALYSIS_REQUIREMENTS, ANALYSIS_NAMES } from './config.js';
+import { callApi, callGeminiApi, generateRefinedArticle, generatePolishedArticleForSynthesis, getFmpStockData, callGeminiApiWithSearch } from './api.js';
+import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { openModal, closeModal, displayMessageInModal, openConfirmationModal, openManageStockModal } from './ui-modals.js';
+import { renderPortfolioManagerList, displayReport, updateReportStatus, fetchAndCachePortfolioData, updateGarpCandidacyStatus, renderCandidacyAnalysis, renderDiligenceLog } from './ui-render.js';
+import { _calculateFinancialAnalysisMetrics, _calculateMoatAnalysisMetrics, _calculateRiskAssessmentMetrics, _calculateCapitalAllocatorsMetrics, _calculateGarpAnalysisMetrics, _calculateGarpScorecardMetrics, CALCULATION_SUMMARIES } from './analysis-helpers.js';
+
+// --- FMP API INTEGRATION & MANAGEMENT ---
+export async function handleRefreshFmpData(symbol) {
+    if (!state.fmpApiKey) {
+        displayMessageInModal("Financial Modeling Prep API Key is required for this feature.", "warning");
+        return;
     }
-};
 
-export const ANALYSIS_ICONS = {
-    'FinancialAnalysis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6a7.5 7.5 0 100 15 7.5 7.5 0 000-15z" /><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.2-5.2" /><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 10.5H10.5v.008H10.5V10.5zm.008 0h.008v4.502h-.008V10.5z" /></svg>`,
-    'GarpAnalysis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18L9 11.25l1.5 1.5L13.5 6l3 3 4.5-4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`,
-    'MoatAnalysis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.286zm0 13.036h.008v.008h-.008v-.008z" /></svg>`,
-    'RiskAssessment': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" /></svg>`,
-    'CapitalAllocators': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15.91 15.91a2.25 2.25 0 01-3.182 0l-3.03-3.03a.75.75 0 011.06-1.061l2.47 2.47 2.47-2.47a.75.75 0 011.06 1.06l-3.03 3.03z" /></svg>`,
-    'InvestmentMemo': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>`,
-};
+    openModal(CONSTANTS.MODAL_LOADING);
+    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+    loadingMessage.textContent = `Fetching all FMP data for ${symbol}...`;
 
-export const ANALYSIS_NAMES = {
-    'FinancialAnalysis': 'Financial Analysis',
-    'GarpAnalysis': 'GARP Analysis',
-    'MoatAnalysis': 'Moat Analysis',
-    'RiskAssessment': 'Risk Assessment',
-    'CapitalAllocators': 'Capital Allocators',
-    'InvestmentMemo': 'Investment Memo',
-    'GarpCandidacy': 'GARP Candidacy Report',
-    'PositionAnalysis': 'Position Analysis',
-    'PortfolioGarpAnalysis': 'Portfolio GARP Analysis',
-    'GarpConvictionScore': 'GARP Conviction Score',
-    'DiligenceInvestigation': 'Diligence Investigation'
-};
+    try {
+        const coreEndpoints = [
+            { name: 'profile', path: 'profile', version: 'v3' },
+            { name: 'income_statement_annual', path: 'income-statement', params: 'period=annual&limit=10', version: 'v3' },
+            { name: 'balance_sheet_statement_annual', path: 'balance-sheet-statement', params: 'period=annual&limit=10', version: 'v3' },
+            { name: 'cash_flow_statement_annual', path: 'cash-flow-statement', params: 'period=annual&limit=10', version: 'v3' },
+            { name: 'key_metrics_annual', path: 'key-metrics', params: 'period=annual&limit=10', version: 'v3' },
+            { name: 'ratios_annual', path: 'ratios', params: 'period=annual&limit=10', version: 'v3' },
+            { name: 'key_metrics_ttm', path: 'key-metrics-ttm', version: 'v3' },
+            { name: 'ratios_ttm', path: 'ratios-ttm', version: 'v3' },
+            { name: 'income_statement_quarterly', path: 'income-statement', params: 'period=quarter&limit=5', version: 'v3' },
+            { name: 'stock_grade_news', path: 'grade', version: 'v3' },
+            { name: 'analyst_estimates', path: 'analyst-estimates', version: 'v3'},
+        ];
+
+        let successfulFetches = 0;
+
+        for (const endpoint of coreEndpoints) {
+            loadingMessage.textContent = `Fetching FMP Data: ${endpoint.name.replace(/_/g, ' ')}...`;
+            
+            const version = endpoint.version || 'v3';
+            const url = `https://financialmodelingprep.com/api/${version}/${endpoint.path}/${symbol}?${endpoint.params ? endpoint.params + '&' : ''}apikey=${state.fmpApiKey}`;
+            const data = await callApi(url);
+
+            if (!data || (Array.isArray(data) && data.length === 0)) {
+                console.warn(`No data returned from FMP for core endpoint: ${endpoint.name}`);
+                continue;
+            }
+
+            const docRef = doc(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, symbol, 'endpoints', endpoint.name);
+            await setDoc(docRef, { cachedAt: Timestamp.now(), data: data });
+            successfulFetches++;
+        }
+        
+        displayMessageInModal(`Successfully fetched and updated data for ${successfulFetches} FMP endpoint(s).`, 'info');
+        await fetchAndCachePortfolioData();
+
+    } catch (error) {
+        console.error("Error fetching FMP data:", error);
+        displayMessageInModal(`Could not fetch FMP data: ${error.message}`, 'error');
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
+// --- PORTFOLIO & DASHBOARD MANAGEMENT ---
+
+export async function handleSaveStock(e) {
+    e.preventDefault();
+    const originalTicker = document.getElementById('manage-stock-original-ticker').value.trim().toUpperCase();
+    const newTicker = document.getElementById('manage-stock-ticker').value.trim().toUpperCase();
+    
+    if (!/^[A-Z.]{1,10}$/.test(newTicker)) {
+        displayMessageInModal("Please enter a valid stock ticker symbol.", "warning");
+        return;
+    }
+
+    const sharesValue = document.getElementById('manage-stock-shares').value;
+    const costValue = document.getElementById('manage-stock-cost').value;
+
+    const stockData = {
+        ticker: newTicker,
+        companyName: document.getElementById('manage-stock-name').value.trim(),
+        exchange: document.getElementById('manage-stock-exchange').value.trim(),
+        status: document.getElementById('manage-stock-status').value.trim(),
+        sector: document.getElementById('manage-stock-sector').value.trim(),
+        industry: document.getElementById('manage-stock-industry').value.trim(),
+        purchaseDate: document.getElementById('manage-stock-date').value || null,
+        shares: sharesValue === '' ? null : parseFloat(sharesValue),
+        costPerShare: costValue === '' ? null : parseFloat(costValue),
+    };
+
+    openModal(CONSTANTS.MODAL_LOADING);
+    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = "Saving to your lists...";
+    
+    try {
+        if (originalTicker && originalTicker !== newTicker) {
+            await deleteDoc(doc(state.db, CONSTANTS.DB_COLLECTION_PORTFOLIO, originalTicker));
+        }
+
+        await setDoc(doc(state.db, CONSTANTS.DB_COLLECTION_PORTFOLIO, newTicker), stockData, { merge: true });
+
+        const fmpCacheRef = collection(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, newTicker, 'endpoints');
+        const fmpSnapshot = await getDocs(query(fmpCacheRef, limit(1)));
+        if (fmpSnapshot.empty) {
+            document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `First time setup: Caching FMP data for ${newTicker}...`;
+            await handleRefreshFmpData(newTicker);
+        }
+
+        closeModal(CONSTANTS.MODAL_MANAGE_STOCK);
+        await fetchAndCachePortfolioData();
+    } catch(error) {
+        console.error("Error saving stock:", error);
+        displayMessageInModal(`Could not save stock: ${error.message}`, 'error');
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
+export async function handleDeleteStock(ticker) {
+    openConfirmationModal(
+        `Delete ${ticker}?`, 
+        `Are you sure you want to remove ${ticker} from your lists? This will not delete the cached API data.`,
+        async () => {
+            openModal(CONSTANTS.MODAL_LOADING);
+            document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Deleting ${ticker}...`;
+            try {
+                await deleteDoc(doc(state.db, CONSTANTS.DB_COLLECTION_PORTFOLIO, ticker));
+                await fetchAndCachePortfolioData();
+                if(document.getElementById(CONSTANTS.MODAL_PORTFOLIO_MANAGER).classList.contains(CONSTANTS.CLASS_MODAL_OPEN)) {
+                    renderPortfolioManagerList();
+                }
+            } catch (error) {
+                console.error("Error deleting stock:", error);
+                displayMessageInModal(`Could not delete ${ticker}: ${error.message}`, 'error');
+            } finally {
+                closeModal(CONSTANTS.MODAL_LOADING);
+            }
+        }
+    );
+}
+
+// --- CORE STOCK RESEARCH LOGIC ---
+
+export async function handleResearchSubmit(e) {
+    e.preventDefault();
+    const tickerInput = document.getElementById(CONSTANTS.INPUT_TICKER);
+    const symbol = tickerInput.value.trim().toUpperCase();
+    if (!/^[A-Z.]{1,10}$/.test(symbol)) {
+        displayMessageInModal("Please enter a valid stock ticker symbol.", "warning");
+        return;
+    }
+    
+    openModal(CONSTANTS.MODAL_LOADING);
+    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Checking your lists for ${symbol}...`;
+    
+    try {
+        const docRef = doc(state.db, CONSTANTS.DB_COLLECTION_PORTFOLIO, symbol);
+        if ((await getDoc(docRef)).exists()) {
+             displayMessageInModal(`${symbol} is already in your lists. You can edit it from the dashboard.`, 'info');
+             tickerInput.value = '';
+             closeModal(CONSTANTS.MODAL_LOADING);
+             return;
+        }
+        
+        document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Fetching overview for ${symbol}...`;
+        
+        const profileUrl = `https://financialmodelingprep.com/api/v3/profile/${symbol}?apikey=${state.fmpApiKey}`;
+        const profileData = await callApi(profileUrl);
+
+        if (!profileData || profileData.length === 0 || !profileData[0].symbol) {
+            throw new Error(`Could not fetch data for ${symbol}. It may be an invalid ticker.`);
+        }
+        const overviewData = profileData[0];
+
+        const newStock = {
+            ticker: overviewData.symbol,
+            companyName: overviewData.companyName,
+            exchange: overviewData.exchange,
+            sector: overviewData.sector,
+            industry: overviewData.industry,
+            isEditMode: false
+        };
+        
+        tickerInput.value = '';
+        openManageStockModal(newStock);
+
+    } catch (error) {
+        console.error("Error during stock research:", error);
+        displayMessageInModal(error.message, 'error');
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
+// --- AI ANALYSIS REPORT GENERATORS ---
+
+export async function handleReportHelpRequest(reportType) {
+    const reportName = ANALYSIS_NAMES[reportType];
+    const prompt = promptMap[reportType]?.prompt;
+    const calcSummary = CALCULATION_SUMMARIES[reportType];
+
+    if (!reportName || !prompt || !calcSummary) {
+        displayMessageInModal(`Could not find help configuration for report type: ${reportType}`, 'error');
+        return;
+    }
+
+    const helpModal = document.getElementById(CONSTANTS.MODAL_HELP);
+    const helpTitle = helpModal.querySelector('#help-modal-title');
+    const helpContent = helpModal.querySelector('#help-modal-content');
+
+    helpTitle.textContent = `Explanation for: ${reportName}`;
+    helpContent.innerHTML = '<div class="flex justify-center items-center p-8"><div class="loader"></div></div>';
+    openModal(CONSTANTS.MODAL_HELP);
+
+    try {
+        const metaPrompt = `
+        Role: You are an AI assistant who excels at explaining the purpose and methodology of financial analysis reports to everyday investors. Your tone should be educational, clear, and encouraging.
+
+        Task: Based on the provided "Core Prompt" and "Data Summary" for a report called "${reportName}", generate a concise explanation for the user. The explanation must be in markdown and follow this structure precisely:
+
+        ## What is the "${reportName}" Report?
+        (Provide a one-paragraph, high-level summary of the report's main goal. Use a relatable analogy if it helps.)
+
+        ## Key Questions It Answers
+        (Create a bulleted list of 2-4 key questions the user can expect this report to answer.)
+
+        ## How It Works
+        (In one paragraph, briefly explain the methodology. Mention the key data points it uses based on the "Data Summary" and what the AI is instructed to do based on the "Core Prompt".)
+
+        ---
+
+        **Core Prompt (The instructions given to the analysis AI):**
+        \`\`\`
+        ${prompt}
+        \`\`\`
+
+        **Data Summary (A description of the data prepared for the AI):**
+        \`\`\`
+        ${calcSummary}
+        \`\`\`
+        `;
+
+        const explanation = await callGeminiApi(metaPrompt);
+        
+        const sanitizeText = (text) => {
+            if (typeof text !== 'string') return '';
+            const tempDiv = document.createElement('div');
+            tempDiv.textContent = text;
+            return tempDiv.innerHTML;
+        };
+
+        const accordionHtml = `
+            <details class="mb-4 border rounded-md bg-gray-50/50">
+                <summary class="p-2 font-semibold text-sm text-gray-700 cursor-pointer hover:bg-gray-100">
+                    View Full Prompt Sent to AI
+                </summary>
+                <pre class="text-xs whitespace-pre-wrap break-all bg-gray-900 text-white p-3 rounded-b-md">${sanitizeText(metaPrompt)}</pre>
+            </details>
+        `;
+
+        helpContent.innerHTML = accordionHtml + marked.parse(explanation);
+
+    } catch (error) {
+        console.error('Error generating help content:', error);
+        helpContent.innerHTML = `<p class="text-red-500">Sorry, I couldn't generate an explanation at this time. Error: ${error.message}</p>`;
+    }
+}
+
+export async function handlePositionAnalysisRequest(ticker, forceNew = false) {
+    const container = document.getElementById('position-analysis-content-container');
+    const reportType = 'PositionAnalysis';
+    if (!container) return;
+
+    try {
+        const savedReports = await getSavedReports(ticker, reportType);
+
+        if (savedReports.length > 0 && !forceNew) {
+            const latestReport = savedReports[0];
+            container.innerHTML = `
+                <div id="report-status-container-position" class="p-3 mb-4 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between gap-4"></div>
+                <div class="prose max-w-none">${latestReport.content}</div>
+            `;
+            const statusContainer = document.getElementById('report-status-container-position');
+            updateReportStatus(statusContainer, savedReports, latestReport.id, { reportType, symbol: ticker });
+            return;
+        }
+
+        container.innerHTML = `<div class="flex items-center justify-center p-4"><div class="loader"></div><p class="ml-4 text-gray-600 font-semibold">AI is analyzing your position...</p></div>`;
+
+        const portfolioData = state.portfolioCache.find(s => s.ticker === ticker);
+        const fmpData = await getFmpStockData(ticker);
+        const candidacyReports = await getSavedReports(ticker, 'GarpCandidacy');
+        const diligenceReports = await getSavedReports(ticker, 'DiligenceInvestigation');
+
+        if (!fmpData || !fmpData.profile || !fmpData.profile.length === 0) {
+            throw new Error(`Could not retrieve the latest price data for ${ticker}.`);
+        }
+        if (candidacyReports.length === 0) {
+            throw new Error(`The foundational 'GARP Candidacy Report' has not been generated yet. Please generate it from the 'Dashboard' or 'AI Analysis' tab first.`);
+        }
+        
+        let diligenceLog = 'No recent diligence is available.';
+        if (diligenceReports.length > 0) {
+            diligenceLog = diligenceReports.map(report => {
+                const question = report.prompt.split('Diligence Question from User:')[1]?.trim() || 'Question not found.';
+                const answer = report.content;
+                return `**Question:** ${question}\n\n**Answer:**\n${answer}\n\n---`;
+            }).join('\n\n');
+        }
+
+        const currentPrice = fmpData.profile[0].price;
+        const candidacyReportContent = candidacyReports[0].content;
+        
+        const { shares, costPerShare, purchaseDate, companyName } = portfolioData;
+        const costBasis = shares * costPerShare;
+        const marketValue = shares * currentPrice;
+        const unrealizedGainLoss = marketValue - costBasis;
+        const unrealizedGainLossPct = (unrealizedGainLoss / costBasis) * 100;
+
+        const pDate = new Date(purchaseDate);
+        const now = new Date();
+        const diffTime = Math.abs(now - pDate);
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        const years = Math.floor(diffDays / 365);
+        const months = Math.floor((diffDays % 365) / 30.44);
+        
+        let holdingPeriod = '';
+        if (years > 0) holdingPeriod += `${years} year(s), `;
+        if (months > 0) holdingPeriod += `${months} month(s)`;
+        if (holdingPeriod === '') holdingPeriod = `${diffDays} day(s)`;
+        holdingPeriod = holdingPeriod.replace(/, $/, '');
+
+        const positionDetails = {
+            purchaseDate,
+            shares,
+            costPerShare: costPerShare.toFixed(2),
+            totalCostBasis: `$${costBasis.toFixed(2)}`,
+            currentMarketValue: `$${marketValue.toFixed(2)}`,
+            unrealizedGainLoss: `$${unrealizedGainLoss.toFixed(2)} (${unrealizedGainLossPct.toFixed(2)}%)`,
+            holdingPeriod
+        };
+        
+        const promptConfig = promptMap[reportType];
+        const prompt = promptConfig.prompt
+            .replace(/{companyName}/g, companyName)
+            .replace(/{tickerSymbol}/g, ticker)
+            .replace('{candidacyReport}', candidacyReportContent)
+            .replace('{positionDetails}', JSON.stringify(positionDetails, null, 2))
+            .replace('{currentPrice}', `$${currentPrice.toFixed(2)}`)
+            .replace('{diligenceLog}', diligenceLog);
+
+        const analysisResult = await generateRefinedArticle(prompt);
+        
+        const sanitizeText = (text) => {
+            if (typeof text !== 'string') return '';
+            const tempDiv = document.createElement('div');
+            tempDiv.textContent = text;
+            return tempDiv.innerHTML;
+        };
+
+        const accordionHtml = `
+            <div class="mb-4 border-b pb-4">
+                <details class="border rounded-md">
+                    <summary class="p-2 font-semibold text-sm text-gray-700 cursor-pointer hover:bg-gray-50 bg-gray-100">View Full Prompt Sent to AI</summary>
+                    <pre class="text-xs whitespace-pre-wrap break-all bg-gray-900 text-white p-3 rounded-b-md">${sanitizeText(prompt)}</pre>
+                </details>
+            </div>
+        `;
+
+        const finalHtmlToSave = accordionHtml + marked.parse(analysisResult);
+        await autoSaveReport(ticker, reportType, finalHtmlToSave, prompt);
+        
+        const refreshedReports = await getSavedReports(ticker, reportType);
+
+        container.innerHTML = `
+            <div id="report-status-container-position" class="p-3 mb-4 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between gap-4"></div>
+            <div class="prose max-w-none">${finalHtmlToSave}</div>
+        `;
+        const statusContainer = document.getElementById('report-status-container-position');
+        updateReportStatus(statusContainer, refreshedReports, refreshedReports[0].id, { reportType, symbol: ticker });
+
+    } catch (error) {
+        console.error("Error during Position Analysis:", error);
+        container.innerHTML = `<p class="text-red-500 p-4">Could not complete analysis: ${error.message}</p>`;
+    }
+}
+
+export async function handlePortfolioGarpAnalysisRequest() {
+    const container = document.getElementById('portfolio-garp-ai-summary-container');
+    if (!container) return;
+
+    container.innerHTML = `<div class="flex items-center justify-center p-4"><div class="loader"></div><p class="ml-4 text-gray-600 font-semibold">AI is analyzing portfolio...</p></div>`;
+
+    try {
+        const portfolioStocks = state.portfolioCache.filter(s => s.status === 'Portfolio');
+        if (portfolioStocks.length === 0) {
+            container.innerHTML = `<p class="text-center text-gray-500 italic">No stocks in portfolio to analyze.</p>`;
+            return;
+        }
+
+        const stocksWithData = await Promise.all(
+            portfolioStocks.map(async (stock) => {
+                const fmpData = await getFmpStockData(stock.ticker);
+                if (!fmpData) return null;
+                const metrics = _calculateGarpScorecardMetrics(fmpData);
+                return { stock, metrics, fmpData };
+            })
+        );
+        
+        const validStocks = stocksWithData.filter(Boolean);
+
+        const payload = validStocks.map(({ stock, metrics, fmpData }) => {
+            const profile = fmpData.profile?.[0] || {};
+            const cleanScorecard = {};
+            for (const [key, data] of Object.entries(metrics)) {
+                if (key === 'garpConvictionScore') continue;
+                 cleanScorecard[key] = {
+                    value: (typeof data.value === 'number' && isFinite(data.value))
+                        ? (data.format === 'percent' ? `${(data.value * 100).toFixed(2)}%` : data.value.toFixed(2))
+                        : 'N/A',
+                    isMet: data.isMet,
+                    interpretation: data.interpretation
+                };
+            }
+
+            return {
+                companyName: stock.companyName,
+                ticker: stock.ticker,
+                sector: stock.sector,
+                mktCap: profile.mktCap,
+                garpConvictionScore: metrics.garpConvictionScore,
+                scorecard: cleanScorecard
+            };
+        });
+        
+        const promptConfig = promptMap['PortfolioGarpAnalysis'];
+        const prompt = promptConfig.prompt.replace('{jsonData}', JSON.stringify(payload, null, 2));
+
+        const analysisResult = await generateRefinedArticle(prompt);
+        container.innerHTML = marked.parse(analysisResult);
+
+    } catch (error) {
+        console.error("Error during portfolio GARP analysis:", error);
+        container.innerHTML = `<p class="text-red-500">Could not complete analysis: ${error.message}</p>`;
+    }
+}
+
+export async function getSavedReports(ticker, reportType) {
+    const reportsRef = collection(state.db, CONSTANTS.DB_COLLECTION_AI_REPORTS);
+    const q = query(reportsRef, where("ticker", "==", ticker), where("reportType", "==", reportType), orderBy("savedAt", "desc"));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+}
+
+
+function buildAnalysisPayload(fullData, requiredEndpoints) {
+    const payload = {};
+    for (const endpointName of requiredEndpoints) {
+        if (fullData.hasOwnProperty(endpointName)) {
+            payload[endpointName] = fullData[endpointName];
+        }
+    }
+    return payload;
+}
+
+async function autoSaveReport(ticker, reportType, content, prompt) {
+    try {
+        const reportData = {
+            ticker,
+            reportType,
+            content,
+            prompt: prompt || '',
+            savedAt: Timestamp.now()
+        };
+        await addDoc(collection(state.db, CONSTANTS.DB_COLLECTION_AI_REPORTS), reportData);
+        console.log(`${reportType} for ${ticker} was auto-saved successfully.`);
+    } catch (error) {
+        console.error(`Auto-save for ${reportType} failed:`, error);
+        displayMessageInModal(`The ${reportType} report was generated but failed to auto-save. You can still save it manually. Error: ${error.message}`, 'warning');
+    }
+}
+
+export async function handleAnalysisRequest(symbol, reportType, promptConfig, forceNew = false) {
+    const contentContainer = document.getElementById('ai-article-container');
+    const statusContainer = document.getElementById('report-status-container-ai');
+    
+    contentContainer.innerHTML = '';
+    statusContainer.classList.add('hidden');
+
+    try {
+        const savedReports = await getSavedReports(symbol, reportType);
+
+        if (savedReports.length > 0 && !forceNew) {
+            const latestReport = savedReports[0];
+            displayReport(contentContainer, latestReport.content, latestReport.prompt);
+            contentContainer.dataset.currentPrompt = latestReport.prompt || '';
+            contentContainer.dataset.rawMarkdown = latestReport.content;
+            updateReportStatus(statusContainer, savedReports, latestReport.id, { symbol, reportType, promptConfig });
+            return; 
+        }
+
+        openModal(CONSTANTS.MODAL_LOADING);
+        const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+        
+        const data = await getFmpStockData(symbol);
+        if (!data) throw new Error(`No cached FMP data found for ${symbol}.`);
+        
+        const requiredEndpoints = promptConfig.requires || [];
+        const missingEndpoints = requiredEndpoints.filter(ep => !data[ep]);
+
+        if (missingEndpoints.length > 0) {
+            const specialReqs = ANALYSIS_REQUIREMENTS[reportType] || [];
+            const isSpecialMissing = specialReqs.some(req => missingEndpoints.includes(req));
+
+            if (isSpecialMissing) {
+                closeModal(CONSTANTS.MODAL_LOADING);
+                openConfirmationModal(
+                    'Data Refresh Required',
+                    `This analysis requires specific data that is not yet cached for ${symbol} (${missingEndpoints.join(', ')}). Would you like to refresh all FMP data now? This may take a moment.`,
+                    async () => {
+                        await handleRefreshFmpData(symbol);
+                        await handleAnalysisRequest(symbol, reportType, promptConfig, true);
+                    }
+                );
+                return;
+            }
+        }
+        
+        let payloadData;
+        if (reportType === 'FinancialAnalysis') {
+            payloadData = _calculateFinancialAnalysisMetrics(data);
+        } else if (reportType === 'MoatAnalysis') {
+            payloadData = _calculateMoatAnalysisMetrics(data);
+        } else if (reportType === 'RiskAssessment') {
+            payloadData = _calculateRiskAssessmentMetrics(data);
+        } else if (reportType === 'CapitalAllocators') {
+            payloadData = _calculateCapitalAllocatorsMetrics(data);
+        } else if (reportType === 'GarpAnalysis') {
+            payloadData = _calculateGarpAnalysisMetrics(data);
+        } else {
+            payloadData = buildAnalysisPayload(data, requiredEndpoints);
+        }
+
+        const profile = data.profile?.[0] || {};
+        const companyName = profile.companyName || 'the company';
+        const tickerSymbol = profile.symbol || symbol;
+
+        const promptTemplate = promptConfig.prompt;
+        const prompt = promptTemplate
+            .replace(/{companyName}/g, companyName)
+            .replace(/{tickerSymbol}/g, tickerSymbol)
+            .replace('{jsonData}', JSON.stringify(payloadData, null, 2));
+
+        contentContainer.dataset.currentPrompt = prompt;
+
+        let finalReportContent;
+        let generatedThesis = '';
+
+        if (reportType === 'GarpAnalysis') {
+            loadingMessage.textContent = "AI is drafting the GARP Analysis report...";
+            const garpReportContent = await generateRefinedArticle(prompt, loadingMessage);
+
+            const thesisSynthesisPrompt = `
+Role: You are a concise investment writer.
+Context: You are given a full GARP analysis report and the source JSON data used to create it.
+Task: Synthesize these two sources into a formal investment thesis suitable for a thesis tracker. The thesis must consist of 2-3 bullet points, and each point must be quantified with specific data from the JSON source.
+
+GARP Report:
+${garpReportContent}
+
+Source JSON:
+${JSON.stringify(payloadData, null, 2)}
+            `;
+
+            loadingMessage.textContent = "AI is synthesizing the investment thesis...";
+            generatedThesis = await callGeminiApi(thesisSynthesisPrompt);
+
+            finalReportContent = `
+${garpReportContent}
+
+---
+
+<div class="flex justify-between items-center my-4">
+    <h2 class="text-2xl font-bold !my-0">AI-Generated Investment Thesis</h2>
+    <button id="insert-thesis-button" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg text-sm">Insert into Thesis Tracker</button>
+</div>
+
+${marked.parse(generatedThesis)}
+            `;
+        } else {
+            finalReportContent = await generateRefinedArticle(prompt, loadingMessage);
+        }
+
+        contentContainer.dataset.rawMarkdown = finalReportContent;
+        await autoSaveReport(symbol, reportType, finalReportContent, prompt);
+        const refreshedReports = await getSavedReports(symbol, reportType);
+        
+        displayReport(contentContainer, finalReportContent, prompt);
+
+        if (reportType === 'GarpAnalysis') {
+            const insertButton = document.getElementById('insert-thesis-button');
+            if (insertButton) {
+                insertButton.addEventListener('click', async () => {
+                    await _saveThesisContent(symbol, generatedThesis);
+                    insertButton.textContent = 'Thesis Saved!';
+                    insertButton.disabled = true;
+                    insertButton.classList.add('bg-green-600', 'hover:bg-green-600');
+                    insertButton.classList.remove('bg-indigo-600', 'hover:bg-indigo-700');
+                }, { once: true });
+            }
+        }
+        
+        updateReportStatus(statusContainer, refreshedReports, refreshedReports[0]?.id, { symbol, reportType, promptConfig });
+
+    } catch (error) {
+        displayMessageInModal(`Could not generate or load analysis: ${error.message}`, 'error');
+        contentContainer.innerHTML = `<p class="text-red-500">Failed to generate report: ${error.message}</p>`;
+    } finally {
+        if (document.getElementById(CONSTANTS.MODAL_LOADING).classList.contains('is-open')) {
+            closeModal(CONSTANTS.MODAL_LOADING);
+        }
+    }
+}
+
+export async function handleInvestmentMemoRequest(symbol, forceNew = false) {
+    const contentContainer = document.getElementById('ai-article-container');
+    const statusContainer = document.getElementById('report-status-container-ai');
+    contentContainer.innerHTML = '';
+    statusContainer.classList.add('hidden');
+
+    try {
+        const reportType = 'InvestmentMemo';
+        const savedReports = await getSavedReports(symbol, reportType);
+        const promptConfig = promptMap[reportType];
+
+        if (savedReports.length > 0 && !forceNew) {
+            const latestReport = savedReports[0];
+            displayReport(contentContainer, latestReport.content, latestReport.prompt);
+            contentContainer.dataset.currentPrompt = latestReport.prompt || '';
+            contentContainer.dataset.rawMarkdown = latestReport.content;
+            updateReportStatus(statusContainer, savedReports, latestReport.id, { symbol, reportType, promptConfig });
+            return;
+        }
+
+        openModal(CONSTANTS.MODAL_LOADING);
+        const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+
+        loadingMessage.textContent = "Gathering data for memo synthesis...";
+        
+        const candidacyReports = await getSavedReports(symbol, 'GarpCandidacy');
+        if (candidacyReports.length === 0) {
+            throw new Error(`Cannot generate memo. Please generate the "GARP Candidacy Report" from Step 1 first.`);
+        }
+        const candidacyReportContent = candidacyReports[0].content;
+
+        const diligenceReports = await getSavedReports(symbol, 'DiligenceInvestigation');
+        let diligenceLog = 'No recent diligence is available.';
+        if (diligenceReports.length > 0) {
+            diligenceLog = diligenceReports.map(report => {
+                const question = report.prompt.split('Diligence Question from User:')[1]?.trim() || 'Question not found.';
+                const answer = report.content;
+                return `**Question:** ${question}\n\n**Answer:**\n${answer}\n\n---`;
+            }).join('\n\n');
+        }
+
+        const data = await getFmpStockData(symbol);
+        if (!data) throw new Error(`Could not retrieve financial data for ${symbol}.`);
+        const scorecardData = _calculateGarpScorecardMetrics(data);
+
+        const profile = data.profile?.[0] || {};
+        const companyName = profile.companyName || 'the company';
+
+        const prompt = promptMap.InvestmentMemo.prompt
+            .replace(/{companyName}/g, companyName)
+            .replace(/{tickerSymbol}/g, symbol)
+            .replace('{candidacyReport}', candidacyReportContent)
+            .replace('{scorecardJson}', JSON.stringify(scorecardData, null, 2))
+            .replace('{diligenceLog}', diligenceLog);
+
+        loadingMessage.textContent = "AI is drafting the investment memo...";
+        const memoContent = await generatePolishedArticleForSynthesis(prompt, loadingMessage);
+        
+        await autoSaveReport(symbol, reportType, memoContent, prompt);
+        const refreshedReports = await getSavedReports(symbol, reportType);
+        const latestReport = refreshedReports[0];
+
+        contentContainer.dataset.currentPrompt = prompt;
+        contentContainer.dataset.rawMarkdown = memoContent;
+        displayReport(contentContainer, memoContent, prompt);
+        
+        updateReportStatus(statusContainer, refreshedReports, latestReport.id, { symbol, reportType, promptConfig });
+
+    } catch (error) {
+        console.error("Error generating investment memo:", error);
+        displayMessageInModal(`Could not generate memo: ${error.message}`, 'error');
+        contentContainer.innerHTML = `<p class="text-red-500">Failed to generate memo: ${error.message}</p>`;
+    } finally {
+        if (document.getElementById(CONSTANTS.MODAL_LOADING).classList.contains('is-open')) {
+            closeModal(CONSTANTS.MODAL_LOADING);
+        }
+    }
+}
+
+export async function handleGenerateAllReportsRequest(symbol) {
+    const reportTypes = ['GarpAnalysis', 'FinancialAnalysis', 'RiskAssessment', 'MoatAnalysis', 'CapitalAllocators'];
+    const reportDisplayNames = {
+        'GarpAnalysis': 'GARP Analysis',
+        'FinancialAnalysis': 'Financial Analysis',
+        'RiskAssessment': 'Risk Assessment',
+        'MoatAnalysis': 'Moat Analysis',
+        'CapitalAllocators': 'Capital Allocators',
+    };
+    const metricCalculators = {
+        'FinancialAnalysis': _calculateFinancialAnalysisMetrics,
+        'GarpAnalysis': _calculateGarpAnalysisMetrics,
+        'MoatAnalysis': _calculateMoatAnalysisMetrics,
+        'RiskAssessment': _calculateRiskAssessmentMetrics,
+        'CapitalAllocators': _calculateCapitalAllocatorsMetrics,
+    };
+
+    openModal(CONSTANTS.MODAL_LOADING);
+    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+    const progressContainer = document.getElementById('progress-container');
+    const progressStatus = document.getElementById('progress-status');
+    const currentReportName = document.getElementById('current-report-name');
+    const progressBarFill = document.getElementById('progress-bar-fill');
+    
+    progressContainer.classList.remove('hidden');
+    progressBarFill.style.width = '0%';
+    
+    try {
+        const data = await getFmpStockData(symbol);
+        if (!data) throw new Error(`No cached FMP data found for ${symbol}. Please refresh the data first.`);
+        
+        const profile = data.profile?.[0] || {};
+        const companyName = profile.companyName || 'the company';
+        const tickerSymbol = profile.symbol || symbol;
+
+        for (let i = 0; i < reportTypes.length; i++) {
+            const reportType = reportTypes[i];
+            
+            progressStatus.textContent = `Generating Reports (${i + 1}/${reportTypes.length})`;
+            currentReportName.textContent = `Running: ${reportDisplayNames[reportType]}...`;
+
+            const promptConfig = promptMap[reportType];
+            const calculateMetrics = metricCalculators[reportType];
+            if (!promptConfig || !calculateMetrics) {
+                console.warn(`Skipping report: No config for ${reportType}`);
+                continue;
+            }
+            const payloadData = calculateMetrics(data);
+            const prompt = promptConfig.prompt
+                .replace(/{companyName}/g, companyName)
+                .replace(/{tickerSymbol}/g, tickerSymbol)
+                .replace('{jsonData}', JSON.stringify(payloadData, null, 2));
+
+            const reportContent = await generateRefinedArticle(prompt, loadingMessage);
+
+            const reportData = {
+                ticker: symbol,
+                reportType: reportType,
+                content: reportContent,
+                savedAt: Timestamp.now(),
+                prompt: prompt
+            };
+            await addDoc(collection(state.db, CONSTANTS.DB_COLLECTION_AI_REPORTS), reportData);
+
+            const aiButtonsContainer = document.getElementById('ai-buttons-container');
+            if (aiButtonsContainer) {
+                const button = aiButtonsContainer.querySelector(`button[data-report-type="${reportType}"]`);
+                if (button) {
+                    button.classList.add('has-saved-report');
+                }
+            }
+            const progress = ((i + 1) / reportTypes.length) * 100;
+            progressBarFill.style.width = `${progress}%`;
+        }
+
+        displayMessageInModal(`Successfully generated and saved all prerequisite reports for ${symbol}. You can now generate the Investment Memo.`, 'info');
+
+    } catch (error) {
+        console.error("Error generating all reports:", error);
+        displayMessageInModal(`Could not complete batch generation: ${error.message}`, 'error');
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+        progressContainer.classList.add('hidden');
+    }
+}
+
+export async function handleSaveReportToDb() {
+    const modal = document.getElementById('rawDataViewerModal');
+    const symbol = modal.dataset.activeTicker;
+    const reportType = document.getElementById('report-status-container-ai').dataset.activeReportType;
+    const contentContainer = document.getElementById('ai-article-container');
+
+    if (!symbol || !reportType || !contentContainer) {
+        displayMessageInModal("Could not determine which report to save.", "warning");
+        return;
+    }
+    
+    const contentToSave = contentContainer.dataset.rawMarkdown;
+    const promptToSave = contentContainer.dataset.currentPrompt;
+
+    if (!contentToSave) {
+        displayMessageInModal("Please generate an analysis before saving.", "warning");
+        return;
+    }
+
+    openModal(CONSTANTS.MODAL_LOADING);
+    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Saving ${reportType} report to database...`;
+
+    try {
+        const reportData = {
+            ticker: symbol,
+            reportType: reportType,
+            content: contentToSave,
+            savedAt: Timestamp.now(),
+            prompt: promptToSave || ''
+        };
+        await addDoc(collection(state.db, CONSTANTS.DB_COLLECTION_AI_REPORTS), reportData);
+        displayMessageInModal("Report saved successfully!", "info");
+        
+        const aiButtonsContainer = document.getElementById('ai-buttons-container');
+        if (aiButtonsContainer) {
+            const button = aiButtonsContainer.querySelector(`button[data-report-type="${reportType}"]`);
+            if (button) {
+                button.classList.add('has-saved-report');
+            }
+        }
+
+        const savedReports = await getSavedReports(symbol, reportType);
+        const latestReport = savedReports[0];
+        const statusContainer = document.getElementById('report-status-container-ai');
+        const promptConfig = promptMap[reportType];
+        
+        updateReportStatus(statusContainer, savedReports, latestReport.id, { symbol, reportType, promptConfig });
+
+    } catch (error) {
+        console.error("Error saving report to DB:", error);
+        displayMessageInModal(`Could not save report: ${error.message}`, 'error');
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
+export async function handleGarpCandidacyRequest(ticker) {
+    const resultContainer = document.getElementById('garp-analysis-container');
+    const statusContainer = document.getElementById('garp-candidacy-status-container');
+    if (!resultContainer) return;
+
+    resultContainer.innerHTML = `<div class="flex items-center justify-center p-4"><div class="loader"></div><p class="ml-4 text-gray-600 font-semibold">AI is analyzing...</p></div>`;
+    statusContainer.classList.add('hidden');
+    
+    try {
+        const fmpData = await getFmpStockData(ticker);
+        if (!fmpData) throw new Error("Could not retrieve financial data to perform analysis.");
+        
+        const scorecardData = _calculateGarpScorecardMetrics(fmpData);
+        const newScore = scorecardData.garpConvictionScore;
+
+        // Save the new score to the database
+        const stockDocRef = doc(state.db, CONSTANTS.DB_COLLECTION_PORTFOLIO, ticker);
+        await updateDoc(stockDocRef, { garpConvictionScore: newScore });
+        
+        // Refresh local cache to reflect the change immediately
+        await fetchAndCachePortfolioData();
+
+        const profile = fmpData.profile?.[0] || {};
+        const companyName = profile.companyName || ticker;
+        const tickerSymbol = profile.symbol || ticker;
+        const sector = profile.sector || 'N/A';
+
+        const cleanData = {};
+        for (const [key, value] of Object.entries(scorecardData)) {
+            if (key === 'garpConvictionScore') continue;
+            
+            // Create a new object for the payload that formats the value but keeps the rich interpretation data
+            const formattedValue = (typeof value.value === 'number' && isFinite(value.value))
+                ? (value.format === 'percent' ? `${(value.value * 100).toFixed(2)}%` : value.value.toFixed(2))
+                : 'N/A';
+
+            cleanData[key] = {
+                value: formattedValue,
+                isMet: value.isMet,
+                interpretation: value.interpretation 
+            };
+        }
+
+        const payload = {
+            scorecard: cleanData,
+            garpConvictionScore: scorecardData.garpConvictionScore
+        };
+
+        const promptConfig = promptMap['GarpCandidacy'];
+        const prompt = promptConfig.prompt
+            .replace(/{companyName}/g, companyName)
+            .replace(/{tickerSymbol}/g, tickerSymbol)
+            .replace(/{sector}/g, sector)
+            .replace('{jsonData}', JSON.stringify(payload, null, 2));
+        
+        const analysisResult = await generateRefinedArticle(prompt);
+        renderCandidacyAnalysis(resultContainer, analysisResult, prompt);
+        
+        const reportType = 'GarpCandidacy';
+        await autoSaveReport(ticker, reportType, analysisResult, prompt);
+        
+        const reports = await getSavedReports(ticker, reportType);
+        if (reports.length > 0) {
+            updateGarpCandidacyStatus(statusContainer, reports, reports[0].id, ticker);
+        }
+
+    } catch (error) {
+        console.error("Error in GARP Candidacy Request:", error);
+        resultContainer.innerHTML = `<p class="text-center text-red-500 p-4">${error.message}</p>`;
+    }
+}
+
+export async function handleDiligenceInvestigationRequest(symbol) {
+    const questionInput = document.getElementById('diligence-question-input');
+    const question = questionInput.value.trim();
+
+    if (!question) {
+        displayMessageInModal("Please enter a diligence question before investigating.", "warning");
+        return;
+    }
+
+    openModal(CONSTANTS.MODAL_LOADING);
+    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+    loadingMessage.textContent = "AI is investigating your question using Google Search...";
+
+    const articleContainer = document.getElementById('ai-article-container');
+    const statusContainer = document.getElementById('report-status-container-ai');
+    articleContainer.innerHTML = '';
+    statusContainer.classList.add('hidden');
+
+    try {
+        const fmpData = await getFmpStockData(symbol);
+        const profile = fmpData?.profile?.[0] || {};
+        const companyName = profile.companyName || symbol;
+
+        const promptConfig = promptMap['DiligenceInvestigation'];
+        const prompt = promptConfig.prompt
+            .replace(/{companyName}/g, companyName)
+            .replace(/{tickerSymbol}/g, symbol)
+            .replace('{diligenceQuestion}', question);
+
+        const investigationResult = await callGeminiApiWithSearch(prompt);
+
+        displayReport(articleContainer, investigationResult, prompt);
+        
+        await autoSaveReport(symbol, 'DiligenceInvestigation', investigationResult, prompt);
+
+        const diligenceReports = await getSavedReports(symbol, 'DiligenceInvestigation');
+        const diligenceLogContainer = document.getElementById('diligence-log-container');
+        renderDiligenceLog(diligenceLogContainer, diligenceReports);
+
+        questionInput.value = '';
+
+    } catch (error) {
+        console.error("Error during Diligence Investigation:", error);
+        displayMessageInModal(`Could not complete investigation: ${error.message}`, 'error');
+        articleContainer.innerHTML = `<p class="text-red-500 p-4">Failed to generate report: ${error.message}</p>`;
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
+export async function handleDeleteDiligenceLog(reportId, ticker) {
+    openConfirmationModal(
+        'Delete Log Entry?',
+        'Are you sure you want to permanently delete this Q&A entry? This action cannot be undone.',
+        async () => {
+            openModal(CONSTANTS.MODAL_LOADING);
+            document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Deleting entry...`;
+            try {
+                await deleteDoc(doc(state.db, CONSTANTS.DB_COLLECTION_AI_REPORTS, reportId));
+
+                const diligenceReports = await getSavedReports(ticker, 'DiligenceInvestigation');
+                const diligenceLogContainer = document.getElementById('diligence-log-container');
+                renderDiligenceLog(diligenceLogContainer, diligenceReports);
+
+                const articleContainer = document.getElementById('ai-article-container');
+                const statusContainer = document.getElementById('report-status-container-ai');
+                articleContainer.innerHTML = '';
+                statusContainer.classList.add('hidden');
+
+                displayMessageInModal('Diligence log entry deleted.', 'info');
+            } catch (error) {
+                console.error("Error deleting diligence log:", error);
+                displayMessageInModal(`Could not delete entry: ${error.message}`, 'error');
+            } finally {
+                closeModal(CONSTANTS.MODAL_LOADING);
+            }
+        }
+    );
+}
+
+export function handleRerunDiligenceQuery(question, symbol) {
+    const questionInput = document.getElementById('diligence-question-input');
+    if (questionInput) {
+        questionInput.value = question;
+        handleDiligenceInvestigationRequest(symbol);
+    } else {
+        displayMessageInModal('Could not find the investigation input box.', 'error');
+    }
+}
