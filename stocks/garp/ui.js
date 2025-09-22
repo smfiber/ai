@@ -1,7 +1,7 @@
 import { CONSTANTS, state, promptMap } from './config.js';
 import { openModal, closeModal, openStockListModal, openManageStockModal, openPortfolioManagerModal, openRawDataViewer } from './ui-modals.js';
 import { fetchAndCachePortfolioData, renderPortfolioManagerList } from './ui-render.js';
-import { handleResearchSubmit, handleSaveStock, handleDeleteStock, handleRefreshFmpData, handleAnalysisRequest, handleInvestmentMemoRequest, handleSaveReportToDb, handleGenerateAllReportsRequest, handleGarpCandidacyRequest, handlePortfolioGarpAnalysisRequest, handlePositionAnalysisRequest, handleReportHelpRequest, handleDiligenceInvestigationRequest, handleDeleteDiligenceLog, handleRerunDiligenceQuery, handlePeerAnalysisRequest } from './ui-handlers.js';
+import { handleResearchSubmit, handleSaveStock, handleDeleteStock, handleRefreshFmpData, handleAnalysisRequest, handleInvestmentMemoRequest, handleSaveReportToDb, handleGenerateAllReportsRequest, handleGarpCandidacyRequest, handlePortfolioGarpAnalysisRequest, handlePositionAnalysisRequest, handleReportHelpRequest, handleDiligenceInvestigationRequest, handleDeleteDiligenceLog, handleRerunDiligenceQuery, handleWorkflowHelpRequest, handlePeerAnalysisRequest } from './ui-handlers.js';
 
 // --- DYNAMIC TOOLTIPS ---
 function initializeTooltips() {
@@ -150,6 +150,7 @@ export function setupEventListeners() {
     });
 
     document.getElementById('manage-all-stocks-button')?.addEventListener('click', openPortfolioManagerModal);
+    document.getElementById('workflow-guide-button')?.addEventListener('click', handleWorkflowHelpRequest);
     
     // NEW event listener for the portfolio analysis button
     document.getElementById('analyze-portfolio-garp-button')?.addEventListener('click', handlePortfolioGarpAnalysisRequest);
