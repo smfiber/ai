@@ -52,6 +52,25 @@ export const CONSTANTS = {
     DB_COLLECTION_AI_REPORTS: 'ai_analysis_reports',
 };
 
+const PEER_IDENTIFICATION_PROMPT = `
+Role: You are a highly specialized financial analyst AI with deep knowledge of corporate structures and competitive landscapes.
+Task: Your sole purpose is to identify the top 3-5 most direct, publicly traded competitors for the given company.
+Constraints:
+- You MUST return ONLY a valid JSON array of ticker symbols.
+- Do NOT include the primary company's own ticker in the list.
+- Do NOT return any explanatory text, headings, or markdown formatting.
+- The tickers must be for publicly traded companies.
+- Prioritize direct competitors in the same industry and with similar business models.
+
+Company Information:
+- Name: {companyName}
+- Ticker: {tickerSymbol}
+- Description: {description}
+
+Example Output:
+["TICKER1", "TICKER2", "TICKER3"]
+`.trim();
+
 const FINANCIAL_ANALYSIS_PROMPT = `
 Role: You are a financial analyst AI who excels at explaining complex topics to everyday investors. Your purpose is to generate a rigorous, data-driven financial analysis that is also educational, objective, and easy to understand. Use relatable analogies to clarify financial concepts.
 Data Instructions: Your analysis MUST be based *exclusively* on the pre-calculated metrics and summaries provided in the JSON data below. Do NOT attempt to recalculate any values. If a specific data point is "N/A" or missing, state that clearly in your analysis.
@@ -231,33 +250,34 @@ You are a Senior Investment Analyst at a GARP-focused ("Growth at a Reasonable P
 2.  **Synthesize, Don't Summarize:** Do not merely restate findings from the reports. Your primary task is to integrate the quantitative data (the "what") with the qualitative analysis (the "so what") to form a cohesive bull case, bear case, and final recommendation.
 3.  **Address Contradictions:** If the qualitative report is optimistic but a quantitative metric is poor (or vice-versa), you must address this tension directly. Explain which factor carries more weight in your final analysis and why.
 4.  **Incorporate New Information:** The 'Diligence Log' contains the most recent findings. This information should be used to challenge or reinforce the original thesis. If the log reveals a critical new risk or catalyst, it must be prominently featured in your analysis.
+5.  **Use Peer Context:** A company doesn't exist in a vacuum. Use the provided peer data to ground your analysis in the current market context. Determine if the company is outperforming or underperforming its direct competitors, and use the trend data to comment on its recent momentum.
 
 ---
 
 # Investment Memo: {companyName} ({tickerSymbol})
 
 ## 1. Executive Summary & Investment Thesis
-*(Begin with a 3-4 sentence paragraph that concisely summarizes the investment thesis. It should cover the core bull case (supported by key metrics from the JSON), the primary risks (highlighted by weak metrics from the JSON), and the final recommendation. Crucially, incorporate any major findings from the diligence log that materially impact the thesis.)*
+*(Begin with a 3-4 sentence paragraph that concisely summarizes the investment thesis. It should cover the core bull case (supported by key metrics from the JSON), the primary risks (highlighted by weak metrics from the JSON), and the final recommendation. Crucially, incorporate any major findings from the diligence log or peer context that materially impact the thesis.)*
 
 ## 2. The Bull Case: Why We Could Be Right
-*(This section should be a compelling narrative about the investment's upside potential, drawing its themes from the 'Candidacy Report'.)*
-* **Business Quality & Growth:** Based on the qualitative report, what is the story behind the company's growth and competitive position? Substantiate claims about growth and profitability with specific metrics like 'EPS Growth (Next 1Y)' and 'Return on Equity' from the JSON. Does the diligence log provide new evidence to support this narrative?
-* **Financial Strength:** Does the qualitative report suggest a strong business? Prove it with data. Cite the 'Debt-to-Equity' ratio from the JSON to support claims about the balance sheet.
+*(This section should be a compelling narrative about the investment's upside potential, drawing its themes from the 'Candidacy Report' and backing them with data.)*
+* **Business Quality & Growth:** Based on the qualitative report, what is the story behind the company's growth? Substantiate claims with metrics like 'EPS Growth (Next 1Y)' and 'Return on Equity' from the JSON. How does its growth and profitability compare to its peers, using the `{peerAverages}` data?
+* **Financial Strength:** Does the qualitative report suggest a strong business? Prove it. Cite the 'Debt-to-Equity' ratio from the JSON. Is its balance sheet stronger or weaker than its peers?
 
 ## 3. The Bear Case: What Could Go Wrong
-*(This section critically examines the primary risks and counterarguments, drawing its themes from the 'Candidacy Report'.)*
-* **Key Risks & Concerns:** What are the top 2-3 risks identified in the qualitative report? Quantify these risks using the weakest data points from the JSON. For example, if the report mentions valuation concerns, cite the 'P/E (TTM)' and 'PEG Ratio'. Has the diligence log uncovered any new risks or provided more detail on existing ones?
+*(This section critically examines the primary risks, using both the qualitative report and quantitative data.)*
+* **Key Risks & Concerns:** What are the top 2-3 risks identified? Quantify these risks using the weakest data points from the JSON and the `{peerAverages}`. For example, if valuation is a concern, is it just high, or is it high *relative to its peers*? Does the `{peerDataChanges}` data show the company's valuation is becoming less attractive over time?
 
 ## 4. Valuation: The GARP Fulcrum
-*(This is the deciding section. Analyze whether the current price is reasonable given the quality of the business and its growth prospects.)*
-* **Synthesize the 'PEG Ratio' and 'Forward P/E' from the JSON with the growth narrative from the 'Candidacy Report'. Answer the ultimate question: Based on all this evidence, is {companyName} a quality growth company trading at a fair price *today*?*
+*(This is the deciding section. Analyze whether the current price is reasonable given the quality, growth, and peer context.)*
+* **Synthesize the 'PEG Ratio', 'Forward P/E', and 'Price to FCF' from the JSON with the `{peerAverages}` data. Answer the ultimate question: Based on all this evidence, is {companyName} a quality growth company trading at a fair price *today*? Use the `{peerDataChanges}` data to comment on the direction of its relative value.*
 
 ## 5. Foundational Q&A and Final Verdict
 (First, provide a direct answer to the following five foundational questions based on all the provided reports and data.)
 
-1.  **Is the company’s forward growth rate both significant and believable?**
+1.  **Is the company’s forward growth rate both significant and believable, especially in the context of its peers?**
     * [Your Answer Here]
-2.  **Is the valuation reasonable enough to provide a margin of safety?**
+2.  **Is the valuation reasonable enough to provide a margin of safety, particularly when compared to its peers?**
     * [Your Answer Here]
 3.  **Does the business possess a durable competitive advantage (moat)?**
     * [Your Answer Here]
@@ -291,6 +311,16 @@ You are a Senior Investment Analyst at a GARP-focused ("Growth at a Reasonable P
 \`\`\`markdown
 {diligenceLog}
 \`\`\`
+
+**4. Peer Group Averages (JSON):**
+\`\`\`json
+{peerAverages}
+\`\`\`
+
+**5. Peer Group Trend Data (Changes Since Last Refresh) (JSON):**
+\`\`\`json
+{peerDataChanges}
+\`\`\`
 `.trim();
 
 const PORTFOLIO_GARP_ANALYSIS_PROMPT = `
@@ -320,7 +350,7 @@ JSON Data for the Entire Portfolio:
 
 const POSITION_ANALYSIS_PROMPT = `
 Role: You are a pragmatic Portfolio Manager with a strict adherence to the GARP (Growth at a Reasonable Price) investment philosophy.
-Objective: Review an existing position in {companyName} ({tickerSymbol}) to determine the best course of action today, September 20, 2025. You must re-evaluate the original investment thesis in the context of the current market price and the specifics of our position.
+Objective: Review an existing position in {companyName} ({tickerSymbol}) to determine the best course of action today, September 22, 2025. You must re-evaluate the original investment thesis in the context of the current market price and the specifics of our position.
 Context & Data:
 1.  **Original GARP Candidacy Report:** This was the initial analysis recommending the stock as a GARP candidate.
     \`\`\`markdown
@@ -374,9 +404,15 @@ Company & Ticker: {companyName} ({tickerSymbol})
 Sector: {sector}
 
 4. Input Data:
-You will be given a JSON object containing a scorecard with key financial metrics and a criteriaInterpretation explaining what each metric signifies within our GARP framework.
+You will be given a JSON object containing a scorecard with key financial metrics and a criteriaInterpretation explaining what each metric signifies within our GARP framework. You will also be provided with data on the company's industry peers.
 \`\`\`json
 {jsonData}
+\`\`\`
+\`\`\`json
+{peerAverages}
+\`\`\`
+\`\`\`json
+{peerDataChanges}
 \`\`\`
 5. Required Output Structure & Content:
 Generate a comprehensive GARP assessment using precise markdown formatting. Your response MUST follow the specified markdown structure.
@@ -392,17 +428,17 @@ Generate a comprehensive GARP assessment using precise markdown formatting. Your
 ## THE BULL CASE: The Growth & Value Narrative
 
 (1 paragraph)
-Synthesize the stock's strengths into a compelling narrative. Do not just list the passing metrics; explain how they work together. Focus on the synergy between the forward-looking growth projections and the current valuation. Directly reference the most impressive numbers from the scorecard to build your case.
+Synthesize the stock's strengths into a compelling narrative. Explain how the passing metrics work together. Focus on the synergy between growth projections and valuation. **Critically, compare the company's strongest metrics (e.g., ROE, Growth) to the `{peerAverages}` to demonstrate its relative strength.** Use the `{peerDataChanges}` to highlight any positive momentum.
 
 ## THE BEAR CASE: The Risks & Quality Concerns
 
 (1 paragraph)
-Identify the critical risks and fundamental weaknesses revealed by the failing metrics. Emphasize the "why" behind the poor numbers (e.g., "low profitability suggests a weak competitive moat"). Directly cite the specific data points that give you pause and explain their negative implications for a long-term GARP investor.
+Identify the critical risks and weaknesses revealed by the failing metrics. **Directly compare the company's weakest metrics to the `{peerAverages}`.** For example, is its P/E ratio just high, or is it significantly higher than its competitors? Use the `{peerDataChanges}` to flag any negative trends, such as its valuation becoming less attractive relative to its peers over time.
 
 ## FINAL SYNTHESIS & RECOMMENDATION
 
 (1 paragraph)
-Investment Profile & The Deciding Factor: Classify the stock's profile (e.g., is this a high-risk 'Turnaround Story' or a steady 'Compounder'?). Then, state the single most critical question or tension an investor must resolve before committing capital.
+Investment Profile & The Deciding Factor: Classify the stock's profile (e.g., 'Best-in-Class Compounder trading at a premium,' 'Undervalued Turnaround Story'). Then, state the single most critical tension an investor must resolve, explicitly referencing the peer comparison (e.g., "The core question is whether the company's superior ROE justifies its 30% valuation premium to its peers.").
 
 **Strategic Recommendation:** [Insert a single bolded recommendation: High Conviction Buy, Initiate Position, Add to Watchlist, or Pass/Sell]
 
@@ -419,17 +455,11 @@ Format each item precisely like this:
 
 6. Critical Guidelines & Constraints:
 
-Handle the PEG Ratio Nuance: A PEG ratio below 0.5 indicates potential deep undervaluation but also carries significant risk. You must interpret this as a high-stakes scenario that requires careful scrutiny of the growth forecast, not as a simple 'buy' signal.
+Data-Driven: Your analysis must be grounded in the provided data. Directly reference specific numerical data points from the scorecard and the peer comparison to substantiate your claims.
 
-Handle Rebound Growth Scenarios: If a company shows extremely high forward growth (>100%), recognize this is likely a statistical rebound from a low base. In your analysis, you should question the sustainability of this growth rate and consider the longer-term historical average as a more realistic baseline.
+Contextualize Everything: Do not analyze any metric in isolation. A P/E of 25 is meaningless without comparing it to the peer average and the company's own growth rate.
 
-Synthesize Related Metrics: Directly address the relationship between valuation (P/E ratios), growth (EPS Growth), and the combined metric (PEG ratio). For instance, if the PEG ratio is strong, explain how this provides context for a P/E ratio that might otherwise appear high. Do not treat these metrics in isolation.
-
-Data-Driven: Your analysis must be grounded in the provided data. Directly reference at least four specific numerical data points from the scorecard to substantiate your claims.
-
-Contextual Awareness: Briefly integrate the current market context (as of late 2025) into your reasoning. For example, how might prevailing interest rates or economic growth forecasts affect the company's debt load or growth prospects?
-
-Peer Comparison: Where relevant, briefly contextualize a key metric against typical industry peers. For example, is the P/S ratio high or low for its sector? This demonstrates a deeper level of analysis beyond the company's own data.
+Synthesize Related Metrics: Directly address the relationship between valuation (P/E ratios), growth (EPS Growth), and the combined metric (PEG ratio). For instance, if the PEG ratio is strong, explain how this provides context for a P/E ratio that might otherwise appear high.
 
 Tone: Maintain a professional, analytical, and objective tone. Avoid speculative hype. Your confidence should stem from the data.
 
@@ -473,6 +503,10 @@ Diligence Question from User:
 
 
 export const promptMap = {
+    'PeerIdentification': {
+        prompt: PEER_IDENTIFICATION_PROMPT,
+        requires: ['profile']
+    },
     'FinancialAnalysis': {
         prompt: FINANCIAL_ANALYSIS_PROMPT,
         requires: ['profile', 'key_metrics_annual', 'stock_grade_news', 'income_statement_annual', 'cash_flow_statement_annual', 'income_statement_quarterly']
@@ -539,5 +573,6 @@ export const ANALYSIS_NAMES = {
     'PositionAnalysis': 'Position Analysis',
     'PortfolioGarpAnalysis': 'Portfolio GARP Analysis',
     'GarpConvictionScore': 'GARP Conviction Score',
-    'DiligenceInvestigation': 'Diligence Investigation'
+    'DiligenceInvestigation': 'Diligence Investigation',
+    'PeerIdentification': 'Peer Identification'
 };
