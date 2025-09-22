@@ -507,6 +507,9 @@ export const promptMap = {
         prompt: PEER_IDENTIFICATION_PROMPT,
         requires: ['profile']
     },
+    'PeerComparison': {
+        prompt: 'N/A' // Placeholder to satisfy help handler check
+    },
     'FinancialAnalysis': {
         prompt: FINANCIAL_ANALYSIS_PROMPT,
         requires: ['profile', 'key_metrics_annual', 'stock_grade_news', 'income_statement_annual', 'cash_flow_statement_annual', 'income_statement_quarterly']
