@@ -871,16 +871,17 @@ export async function handleGarpCandidacyRequest(ticker) {
 
         const cleanData = {};
         for (const [key, value] of Object.entries(scorecardData)) {
-             if (key === 'garpConvictionScore') continue;
-            let formattedValue;
-            if (typeof value.value === 'number' && isFinite(value.value)) {
-                formattedValue = value.format === 'percent' ? `${(value.value * 100).toFixed(2)}%` : value.value.toFixed(2);
-            } else {
-                formattedValue = 'N/A';
-            }
+            if (key === 'garpConvictionScore') continue;
+            
+            // Create a new object for the payload that formats the value but keeps the rich interpretation data
+            const formattedValue = (typeof value.value === 'number' && isFinite(value.value))
+                ? (value.format === 'percent' ? `${(value.value * 100).toFixed(2)}%` : value.value.toFixed(2))
+                : 'N/A';
+
             cleanData[key] = {
                 value: formattedValue,
-                isMet: value.isMet
+                isMet: value.isMet,
+                interpretation: value.interpretation 
             };
         }
 
