@@ -365,13 +365,15 @@ export async function handlePositionAnalysisRequest(ticker, forceNew = false) {
         let totalCost = 0;
         let earliestDate = null;
 
-        transactions.forEach(t => {
-            totalShares += t.shares;
-            totalCost += t.shares * t.costPerShare;
-            if (!earliestDate || new Date(t.date) < new Date(earliestDate)) {
-                earliestDate = t.date;
-            }
-        });
+        if(transactions && transactions.length > 0) {
+            transactions.forEach(t => {
+                totalShares += t.shares;
+                totalCost += t.shares * t.costPerShare;
+                if (!earliestDate || new Date(t.date) < new Date(earliestDate)) {
+                    earliestDate = t.date;
+                }
+            });
+        }
 
         const avgCostPerShare = totalShares > 0 ? totalCost / totalShares : 0;
         const marketValue = totalShares * currentPrice;
@@ -1080,11 +1082,54 @@ export function handleRerunDiligenceQuery(question, symbol) {
     }
 }
 
+async function runPeerAnalysis(primaryTicker, peerTickers) {
+    const container = document.getElementById('peer-analysis-content-container');
+    container.innerHTML = `<div class="flex items-center justify-center p-4"><div class="loader"></div><p class="ml-4 text-gray-600 font-semibold">Analyzing peer data...</p></div>`;
+
+    const companyFmpData = await getFmpStockData(primaryTicker);
+    if (!companyFmpData) throw new Error(`Could not get data for primary ticker ${primaryTicker}.`);
+
+    const peerDataPromises = peerTickers.map(peerTicker => getFmpStockData(peerTicker));
+    const allPeerFmpData = await Promise.all(peerDataPromises);
+
+    const peerMetricsList = allPeerFmpData.filter(Boolean).map(fmpData => _calculateGarpScorecardMetrics(fmpData));
+
+    if (peerMetricsList.length === 0) {
+        throw new Error("Could not calculate metrics for any identified peers.");
+    }
+
+    const peerAverages = {};
+    const metricKeys = Object.keys(peerMetricsList[0]);
+    
+    for (const key of metricKeys) {
+        if (key === 'garpConvictionScore') continue; 
+        const values = peerMetricsList
+            .map(metrics => metrics[key]?.value)
+            .filter(v => typeof v === 'number' && isFinite(v));
+        
+        if (values.length > 0) {
+            peerAverages[key] = values.reduce((sum, v) => sum + v, 0) / values.length;
+        } else {
+             peerAverages[key] = null;
+        }
+    }
+    
+    const companyMetrics = _calculateGarpScorecardMetrics(companyFmpData);
+    const finalPeerDataObject = {
+        peers: peerTickers,
+        averages: peerAverages,
+        cachedAt: Timestamp.now()
+    };
+
+    const peerDocRef = doc(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, primaryTicker, 'analysis', 'peer_comparison');
+    await setDoc(peerDocRef, finalPeerDataObject);
+    
+    renderPeerComparisonTable(container, primaryTicker, companyMetrics, finalPeerDataObject);
+}
+
 export async function handlePeerAnalysisRequest(ticker) {
     const container = document.getElementById('peer-analysis-content-container');
-    if (!container) return;
-
-    container.innerHTML = `<div class="flex items-center justify-center p-4"><div class="loader"></div><p class="ml-4 text-gray-600 font-semibold">AI is identifying peers and fetching data...</p></div>`;
+    container.innerHTML = `<div class="flex items-center justify-center p-4"><div class="loader"></div><p class="ml-4 text-gray-600 font-semibold">AI is identifying peers...</p></div>`;
 
     try {
         const companyFmpData = await getFmpStockData(ticker);
@@ -1106,47 +1151,33 @@ export async function handlePeerAnalysisRequest(ticker) {
             throw new Error("AI did not return a valid list of competitor tickers.");
         }
 
-        const peerDataPromises = peerTickers.map(peerTicker => getFmpStockData(peerTicker));
-        const allPeerFmpData = await Promise.all(peerDataPromises);
-
-        const peerMetricsList = allPeerFmpData.filter(Boolean).map(fmpData => {
-            return _calculateGarpScorecardMetrics(fmpData);
-        });
-
-        if (peerMetricsList.length === 0) {
-            throw new Error("Could not calculate metrics for any identified peers.");
-        }
-
-        const peerAverages = {};
-        const metricKeys = Object.keys(peerMetricsList[0]);
-        
-        for (const key of metricKeys) {
-            if (key === 'garpConvictionScore') continue; 
-            const values = peerMetricsList
-                .map(metrics => metrics[key]?.value)
-                .filter(v => typeof v === 'number' && isFinite(v));
-            
-            if (values.length > 0) {
-                peerAverages[key] = values.reduce((sum, v) => sum + v, 0) / values.length;
-            } else {
-                 peerAverages[key] = null;
-            }
-        }
-        
-        const companyMetrics = _calculateGarpScorecardMetrics(companyFmpData);
-        const finalPeerDataObject = {
-            peers: peerTickers,
-            averages: peerAverages,
-            cachedAt: Timestamp.now()
-        };
-
-        const peerDocRef = doc(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, ticker, 'analysis', 'peer_comparison');
-        await setDoc(peerDocRef, finalPeerDataObject);
-        
-        renderPeerComparisonTable(container, ticker, companyMetrics, finalPeerDataObject);
+        await runPeerAnalysis(ticker, peerTickers);
 
     } catch (error) {
         console.error("Error handling peer analysis request:", error);
         container.innerHTML = `<p class="text-red-500 p-4">Could not complete peer analysis: ${error.message}</p>`;
+        document.getElementById('manual-peer-entry-container').classList.remove('hidden');
+    }
+}
+
+export async function handleManualPeerAnalysisRequest(ticker) {
+    const input = document.getElementById('manual-peer-input');
+    if (!input) return;
+
+    const tickersStr = input.value.trim();
+    if (!tickersStr) {
+        displayMessageInModal("Please enter at least one peer ticker.", "warning");
+        return;
+    }
+
+    const peerTickers = tickersStr.split(',').map(t => t.trim().toUpperCase()).filter(Boolean);
+
+    try {
+        await runPeerAnalysis(ticker, peerTickers);
+    } catch (error) {
+        console.error("Error handling manual peer analysis:", error);
+        const container = document.getElementById('peer-analysis-content-container');
+        container.innerHTML = `<p class="text-red-500 p-4">Could not complete manual peer analysis: ${error.message}</p>`;
+        document.getElementById('manual-peer-entry-container').classList.remove('hidden');
     }
 }
