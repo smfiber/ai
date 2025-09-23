@@ -835,7 +835,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     ? valA.localeCompare(valB) 
                     : valB.localeCompare(a);
             } else {
-                return direction === 'asc' ? valA - valB : valB - valA;
+                return direction === 'asc' ? valA - valB : valB - a;
             }
         });
         renderAdvancedStockTable(sortedData, document.getElementById('advanced-screener-data-container'));
@@ -1268,7 +1268,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 document.getElementById('modal-financial-trends-content').innerHTML = '<p class="text-center text-gray-500">Refreshing trend data...</p>';
                 document.getElementById('modal-news-content').innerHTML = '<p class="text-center text-gray-500">Refreshing news...</p>';
 
-                const liveData = await fetchTickerDetails(symbol, true); // Force refresh
+                const liveData = await fetchFullTickerDetails(symbol, true); // Force refresh
                 if (liveData) {
                     const garpData = mapDataForGarp(liveData);
                     const metrics = _calculateGarpScorecardMetrics(garpData);
@@ -1279,7 +1279,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     populateNewsTab(liveData.news, null);
                     populateGarpScorecardInModal(metrics);
                     
-                    const dataToSave = { ...liveData, garpConvictionScore: metrics.garpConvictionScore, timestamp: new Date().toISOString() };
+                    const dataToSave = { ...garpData, news: liveData.news, garpConvictionScore: metrics.garpConvictionScore, timestamp: new Date().toISOString() };
                     await saveTickerDetailsToFirebase(symbol, dataToSave);
                     appConfig.cachedStockInfo[symbol] = { rating: metrics.garpConvictionScore, timestamp: dataToSave.timestamp };
                     
@@ -1331,7 +1331,7 @@ document.addEventListener("DOMContentLoaded", () => {
             populateNewsTab(cachedData.news, cachedData.timestamp);
             populateGarpScorecardInModal(metrics);
         } else {
-            const liveData = await fetchTickerDetails(symbol);
+            const liveData = await fetchFullTickerDetails(symbol);
              if (liveData) {
                 const garpData = mapDataForGarp(liveData);
                 const metrics = _calculateGarpScorecardMetrics(garpData);
@@ -1376,7 +1376,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
 
-    async function fetchTickerDetails(symbol) {
+    async function fetchFullTickerDetails(symbol) {
         if (!appConfig.fmpApiKey) return null;
         const apiKey = appConfig.fmpApiKey;
         const endpoints = {
