@@ -833,7 +833,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (typeof valA === 'string') {
                 return direction === 'asc' 
                     ? valA.localeCompare(valB) 
-                    : valB.localeCompare(valA);
+                    : valB.localeCompare(a);
             } else {
                 return direction === 'asc' ? valA - valB : valB - valA;
             }
@@ -893,7 +893,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 processedCount++;
             }
             
-            await delay(600);
         }
 
         if (statusEl) {
@@ -1562,7 +1561,7 @@ document.addEventListener("DOMContentLoaded", () => {
             createRow('EPS (Diluted)', income, 'epsdiluted', 'eps'),
             createRow('Return on Equity (ROE)', metrics, 'roe', 'percent'),
             createRow('Debt to Equity', metrics, 'debtToEquity', 'default'),
-            createRow('Free Cash Flow', cashflow, 'freeCashFlow', 'currency')
+            createRow('Free Cash Flow', cashflow, 'freeCashflow', 'currency')
         ].join('');
 
         contentEl.innerHTML = `
