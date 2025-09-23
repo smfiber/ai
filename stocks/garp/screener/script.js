@@ -4,8 +4,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const appConfig = {
         fmpApiKey: "",
         geminiApiKey: "",
-        searchApiKey: "",
-        searchEngineId: "",
         googleClientId: "",
         firebaseConfig: {},
         cachedStockInfo: {}
@@ -27,8 +25,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const errorMessage = document.getElementById('api-key-error');
     const geminiApiKeyInput = document.getElementById('geminiApiKeyInput');
     const googleClientIdInput = document.getElementById('googleClientIdInput');
-    const webSearchApiKeyInput = document.getElementById('webSearchApiKeyInput');
-    const searchEngineIdInput = document.getElementById('searchEngineIdInput');
     const fmpApiKeyInput = document.getElementById('fmpApiKeyInput');
     const firebaseConfigInput = document.getElementById('firebaseConfigInput');
     const tabButtons = document.querySelectorAll('.tab-button');
@@ -868,7 +864,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 continue;
             }
 
-            const liveData = await fetchTickerDetails(symbol);
+            const liveData = await fetchFullTickerDetails(symbol);
             if (liveData) {
                 const garpData = mapDataForGarp(liveData);
                 const metrics = _calculateGarpScorecardMetrics(garpData);
@@ -1320,17 +1316,9 @@ document.addEventListener("DOMContentLoaded", () => {
         document.querySelectorAll('.modal-tab-content').forEach(content => content.classList.remove('active'));
         document.querySelector('#modal-ai-summary-content').classList.add('active');
 
-        const cachedData = await loadTickerDetailsFromFirebase(symbol);
-        if (cachedData && cachedData.key_metrics_annual) { // Check for a key that confirms new format
-            const metrics = _calculateGarpScorecardMetrics(cachedData);
-            populateFinancialsModal(cachedData);
-            populateFinancialTrends(cachedData);
-            populateRawDataModal(cachedData);
-            populateNewsTab(cachedData.news, cachedData.timestamp);
-            populateGarpScorecardInModal(metrics);
-        } else {
-            const liveData = await fetchFullTickerDetails(symbol);
-             if (liveData) {
+        // Always fetch live data and update cache
+        const liveData = await fetchFullTickerDetails(symbol);
+            if (liveData) {
                 const garpData = mapDataForGarp(liveData);
                 const metrics = _calculateGarpScorecardMetrics(garpData);
                 
@@ -1355,7 +1343,6 @@ document.addEventListener("DOMContentLoaded", () => {
                  document.getElementById('modal-financial-trends-content').innerHTML = '';
                  document.getElementById('modal-news-content').innerHTML = '';
             }
-        }
         updateViewedIndicatorForSymbol(symbol);
     }
 
