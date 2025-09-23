@@ -464,8 +464,6 @@ document.addEventListener("DOMContentLoaded", () => {
         const formValues = {
             geminiApiKey: geminiApiKeyInput.value.trim(),
             googleClientId: googleClientIdInput.value.trim(),
-            searchApiKey: webSearchApiKeyInput.value.trim(),
-            searchEngineId: searchEngineIdInput.value.trim(),
             fmpApiKey: fmpApiKeyInput.value.trim(),
             firebaseConfigString: firebaseConfigInput.value.trim()
         };
@@ -833,9 +831,9 @@ document.addEventListener("DOMContentLoaded", () => {
             if (typeof valA === 'string') {
                 return direction === 'asc' 
                     ? valA.localeCompare(valB) 
-                    : valB.localeCompare(a);
+                    : valB.localeCompare(valA);
             } else {
-                return direction === 'asc' ? valA - valB : valB - a;
+                return direction === 'asc' ? valA - valB : valB - valA;
             }
         });
         renderAdvancedStockTable(sortedData, document.getElementById('advanced-screener-data-container'));
