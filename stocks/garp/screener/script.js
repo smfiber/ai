@@ -1219,22 +1219,33 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // --- 17. Financials Modal Logic ---
     function updateScreenerAndRerender(symbol, newTimestamp) {
+        // Update the cached timestamp for the stock in the advancedScreenerData array
         const stockInScreener = advancedScreenerData.find(s => s.symbol === symbol);
         if (stockInScreener) {
             stockInScreener.cachedTimestamp = newTimestamp;
         }
 
-        const tableContainerParent = document.getElementById('advanced-screener-data-container');
-        if (tableContainerParent) {
-            const tableContainer = tableContainerParent.querySelector('.overflow-y-auto');
-            const scrollPos = tableContainer ? tableContainer.scrollTop : 0;
-            
-            sortAndRerenderAdvancedTable();
+        // Get the specific row for the symbol from both screener tables
+        const advancedRow = document.querySelector(`#advanced-screener-data-container tr[data-symbol-row="${symbol}"]`);
+        const simpleRow = document.querySelector(`#screener-tab-content tr[data-symbol-row="${symbol}"]`);
 
-            if (tableContainer) {
-                setTimeout(() => {
-                    tableContainer.scrollTop = scrollPos;
-                }, 0);
+        // Update the conviction score and cached date elements in the advanced screener row
+        if (advancedRow) {
+            const scoreCell = advancedRow.querySelector('[data-rating-symbol]');
+            const cachedCell = advancedRow.querySelector('[data-cached-on-symbol]');
+            if (scoreCell) {
+                scoreCell.innerHTML = getRatingHtml(symbol);
+            }
+            if (cachedCell) {
+                cachedCell.textContent = formatDate(newTimestamp);
+            }
+        }
+        
+        // Update the conviction score and viewed indicator in the simple screener row
+        if (simpleRow) {
+            const scoreCell = simpleRow.querySelector('[data-rating-symbol]');
+            if (scoreCell) {
+                scoreCell.innerHTML = getRatingHtml(symbol);
             }
         }
     }
