@@ -633,6 +633,11 @@ export async function handleGarpCandidacyRequest(ticker) {
         const companyName = profile.companyName || ticker;
         const tickerSymbol = profile.symbol || ticker;
         const sector = profile.sector || 'N/A';
+        const peerDocRef = doc(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, ticker, 'analysis', 'peer_comparison');
+        const peerDocSnap = await getDoc(peerDocRef);
+        const peerAverages = peerDocSnap.exists() ? peerDocSnap.data().averages : null;
+        const peerDataChanges = peerDocSnap.exists() ? peerDocSnap.data().changes : null;
+
 
         // Check for hyper-growth to generate diligence questions
         const epsNext1yValue = scorecardData['EPS Growth (Next 1Y)'].value;
@@ -646,16 +651,15 @@ export async function handleGarpCandidacyRequest(ticker) {
             });
         }
 
-        const cleanData = {};
+        const cleanScorecard = {};
         for (const [key, value] of Object.entries(scorecardData)) {
             if (key === 'garpConvictionScore') continue;
             
-            // Create a new object for the payload that formats the value but keeps the rich interpretation data
             const formattedValue = (typeof value.value === 'number' && isFinite(value.value))
                 ? (value.format === 'percent' ? `${(value.value * 100).toFixed(2)}%` : value.value.toFixed(2))
                 : 'N/A';
 
-            cleanData[key] = {
+            cleanScorecard[key] = {
                 value: formattedValue,
                 isMet: value.isMet,
                 interpretation: value.interpretation 
@@ -663,18 +667,39 @@ export async function handleGarpCandidacyRequest(ticker) {
         }
 
         const payload = {
-            scorecard: cleanData,
+            scorecard: cleanScorecard,
             garpConvictionScore: scorecardData.garpConvictionScore,
+            peerAverages: peerAverages,
+            peerDataChanges: peerDataChanges,
             diligenceQuestions: diligenceQuestions
         };
 
         const promptConfig = promptMap['GarpCandidacy'];
-        const prompt = promptConfig.prompt
+        let prompt = promptConfig.prompt
             .replace(/{companyName}/g, companyName)
             .replace(/{tickerSymbol}/g, tickerSymbol)
             .replace(/{sector}/g, sector)
             .replace('{jsonData}', JSON.stringify(payload, null, 2));
-        
+            
+        // Manually handle the diligence questions section
+        if (diligenceQuestions.length > 0) {
+            let questionsHtml = `
+(1 paragraph)
+Based on your analysis, propose 2-3 critical diligence questions. For each question, you MUST provide two parts:
+1.  **Human-Led Question:** A high-level, strategic question for an analyst to answer through deeper research and judgment.
+2.  **Suggested AI Investigation Query:** A specific, fact-based query designed to be used with a search-enabled AI (like the 'Diligence Investigation' tool) to find source material. This query should target information from recent earnings calls, SEC filings (10-K, 10-Q), or investor presentations.
+
+Format each item precisely like this:
+`;
+            questionsHtml += diligenceQuestions.map(q => `
+- **Human-Led Question:** ${q.humanQuestion}
+- **Suggested AI Investigation Query:** "${q.aiQuery}"
+`).join('\n');
+            prompt = prompt.replace('{diligenceQuestions}', questionsHtml);
+        } else {
+            prompt = prompt.replace('{diligenceQuestions}', 'No critical diligence questions were identified by the AI in this initial assessment.');
+        }
+
         const analysisResult = await generateRefinedArticle(prompt);
         renderCandidacyAnalysis(resultContainer, analysisResult, prompt, diligenceQuestions);
         
