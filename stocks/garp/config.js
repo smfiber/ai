@@ -406,14 +406,9 @@ Sector: {sector}
 4. Input Data:
 You will be given a JSON object containing a scorecard with key financial metrics and a criteriaInterpretation explaining what each metric signifies within our GARP framework. You will also be provided with data on the company's industry peers.
 \`\`\`json
-{
-    "scorecard": {jsonData.scorecard},
-    "garpConvictionScore": {jsonData.garpConvictionScore},
-    "peerAverages": {peerAverages},
-    "peerDataChanges": {peerDataChanges},
-    "diligenceQuestions": {jsonData.diligenceQuestions}
-}
+{jsonData}
 \`\`\`
+
 5. Required Output Structure & Content:
 Generate a comprehensive GARP assessment using precise markdown formatting. Your response MUST follow the specified markdown structure.
 
@@ -428,12 +423,12 @@ Generate a comprehensive GARP assessment using precise markdown formatting. Your
 ## THE BULL CASE: The Growth & Value Narrative
 
 (1 paragraph)
-Synthesize the stock's strengths into a compelling narrative. Explain how the passing metrics work together. Focus on the synergy between growth projections and valuation. **Critically, compare the company's strongest metrics (e.g., ROE, Growth) to the \`{peerAverages}\` to demonstrate its relative strength.** Use the \`{peerDataChanges}\` to highlight any positive momentum.
+Synthesize the stock's strengths into a compelling narrative. Explain how the passing metrics work together. Focus on the synergy between growth projections and valuation. Critically, compare the company's strongest metrics (e.g., ROE, Growth) to the peer averages to demonstrate its relative strength. Use the peer trend data to highlight any positive momentum.
 
 ## THE BEAR CASE: The Risks & Quality Concerns
 
 (1 paragraph)
-Identify the critical risks and weaknesses revealed by the failing metrics. **Directly compare the company's weakest metrics to the \`{peerAverages}\`.** For example, is its P/E ratio just high, or is it significantly higher than its competitors? Use the \`{peerDataChanges}\` to flag any negative trends, such as its valuation becoming less attractive relative to its peers over time.
+Identify the critical risks and weaknesses revealed by the failing metrics. Directly compare the company's weakest metrics to the peer averages. For example, is its P/E ratio just high, or is it significantly higher than its competitors? Use the peer trend data to flag any negative trends, such as its valuation becoming less attractive relative to its peers over time.
 
 ## FINAL SYNTHESIS & RECOMMENDATION
 
@@ -444,16 +439,7 @@ Investment Profile & The Deciding Factor: Classify the stock's profile (e.g., 'B
 
 ## Actionable Diligence Questions
 
-[if jsonData.diligenceQuestions.length > 0 then]
-(1 paragraph)
-Based on your analysis, propose 2-3 critical diligence questions. For each question, you MUST provide two parts:
-1.  **Human-Led Question:** A high-level, strategic question for an analyst to answer through deeper research and judgment.
-2.  **Suggested AI Investigation Query:** A specific, fact-based query designed to be used with a search-enabled AI (like the 'Diligence Investigation' tool) to find source material. This query should target information from recent earnings calls, SEC filings (10-K, 10-Q), or investor presentations.
-
-Format each item precisely like this:
-- **Human-Led Question:** [Your strategic question here]
-- **Suggested AI Investigation Query:** "[Your specific, fact-based query here]"
-[end if]
+{diligenceQuestions}
 
 6. Critical Guidelines & Constraints:
 
