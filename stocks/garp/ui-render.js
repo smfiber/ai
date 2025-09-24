@@ -565,7 +565,7 @@ export function updateGarpCandidacyStatus(statusContainer, reports, activeReport
         const selectedReport = reports.find(r => r.id === e.target.value);
         if (selectedReport) {
             const contentContainer = document.getElementById('garp-analysis-container');
-            renderCandidacyAnalysis(contentContainer, selectedReport.content, selectedReport.prompt);
+            renderCandidacyAnalysis(contentContainer, selectedReport.content, selectedReport.prompt, selectedReport.diligenceQuestions);
             updateGarpCandidacyStatus(statusContainer, reports, selectedReport.id, ticker);
         }
     });
@@ -609,7 +609,7 @@ export function renderCandidacyAnalysis(container, reportContent, prompt, dilige
     // Add event listeners for the new diligence questions
     container.querySelectorAll('[data-ai-query]').forEach(item => {
         item.addEventListener('click', () => {
-            const query = item.dataset.ai-query;
+            const query = item.dataset.aiQuery;
             const diligenceInput = document.getElementById('diligence-question-input');
             if (diligenceInput) {
                 diligenceInput.value = query;
