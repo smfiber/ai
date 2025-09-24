@@ -1159,11 +1159,15 @@ async function _fetchAndCachePeerData(tickers) {
     const currentReportName = document.getElementById('current-report-name');
     const progressContainer = document.getElementById('progress-container');
 
-    progressContainer.classList.remove('hidden');
-    progressStatus.textContent = 'Fetching Peer Data';
-    progressBarFill.style.width = '0%';
+    if (progressContainer) {
+        progressContainer.classList.remove('hidden');
+        progressStatus.textContent = 'Fetching Peer Data';
+        progressBarFill.style.width = '0%';
+    }
+
 
     for (const ticker of tickers) {
+        let allEndpointsFetched = true;
         try {
             // Check if the peer data is already cached
             const docRef = doc(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, ticker, 'endpoints', 'profile');
@@ -1173,12 +1177,16 @@ async function _fetchAndCachePeerData(tickers) {
                 console.log(`Peer data for ${ticker} already in cache. Skipping fetch.`);
                 successfullyFetchedTickers.push(ticker);
                 fetchedCount += endpointsToFetch.length;
-                const progress = (fetchedCount / totalEndpoints) * 100;
-                progressBarFill.style.width = `${progress}%`;
+                if (progressBarFill) {
+                    const progress = (fetchedCount / totalEndpoints) * 100;
+                    progressBarFill.style.width = `${progress}%`;
+                }
                 continue;
             }
             
-            currentReportName.textContent = `Fetching data for ${ticker}...`;
+            if (currentReportName) {
+                currentReportName.textContent = `Fetching data for ${ticker}...`;
+            }
 
             for (const endpoint of endpointsToFetch) {
                 const url = `https://financialmodelingprep.com/api/v3/${endpoint}/${ticker}?apikey=${state.fmpApiKey}`;
@@ -1187,19 +1195,30 @@ async function _fetchAndCachePeerData(tickers) {
                 if (data && (!Array.isArray(data) || data.length > 0)) {
                     const endpointDocRef = doc(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, ticker, 'endpoints', endpoint);
                     await setDoc(endpointDocRef, { cachedAt: Timestamp.now(), data: data });
+                } else {
+                    console.warn(`No data returned from FMP for peer endpoint: ${endpoint} for ticker ${ticker}.`);
+                    allEndpointsFetched = false;
                 }
                 fetchedCount++;
-                const progress = (fetchedCount / totalEndpoints) * 100;
-                progressBarFill.style.width = `${progress}%`;
+                if (progressBarFill) {
+                    const progress = (fetchedCount / totalEndpoints) * 100;
+                    progressBarFill.style.width = `${progress}%`;
+                }
             }
 
-            successfullyFetchedTickers.push(ticker);
+            if (allEndpointsFetched) {
+                successfullyFetchedTickers.push(ticker);
+            } else {
+                console.warn(`Incomplete data fetched for ${ticker}. It will be excluded from analysis.`);
+            }
 
         } catch (error) {
             console.error(`Error fetching data for peer ${ticker}:`, error);
         }
     }
-    progressContainer.classList.add('hidden');
+    if (progressContainer) {
+        progressContainer.classList.add('hidden');
+    }
     return successfullyFetchedTickers;
 }
 
