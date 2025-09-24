@@ -591,10 +591,9 @@ export function renderCandidacyAnalysis(container, reportContent, prompt, dilige
             </div>
         `;
     }
-
-    const rawMarkdown = reportContent || '';
-    const reportHtml = marked.parse(rawMarkdown);
     
+    // Parse the markdown and then manipulate the DOM to find and replace
+    const reportHtml = marked.parse(reportContent || '');
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = reportHtml;
     
@@ -603,6 +602,7 @@ export function renderCandidacyAnalysis(container, reportContent, prompt, dilige
         let currentElement = diligenceSection.nextElementSibling;
         const questionsContainer = document.createElement('div');
 
+        // Extract all elements until the next H2
         while(currentElement && currentElement.tagName !== 'H2') {
             const nextElement = currentElement.nextElementSibling;
             questionsContainer.appendChild(currentElement);
@@ -616,17 +616,19 @@ export function renderCandidacyAnalysis(container, reportContent, prompt, dilige
         doc.querySelectorAll('li').forEach(li => {
             const strongTags = li.querySelectorAll('strong');
             if (strongTags.length === 2) {
-                const humanQuestionText = strongTags[0].nextSibling.textContent.trim();
-                const aiQueryText = strongTags[1].nextSibling.textContent.trim().replace(/^:/, '').replace(/^"|"$/g, '').trim();
-                
-                // Create a container for the clickable question
-                const clickableDiv = document.createElement('div');
-                clickableDiv.className = 'p-3 bg-indigo-50 border border-indigo-200 rounded-lg cursor-pointer hover:bg-indigo-100 transition-colors duration-150 mb-2';
-                clickableDiv.innerHTML = `<p class="font-semibold text-sm text-indigo-800">Human-Led Question: ${sanitizeText(humanQuestionText)}</p><span class="text-xs text-indigo-600 font-medium">Click to investigate this question</span>`;
-                clickableDiv.setAttribute('data-ai-query', sanitizeText(aiQueryText));
-                
-                // Replace the original list item with the new clickable div
-                li.parentNode.replaceChild(clickableDiv, li);
+                const humanQuestionText = strongTags[0].nextSibling?.textContent.trim();
+                const aiQueryText = strongTags[1].nextSibling?.textContent.trim().replace(/^:/, '').replace(/^"|"$/g, '').trim();
+
+                if (humanQuestionText && aiQueryText) {
+                    // Create a container for the clickable question
+                    const clickableDiv = document.createElement('div');
+                    clickableDiv.className = 'p-3 bg-indigo-50 border border-indigo-200 rounded-lg cursor-pointer hover:bg-indigo-100 transition-colors duration-150 mb-2';
+                    clickableDiv.innerHTML = `<p class="font-semibold text-sm text-indigo-800">Human-Led Question: ${sanitizeText(humanQuestionText)}</p><span class="text-xs text-indigo-600 font-medium">Click to investigate this question</span>`;
+                    clickableDiv.setAttribute('data-ai-query', sanitizeText(aiQueryText));
+                    
+                    // Replace the original list item with the new clickable div
+                    li.parentNode.replaceChild(clickableDiv, li);
+                }
             }
         });
         diligenceSection.innerHTML = `Actionable Diligence Questions`;
@@ -638,7 +640,7 @@ export function renderCandidacyAnalysis(container, reportContent, prompt, dilige
     
     container.querySelectorAll('[data-ai-query]').forEach(item => {
         item.addEventListener('click', () => {
-            const query = item.dataset.ai-query;
+            const query = item.dataset.aiQuery;
             const diligenceInput = document.getElementById('diligence-question-input');
             if (diligenceInput) {
                 diligenceInput.value = query;
