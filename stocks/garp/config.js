@@ -289,7 +289,7 @@ You are a Senior Investment Analyst at a GARP-focused ("Growth at a Reasonable P
 (Now, synthesize your answers above into a final verdict.)
 
 ### Recommendation
-**[Provide one of the following recommendations: High Conviction Buy, Initiate Position, Add to Watchlist, or Pass]**
+**[Provide one of the following recommendations: High Conviction Buy, Initiate Position, Add to Watchlist, or Pass/Sell]**
 
 ### Justification
 [Provide a 1-2 sentence justification for your recommendation, explicitly referencing the trade-offs revealed in the Q&A above.]
@@ -406,13 +406,13 @@ Sector: {sector}
 4. Input Data:
 You will be given a JSON object containing a scorecard with key financial metrics and a criteriaInterpretation explaining what each metric signifies within our GARP framework. You will also be provided with data on the company's industry peers.
 \`\`\`json
-{jsonData}
-\`\`\`
-\`\`\`json
-{peerAverages}
-\`\`\`
-\`\`\`json
-{peerDataChanges}
+{
+    "scorecard": {jsonData.scorecard},
+    "garpConvictionScore": {jsonData.garpConvictionScore},
+    "peerAverages": {peerAverages},
+    "peerDataChanges": {peerDataChanges},
+    "diligenceQuestions": {jsonData.diligenceQuestions}
+}
 \`\`\`
 5. Required Output Structure & Content:
 Generate a comprehensive GARP assessment using precise markdown formatting. Your response MUST follow the specified markdown structure.
@@ -444,6 +444,7 @@ Investment Profile & The Deciding Factor: Classify the stock's profile (e.g., 'B
 
 ## Actionable Diligence Questions
 
+[if jsonData.diligenceQuestions.length > 0 then]
 (1 paragraph)
 Based on your analysis, propose 2-3 critical diligence questions. For each question, you MUST provide two parts:
 1.  **Human-Led Question:** A high-level, strategic question for an analyst to answer through deeper research and judgment.
@@ -452,6 +453,7 @@ Based on your analysis, propose 2-3 critical diligence questions. For each quest
 Format each item precisely like this:
 - **Human-Led Question:** [Your strategic question here]
 - **Suggested AI Investigation Query:** "[Your specific, fact-based query here]"
+[end if]
 
 6. Critical Guidelines & Constraints:
 
@@ -581,3 +583,5 @@ export const ANALYSIS_NAMES = {
     'PeerIdentification': 'Peer Identification',
     'PeerComparison': 'Peer Comparison'
 };
+
+}
