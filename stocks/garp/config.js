@@ -193,7 +193,7 @@ Based on all the evidence, provide a concluding assessment. Classify the moat as
 - **No Moat:** The company has no clear, sustainable competitive advantage, **making it vulnerable to competition and price wars.**
 `.trim();
 
-export const RISK_ASSESSMENT_PROMPT = `
+const RISK_ASSESSMENT_PROMPT = `
 Role: You are a risk analyst AI. Your job is to act like a cautious inspector, identifying the most significant potential problems or "red flags" for {companyName} and explaining them simply.
 Data Instructions: Your analysis must be derived exclusively from the provided JSON data. For each potential risk listed below, evaluate the data. **Only include the bullet point in your final output if the data indicates a risk is present.**
 Output Format: You MUST return a prioritized, bulleted list in markdown, categorized by risk type. Do NOT use prose or paragraph format for the main analysis. Explain each risk in simple terms within the bullet points.
@@ -583,5 +583,3 @@ export const ANALYSIS_NAMES = {
     'PeerIdentification': 'Peer Identification',
     'PeerComparison': 'Peer Comparison'
 };
-
-}
