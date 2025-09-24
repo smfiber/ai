@@ -3,7 +3,7 @@ import { CONSTANTS, state, promptMap, ANALYSIS_REQUIREMENTS, ANALYSIS_NAMES } fr
 import { callApi, callGeminiApi, generateRefinedArticle, generatePolishedArticleForSynthesis, getFmpStockData, callGeminiApiWithSearch } from './api.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { openModal, closeModal, displayMessageInModal, openConfirmationModal, openManageStockModal, openDiligenceWarningModal } from './ui-modals.js';
-import { renderPortfolioManagerList, displayReport, updateReportStatus, fetchAndCachePortfolioData, updateGarpCandidacyStatus, renderCandidacyAnalysis, renderDiligenceLog, renderPeerComparisonTable } from './ui-render.js';
+import { renderPortfolioManagerList, displayReport, updateReportStatus, fetchAndCachePortfolioData, updateGarpCandidacyStatus, renderCandidacyAnalysis, renderGarpAnalysisSummary, renderDiligenceLog, renderPeerComparisonTable } from './ui-render.js';
 import { _calculateFinancialAnalysisMetrics, _calculateMoatAnalysisMetrics, _calculateRiskAssessmentMetrics, _calculateCapitalAllocatorsMetrics, _calculateGarpAnalysisMetrics, _calculateGarpScorecardMetrics, CALCULATION_SUMMARIES } from './analysis-helpers.js';
 
 // --- UTILITY HELPERS ---
@@ -367,7 +367,8 @@ export async function handlePositionAnalysisRequest(ticker, forceNew = false) {
         if (savedReports.length > 0 && !forceNew) {
             const latestReport = savedReports[0];
             displayReport(container, latestReport.content, latestReport.prompt);
-            const statusContainer = document.getElementById('report-status-container-position');
+            contentContainer.dataset.currentPrompt = latestReport.prompt || '';
+            contentContainer.dataset.rawMarkdown = latestReport.content;
             updateReportStatus(statusContainer, savedReports, latestReport.id, { reportType, symbol: ticker });
             return;
         }
@@ -1145,10 +1146,67 @@ export function handleRerunDiligenceQuery(question, symbol) {
     }
 }
 
+async function _fetchAndCachePeerData(tickers) {
+    if (!state.fmpApiKey) {
+        throw new Error("FMP API key is required to fetch peer data.");
+    }
+    const successfullyFetchedTickers = [];
+    const endpointsToFetch = ['profile', 'key_metrics_ttm', 'ratios_ttm', 'key_metrics_annual', 'ratios_annual'];
+    const totalEndpoints = tickers.length * endpointsToFetch.length;
+    let fetchedCount = 0;
+
+    const progressBarFill = document.getElementById('progress-bar-fill');
+    const progressStatus = document.getElementById('progress-status');
+    const currentReportName = document.getElementById('current-report-name');
+    const progressContainer = document.getElementById('progress-container');
+
+    progressContainer.classList.remove('hidden');
+    progressStatus.textContent = 'Fetching Peer Data';
+    progressBarFill.style.width = '0%';
+
+    for (const ticker of tickers) {
+        try {
+            // Check if the peer data is already cached
+            const docRef = doc(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, ticker, 'endpoints', 'profile');
+            const docSnap = await getDoc(docRef);
+
+            if (docSnap.exists()) {
+                console.log(`Peer data for ${ticker} already in cache. Skipping fetch.`);
+                successfullyFetchedTickers.push(ticker);
+                fetchedCount += endpointsToFetch.length;
+                const progress = (fetchedCount / totalEndpoints) * 100;
+                progressBarFill.style.width = `${progress}%`;
+                continue;
+            }
+            
+            currentReportName.textContent = `Fetching data for ${ticker}...`;
+
+            for (const endpoint of endpointsToFetch) {
+                const url = `https://financialmodelingprep.com/api/v3/${endpoint}/${ticker}?apikey=${state.fmpApiKey}`;
+                const data = await callApi(url);
+
+                if (data && (!Array.isArray(data) || data.length > 0)) {
+                    const endpointDocRef = doc(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, ticker, 'endpoints', endpoint);
+                    await setDoc(endpointDocRef, { cachedAt: Timestamp.now(), data: data });
+                }
+                fetchedCount++;
+                const progress = (fetchedCount / totalEndpoints) * 100;
+                progressBarFill.style.width = `${progress}%`;
+            }
+
+            successfullyFetchedTickers.push(ticker);
+
+        } catch (error) {
+            console.error(`Error fetching data for peer ${ticker}:`, error);
+        }
+    }
+    progressContainer.classList.add('hidden');
+    return successfullyFetchedTickers;
+}
+
+
 async function runPeerAnalysis(primaryTicker, peerTickers) {
     const container = document.getElementById('peer-analysis-content-container');
-    container.innerHTML = `<div class="flex items-center justify-center p-4"><div class="loader"></div><p class="ml-4 text-gray-600 font-semibold">Analyzing peer data...</p></div>`;
-
     const companyFmpData = await getFmpStockData(primaryTicker);
     if (!companyFmpData) throw new Error(`Could not get data for primary ticker ${primaryTicker}.`);
 
@@ -1202,6 +1260,9 @@ export async function handlePeerAnalysisRequest(ticker) {
 
     let peerTickers = [];
     let source = '';
+    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+    const progressContainer = document.getElementById('progress-container');
+    const genericLoader = document.getElementById('generic-loader-container');
 
     try {
         // Tier 1: Direct Competitor Search
@@ -1219,7 +1280,7 @@ export async function handlePeerAnalysisRequest(ticker) {
             source = 'AI (Direct)';
         } else {
             // Tier 2: Fallback AI Search (by sector & market cap)
-            container.innerHTML = `<div class="flex items-center justify-center p-4"><div class="loader"></div><p class="ml-4 text-gray-600 font-semibold">Direct search failed. Trying broader search...</p></div>`;
+            loadingMessage.textContent = 'Direct search failed. Trying broader search...';
             const fallbackPromptConfig = promptMap['PeerIdentificationFallback'];
             const fallbackPrompt = fallbackPromptConfig.prompt
                 .replace('{tickerSymbol}', profileData.ticker)
@@ -1234,7 +1295,7 @@ export async function handlePeerAnalysisRequest(ticker) {
                 source = 'AI (Fallback)';
             } else {
                 // Tier 3: FMP Peer API
-                container.innerHTML = `<div class="flex items-center justify-center p-4"><div class="loader"></div><p class="ml-4 text-gray-600 font-semibold">AI search failed. Using FMP's Peer API...</p></div>`;
+                loadingMessage.textContent = 'AI search failed. Using FMP\'s Peer API...';
                 const fmpUrl = `https://financialmodelingprep.com/api/v4/stock_peers?symbol=${ticker}&apikey=${state.fmpApiKey}`;
                 const fmpResponse = await callApi(fmpUrl);
 
@@ -1247,13 +1308,21 @@ export async function handlePeerAnalysisRequest(ticker) {
             }
         }
         
-        await runPeerAnalysis(ticker, peerTickers);
-        displayMessageInModal(`Successfully found ${peerTickers.length} peers using ${source}.`, 'info');
+        openModal(CONSTANTS.MODAL_LOADING);
+        genericLoader.classList.add('hidden');
+        
+        const fetchedPeers = await _fetchAndCachePeerData(peerTickers);
+        
+        await runPeerAnalysis(ticker, fetchedPeers);
+        displayMessageInModal(`Successfully found ${fetchedPeers.length} peers using ${source}.`, 'info');
 
     } catch (error) {
         console.error("Error handling peer analysis request:", error);
         container.innerHTML = `<p class="text-red-500 p-4">Could not complete peer analysis: ${error.message}</p>`;
         document.getElementById('manual-peer-entry-container').classList.remove('hidden');
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+        genericLoader.classList.remove('hidden');
     }
 }
 
@@ -1268,13 +1337,20 @@ export async function handleManualPeerAnalysisRequest(ticker) {
     }
 
     const peerTickers = tickersStr.split(',').map(t => t.trim().toUpperCase()).filter(Boolean);
+    const genericLoader = document.getElementById('generic-loader-container');
 
     try {
-        await runPeerAnalysis(ticker, peerTickers);
+        openModal(CONSTANTS.MODAL_LOADING);
+        genericLoader.classList.add('hidden');
+        const fetchedPeers = await _fetchAndCachePeerData(peerTickers);
+        await runPeerAnalysis(ticker, fetchedPeers);
     } catch (error) {
         console.error("Error handling manual peer analysis:", error);
         const container = document.getElementById('peer-analysis-content-container');
         container.innerHTML = `<p class="text-red-500 p-4">Could not complete manual peer analysis: ${error.message}</p>`;
         document.getElementById('manual-peer-entry-container').classList.remove('hidden');
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+        genericLoader.classList.remove('hidden');
     }
 }
