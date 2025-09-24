@@ -590,30 +590,54 @@ export function renderCandidacyAnalysis(container, reportContent, prompt, dilige
     }
 
     let diligenceQuestionsHtml = '';
+    // Check if there are any diligence questions to render
     if (diligenceQuestions && diligenceQuestions.length > 0) {
-        diligenceQuestionsHtml = `
-            <h4 class="text-lg font-bold text-red-700 mb-2 mt-4 border-t pt-4">Critical Diligence Required</h4>
-            <p class="text-sm text-gray-700 mb-3">The following key questions were identified by the AI during the initial assessment and require investigation before a final investment decision is made. Click to copy the question to the diligence investigation box.</p>
-            <ul class="space-y-2">
-                ${diligenceQuestions.map(q => `
-                    <li class="p-3 bg-red-50 border border-red-200 rounded-lg cursor-pointer hover:bg-red-100 transition-colors duration-150" data-ai-query="${sanitizeText(q.aiQuery)}">
-                        <p class="font-semibold text-sm text-red-800">${sanitizeText(q.humanQuestion)}</p>
+        // Find the specific question from the report content
+        const questionFromReport = diligenceQuestions.find(q => reportContent.includes(q.humanQuestion));
+        // If a specific question is found, render the old "Critical" section
+        if (questionFromReport) {
+            diligenceQuestionsHtml = `
+                <h4 class="text-lg font-bold text-red-700 mb-2 mt-4 border-t pt-4">Critical Diligence Required</h4>
+                <p class="text-sm text-gray-700 mb-3">The following key questions were identified by the AI during the initial assessment and require investigation before a final investment decision is made. Click to copy the question to the diligence investigation box.</p>
+                <ul class="space-y-2">
+                    <li class="p-3 bg-red-50 border border-red-200 rounded-lg cursor-pointer hover:bg-red-100 transition-colors duration-150" data-ai-query="${sanitizeText(questionFromReport.aiQuery)}">
+                        <p class="font-semibold text-sm text-red-800">${sanitizeText(questionFromReport.humanQuestion)}</p>
                     </li>
-                `).join('')}
-            </ul>
-        `;
+                </ul>
+            `;
+        }
+    }
+
+    // New logic to make all three AI questions clickable
+    const actionableQuestions = prompt.split('## Actionable Diligence Questions')[1];
+    if (actionableQuestions) {
+        // We'll parse this section and make the AI queries clickable
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(marked.parse(actionableQuestions), 'text/html');
+        doc.querySelectorAll('ul li').forEach(li => {
+            const humanQuestionEl = li.querySelector('strong');
+            const aiQueryEl = li.querySelector('li strong');
+            if (humanQuestionEl && aiQueryEl) {
+                const aiQueryText = aiQueryEl.nextSibling.textContent.trim().replace(/^:/, '').trim();
+                const aiQuerySpan = document.createElement('span');
+                aiQuerySpan.textContent = `Suggested AI Investigation Query: ${aiQueryText}`;
+                aiQuerySpan.className = 'text-sm text-blue-600 font-medium cursor-pointer hover:underline clickable-query';
+                aiQuerySpan.setAttribute('data-ai-query', sanitizeText(aiQueryText));
+                aiQueryEl.parentNode.replaceChild(aiQuerySpan, aiQueryEl);
+            }
+        });
+        diligenceQuestionsHtml += doc.body.innerHTML;
     }
 
     container.innerHTML = accordionHtml + marked.parse(reportContent || '') + diligenceQuestionsHtml;
     
-    // Add event listeners for the new diligence questions
+    // Add event listeners for all clickable questions, including the new ones
     container.querySelectorAll('[data-ai-query]').forEach(item => {
         item.addEventListener('click', () => {
             const query = item.dataset.aiQuery;
             const diligenceInput = document.getElementById('diligence-question-input');
             if (diligenceInput) {
                 diligenceInput.value = query;
-                // Scroll to the diligence section to show the user the field has been populated
                 diligenceInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
         });
