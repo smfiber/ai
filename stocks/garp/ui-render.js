@@ -575,7 +575,7 @@ export function updateGarpCandidacyStatus(statusContainer, reports, activeReport
     });
 }
 
-export function renderCandidacyAnalysis(container, reportContent, prompt) {
+export function renderCandidacyAnalysis(container, reportContent, prompt, diligenceQuestions = []) {
     let accordionHtml = '';
     if (prompt) {
         const sanitizedPrompt = sanitizeText(prompt);
@@ -588,7 +588,36 @@ export function renderCandidacyAnalysis(container, reportContent, prompt) {
             </div>
         `;
     }
-    container.innerHTML = accordionHtml + marked.parse(reportContent || '');
+
+    let diligenceQuestionsHtml = '';
+    if (diligenceQuestions && diligenceQuestions.length > 0) {
+        diligenceQuestionsHtml = `
+            <h4 class="text-lg font-bold text-red-700 mb-2 mt-4 border-t pt-4">Critical Diligence Required</h4>
+            <p class="text-sm text-gray-700 mb-3">The following key questions were identified by the AI during the initial assessment and require investigation before a final investment decision is made. Click to copy the question to the diligence investigation box.</p>
+            <ul class="space-y-2">
+                ${diligenceQuestions.map(q => `
+                    <li class="p-3 bg-red-50 border border-red-200 rounded-lg cursor-pointer hover:bg-red-100 transition-colors duration-150" data-ai-query="${sanitizeText(q.aiQuery)}">
+                        <p class="font-semibold text-sm text-red-800">${sanitizeText(q.humanQuestion)}</p>
+                    </li>
+                `).join('')}
+            </ul>
+        `;
+    }
+
+    container.innerHTML = accordionHtml + marked.parse(reportContent || '') + diligenceQuestionsHtml;
+    
+    // Add event listeners for the new diligence questions
+    container.querySelectorAll('[data-ai-query]').forEach(item => {
+        item.addEventListener('click', () => {
+            const query = item.dataset.aiQuery;
+            const diligenceInput = document.getElementById('diligence-question-input');
+            if (diligenceInput) {
+                diligenceInput.value = query;
+                // Scroll to the diligence section to show the user the field has been populated
+                diligenceInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        });
+    });
 }
 
 
