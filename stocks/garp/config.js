@@ -555,5 +555,3 @@ export const ANALYSIS_NAMES = {
     'PeerIdentification': 'Peer Identification',
     'PeerComparison': 'Peer Comparison'
 };
-
-}
