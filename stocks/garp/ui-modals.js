@@ -201,6 +201,64 @@ export async function openStockListModal(listType) {
 }
 
 
+/**
+ * Opens a dedicated warning modal when a critical diligence question has not been answered.
+ * @param {string} ticker The stock ticker.
+ * @param {Array<object>} questions The list of unanswered diligence questions.
+ * @param {function} onConfirm The callback to execute if the user chooses to proceed.
+ */
+export function openDiligenceWarningModal(ticker, questions, onConfirm) {
+    const modal = document.getElementById(CONSTANTS.MODAL_CONFIRMATION);
+    const titleEl = document.getElementById('confirmation-title');
+    const messageEl = document.getElementById('confirmation-message');
+    const confirmButton = document.getElementById('confirm-button');
+    const cancelButton = document.getElementById('cancel-button');
+    
+    titleEl.textContent = `Warning: Unanswered Diligence for ${ticker}`;
+    
+    let questionsHtml = questions.map(q => `
+        <li class="p-2 border-b last:border-b-0 text-left text-sm font-medium text-gray-700">
+            ${q.humanQuestion}
+        </li>
+    `).join('');
+
+    messageEl.innerHTML = `
+        <p class="text-gray-500 mb-4">
+            The initial GARP analysis identified a hyper-growth metric that requires investigation.
+            The following critical questions have not yet been answered in the diligence log.
+            Generating the Investment Memo now without this information is not recommended.
+        </p>
+        <ul class="bg-gray-100 p-3 rounded-lg border border-gray-200 divide-y divide-gray-200">
+            ${questionsHtml}
+        </ul>
+    `;
+    
+    confirmButton.textContent = 'Continue Anyway';
+    confirmButton.classList.remove('bg-red-600', 'hover:bg-red-700');
+    confirmButton.classList.add('bg-orange-500', 'hover:bg-orange-600');
+    
+    cancelButton.textContent = 'Go Back to Diligence';
+    cancelButton.classList.remove('bg-gray-200', 'hover:bg-gray-300');
+    cancelButton.classList.add('bg-indigo-600', 'hover:bg-indigo-700', 'text-white');
+
+    const newConfirmButton = confirmButton.cloneNode(true);
+    const newCancelButton = cancelButton.cloneNode(true);
+    confirmButton.parentNode.replaceChild(newConfirmButton, confirmButton);
+    cancelButton.parentNode.replaceChild(newCancelButton, cancelButton);
+
+    newConfirmButton.addEventListener('click', () => {
+        closeModal(CONSTANTS.MODAL_CONFIRMATION);
+        onConfirm();
+    }, { once: true });
+    
+    newCancelButton.addEventListener('click', () => {
+        closeModal(CONSTANTS.MODAL_CONFIRMATION);
+    }, { once: true });
+
+    openModal(CONSTANTS.MODAL_CONFIRMATION);
+}
+
+
 // --- SPECIFIC, COMPLEX MODAL CONTROLLERS ---
 
 export async function openRawDataViewer(ticker) {
@@ -251,7 +309,7 @@ export async function openRawDataViewer(ticker) {
         const savedCandidacyReportsPromise = getSavedReports(ticker, candidacyReportType);
 
 
-        const [fmpData, groupedFmpData, savedReportsSnapshot, savedCandidacyReports] = await Promise.all([fmpDataPromise, groupedDataPromise, savedReportsPromise, savedCandidacyReportsPromise]);
+        const [fmpData, groupedFmpData, savedReportsSnapshot, savedCandidacyReports] = await Promise.all([fmpDataPromise, groupedDataPromise, savedReportsSnapshot, savedCandidacyReportsPromise]);
 
         if (!fmpData || !fmpData.profile || fmpData.profile.length === 0) {
             closeModal(modalId);
@@ -375,7 +433,7 @@ export async function openRawDataViewer(ticker) {
                 <div class="p-4 bg-white rounded-lg border shadow-sm">
                     <div class="flex justify-center items-center gap-2 mb-4">
                         <h3 class="text-lg font-bold text-gray-800">Step 4: Synthesize Final Memo</h3>
-                        <button data-report-type="InvestmentMemo" class="ai-help-button p-1 rounded-full hover:bg-indigo-100" title="What is this?"><svg class="w-5 h-5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" /></svg></button>
+                        <button data-report-type="InvestmentMemo" class="ai-help-button p-1 rounded-full hover:bg-indigo-100" title="What is this?"><svg class="w-5 h-5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg></button>
                     </div>
                     <div class="flex justify-center">${garpMemoBtn}</div>
                 </div>
@@ -458,7 +516,7 @@ export async function openRawDataViewer(ticker) {
 
             const savedDate = latestReport.savedAt.toDate().toLocaleString();
             const tempContainer = document.createElement('div');
-            renderCandidacyAnalysis(tempContainer, latestReport.content, latestReport.prompt);
+            renderCandidacyAnalysis(tempContainer, latestReport.content, latestReport.prompt, latestReport.diligenceQuestions);
             const accordionContent = tempContainer.innerHTML;
 
             resultContainer.innerHTML = `
