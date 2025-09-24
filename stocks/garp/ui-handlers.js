@@ -1,9 +1,45 @@
 import { CONSTANTS, state, promptMap, ANALYSIS_REQUIREMENTS, ANALYSIS_NAMES } from './config.js';
 import { callApi, callGeminiApi, generateRefinedArticle, generatePolishedArticleForSynthesis, getFmpStockData, callGeminiApiWithSearch } from './api.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { openModal, closeModal, displayMessageInModal, openConfirmationModal, openManageStockModal } from './ui-modals.js';
+import { openModal, closeModal, displayMessageInModal, openConfirmationModal, openManageStockModal, openDiligenceWarningModal } from './ui-modals.js';
 import { renderPortfolioManagerList, displayReport, updateReportStatus, fetchAndCachePortfolioData, updateGarpCandidacyStatus, renderCandidacyAnalysis, renderDiligenceLog, renderPeerComparisonTable } from './ui-render.js';
 import { _calculateFinancialAnalysisMetrics, _calculateMoatAnalysisMetrics, _calculateRiskAssessmentMetrics, _calculateCapitalAllocatorsMetrics, _calculateGarpAnalysisMetrics, _calculateGarpScorecardMetrics, CALCULATION_SUMMARIES } from './analysis-helpers.js';
+
+// --- UTILITY HELPERS ---
+async function getSavedReports(ticker, reportType) {
+    const reportsRef = collection(state.db, CONSTANTS.DB_COLLECTION_AI_REPORTS);
+    const q = query(reportsRef, where("ticker", "==", ticker), where("reportType", "==", reportType), orderBy("savedAt", "desc"));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+}
+
+function buildAnalysisPayload(fullData, requiredEndpoints) {
+    const payload = {};
+    for (const endpointName of requiredEndpoints) {
+        if (fullData.hasOwnProperty(endpointName)) {
+            payload[endpointName] = fullData[endpointName];
+        }
+    }
+    return payload;
+}
+
+async function autoSaveReport(ticker, reportType, content, prompt, diligenceQuestions = null) {
+    try {
+        const reportData = {
+            ticker,
+            reportType,
+            content,
+            prompt: prompt || '',
+            savedAt: Timestamp.now(),
+            diligenceQuestions: diligenceQuestions // Save the questions with the report
+        };
+        await addDoc(collection(state.db, CONSTANTS.DB_COLLECTION_AI_REPORTS), reportData);
+        console.log(`${reportType} for ${ticker} was auto-saved successfully.`);
+    } catch (error) {
+        console.error(`Auto-save for ${reportType} failed:`, error);
+        displayMessageInModal(`The ${reportType} report was generated but failed to auto-save. You can still save it manually. Error: ${error.message}`, 'warning');
+    }
+}
 
 // --- FMP API INTEGRATION & MANAGEMENT ---
 export async function handleRefreshFmpData(symbol) {
@@ -510,38 +546,144 @@ export async function handlePortfolioGarpAnalysisRequest() {
     }
 }
 
-export async function getSavedReports(ticker, reportType) {
-    const reportsRef = collection(state.db, CONSTANTS.DB_COLLECTION_AI_REPORTS);
-    const q = query(reportsRef, where("ticker", "==", ticker), where("reportType", "==", reportType), orderBy("savedAt", "desc"));
-    const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-}
+export async function handleSaveReportToDb() {
+    const modal = document.getElementById('rawDataViewerModal');
+    const symbol = modal.dataset.activeTicker;
+    const reportType = document.getElementById('report-status-container-ai').dataset.activeReportType;
+    const contentContainer = document.getElementById('ai-article-container');
 
-
-function buildAnalysisPayload(fullData, requiredEndpoints) {
-    const payload = {};
-    for (const endpointName of requiredEndpoints) {
-        if (fullData.hasOwnProperty(endpointName)) {
-            payload[endpointName] = fullData[endpointName];
-        }
+    if (!symbol || !reportType || !contentContainer) {
+        displayMessageInModal("Could not determine which report to save.", "warning");
+        return;
     }
-    return payload;
-}
+    
+    const contentToSave = contentContainer.dataset.rawMarkdown;
+    const promptToSave = contentContainer.dataset.currentPrompt;
 
-async function autoSaveReport(ticker, reportType, content, prompt) {
+    if (!contentToSave) {
+        displayMessageInModal("Please generate an analysis before saving.", "warning");
+        return;
+    }
+
+    openModal(CONSTANTS.MODAL_LOADING);
+    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Saving ${reportType} report to database...`;
+
     try {
         const reportData = {
-            ticker,
-            reportType,
-            content,
-            prompt: prompt || '',
-            savedAt: Timestamp.now()
+            ticker: symbol,
+            reportType: reportType,
+            content: contentToSave,
+            savedAt: Timestamp.now(),
+            prompt: promptToSave || ''
         };
         await addDoc(collection(state.db, CONSTANTS.DB_COLLECTION_AI_REPORTS), reportData);
-        console.log(`${reportType} for ${ticker} was auto-saved successfully.`);
+        displayMessageInModal("Report saved successfully!", "info");
+        
+        const aiButtonsContainer = document.getElementById('ai-buttons-container');
+        if (aiButtonsContainer) {
+            const button = aiButtonsContainer.querySelector(`button[data-report-type="${reportType}"]`);
+            if (button) {
+                button.classList.add('has-saved-report');
+            }
+        }
+
+        const savedReports = await getSavedReports(symbol, reportType);
+        const latestReport = savedReports[0];
+        const statusContainer = document.getElementById('report-status-container-ai');
+        const promptConfig = promptMap[reportType];
+        
+        updateReportStatus(statusContainer, savedReports, latestReport.id, { symbol, reportType, promptConfig });
+
     } catch (error) {
-        console.error(`Auto-save for ${reportType} failed:`, error);
-        displayMessageInModal(`The ${reportType} report was generated but failed to auto-save. You can still save it manually. Error: ${error.message}`, 'warning');
+        console.error("Error saving report to DB:", error);
+        displayMessageInModal(`Could not save report: ${error.message}`, 'error');
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
+export async function handleGarpCandidacyRequest(ticker) {
+    const resultContainer = document.getElementById('garp-analysis-container');
+    const statusContainer = document.getElementById('garp-candidacy-status-container');
+    if (!resultContainer) return;
+
+    resultContainer.innerHTML = `<div class="flex items-center justify-center p-4"><div class="loader"></div><p class="ml-4 text-gray-600 font-semibold">AI is analyzing...</p></div>`;
+    statusContainer.classList.add('hidden');
+    
+    try {
+        const fmpData = await getFmpStockData(ticker);
+        if (!fmpData) throw new Error("Could not retrieve financial data to perform analysis.");
+        
+        const scorecardData = _calculateGarpScorecardMetrics(fmpData);
+        const newScore = scorecardData.garpConvictionScore;
+
+        // Save the new score to the database
+        const stockDocRef = doc(state.db, CONSTANTS.DB_COLLECTION_PORTFOLIO, ticker);
+        await updateDoc(stockDocRef, { garpConvictionScore: newScore });
+        
+        // Refresh local cache to reflect the change immediately
+        await fetchAndCachePortfolioData();
+
+        const profile = fmpData.profile?.[0] || {};
+        const companyName = profile.companyName || ticker;
+        const tickerSymbol = profile.symbol || ticker;
+        const sector = profile.sector || 'N/A';
+
+        // Check for hyper-growth to generate diligence questions
+        const epsNext1yValue = scorecardData['EPS Growth (Next 1Y)'].value;
+        const epsNext1yInterpretation = scorecardData['EPS Growth (Next 1Y)'].interpretation.category;
+        const diligenceQuestions = [];
+
+        if (epsNext1yValue > 0.40) {
+            diligenceQuestions.push({
+                humanQuestion: `What are the key drivers behind the projected near-term hyper-growth (${(epsNext1yValue * 100).toFixed(2)}% EPS Growth), and how sustainable are these factors beyond the next fiscal year?`,
+                aiQuery: `${companyName} (${tickerSymbol}) EPS growth guidance Q3 2024 earnings call transcript revenue backlog contracts 2025 outlook analyst day presentation`
+            });
+        }
+
+        const cleanData = {};
+        for (const [key, value] of Object.entries(scorecardData)) {
+            if (key === 'garpConvictionScore') continue;
+            
+            // Create a new object for the payload that formats the value but keeps the rich interpretation data
+            const formattedValue = (typeof value.value === 'number' && isFinite(value.value))
+                ? (value.format === 'percent' ? `${(value.value * 100).toFixed(2)}%` : value.value.toFixed(2))
+                : 'N/A';
+
+            cleanData[key] = {
+                value: formattedValue,
+                isMet: value.isMet,
+                interpretation: value.interpretation 
+            };
+        }
+
+        const payload = {
+            scorecard: cleanData,
+            garpConvictionScore: scorecardData.garpConvictionScore,
+            diligenceQuestions: diligenceQuestions
+        };
+
+        const promptConfig = promptMap['GarpCandidacy'];
+        const prompt = promptConfig.prompt
+            .replace(/{companyName}/g, companyName)
+            .replace(/{tickerSymbol}/g, tickerSymbol)
+            .replace(/{sector}/g, sector)
+            .replace('{jsonData}', JSON.stringify(payload, null, 2));
+        
+        const analysisResult = await generateRefinedArticle(prompt);
+        renderCandidacyAnalysis(resultContainer, analysisResult, prompt, diligenceQuestions);
+        
+        const reportType = 'GarpCandidacy';
+        await autoSaveReport(ticker, reportType, analysisResult, prompt, diligenceQuestions);
+        
+        const reports = await getSavedReports(ticker, reportType);
+        if (reports.length > 0) {
+            updateGarpCandidacyStatus(statusContainer, reports, reports[0].id, ticker);
+        }
+
+    } catch (error) {
+        console.error("Error in GARP Candidacy Request:", error);
+        resultContainer.innerHTML = `<p class="text-center text-red-500 p-4">${error.message}</p>`;
     }
 }
 
@@ -716,7 +858,25 @@ export async function handleInvestmentMemoRequest(symbol, forceNew = false) {
         if (candidacyReports.length === 0) {
             throw new Error(`Cannot generate memo. Please generate the "GARP Candidacy Report" from Step 1 first.`);
         }
-        const candidacyReportContent = candidacyReports[0].content;
+        const candidacyReport = candidacyReports[0];
+
+        // --- NEW: Check for un-investigated diligence questions ---
+        if (candidacyReport.diligenceQuestions && candidacyReport.diligenceQuestions.length > 0) {
+            const diligenceReports = await getSavedReports(symbol, 'DiligenceInvestigation');
+            let answeredCount = 0;
+            candidacyReport.diligenceQuestions.forEach(q => {
+                if (diligenceReports.some(d => d.prompt.includes(q.aiQuery))) {
+                    answeredCount++;
+                }
+            });
+
+            if (answeredCount === 0) {
+                 closeModal(CONSTANTS.MODAL_LOADING);
+                 return openDiligenceWarningModal(symbol, candidacyReport.diligenceQuestions, () => {
+                     handleInvestmentMemoRequest(symbol, true);
+                 });
+            }
+        }
 
         const diligenceReports = await getSavedReports(symbol, 'DiligenceInvestigation');
         let diligenceLog = 'No recent diligence is available.';
@@ -748,7 +908,7 @@ export async function handleInvestmentMemoRequest(symbol, forceNew = false) {
         const prompt = promptMap.InvestmentMemo.prompt
             .replace(/{companyName}/g, companyName)
             .replace(/{tickerSymbol}/g, symbol)
-            .replace('{candidacyReport}', candidacyReportContent)
+            .replace('{candidacyReport}', candidacyReport.content)
             .replace('{scorecardJson}', JSON.stringify(scorecardData, null, 2))
             .replace('{diligenceLog}', diligenceLog)
             .replace('{peerAverages}', JSON.stringify(peerAverages, null, 2))
@@ -861,134 +1021,6 @@ export async function handleGenerateAllReportsRequest(symbol) {
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
         progressContainer.classList.add('hidden');
-    }
-}
-
-export async function handleSaveReportToDb() {
-    const modal = document.getElementById('rawDataViewerModal');
-    const symbol = modal.dataset.activeTicker;
-    const reportType = document.getElementById('report-status-container-ai').dataset.activeReportType;
-    const contentContainer = document.getElementById('ai-article-container');
-
-    if (!symbol || !reportType || !contentContainer) {
-        displayMessageInModal("Could not determine which report to save.", "warning");
-        return;
-    }
-    
-    const contentToSave = contentContainer.dataset.rawMarkdown;
-    const promptToSave = contentContainer.dataset.currentPrompt;
-
-    if (!contentToSave) {
-        displayMessageInModal("Please generate an analysis before saving.", "warning");
-        return;
-    }
-
-    openModal(CONSTANTS.MODAL_LOADING);
-    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Saving ${reportType} report to database...`;
-
-    try {
-        const reportData = {
-            ticker: symbol,
-            reportType: reportType,
-            content: contentToSave,
-            savedAt: Timestamp.now(),
-            prompt: promptToSave || ''
-        };
-        await addDoc(collection(state.db, CONSTANTS.DB_COLLECTION_AI_REPORTS), reportData);
-        displayMessageInModal("Report saved successfully!", "info");
-        
-        const aiButtonsContainer = document.getElementById('ai-buttons-container');
-        if (aiButtonsContainer) {
-            const button = aiButtonsContainer.querySelector(`button[data-report-type="${reportType}"]`);
-            if (button) {
-                button.classList.add('has-saved-report');
-            }
-        }
-
-        const savedReports = await getSavedReports(symbol, reportType);
-        const latestReport = savedReports[0];
-        const statusContainer = document.getElementById('report-status-container-ai');
-        const promptConfig = promptMap[reportType];
-        
-        updateReportStatus(statusContainer, savedReports, latestReport.id, { symbol, reportType, promptConfig });
-
-    } catch (error) {
-        console.error("Error saving report to DB:", error);
-        displayMessageInModal(`Could not save report: ${error.message}`, 'error');
-    } finally {
-        closeModal(CONSTANTS.MODAL_LOADING);
-    }
-}
-
-export async function handleGarpCandidacyRequest(ticker) {
-    const resultContainer = document.getElementById('garp-analysis-container');
-    const statusContainer = document.getElementById('garp-candidacy-status-container');
-    if (!resultContainer) return;
-
-    resultContainer.innerHTML = `<div class="flex items-center justify-center p-4"><div class="loader"></div><p class="ml-4 text-gray-600 font-semibold">AI is analyzing...</p></div>`;
-    statusContainer.classList.add('hidden');
-    
-    try {
-        const fmpData = await getFmpStockData(ticker);
-        if (!fmpData) throw new Error("Could not retrieve financial data to perform analysis.");
-        
-        const scorecardData = _calculateGarpScorecardMetrics(fmpData);
-        const newScore = scorecardData.garpConvictionScore;
-
-        // Save the new score to the database
-        const stockDocRef = doc(state.db, CONSTANTS.DB_COLLECTION_PORTFOLIO, ticker);
-        await updateDoc(stockDocRef, { garpConvictionScore: newScore });
-        
-        // Refresh local cache to reflect the change immediately
-        await fetchAndCachePortfolioData();
-
-        const profile = fmpData.profile?.[0] || {};
-        const companyName = profile.companyName || ticker;
-        const tickerSymbol = profile.symbol || ticker;
-        const sector = profile.sector || 'N/A';
-
-        const cleanData = {};
-        for (const [key, value] of Object.entries(scorecardData)) {
-            if (key === 'garpConvictionScore') continue;
-            
-            // Create a new object for the payload that formats the value but keeps the rich interpretation data
-            const formattedValue = (typeof value.value === 'number' && isFinite(value.value))
-                ? (value.format === 'percent' ? `${(value.value * 100).toFixed(2)}%` : value.value.toFixed(2))
-                : 'N/A';
-
-            cleanData[key] = {
-                value: formattedValue,
-                isMet: value.isMet,
-                interpretation: value.interpretation 
-            };
-        }
-
-        const payload = {
-            scorecard: cleanData,
-            garpConvictionScore: scorecardData.garpConvictionScore
-        };
-
-        const promptConfig = promptMap['GarpCandidacy'];
-        const prompt = promptConfig.prompt
-            .replace(/{companyName}/g, companyName)
-            .replace(/{tickerSymbol}/g, tickerSymbol)
-            .replace(/{sector}/g, sector)
-            .replace('{jsonData}', JSON.stringify(payload, null, 2));
-        
-        const analysisResult = await generateRefinedArticle(prompt);
-        renderCandidacyAnalysis(resultContainer, analysisResult, prompt);
-        
-        const reportType = 'GarpCandidacy';
-        await autoSaveReport(ticker, reportType, analysisResult, prompt);
-        
-        const reports = await getSavedReports(ticker, reportType);
-        if (reports.length > 0) {
-            updateGarpCandidacyStatus(statusContainer, reports, reports[0].id, ticker);
-        }
-
-    } catch (error) {
-        console.error("Error in GARP Candidacy Request:", error);
-        resultContainer.innerHTML = `<p class="text-center text-red-500 p-4">${error.message}</p>`;
     }
 }
 
