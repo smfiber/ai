@@ -366,10 +366,7 @@ export async function handlePositionAnalysisRequest(ticker, forceNew = false) {
 
         if (savedReports.length > 0 && !forceNew) {
             const latestReport = savedReports[0];
-            container.innerHTML = `
-                <div id="report-status-container-position" class="p-3 mb-4 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between gap-4"></div>
-                <div class="prose max-w-none">${latestReport.content}</div>
-            `;
+            displayReport(container, latestReport.content, latestReport.prompt);
             const statusContainer = document.getElementById('report-status-container-position');
             updateReportStatus(statusContainer, savedReports, latestReport.id, { reportType, symbol: ticker });
             return;
@@ -479,16 +476,20 @@ export async function handlePositionAnalysisRequest(ticker, forceNew = false) {
         
         const refreshedReports = await getSavedReports(ticker, reportType);
 
-        container.innerHTML = `
-            <div id="report-status-container-position" class="p-3 mb-4 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between gap-4"></div>
-            <div class="prose max-w-none">${finalHtmlToSave}</div>
-        `;
         const statusContainer = document.getElementById('report-status-container-position');
+        displayReport(container, finalHtmlToSave, prompt);
         updateReportStatus(statusContainer, refreshedReports, refreshedReports[0].id, { reportType, symbol: ticker });
 
     } catch (error) {
         console.error("Error during Position Analysis:", error);
-        container.innerHTML = `<p class="text-red-500 p-4">Could not complete analysis: ${error.message}</p>`;
+        const statusContainer = document.getElementById('report-status-container-position');
+        const containerHtml = `<p class="text-red-500 p-4">Could not complete analysis: ${error.message}</p>`;
+        
+        if(statusContainer) {
+            statusContainer.classList.add('hidden');
+            statusContainer.innerHTML = '';
+        }
+        container.innerHTML = containerHtml;
     }
 }
 
