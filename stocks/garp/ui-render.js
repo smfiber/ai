@@ -609,7 +609,7 @@ export function renderCandidacyAnalysis(container, reportContent, prompt, dilige
     // Add event listeners for the new diligence questions
     container.querySelectorAll('[data-ai-query]').forEach(item => {
         item.addEventListener('click', () => {
-            const query = item.dataset.aiQuery;
+            const query = item.dataset.ai-query;
             const diligenceInput = document.getElementById('diligence-question-input');
             if (diligenceInput) {
                 diligenceInput.value = query;
