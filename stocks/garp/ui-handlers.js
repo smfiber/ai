@@ -6,11 +6,16 @@ import { renderPortfolioManagerList, displayReport, updateReportStatus, fetchAnd
 import { _calculateFinancialAnalysisMetrics, _calculateMoatAnalysisMetrics, _calculateRiskAssessmentMetrics, _calculateCapitalAllocatorsMetrics, _calculateGarpAnalysisMetrics, _calculateGarpScorecardMetrics, CALCULATION_SUMMARIES } from './analysis-helpers.js';
 
 // --- UTILITY HELPERS ---
-async function getSavedReports(ticker, reportType) {
-    const reportsRef = collection(state.db, CONSTANTS.DB_COLLECTION_AI_REPORTS);
-    const q = query(reportsRef, where("ticker", "==", ticker), where("reportType", "==", reportType), orderBy("savedAt", "desc"));
-    const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+export async function getSavedReports(ticker, reportType) {
+    try {
+        const reportsRef = collection(state.db, CONSTANTS.DB_COLLECTION_AI_REPORTS);
+        const q = query(reportsRef, where("ticker", "==", ticker), where("reportType", "==", reportType), orderBy("savedAt", "desc"));
+        const querySnapshot = await getDocs(q);
+        return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (error) {
+        console.error("Error fetching saved reports:", error);
+        return [];
+    }
 }
 
 function buildAnalysisPayload(fullData, requiredEndpoints) {
