@@ -1193,28 +1193,62 @@ async function runPeerAnalysis(primaryTicker, peerTickers) {
 export async function handlePeerAnalysisRequest(ticker) {
     const container = document.getElementById('peer-analysis-content-container');
     container.innerHTML = `<div class="flex items-center justify-center p-4"><div class="loader"></div><p class="ml-4 text-gray-600 font-semibold">AI is identifying peers...</p></div>`;
+    
+    const profileData = state.portfolioCache.find(s => s.ticker === ticker);
+    if (!profileData) {
+        container.innerHTML = `<p class="text-red-500 p-4">Could not find profile data for ${ticker}. Please refresh the FMP data first.</p>`;
+        return;
+    }
+
+    let peerTickers = [];
+    let source = '';
 
     try {
-        const companyFmpData = await getFmpStockData(ticker);
-        if (!companyFmpData || !companyFmpData.profile || !companyFmpData.profile[0]) {
-            throw new Error(`Could not fetch profile for ${ticker}.`);
-        }
-        const profile = companyFmpData.profile[0];
-
-        const peerPromptConfig = promptMap['PeerIdentification'];
-        const peerIdPrompt = peerPromptConfig.prompt
-            .replace('{companyName}', profile.companyName)
-            .replace('{tickerSymbol}', profile.symbol)
-            .replace('{description}', profile.description);
+        // Tier 1: Direct Competitor Search
+        const directPromptConfig = promptMap['PeerIdentification'];
+        const directPrompt = directPromptConfig.prompt
+            .replace('{companyName}', profileData.companyName)
+            .replace('{tickerSymbol}', profileData.ticker)
+            .replace('{description}', profileData.description);
         
-        const peerResponse = await callGeminiApi(peerIdPrompt);
-        const peerTickers = JSON.parse(peerResponse.trim());
+        const directResponse = await callGeminiApi(directPrompt);
+        const directPeers = JSON.parse(directResponse.trim());
 
-        if (!Array.isArray(peerTickers) || peerTickers.length === 0) {
-            throw new Error("AI did not return a valid list of competitor tickers.");
+        if (Array.isArray(directPeers) && directPeers.length > 0) {
+            peerTickers = directPeers;
+            source = 'AI (Direct)';
+        } else {
+            // Tier 2: Fallback AI Search (by sector & market cap)
+            container.innerHTML = `<div class="flex items-center justify-center p-4"><div class="loader"></div><p class="ml-4 text-gray-600 font-semibold">Direct search failed. Trying broader search...</p></div>`;
+            const fallbackPromptConfig = promptMap['PeerIdentificationFallback'];
+            const fallbackPrompt = fallbackPromptConfig.prompt
+                .replace('{tickerSymbol}', profileData.ticker)
+                .replace('{sectorName}', profileData.sector)
+                .replace('{marketCap}', profileData.mktCap);
+            
+            const fallbackResponse = await callGeminiApi(fallbackPrompt);
+            const fallbackPeers = JSON.parse(fallbackResponse.trim());
+            
+            if (Array.isArray(fallbackPeers) && fallbackPeers.length > 0) {
+                peerTickers = fallbackPeers;
+                source = 'AI (Fallback)';
+            } else {
+                // Tier 3: FMP Peer API
+                container.innerHTML = `<div class="flex items-center justify-center p-4"><div class="loader"></div><p class="ml-4 text-gray-600 font-semibold">AI search failed. Using FMP's Peer API...</p></div>`;
+                const fmpUrl = `https://financialmodelingprep.com/api/v4/stock_peers?symbol=${ticker}&apikey=${state.fmpApiKey}`;
+                const fmpResponse = await callApi(fmpUrl);
+
+                if (fmpResponse && fmpResponse.peersList && Array.isArray(fmpResponse.peersList) && fmpResponse.peersList.length > 0) {
+                    peerTickers = fmpResponse.peersList;
+                    source = 'FMP API';
+                } else {
+                     throw new Error("Could not find any peers using any automated method.");
+                }
+            }
         }
-
+        
         await runPeerAnalysis(ticker, peerTickers);
+        displayMessageInModal(`Successfully found ${peerTickers.length} peers using ${source}.`, 'info');
 
     } catch (error) {
         console.error("Error handling peer analysis request:", error);
