@@ -448,8 +448,6 @@ Format each item precisely like this:
 - **Human-Led Question:** [Your question here]
 - **Suggested AI Investigation Query:** "[Your search query here]"
 
-${diligenceQuestions}
-
 `.trim();
 
 const GARP_CONVICTION_SCORE_PROMPT = `
