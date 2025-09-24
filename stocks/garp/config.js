@@ -71,6 +71,24 @@ Example Output:
 ["TICKER1", "TICKER2", "TICKER3"]
 `.trim();
 
+const PEER_IDENTIFICATION_FALLBACK_PROMPT = `
+Role: You are a financial data assistant.
+Task: Your goal is to identify a list of publicly traded companies that are peers to the provided company, prioritizing those with a similar market capitalization and operating in the same sector.
+Constraints:
+- You MUST return ONLY a valid JSON array of ticker symbols.
+- Do NOT include the primary company's own ticker in the list.
+- Do NOT return any explanatory text, headings, or markdown formatting.
+- The tickers must be for publicly traded companies.
+
+Company Information:
+- Ticker: {tickerSymbol}
+- Sector: {sectorName}
+- Market Cap: {marketCap}
+
+Example Output:
+["TICKER1", "TICKER2", "TICKER3"]
+`.trim();
+
 const FINANCIAL_ANALYSIS_PROMPT = `
 Role: You are a financial analyst AI who excels at explaining complex topics to everyday investors. Your purpose is to generate a rigorous, data-driven financial analysis that is also educational, objective, and easy to understand. Use relatable analogies to clarify financial concepts.
 Data Instructions: Your analysis MUST be based *exclusively* on the pre-calculated metrics and summaries provided in the JSON data below. Do NOT attempt to recalculate any values. If a specific data point is "N/A" or missing, state that clearly in your analysis.
@@ -266,7 +284,7 @@ You are a Senior Investment Analyst at a GARP-focused ("Growth at a Reasonable P
 
 ## 3. The Bear Case: What Could Go Wrong
 *(This section critically examines the primary risks, using both the qualitative report and quantitative data.)*
-* **Key Risks & Concerns:** What are the top 2-3 risks identified? Quantify these risks using the weakest data points from the JSON and the \`{peerAverages}\`. For example, if valuation is a concern, is it just high, or is it high *relative to its peers*? Does the \`{peerDataChanges}\` data show the company's valuation is becoming less attractive over time?
+* **Key Risks & Concerns:** What are the top 2-3 risks identified? Quantify these risks using the weakest data points from the JSON and the \`{peerAverages}\`. For example, if valuation is a concern, is it just high, or is it significantly higher than its competitors? Does the \`{peerDataChanges}\` data show the company's valuation is becoming less attractive over time?
 
 ## 4. Valuation: The GARP Fulcrum
 *(This is the deciding section. Analyze whether the current price is reasonable given the quality, growth, and peer context.)*
@@ -350,7 +368,7 @@ JSON Data for the Entire Portfolio:
 
 const POSITION_ANALYSIS_PROMPT = `
 Role: You are a pragmatic Portfolio Manager with a strict adherence to the GARP (Growth at a Reasonable Price) investment philosophy.
-Objective: Review an existing position in {companyName} ({tickerSymbol}) to determine the best course of action today, September 22, 2025. You must re-evaluate the original investment thesis in the context of the current market price and the specifics of our position.
+Objective: Review an existing position in {companyName} (REYN) to determine the best course of action today, September 22, 2025. You must re-evaluate the original investment thesis in the context of the current market price and the specifics of our position.
 Context & Data:
 1.  **Original GARP Candidacy Report:** This was the initial analysis recommending the stock as a GARP candidate.
     \`\`\`markdown
@@ -361,7 +379,7 @@ Context & Data:
     {positionDetails}
     \`\`\`
 3.  **Current Market Price:**
-    - {tickerSymbol}: {currentPrice}
+    - REYN: {currentPrice}
 4.  **Recent Diligence Log (Q&A):** This contains new information gathered since the original thesis was formed. If empty, state that no recent diligence is available.
     \`\`\`markdown
     {diligenceLog}
@@ -478,6 +496,10 @@ Diligence Question from User:
 export const promptMap = {
     'PeerIdentification': {
         prompt: PEER_IDENTIFICATION_PROMPT,
+        requires: ['profile']
+    },
+    'PeerIdentificationFallback': {
+        prompt: PEER_IDENTIFICATION_FALLBACK_PROMPT,
         requires: ['profile']
     },
     'PeerComparison': {
