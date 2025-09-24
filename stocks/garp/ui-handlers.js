@@ -358,8 +358,9 @@ export async function handleReportHelpRequest(reportType) {
 
 export async function handlePositionAnalysisRequest(ticker, forceNew = false) {
     const container = document.getElementById('position-analysis-content-container');
+    const statusContainer = document.getElementById('report-status-container-position');
     const reportType = 'PositionAnalysis';
-    if (!container) return;
+    if (!container || !statusContainer) return;
 
     try {
         const savedReports = await getSavedReports(ticker, reportType);
@@ -367,8 +368,8 @@ export async function handlePositionAnalysisRequest(ticker, forceNew = false) {
         if (savedReports.length > 0 && !forceNew) {
             const latestReport = savedReports[0];
             displayReport(container, latestReport.content, latestReport.prompt);
-            contentContainer.dataset.currentPrompt = latestReport.prompt || '';
-            contentContainer.dataset.rawMarkdown = latestReport.content;
+            container.dataset.currentPrompt = latestReport.prompt || '';
+            container.dataset.rawMarkdown = latestReport.content;
             updateReportStatus(statusContainer, savedReports, latestReport.id, { reportType, symbol: ticker });
             return;
         }
@@ -477,13 +478,11 @@ export async function handlePositionAnalysisRequest(ticker, forceNew = false) {
         
         const refreshedReports = await getSavedReports(ticker, reportType);
 
-        const statusContainer = document.getElementById('report-status-container-position');
         displayReport(container, finalHtmlToSave, prompt);
         updateReportStatus(statusContainer, refreshedReports, refreshedReports[0].id, { reportType, symbol: ticker });
 
     } catch (error) {
         console.error("Error during Position Analysis:", error);
-        const statusContainer = document.getElementById('report-status-container-position');
         const containerHtml = `<p class="text-red-500 p-4">Could not complete analysis: ${error.message}</p>`;
         
         if(statusContainer) {
