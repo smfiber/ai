@@ -1,3 +1,4 @@
+// fileName: ui-render.js
 import { CONSTANTS, state } from './config.js';
 import { getDocs, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { _calculateGarpScorecardMetrics } from './analysis-helpers.js';
@@ -353,7 +354,9 @@ export function renderGarpScorecardDashboard(container, ticker, fmpData) {
     container.innerHTML = `
         <div class="flex justify-between items-start mb-4 border-b pb-2">
             <h3 class="text-xl font-bold text-gray-800">GARP Scorecard</h3>
-            ${scoreHtml}
+            <div class="flex items-center space-x-2">
+                ${scoreHtml}
+            </div>
         </div>
         <div class="grid grid-cols-2 md:grid-cols-5 gap-4">${tilesHtml}</div>`;
     
@@ -589,52 +592,53 @@ export function renderCandidacyAnalysis(container, reportContent, prompt, dilige
         `;
     }
 
-    let diligenceQuestionsHtml = '';
-    // Check if there are any diligence questions to render
-    if (diligenceQuestions && diligenceQuestions.length > 0) {
-        // Find the specific question from the report content
-        const questionFromReport = diligenceQuestions.find(q => reportContent.includes(q.humanQuestion));
-        // If a specific question is found, render the old "Critical" section
-        if (questionFromReport) {
-            diligenceQuestionsHtml = `
-                <h4 class="text-lg font-bold text-red-700 mb-2 mt-4 border-t pt-4">Critical Diligence Required</h4>
-                <p class="text-sm text-gray-700 mb-3">The following key questions were identified by the AI during the initial assessment and require investigation before a final investment decision is made. Click to copy the question to the diligence investigation box.</p>
-                <ul class="space-y-2">
-                    <li class="p-3 bg-red-50 border border-red-200 rounded-lg cursor-pointer hover:bg-red-100 transition-colors duration-150" data-ai-query="${sanitizeText(questionFromReport.aiQuery)}">
-                        <p class="font-semibold text-sm text-red-800">${sanitizeText(questionFromReport.humanQuestion)}</p>
-                    </li>
-                </ul>
-            `;
-        }
-    }
+    const rawMarkdown = reportContent || '';
+    const reportHtml = marked.parse(rawMarkdown);
+    
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = reportHtml;
+    
+    const diligenceSection = tempDiv.querySelector('h2#actionable-diligence-questions');
+    if (diligenceSection) {
+        let currentElement = diligenceSection.nextElementSibling;
+        const questionsContainer = document.createElement('div');
 
-    // New logic to make all three AI questions clickable
-    const actionableQuestions = prompt.split('## Actionable Diligence Questions')[1];
-    if (actionableQuestions) {
-        // We'll parse this section and make the AI queries clickable
+        while(currentElement && currentElement.tagName !== 'H2') {
+            const nextElement = currentElement.nextElementSibling;
+            questionsContainer.appendChild(currentElement);
+            currentElement = nextElement;
+        }
+
+        const questionsHtml = questionsContainer.innerHTML;
         const parser = new DOMParser();
-        const doc = parser.parseFromString(marked.parse(actionableQuestions), 'text/html');
-        doc.querySelectorAll('ul li').forEach(li => {
-            const humanQuestionEl = li.querySelector('strong');
-            const aiQueryEl = li.querySelector('li strong');
-            if (humanQuestionEl && aiQueryEl) {
-                const aiQueryText = aiQueryEl.nextSibling.textContent.trim().replace(/^:/, '').trim();
-                const aiQuerySpan = document.createElement('span');
-                aiQuerySpan.textContent = `Suggested AI Investigation Query: ${aiQueryText}`;
-                aiQuerySpan.className = 'text-sm text-blue-600 font-medium cursor-pointer hover:underline clickable-query';
-                aiQuerySpan.setAttribute('data-ai-query', sanitizeText(aiQueryText));
-                aiQueryEl.parentNode.replaceChild(aiQuerySpan, aiQueryEl);
+        const doc = parser.parseFromString(questionsHtml, 'text/html');
+
+        doc.querySelectorAll('li').forEach(li => {
+            const strongTags = li.querySelectorAll('strong');
+            if (strongTags.length === 2) {
+                const humanQuestionText = strongTags[0].nextSibling.textContent.trim();
+                const aiQueryText = strongTags[1].nextSibling.textContent.trim().replace(/^:/, '').replace(/^"|"$/g, '').trim();
+                
+                // Create a container for the clickable question
+                const clickableDiv = document.createElement('div');
+                clickableDiv.className = 'p-3 bg-indigo-50 border border-indigo-200 rounded-lg cursor-pointer hover:bg-indigo-100 transition-colors duration-150 mb-2';
+                clickableDiv.innerHTML = `<p class="font-semibold text-sm text-indigo-800">Human-Led Question: ${sanitizeText(humanQuestionText)}</p><span class="text-xs text-indigo-600 font-medium">Click to investigate this question</span>`;
+                clickableDiv.setAttribute('data-ai-query', sanitizeText(aiQueryText));
+                
+                // Replace the original list item with the new clickable div
+                li.parentNode.replaceChild(clickableDiv, li);
             }
         });
-        diligenceQuestionsHtml += doc.body.innerHTML;
+        diligenceSection.innerHTML = `Actionable Diligence Questions`;
+        diligenceSection.after(doc.body);
     }
-
-    container.innerHTML = accordionHtml + marked.parse(reportContent || '') + diligenceQuestionsHtml;
     
-    // Add event listeners for all clickable questions, including the new ones
+    const finalHtml = accordionHtml + tempDiv.innerHTML;
+    container.innerHTML = finalHtml;
+    
     container.querySelectorAll('[data-ai-query]').forEach(item => {
         item.addEventListener('click', () => {
-            const query = item.dataset.aiQuery;
+            const query = item.dataset.ai-query;
             const diligenceInput = document.getElementById('diligence-question-input');
             if (diligenceInput) {
                 diligenceInput.value = query;
