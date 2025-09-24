@@ -592,11 +592,10 @@ export function renderCandidacyAnalysis(container, reportContent, prompt, dilige
         `;
     }
     
-    // Parse the markdown and then manipulate the DOM to find and replace
     const reportHtml = marked.parse(reportContent || '');
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = reportHtml;
-    
+
     const diligenceSection = tempDiv.querySelector('h2#actionable-diligence-questions');
     if (diligenceSection) {
         let currentElement = diligenceSection.nextElementSibling;
@@ -620,17 +619,17 @@ export function renderCandidacyAnalysis(container, reportContent, prompt, dilige
                 const aiQueryText = strongTags[1].nextSibling?.textContent.trim().replace(/^:/, '').replace(/^"|"$/g, '').trim();
 
                 if (humanQuestionText && aiQueryText) {
-                    // Create a container for the clickable question
                     const clickableDiv = document.createElement('div');
                     clickableDiv.className = 'p-3 bg-indigo-50 border border-indigo-200 rounded-lg cursor-pointer hover:bg-indigo-100 transition-colors duration-150 mb-2';
                     clickableDiv.innerHTML = `<p class="font-semibold text-sm text-indigo-800">Human-Led Question: ${sanitizeText(humanQuestionText)}</p><span class="text-xs text-indigo-600 font-medium">Click to investigate this question</span>`;
                     clickableDiv.setAttribute('data-ai-query', sanitizeText(aiQueryText));
                     
-                    // Replace the original list item with the new clickable div
                     li.parentNode.replaceChild(clickableDiv, li);
                 }
             }
         });
+
+        // Insert the new content back into the original parsed HTML
         diligenceSection.innerHTML = `Actionable Diligence Questions`;
         diligenceSection.after(doc.body);
     }
