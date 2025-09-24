@@ -135,7 +135,7 @@ After listing the statuses, briefly discuss what these comparisons imply. Is the
 Based purely on this quantitative analysis, what is the primary story? Does the \`thesis.moatIndicator\` suggest the company has a strong competitive advantage (a "moat")? Conclude with a final statement on its profile as a potential long-term holding.
 `.trim();
 
-export const GARP_ANALYSIS_PROMPT = `
+const GARP_ANALYSIS_PROMPT = `
 Role: You are a growth-oriented investment analyst, specializing in the "Growth at a Reasonable Price" (GARP) philosophy. Your task is to determine if a company's valuation is justified by its growth prospects.
 Data Instructions: Your analysis MUST be based *exclusively* on the pre-calculated metrics provided in the JSON data below.
 Output Format: The final report must be in professional markdown format. Use # for the main title, ## for major sections, and bullet points for key data points. Each bullet point MUST start on a new line.
@@ -439,31 +439,17 @@ Investment Profile & The Deciding Factor: Classify the stock's profile (e.g., 'B
 
 ## Actionable Diligence Questions
 
-{diligenceQuestions}
+(1 paragraph)
+Based on your analysis, propose 2-3 critical diligence questions. For each question, you MUST provide two parts:
+1.  **Human-Led Question:** A high-level, strategic question for an analyst to answer through deeper research and judgment.
+2.  **Suggested AI Investigation Query:** A specific, fact-based query designed to be used with a search-enabled AI (like the 'Diligence Investigation' tool) to find source material. This query should target information from recent earnings calls, SEC filings (10-K, 10-Q), or investor presentations.
 
-6. Critical Guidelines & Constraints:
+Format each item precisely like this:
+- **Human-Led Question:** [Your question here]
+- **Suggested AI Investigation Query:** "[Your search query here]"
 
-Data-Driven: Your analysis must be grounded in the provided data. Directly reference specific numerical data points from the scorecard and the peer comparison to substantiate your claims.
+${diligenceQuestions}
 
-Contextualize Everything: Do not analyze any metric in isolation. A P/E of 25 is meaningless without comparing it to the peer average and the company's own growth rate.
-
-Synthesize Related Metrics: Directly address the relationship between valuation (P/E ratios), growth (EPS Growth), and the combined metric (PEG ratio). For instance, if the PEG ratio is strong, explain how this provides context for a P/E ratio that might otherwise appear high.
-
-Tone: Maintain a professional, analytical, and objective tone. Avoid speculative hype. Your confidence should stem from the data.
-
-Formatting: Adhere strictly to the markdown structure, including bolding and paragraph breaks as specified.
-IMPORTANT: Your entire response must be pure markdown. Do not wrap your final output in markdown code fences (\`\`\`).
-
-Summary of Adjustments and Why They Work:
-Added Contextual Grounding: This small addition makes the task more realistic. An analyst is never looking at numbers in a vacuum; they know the company, ticker, and sector, which immediately informs their judgment.
-
-Added Actionable Diligence Questions: This is the most critical change. It transforms the output from a static report into a dynamic tool that guides the team's next steps. It proves the analyst has thought about "what's next?"
-
-Added Contextual Awareness Guideline: This forces the model to think like a real-world analyst who is aware of the current date and economic environment, adding a layer of sophisticated, timely relevance.
-
-Added Peer Comparison Guideline: This prevents the analysis from being myopic. A company’s metrics are only truly meaningful when compared to their direct competitors, and this guideline encourages that crucial step.
-
-Split FINAL SYNTHESIS into two paragraphs: This improves readability and logically separates the summary conclusion from the forward-looking action items.
 `.trim();
 
 const GARP_CONVICTION_SCORE_PROMPT = `
@@ -569,3 +555,5 @@ export const ANALYSIS_NAMES = {
     'PeerIdentification': 'Peer Identification',
     'PeerComparison': 'Peer Comparison'
 };
+
+}
