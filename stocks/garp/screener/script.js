@@ -139,6 +139,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (value < 0.7) return { category: 'Low Leverage', text: 'Indicates a healthy and manageable debt level, reducing financial risk.' };
                 return { category: 'High Leverage', text: 'A potential red flag. The company relies heavily on debt, which increases risk during economic weakness.' };
 
+            // ADDED: Interpretation for Price to FCF
+            case 'Price to FCF':
+                if (value < 15) return { category: 'Potentially Undervalued', text: 'The market price appears low relative to the company\'s ability to generate cash, a strong sign of value.' };
+                if (value < 25) return { category: 'Reasonable Price', text: 'A healthy valuation that suggests the market price is not excessive relative to the company\'s cash flow.' };
+                return { category: 'Expensive', text: 'The stock is trading at a high multiple of its cash flow, suggesting high expectations are priced in.' };
+
             default:
                 return { category: 'N/A', text: '' };
         }
@@ -203,6 +209,14 @@ document.addEventListener("DOMContentLoaded", () => {
                  if (value < 2.5) return 1.0;
                  if (value < 4.0) return 0.5;
                  return 0;
+
+            // ADDED: Multiplier logic for Price to FCF
+            case 'Price to FCF':
+                if (value <= 0) return 0;
+                if (value < 15) return 1.2;
+                if (value < 25) return 1.0;
+                if (value < 40) return 0.5;
+                return 0;
             
             case 'Debt-to-Equity':
                 if (value < 0.3) return 1.2;
@@ -268,6 +282,13 @@ document.addEventListener("DOMContentLoaded", () => {
             peg = pe / (epsNext1y * 100);
         }
 
+        // ADDED: Calculation for Price to FCF
+        let pfcf = null;
+        const fcfPerShareTtm = metricsTtm.freeCashFlowPerShareTTM;
+        if (currentPrice > 0 && fcfPerShareTtm > 0) {
+            pfcf = currentPrice / fcfPerShareTtm;
+        }
+
         // --- METRICS DEFINITION ---
         const metrics = {
             'EPS Growth (5Y)': { value: eps5y, format: 'percent', weight: 8 },
@@ -279,6 +300,8 @@ document.addEventListener("DOMContentLoaded", () => {
             'Forward P/E': { value: forwardPe, format: 'decimal', weight: 8 },
             'PEG Ratio': { value: peg, format: 'decimal', weight: 15 },
             'P/S Ratio': { value: ps, format: 'decimal', weight: 5 },
+            // ADDED: Metric definition for Price to FCF
+            'Price to FCF': { value: pfcf, format: 'decimal', weight: 10 },
             'Debt-to-Equity': { value: de, format: 'decimal', weight: 5 },
         };
 
@@ -363,7 +386,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const metricGroups = {
             'Growth': ['EPS Growth (5Y)', 'EPS Growth (Next 1Y)', 'Revenue Growth (5Y)'],
             'Profitability': ['Return on Equity', 'Return on Invested Capital'],
-            'Valuation & Debt': ['P/E (TTM)', 'Forward P/E', 'PEG Ratio', 'P/S Ratio', 'Debt-to-Equity']
+            'Valuation & Debt': ['P/E (TTM)', 'Forward P/E', 'PEG Ratio', 'P/S Ratio', 'Price to FCF', 'Debt-to-Equity']
         };
 
         let html = '<h3 class="text-lg font-bold text-gray-800 my-4 pt-4 border-t">GARP Criteria Interpretation</h3>';
