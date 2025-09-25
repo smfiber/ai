@@ -1,6 +1,6 @@
 // fileName: ui-handlers.js
 import { CONSTANTS, state, promptMap, ANALYSIS_REQUIREMENTS, ANALYSIS_NAMES } from './config.js';
-import { callApi, callGeminiApi, generateRefinedArticle, generatePolishedArticleForSynthesis, getFmpStockData, callGeminiApiWithSearch } from './api.js';
+import { callApi, callGeminiApi, generateRefinedArticle, generatePolishedArticleForSynthesis, getFmpStockData } from './api.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { openModal, closeModal, displayMessageInModal, openConfirmationModal, openManageStockModal, openDiligenceWarningModal } from './ui-modals.js';
 import { renderPortfolioManagerList, displayReport, updateReportStatus, fetchAndCachePortfolioData, updateGarpCandidacyStatus, renderCandidacyAnalysis, renderGarpAnalysisSummary, renderDiligenceLog, renderPeerComparisonTable } from './ui-render.js';
@@ -1045,51 +1045,49 @@ export async function handleGenerateAllReportsRequest(symbol) {
     }
 }
 
-export async function handleDiligenceInvestigationRequest(symbol) {
-    const questionInput = document.getElementById('diligence-question-input');
-    const question = questionInput.value.trim();
+export async function handleManualDiligenceSave(symbol) {
+    const entriesContainer = document.getElementById('manual-diligence-entries-container');
+    if (!entriesContainer) return;
 
-    if (!question) {
-        displayMessageInModal("Please enter a diligence question before investigating.", "warning");
+    const entryRows = entriesContainer.querySelectorAll('.diligence-entry-row');
+    const entriesToSave = [];
+
+    entryRows.forEach(row => {
+        const question = row.querySelector('.diligence-question-manual-input').value.trim();
+        const answer = row.querySelector('.diligence-answer-manual-input').value.trim();
+
+        if (question && answer) {
+            entriesToSave.push({ question, answer });
+        }
+    });
+
+    if (entriesToSave.length === 0) {
+        displayMessageInModal("Please add at least one complete Q&A entry before saving.", "warning");
         return;
     }
 
     openModal(CONSTANTS.MODAL_LOADING);
-    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
-    loadingMessage.textContent = "AI is investigating your question using Google Search...";
-
-    const articleContainer = document.getElementById('ai-article-container');
-    const statusContainer = document.getElementById('report-status-container-ai');
-    articleContainer.innerHTML = '';
-    statusContainer.classList.add('hidden');
+    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Saving ${entriesToSave.length} diligence log(s)...`;
 
     try {
-        const fmpData = await getFmpStockData(symbol);
-        const profile = fmpData?.profile?.[0] || {};
-        const companyName = profile.companyName || symbol;
+        const savePromises = entriesToSave.map(entry => {
+            const prompt = `Diligence Question from User: ${entry.question}`;
+            const content = marked.parse(entry.answer);
+            return autoSaveReport(symbol, 'DiligenceInvestigation', content, prompt);
+        });
 
-        const promptConfig = promptMap['DiligenceInvestigation'];
-        const prompt = promptConfig.prompt
-            .replace(/{companyName}/g, companyName)
-            .replace(/{tickerSymbol}/g, symbol)
-            .replace('{diligenceQuestion}', question);
+        await Promise.all(savePromises);
 
-        const investigationResult = await callGeminiApiWithSearch(prompt);
-
-        displayReport(articleContainer, investigationResult, prompt);
-        
-        await autoSaveReport(symbol, 'DiligenceInvestigation', investigationResult, prompt);
-
+        entriesContainer.innerHTML = '';
         const diligenceReports = await getSavedReports(symbol, 'DiligenceInvestigation');
         const diligenceLogContainer = document.getElementById('diligence-log-container');
         renderDiligenceLog(diligenceLogContainer, diligenceReports);
 
-        questionInput.value = '';
+        displayMessageInModal(`Successfully saved ${entriesToSave.length} diligence entries.`, 'info');
 
     } catch (error) {
-        console.error("Error during Diligence Investigation:", error);
-        displayMessageInModal(`Could not complete investigation: ${error.message}`, 'error');
-        articleContainer.innerHTML = `<p class="text-red-500 p-4">Failed to generate report: ${error.message}</p>`;
+        console.error("Error saving manual diligence entries:", error);
+        displayMessageInModal(`Could not save entries: ${error.message}`, 'error');
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
@@ -1123,16 +1121,6 @@ export async function handleDeleteDiligenceLog(reportId, ticker) {
             }
         }
     );
-}
-
-export function handleRerunDiligenceQuery(question, symbol) {
-    const questionInput = document.getElementById('diligence-question-input');
-    if (questionInput) {
-        questionInput.value = question;
-        handleDiligenceInvestigationRequest(symbol);
-    } else {
-        displayMessageInModal('Could not find the investigation input box.', 'error');
-    }
 }
 
 async function _fetchAndCachePeerData(tickers) {
