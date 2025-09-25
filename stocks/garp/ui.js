@@ -1,7 +1,7 @@
 import { CONSTANTS, state, promptMap } from './config.js';
 import { openModal, closeModal, openStockListModal, openManageStockModal, openPortfolioManagerModal, openRawDataViewer } from './ui-modals.js';
 import { fetchAndCachePortfolioData, renderPortfolioManagerList } from './ui-render.js';
-import { handleResearchSubmit, handleSaveStock, handleDeleteStock, handleRefreshFmpData, handleAnalysisRequest, handleInvestmentMemoRequest, handleSaveReportToDb, handleGenerateAllReportsRequest, handleGarpCandidacyRequest, handlePortfolioGarpAnalysisRequest, handlePositionAnalysisRequest, handleReportHelpRequest, handleDiligenceInvestigationRequest, handleDeleteDiligenceLog, handleRerunDiligenceQuery, handleWorkflowHelpRequest, handlePeerAnalysisRequest, handleManualPeerAnalysisRequest } from './ui-handlers.js';
+import { handleResearchSubmit, handleSaveStock, handleDeleteStock, handleRefreshFmpData, handleAnalysisRequest, handleInvestmentMemoRequest, handleSaveReportToDb, handleGenerateAllReportsRequest, handleGarpCandidacyRequest, handlePortfolioGarpAnalysisRequest, handlePositionAnalysisRequest, handleReportHelpRequest, handleManualDiligenceSave, handleDeleteDiligenceLog, handleWorkflowHelpRequest, handlePeerAnalysisRequest, handleManualPeerAnalysisRequest } from './ui-handlers.js';
 
 // --- DYNAMIC TOOLTIPS ---
 function initializeTooltips() {
@@ -240,17 +240,8 @@ export function setupEventListeners() {
             return;
         }
 
-        const rerunBtn = e.target.closest('.diligence-rerun-btn');
-        if (rerunBtn) {
-            const question = rerunBtn.dataset.question;
-            if (question) {
-                handleRerunDiligenceQuery(question, symbol);
-            }
-            return;
-        }
-
-        if (target.id === 'investigate-diligence-button') {
-            handleDiligenceInvestigationRequest(symbol);
+        if (target.id === 'save-manual-diligence-button') {
+            handleManualDiligenceSave(symbol);
             return;
         }
 
