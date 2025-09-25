@@ -374,7 +374,9 @@ export async function handlePositionAnalysisRequest(ticker, forceNew = false) {
             return;
         }
 
-        container.innerHTML = `<div class="flex items-center justify-center p-4"><div class="loader"></div><p class="ml-4 text-gray-600 font-semibold">AI is analyzing your position...</p></div>`;
+        openModal(CONSTANTS.MODAL_LOADING);
+        const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+        loadingMessage.textContent = 'Synthesizing position analysis...';
 
         const portfolioData = state.portfolioCache.find(s => s.ticker === ticker);
         const fmpData = await getFmpStockData(ticker);
@@ -388,17 +390,27 @@ export async function handlePositionAnalysisRequest(ticker, forceNew = false) {
             throw new Error(`The foundational 'GARP Candidacy Report' has not been generated yet. Please generate it from the 'Dashboard' or 'AI Analysis' tab first.`);
         }
         
-        let diligenceLog = 'No recent diligence is available.';
+        // Step 1: Summarize the diligence log
+        loadingMessage.textContent = "AI is summarizing new diligence...";
+        let diligenceSummary = "No new diligence findings were available.";
         if (diligenceReports.length > 0) {
-            diligenceLog = diligenceReports.map(report => {
+            const diligenceLog = diligenceReports.map(report => {
                 const question = report.prompt.split('Diligence Question from User:')[1]?.trim() || 'Question not found.';
-                const answer = report.content;
-                return `**Question:** ${question}\n\n**Answer:**\n${answer}\n\n---`;
-            }).join('\n\n');
+                return `Question: ${question}\nAnswer:\n${report.content}`;
+            }).join('\n\n---\n\n');
+            
+            const summarizationPrompt = `Please summarize the key takeaways from the following diligence log in a single, concise sentence:\n\n${diligenceLog}`;
+            diligenceSummary = await callGeminiApi(summarizationPrompt);
         }
 
-        const currentPrice = fmpData.profile[0].price;
+        // Step 2: Extract the core thesis from the candidacy report
         const candidacyReportContent = candidacyReports[0].content;
+        const thesisRegex = /\*\*Core Thesis:\*\*\s*(.*)/;
+        const match = candidacyReportContent.match(thesisRegex);
+        const originalThesis = match ? match[1].trim() : "The original investment thesis could not be parsed.";
+
+
+        const currentPrice = fmpData.profile[0].price;
         const { companyName, transactions } = portfolioData;
 
         // --- Calculate position details from transactions ---
@@ -446,43 +458,30 @@ export async function handlePositionAnalysisRequest(ticker, forceNew = false) {
             holdingPeriod
         };
         
+        // Step 3: Build and call the new, lean prompt
+        loadingMessage.textContent = "AI is re-evaluating the thesis...";
         const promptConfig = promptMap[reportType];
         const prompt = promptConfig.prompt
-            .replace(/{companyName}/g, companyName)
-            .replace(/{tickerSymbol}/g, ticker)
-            .replace('{candidacyReport}', candidacyReportContent)
+            .replace('{companyName}', companyName)
+            .replace('{tickerSymbol}', ticker)
+            .replace('{originalThesis}', originalThesis)
+            .replace('{diligenceSummary}', diligenceSummary)
             .replace('{positionDetails}', JSON.stringify(positionDetails, null, 2))
-            .replace('{currentPrice}', `$${currentPrice.toFixed(2)}`)
-            .replace('{diligenceLog}', diligenceLog);
+            .replace('{currentPrice}', `$${currentPrice.toFixed(2)}`);
 
-        const analysisResult = await generateRefinedArticle(prompt);
+        const analysisResult = await callGeminiApi(prompt);
         
-        const sanitizeText = (text) => {
-            if (typeof text !== 'string') return '';
-            const tempDiv = document.createElement('div');
-            tempDiv.textContent = text;
-            return tempDiv.innerHTML;
-        };
-
-        const accordionHtml = `
-            <div class="mb-4 border-b pb-4">
-                <details class="border rounded-md">
-                    <summary class="p-2 font-semibold text-sm text-gray-700 cursor-pointer hover:bg-gray-50 bg-gray-100">View Full Prompt Sent to AI</summary>
-                    <pre class="text-xs whitespace-pre-wrap break-all bg-gray-900 text-white p-3 rounded-b-md">${sanitizeText(prompt)}</pre>
-                </details>
-            </div>
-        `;
-
-        const finalHtmlToSave = accordionHtml + marked.parse(analysisResult);
-        await autoSaveReport(ticker, reportType, finalHtmlToSave, prompt);
+        const finalHtml = marked.parse(analysisResult);
+        await autoSaveReport(ticker, reportType, finalHtml, prompt);
         
         const refreshedReports = await getSavedReports(ticker, reportType);
 
-        displayReport(container, finalHtmlToSave, prompt);
+        displayReport(container, finalHtml, prompt);
         updateReportStatus(statusContainer, refreshedReports, refreshedReports[0].id, { reportType, symbol: ticker });
 
     } catch (error) {
         console.error("Error during Position Analysis:", error);
+        displayMessageInModal(`Could not complete analysis: ${error.message}`, 'error');
         const containerHtml = `<p class="text-red-500 p-4">Could not complete analysis: ${error.message}</p>`;
         
         if(statusContainer) {
@@ -490,6 +489,8 @@ export async function handlePositionAnalysisRequest(ticker, forceNew = false) {
             statusContainer.innerHTML = '';
         }
         container.innerHTML = containerHtml;
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
     }
 }
 
@@ -946,7 +947,7 @@ export async function handleInvestmentMemoRequest(symbol, forceNew = false) {
             .replace('{peerDataChanges}', JSON.stringify(peerDataChanges, null, 2));
 
         loadingMessage.textContent = "AI is drafting the investment memo...";
-        const memoContent = await generateRefinedArticle(prompt, loadingMessage);
+        const memoContent = await callGeminiApi(prompt);
         
         await autoSaveReport(symbol, reportType, memoContent, prompt);
         const refreshedReports = await getSavedReports(symbol, reportType);
