@@ -368,31 +368,20 @@ JSON Data for the Entire Portfolio:
 
 const POSITION_ANALYSIS_PROMPT = `
 Role: You are a pragmatic Portfolio Manager with a strict adherence to the GARP (Growth at a Reasonable Price) investment philosophy.
-Objective: Review an existing position in {companyName} ({tickerSymbol}) to determine the best course of action.
-Task: Synthesize the provided data into a cohesive and professional Position Review Memo. Do not include the raw data or markdown from the inputs. Instead, use the information to build a clear narrative.
-Final Output Format: You MUST return a single block of clean markdown. Do NOT use HTML tags.
+Objective: Re-evaluate a position in {companyName} ({tickerSymbol}) based on new information and market price changes.
 
-# Position Review: {companyName} ({tickerSymbol})
+**Core Data for Evaluation:**
+- **Original Thesis:** "{originalThesis}"
+- **Key New Findings (from Diligence):** "{diligenceSummary}"
+- **Our Current Position:** {positionDetails}
+- **Current Market Price:** {currentPrice}
 
-## 1. Thesis Re-evaluation
-(1 paragraph)
-Briefly summarize the core thesis from the original GARP report. Then, using new information from the **Recent Diligence Log**, analyze if that original thesis is still intact. Does the new information strengthen, weaken, or otherwise invalidate the original thesis? Finally, consider the stock's move from our purchase price to the current market price. Does the current valuation still represent "Growth at a Reasonable Price," or has it become too expensive (or even cheaper)?
+**Task:**
+Synthesize the Core Data above into a professional Position Review Memo.
+1.  **Thesis Re-evaluation:** Analyze if the "Key New Findings" strengthen or weaken the "Original Thesis."
+2.  **Quantitative Snapshot:** List the metrics from "Our Current Position."
+3.  **Recommendation & Justification:** Based on your analysis, provide a clear recommendation (Hold, Acquire More, Trim Position, or Sell).
 
-## 2. Quantitative Snapshot
-(A bulleted list derived from the Position Details JSON. Do not show the JSON directly.)
-- **Cost Basis:** [Value from JSON]
-- **Current Market Value:** [Value from JSON]
-- **Unrealized Gain/Loss:** [Value from JSON]
-- **Holding Period:** [Value from JSON]
-
-## 3. Recommendation & Justification
-(A single, bolded recommendation from the list below, on its own line, followed by a 2-3 sentence justification.)
-- **Hold**
-- **Acquire More**
-- **Trim Position**
-- **Sell**
-
----
 **CRITICAL INSTRUCTION: Your final output MUST use the exact markdown structure shown in the example below. Do NOT deviate.**
 
 **EXAMPLE OUTPUT FORMAT:**
@@ -412,21 +401,6 @@ Briefly summarize the core thesis from the original GARP report. Then, using new
 
 (Your 2-3 sentence justification goes here...)
 ---
-
-**INPUT DATA FOR SYNTHESIS:**
-1.  **Original GARP Candidacy Report:**
-    \`\`\`markdown
-    {candidacyReport}
-    \`\`\`
-2.  **Our Current Position:**
-    \`\`\`json
-    {positionDetails}
-    \`\`\`
-3.  **Current Market Price:** {currentPrice}
-4.  **Recent Diligence Log:**
-    \`\`\`markdown
-    {diligenceLog}
-    \`\`\`
 `.trim();
 
 const GARP_CANDIDACY_PROMPT = `
