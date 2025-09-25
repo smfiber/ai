@@ -455,7 +455,7 @@ export async function handlePositionAnalysisRequest(ticker, forceNew = false) {
             .replace('{currentPrice}', `$${currentPrice.toFixed(2)}`)
             .replace('{diligenceLog}', diligenceLog);
 
-        const analysisResult = await generatePolishedArticleForSynthesis(prompt);
+        const analysisResult = await generateRefinedArticle(prompt);
         
         const sanitizeText = (text) => {
             if (typeof text !== 'string') return '';
@@ -946,7 +946,7 @@ export async function handleInvestmentMemoRequest(symbol, forceNew = false) {
             .replace('{peerDataChanges}', JSON.stringify(peerDataChanges, null, 2));
 
         loadingMessage.textContent = "AI is drafting the investment memo...";
-        const memoContent = await generatePolishedArticleForSynthesis(prompt, loadingMessage);
+        const memoContent = await generateRefinedArticle(prompt, loadingMessage);
         
         await autoSaveReport(symbol, reportType, memoContent, prompt);
         const refreshedReports = await getSavedReports(symbol, reportType);
