@@ -691,7 +691,6 @@ export function renderDiligenceLog(container, reports) {
                      <p class="text-xs text-gray-400">Saved: ${savedDate}</p>
                 </div>
                 <div class="flex items-center gap-2 flex-shrink-0 ml-4">
-                    <button class="diligence-rerun-btn text-xs font-semibold py-1 px-3 rounded-full bg-blue-100 text-blue-800 hover:bg-blue-200" title="Re-run this query" data-report-id="${report.id}" data-question="${sanitizeText(question)}">Re-run</button>
                     <button class="diligence-delete-btn text-xs font-semibold py-1 px-3 rounded-full bg-red-100 text-red-800 hover:bg-red-200" title="Delete this entry" data-report-id="${report.id}">Delete</button>
                 </div>
             </li>
