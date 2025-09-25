@@ -935,8 +935,7 @@ export async function handleInvestmentMemoRequest(symbol, forceNew = false) {
             .replace('{peerAverages}', JSON.stringify(peerAverages, null, 2))
             .replace('{peerDataChanges}', JSON.stringify(peerDataChanges, null, 2));
 
-        loadingMessage.textContent = "AI is drafting the investment memo...";
-        const memoContent = await callGeminiApi(prompt);
+        const memoContent = await generateRefinedArticle(prompt, loadingMessage);
         
         await autoSaveReport(symbol, reportType, memoContent, prompt);
         const refreshedReports = await getSavedReports(symbol, reportType);
