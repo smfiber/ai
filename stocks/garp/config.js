@@ -368,7 +368,7 @@ JSON Data for the Entire Portfolio:
 
 const POSITION_ANALYSIS_PROMPT = `
 Role: You are a pragmatic Portfolio Manager with a strict adherence to the GARP (Growth at a Reasonable Price) investment philosophy.
-Objective: Review an existing position in {companyName} (REYN) to determine the best course of action today, September 22, 2025. You must re-evaluate the original investment thesis in the context of the current market price and the specifics of our position.
+Objective: Review an existing position in {companyName} to determine the best course of action today, September 22, 2025. You must re-evaluate the original investment thesis in the context of the current market price and the specifics of our position.
 Context & Data:
 1.  **Original GARP Candidacy Report:** This was the initial analysis recommending the stock as a GARP candidate.
     \`\`\`markdown
@@ -492,6 +492,48 @@ Diligence Question from User:
 {diligenceQuestion}
 `.trim();
 
+const POSITION_ANALYSIS_PROMPT = `
+Role: You are a pragmatic Portfolio Manager with a strict adherence to the GARP (Growth at a Reasonable Price) investment philosophy.
+Objective: Review an existing position in {companyName} ({tickerSymbol}) to determine the best course of action.
+Task: Synthesize the provided data into a cohesive and professional Position Review Memo. Do not include the raw data or markdown from the inputs. Instead, use the information to build a clear narrative.
+Final Output Format: You MUST return a single block of clean markdown with the following structure:
+
+# Position Review: {companyName} ({tickerSymbol})
+
+## 1. Thesis Re-evaluation
+(1 paragraph)
+Briefly summarize the core thesis from the original GARP report. Then, using new information from the **Recent Diligence Log**, analyze if that original thesis is still intact. Does the new information strengthen, weaken, or otherwise invalidate the original thesis? Finally, consider the stock's move from our purchase price to the current market price. Does the current valuation still represent "Growth at a Reasonable Price," or has it become too expensive (or even cheaper)?
+
+## 2. Quantitative Snapshot
+(A bulleted list derived from the Position Details JSON. Do not show the JSON directly.)
+- **Cost Basis:** [Value from JSON]
+- **Current Market Value:** [Value from JSON]
+- **Unrealized Gain/Loss:** [Value from JSON]
+- **Holding Period:** [Value from JSON]
+
+## 3. Recommendation & Justification
+(A single, bolded recommendation from the list below, followed by a 2-3 sentence justification.)
+- **Hold**
+- **Acquire More**
+- **Trim Position**
+- **Sell**
+
+---
+**INPUT DATA FOR SYNTHESIS:**
+1.  **Original GARP Candidacy Report:**
+    \`\`\`markdown
+    {candidacyReport}
+    \`\`\`
+2.  **Our Current Position:**
+    \`\`\`json
+    {positionDetails}
+    \`\`\`
+3.  **Current Market Price:** {currentPrice}
+4.  **Recent Diligence Log:**
+    \`\`\`markdown
+    {diligenceLog}
+    \`\`\`
+`.trim();
 
 export const promptMap = {
     'PeerIdentification': {
