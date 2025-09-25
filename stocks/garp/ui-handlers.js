@@ -455,7 +455,7 @@ export async function handlePositionAnalysisRequest(ticker, forceNew = false) {
             .replace('{currentPrice}', `$${currentPrice.toFixed(2)}`)
             .replace('{diligenceLog}', diligenceLog);
 
-        const analysisResult = await generateRefinedArticle(prompt);
+        const analysisResult = await generatePolishedArticleForSynthesis(prompt);
         
         const sanitizeText = (text) => {
             if (typeof text !== 'string') return '';
