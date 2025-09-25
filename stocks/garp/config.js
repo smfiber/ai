@@ -369,7 +369,7 @@ JSON Data for the Entire Portfolio:
 const POSITION_ANALYSIS_PROMPT = `
 Role: You are a pragmatic Portfolio Manager with a strict adherence to the GARP (Growth at a Reasonable Price) investment philosophy.
 Objective: Review an existing position in {companyName} ({tickerSymbol}) to determine the best course of action.
-Task: Synthesize the provided data into a cohesive and professional Position Review Memo. Do not include the raw data or markdown from the inputs. Instead, use the information to build a clear narrative. **You must strictly follow the markdown format provided in the example below.**
+Task: Synthesize the provided data into a cohesive and professional Position Review Memo. Do not include the raw data or markdown from the inputs. Instead, use the information to build a clear narrative.
 Final Output Format: You MUST return a single block of clean markdown. Do NOT use HTML tags.
 
 # Position Review: {companyName} ({tickerSymbol})
@@ -386,15 +386,16 @@ Briefly summarize the core thesis from the original GARP report. Then, using new
 - **Holding Period:** [Value from JSON]
 
 ## 3. Recommendation & Justification
-(A single, bolded recommendation from the list below, followed by a 2-3 sentence justification.)
+(A single, bolded recommendation from the list below, on its own line, followed by a 2-3 sentence justification.)
 - **Hold**
 - **Acquire More**
 - **Trim Position**
 - **Sell**
 
 ---
-**EXAMPLE OUTPUT FORMAT (Use this exact markdown structure):**
+**CRITICAL INSTRUCTION: Your final output MUST use the exact markdown structure shown in the example below. Do NOT deviate.**
 
+**EXAMPLE OUTPUT FORMAT:**
 # Position Review: ExampleCorp (EXMP)
 
 ## 1. Thesis Re-evaluation
