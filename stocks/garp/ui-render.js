@@ -592,7 +592,10 @@ export function renderCandidacyAnalysis(container, reportContent, prompt, dilige
         `;
     }
     
-    const reportHtml = marked.parse(reportContent || '');
+    // Clean the AI's response to remove wrapping markdown code fences.
+    const cleanedContent = (reportContent || '').trim().replace(/^```(?:markdown)?\s*\n/, '').replace(/\n```$/, '').trim();
+
+    const reportHtml = marked.parse(cleanedContent);
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = reportHtml;
 
