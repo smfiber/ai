@@ -395,11 +395,17 @@ export async function openRawDataViewer(ticker) {
         const diligenceLogContainerHtml = `<div id="diligence-log-container" class="mb-6 text-left"></div>`;
         const diligenceInvestigationHtml = `
             <div class="text-left">
-                <h3 class="text-lg font-semibold text-gray-800 mb-2">Diligence Investigation</h3>
-                <p class="text-sm text-gray-500 mb-4">Copy a question from a generated report (or write your own) and use AI to find answers from recent public documents.</p>
-                <textarea id="diligence-question-input" class="w-full border border-gray-300 rounded-lg p-2 text-sm" rows="4" placeholder="e.g., What are the specific operational and strategic drivers behind the projected EPS growth for the next fiscal year?"></textarea>
-                <div class="text-right mt-2">
-                     <button id="investigate-diligence-button" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg">Investigate with AI</button>
+                <div class="flex justify-between items-center mb-4">
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-800">Manual Diligence Entry</h3>
+                        <p class="text-sm text-gray-500">Add questions and answers to the diligence log.</p>
+                    </div>
+                    <button id="add-diligence-entry-button" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg text-sm">Add New Q&A</button>
+                </div>
+                <div id="manual-diligence-entries-container" class="space-y-4">
+                    </div>
+                <div class="text-right mt-4 pt-4 border-t">
+                     <button id="save-manual-diligence-button" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg">Save All New Entries</button>
                 </div>
             </div>
         `;
@@ -424,7 +430,6 @@ export async function openRawDataViewer(ticker) {
                 <div class="p-4 bg-white rounded-lg border shadow-sm">
                     <div class="flex justify-center items-center gap-2 mb-4">
                         <h3 class="text-lg font-bold text-gray-800">Step 3: Diligence Investigation (Optional)</h3>
-                        <button data-report-type="DiligenceInvestigation" class="ai-help-button p-1 rounded-full hover:bg-indigo-100" title="What is this?"><svg class="w-5 h-5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" /></svg></button>
                     </div>
                     ${diligenceLogContainerHtml}
                     ${diligenceInvestigationHtml}
@@ -439,6 +444,39 @@ export async function openRawDataViewer(ticker) {
                 </div>
             </div>
         `;
+
+        // --- NEW: Logic for Manual Diligence Entry ---
+        const addDiligenceEntryRow = () => {
+            const container = document.getElementById('manual-diligence-entries-container');
+            if (!container) return;
+            const entryDiv = document.createElement('div');
+            entryDiv.className = 'diligence-entry-row border p-3 rounded-lg bg-gray-50 space-y-2';
+            entryDiv.innerHTML = `
+                <div class="flex justify-between items-center">
+                    <label class="block text-sm font-medium text-gray-700">New Question</label>
+                    <button type="button" class="delete-diligence-entry-button text-red-500 hover:text-red-700 font-bold text-xl">&times;</button>
+                </div>
+                <textarea class="diligence-question-manual-input w-full border border-gray-300 rounded-lg p-2 text-sm" rows="3" placeholder="Enter your diligence question..."></textarea>
+                <label class="block text-sm font-medium text-gray-700 pt-2">Answer</label>
+                <textarea class="diligence-answer-manual-input w-full border border-gray-300 rounded-lg p-2 text-sm" rows="5" placeholder="Enter the answer you found..."></textarea>
+            `;
+            container.appendChild(entryDiv);
+        };
+        
+        const addBtn = document.getElementById('add-diligence-entry-button');
+        if (addBtn) {
+            addBtn.addEventListener('click', addDiligenceEntryRow);
+        }
+
+        const entriesContainer = document.getElementById('manual-diligence-entries-container');
+        if (entriesContainer) {
+            entriesContainer.addEventListener('click', (e) => {
+                const deleteBtn = e.target.closest('.delete-diligence-entry-button');
+                if (deleteBtn) {
+                    deleteBtn.closest('.diligence-entry-row').remove();
+                }
+            });
+        }
         
         const diligenceReports = allSavedReports.filter(r => r.reportType === 'DiligenceInvestigation');
         const diligenceLogContainer = document.getElementById('diligence-log-container');
