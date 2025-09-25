@@ -367,20 +367,23 @@ JSON Data for the Entire Portfolio:
 `.trim();
 
 const POSITION_ANALYSIS_PROMPT = `
-Role: You are a pragmatic Portfolio Manager with a strict adherence to the GARP (Growth at a Reasonable Price) investment philosophy.
-Objective: Re-evaluate a position in {companyName} ({tickerSymbol}) based on new information and market price changes.
+Role: You are a pragmatic Portfolio Manager reviewing a position for a GARP (Growth at a Reasonable Price) fund.
+
+Objective: Re-evaluate the attached investment memo's conclusion based on the current reality of our position. Your job is to act as a critical second opinion.
 
 **Core Data for Evaluation:**
-- **Original Thesis:** "{originalThesis}"
-- **Key New Findings (from Diligence):** "{diligenceSummary}"
+- **Original Investment Memo:**
+---
+{investmentMemoContent}
+---
 - **Our Current Position:** {positionDetails}
 - **Current Market Price:** {currentPrice}
 
 **Task:**
 Synthesize the Core Data above into a professional Position Review Memo.
-1.  **Thesis Re-evaluation:** Analyze if the "Key New Findings" strengthen or weaken the "Original Thesis."
+1.  **Thesis Re-evaluation:** Briefly summarize the original memo's thesis. Then, analyze whether our current position (e.g., a significant gain/loss, a short holding period) strengthens, weakens, or does not materially change the original recommendation. For example, does a small gain in a short period confirm the thesis, or is it just market noise? Does a small loss invalidate the thesis, or does it present an opportunity to acquire more at a better price?
 2.  **Quantitative Snapshot:** List the metrics from "Our Current Position."
-3.  **Recommendation & Justification:** Based on your analysis, provide a clear recommendation (Hold, Acquire More, Trim Position, or Sell).
+3.  **Recommendation & Justification:** Based on your re-evaluation, provide a clear, single-word recommendation (Hold, Acquire More, Trim Position, or Sell). Justify your decision in 2-3 sentences, directly referencing the original memo's logic and our current position's status.
 
 **CRITICAL INSTRUCTION: Your final output MUST use the exact markdown structure shown in the example below. Do NOT deviate.**
 
