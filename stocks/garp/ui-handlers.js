@@ -881,21 +881,49 @@ export async function handleInvestmentMemoRequest(symbol, forceNew = false) {
         }
         const candidacyReport = candidacyReports[0];
 
-        // --- NEW: Check for un-investigated diligence questions ---
+        // --- NEW: AI-powered check for un-investigated diligence questions ---
         if (candidacyReport.diligenceQuestions && candidacyReport.diligenceQuestions.length > 0) {
+            loadingMessage.textContent = "AI is verifying diligence log...";
+            
             const diligenceReports = await getSavedReports(symbol, 'DiligenceInvestigation');
-            let answeredCount = 0;
-            candidacyReport.diligenceQuestions.forEach(q => {
-                if (diligenceReports.some(d => d.prompt.includes(q.aiQuery))) {
-                    answeredCount++;
-                }
-            });
+            const answeredQuestions = diligenceReports.map(report => {
+                return report.prompt.split('Diligence Question from User:')[1]?.trim() || '';
+            }).filter(Boolean);
 
-            if (answeredCount === 0) {
-                 closeModal(CONSTANTS.MODAL_LOADING);
-                 return openDiligenceWarningModal(symbol, candidacyReport.diligenceQuestions, () => {
+            if (answeredQuestions.length > 0) {
+                const requiredQuestion = candidacyReport.diligenceQuestions[0].humanQuestion;
+
+                const validationPrompt = `
+                Role: You are a meticulous research assistant.
+                Task: Your sole purpose is to determine if a list of "Answered Questions" sufficiently addresses the core topic of a "Required Critical Question".
+                Constraints:
+                - You MUST return ONLY the word "Yes" or "No".
+                - Do NOT return any other text, explanation, or punctuation.
+                - "Yes" means the answered questions cover the topic.
+                - "No" means they do not.
+
+                Required Critical Question:
+                "${requiredQuestion}"
+
+                List of Answered Questions:
+                ${answeredQuestions.map(q => `- "${q}"`).join('\n')}
+                `.trim();
+
+                const validationResponse = await callGeminiApi(validationPrompt);
+
+                if (validationResponse.trim().toLowerCase().includes('yes')) {
+                    loadingMessage.textContent = "Diligence verified. Continuing memo generation...";
+                } else {
+                    closeModal(CONSTANTS.MODAL_LOADING);
+                    return openDiligenceWarningModal(symbol, candidacyReport.diligenceQuestions, () => {
+                         handleInvestmentMemoRequest(symbol, true);
+                    });
+                }
+            } else {
+                closeModal(CONSTANTS.MODAL_LOADING);
+                return openDiligenceWarningModal(symbol, candidacyReport.diligenceQuestions, () => {
                      handleInvestmentMemoRequest(symbol, true);
-                 });
+                });
             }
         }
 
