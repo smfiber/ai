@@ -380,35 +380,26 @@ export async function handlePositionAnalysisRequest(ticker, forceNew = false) {
 
         const portfolioData = state.portfolioCache.find(s => s.ticker === ticker);
         const fmpData = await getFmpStockData(ticker);
-        const candidacyReports = await getSavedReports(ticker, 'GarpCandidacy');
-        const diligenceReports = await getSavedReports(ticker, 'DiligenceInvestigation');
-
+        
+        // --- MODIFIED LOGIC ---
+        const memoReports = await getSavedReports(ticker, 'InvestmentMemo');
+        let sourceReportContent;
+        
+        if (memoReports.length > 0) {
+            // Prioritize the InvestmentMemo
+            sourceReportContent = memoReports[0].content;
+        } else {
+            // Fallback to GarpCandidacy report
+            const candidacyReports = await getSavedReports(ticker, 'GarpCandidacy');
+            if (candidacyReports.length === 0) {
+                throw new Error(`The foundational 'GARP Candidacy Report' or 'Investment Memo' has not been generated yet. Please generate one from the 'Dashboard' or 'AI Analysis' tab first.`);
+            }
+            sourceReportContent = candidacyReports[0].content;
+        }
+        
         if (!fmpData || !fmpData.profile || !fmpData.profile.length === 0) {
             throw new Error(`Could not retrieve the latest price data for ${ticker}.`);
         }
-        if (candidacyReports.length === 0) {
-            throw new Error(`The foundational 'GARP Candidacy Report' has not been generated yet. Please generate it from the 'Dashboard' or 'AI Analysis' tab first.`);
-        }
-        
-        // Step 1: Summarize the diligence log
-        loadingMessage.textContent = "AI is summarizing new diligence...";
-        let diligenceSummary = "No new diligence findings were available.";
-        if (diligenceReports.length > 0) {
-            const diligenceLog = diligenceReports.map(report => {
-                const question = report.prompt.split('Diligence Question from User:')[1]?.trim() || 'Question not found.';
-                return `Question: ${question}\nAnswer:\n${report.content}`;
-            }).join('\n\n---\n\n');
-            
-            const summarizationPrompt = `Please summarize the key takeaways from the following diligence log in a single, concise sentence:\n\n${diligenceLog}`;
-            diligenceSummary = await callGeminiApi(summarizationPrompt);
-        }
-
-        // Step 2: Extract the core thesis from the candidacy report
-        const candidacyReportContent = candidacyReports[0].content;
-        const thesisRegex = /\*\*Core Thesis:\*\*\s*(.*)/;
-        const match = candidacyReportContent.match(thesisRegex);
-        const originalThesis = match ? match[1].trim() : "The original investment thesis could not be parsed.";
-
 
         const currentPrice = fmpData.profile[0].price;
         const { companyName, transactions } = portfolioData;
@@ -458,14 +449,12 @@ export async function handlePositionAnalysisRequest(ticker, forceNew = false) {
             holdingPeriod
         };
         
-        // Step 3: Build and call the new, lean prompt
         loadingMessage.textContent = "AI is re-evaluating the thesis...";
         const promptConfig = promptMap[reportType];
         const prompt = promptConfig.prompt
             .replace('{companyName}', companyName)
             .replace('{tickerSymbol}', ticker)
-            .replace('{originalThesis}', originalThesis)
-            .replace('{diligenceSummary}', diligenceSummary)
+            .replace('{investmentMemoContent}', sourceReportContent)
             .replace('{positionDetails}', JSON.stringify(positionDetails, null, 2))
             .replace('{currentPrice}', `$${currentPrice.toFixed(2)}`);
 
