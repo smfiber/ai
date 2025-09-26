@@ -183,13 +183,10 @@ export function renderPeerComparisonTable(container, ticker, companyMetrics, pee
 
 export async function renderPortfolioGarpOverview() {
     const overviewContainer = document.getElementById('portfolio-garp-overview-container');
-    const breakdownContainer = document.getElementById('portfolio-garp-breakdown-container');
     const aiSummaryContainer = document.getElementById('portfolio-garp-ai-summary-container');
     
-    // Clear old content from containers we are replacing
-    if (overviewContainer) overviewContainer.innerHTML = '';
-    if (breakdownContainer) breakdownContainer.innerHTML = '';
-    if (aiSummaryContainer) aiSummaryContainer.innerHTML = ''; // Clear previous AI summary
+    if (aiSummaryContainer) aiSummaryContainer.innerHTML = ''; 
+    if (!overviewContainer) return;
 
     try {
         const portfolioStocks = state.portfolioCache.filter(s => s.status === 'Portfolio');
@@ -198,50 +195,52 @@ export async function renderPortfolioGarpOverview() {
             overviewContainer.innerHTML = `<p class="text-center text-gray-500 py-8">Add stocks to your portfolio to see a summary here.</p>`;
             return;
         }
-        
-        // Sort by score, putting stocks without a score at the bottom
-        portfolioStocks.sort((a, b) => (b.garpConvictionScore || 0) - (a.garpConvictionScore || 0));
 
-        let overviewHtml = '<ul class="divide-y divide-gray-200 border rounded-lg bg-white">';
-        
-        for (const stock of portfolioStocks) {
-            const score = stock.garpConvictionScore;
-            let scoreBadgeHtml = '<span class="conviction-score-badge low" data-tooltip="Generate a GARP Candidacy Report to get a score.">N/A</span>';
+        const sectorCounts = portfolioStocks.reduce((acc, stock) => {
+            const sector = stock.sector || 'Uncategorized';
+            acc[sector] = (acc[sector] || 0) + 1;
+            return acc;
+        }, {});
 
-            if (score) {
-                let scoreClass = 'low';
-                let scoreTooltip = 'Score indicates a low alignment with GARP principles.';
-                if (score > 75) {
-                    scoreClass = 'high';
-                    scoreTooltip = 'Score indicates a high alignment with GARP principles.';
-                } else if (score > 50) {
-                    scoreClass = 'medium';
-                    scoreTooltip = 'Score indicates a medium alignment with GARP principles.';
-                }
-                scoreBadgeHtml = `<span class="conviction-score-badge ${scoreClass}" data-tooltip="${scoreTooltip}">${score}</span>`;
-            }
+        const totalStocks = portfolioStocks.length;
+        const sortedSectors = Object.entries(sectorCounts)
+            .map(([name, count]) => ({
+                name,
+                count,
+                percentage: (count / totalStocks) * 100,
+            }))
+            .sort((a, b) => b.count - a.count);
 
-            overviewHtml += `
-                <li class="p-3 flex justify-between items-center hover:bg-gray-50">
-                    <div class="flex items-center gap-4">
-                        ${scoreBadgeHtml}
-                        <div>
-                            <p class="font-semibold text-gray-800">${sanitizeText(stock.companyName)} (${sanitizeText(stock.ticker)})</p>
-                            <p class="text-sm text-gray-500">${sanitizeText(stock.sector) || 'N/A'}</p>
-                        </div>
+        const barHtml = sortedSectors.map((sector, index) => {
+            const colorClass = `sector-color-${(index % 10) + 1}`;
+            const tooltip = `${sector.name}: ${sector.count} stock(s) (${sector.percentage.toFixed(1)}%)`;
+            return `<div class="sector-segment ${colorClass}" style="width: ${sector.percentage}%;" title="${tooltip}"></div>`;
+        }).join('');
+
+        const legendHtml = sortedSectors.map((sector, index) => {
+            const colorClass = `sector-color-${(index % 10) + 1}`;
+            return `
+                <div class="legend-item">
+                    <div class="legend-color-box ${colorClass}"></div>
+                    <div class="text-gray-700">
+                        <span class="font-semibold">${sanitizeText(sector.name)}</span>
+                        <span class="text-gray-500 ml-2">(${sector.count}, ${sector.percentage.toFixed(1)}%)</span>
                     </div>
-                </li>
-            `;
-        }
-        
-        overviewHtml += '</ul>';
-        overviewContainer.innerHTML = overviewHtml;
+                </div>`;
+        }).join('');
+
+        const finalHtml = `
+            <div class="sector-breakdown-bar">${barHtml}</div>
+            <div class="sector-legend">${legendHtml}</div>
+        `;
+        overviewContainer.innerHTML = finalHtml;
 
     } catch (error) {
         console.error("Error rendering portfolio GARP overview:", error);
         overviewContainer.innerHTML = `<p class="text-center text-red-500 py-8">Could not load the overview: ${error.message}</p>`;
     }
 }
+
 
 export function renderPortfolioManagerList() {
     const container = document.getElementById('portfolio-manager-list-container');
