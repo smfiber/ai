@@ -259,6 +259,18 @@ const CAPITAL_ALLOCATORS_PROMPT = `
 	Crucial Disclaimer: This article is for informational purposes only and should not be considered financial advice. Readers should consult with a qualified financial professional before making any investment decisions.
 `;
 
+const SECTOR_MOMENTUM_PROMPT = `
+Role: You are a market analyst AI. Your task is to provide a concise, data-driven summary of sector performance based on the provided JSON data.
+Instructions:
+- Identify the top 2-3 strongest performing sectors, especially based on Year-to-Date (YTD) performance.
+- Identify the 1-2 weakest performing sectors.
+- Briefly comment on any notable shifts in momentum (e.g., a sector that is strong YTD but weak in the last 1-month).
+- Keep the summary to a single, professional paragraph. Do not use markdown headings or bullet points.
+
+JSON Data:
+{jsonData}
+`.trim();
+
 export const INVESTMENT_MEMO_PROMPT = `
 **Persona & Goal:**
 You are a Senior Investment Analyst at a GARP-focused ("Growth at a Reasonable Price") fund. Your task is to synthesize a quantitative scorecard, a qualitative candidacy report, and a diligence log on {companyName} into a definitive and convincing investment memo. The final output must be a clear, thesis-driven analysis that determines if this is a quality growth company trading at a fair price.
@@ -527,6 +539,10 @@ export const promptMap = {
     'GarpConvictionScore': {
         prompt: GARP_CONVICTION_SCORE_PROMPT,
         requires: []
+    },
+    'SectorMomentum': {
+        prompt: SECTOR_MOMENTUM_PROMPT,
+        requires: []
     }
 };
 
@@ -551,5 +567,6 @@ export const ANALYSIS_NAMES = {
     'PortfolioGarpAnalysis': 'Portfolio GARP Analysis',
     'GarpConvictionScore': 'GARP Conviction Score',
     'PeerIdentification': 'Peer Identification',
-    'PeerComparison': 'Peer Comparison'
+    'PeerComparison': 'Peer Comparison',
+    'SectorMomentum': 'Sector Momentum'
 };
