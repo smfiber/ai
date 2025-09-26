@@ -339,7 +339,7 @@ You are a Senior Investment Analyst at a GARP-focused ("Growth at a Reasonable P
 \`\`\`json
 {peerDataChanges}
 \`\`\`
-`.trim();
+\`.trim();
 
 const PORTFOLIO_GARP_ANALYSIS_PROMPT = `
 Role: You are a sharp and insightful portfolio analyst specializing in GARP (Growth at a Reasonable Price) investing.
