@@ -106,12 +106,14 @@ export async function handleRefreshFmpData(symbol) {
 // --- PORTFOLIO & DASHBOARD MANAGEMENT ---
 
 export async function handleSectorMomentumRequest() {
+    const section = document.getElementById('sector-momentum-section');
     const container = document.getElementById('sector-momentum-container');
     const summaryContainer = document.getElementById('sector-momentum-ai-summary');
-    if (!container || !summaryContainer) return;
+    if (!section || !container || !summaryContainer) return;
 
     summaryContainer.textContent = 'Fetching sector performance data...';
     container.innerHTML = '<div class="loader mx-auto my-8"></div>';
+    section.classList.remove('hidden');
 
     try {
         const url = `https://financialmodelingprep.com/api/v3/historical-sectors-performance?apikey=${state.fmpApiKey}`;
@@ -159,7 +161,6 @@ export async function handleSectorMomentumRequest() {
             };
         }).sort((a, b) => (b.perfYTD || -Infinity) - (a.perfYTD || -Infinity));
 
-
         summaryContainer.textContent = 'AI is analyzing sector trends...';
         const promptConfig = promptMap['SectorMomentum'];
         const prompt = promptConfig.prompt.replace('{jsonData}', JSON.stringify(processedData, null, 2));
@@ -169,13 +170,10 @@ export async function handleSectorMomentumRequest() {
 
     } catch (error) {
         console.error("Error fetching or rendering sector momentum:", error);
-        const section = document.getElementById('sector-momentum-section');
-        if (section) {
-            section.innerHTML = `<div class="p-4 bg-red-50 text-red-700 rounded-lg text-center">Could not load Sector Momentum data: ${error.message}</div>`;
-            section.classList.remove('hidden');
-        }
+        section.innerHTML = `<div class="p-4 bg-red-50 text-red-700 rounded-lg text-center">Could not load Sector Momentum data: ${error.message}</div>`;
     }
 }
+
 
 export async function handleSaveStock(e) {
     e.preventDefault();
