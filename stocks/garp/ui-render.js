@@ -1,6 +1,6 @@
 // fileName: ui-render.js
 import { CONSTANTS, state } from './config.js';
-import { getDocs, collection } from "https://www.gstatic.com/firebasejs/11.6.firestore.js";
+import { getDocs, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { _calculateGarpScorecardMetrics } from './analysis-helpers.js';
 import { handleAnalysisRequest, handleInvestmentMemoRequest, handleGarpCandidacyRequest, handlePositionAnalysisRequest } from './ui-handlers.js';
 import { getFmpStockData } from './api.js';
