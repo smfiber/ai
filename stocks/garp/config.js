@@ -309,6 +309,9 @@ You are a Senior Investment Analyst at a GARP-focused ("Growth at a Reasonable P
 ### Recommendation
 **[Provide one of the following recommendations: High Conviction Buy, Initiate Position, Add to Watchlist, or Pass/Sell]**
 
+### Confidence Score
+**[Provide a confidence score from 1.0 (Very Low) to 5.0 (Very High) with one decimal place. This score should reflect your confidence in the *Recommendation* based on the clarity and strength of the data. A highly contradictory or data-deficient analysis should receive a lower score.]**
+
 ### Justification
 [Provide a 1-2 sentence justification for your recommendation, explicitly referencing the trade-offs revealed in the Q&A above.]
 
