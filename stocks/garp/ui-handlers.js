@@ -3,7 +3,7 @@ import { CONSTANTS, state, promptMap, ANALYSIS_REQUIREMENTS, ANALYSIS_NAMES } fr
 import { callApi, callGeminiApi, generateRefinedArticle, generatePolishedArticleForSynthesis, getFmpStockData } from './api.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { openModal, closeModal, displayMessageInModal, openConfirmationModal, openManageStockModal, openDiligenceWarningModal } from './ui-modals.js';
-import { renderPortfolioManagerList, displayReport, updateReportStatus, fetchAndCachePortfolioData, updateGarpCandidacyStatus, renderCandidacyAnalysis, renderGarpAnalysisSummary, renderDiligenceLog, renderPeerComparisonTable } from './ui-render.js';
+import { renderPortfolioManagerList, displayReport, updateReportStatus, fetchAndCachePortfolioData, updateGarpCandidacyStatus, renderCandidacyAnalysis, renderGarpAnalysisSummary, renderDiligenceLog, renderPeerComparisonTable, renderSectorMomentumHeatMap } from './ui-render.js';
 import { _calculateFinancialAnalysisMetrics, _calculateMoatAnalysisMetrics, _calculateRiskAssessmentMetrics, _calculateCapitalAllocatorsMetrics, _calculateGarpAnalysisMetrics, _calculateGarpScorecardMetrics, CALCULATION_SUMMARIES } from './analysis-helpers.js';
 
 // --- UTILITY HELPERS ---
@@ -104,6 +104,78 @@ export async function handleRefreshFmpData(symbol) {
 }
 
 // --- PORTFOLIO & DASHBOARD MANAGEMENT ---
+
+export async function handleSectorMomentumRequest() {
+    const container = document.getElementById('sector-momentum-container');
+    const summaryContainer = document.getElementById('sector-momentum-ai-summary');
+    if (!container || !summaryContainer) return;
+
+    summaryContainer.textContent = 'Fetching sector performance data...';
+    container.innerHTML = '<div class="loader mx-auto my-8"></div>';
+
+    try {
+        const url = `https://financialmodelingprep.com/api/v3/historical-sectors-performance?apikey=${state.fmpApiKey}`;
+        const historicalData = await callApi(url);
+
+        if (!historicalData || historicalData.length < 2) {
+            throw new Error("Not enough historical sector performance data was returned from the API.");
+        }
+
+        const latestData = historicalData[0];
+        const sectors = Object.keys(latestData).filter(k => k !== 'date' && typeof latestData[k] === 'number');
+
+        const findClosestDateRecord = (targetDate) => {
+            const targetTime = targetDate.getTime();
+            return historicalData.reduce((prev, curr) => {
+                const prevDiff = Math.abs(new Date(prev.date).getTime() - targetTime);
+                const currDiff = Math.abs(new Date(curr.date).getTime() - targetTime);
+                return currDiff < prevDiff ? curr : prev;
+            });
+        };
+        
+        const today = new Date();
+        const date1M = new Date();
+        date1M.setMonth(today.getMonth() - 1);
+        const date3M = new Date();
+        date3M.setMonth(today.getMonth() - 3);
+        const dateYTD = new Date(today.getFullYear(), 0, 2); 
+
+        const record1M = findClosestDateRecord(date1M);
+        const record3M = findClosestDateRecord(date3M);
+        const recordYTD = findClosestDateRecord(dateYTD);
+
+        const processedData = sectors.map(sector => {
+            const latestPerf = latestData[sector];
+            const calcPerf = (startRecord) => {
+                if (!startRecord || !startRecord[sector] || startRecord[sector] === 0) return null;
+                return ((latestPerf / startRecord[sector]) - 1) * 100;
+            };
+            
+            return {
+                sector: sector.replace(/([A-Z])/g, ' $1').replace('Changes Percentage','').trim(),
+                perf1M: calcPerf(record1M),
+                perf3M: calcPerf(record3M),
+                perfYTD: calcPerf(recordYTD)
+            };
+        }).sort((a, b) => (b.perfYTD || -Infinity) - (a.perfYTD || -Infinity));
+
+
+        summaryContainer.textContent = 'AI is analyzing sector trends...';
+        const promptConfig = promptMap['SectorMomentum'];
+        const prompt = promptConfig.prompt.replace('{jsonData}', JSON.stringify(processedData, null, 2));
+        const aiSummary = await callGeminiApi(prompt);
+
+        renderSectorMomentumHeatMap(processedData, aiSummary);
+
+    } catch (error) {
+        console.error("Error fetching or rendering sector momentum:", error);
+        const section = document.getElementById('sector-momentum-section');
+        if (section) {
+            section.innerHTML = `<div class="p-4 bg-red-50 text-red-700 rounded-lg text-center">Could not load Sector Momentum data: ${error.message}</div>`;
+            section.classList.remove('hidden');
+        }
+    }
+}
 
 export async function handleSaveStock(e) {
     e.preventDefault();
