@@ -1,6 +1,7 @@
 import { setupEventListeners } from './ui.js';
 import { openModal, closeModal, displayMessageInModal } from './ui-modals.js';
 import { fetchAndCachePortfolioData } from './ui-render.js';
+import { handleSectorMomentumRequest } from './ui-handlers.js';
 import { CONSTANTS, APP_VERSION, state } from './config.js';
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, signOut, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -27,6 +28,7 @@ async function initializeAppContent() {
     document.getElementById('stock-screener-section').classList.remove(CONSTANTS.CLASS_HIDDEN);
     
     await fetchAndCachePortfolioData();
+    await handleSectorMomentumRequest();
 }
 
 async function initializeFirebase() {
