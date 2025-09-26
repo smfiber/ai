@@ -140,24 +140,30 @@ export async function handleSectorMomentumRequest() {
         date1M.setMonth(today.getMonth() - 1);
         const date3M = new Date();
         date3M.setMonth(today.getMonth() - 3);
-        const dateYTD = new Date(today.getFullYear(), 0, 2); 
 
         const record1M = findClosestDateRecord(date1M);
         const record3M = findClosestDateRecord(date3M);
-        const recordYTD = findClosestDateRecord(dateYTD);
 
         const processedData = sectors.map(sector => {
             const latestPerf = latestData[sector];
+            
             const calcPerf = (startRecord) => {
-                if (!startRecord || !startRecord[sector] || startRecord[sector] === 0) return null;
-                return ((latestPerf / startRecord[sector]) - 1) * 100;
+                const startValue = startRecord ? startRecord[sector] : null;
+                if (typeof latestPerf !== 'number' || typeof startValue !== 'number') return null;
+
+                const endFactor = 1 + (latestPerf / 100);
+                const startFactor = 1 + (startValue / 100);
+
+                if (startFactor === 0) return null;
+                
+                return ((endFactor / startFactor) - 1) * 100;
             };
             
             return {
                 sector: sector.replace(/([A-Z])/g, ' $1').replace('Changes Percentage','').trim(),
                 perf1M: calcPerf(record1M),
                 perf3M: calcPerf(record3M),
-                perfYTD: calcPerf(recordYTD)
+                perfYTD: latestPerf
             };
         }).sort((a, b) => (b.perfYTD || -Infinity) - (a.perfYTD || -Infinity));
 
