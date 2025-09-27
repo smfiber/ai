@@ -951,14 +951,33 @@ export async function handleInvestmentMemoRequest(symbol, forceNew = false) {
 
         loadingMessage.textContent = "Gathering data for memo synthesis...";
         
+        const candidacyReports = await getSavedReports(symbol, 'GarpCandidacy');
+        if (candidacyReports.length === 0) {
+            throw new Error(`The foundational 'GARP Candidacy Report' has not been generated yet. Please generate it from the 'AI Analysis' tab first.`);
+        }
+        const candidacyReportContent = candidacyReports[0].content;
+        const criticalDiligenceQuestions = candidacyReports[0].diligenceQuestions || [];
+        
         const diligenceReports = await getSavedReports(symbol, 'DiligenceInvestigation');
         let diligenceLog = 'No recent diligence is available.';
+        let answeredQuestions = new Set();
         if (diligenceReports.length > 0) {
             diligenceLog = diligenceReports.map(report => {
                 const question = report.prompt.split('Diligence Question from User:')[1]?.trim() || 'Question not found.';
+                answeredQuestions.add(question);
                 const answer = report.content;
                 return `**Question:** ${question}\n\n**Answer:**\n${answer}\n\n---`;
             }).join('\n\n');
+        }
+
+        const unansweredCriticalQuestions = criticalDiligenceQuestions.filter(q => !answeredQuestions.has(q.humanQuestion));
+        if (unansweredCriticalQuestions.length > 0) {
+            closeModal(CONSTANTS.MODAL_LOADING);
+            openDiligenceWarningModal(symbol, unansweredCriticalQuestions, () => {
+                // This is the callback that runs if the user clicks "Continue Anyway"
+                handleInvestmentMemoRequest(symbol, true);
+            });
+            return;
         }
 
         const data = await getFmpStockData(symbol);
@@ -972,7 +991,8 @@ export async function handleInvestmentMemoRequest(symbol, forceNew = false) {
             .replace(/{companyName}/g, companyName)
             .replace(/{tickerSymbol}/g, symbol)
             .replace('{scorecardJson}', JSON.stringify(scorecardData, null, 2))
-            .replace('{diligenceLog}', diligenceLog);
+            .replace('{diligenceLog}', diligenceLog)
+            .replace('{garpCandidacyReport}', candidacyReportContent);
 
         const memoContent = await generateRefinedArticle(prompt, loadingMessage);
         
