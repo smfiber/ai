@@ -40,7 +40,7 @@ export function closeModal(modalId) {
  * @param {string} type The type of message ('info', 'warning', 'error').
  * @param {number} duration The time in milliseconds before the modal auto-closes.
  */
-export function displayMessageInModal(message, type = 'info', duration = 4000) {
+export function displayMessageInModal(message, type = 'info', duration = 2500) {
     const modal = document.getElementById(CONSTANTS.MODAL_MESSAGE);
     const content = modal.querySelector('.modal-content');
     if (!content) return;
