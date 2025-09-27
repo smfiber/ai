@@ -839,6 +839,10 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function sortAndRerenderAdvancedTable() {
+        const container = document.getElementById('advanced-screener-data-container');
+        const scrollableDiv = container.querySelector('.overflow-y-auto');
+        const scrollTop = scrollableDiv ? scrollableDiv.scrollTop : 0;
+
         const { key, direction } = currentSort;
         const sortedData = [...advancedScreenerData].sort((a, b) => {
             let valA = a[key];
@@ -855,7 +859,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 return direction === 'asc' ? valA - valB : valB - valA;
             }
         });
-        renderAdvancedStockTable(sortedData, document.getElementById('advanced-screener-data-container'));
+        renderAdvancedStockTable(sortedData, container);
+
+        const newScrollableDiv = container.querySelector('.overflow-y-auto');
+        if (newScrollableDiv) {
+            newScrollableDiv.scrollTop = scrollTop;
+        }
     }
 
     // --- 12. Batch Score Calculation ---
@@ -1234,38 +1243,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // --- 17. Financials Modal Logic ---
-    function updateScreenerAndRerender(symbol, newTimestamp) {
-        // Update the cached timestamp for the stock in the advancedScreenerData array
-        const stockInScreener = advancedScreenerData.find(s => s.symbol === symbol);
-        if (stockInScreener) {
-            stockInScreener.cachedTimestamp = newTimestamp;
-        }
-
-        // Get the specific row for the symbol from both screener tables
-        const advancedRow = document.querySelector(`#advanced-screener-data-container tr[data-symbol-row="${symbol}"]`);
-        const simpleRow = document.querySelector(`#screener-tab-content tr[data-symbol-row="${symbol}"]`);
-
-        // Update the conviction score and cached date elements in the advanced screener row
-        if (advancedRow) {
-            const scoreCell = advancedRow.querySelector('[data-rating-symbol]');
-            const cachedCell = advancedRow.querySelector('[data-cached-on-symbol]');
-            if (scoreCell) {
-                scoreCell.innerHTML = getRatingHtml(symbol);
-            }
-            if (cachedCell) {
-                cachedCell.textContent = formatDate(newTimestamp);
-            }
-        }
-        
-        // Update the conviction score and viewed indicator in the simple screener row
-        if (simpleRow) {
-            const scoreCell = simpleRow.querySelector('[data-rating-symbol]');
-            if (scoreCell) {
-                scoreCell.innerHTML = getRatingHtml(symbol);
-            }
-        }
-    }
-
     function setupFinancialsModalListeners() {
         financialsModalOverlay.addEventListener('click', hideFinancialsModal);
         financialsModalCloseBtn.addEventListener('click', hideFinancialsModal);
@@ -1302,7 +1279,14 @@ document.addEventListener("DOMContentLoaded", () => {
                     
                     updateRatingDisplayForSymbol(symbol);
                     updateRatingDateDisplayForSymbol(symbol);
-                    updateScreenerAndRerender(symbol, new Date(dataToSave.timestamp).getTime());
+                    
+                    // Update data model and redraw the advanced screener table
+                    const numericTimestamp = new Date(dataToSave.timestamp).getTime();
+                    const stockInScreener = advancedScreenerData.find(s => s.symbol === symbol);
+                    if (stockInScreener) {
+                        stockInScreener.cachedTimestamp = numericTimestamp;
+                    }
+                    sortAndRerenderAdvancedTable();
                 } else {
                     document.getElementById('modal-key-metrics-content').innerHTML = '<p class="text-center text-red-500">Could not refresh data.</p>';
                 }
@@ -1358,7 +1342,14 @@ document.addEventListener("DOMContentLoaded", () => {
                 
                 updateRatingDisplayForSymbol(symbol);
                 updateRatingDateDisplayForSymbol(symbol);
-                updateScreenerAndRerender(symbol, new Date(newTimestamp).getTime());
+                
+                // Update data model and redraw the advanced screener table
+                const numericTimestamp = new Date(newTimestamp).getTime();
+                const stockInScreener = advancedScreenerData.find(s => s.symbol === symbol);
+                if (stockInScreener) {
+                    stockInScreener.cachedTimestamp = numericTimestamp;
+                }
+                sortAndRerenderAdvancedTable();
             } else {
                  document.getElementById('modal-key-metrics-content').innerHTML = '<p class="text-center text-red-500">Could not fetch financial data.</p>';
                  document.getElementById('modal-ai-summary-content').innerHTML = '';
