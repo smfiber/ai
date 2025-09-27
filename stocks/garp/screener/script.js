@@ -1057,6 +1057,21 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+    function updateSingleStockInScreener(symbol, timestamp) {
+        const numericTimestamp = new Date(timestamp).getTime();
+        
+        // 1. Update the data model for the advanced screener
+        const stockInDataModel = advancedScreenerData.find(s => s.symbol === symbol);
+        if (stockInDataModel) {
+            stockInDataModel.cachedTimestamp = numericTimestamp;
+        }
+
+        // 2. Update all relevant DOM elements efficiently
+        updateRatingDisplayForSymbol(symbol);      // Handles score in all tables and cards
+        updateRatingDateDisplayForSymbol(symbol); // Handles "as of" date in cards
+        updateCachedOnDisplayForSymbol(symbol);     // Handles "Cached On" column in advanced table
+    }
+
     function renderSimpleStockTable(data, container) {
         if (!container) return;
         if (!data || data.length === 0) {
@@ -1277,16 +1292,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     await saveTickerDetailsToFirebase(symbol, dataToSave);
                     appConfig.cachedStockInfo[symbol] = { rating: metrics.garpConvictionScore, timestamp: dataToSave.timestamp };
                     
-                    updateRatingDisplayForSymbol(symbol);
-                    updateRatingDateDisplayForSymbol(symbol);
-                    
-                    // Update data model and redraw the advanced screener table
-                    const numericTimestamp = new Date(dataToSave.timestamp).getTime();
-                    const stockInScreener = advancedScreenerData.find(s => s.symbol === symbol);
-                    if (stockInScreener) {
-                        stockInScreener.cachedTimestamp = numericTimestamp;
-                    }
-                    sortAndRerenderAdvancedTable();
+                    updateSingleStockInScreener(symbol, dataToSave.timestamp);
                 } else {
                     document.getElementById('modal-key-metrics-content').innerHTML = '<p class="text-center text-red-500">Could not refresh data.</p>';
                 }
@@ -1340,16 +1346,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 await saveTickerDetailsToFirebase(symbol, dataToSave);
                 appConfig.cachedStockInfo[symbol] = { rating: metrics.garpConvictionScore, timestamp: newTimestamp };
                 
-                updateRatingDisplayForSymbol(symbol);
-                updateRatingDateDisplayForSymbol(symbol);
-                
-                // Update data model and redraw the advanced screener table
-                const numericTimestamp = new Date(newTimestamp).getTime();
-                const stockInScreener = advancedScreenerData.find(s => s.symbol === symbol);
-                if (stockInScreener) {
-                    stockInScreener.cachedTimestamp = numericTimestamp;
-                }
-                sortAndRerenderAdvancedTable();
+                updateSingleStockInScreener(symbol, newTimestamp);
             } else {
                  document.getElementById('modal-key-metrics-content').innerHTML = '<p class="text-center text-red-500">Could not fetch financial data.</p>';
                  document.getElementById('modal-ai-summary-content').innerHTML = '';
