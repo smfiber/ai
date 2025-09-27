@@ -2,7 +2,7 @@
 import { CONSTANTS, state, promptMap, ANALYSIS_REQUIREMENTS, ANALYSIS_NAMES } from './config.js';
 import { callApi, callGeminiApi, generateRefinedArticle, generatePolishedArticleForSynthesis, getFmpStockData } from './api.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { openModal, closeModal, displayMessageInModal, openConfirmationModal, openManageStockModal, openDiligenceWarningModal } from './ui-modals.js';
+import { openModal, closeModal, displayMessageInModal, openConfirmationModal, openManageStockModal, openDiligenceWarningModal, STRUCTURED_DILIGENCE_QUESTIONS } from './ui-modals.js';
 import { renderPortfolioManagerList, displayReport, updateReportStatus, fetchAndCachePortfolioData, updateGarpCandidacyStatus, renderCandidacyAnalysis, renderGarpAnalysisSummary, renderDiligenceLog, renderPeerComparisonTable, renderSectorMomentumHeatMap } from './ui-render.js';
 import { _calculateFinancialAnalysisMetrics, _calculateMoatAnalysisMetrics, _calculateRiskAssessmentMetrics, _calculateCapitalAllocatorsMetrics, _calculateGarpAnalysisMetrics, _calculateGarpScorecardMetrics, CALCULATION_SUMMARIES } from './analysis-helpers.js';
 
@@ -1145,6 +1145,55 @@ export async function handleGenerateAllReportsRequest(symbol) {
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
         progressContainer.classList.add('hidden');
+    }
+}
+
+export async function handleStructuredDiligenceSave(symbol) {
+    const answerElements = document.querySelectorAll('.structured-diligence-answer');
+    const entriesToSave = [];
+
+    answerElements.forEach(textarea => {
+        const answer = textarea.value.trim();
+        const category = textarea.dataset.category;
+        const question = STRUCTURED_DILIGENCE_QUESTIONS[category];
+
+        if (answer && question) {
+            entriesToSave.push({ question, answer, textarea });
+        }
+    });
+
+    if (entriesToSave.length === 0) {
+        displayMessageInModal("Please add an answer to at least one structured diligence question before saving.", "warning");
+        return;
+    }
+
+    openModal(CONSTANTS.MODAL_LOADING);
+    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Saving ${entriesToSave.length} structured diligence log(s)...`;
+
+    try {
+        const savePromises = entriesToSave.map(entry => {
+            const prompt = `Diligence Question from User: ${entry.question}`;
+            const content = marked.parse(entry.answer);
+            return autoSaveReport(symbol, 'DiligenceInvestigation', content, prompt);
+        });
+
+        await Promise.all(savePromises);
+
+        entriesToSave.forEach(entry => {
+            entry.textarea.value = '';
+        });
+
+        const diligenceReports = await getSavedReports(symbol, 'DiligenceInvestigation');
+        const diligenceLogContainer = document.getElementById('diligence-log-container');
+        renderDiligenceLog(diligenceLogContainer, diligenceReports);
+
+        displayMessageInModal(`Successfully saved ${entriesToSave.length} structured diligence entries.`, 'info');
+
+    } catch (error) {
+        console.error("Error saving structured diligence entries:", error);
+        displayMessageInModal(`Could not save entries: ${error.message}`, 'error');
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
     }
 }
 
