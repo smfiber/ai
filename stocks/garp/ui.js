@@ -1,7 +1,7 @@
 import { CONSTANTS, state, promptMap } from './config.js';
 import { openModal, closeModal, openStockListModal, openManageStockModal, openPortfolioManagerModal, openRawDataViewer } from './ui-modals.js';
 import { fetchAndCachePortfolioData, renderPortfolioManagerList } from './ui-render.js';
-import { handleResearchSubmit, handleSaveStock, handleDeleteStock, handleRefreshFmpData, handleAnalysisRequest, handleInvestmentMemoRequest, handleSaveReportToDb, handleGenerateAllReportsRequest, handleGarpCandidacyRequest, handlePortfolioGarpAnalysisRequest, handlePositionAnalysisRequest, handleReportHelpRequest, handleManualDiligenceSave, handleDeleteDiligenceLog, handleWorkflowHelpRequest, handlePeerAnalysisRequest, handleManualPeerAnalysisRequest } from './ui-handlers.js';
+import { handleResearchSubmit, handleSaveStock, handleDeleteStock, handleRefreshFmpData, handleAnalysisRequest, handleInvestmentMemoRequest, handleSaveReportToDb, handleGenerateAllReportsRequest, handleGarpCandidacyRequest, handlePortfolioGarpAnalysisRequest, handlePositionAnalysisRequest, handleReportHelpRequest, handleManualDiligenceSave, handleDeleteDiligenceLog, handleWorkflowHelpRequest, handlePeerAnalysisRequest, handleManualPeerAnalysisRequest, handleStructuredDiligenceSave } from './ui-handlers.js';
 
 // --- DYNAMIC TOOLTIPS ---
 function initializeTooltips() {
@@ -102,9 +102,9 @@ function setupGlobalEventListeners() {
         const ticker = target.dataset.ticker;
         if (ticker) {
             if (target.classList.contains('dashboard-item-edit')) {
+                closeModal(CONSTANTS.MODAL_STOCK_LIST);
                 const stockData = state.portfolioCache.find(s => s.ticker === ticker);
                 if (stockData) {
-                    closeModal(CONSTANTS.MODAL_STOCK_LIST);
                     openManageStockModal({ ...stockData, isEditMode: true });
                 }
             } else if (target.classList.contains('dashboard-item-view')) {
@@ -239,6 +239,11 @@ export function setupEventListeners() {
             if (reportId) {
                 handleDeleteDiligenceLog(reportId, symbol);
             }
+            return;
+        }
+
+        if (target.id === 'save-structured-diligence-button') {
+            handleStructuredDiligenceSave(symbol);
             return;
         }
 
