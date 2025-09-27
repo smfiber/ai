@@ -41,9 +41,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const signOutBtn = document.getElementById('signOutBtn');
     const authUserInfo = document.getElementById('auth-user-info');
     const userEmailSpan = document.getElementById('user-email');
-    // Batch Calculation Elements
-    const calculateAdvancedScreenerScoresBtn = document.getElementById('calculateAdvancedScreenerScoresBtn');
-    const advancedScreenerStatus = document.getElementById('advancedScreenerStatus');
 
 
     // --- NEW: DATA PROCESSING LOGIC FROM STOCK RESEARCH HUB ---
@@ -602,11 +599,6 @@ document.addEventListener("DOMContentLoaded", () => {
         // Set default filter values
         document.getElementById('sector').value = 'Consumer Cyclical';
         document.getElementById('industry').value = 'Advertising Agencies';
-
-        calculateAdvancedScreenerScoresBtn.addEventListener('click', () => {
-            const symbols = advancedScreenerData.map(stock => stock.symbol);
-            runBatchConvictionScores(symbols, 'advancedScreenerStatus');
-        });
         
         appContent.addEventListener('click', (e) => {
             const saveBtn = e.target.closest('.save-stock-btn');
@@ -616,9 +608,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
 
         await loadAllCachedInfo();
-
-        // Initialize Advanced Screener with default values
-        fetchAdvancedStockScreener();
         
         console.log("All data loaded.");
     }
@@ -810,63 +799,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // --- 11. Batch Score Calculation ---
-    async function runBatchConvictionScores(symbols, statusElementId) {
-        const statusEl = document.getElementById(statusElementId);
-        if (!symbols || symbols.length === 0) {
-            if (statusEl) statusEl.textContent = 'No stocks to process.';
-            return;
-        }
-
-        const thirtyDays = .5 * 24 * 60 * 60 * 1000;
-        let processedCount = 0;
-        let skippedCount = 0;
-
-        for (const [index, symbol] of symbols.entries()) {
-            if (statusEl) {
-                statusEl.innerHTML = `Processing ${index + 1} of ${symbols.length}: <strong>${symbol}</strong>...`;
-            }
-
-            const cached = appConfig.cachedStockInfo[symbol];
-            const hasRecentValidScore = cached &&
-                                      cached.timestamp &&
-                                      (new Date() - new Date(cached.timestamp)) < thirtyDays &&
-                                      cached.rating !== null && 
-                                      typeof cached.rating !== 'undefined';
-
-            if (hasRecentValidScore) {
-                skippedCount++;
-                continue;
-            }
-
-            const liveData = await fetchFullTickerDetails(symbol);
-            if (liveData) {
-                const garpData = mapDataForGarp(liveData);
-                const metrics = _calculateGarpScorecardMetrics(garpData);
-                
-                const newTimestamp = new Date().toISOString();
-                const dataToSave = { ...garpData, garpConvictionScore: metrics.garpConvictionScore, timestamp: newTimestamp };
-                
-                await saveTickerDetailsToFirebase(symbol, dataToSave);
-                appConfig.cachedStockInfo[symbol] = { rating: metrics.garpConvictionScore, timestamp: newTimestamp };
-                
-                const stockInScreener = advancedScreenerData.find(s => s.symbol === symbol);
-                if (stockInScreener) {
-                    stockInScreener.cachedTimestamp = new Date(newTimestamp).getTime();
-                }
-
-                updateRatingDisplayForSymbol(symbol);
-                updateRatingDateDisplayForSymbol(symbol);
-                updateViewedIndicatorForSymbol(symbol);
-                updateCachedOnDisplayForSymbol(symbol);
-                processedCount++;
-            }
-            
-        }
-
-        if (statusEl) {
-            statusEl.textContent = `Batch complete. Processed: ${processedCount}, Skipped (recent): ${skippedCount}.`;
-        }
-    }
+    // REMOVED runBatchConvictionScores function
 
     // --- 12. Firebase Functions ---
     async function saveTickerDetailsToFirebase(symbol, data) {
