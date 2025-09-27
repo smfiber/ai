@@ -261,6 +261,15 @@ export function openDiligenceWarningModal(ticker, questions, onConfirm) {
 
 // --- SPECIFIC, COMPLEX MODAL CONTROLLERS ---
 
+export const STRUCTURED_DILIGENCE_QUESTIONS = {
+    'Financial Analysis': 'Synthesize the provided financial metrics into a comprehensive investment thesis for company, based on a comparative analysis against its industry benchmarks. Your analysis must critically address the central conflict revealed in the data: the company's exceptional profitability and financial stability versus its recent negative growth trajectory. Conclude with a near-term outlook (1-2 years) that assesses its valuation attractiveness and weighs the primary risks and opportunities, citing the most critical data points to support your position.',
+    'Balance Sheet': 'Analyze the trends across this five-quarter balance sheet to assess the company\'s evolving financial stability and capital management strategy. How do its liquidity (Current Ratio), leverage (Total Debt/Equity), and the growth in its book value portray its overall risk profile, and what do the consistent changes in shares outstanding imply about management\'s priorities?',
+    'Income Statement': 'Analyze the key performance trends across this five-quarter income statement, from the top line (Sales) down to the bottom line (Net Income and EPS). Specifically, evaluate how the company\'s profit margins (gross, operating, and net) are evolving. What do these interconnected trends suggest about the company\'s operational efficiency and potential profitability challenges ahead?',
+    'Cash Flow': 'Analyze the company\'s cash flow dynamics by identifying its primary sources of cash (Operating Activities) and its primary uses of cash (Investing and Financing Activities). Evaluate the quality and sustainability of its operating cash flow. Based on this, what does the company\'s capital allocation strategy—specifically its heavy spending on capital expenditures and shareholder returns—suggest about its financial health and strategic priorities?',
+    'Institutional Ownership': 'Analyze this ownership data to assess the quality of the company\'s shareholder base and the prevailing institutional sentiment. Evaluate the central contradiction: the high concentration of ownership by top-tier institutions versus the consistent net selling in recent quarters. What does the mix of passive index funds and active managers, combined with this selling pressure, imply about institutional conviction in the stock\'s future?',
+    'Competitors': 'Conduct a competitive analysis to company against this peer group and the industry average. Based on the available metrics, evaluate this company relative position in terms of valuation, stock performance, and scale. What does this comparison reveal about companies competitive advantages or disadvantages, and which company emerges as its most direct competitor?'
+};
+
 export async function openRawDataViewer(ticker) {
     const modalId = 'rawDataViewerModal';
     openModal(modalId);
@@ -393,19 +402,47 @@ export async function openRawDataViewer(ticker) {
         const garpMemoBtn = `<button data-symbol="${ticker}" id="investment-memo-button" data-report-type="InvestmentMemo" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg text-base">Generate GARP Memo</button>`;
         
         const diligenceLogContainerHtml = `<div id="diligence-log-container" class="mb-6 text-left"></div>`;
-        const diligenceInvestigationHtml = `
-            <div class="text-left">
+
+        // --- NEW STRUCTURED DILIGENCE HTML ---
+        let structuredDiligenceHtml = `
+            <div class="text-left mt-4 border rounded-lg p-4 bg-gray-50">
+                <h4 class="text-base font-semibold text-gray-800 mb-1">Structured Diligence</h4>
+                <p class="text-sm text-gray-500 mb-4">Answer these core questions to build a foundational thesis.</p>
+                <div id="structured-diligence-container" class="space-y-4">
+        `;
+        for (const [category, question] of Object.entries(STRUCTURED_DILIGENCE_QUESTIONS)) {
+            structuredDiligenceHtml += `
+                <div class="diligence-card p-3 bg-white rounded-lg border border-gray-200">
+                    <h5 class="font-semibold text-sm text-indigo-700 mb-2">${category}</h5>
+                    <p class="text-xs text-gray-600 mb-2 italic">"${question}"</p>
+                    <textarea class="structured-diligence-answer w-full border border-gray-300 rounded-lg p-2 text-sm" 
+                              rows="4" 
+                              data-category="${category}"
+                              placeholder="Your analysis and findings here..."></textarea>
+                </div>
+            `;
+        }
+        structuredDiligenceHtml += `
+                </div>
+                <div class="text-right mt-4">
+                    <button id="save-structured-diligence-button" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg">Save Structured Answers</button>
+                </div>
+            </div>
+        `;
+
+        // --- EXISTING MANUAL DILIGENCE HTML ---
+        const manualDiligenceHtml = `
+            <div class="text-left mt-6 pt-6 border-t">
                 <div class="flex justify-between items-center mb-4">
                     <div>
-                        <h3 class="text-lg font-semibold text-gray-800">Manual Diligence Entry</h3>
-                        <p class="text-sm text-gray-500">Add questions and answers to the diligence log.</p>
+                        <h4 class="text-base font-semibold text-gray-800">Manual Diligence Entry</h4>
+                        <p class="text-sm text-gray-500">Add custom questions and answers to the log.</p>
                     </div>
                     <button id="add-diligence-entry-button" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg text-sm">Add New Q&A</button>
                 </div>
-                <div id="manual-diligence-entries-container" class="space-y-4">
-                    </div>
-                <div class="text-right mt-4 pt-4 border-t">
-                     <button id="save-manual-diligence-button" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg">Save All New Entries</button>
+                <div id="manual-diligence-entries-container" class="space-y-4"></div>
+                <div class="text-right mt-4">
+                     <button id="save-manual-diligence-button" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg">Save Manual Entries</button>
                 </div>
             </div>
         `;
@@ -429,10 +466,11 @@ export async function openRawDataViewer(ticker) {
 
                 <div class="p-4 bg-white rounded-lg border shadow-sm">
                     <div class="flex justify-center items-center gap-2 mb-4">
-                        <h3 class="text-lg font-bold text-gray-800">Step 3: Diligence Investigation (Optional)</h3>
+                        <h3 class="text-lg font-bold text-gray-800">Step 3: Diligence Investigation</h3>
                     </div>
                     ${diligenceLogContainerHtml}
-                    ${diligenceInvestigationHtml}
+                    ${structuredDiligenceHtml}
+                    ${manualDiligenceHtml}
                 </div>
 
                 <div class="p-4 bg-white rounded-lg border shadow-sm">
@@ -445,7 +483,6 @@ export async function openRawDataViewer(ticker) {
             </div>
         `;
 
-        // --- NEW: Logic for Manual Diligence Entry ---
         const addDiligenceEntryRow = () => {
             const container = document.getElementById('manual-diligence-entries-container');
             if (!container) return;
