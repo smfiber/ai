@@ -951,58 +951,6 @@ export async function handleInvestmentMemoRequest(symbol, forceNew = false) {
 
         loadingMessage.textContent = "Gathering data for memo synthesis...";
         
-        const candidacyReports = await getSavedReports(symbol, 'GarpCandidacy');
-        if (candidacyReports.length === 0) {
-            throw new Error(`Cannot generate memo. Please generate the "GARP Candidacy Report" from Step 1 first.`);
-        }
-        const candidacyReport = candidacyReports[0];
-
-        // --- NEW: AI-powered check for un-investigated diligence questions ---
-        if (candidacyReport.diligenceQuestions && candidacyReport.diligenceQuestions.length > 0) {
-            loadingMessage.textContent = "AI is verifying diligence log...";
-            
-            const diligenceReports = await getSavedReports(symbol, 'DiligenceInvestigation');
-            const answeredQuestions = diligenceReports.map(report => {
-                return report.prompt.split('Diligence Question from User:')[1]?.trim() || '';
-            }).filter(Boolean);
-
-            if (answeredQuestions.length > 0) {
-                const requiredQuestion = candidacyReport.diligenceQuestions[0].humanQuestion;
-
-                const validationPrompt = `
-                Role: You are a meticulous research assistant.
-                Task: Your sole purpose is to determine if a list of "Answered Questions" sufficiently addresses the core topic of a "Required Critical Question".
-                Constraints:
-                - You MUST return ONLY the word "Yes" or "No".
-                - Do NOT return any other text, explanation, or punctuation.
-                - "Yes" means the answered questions cover the topic.
-                - "No" means they do not.
-
-                Required Critical Question:
-                "${requiredQuestion}"
-
-                List of Answered Questions:
-                ${answeredQuestions.map(q => `- "${q}"`).join('\n')}
-                `.trim();
-
-                const validationResponse = await callGeminiApi(validationPrompt);
-
-                if (validationResponse.trim().toLowerCase().includes('yes')) {
-                    loadingMessage.textContent = "Diligence verified. Continuing memo generation...";
-                } else {
-                    closeModal(CONSTANTS.MODAL_LOADING);
-                    return openDiligenceWarningModal(symbol, candidacyReport.diligenceQuestions, () => {
-                         handleInvestmentMemoRequest(symbol, true);
-                    });
-                }
-            } else {
-                closeModal(CONSTANTS.MODAL_LOADING);
-                return openDiligenceWarningModal(symbol, candidacyReport.diligenceQuestions, () => {
-                     handleInvestmentMemoRequest(symbol, true);
-                });
-            }
-        }
-
         const diligenceReports = await getSavedReports(symbol, 'DiligenceInvestigation');
         let diligenceLog = 'No recent diligence is available.';
         if (diligenceReports.length > 0) {
@@ -1020,24 +968,11 @@ export async function handleInvestmentMemoRequest(symbol, forceNew = false) {
         const profile = data.profile?.[0] || {};
         const companyName = profile.companyName || 'the company';
 
-        // Fetch peer data
-        const peerDocRef = doc(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, symbol, 'analysis', 'peer_comparison');
-        const peerDocSnap = await getDoc(peerDocRef);
-        let peerAverages = { "note": "Peer data has not been generated for this stock yet." };
-        if (peerDocSnap.exists()) {
-            peerAverages = peerDocSnap.data().averages || peerAverages;
-        }
-        
-        let peerDataChanges = {}; // Placeholder for now
-
         const prompt = promptMap.InvestmentMemo.prompt
             .replace(/{companyName}/g, companyName)
             .replace(/{tickerSymbol}/g, symbol)
-            .replace('{candidacyReport}', candidacyReport.content)
             .replace('{scorecardJson}', JSON.stringify(scorecardData, null, 2))
-            .replace('{diligenceLog}', diligenceLog)
-            .replace('{peerAverages}', JSON.stringify(peerAverages, null, 2))
-            .replace('{peerDataChanges}', JSON.stringify(peerDataChanges, null, 2));
+            .replace('{diligenceLog}', diligenceLog);
 
         const memoContent = await generateRefinedArticle(prompt, loadingMessage);
         
