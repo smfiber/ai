@@ -302,17 +302,17 @@ You are a Senior Investment Analyst at a GARP-focused ("Growth at a Reasonable P
 * **Synthesize the 'PEG Ratio', 'Forward P/E', and 'Price to FCF' from the JSON. Answer the ultimate question: Based on all this evidence, is {companyName} a quality growth company trading at a fair price *today*?*
 
 ## 5. Foundational Q&A and Final Verdict
-(First, provide a direct answer to the following five foundational questions based on all the provided reports and data.)
+(First, provide a direct answer to the following five foundational questions. Synthesize the answers from the 'Diligence Log' to inform your verdict. The quality of the diligence answers should directly influence your confidence and recommendation. A strong GARP candidate must have convincing, data-backed answers to these questions.)
 
-1.  **Is the company’s forward growth rate both significant and believable?**
+1.  **Financial Analysis:** Does the diligence show a story of high-quality, durable growth, or are fundamentals weakening?
     * [Your Answer Here]
-2.  **Is the valuation reasonable enough to provide a margin of safety?**
+2.  **Balance Sheet:** Does the diligence confirm the balance sheet is a fortress capable of funding future growth?
     * [Your Answer Here]
-3.  **Does the business possess a durable competitive advantage (moat)?**
+3.  **Income Statement:** Does the diligence show signs of improving operational efficiency and operating leverage?
     * [Your Answer Here]
-4.  **How effectively is management allocating capital?**
+4.  **Cash Flow & Capital Allocation:** Does the diligence reveal effective capital allocation, evidenced by a strong and stable ROIC?
     * [Your Answer Here]
-5.  **What is the primary risk, and is it manageable?**
+5.  **Valuation:** Does the diligence support the view that the valuation is reasonable and provides a margin of safety?
     * [Your Answer Here]
 
 (Now, synthesize your answers above into a final verdict.)
