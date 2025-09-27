@@ -844,7 +844,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 const metrics = _calculateGarpScorecardMetrics(garpData);
                 
                 const newTimestamp = new Date().toISOString();
-                const dataToSave = { ...garpData, news: liveData.news, garpConvictionScore: metrics.garpConvictionScore, timestamp: newTimestamp };
+                const dataToSave = { ...garpData, garpConvictionScore: metrics.garpConvictionScore, timestamp: newTimestamp };
                 
                 await saveTickerDetailsToFirebase(symbol, dataToSave);
                 appConfig.cachedStockInfo[symbol] = { rating: metrics.garpConvictionScore, timestamp: newTimestamp };
@@ -1190,7 +1190,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 document.getElementById('modal-ai-summary-content').innerHTML = '<p class="text-center text-gray-500">Refreshing analysis...</p>';
                 document.getElementById('modal-key-metrics-content').innerHTML = '<p class="text-center text-gray-500">Refreshing data...</p>';
                 document.getElementById('modal-financial-trends-content').innerHTML = '<p class="text-center text-gray-500">Refreshing trend data...</p>';
-                document.getElementById('modal-news-content').innerHTML = '<p class="text-center text-gray-500">Refreshing news...</p>';
 
                 const liveData = await fetchFullTickerDetails(symbol, true); // Force refresh
                 if (liveData) {
@@ -1200,10 +1199,9 @@ document.addEventListener("DOMContentLoaded", () => {
                     populateFinancialsModal(liveData);
                     populateFinancialTrends(liveData);
                     populateRawDataModal(liveData);
-                    populateNewsTab(liveData.news, null);
                     populateGarpScorecardInModal(metrics);
                     
-                    const dataToSave = { ...garpData, news: liveData.news, garpConvictionScore: metrics.garpConvictionScore, timestamp: new Date().toISOString() };
+                    const dataToSave = { ...garpData, garpConvictionScore: metrics.garpConvictionScore, timestamp: new Date().toISOString() };
                     await saveTickerDetailsToFirebase(symbol, dataToSave);
                     appConfig.cachedStockInfo[symbol] = { rating: metrics.garpConvictionScore, timestamp: dataToSave.timestamp };
                     
@@ -1234,7 +1232,6 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById('modal-key-metrics-content').innerHTML = '<p class="text-center text-gray-500">Loading financial data...</p>';
         document.getElementById('modal-raw-data-content').innerHTML = '<p class="text-center text-gray-500">Loading raw data...</p>';
         document.getElementById('modal-financial-trends-content').innerHTML = '<p class="text-center text-gray-500">Loading trend data...</p>';
-        document.getElementById('modal-news-content').innerHTML = '<p class="text-center text-gray-500">Loading news...</p>';
         document.getElementById('modal-company-name').textContent = `Loading... (${symbol})`;
         document.getElementById('modal-stock-price').textContent = '';
         document.getElementById('modal-last-updated').textContent = '...';
@@ -1253,11 +1250,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 populateFinancialsModal(liveData);
                 populateFinancialTrends(liveData);
                 populateRawDataModal(liveData);
-                populateNewsTab(liveData.news, null);
                 populateGarpScorecardInModal(metrics);
                 
                 const newTimestamp = new Date().toISOString();
-                const dataToSave = { ...garpData, news: liveData.news, garpConvictionScore: metrics.garpConvictionScore, timestamp: newTimestamp };
+                const dataToSave = { ...garpData, garpConvictionScore: metrics.garpConvictionScore, timestamp: newTimestamp };
                 await saveTickerDetailsToFirebase(symbol, dataToSave);
                 appConfig.cachedStockInfo[symbol] = { rating: metrics.garpConvictionScore, timestamp: newTimestamp };
                 
@@ -1267,7 +1263,6 @@ document.addEventListener("DOMContentLoaded", () => {
                  document.getElementById('modal-ai-summary-content').innerHTML = '';
                  document.getElementById('modal-raw-data-content').innerHTML = '';
                  document.getElementById('modal-financial-trends-content').innerHTML = '';
-                 document.getElementById('modal-news-content').innerHTML = '';
             }
         updateViewedIndicatorForSymbol(symbol);
     }
@@ -1300,9 +1295,6 @@ document.addEventListener("DOMContentLoaded", () => {
             key_metrics_ttm: `https://financialmodelingprep.com/api/v3/key-metrics-ttm/${symbol}?apikey=${apiKey}`,
             ratios_ttm: `https://financialmodelingprep.com/api/v3/ratios-ttm/${symbol}?apikey=${apiKey}`,
             analyst_estimates: `https://financialmodelingprep.com/api/v3/analyst-estimates/${symbol}?apikey=${apiKey}`,
-            generalNews: `https://financialmodelingprep.com/stable/news/stock?symbols=${symbol}&limit=20&apikey=${apiKey}`,
-            priceTargetNews: `https://financialmodelingprep.com/stable/price-target-news?symbol=${symbol}&limit=10&apikey=${apiKey}`,
-            stockGradeNews: `https://financialmodelingprep.com/stable/grades-news?symbol=${symbol}&limit=10&apikey=${apiKey}`,
         };
 
         try {
@@ -1322,41 +1314,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             });
 
-            const { generalNews, priceTargetNews, stockGradeNews } = data;
-
-            // Normalize and combine news
-            const normalizedGeneralNews = (generalNews || []).map(item => ({
-                type: 'General',
-                title: item.title,
-                site: item.site,
-                url: item.url,
-                publishedDate: item.publishedDate || new Date().toISOString()
-            }));
-
-            const normalizedPriceTargetNews = (priceTargetNews || []).map(item => ({
-                type: 'Price Target',
-                title: item.newsTitle,
-                site: item.newsPublisher,
-                url: item.newsURL,
-                publishedDate: item.publishedDate || new Date().toISOString(),
-                analyst: `${item.analystName || 'N/A'} @ ${item.analystCompany || 'N/A'}`,
-                priceTarget: item.priceTarget
-            }));
-            
-            const normalizedGradeNews = (stockGradeNews || []).map(item => ({
-                type: 'Grade Change',
-                title: `Grade Change by ${item.gradingCompany}: ${item.previousGrade} → ${item.newGrade}`,
-                site: item.gradingCompany,
-                url: '#', 
-                publishedDate: item.date || new Date().toISOString(),
-                previousGrade: item.previousGrade,
-                newGrade: item.newGrade
-            }));
-            
-            const combinedNews = [...normalizedGeneralNews, ...normalizedPriceTargetNews, ...normalizedGradeNews]
-                .sort((a, b) => new Date(b.publishedDate) - new Date(a.publishedDate));
-
-            return { ...data, news: combinedNews };
+            return data;
 
         } catch (error) {
             console.error(`A critical error occurred while fetching details for ${symbol}:`, error);
@@ -1488,56 +1446,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 </table>
             </div>
         `;
-    }
-
-    function populateNewsTab(newsData, timestamp) {
-        const contentEl = document.getElementById('modal-news-content');
-        if (!newsData || newsData.length === 0) {
-            contentEl.innerHTML = '<p class="text-center text-gray-500">No recent news found for this stock.</p>';
-            return;
-        }
-
-        const timeString = timestamp ? `Last Fetched: ${formatDate(timestamp)}` : 'Live Data (just now)';
-        let newsHtml = `<p class="text-xs text-gray-400 mb-3">${timeString}</p><div class="space-y-3 max-h-96 overflow-y-auto pr-2">`;
-        
-        newsHtml += newsData.map(news => {
-            let detailsHtml = '';
-            let title = formatText(news.title);
-            let url = news.url || '#';
-            let bgColor = 'bg-gray-50';
-            let linkWrapper = (content) => `<a href="${url}" target="_blank" rel="noopener noreferrer" class="block ${bgColor} p-3 rounded-lg shadow-sm hover:bg-gray-100 transition-colors">${content}</a>`;
-
-            if (news.type === 'Price Target') {
-                detailsHtml = `
-                    <span><strong>Publisher:</strong> ${formatText(news.site)}</span>
-                    <span><strong>Analyst:</strong> ${formatText(news.analyst)}</span>
-                    <span><strong>Target:</strong> ${news.priceTarget ? '$'+news.priceTarget.toFixed(2) : 'N/A'}</span>`;
-            } else if (news.type === 'Grade Change') {
-                bgColor = 'bg-blue-50';
-                detailsHtml = `
-                    <span><strong>Firm:</strong> ${formatText(news.site)}</span>
-                    <span><strong>Previous:</strong> ${formatText(news.previousGrade)}</span>
-                    <span><strong>New:</strong> ${formatText(news.newGrade)}</span>`;
-                // Grade changes don't have a URL, so we don't wrap them in an <a> tag
-                linkWrapper = (content) => `<div class="block ${bgColor} p-3 rounded-lg shadow-sm">${content}</div>`;
-            } else { // General News
-                detailsHtml = `<span><strong>Publisher:</strong> ${formatText(news.site)}</span>`;
-            }
-
-            const content = `
-                <div class="flex justify-between items-start mb-1">
-                     <p class="font-semibold text-gray-800 text-sm">${title}</p>
-                    <p class="text-xs text-gray-500 whitespace-nowrap ml-4">${new Date(news.publishedDate).toLocaleDateString()}</p>
-                </div>
-                <div class="text-xs text-gray-500 flex flex-wrap gap-x-4 gap-y-1 mt-2">
-                   ${detailsHtml}
-                </div>`;
-            
-            return linkWrapper(content);
-        }).join('');
-
-        newsHtml += `</div>`;
-        contentEl.innerHTML = newsHtml;
     }
 
     function populateRawDataModal(data) {
