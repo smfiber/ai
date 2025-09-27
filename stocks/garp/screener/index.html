@@ -19,9 +19,6 @@
     <div class="mb-8">
         <div class="border-b border-gray-200">
             <nav class="-mb-px flex space-x-6" aria-label="Tabs">
-                <button id="screener-tab-button" class="tab-button whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
-                    Stock Screener
-                </button>
                 <button id="advanced-screener-tab-button" class="tab-button whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
                     Advanced Screener
                 </button>
@@ -33,54 +30,6 @@
     </div>
 
     <div>
-        <div id="screener-tab-content" class="tab-content">
-            <div class="bg-white p-4 rounded-xl shadow-md mb-4 flex items-center justify-between">
-                <div>
-                    <h3 class="font-semibold text-gray-800">Batch Score Calculation</h3>
-                    <p id="simpleScreenerStatus" class="text-sm text-gray-500 mt-1">Calculate conviction scores for all stocks listed below.</p>
-                </div>
-                <button id="calculateSimpleScreenerScoresBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition-colors">
-                    <i class="fas fa-calculator mr-2"></i>Calculate All Scores
-                </button>
-            </div>
-            <div class="space-y-4">
-                <div id="nasdaqScreenerAccordion" class="bg-white rounded-xl shadow-md">
-                    <button id="nasdaq-accordion-button" class="w-full flex justify-between items-center p-5 text-left font-semibold text-lg hover:bg-gray-50 rounded-t-xl focus:outline-none">
-                        <span>Stock Screener Table: NASDAQ (Market Cap > $1B)</span>
-                        <svg id="nasdaq-accordion-icon" class="w-6 h-6 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                    </button>
-                    <div id="nasdaq-accordion-content" class="accordion-content px-5 pb-5">
-                        <div id="nasdaq-screener-data-container" class="mt-4 border-t pt-4"></div>
-                    </div>
-                </div>
-                <div id="nyseScreenerAccordion" class="bg-white rounded-xl shadow-md">
-                    <button id="nyse-accordion-button" class="w-full flex justify-between items-center p-5 text-left font-semibold text-lg hover:bg-gray-50 rounded-t-xl focus:outline-none">
-                        <span>Stock Screener Table: NYSE (Market Cap > $1B)</span>
-                        <svg id="nyse-accordion-icon" class="w-6 h-6 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                    </button>
-                    <div id="nyse-accordion-content" class="accordion-content px-5 pb-5">
-                        <div id="nyse-screener-data-container" class="mt-4 border-t pt-4"></div>
-                    </div>
-                </div>
-                <div id="amexScreenerAccordion" class="bg-white rounded-xl shadow-md">
-                    <button id="amex-accordion-button" class="w-full flex justify-between items-center p-5 text-left font-semibold text-lg hover:bg-gray-50 rounded-t-xl focus:outline-none">
-                        <span>Stock Screener Table: AMEX (Market Cap > $1B)</span>
-                        <svg id="amex-accordion-icon" class="w-6 h-6 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                    </button>
-                    <div id="amex-accordion-content" class="accordion-content px-5 pb-5">
-                        <div id="amex-screener-data-container" class="mt-4 border-t pt-4"></div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="mt-12">
-                <h2 class="text-2xl font-bold text-center mb-6">Stock Card View by Sector & Industry</h2>
-                <div id="nasdaq-card-view" class="mb-8"></div>
-                <div id="nyse-card-view" class="mb-8"></div>
-                <div id="amex-card-view" class="mb-8"></div>
-            </div>
-        </div>
-
         <div id="advanced-screener-tab-content" class="tab-content">
             <div class="bg-white p-6 rounded-xl shadow-md mb-8">
                 <h2 class="text-xl font-bold mb-4 text-gray-800">Advanced Stock Screener</h2>
