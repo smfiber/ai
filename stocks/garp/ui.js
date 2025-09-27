@@ -104,9 +104,11 @@ function setupGlobalEventListeners() {
             if (target.classList.contains('dashboard-item-edit')) {
                 const stockData = state.portfolioCache.find(s => s.ticker === ticker);
                 if (stockData) {
+                    closeModal(CONSTANTS.MODAL_STOCK_LIST);
                     openManageStockModal({ ...stockData, isEditMode: true });
                 }
             } else if (target.classList.contains('dashboard-item-view')) {
+                closeModal(CONSTANTS.MODAL_STOCK_LIST);
                 openRawDataViewer(ticker);
             } else if (target.classList.contains('dashboard-item-refresh')) {
                 handleRefreshFmpData(ticker);
