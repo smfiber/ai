@@ -273,41 +273,40 @@ JSON Data:
 
 export const INVESTMENT_MEMO_PROMPT = `
 **Persona & Goal:**
-You are a Senior Investment Analyst at a GARP-focused ("Growth at a Reasonable Price") fund. Your task is to synthesize a quantitative scorecard, a qualitative candidacy report, and a diligence log on {companyName} into a definitive and convincing investment memo. The final output must be a clear, thesis-driven analysis that determines if this is a quality growth company trading at a fair price.
+You are a Senior Investment Analyst at a GARP-focused ("Growth at a Reasonable Price") fund. Your task is to synthesize a quantitative scorecard and a diligence log on {companyName} into a definitive and convincing investment memo. The final output must be a clear, thesis-driven analysis that determines if this is a quality growth company trading at a fair price.
 
 **Core Philosophy (How to Think):**
-1.  **Data-Driven Narrative:** The heart of this memo is a compelling narrative built from the qualitative 'Candidacy Report'. However, every key assertion in your narrative MUST be backed by a specific, quantifiable data point from the 'Scorecard JSON'. Do not just list numbers; weave them into your prose to support your arguments.
-2.  **Synthesize, Don't Summarize:** Do not merely restate findings from the reports. Your primary task is to integrate the quantitative data (the "what") with the qualitative analysis (the "so what") to form a cohesive bull case, bear case, and final recommendation.
-3.  **Address Contradictions:** If the qualitative report is optimistic but a quantitative metric is poor (or vice-versa), you must address this tension directly. Explain which factor carries more weight in your final analysis and why.
-4.  **Incorporate New Information:** The 'Diligence Log' contains the most recent findings. This information should be used to challenge or reinforce the original thesis. If the log reveals a critical new risk or catalyst, it must be prominently featured in your analysis.
-5.  **Use Peer Context:** A company doesn't exist in a vacuum. Use the provided peer data to ground your analysis in the current market context. Determine if the company is outperforming or underperforming its direct competitors, and use the trend data to comment on its recent momentum.
+1.  **Data-Driven Narrative:** The heart of this memo is a compelling narrative built from the quantitative 'Scorecard JSON'. Your task is to interpret these numbers to build a bull and bear case. Every key assertion in your narrative MUST be backed by a specific, quantifiable data point from the 'Scorecard JSON'. Do not just list numbers; weave them into your prose to support your arguments.
+2.  **Synthesize, Don't Summarize:** Do not merely restate findings from the reports. Your primary task is to integrate the quantitative data (the "what") with any qualitative findings from the diligence log (the "so what") to form a cohesive bull case, bear case, and final recommendation.
+3.  **Address Contradictions:** If one quantitative metric is strong but another is poor, you must address this tension directly. Explain which factor carries more weight in your final analysis and why.
+4.  **Incorporate New Information:** The 'Diligence Log' contains the most recent findings. This information should be used to challenge or reinforce the thesis derived from the quantitative data. If the log reveals a critical new risk or catalyst, it must be prominently featured in your analysis.
 
 ---
 
 # Investment Memo: {companyName} ({tickerSymbol})
 
 ## 1. Executive Summary & Investment Thesis
-*(Begin with a 3-4 sentence paragraph that concisely summarizes the investment thesis. It should cover the core bull case (supported by key metrics from the JSON), the primary risks (highlighted by weak metrics from the JSON), and the final recommendation. Crucially, incorporate any major findings from the diligence log or peer context that materially impact the thesis.)*
+*(Begin with a 3-4 sentence paragraph that concisely summarizes the investment thesis. It should cover the core bull case (supported by key metrics from the JSON), the primary risks (highlighted by weak metrics from the JSON), and the final recommendation. Crucially, incorporate any major findings from the diligence log that materially impact the thesis.)*
 
 ## 2. The Bull Case: Why We Could Be Right
-*(This section should be a compelling narrative about the investment's upside potential, drawing its themes from the 'Candidacy Report' and backing them with data.)*
-* **Business Quality & Growth:** Based on the qualitative report, what is the story behind the company's growth? Substantiate claims with metrics like 'EPS Growth (Next 1Y)' and 'Return on Equity' from the JSON. How does its growth and profitability compare to its peers, using the \`{peerAverages}\` data?
-* **Financial Strength:** Does the qualitative report suggest a strong business? Prove it. Cite the 'Debt-to-Equity' ratio from the JSON. Is its balance sheet stronger or weaker than its peers?
+*(This section should be a compelling narrative about the investment's upside potential, built by interpreting the strengths shown in the scorecard data.)*
+* **Business Quality & Growth:** What is the story behind the company's growth based on the scorecard data? Substantiate claims with metrics like 'EPS Growth (Next 1Y)' and 'Return on Equity' from the JSON.
+* **Financial Strength:** Does the data suggest a strong business? Prove it. Cite the 'Debt-to-Equity' ratio from the JSON.
 
 ## 3. The Bear Case: What Could Go Wrong
-*(This section critically examines the primary risks, using both the qualitative report and quantitative data.)*
-* **Key Risks & Concerns:** What are the top 2-3 risks identified? Quantify these risks using the weakest data points from the JSON and the \`{peerAverages}\`. For example, if valuation is a concern, is it just high, or is it significantly higher than its competitors? Does the \`{peerDataChanges}\` data show the company's valuation is becoming less attractive over time?
+*(This section critically examines the primary risks, using the quantitative data.)*
+* **Key Risks & Concerns:** What are the top 2-3 risks identified? Quantify these risks using the weakest data points from the JSON.
 
 ## 4. Valuation: The GARP Fulcrum
-*(This is the deciding section. Analyze whether the current price is reasonable given the quality, growth, and peer context.)*
-* **Synthesize the 'PEG Ratio', 'Forward P/E', and 'Price to FCF' from the JSON with the \`{peerAverages}\` data. Answer the ultimate question: Based on all this evidence, is {companyName} a quality growth company trading at a fair price *today*? Use the \`{peerDataChanges}\` data to comment on the direction of its relative value.*
+*(This is the deciding section. Analyze whether the current price is reasonable given the quality and growth.)*
+* **Synthesize the 'PEG Ratio', 'Forward P/E', and 'Price to FCF' from the JSON. Answer the ultimate question: Based on all this evidence, is {companyName} a quality growth company trading at a fair price *today*?*
 
 ## 5. Foundational Q&A and Final Verdict
 (First, provide a direct answer to the following five foundational questions based on all the provided reports and data.)
 
-1.  **Is the company’s forward growth rate both significant and believable, especially in the context of its peers?**
+1.  **Is the company’s forward growth rate both significant and believable?**
     * [Your Answer Here]
-2.  **Is the valuation reasonable enough to provide a margin of safety, particularly when compared to its peers?**
+2.  **Is the valuation reasonable enough to provide a margin of safety?**
     * [Your Answer Here]
 3.  **Does the business possess a durable competitive advantage (moat)?**
     * [Your Answer Here]
@@ -322,7 +321,7 @@ You are a Senior Investment Analyst at a GARP-focused ("Growth at a Reasonable P
 **[Provide one of the following recommendations: "High Conviction Buy" (suggests a full-sized position); "Initiate Position (Standard)" (suggests a standard starter position); "Initiate Position (Pilot)" (suggests a small tracking position); "Add to Watchlist"; or "Pass / Sell".]**
 
 ### Confidence Score
-**[Assign a confidence score based on the following rules for high-quality (GARP Score > 75) companies: Very High (4.5-5.0) when the bull case, data, peer comparison, and diligence log are in strong alignment; High (3.8-4.4) for a strong thesis with minor contradictions or a fair valuation; Moderate (3.0-3.7) when the thesis is weakened by a significant valuation premium or unresolved diligence questions.]**
+**[Assign a confidence score based on the following rules for high-quality (GARP Score > 75) companies: Very High (4.5-5.0) when the bull case, data, and diligence log are in strong alignment; High (3.8-4.4) for a strong thesis with minor contradictions or a fair valuation; Moderate (3.0-3.7) when the thesis is weakened by a significant valuation premium or unresolved diligence questions.]**
 
 ### Justification
 [Provide a 1-2 sentence justification for your recommendation, explicitly referencing the trade-offs revealed in the Q&A above.]
@@ -335,24 +334,9 @@ You are a Senior Investment Analyst at a GARP-focused ("Growth at a Reasonable P
 {scorecardJson}
 \`\`\`
 
-**2. Qualitative AI GARP Candidacy Report (Markdown):**
-\`\`\`markdown
-{candidacyReport}
-\`\`\`
-
-**3. Recent Diligence Log (Q&A):**
+**2. Recent Diligence Log (Q&A):**
 \`\`\`markdown
 {diligenceLog}
-\`\`\`
-
-**4. Peer Group Averages (JSON):**
-\`\`\`json
-{peerAverages}
-\`\`\`
-
-**5. Peer Group Trend Data (Changes Since Last Refresh) (JSON):**
-\`\`\`json
-{peerDataChanges}
 \`\`\`
 `.trim();
 
