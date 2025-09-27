@@ -42,8 +42,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const authUserInfo = document.getElementById('auth-user-info');
     const userEmailSpan = document.getElementById('user-email');
     // Batch Calculation Elements
-    const calculateSimpleScreenerScoresBtn = document.getElementById('calculateSimpleScreenerScoresBtn');
-    const simpleScreenerStatus = document.getElementById('simpleScreenerStatus');
     const calculateAdvancedScreenerScoresBtn = document.getElementById('calculateAdvancedScreenerScoresBtn');
     const advancedScreenerStatus = document.getElementById('advancedScreenerStatus');
 
@@ -554,7 +552,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function setupTabs() {
         const tabMap = {
-            'screener-tab-button': 'screener-tab-content',
             'advanced-screener-tab-button': 'advanced-screener-tab-content',
             'saved-stocks-tab-button': 'saved-stocks-tab-content'
         };
@@ -582,7 +579,7 @@ document.addEventListener("DOMContentLoaded", () => {
             button.addEventListener('click', () => setActiveTab(button.id));
         });
         
-        setActiveTab('screener-tab-button');
+        setActiveTab('advanced-screener-tab-button');
     }
     
     async function handleAdvancedScreenerRun(event) {
@@ -599,14 +596,12 @@ document.addEventListener("DOMContentLoaded", () => {
         setupFinancialsModalListeners();
         advancedScreenerFilterForm.addEventListener('submit', handleAdvancedScreenerRun);
         document.getElementById('advanced-screener-data-container').addEventListener('click', handleSortClick);
-        populateIndustryDropdown();
+        
+        await populateIndustryDropdown();
 
-        calculateSimpleScreenerScoresBtn.addEventListener('click', () => {
-            const symbolNodes = document.querySelectorAll('#screener-tab-content .ticker-details-btn');
-            const symbols = Array.from(symbolNodes).map(btn => btn.dataset.symbol);
-            const uniqueSymbols = [...new Set(symbols)];
-            runBatchConvictionScores(uniqueSymbols, 'simpleScreenerStatus');
-        });
+        // Set default filter values
+        document.getElementById('sector').value = 'Consumer Cyclical';
+        document.getElementById('industry').value = 'Advertising Agencies';
 
         calculateAdvancedScreenerScoresBtn.addEventListener('click', () => {
             const symbols = advancedScreenerData.map(stock => stock.symbol);
@@ -624,14 +619,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // Initialize Advanced Screener with default values
         fetchAdvancedStockScreener();
-
-        const exchanges = ['nasdaq', 'nyse', 'amex'];
         
-        for (const exchange of exchanges) {
-            console.log(`Initializing components for ${exchange.toUpperCase()}...`);
-            await initExchangeData(exchange);
-            console.log(`Completed ${exchange.toUpperCase()}.`);
-        }
         console.log("All data loaded.");
     }
     
@@ -716,23 +704,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // --- 9. Data Initialization for Each Exchange ---
-    async function initExchangeData(exchange) {
-        const exchangeUpperCase = exchange.toUpperCase();
-        // Simple Screener Accordion
-        const screenerAccordionButton = document.getElementById(`${exchange}-accordion-button`);
-        const screenerAccordionContent = document.getElementById(`${exchange}-accordion-content`);
-        const screenerAccordionIcon = document.getElementById(`${exchange}-accordion-icon`);
-        // Data Containers
-        const tableContainer = document.getElementById(`${exchange}-screener-data-container`);
-        const cardContainer = document.getElementById(`${exchange}-card-view`);
-
-        setupAccordionToggle(screenerAccordionButton, screenerAccordionContent, screenerAccordionIcon);
-        
-        await fetchSimpleStockScreener(exchangeUpperCase, tableContainer, cardContainer);
-    }
-
-    // --- 10. Accordion Toggle Logic ---
+    // --- 9. Accordion Toggle Logic ---
     function setupAccordionToggle(button, content, icon) {
         if (!button) return;
         button.addEventListener('click', () => {
@@ -742,37 +714,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // --- 11. Screener Fetching & Sorting Functions ---
-    async function fetchSimpleStockScreener(exchange, tableEl, cardEl) {
-        const loadingMsg = `<p class="text-gray-500">Loading screener for ${exchange}...</p>`;
-        if(tableEl) tableEl.innerHTML = loadingMsg;
-        if(cardEl) cardEl.innerHTML = loadingMsg;
-
-        if (!appConfig.fmpApiKey) {
-            const errorMsg = '<p class="text-red-500">Financial Modeling Prep API Key is missing.</p>';
-            if(tableEl) tableEl.innerHTML = errorMsg;
-            if(cardEl) cardEl.innerHTML = errorMsg;
-            return [];
-        }
-
-        const url = `https://financialmodelingprep.com/api/v3/stock-screener?marketCapMoreThan=1000000000&exchange=${exchange}&limit=1000&isEtf=false&isFund=false&apikey=${appConfig.fmpApiKey}`;
-        try {
-            const response = await fetch(url);
-            if (!response.ok) throw new Error(`API request failed: ${response.status}`);
-            const data = await response.json();
-            
-            renderSimpleStockTable(data, tableEl);
-            renderStockCards(data, cardEl, exchange);
-            return data;
-        } catch (error) {
-            console.error(`Error fetching simple screener data for ${exchange}:`, error);
-            const errorMsg = `<p class="text-red-500">Error fetching data for ${exchange}.</p>`;
-             if(tableEl) tableEl.innerHTML = errorMsg;
-            if(cardEl) cardEl.innerHTML = errorMsg;
-            return [];
-        }
-    }
-    
+    // --- 10. Screener Fetching & Sorting Functions ---
     async function fetchAdvancedStockScreener() {
         const tableEl = document.getElementById('advanced-screener-data-container');
         const cardEl = document.getElementById('advanced-screener-card-view');
@@ -867,7 +809,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // --- 12. Batch Score Calculation ---
+    // --- 11. Batch Score Calculation ---
     async function runBatchConvictionScores(symbols, statusElementId) {
         const statusEl = document.getElementById(statusElementId);
         if (!symbols || symbols.length === 0) {
@@ -926,7 +868,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // --- 13. Firebase Functions ---
+    // --- 12. Firebase Functions ---
     async function saveTickerDetailsToFirebase(symbol, data) {
         if (!db) return;
         try {
@@ -982,7 +924,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // --- 16. Rendering Functions ---
+    // --- 13. Rendering Functions ---
     const formatText = (text) => text || 'N/A';
     const formatMarketCap = (num) => {
         if (!num) return 'N/A';
@@ -1070,33 +1012,6 @@ document.addEventListener("DOMContentLoaded", () => {
         updateRatingDisplayForSymbol(symbol);      // Handles score in all tables and cards
         updateRatingDateDisplayForSymbol(symbol); // Handles "as of" date in cards
         updateCachedOnDisplayForSymbol(symbol);     // Handles "Cached On" column in advanced table
-    }
-
-    function renderSimpleStockTable(data, container) {
-        if (!container) return;
-        if (!data || data.length === 0) {
-            container.innerHTML = '<p class="text-gray-500">No stock data found.</p>';
-            return;
-        }
-        const tableRows = data.map(stock => {
-            const isSaved = savedStocks.has(stock.symbol);
-            return `
-            <tr data-symbol-row="${stock.symbol}" class="${isSaved ? 'saved-stock-row' : ''}">
-                <td class="px-4 py-3 whitespace-nowrap text-sm">
-                     <button class="save-stock-btn ${isSaved ? 'saved' : ''}" data-symbol="${stock.symbol}" title="Save Stock">
-                        <i class="${isSaved ? 'fas' : 'far'} fa-star"></i>
-                    </button>
-                    <button class="ticker-details-btn font-medium text-indigo-600 hover:text-indigo-800" data-symbol="${stock.symbol}">${stock.symbol}</button>
-                    <span class="viewed-indicator" data-indicator-symbol="${stock.symbol}"></span>
-                </td>
-                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-600">${formatText(stock.companyName)}</td>
-                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-right">${formatMarketCap(stock.marketCap)}</td>
-                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${formatText(stock.sector)}</td>
-                <td class="px-4 py-3 whitespace-nowrap text-sm text-center" data-rating-symbol="${stock.symbol}">${getRatingHtml(stock.symbol)}</td>
-            </tr>`;
-        }).join('');
-        container.innerHTML = `<div class="overflow-x-auto max-h-96"><table class="min-w-full divide-y divide-gray-200"><thead class="bg-gray-50 sticky top-0"><tr><th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Symbol</th><th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Company</th><th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Market Cap</th><th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sector</th><th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Conviction Score</th></tr></thead><tbody class="bg-white divide-y divide-gray-200">${tableRows}</tbody></table></div>`;
-        updateViewedIndicators();
     }
 
     function renderAdvancedStockTable(data, container) {
@@ -1257,7 +1172,7 @@ document.addEventListener("DOMContentLoaded", () => {
         updateViewedIndicators();
     }
 
-    // --- 17. Financials Modal Logic ---
+    // --- 14. Financials Modal Logic ---
     function setupFinancialsModalListeners() {
         financialsModalOverlay.addEventListener('click', hideFinancialsModal);
         financialsModalCloseBtn.addEventListener('click', hideFinancialsModal);
