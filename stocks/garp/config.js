@@ -324,7 +324,7 @@ You are a Senior Investment Analyst at a GARP-focused ("Growth at a Reasonable P
 **[Assign a confidence score based on the following rules for high-quality (GARP Score > 75) companies: Very High (4.5-5.0) when the bull case, data, and diligence log are in strong alignment; High (3.8-4.4) for a strong thesis with minor contradictions or a fair valuation; Moderate (3.0-3.7) when the thesis is weakened by a significant valuation premium or unresolved diligence questions.]**
 
 ### Justification
-[Provide a 1-2 sentence justification for your recommendation, explicitly referencing the trade-offs revealed in the Q&A above.]
+[Provide a 4-5 sentence justification for your recommendation, explicitly referencing the trade-offs revealed in the Q&A above.]
 
 ---
 **INPUTS:**
