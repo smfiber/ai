@@ -299,7 +299,7 @@ You are a Senior Investment Analyst at a GARP-focused ("Growth at a Reasonable P
 
 ## 4. Valuation: The GARP Fulcrum
 *(This is the deciding section. Analyze whether the current price is reasonable given the quality and growth. Explicitly address any discrepancies between the initial scorecard's valuation metrics and the deeper analysis in the diligence log.)*
-* **Synthesize the 'PEG Ratio', 'Forward P/E', and 'Price to FCF' from the JSON. Use the detailed valuation analysis from the diligence log to arrive at a final verdict. Answer the ultimate question: Based on all this evidence, is {companyName} a quality growth company trading at a fair price *today*?*
+* **Synthesize the 'PEG Ratio', 'Forward P/E', and 'Price to FCF' from the JSON. Use the detailed valuation analysis from the diligence log to arrive at a final verdict. Answer the ultimate question: Based on all available evidence, does {companyName} represent a high-quality growth business trading at a price that offers a reasonable margin of safety for future returns?
 
 ## 5. Foundational Q&A and Final Verdict
 (First, provide a direct answer to the following five foundational questions. Synthesize the answers from the 'Diligence Log' to inform your verdict. The quality of the diligence answers should directly influence your confidence and recommendation. A strong GARP candidate must have convincing, data-backed answers to these questions.)
@@ -453,7 +453,7 @@ Identify the critical risks and weaknesses revealed by the failing metrics. Dire
 ## FINAL SYNTHESIS & RECOMMENDATION
 
 (1 paragraph)
-Investment Profile & The Deciding Factor: Classify the stock's profile (e.g., 'Best-in-Class Compounder trading at a premium,' 'Undervalued Turnaround Story'). Then, state the single most critical tension an investor must resolve, explicitly referencing the peer comparison (e.g., "The core question is whether the company's superior ROE justifies its 30% valuation premium to its peers.").
+Investment Profile & The Deciding Factor: Classify the stock's profile (e.g., 'Best-in-Class Compounder trading at a premium,' 'Undervalued Turnaround Story'). Then, state the single most critical GARP tension an investor must resolve, explicitly referencing the peer comparison (e.g., 'The core question is whether the company's superior ROE and forward growth justify its valuation premium to its peers.').
 
 **Strategic Recommendation:** [Insert a single bolded recommendation based on the following criteria: "Pursue Diligence (High Priority)" for GARP Scores > 75 with clear peer superiority; "Pursue Diligence" for solid candidates; "Add to Watchlist" for borderline cases or good companies at unreasonable prices; "Pass" for clear non-candidates.]
 
