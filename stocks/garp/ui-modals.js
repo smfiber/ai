@@ -201,64 +201,6 @@ export async function openStockListModal(listType) {
 }
 
 
-/**
- * Opens a dedicated warning modal when a critical diligence question has not been answered.
- * @param {string} ticker The stock ticker.
- * @param {Array<object>} questions The list of unanswered diligence questions.
- * @param {function} onConfirm The callback to execute if the user chooses to proceed.
- */
-export function openDiligenceWarningModal(ticker, questions, onConfirm) {
-    const modal = document.getElementById(CONSTANTS.MODAL_CONFIRMATION);
-    const titleEl = document.getElementById('confirmation-title');
-    const messageEl = document.getElementById('confirmation-message');
-    const confirmButton = document.getElementById('confirm-button');
-    const cancelButton = document.getElementById('cancel-button');
-    
-    titleEl.textContent = `Warning: Unanswered Diligence for ${ticker}`;
-    
-    let questionsHtml = questions.map(q => `
-        <li class="p-2 border-b last:border-b-0 text-left text-sm font-medium text-gray-700">
-            ${q.humanQuestion}
-        </li>
-    `).join('');
-
-    messageEl.innerHTML = `
-        <p class="text-gray-500 mb-4">
-            The initial GARP analysis identified a hyper-growth metric that requires investigation.
-            The following critical questions have not yet been answered in the diligence log.
-            Generating the Investment Memo now without this information is not recommended.
-        </p>
-        <ul class="bg-gray-100 p-3 rounded-lg border border-gray-200 divide-y divide-gray-200">
-            ${questionsHtml}
-        </ul>
-    `;
-    
-    confirmButton.textContent = 'Continue Anyway';
-    confirmButton.classList.remove('bg-red-600', 'hover:bg-red-700');
-    confirmButton.classList.add('bg-orange-500', 'hover:bg-orange-600');
-    
-    cancelButton.textContent = 'Go Back to Diligence';
-    cancelButton.classList.remove('bg-gray-200', 'hover:bg-gray-300');
-    cancelButton.classList.add('bg-indigo-600', 'hover:bg-indigo-700', 'text-white');
-
-    const newConfirmButton = confirmButton.cloneNode(true);
-    const newCancelButton = cancelButton.cloneNode(true);
-    confirmButton.parentNode.replaceChild(newConfirmButton, confirmButton);
-    cancelButton.parentNode.replaceChild(newCancelButton, cancelButton);
-
-    newConfirmButton.addEventListener('click', () => {
-        closeModal(CONSTANTS.MODAL_CONFIRMATION);
-        onConfirm();
-    }, { once: true });
-    
-    newCancelButton.addEventListener('click', () => {
-        closeModal(CONSTANTS.MODAL_CONFIRMATION);
-    }, { once: true });
-
-    openModal(CONSTANTS.MODAL_CONFIRMATION);
-}
-
-
 // --- SPECIFIC, COMPLEX MODAL CONTROLLERS ---
 
 export const STRUCTURED_DILIGENCE_QUESTIONS = {
