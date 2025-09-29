@@ -2,7 +2,7 @@
 import { CONSTANTS, state, promptMap, ANALYSIS_REQUIREMENTS, ANALYSIS_NAMES } from './config.js';
 import { callApi, callGeminiApi, generateRefinedArticle, generatePolishedArticleForSynthesis, getFmpStockData } from './api.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { openModal, closeModal, displayMessageInModal, openConfirmationModal, openManageStockModal, openDiligenceWarningModal, STRUCTURED_DILIGENCE_QUESTIONS } from './ui-modals.js';
+import { openModal, closeModal, displayMessageInModal, openConfirmationModal, openManageStockModal, STRUCTURED_DILIGENCE_QUESTIONS } from './ui-modals.js';
 import { renderPortfolioManagerList, displayReport, updateReportStatus, fetchAndCachePortfolioData, updateGarpCandidacyStatus, renderCandidacyAnalysis, renderGarpAnalysisSummary, renderDiligenceLog, renderPeerComparisonTable, renderSectorMomentumHeatMap } from './ui-render.js';
 import { _calculateFinancialAnalysisMetrics, _calculateMoatAnalysisMetrics, _calculateRiskAssessmentMetrics, _calculateCapitalAllocatorsMetrics, _calculateGarpAnalysisMetrics, _calculateGarpScorecardMetrics, CALCULATION_SUMMARIES } from './analysis-helpers.js';
 
@@ -956,28 +956,15 @@ export async function handleInvestmentMemoRequest(symbol, forceNew = false) {
             throw new Error(`The foundational 'GARP Candidacy Report' has not been generated yet. Please generate it from the 'AI Analysis' tab first.`);
         }
         const candidacyReportContent = candidacyReports[0].content;
-        const criticalDiligenceQuestions = candidacyReports[0].diligenceQuestions || [];
         
         const diligenceReports = await getSavedReports(symbol, 'DiligenceInvestigation');
         let diligenceLog = 'No recent diligence is available.';
-        let answeredQuestions = new Set();
         if (diligenceReports.length > 0) {
             diligenceLog = diligenceReports.map(report => {
                 const question = report.prompt.split('Diligence Question from User:')[1]?.trim() || 'Question not found.';
-                answeredQuestions.add(question);
                 const answer = report.content;
                 return `**Question:** ${question}\n\n**Answer:**\n${answer}\n\n---`;
             }).join('\n\n');
-        }
-
-        const unansweredCriticalQuestions = criticalDiligenceQuestions.filter(q => !answeredQuestions.has(q.humanQuestion));
-        if (unansweredCriticalQuestions.length > 0) {
-            closeModal(CONSTANTS.MODAL_LOADING);
-            openDiligenceWarningModal(symbol, unansweredCriticalQuestions, () => {
-                // This is the callback that runs if the user clicks "Continue Anyway"
-                handleInvestmentMemoRequest(symbol, true);
-            });
-            return;
         }
 
         const data = await getFmpStockData(symbol);
