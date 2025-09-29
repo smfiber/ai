@@ -108,7 +108,6 @@ function setupGlobalEventListeners() {
                     openManageStockModal({ ...stockData, isEditMode: true });
                 }
             } else if (target.classList.contains('dashboard-item-view')) {
-                closeModal(CONSTANTS.MODAL_STOCK_LIST);
                 openRawDataViewer(ticker);
             } else if (target.classList.contains('dashboard-item-refresh')) {
                 handleRefreshFmpData(ticker);
