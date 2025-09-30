@@ -173,11 +173,15 @@ body {
 
 /* GARP SCORECARD STYLES */
 .price-gain {
-    color: #16a34a;
+    color: #16a34a; /* Green */
+}
+
+.price-neutral {
+    color: #ca8a04; /* Yellow */
 }
 
 .price-loss {
-    color: #dc2626;
+    color: #dc2626; /* Red */
 }
 
 .interp-badge {
@@ -191,45 +195,57 @@ body {
     letter-spacing: 0.025em;
 }
 
-.interp-badge.hyper-growth,
-.interp-badge.exceptional-quality {
+/* GREEN - Best of the Best */
+.interp-badge.exceptional-quality,
+.interp-badge.fortress-balance-sheet,
+.interp-badge.very-safe,
+.interp-badge.highly-consistent,
+.interp-badge.highly-stable {
     background-color: #166534;
     color: #f0fdf4;
 }
 
+/* YELLOW - Good / Investigate */
+.interp-badge.hyper-growth,
 .interp-badge.garp-sweet-spot,
 .interp-badge.high-quality,
 .interp-badge.solid-growth,
 .interp-badge.fairly-priced,
 .interp-badge.low-leverage,
-.interp-badge.fortress-balance-sheet {
-    background-color: #22c55e;
-    color: #f0fdf4;
-}
-
 .interp-badge.modest-growth,
 .interp-badge.reasonable-price,
 .interp-badge.potentially-undervalued,
 .interp-badge.investigate,
-.interp-badge.rebound-growth {
+.interp-badge.rebound-growth,
+.interp-badge.healthy,
+.interp-badge.consistent,
+.interp-badge.stable {
     background-color: #eab308;
     color: #78350f;
 }
 
+/* ORANGE - Warning */
 .interp-badge.warning-sign,
 .interp-badge.potential-value-trap,
-.interp-badge.priced-for-perfection {
+.interp-badge.priced-for-perfection,
+.interp-badge.adequate {
     background-color: #f97316;
     color: #fff7ed;
 }
 
+/* RED - Bad */
 .interp-badge.negative-growth,
 .interp-badge.low-quality,
 .interp-badge.expensive,
-.interp-badge.high-leverage {
+.interp-badge.high-leverage,
+.interp-badge.high-risk,
+.interp-badge.inconsistent,
+.interp-badge.volatile,
+.interp-badge.slow-growth {
     background-color: #dc2626;
     color: #fef2f2;
 }
+
 
 .metric-tile {
     background-color: #f9fafb;
