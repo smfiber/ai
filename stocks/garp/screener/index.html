@@ -159,7 +159,15 @@
             </div>
             
             <div class="bg-white rounded-xl shadow-md p-5">
-                <h2 class="text-lg font-semibold mb-4">Screener Results</h2>
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-lg font-semibold">Screener Results</h2>
+                    <div class="flex items-center space-x-3">
+                         <span id="batchStatus" class="text-sm text-gray-500"></span>
+                         <button id="batchProcessBtn" class="text-sm bg-blue-500 hover:bg-blue-600 text-white font-semibold py-1 px-3 rounded-md">
+                            <i class="fas fa-cogs mr-2"></i>Calculate All Scores
+                        </button>
+                    </div>
+                </div>
                 <div id="advanced-screener-data-container" class="border-t pt-4"></div>
             </div>
 
