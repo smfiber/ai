@@ -14,6 +14,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let sessionTimer = null;
     let advancedScreenerData = [];
     let currentSort = { key: 'marketCap', direction: 'desc' };
+    let currentModalDataToSave = null;
 
 
     // --- Utility to pause execution ---
@@ -34,6 +35,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const financialsModalOverlay = document.getElementById('financialsModalOverlay');
     const financialsModalCloseBtn = document.getElementById('financialsModalCloseBtn');
     const refreshFinancialsBtn = document.getElementById('refreshFinancialsBtn');
+    const saveToFirebaseBtn = document.getElementById('saveToFirebaseBtn');
     const appContent = document.getElementById('appContent');
     const financialsModalTabs = document.getElementById('financials-modal-tabs');
     // Auth Elements
@@ -279,7 +281,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const income = (data.income_statement_annual || []).slice().reverse();
         const metricsTtm = data.key_metrics_ttm?.[0] || {};
         const ratiosTtm = data.ratios_ttm?.[0] || {};
-        const estimates = data.analyst_estimates?.[0] || {};
+        const estimates = data.analyst_estimates || [];
         const keyMetricsAnnual = (data.key_metrics_annual || []).slice().reverse();
         const latestAnnualMetrics = keyMetricsAnnual[keyMetricsAnnual.length - 1] || {};
         const ratiosAnnual = (data.ratios_annual || []).slice().reverse();
@@ -300,18 +302,22 @@ document.addEventListener("DOMContentLoaded", () => {
         
         const roe = metricsTtm.roe ?? latestAnnualMetrics.roe;
         const roic = metricsTtm.roic ?? latestAnnualMetrics.roic;
-        const pe = metricsTtm.peRatioTTM ?? latestAnnualMetrics.peRatio;
         const de = metricsTtm.debtToEquity ?? latestAnnualMetrics.debtToEquity;
+
+        // --- FIX: Find the correct forward-looking estimate for NEXT YEAR ---
+        const currentYear = new Date().getFullYear();
+        const nextYear = currentYear + 1;
+        const nextYearEstimate = estimates.find(est => parseInt(est.calendarYear) === nextYear);
 
         let epsNext1y = null;
         const lastActualEps = income.length > 0 ? income[lastIndex].eps : null;
-        const forwardEpsForGrowth = estimates.estimatedEpsAvg;
+        const forwardEpsForGrowth = nextYearEstimate ? nextYearEstimate.estimatedEpsAvg : null;
         if (lastActualEps > 0 && forwardEpsForGrowth > 0) {
             epsNext1y = (forwardEpsForGrowth / lastActualEps) - 1;
         }
 
         let forwardPe = null;
-        const forwardEps = estimates.estimatedEpsAvg;
+        const forwardEps = nextYearEstimate ? nextYearEstimate.estimatedEpsAvg : null;
         const currentPrice = profile.price;
         if (currentPrice > 0 && forwardEps > 0) {
             forwardPe = currentPrice / forwardEps;
@@ -1161,14 +1167,32 @@ document.addEventListener("DOMContentLoaded", () => {
                     populateRawDataModal(garpData);
                     
                     const dataToSave = { ...garpData, garpConvictionScore: metrics.garpConvictionScore, timestamp: new Date().toISOString() };
-                    await saveTickerDetailsToFirebase(symbol, dataToSave);
-                    appConfig.cachedStockInfo[symbol] = { rating: metrics.garpConvictionScore, timestamp: dataToSave.timestamp };
+                    currentModalDataToSave = dataToSave; // Update data available for manual save
                     
-                    updateSingleStockInScreener(symbol, dataToSave.timestamp);
+                    // Reset save button state on refresh
+                    saveToFirebaseBtn.disabled = false;
+                    saveToFirebaseBtn.innerHTML = '<i class="fas fa-cloud-upload-alt mr-2"></i>Save to Cloud';
                 } else {
                     document.getElementById('modal-ai-summary-content').innerHTML = '<p class="text-center text-red-500">Could not refresh data.</p>';
                     document.getElementById('modal-raw-data-content').innerHTML = '';
                 }
+            }
+        });
+        
+        saveToFirebaseBtn.addEventListener('click', async () => {
+            const symbol = saveToFirebaseBtn.dataset.symbol;
+            if (symbol && currentModalDataToSave) {
+                await saveTickerDetailsToFirebase(symbol, currentModalDataToSave);
+                
+                // Update local cache and UI to reflect the save
+                const { garpConvictionScore, timestamp } = currentModalDataToSave;
+                appConfig.cachedStockInfo[symbol] = { rating: garpConvictionScore, timestamp: timestamp };
+                updateSingleStockInScreener(symbol, timestamp);
+                updateViewedIndicatorForSymbol(symbol);
+                
+                // Provide user feedback
+                saveToFirebaseBtn.disabled = true;
+                saveToFirebaseBtn.innerHTML = '<i class="fas fa-check mr-2"></i>Saved!';
             }
         });
 
@@ -1187,6 +1211,12 @@ document.addEventListener("DOMContentLoaded", () => {
     async function handleTickerClick(symbol) {
         showFinancialsModal();
         refreshFinancialsBtn.dataset.symbol = symbol;
+        saveToFirebaseBtn.dataset.symbol = symbol;
+        
+        // Reset button state every time modal is opened
+        saveToFirebaseBtn.disabled = false;
+        saveToFirebaseBtn.innerHTML = '<i class="fas fa-cloud-upload-alt mr-2"></i>Save to Cloud';
+        
         // Reset UI
         document.getElementById('modal-company-name').textContent = `Loading... (${symbol})`;
         document.getElementById('modal-stock-price').textContent = '';
@@ -1200,7 +1230,6 @@ document.addEventListener("DOMContentLoaded", () => {
         document.querySelectorAll('.modal-tab-content').forEach(content => content.classList.remove('active'));
         document.querySelector('#modal-ai-summary-content').classList.add('active');
 
-        // Fetch live data, calculate, render, and update cache
         const liveData = await fetchFullTickerDetails(symbol);
         if (liveData) {
             const garpData = mapDataForGarp(liveData);
@@ -1214,16 +1243,13 @@ document.addEventListener("DOMContentLoaded", () => {
             populateGarpScorecardInModal(metrics);
             populateRawDataModal(garpData);
             
-            // Save to Firebase and update local cache
-            const newTimestamp = new Date().toISOString();
-            const dataToSave = { ...garpData, garpConvictionScore: metrics.garpConvictionScore, timestamp: newTimestamp };
-            await saveTickerDetailsToFirebase(symbol, dataToSave);
-            appConfig.cachedStockInfo[symbol] = { rating: metrics.garpConvictionScore, timestamp: newTimestamp };
+            const dataToSave = { ...garpData, garpConvictionScore: metrics.garpConvictionScore, timestamp: new Date().toISOString() };
+            currentModalDataToSave = dataToSave;
             
-            updateSingleStockInScreener(symbol, newTimestamp);
         } else {
              document.getElementById('modal-ai-summary-content').innerHTML = '<p class="text-center text-red-500">Could not fetch financial data.</p>';
              document.getElementById('modal-raw-data-content').innerHTML = '';
+             currentModalDataToSave = null;
         }
         updateViewedIndicatorForSymbol(symbol);
     }
