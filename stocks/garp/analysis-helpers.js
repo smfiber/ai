@@ -1,3 +1,4 @@
+// fileName: analysis-helpers.js
 /**
  * Formats a large number into a more readable string with suffixes (K, M, B, T).
  * @param {number|string} value The number to format.
@@ -660,6 +661,7 @@ export function _calculateGarpAnalysisMetrics(data) {
 export const CALCULATION_SUMMARIES = {
     'FinancialAnalysis': 'Calculates a comprehensive financial overview by analyzing multi-year trends in revenue and income, recent quarterly performance (YoY growth), financial health ratios (e.g., Debt-to-Equity), cash flow quality, and how the current stock valuation compares to its own historical average.',
     'GarpAnalysis': 'Focuses on the Growth at a Reasonable Price (GARP) philosophy by calculating historical and forward-looking EPS growth, the current P/E ratio, and synthesizes them into a Price/Earnings-to-Growth (PEG) ratio to determine if the stock\'s growth justifies its price.',
+    'QarpAnalysis': 'Performs a "Quality at a Reasonable Price" (QARP) analysis. This report uses the same underlying data as the GARP Scorecard but instructs the AI to synthesize it through a different lens, focusing on the critical balance between business quality (measured by ROE, ROIC, D/E) and valuation (measured by P/E, PEG, P/FCF).',
     'MoatAnalysis': 'Assesses a company\'s competitive advantage ("moat") by calculating 10-year historical trends for key quality metrics like Return on Invested Capital (ROIC), profitability margins (net, operating, gross), and reinvestment rates (e.g., CapEx, R&D expenses).',
     'RiskAssessment': 'Identifies potential red flags by calculating financial health ratios (e.g., Debt-to-Equity, Current Ratio), checking for earnings quality (cash flow vs. net income), assessing stock volatility (Beta), and looking for signs of high valuation or negative analyst sentiment.',
     'CapitalAllocators': 'Evaluates management\'s effectiveness by analyzing historical data on how they prioritize cash flow (e.g., CapEx vs. buybacks), the effectiveness of their investments (ROIC trends), their acquisition history (goodwill), and how they return capital to shareholders (dividends and buybacks).',
