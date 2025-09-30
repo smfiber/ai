@@ -345,6 +345,7 @@ export async function openRawDataViewer(ticker) {
         const diligenceLogContainerHtml = `<div id="diligence-log-container" class="mb-6 text-left"></div>`;
 
         // --- NEW STRUCTURED DILIGENCE HTML ---
+        const copyIcon = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75" /></svg>`;
         let structuredDiligenceHtml = `
             <div class="text-left mt-4 border rounded-lg p-4 bg-gray-50">
                 <h4 class="text-base font-semibold text-gray-800 mb-1">Structured Diligence</h4>
@@ -355,7 +356,10 @@ export async function openRawDataViewer(ticker) {
             structuredDiligenceHtml += `
                 <div class="diligence-card p-3 bg-white rounded-lg border border-gray-200">
                     <h5 class="font-semibold text-sm text-indigo-700 mb-2">${category}</h5>
-                    <p class="text-xs text-gray-600 mb-2 italic">"${question}"</p>
+                    <div class="flex items-start gap-2 mb-2">
+                        <p class="text-xs text-gray-600 flex-grow" data-question-text>${question}</p>
+                        <button type="button" class="copy-icon-btn structured-diligence-copy-btn" title="Copy Question">${copyIcon}</button>
+                    </div>
                     <textarea class="structured-diligence-answer w-full border border-gray-300 rounded-lg p-2 text-sm" 
                               rows="4" 
                               data-category="${category}"
@@ -423,6 +427,23 @@ export async function openRawDataViewer(ticker) {
                 </div>
             </div>
         `;
+
+        // Add copy-to-clipboard functionality for structured diligence
+        const checkIcon = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>`;
+        aiButtonsContainer.addEventListener('click', (e) => {
+            const copyBtn = e.target.closest('.structured-diligence-copy-btn');
+            if (copyBtn) {
+                const textToCopy = copyBtn.previousElementSibling.textContent;
+                navigator.clipboard.writeText(textToCopy).then(() => {
+                    copyBtn.classList.add('copied');
+                    copyBtn.innerHTML = checkIcon;
+                    setTimeout(() => {
+                        copyBtn.classList.remove('copied');
+                        copyBtn.innerHTML = copyIcon;
+                    }, 2000);
+                });
+            }
+        });
 
         const addDiligenceEntryRow = () => {
             const container = document.getElementById('manual-diligence-entries-container');
