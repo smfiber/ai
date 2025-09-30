@@ -1018,16 +1018,12 @@ document.addEventListener("DOMContentLoaded", () => {
             const symbol = refreshFinancialsBtn.dataset.symbol;
             if (symbol) {
                 document.getElementById('modal-dividend-analysis-content').innerHTML = '<p class="text-center text-gray-500">Refreshing analysis...</p>';
-                document.getElementById('modal-key-metrics-content').innerHTML = '<p class="text-center text-gray-500">Refreshing data...</p>';
-                document.getElementById('modal-financial-trends-content').innerHTML = '<p class="text-center text-gray-500">Refreshing trend data...</p>';
-
+                
                 const liveData = await fetchFullTickerDetails(symbol, true); // Force refresh
                 if (liveData) {
                     const analysisData = mapDataForAnalysis(liveData);
                     const metrics = _calculateDividendScorecardMetrics(analysisData);
                     
-                    populateFinancialsModal(liveData);
-                    populateFinancialTrends(liveData);
                     populateRawDataModal(liveData);
                     populateDividendScorecardInModal(metrics);
                     
@@ -1037,7 +1033,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     
                     updateSingleStockInScreener(symbol, dataToSave.timestamp);
                 } else {
-                    document.getElementById('modal-key-metrics-content').innerHTML = '<p class="text-center text-red-500">Could not refresh data.</p>';
+                     document.getElementById('modal-dividend-analysis-content').innerHTML = '<p class="text-center text-red-500">Could not refresh analysis.</p>';
                 }
             }
         });
@@ -1059,9 +1055,7 @@ document.addEventListener("DOMContentLoaded", () => {
         refreshFinancialsBtn.dataset.symbol = symbol;
         // Reset UI
         document.getElementById('modal-dividend-analysis-content').innerHTML = '<p class="text-center text-gray-500">Loading dividend analysis...</p>';
-        document.getElementById('modal-key-metrics-content').innerHTML = '<p class="text-center text-gray-500">Loading financial data...</p>';
         document.getElementById('modal-raw-data-content').innerHTML = '<p class="text-center text-gray-500">Loading raw data...</p>';
-        document.getElementById('modal-financial-trends-content').innerHTML = '<p class="text-center text-gray-500">Loading trend data...</p>';
         document.getElementById('modal-company-name').textContent = `Loading... (${symbol})`;
         document.getElementById('modal-stock-price').textContent = '';
         document.getElementById('modal-last-updated').textContent = '...';
@@ -1077,8 +1071,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 const analysisData = mapDataForAnalysis(liveData);
                 const metrics = _calculateDividendScorecardMetrics(analysisData);
                 
-                populateFinancialsModal(liveData);
-                populateFinancialTrends(liveData);
                 populateRawDataModal(liveData);
                 populateDividendScorecardInModal(metrics);
                 
@@ -1089,10 +1081,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 
                 updateSingleStockInScreener(symbol, newTimestamp);
             } else {
-                 document.getElementById('modal-key-metrics-content').innerHTML = '<p class="text-center text-red-500">Could not fetch financial data.</p>';
-                 document.getElementById('modal-dividend-analysis-content').innerHTML = '';
+                 document.getElementById('modal-dividend-analysis-content').innerHTML = '<p class="text-center text-red-500">Could not fetch financial data.</p>';
                  document.getElementById('modal-raw-data-content').innerHTML = '';
-                 document.getElementById('modal-financial-trends-content').innerHTML = '';
             }
         updateViewedIndicatorForSymbol(symbol);
     }
@@ -1100,13 +1090,8 @@ document.addEventListener("DOMContentLoaded", () => {
     function mapDataForAnalysis(fetchedData) {
         return {
             profile: fetchedData.profile,
-            income_statement_annual: fetchedData.incomeStatement,
             key_metrics_ttm: fetchedData.key_metrics_ttm,
             ratios_ttm: fetchedData.ratios_ttm,
-            analyst_estimates: fetchedData.analyst_estimates,
-            key_metrics_annual: fetchedData.keyMetrics,
-            ratios_annual: fetchedData.ratios,
-            balance_sheet_statement_annual: fetchedData.balanceSheet,
             cash_flow_statement_annual: fetchedData.cashFlow,
             financial_growth: fetchedData.financial_growth
         };
@@ -1116,16 +1101,11 @@ document.addEventListener("DOMContentLoaded", () => {
     async function fetchFullTickerDetails(symbol) {
         if (!appConfig.fmpApiKey) return null;
         const apiKey = appConfig.fmpApiKey;
-        // UPDATED: Replaced separate TTM endpoints with a single one and added financial_growth.
+        // UPDATED: Reduced to only the endpoints required for dividend analysis
         const endpoints = {
             profile: `https://financialmodelingprep.com/api/v3/profile/${symbol}?apikey=${apiKey}`,
-            keyMetrics: `https://financialmodelingprep.com/api/v3/key-metrics/${symbol}?period=annual&limit=10&apikey=${apiKey}`,
-            ratios: `https://financialmodelingprep.com/api/v3/ratios/${symbol}?period=annual&limit=10&apikey=${apiKey}`,
-            incomeStatement: `https://financialmodelingprep.com/api/v3/income-statement/${symbol}?period=annual&limit=10&apikey=${apiKey}`,
-            balanceSheet: `https://financialmodelingprep.com/api/v3/balance-sheet-statement/${symbol}?period=annual&limit=10&apikey=${apiKey}`,
-            cashFlow: `https://financialmodelingprep.com/api/v3/cash-flow-statement/${symbol}?period=annual&limit=10&apikey=${apiKey}`,
+            cashFlow: `https://financialmodelingprep.com/api/v3/cash-flow-statement/${symbol}?period=annual&limit=1&apikey=${apiKey}`,
             metrics_ratios_ttm: `https://financialmodelingprep.com/api/v3/ratios-ttm/${symbol}?apikey=${apiKey}`,
-            analyst_estimates: `https://financialmodelingprep.com/api/v3/analyst-estimates/${symbol}?apikey=${apiKey}`,
             financial_growth: `https://financialmodelingprep.com/api/v3/financial-growth/${symbol}?period=annual&limit=1&apikey=${apiKey}`,
         };
 
@@ -1166,124 +1146,7 @@ document.addEventListener("DOMContentLoaded", () => {
         renderDividendInterpretationAnalysis(tempContainer, metrics);
         contentEl.innerHTML = tempContainer.innerHTML;
     }
-
-
-    function populateFinancialsModal(data) {
-        const profile = data.profile?.[0] || {};
-        const metrics = (data.key_metrics_annual || data.keyMetrics)?.[0] || {};
-        const ratios = (data.ratios_annual || data.ratios)?.[0] || {};
-        const income = (data.income_statement_annual || data.incomeStatement)?.[0] || {};
-        const { timestamp } = data;
-        
-        const format = (value, prefix = '', suffix = '', digits = 2) => {
-            return (value !== null && typeof value !== 'undefined' && !isNaN(value)) ? `${prefix}${Number(value).toFixed(digits)}${suffix}` : 'N/A';
-        };
-
-        const eps = metrics.netIncomePerShare;
-        const bvps = metrics.bookValuePerShare;
-        let grahamNumber = null;
-        if (eps > 0 && bvps > 0) {
-            grahamNumber = Math.sqrt(22.5 * eps * bvps);
-        }
-        
-        document.getElementById('modal-company-name').textContent = `${profile.companyName || 'N/A'} (${profile.symbol || ''})`;
-        document.getElementById('modal-stock-price').textContent = format(profile.price, '$');
-        if (timestamp) {
-            document.getElementById('modal-last-updated').textContent = `Cached: ${formatDate(timestamp)}`;
-        } else {
-             document.getElementById('modal-last-updated').textContent = `Live Data (just now)`;
-        }
-
-        const contentEl = document.getElementById('modal-key-metrics-content');
-        contentEl.innerHTML = `
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-6">
-                <div class="space-y-3">
-                    <h4 class="font-semibold text-gray-700 border-b pb-2">Valuation Ratios (Annual)</h4>
-                    <div class="flex justify-between text-sm"><span class="text-gray-500">P/E Ratio</span><span class="font-medium">${format(metrics.peRatio)}</span></div>
-                    <div class="flex justify-between text-sm"><span class="text-gray-500">Price to Sales</span><span class="font-medium">${format(metrics.priceToSalesRatio)}</span></div>
-                    <div class="flex justify-between text-sm"><span class="text-gray-500">Price to Book</span><span class="font-medium">${format(metrics.pbRatio)}</span></div>
-                    <div class="flex justify-between text-sm"><span class="text-gray-500">EV/EBITDA</span><span class="font-medium">${format(metrics.enterpriseValueOverEBITDA)}</span></div>
-                    <div class="flex justify-between text-sm"><span class="text-gray-500">Graham Number</span><span class="font-medium">${format(grahamNumber, '$')}</span></div>
-                </div>
-                <div class="space-y-3">
-                    <h4 class="font-semibold text-gray-700 border-b pb-2">Financial Health (Annual)</h4>
-                    <div class="flex justify-between text-sm"><span class="text-gray-500">Debt to Equity</span><span class="font-medium">${format(metrics.debtToEquity)}</span></div>
-                    <div class="flex justify-between text-sm"><span class="text-gray-500">Return on Equity (ROE)</span><span class="font-medium">${format(metrics.roe * 100, '', '%')}</span></div>
-                     <div class="flex justify-between text-sm"><span class="text-gray-500">Operating Margin</span><span class="font-medium">${format(((ratios.operatingMargin || (income.operatingIncome / income.revenue)) || 0) * 100, '', '%')}</span></div>
-                    <div class="flex justify-between text-sm"><span class="text-gray-500">Net Profit Margin</span><span class="font-medium">${format((ratios.netProfitMargin || 0) * 100, '', '%')}</span></div>
-                </div>
-                <div class="space-y-3">
-                    <h4 class="font-semibold text-gray-700 border-b pb-2">Dividend Info (Annual)</h4>
-                     <div class="flex justify-between text-sm"><span class="text-gray-500">Dividend Yield</span><span class="font-medium">${format((metrics.dividendYield || 0) * 100, '', '%')}</span></div>
-                    <div class="flex justify-between text-sm"><span class="text-gray-500">Payout Ratio</span><span class="font-medium">${format((ratios.payoutRatio || 0) * 100, '', '%')}</span></div>
-                </div>
-            </div>
-        `;
-    }
     
-    function populateFinancialTrends(data) {
-        const contentEl = document.getElementById('modal-financial-trends-content');
-        
-        const metrics = data.key_metrics_annual ? [...data.key_metrics_annual].reverse() : (data.keyMetrics ? [...data.keyMetrics].reverse() : []);
-        const income = data.income_statement_annual ? [...data.income_statement_annual].reverse() : (data.incomeStatement ? [...data.incomeStatement].reverse() : []);
-        const cashflow = data.cash_flow_statement_annual ? [...data.cash_flow_statement_annual].reverse() : (data.cashFlow ? [...data.cashFlow].reverse() : []);
-
-        if (metrics.length === 0 || income.length === 0) {
-            contentEl.innerHTML = '<p class="text-center text-gray-500">Trend data is not available.</p>';
-            return;
-        }
-        
-        const formatNum = (val, type = 'default') => {
-            if (val === null || typeof val === 'undefined' || isNaN(val)) return 'N/A';
-            if (type === 'currency') {
-                 if (Math.abs(val) >= 1e12) return `${(val / 1e12).toFixed(2)}T`;
-                 if (Math.abs(val) >= 1e9) return `${(val / 1e9).toFixed(2)}B`;
-                 if (Math.abs(val) >= 1e6) return `${(val / 1e6).toFixed(2)}M`;
-                 return val.toFixed(2);
-            }
-            if (type === 'percent') return `${(val * 100).toFixed(2)}%`;
-            if (type === 'eps') return val.toFixed(2);
-            return val.toFixed(2);
-        };
-
-        const years = income.map(i => i.calendarYear);
-        const headers = years.map(y => `<th class="px-3 py-2 text-xs text-right font-medium text-gray-500 uppercase tracking-wider">${y}</th>`).join('');
-
-        const createRow = (title, dataArray, key, formatType) => {
-            const cells = years.map(year => {
-                const record = dataArray.find(d => d.calendarYear === year);
-                const value = record ? record[key] : undefined;
-                return `<td class="px-3 py-2 whitespace-nowrap text-sm text-right text-gray-500">${formatNum(value, formatType)}</td>`;
-            }).join('');
-            return `<tr><td class="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">${title}</td>${cells}</tr>`;
-        };
-        
-        const tableRows = [
-            createRow('Revenue', income, 'revenue', 'currency'),
-            createRow('Net Income', income, 'netIncome', 'currency'),
-            createRow('EPS (Diluted)', income, 'epsdiluted', 'eps'),
-            createRow('Dividends per Share', metrics, 'dividendPerShare', 'eps'),
-            createRow('Return on Equity (ROE)', metrics, 'roe', 'percent'),
-            createRow('Debt to Equity', metrics, 'debtToEquity', 'default'),
-            createRow('Free Cash Flow', cashflow, 'freeCashFlow', 'currency')
-        ].join('');
-
-
-        contentEl.innerHTML = `
-            <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Metric</th>
-                            ${headers}
-                        </tr>
-                    </thead>
-                    <tbody class="bg-white divide-y divide-gray-200">${tableRows}</tbody>
-                </table>
-            </div>
-        `;
-    }
-
     function populateRawDataModal(data) {
         const contentEl = document.getElementById('modal-raw-data-content');
         if (!data) {
