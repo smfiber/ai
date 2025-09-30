@@ -643,9 +643,7 @@ export function renderCandidacyAnalysis(container, reportContent, prompt, dilige
         `;
     }
     
-    // Clean the AI's response to remove wrapping markdown code fences.
     const cleanedContent = (reportContent || '').trim().replace(/^```(?:markdown)?\s*\n/, '').replace(/\n```$/, '').trim();
-
     const reportHtml = marked.parse(cleanedContent);
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = reportHtml;
@@ -655,7 +653,6 @@ export function renderCandidacyAnalysis(container, reportContent, prompt, dilige
         let currentElement = diligenceSection.nextElementSibling;
         const questionsContainer = document.createElement('div');
 
-        // Extract all elements until the next H2
         while(currentElement && currentElement.tagName !== 'H2') {
             const nextElement = currentElement.nextElementSibling;
             questionsContainer.appendChild(currentElement);
@@ -665,6 +662,7 @@ export function renderCandidacyAnalysis(container, reportContent, prompt, dilige
         const questionsHtml = questionsContainer.innerHTML;
         const parser = new DOMParser();
         const doc = parser.parseFromString(questionsHtml, 'text/html');
+        const copyIcon = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75" /></svg>`;
 
         doc.querySelectorAll('li').forEach(li => {
             const strongTags = li.querySelectorAll('strong');
@@ -673,17 +671,29 @@ export function renderCandidacyAnalysis(container, reportContent, prompt, dilige
                 const aiQueryText = strongTags[1].nextSibling?.textContent.trim().replace(/^:/, '').replace(/^"|"$/g, '').trim();
 
                 if (humanQuestionText && aiQueryText) {
-                    const clickableDiv = document.createElement('div');
-                    clickableDiv.className = 'p-3 bg-indigo-50 border border-indigo-200 rounded-lg cursor-pointer hover:bg-indigo-100 transition-colors duration-150 mb-2';
-                    clickableDiv.innerHTML = `<p class="font-semibold text-sm text-indigo-800">Human-Led Question: ${sanitizeText(humanQuestionText)}</p><span class="text-xs text-indigo-600 font-medium">Click to investigate this question</span>`;
-                    clickableDiv.setAttribute('data-ai-query', sanitizeText(aiQueryText));
-                    
-                    li.parentNode.replaceChild(clickableDiv, li);
+                    const newContainer = document.createElement('div');
+                    newContainer.className = 'p-3 bg-indigo-50 border border-indigo-200 rounded-lg mb-2 space-y-2';
+                    newContainer.innerHTML = `
+                        <div class="flex items-start gap-2">
+                            <div class="flex-grow">
+                                <strong class="text-sm text-indigo-800">Human-Led Question:</strong>
+                                <span class="text-sm text-indigo-900">${sanitizeText(humanQuestionText)}</span>
+                            </div>
+                            <button type="button" class="copy-icon-btn actionable-diligence-copy-btn" title="Copy Question">${copyIcon}</button>
+                        </div>
+                        <div class="flex items-start gap-2">
+                            <div class="flex-grow cursor-pointer hover:underline" data-ai-query="${sanitizeText(aiQueryText)}" title="Click to investigate">
+                                <strong class="text-sm text-indigo-800">Suggested AI Investigation Query:</strong>
+                                <span class="text-sm text-indigo-900">${sanitizeText(aiQueryText)}</span>
+                            </div>
+                            <button type="button" class="copy-icon-btn actionable-diligence-copy-btn" title="Copy Query">${copyIcon}</button>
+                        </div>
+                    `;
+                    li.parentNode.replaceChild(newContainer, li);
                 }
             }
         });
 
-        // Insert the new content back into the original parsed HTML
         diligenceSection.innerHTML = `Actionable Diligence Questions`;
         diligenceSection.after(doc.body);
     }
@@ -700,6 +710,26 @@ export function renderCandidacyAnalysis(container, reportContent, prompt, dilige
                 diligenceInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
         });
+    });
+
+    const copyIcon = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75" /></svg>`;
+    const checkIcon = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>`;
+    container.addEventListener('click', e => {
+        const copyBtn = e.target.closest('.actionable-diligence-copy-btn');
+        if (copyBtn) {
+            const parentDiv = copyBtn.parentElement;
+            const textContainer = parentDiv.querySelector('.flex-grow');
+            const textToCopy = textContainer.querySelector('span').textContent;
+            
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                copyBtn.classList.add('copied');
+                copyBtn.innerHTML = checkIcon;
+                setTimeout(() => {
+                    copyBtn.classList.remove('copied');
+                    copyBtn.innerHTML = copyIcon;
+                }, 2000);
+            });
+        }
     });
 }
 
