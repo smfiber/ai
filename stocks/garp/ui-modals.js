@@ -1,3 +1,4 @@
+// fileName: ui-modals.js
 import { CONSTANTS, state, ANALYSIS_ICONS } from './config.js';
 import { getFmpStockData, getGroupedFmpData } from './api.js';
 import { renderValuationHealthDashboard, _renderGroupedStockList, renderPortfolioManagerList, renderGarpScorecardDashboard, renderGarpInterpretationAnalysis, updateGarpCandidacyStatus, renderCandidacyAnalysis, renderGarpAnalysisSummary, renderDiligenceLog, renderPeerComparisonTable } from './ui-render.js'; 
@@ -341,6 +342,7 @@ export async function openRawDataViewer(ticker) {
         const candidacyBtn = `<button data-symbol="${ticker}" data-report-type="GarpCandidacy" class="generate-candidacy-button bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg text-base">Generate GARP Candidacy Report</button>`;
         const generateAllBtn = `<button data-symbol="${ticker}" id="generate-all-reports-button" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg">Generate All Deep Dives</button>`;
         const garpMemoBtn = `<button data-symbol="${ticker}" id="investment-memo-button" data-report-type="InvestmentMemo" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg text-base">Generate GARP Memo</button>`;
+        const qarpBtn = `<button data-symbol="${ticker}" id="qarp-analysis-button" data-report-type="QarpAnalysis" class="ai-analysis-button bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 px-6 rounded-lg text-base">Generate QARP Analysis</button>`;
         
         const diligenceLogContainerHtml = `<div id="diligence-log-container" class="mb-6 text-left"></div>`;
 
@@ -420,10 +422,12 @@ export async function openRawDataViewer(ticker) {
 
                 <div class="p-4 bg-white rounded-lg border shadow-sm">
                     <div class="flex justify-center items-center gap-2 mb-4">
-                        <h3 class="text-lg font-bold text-gray-800">Step 4: Synthesize Final Memo</h3>
-                        <button data-report-type="InvestmentMemo" class="ai-help-button p-1 rounded-full hover:bg-indigo-100" title="What is this?"><svg class="w-5 h-5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg></button>
+                        <h3 class="text-lg font-bold text-gray-800">Step 4: Final Analysis & Memo</h3>
                     </div>
-                    <div class="flex justify-center">${garpMemoBtn}</div>
+                    <div class="flex justify-center flex-wrap gap-4">
+                        ${qarpBtn}
+                        ${garpMemoBtn}
+                    </div>
                 </div>
             </div>
         `;
