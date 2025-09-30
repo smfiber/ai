@@ -165,25 +165,20 @@ document.addEventListener("DOMContentLoaded", () => {
     function _calculateDividendScorecardMetrics(data) {
         const metricsTtm = data.key_metrics_ttm?.[0] || {};
         const ratiosTtm = data.ratios_ttm?.[0] || {};
-        const keyMetricsAnnual = (data.key_metrics_annual || []).slice().reverse();
         const cashFlowAnnual = (data.cash_flow_statement_annual || []).slice().reverse();
+        const financialGrowth = data.financial_growth?.[0] || {};
 
-        const getCagr = (startValue, endValue, periods) => {
-            if (typeof startValue !== 'number' || typeof endValue !== 'number' || startValue <= 0 || periods <= 0) return null;
-            return Math.pow(endValue / startValue, 1 / periods) - 1;
-        };
-        
         // --- CALCULATIONS ---
         const yieldTtm = ratiosTtm.dividendYieldTTM;
         const payoutRatioTtm = ratiosTtm.payoutRatioTTM;
         const de = metricsTtm.debtToEquityTTM;
 
-        // Dividend Growth (5Y CAGR)
+        // Dividend Growth (5Y CAGR) from pre-calculated total growth
         let divGrowth5y = null;
-        if (keyMetricsAnnual.length >= 6) {
-            const startIndex = keyMetricsAnnual.length - 6;
-            const lastIndex = keyMetricsAnnual.length - 1;
-            divGrowth5y = getCagr(keyMetricsAnnual[startIndex].dividendPerShare, keyMetricsAnnual[lastIndex].dividendPerShare, 5);
+        const totalGrowth5Y = financialGrowth.fiveYDividendperShareGrowthPerShare;
+        if (typeof totalGrowth5Y === 'number' && isFinite(totalGrowth5Y)) {
+            // Convert total growth over 5 years to a Compound Annual Growth Rate (CAGR)
+            divGrowth5y = Math.pow(1 + totalGrowth5Y, 1/5) - 1;
         }
 
         // FCF Payout Ratio
@@ -1112,7 +1107,8 @@ document.addEventListener("DOMContentLoaded", () => {
             key_metrics_annual: fetchedData.keyMetrics,
             ratios_annual: fetchedData.ratios,
             balance_sheet_statement_annual: fetchedData.balanceSheet,
-            cash_flow_statement_annual: fetchedData.cashFlow
+            cash_flow_statement_annual: fetchedData.cashFlow,
+            financial_growth: fetchedData.financial_growth
         };
     }
 
@@ -1120,7 +1116,7 @@ document.addEventListener("DOMContentLoaded", () => {
     async function fetchFullTickerDetails(symbol) {
         if (!appConfig.fmpApiKey) return null;
         const apiKey = appConfig.fmpApiKey;
-        // UPDATED: Replaced separate TTM endpoints with a single one.
+        // UPDATED: Replaced separate TTM endpoints with a single one and added financial_growth.
         const endpoints = {
             profile: `https://financialmodelingprep.com/api/v3/profile/${symbol}?apikey=${apiKey}`,
             keyMetrics: `https://financialmodelingprep.com/api/v3/key-metrics/${symbol}?period=annual&limit=10&apikey=${apiKey}`,
@@ -1128,9 +1124,9 @@ document.addEventListener("DOMContentLoaded", () => {
             incomeStatement: `https://financialmodelingprep.com/api/v3/income-statement/${symbol}?period=annual&limit=10&apikey=${apiKey}`,
             balanceSheet: `https://financialmodelingprep.com/api/v3/balance-sheet-statement/${symbol}?period=annual&limit=10&apikey=${apiKey}`,
             cashFlow: `https://financialmodelingprep.com/api/v3/cash-flow-statement/${symbol}?period=annual&limit=10&apikey=${apiKey}`,
-            // This new endpoint gets all TTM metrics and ratios in one call
             metrics_ratios_ttm: `https://financialmodelingprep.com/api/v3/ratios-ttm/${symbol}?apikey=${apiKey}`,
             analyst_estimates: `https://financialmodelingprep.com/api/v3/analyst-estimates/${symbol}?apikey=${apiKey}`,
+            financial_growth: `https://financialmodelingprep.com/api/v3/financial-growth/${symbol}?period=annual&limit=1&apikey=${apiKey}`,
         };
 
         try {
