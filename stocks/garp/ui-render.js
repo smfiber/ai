@@ -745,7 +745,8 @@ export function displayReport(container, content, prompt = null) {
         `;
     }
 
-    finalHtml += marked.parse(content || '');
+    const cleanedContent = (content || '').trim().replace(/^```(?:markdown)?\s*\n/, '').replace(/\n```$/, '').trim();
+    finalHtml += marked.parse(cleanedContent);
     container.innerHTML = finalHtml;
 }
 
