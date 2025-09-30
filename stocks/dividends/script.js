@@ -134,10 +134,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 return 0;
 
             case 'Dividend Growth (5Y)':
-                if (value > 0.10) return 1.2; // Strong growth
-                if (value > 0.05) return 1.0; // Steady growth
-                if (value > 0.02) return 0.5; // Slow growth
-                return 0; // Stagnant or negative growth
+                if (value > 0.10) return 1.2;  // Strong growth
+                if (value > 0.05) return 1.0;  // Steady growth
+                if (value > 0.02) return 0.5;  // Slow growth
+                if (value <= 0) return -1.0; // PENALTY for stagnant or negative growth
+                return 0;
 
             case 'FCF Payout Ratio':
                  if (value > 1.0 || value < 0) return 0; // Not covered by cash or negative
@@ -636,8 +637,7 @@ document.addEventListener("DOMContentLoaded", () => {
             data.forEach(stock => {
                 const cachedInfo = appConfig.cachedStockInfo[stock.symbol];
                 stock.cachedTimestamp = cachedInfo?.timestamp ? new Date(cachedInfo.timestamp).getTime() : null;
-                // We keep dividendYield null here as it will be calculated during render
-                stock.dividendYield = null;
+                stock.dividendYield = stock.dividendYieldPercentage || null;
             });
             
             advancedScreenerData = data;
@@ -678,12 +678,6 @@ document.addEventListener("DOMContentLoaded", () => {
         const sortedData = [...advancedScreenerData].sort((a, b) => {
             let valA = a[key];
             let valB = b[key];
-            
-            // Handle dividendYield sorting by calculating it on the fly
-            if (key === 'dividendYield') {
-                valA = (a.lastAnnualDividend > 0 && a.price > 0) ? (a.lastAnnualDividend / a.price) : -1;
-                valB = (b.lastAnnualDividend > 0 && b.price > 0) ? (b.lastAnnualDividend / b.price) : -1;
-            }
 
             if (valA === null || valA === undefined) return 1;
             if (valB === null || valB === undefined) return -1;
@@ -882,13 +876,6 @@ document.addEventListener("DOMContentLoaded", () => {
         const tableRows = data.map(stock => {
             const isSaved = savedStocks.has(stock.symbol);
             
-            // Calculate Dividend Yield on the fly
-            let dividendYieldHtml = 'N/A';
-            if (stock.lastAnnualDividend > 0 && stock.price > 0) {
-                const yieldPercent = (stock.lastAnnualDividend / stock.price) * 100;
-                dividendYieldHtml = yieldPercent.toFixed(2) + '%';
-            }
-
             return `
             <tr data-symbol-row="${stock.symbol}" class="${isSaved ? 'saved-stock-row' : ''}">
                 <td class="px-4 py-3 whitespace-nowrap text-sm">
@@ -907,7 +894,7 @@ document.addEventListener("DOMContentLoaded", () => {
                  <td class="px-4 py-3 whitespace-nowrap text-sm text-center" data-rating-symbol="${stock.symbol}">${getRatingHtml(stock.symbol)}</td>
                  <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-right">${stock.price ? '$'+stock.price.toFixed(2) : 'N/A'}</td>
                  <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-right">${stock.lastAnnualDividend ? '$'+stock.lastAnnualDividend.toFixed(2) : 'N/A'}</td>
-                 <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-right">${dividendYieldHtml}</td>
+                 <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-right">${stock.dividendYield ? stock.dividendYield.toFixed(2) + '%' : 'N/A'}</td>
                  <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500" data-cached-on-symbol="${stock.symbol}">${formatDate(stock.cachedTimestamp)}</td>
             </tr>`;
         }).join('');
