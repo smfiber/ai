@@ -36,6 +36,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const financialsModalCloseBtn = document.getElementById('financialsModalCloseBtn');
     const refreshFinancialsBtn = document.getElementById('refreshFinancialsBtn');
     const saveToFirebaseBtn = document.getElementById('saveToFirebaseBtn');
+    const deleteOldDataBtn = document.getElementById('deleteOldDataBtn');
+    const batchProcessBtn = document.getElementById('batchProcessBtn');
+    const batchStatus = document.getElementById('batchStatus');
     const appContent = document.getElementById('appContent');
     const financialsModalTabs = document.getElementById('financials-modal-tabs');
     // Auth Elements
@@ -375,6 +378,7 @@ document.addEventListener("DOMContentLoaded", () => {
             weightedScore += metric.weight * multiplier;
             
             metric.isMet = multiplier >= 1.0;
+            metric.multiplier = multiplier;
             metric.interpretation = _getMetricInterpretation(key, metric.value);
         }
 
@@ -391,10 +395,19 @@ document.addEventListener("DOMContentLoaded", () => {
         const tilesHtml = Object.entries(metrics).map(([name, data]) => {
             if (name === 'garpConvictionScore') return '';
             let valueDisplay = 'N/A';
+            
             let colorClass = 'text-gray-500 italic';
+            if (typeof data.multiplier === 'number') {
+                if (data.multiplier > 1.0) {
+                    colorClass = 'price-gain'; // Green for exceptional
+                } else if (data.multiplier === 1.0) {
+                    colorClass = 'price-neutral'; // Yellow for good
+                } else {
+                    colorClass = 'price-loss'; // Red for fail/partial
+                }
+            }
 
             if (typeof data.value === 'number' && isFinite(data.value)) {
-                colorClass = data.isMet ? 'price-gain' : 'price-loss';
                 if (data.format === 'percent') {
                     valueDisplay = `${(data.value * 100).toFixed(2)}%`;
                 } else if (data.format === 'number') {
@@ -403,6 +416,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 else {
                     valueDisplay = data.value.toFixed(2);
                 }
+            } else {
+                 colorClass = 'text-gray-500 italic';
             }
             
             return `
@@ -487,6 +502,19 @@ document.addEventListener("DOMContentLoaded", () => {
         googleSignInBtn.addEventListener('click', signInWithGoogle);
         signOutBtn.addEventListener('click', signOut);
         apiKeyForm.addEventListener('submit', handleApiKeyFormSubmit);
+        deleteOldDataBtn.addEventListener('click', async () => {
+            if (db && confirm('Are you sure you want to permanently delete all old data from the "financial-details" table? This action cannot be undone.')) {
+                try {
+                    await db.ref('financial-details').remove();
+                    alert('The old "financial-details" table has been successfully deleted.');
+                } catch (error) {
+                    console.error("Failed to delete old data:", error);
+                    alert(`An error occurred while trying to delete the data: ${error.message}`);
+                }
+            } else if (!db) {
+                alert("Please save your configuration and sign in first to connect to the database.");
+            }
+        });
     }
     
     // --- 4. Auth and Session Management ---
@@ -653,6 +681,7 @@ document.addEventListener("DOMContentLoaded", () => {
         setupFinancialsModalListeners();
         advancedScreenerFilterForm.addEventListener('submit', handleAdvancedScreenerRun);
         document.getElementById('advanced-screener-data-container').addEventListener('click', handleSortClick);
+        batchProcessBtn.addEventListener('click', handleBatchProcess);
         
         await populateIndustryDropdown();
 
@@ -665,10 +694,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 toggleSaveStock(saveBtn.dataset.symbol);
             }
         });
-
-        await loadAllCachedInfo();
         
-        console.log("All data loaded.");
+        console.log("Application loaded. Ready for screening.");
     }
     
     async function populateIndustryDropdown() {
@@ -791,19 +818,6 @@ document.addEventListener("DOMContentLoaded", () => {
             const response = await fetch(url);
             if (!response.ok) throw new Error(`API request failed: ${response.status}`);
             const data = await response.json();
-
-            data.forEach(stock => {
-                const cachedInfo = appConfig.cachedStockInfo[stock.symbol];
-                stock.cachedTimestamp = cachedInfo?.timestamp ? new Date(cachedInfo.timestamp).getTime() : null;
-                
-                // **NEW**: Robustly calculate dividend yield
-                if (stock.price > 0 && typeof stock.lastAnnualDividend === 'number') {
-                    stock.dividendYield = (stock.lastAnnualDividend / stock.price) * 100;
-                } else {
-                    // Fallback to the API's pre-calculated value
-                    stock.dividendYield = stock.dividendYieldPercentage ?? null;
-                }
-            });
             
             advancedScreenerData = data;
             currentSort = { key: 'marketCap', direction: 'desc' };
@@ -867,43 +881,10 @@ document.addEventListener("DOMContentLoaded", () => {
     async function saveTickerDetailsToFirebase(symbol, data) {
         if (!db) return;
         try {
-            await db.ref(`financial-details/${symbol}`).set(data);
+            await db.ref(`financial-details-v2/${symbol}`).set(data);
             console.log(`Details for ${symbol} saved to Firebase.`);
         } catch (error) {
             console.error(`Failed to save details for ${symbol}:`, error);
-        }
-    }
-    
-    async function getAllCachedSymbols() {
-        if(!db) return new Set();
-        try {
-            const snapshot = await db.ref('financial-details').get();
-            return snapshot.exists() ? new Set(Object.keys(snapshot.val())) : new Set();
-        } catch (error) {
-            console.error("Failed to get all cached symbols:", error);
-            return new Set();
-        }
-    }
-    
-    async function loadAllCachedInfo() {
-        if (!db) return;
-        try {
-            const snapshot = await db.ref('financial-details').get();
-            if (snapshot.exists()) {
-                const allDetails = snapshot.val();
-                for (const symbol in allDetails) {
-                    const stockData = allDetails[symbol];
-                    if (stockData.hasOwnProperty('garpConvictionScore') && stockData.timestamp) {
-                        appConfig.cachedStockInfo[symbol] = { 
-                            rating: stockData.garpConvictionScore,
-                            timestamp: stockData.timestamp 
-                        };
-                    }
-                }
-                console.log("Successfully loaded all cached stock info (scores and timestamps).");
-            }
-        } catch(error) {
-            console.error("Could not load cached stock info from Firebase:", error);
         }
     }
 
@@ -924,27 +905,6 @@ document.addEventListener("DOMContentLoaded", () => {
         const year = date.getFullYear();
         return `${month}/${day}/${year}`;
     }
-    
-    function updateViewedIndicatorForSymbol(symbol) {
-        const indicators = document.querySelectorAll(`.viewed-indicator[data-indicator-symbol="${symbol}"]`);
-        indicators.forEach(indicator => {
-            indicator.innerHTML = '👁️';
-            indicator.title = "You have viewed the details for this stock."
-        });
-    }
-
-    async function updateViewedIndicators() {
-        const cachedSymbols = await getAllCachedSymbols();
-        const indicators = document.querySelectorAll('.viewed-indicator');
-        indicators.forEach(indicator => {
-            if (cachedSymbols.has(indicator.dataset.indicatorSymbol)) {
-                indicator.innerHTML = '👁️';
-                indicator.title = "You have viewed the details for this stock."
-            } else {
-                indicator.innerHTML = '';
-            }
-        });
-    }
 
     function getRatingHtml(symbol) {
         const score = appConfig.cachedStockInfo[symbol]?.rating;
@@ -963,14 +923,21 @@ document.addEventListener("DOMContentLoaded", () => {
         return `<span class="text-xs text-gray-400">as of ${formatDate(timestamp)}</span>`;
     }
 
-    function updateSingleStockInScreener(symbol, timestamp) {
+    function updateScoreInUI(symbol, score, timestamp) {
+        // Update in-memory cache
+        appConfig.cachedStockInfo[symbol] = { 
+            rating: score,
+            timestamp: timestamp 
+        };
         const numericTimestamp = new Date(timestamp).getTime();
-        
+
+        // Update the screener data model if it exists
         const stockInDataModel = advancedScreenerData.find(s => s.symbol === symbol);
         if (stockInDataModel) {
             stockInDataModel.cachedTimestamp = numericTimestamp;
         }
 
+        // Update all UI elements for this symbol
         document.querySelectorAll(`[data-rating-symbol="${symbol}"]`).forEach(cell => {
             cell.innerHTML = getRatingHtml(symbol);
         });
@@ -1019,7 +986,6 @@ document.addEventListener("DOMContentLoaded", () => {
                         <i class="${isSaved ? 'fas' : 'far'} fa-star"></i>
                     </button>
                      <button class="ticker-details-btn font-medium text-indigo-600 hover:text-indigo-800" data-symbol="${stock.symbol}">${stock.symbol}</button>
-                     <span class="viewed-indicator" data-indicator-symbol="${stock.symbol}"></span>
                 </td>
                 <td class="px-4 py-3 text-sm text-gray-600 break-words">${formatText(stock.companyName)}</td>
                 <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-right">${formatMarketCap(stock.marketCap)}</td>
@@ -1035,7 +1001,6 @@ document.addEventListener("DOMContentLoaded", () => {
             </tr>`;
         }).join('');
         container.innerHTML = `<div class="overflow-y-auto max-h-[60vh]"><table class="w-full table-fixed divide-y divide-gray-200"><thead class="bg-gray-50 sticky top-0"><tr>${headers}</tr></thead><tbody class="bg-white divide-y divide-gray-200">${tableRows}</tbody></table></div>`;
-        updateViewedIndicators();
     }
     
     async function renderSavedStocksTable() {
@@ -1065,7 +1030,6 @@ document.addEventListener("DOMContentLoaded", () => {
                             <i class="${isSaved ? 'fas' : 'far'} fa-star"></i>
                         </button>
                         <button class="ticker-details-btn font-medium text-indigo-600 hover:text-indigo-800" data-symbol="${stock.symbol}">${stock.symbol}</button>
-                        <span class="viewed-indicator" data-indicator-symbol="${stock.symbol}"></span>
                     </td>
                     <td class="px-4 py-3 text-sm text-gray-600 break-words">${formatText(stock.companyName)}</td>
                     <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-right">${formatMarketCap(stock.mktCap)}</td>
@@ -1077,7 +1041,6 @@ document.addEventListener("DOMContentLoaded", () => {
             }).join('');
 
             container.innerHTML = `<div class="overflow-y-auto max-h-[60vh]"><table class="w-full table-fixed divide-y divide-gray-200"><thead class="bg-gray-50 sticky top-0"><tr><th class="w-[15%] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Symbol</th><th class="w-[30%] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Company</th><th class="w-[15%] px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Market Cap</th><th class="w-[15%] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sector</th><th class="w-[10%] px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Conviction Score</th><th class="w-[5%] px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Beta</th><th class="w-[10%] px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Price</th></tr></thead><tbody class="bg-white divide-y divide-gray-200">${tableRows}</tbody></table></div>`;
-            updateViewedIndicators();
 
         } catch (error) {
             console.error("Error rendering saved stocks table:", error);
@@ -1114,9 +1077,7 @@ document.addEventListener("DOMContentLoaded", () => {
                                                 <i class="${isSaved ? 'fas' : 'far'} fa-star"></i>
                                             </button>
                                             <p class="font-bold text-sm text-indigo-600 truncate pr-2">
-                                                <button class="ticker-details-btn text-left w-full" data-symbol="${stock.symbol}">${stock.symbol}
-                                                    <span class="viewed-indicator" data-indicator-symbol="${stock.symbol}"></span>
-                                                </button>
+                                                <button class="ticker-details-btn text-left w-full" data-symbol="${stock.symbol}">${stock.symbol}</button>
                                             </p>
                                         </div>
                                         <p class="text-xs font-semibold text-gray-700 whitespace-nowrap">${formatMarketCap(stock.marketCap)}</p>
@@ -1137,7 +1098,6 @@ document.addEventListener("DOMContentLoaded", () => {
             html += `</div>`;
         }
         container.innerHTML = html;
-        updateViewedIndicators();
     }
 
     // --- 13. Financials Modal Logic ---
@@ -1184,13 +1144,9 @@ document.addEventListener("DOMContentLoaded", () => {
             if (symbol && currentModalDataToSave) {
                 await saveTickerDetailsToFirebase(symbol, currentModalDataToSave);
                 
-                // Update local cache and UI to reflect the save
                 const { garpConvictionScore, timestamp } = currentModalDataToSave;
-                appConfig.cachedStockInfo[symbol] = { rating: garpConvictionScore, timestamp: timestamp };
-                updateSingleStockInScreener(symbol, timestamp);
-                updateViewedIndicatorForSymbol(symbol);
+                updateScoreInUI(symbol, garpConvictionScore, timestamp);
                 
-                // Provide user feedback
                 saveToFirebaseBtn.disabled = true;
                 saveToFirebaseBtn.innerHTML = '<i class="fas fa-check mr-2"></i>Saved!';
             }
@@ -1207,17 +1163,49 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         });
     }
+    
+    async function handleBatchProcess() {
+        if (!advancedScreenerData || advancedScreenerData.length === 0) {
+            alert("No stocks in the screener results to process.");
+            return;
+        }
+
+        batchProcessBtn.disabled = true;
+        const total = advancedScreenerData.length;
+
+        for (let i = 0; i < total; i++) {
+            const stock = advancedScreenerData[i];
+            batchStatus.textContent = `Processing ${i + 1} of ${total}: ${stock.symbol}`;
+            
+            try {
+                const liveData = await fetchFullTickerDetails(stock.symbol);
+                if (liveData) {
+                    const garpData = mapDataForGarp(liveData);
+                    const metrics = _calculateGarpScorecardMetrics(garpData);
+                    const timestamp = new Date().toISOString();
+                    updateScoreInUI(stock.symbol, metrics.garpConvictionScore, timestamp);
+                }
+                await delay(200); // 200ms delay to respect API rate limits
+            } catch (error) {
+                console.error(`Failed to process ${stock.symbol}:`, error);
+                batchStatus.textContent = `Error on ${stock.symbol}. Skipping...`;
+                await delay(500);
+            }
+        }
+
+        batchStatus.textContent = "Batch complete!";
+        batchProcessBtn.disabled = false;
+        setTimeout(() => batchStatus.textContent = "", 3000);
+    }
 
     async function handleTickerClick(symbol) {
         showFinancialsModal();
         refreshFinancialsBtn.dataset.symbol = symbol;
         saveToFirebaseBtn.dataset.symbol = symbol;
         
-        // Reset button state every time modal is opened
         saveToFirebaseBtn.disabled = false;
         saveToFirebaseBtn.innerHTML = '<i class="fas fa-cloud-upload-alt mr-2"></i>Save to Cloud';
         
-        // Reset UI
         document.getElementById('modal-company-name').textContent = `Loading... (${symbol})`;
         document.getElementById('modal-stock-price').textContent = '';
         document.getElementById('modal-last-updated').textContent = '...';
@@ -1235,7 +1223,6 @@ document.addEventListener("DOMContentLoaded", () => {
             const garpData = mapDataForGarp(liveData);
             const metrics = _calculateGarpScorecardMetrics(garpData);
             
-            // Populate the UI
             const profile = liveData.profile?.[0] || {};
             document.getElementById('modal-company-name').textContent = `${profile.companyName || 'N/A'} (${profile.symbol || ''})`;
             document.getElementById('modal-stock-price').textContent = profile.price ? `$${Number(profile.price).toFixed(2)}` : 'N/A';
@@ -1251,7 +1238,6 @@ document.addEventListener("DOMContentLoaded", () => {
              document.getElementById('modal-raw-data-content').innerHTML = '';
              currentModalDataToSave = null;
         }
-        updateViewedIndicatorForSymbol(symbol);
     }
 
     function mapDataForGarp(fetchedData) {
@@ -1270,7 +1256,7 @@ document.addEventListener("DOMContentLoaded", () => {
     async function fetchFullTickerDetails(symbol) {
         if (!appConfig.fmpApiKey) return null;
         const apiKey = appConfig.fmpApiKey;
-        // Reduced set of endpoints needed only for the conviction score
+        
         const endpoints = {
             profile: `https://financialmodelingprep.com/api/v3/profile/${symbol}?apikey=${apiKey}`,
             keyMetrics: `https://financialmodelingprep.com/api/v3/key-metrics/${symbol}?period=annual&limit=10&apikey=${apiKey}`,
