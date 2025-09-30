@@ -304,7 +304,7 @@ You are a Senior Investment Analyst at a GARP-focused ("Growth at a Reasonable P
 ## 5. Foundational Q&A and Final Verdict
 (First, provide a direct answer to the following five foundational questions. Synthesize the answers from the 'Diligence Log' to inform your verdict. The quality of the diligence answers should directly influence your confidence and recommendation. A strong GARP candidate must have convincing, data-backed answers to these questions.)
 
-1.  **Financial Analysis:** Does the diligence show a story of high-quality, durable growth, or are fundamentals weakening?
+1.  **Financial Analysis:** Does the diligence show a story of high-quality, durable growth, or are there signs of weakening fundamentals?
     * [Your Answer Here]
 2.  **Balance Sheet:** Does the diligence confirm the balance sheet is a fortress capable of funding future growth?
     * [Your Answer Here]
