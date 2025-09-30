@@ -169,9 +169,9 @@ document.addEventListener("DOMContentLoaded", () => {
         const financialGrowth = data.financial_growth?.[0] || {};
 
         // --- CALCULATIONS ---
-        const yieldTtm = ratiosTtm.dividendYieldTTM;
+        const yieldTtm = ratiosTtm.dividendYielTTM; // CORRECTED PROPERTY NAME
         const payoutRatioTtm = ratiosTtm.payoutRatioTTM;
-        const de = metricsTtm.debtToEquityTTM;
+        const de = metricsTtm.debtEquityRatioTTM; // CORRECTED PROPERTY NAME
 
         // Dividend Growth (5Y CAGR) from pre-calculated total growth
         let divGrowth5y = null;
