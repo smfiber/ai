@@ -236,9 +236,14 @@
         </div>
          <div class="flex justify-between items-center py-3">
              <p id="modal-last-updated" class="text-xs text-gray-500">Loading...</p>
-             <button id="refreshFinancialsBtn" data-symbol="" class="text-sm bg-indigo-100 text-indigo-700 hover:bg-indigo-200 rounded-md px-3 py-1 font-semibold">
-                 <i class="fas fa-sync-alt mr-2"></i>Refresh Data
-            </button>
+             <div class="flex items-center space-x-2">
+                 <button id="saveToFirebaseBtn" data-symbol="" class="text-sm bg-green-100 text-green-700 hover:bg-green-200 rounded-md px-3 py-1 font-semibold">
+                     <i class="fas fa-cloud-upload-alt mr-2"></i>Save to Cloud
+                 </button>
+                 <button id="refreshFinancialsBtn" data-symbol="" class="text-sm bg-indigo-100 text-indigo-700 hover:bg-indigo-200 rounded-md px-3 py-1 font-semibold">
+                     <i class="fas fa-sync-alt mr-2"></i>Refresh Data
+                </button>
+            </div>
         </div>
         <div class="border-b border-gray-200">
             <nav id="financials-modal-tabs" class="-mb-px flex space-x-4" aria-label="Tabs">
