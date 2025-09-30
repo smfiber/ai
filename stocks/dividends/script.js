@@ -1120,6 +1120,7 @@ document.addEventListener("DOMContentLoaded", () => {
     async function fetchFullTickerDetails(symbol) {
         if (!appConfig.fmpApiKey) return null;
         const apiKey = appConfig.fmpApiKey;
+        // UPDATED: Replaced separate TTM endpoints with a single one.
         const endpoints = {
             profile: `https://financialmodelingprep.com/api/v3/profile/${symbol}?apikey=${apiKey}`,
             keyMetrics: `https://financialmodelingprep.com/api/v3/key-metrics/${symbol}?period=annual&limit=10&apikey=${apiKey}`,
@@ -1127,8 +1128,8 @@ document.addEventListener("DOMContentLoaded", () => {
             incomeStatement: `https://financialmodelingprep.com/api/v3/income-statement/${symbol}?period=annual&limit=10&apikey=${apiKey}`,
             balanceSheet: `https://financialmodelingprep.com/api/v3/balance-sheet-statement/${symbol}?period=annual&limit=10&apikey=${apiKey}`,
             cashFlow: `https://financialmodelingprep.com/api/v3/cash-flow-statement/${symbol}?period=annual&limit=10&apikey=${apiKey}`,
-            key_metrics_ttm: `https://financialmodelingprep.com/api/v3/key-metrics-ttm/${symbol}?apikey=${apiKey}`,
-            ratios_ttm: `https://financialmodelingprep.com/api/v3/ratios-ttm/${symbol}?apikey=${apiKey}`,
+            // This new endpoint gets all TTM metrics and ratios in one call
+            metrics_ratios_ttm: `https://financialmodelingprep.com/api/v3/ratios-ttm/${symbol}?apikey=${apiKey}`,
             analyst_estimates: `https://financialmodelingprep.com/api/v3/analyst-estimates/${symbol}?apikey=${apiKey}`,
         };
 
@@ -1148,6 +1149,10 @@ document.addEventListener("DOMContentLoaded", () => {
                     data[key] = []; // Default to empty array on failure
                 }
             });
+
+            // Add aliases for the new combined endpoint to avoid breaking other functions
+            data.key_metrics_ttm = data.metrics_ratios_ttm;
+            data.ratios_ttm = data.metrics_ratios_ttm;
 
             return data;
 
