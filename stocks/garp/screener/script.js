@@ -1,4 +1,4 @@
-// Version 5.6.0
+// Version 5.7.0
 document.addEventListener("DOMContentLoaded", () => {
     // --- 1. Global Configuration Object ---
     const appConfig = {
@@ -684,7 +684,7 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-        let url = `https://financialmodelingprep.com/api/v3/stock-screener?apikey=${appConfig.fmpApiKey}&limit=1000&isEtf=false&isFund=false&dividendYieldMoreThan=0.00001`;
+        let url = `https://financialmodelingprep.com/api/v3/stock-screener?apikey=${appConfig.fmpApiKey}&limit=1000&isEtf=false&isFund=false`;
         
         const formIds = ["marketCapMoreThan", "marketCapLowerThan", "betaMoreThan", "betaLowerThan", "volumeMoreThan", "volumeLowerThan", "dividendMoreThan", "dividendLowerThan", "sector", "industry", "exchange", "country"];
         const form = document.getElementById('advancedScreenerFilterForm');
@@ -703,7 +703,14 @@ document.addEventListener("DOMContentLoaded", () => {
             data.forEach(stock => {
                 const cachedInfo = appConfig.cachedStockInfo[stock.symbol];
                 stock.cachedTimestamp = cachedInfo?.timestamp ? new Date(cachedInfo.timestamp).getTime() : null;
-                stock.dividendYield = stock.dividendYieldPercentage || null;
+                
+                // **NEW**: Robustly calculate dividend yield
+                if (stock.price > 0 && typeof stock.lastAnnualDividend === 'number') {
+                    stock.dividendYield = (stock.lastAnnualDividend / stock.price) * 100;
+                } else {
+                    // Fallback to the API's pre-calculated value
+                    stock.dividendYield = stock.dividendYieldPercentage ?? null;
+                }
             });
             
             advancedScreenerData = data;
@@ -906,7 +913,7 @@ document.addEventListener("DOMContentLoaded", () => {
             getSortableHeaderHtml('beta', 'Beta', 'w-[5%]', 'right'),
             `<th class="w-[8%] px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Conviction Score</th>`,
             getSortableHeaderHtml('price', 'Price', 'w-[6%]', 'right'),
-            getSortableHeaderHtml('lastAnnualDividend', 'Dividend', 'w-[6%]', 'right'),
+            getSortableHeaderHtml('lastAnnualDividend', 'Dividend $', 'w-[6%]', 'right'),
             getSortableHeaderHtml('dividendYield', 'Dividend %', 'w-[6%]', 'right'),
             getSortableHeaderHtml('cachedTimestamp', 'Cached On', 'w-[8%]', 'left')
         ].join('');
@@ -931,7 +938,7 @@ document.addEventListener("DOMContentLoaded", () => {
                  <td class="px-4 py-3 whitespace-nowrap text-sm text-center" data-rating-symbol="${stock.symbol}">${getRatingHtml(stock.symbol)}</td>
                  <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-right">${stock.price ? '$'+stock.price.toFixed(2) : 'N/A'}</td>
                  <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-right">${stock.lastAnnualDividend ? '$'+stock.lastAnnualDividend.toFixed(2) : 'N/A'}</td>
-                 <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-right">${stock.dividendYield ? stock.dividendYield.toFixed(2) + '%' : 'N/A'}</td>
+                 <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-right">${typeof stock.dividendYield === 'number' ? stock.dividendYield.toFixed(2) + '%' : 'N/A'}</td>
                  <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500" data-cached-on-symbol="${stock.symbol}">${formatDate(stock.cachedTimestamp)}</td>
             </tr>`;
         }).join('');
