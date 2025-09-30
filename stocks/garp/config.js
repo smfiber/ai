@@ -500,6 +500,37 @@ export const promptMap = {
         prompt: GARP_ANALYSIS_PROMPT,
         requires: ['profile', 'key_metrics_annual', 'ratios_annual', 'analyst_estimates', 'income_statement_annual']
     },
+    'QarpAnalysis': {
+        prompt: `
+Role: You are a Senior Investment Analyst specializing in the "Quality at a Reasonable Price" (QARP) philosophy. Your task is to provide a rigorous, data-driven analysis that weighs a company's quality against its current valuation.
+Data Instructions: Your analysis MUST be based *exclusively* on the pre-calculated metrics provided in the JSON data below. Do not recalculate any values.
+Output Format: The final report must be in professional markdown format. Use # for the main title, ## for major sections, and bullet points.
+
+JSON Data with Pre-Calculated Metrics:
+{jsonData}
+
+# QARP Analysis: {companyName} ({tickerSymbol})
+
+## 1. Executive Summary & Verdict
+(Provide a concise, one-paragraph summary. Conclude with a clear verdict: "This company appears to be a **strong QARP candidate**," "a **borderline QARP candidate**," or "**does not meet the criteria** for a QARP investment at this time.")
+
+## 2. The "Quality" Pillar: Is This a Superior Business?
+(Analyze the company's quality using the scorecard data. Address the following:)
+- **Profitability & Efficiency:** Based on the **Return on Equity (ROE)** and **Return on Invested Capital (ROIC)**, how effectively does management generate profits?
+- **Financial Strength:** How resilient is the company? Analyze the **Debt-to-Equity** ratio to assess its financial leverage and risk.
+- **Growth Stability:** Evaluate the **EPS Growth (5Y)** and **Revenue Growth (5Y)**. Do these figures suggest a history of durable, consistent growth?
+
+## 3. The "Reasonable Price" Pillar: Are We Overpaying?
+(Analyze the company's valuation using the scorecard data. Address the following:)
+- **Core Valuation:** Based on the **P/E (TTM)** and **Forward P/E** ratios, does the stock appear cheap or expensive on an earnings basis?
+- **Growth-Adjusted Valuation:** Use the **PEG Ratio** to determine if the price is justified by its forward growth estimates.
+- **Cash Flow Valuation:** Analyze the **Price to FCF** ratio. How does the valuation look when measured against the actual cash the business generates?
+
+## 4. Final Synthesis: The QARP Verdict
+(Synthesize the findings from the two pillars into a final conclusion. Explain the trade-offs. For example, is this a very high-quality company trading at a slight premium, or a medium-quality company at a very cheap price? Based on this balance, reiterate and justify your final verdict.)
+        `.trim(),
+        requires: [] // Uses the same scorecard data as GARP Candidacy
+    },
     'MoatAnalysis': {
         prompt: MOAT_ANALYSIS_PROMPT,
         requires: ['profile', 'key_metrics_annual', 'income_statement_annual', 'cash_flow_statement_annual', 'ratios_annual']
@@ -541,6 +572,7 @@ export const promptMap = {
 export const ANALYSIS_ICONS = {
     'FinancialAnalysis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6a7.5 7.5 0 100 15 7.5 7.5 0 000-15z" /><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.2-5.2" /><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 10.5H10.5v.008H10.5V10.5zm.008 0h.008v4.502h-.008V10.5z" /></svg>`,
     'GarpAnalysis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18L9 11.25l1.5 1.5L13.5 6l3 3 4.5-4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`,
+    'QarpAnalysis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`,
     'MoatAnalysis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.286zm0 13.036h.008v.008h-.008v-.008z" /></svg>`,
     'RiskAssessment': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" /></svg>`,
     'CapitalAllocators': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15.91 15.91a2.25 2.25 0 01-3.182 0l-3.03-3.03a.75.75 0 011.06-1.061l2.47 2.47 2.47-2.47a.75.75 0 011.06 1.06l-3.03 3.03z" /></svg>`,
@@ -550,6 +582,7 @@ export const ANALYSIS_ICONS = {
 export const ANALYSIS_NAMES = {
     'FinancialAnalysis': 'Financial Analysis',
     'GarpAnalysis': 'GARP Analysis',
+    'QarpAnalysis': 'QARP Analysis',
     'MoatAnalysis': 'Moat Analysis',
     'RiskAssessment': 'Risk Assessment',
     'CapitalAllocators': 'Capital Allocators',
