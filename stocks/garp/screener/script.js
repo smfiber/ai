@@ -1,4 +1,4 @@
-// Version 5.5.0
+// Version 5.6.0
 document.addEventListener("DOMContentLoaded", () => {
     // --- 1. Global Configuration Object ---
     const appConfig = {
@@ -43,7 +43,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const userEmailSpan = document.getElementById('user-email');
 
 
-    // --- NEW: DATA PROCESSING LOGIC FROM STOCK RESEARCH HUB ---
+    // --- DATA PROCESSING LOGIC ---
 
     function formatLargeNumber(value, precision = 2) {
         const num = parseFloat(value);
@@ -61,28 +61,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     /**
-     * Formats a large number into a more readable string with suffixes (K, M, B, T).
-     * @param {number|string} value The number to format.
-     * @param {number} precision The number of decimal places to use.
-     * @returns {string} The formatted number string or "N/A".
-     */
-    function formatLargeNumber(value, precision = 2) {
-        const num = parseFloat(value);
-        if (isNaN(num) || num === 0) return "N/A";
-        const tiers = [
-            { value: 1e12, suffix: 'T' }, { value: 1e9,  suffix: 'B' },
-            { value: 1e6,  suffix: 'M' }, { value: 1e3,  suffix: 'K' },
-        ];
-        const tier = tiers.find(t => Math.abs(num) >= t.value);
-        if (tier) {
-            const formattedNum = (num / tier.value).toFixed(precision);
-            return `${formattedNum}${tier.suffix}`;
-        }
-        return num.toFixed(precision);
-    }
-
-    /**
-     * NEW: Analyzes a metric's value against GARP criteria to provide a qualitative interpretation.
+     * Analyzes a metric's value against GARP criteria to provide a qualitative interpretation.
      * @param {string} metricName The name of the metric being analyzed.
      * @param {number|null} value The calculated value of the metric.
      * @returns {object} An object containing the category and explanatory text.
@@ -134,7 +113,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (value < 0.7) return { category: 'Low Leverage', text: 'Indicates a healthy and manageable debt level, reducing financial risk.' };
                 return { category: 'High Leverage', text: 'A potential red flag. The company relies heavily on debt, which increases risk during economic weakness.' };
 
-            // ADDED: Interpretation for Price to FCF
             case 'Price to FCF':
                 if (value < 15) return { category: 'Potentially Undervalued', text: 'The market price appears low relative to the company\'s ability to generate cash, a strong sign of value.' };
                 if (value < 25) return { category: 'Reasonable Price', text: 'A healthy valuation that suggests the market price is not excessive relative to the company\'s cash flow.' };
@@ -205,7 +183,6 @@ document.addEventListener("DOMContentLoaded", () => {
                  if (value < 4.0) return 0.5;
                  return 0;
 
-            // ADDED: Multiplier logic for Price to FCF
             case 'Price to FCF':
                 if (value <= 0) return 0;
                 if (value < 15) return 1.2;
@@ -227,7 +204,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     /**
      * Calculates metrics for the GARP Scorecard dashboard.
-     * @param {object} data - The full FMP data object for a stock.
+     * @param {object} data - The FMP data object needed for the score.
      * @returns {object} An object containing GARP metrics with their values and pass/fail status.
      */
     function _calculateGarpScorecardMetrics(data) {
@@ -277,7 +254,6 @@ document.addEventListener("DOMContentLoaded", () => {
             peg = pe / (epsNext1y * 100);
         }
 
-        // ADDED: Calculation for Price to FCF
         let pfcf = null;
         const fcfPerShareTtm = metricsTtm.freeCashFlowPerShareTTM;
         if (currentPrice > 0 && fcfPerShareTtm > 0) {
@@ -295,7 +271,6 @@ document.addEventListener("DOMContentLoaded", () => {
             'Forward P/E': { value: forwardPe, format: 'decimal', weight: 8 },
             'PEG Ratio': { value: peg, format: 'decimal', weight: 15 },
             'P/S Ratio': { value: ps, format: 'decimal', weight: 5 },
-            // ADDED: Metric definition for Price to FCF
             'Price to FCF': { value: pfcf, format: 'decimal', weight: 10 },
             'Debt-to-Equity': { value: de, format: 'decimal', weight: 5 },
         };
@@ -310,16 +285,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
             totalWeight += metric.weight;
             weightedScore += metric.weight * multiplier;
-
-            // Restore the isMet property for UI coloring (pass >= 1.0)
-            metric.isMet = multiplier >= 1.0;
             
+            metric.isMet = multiplier >= 1.0;
             metric.interpretation = _getMetricInterpretation(key, metric.value);
         }
 
         const rawScore = (weightedScore / totalWeight) * 100;
         
-        // Cap the final score at 100 and handle potential NaN results
         metrics.garpConvictionScore = Math.round(Math.min(100, rawScore) || 0);
         
         return metrics;
@@ -493,7 +465,6 @@ document.addEventListener("DOMContentLoaded", () => {
             }
             Object.assign(appConfig, { ...formValues, firebaseConfig: parsedFirebaseConfig });
             
-            // Initialize Firebase here, after getting the config
             try {
                 if (!firebase.apps.length) {
                     firebase.initializeApp(appConfig.firebaseConfig);
@@ -501,10 +472,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 db = firebase.database();
                 console.log("Firebase initialized successfully.");
 
-                // NOW, attach the auth listener
                 firebase.auth().onAuthStateChanged(user => {
                     if (user) {
-                        // User is signed in.
                         console.log("User signed in:", user.email);
                         userEmailSpan.textContent = user.email;
                         googleSignInBtn.style.display = 'none';
@@ -514,7 +483,6 @@ document.addEventListener("DOMContentLoaded", () => {
                         hideModal();
                         startApp();
                     } else {
-                        // User is signed out.
                         console.log("User is signed out.");
                         userEmailSpan.textContent = '';
                         googleSignInBtn.style.display = 'block';
@@ -596,7 +564,6 @@ document.addEventListener("DOMContentLoaded", () => {
         
         await populateIndustryDropdown();
 
-        // Set default filter values
         document.getElementById('sector').value = 'Consumer Cyclical';
         document.getElementById('industry').value = 'Advertising Agencies';
         
@@ -628,7 +595,6 @@ document.addEventListener("DOMContentLoaded", () => {
             const industries = await response.json();
 
             if (Array.isArray(industries)) {
-                 // Sort array of objects by the first value of each object
                 industries.sort((a, b) => {
                     const nameA = a && typeof a === 'object' ? String(Object.values(a)[0] || '') : String(a);
                     const nameB = b && typeof b === 'object' ? String(Object.values(b)[0] || '') : String(b);
@@ -675,7 +641,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         updateSavedStocksStorage();
         updateUiForSymbol(symbol);
-        renderSavedStocksTable(); // Re-render the saved stocks table
+        renderSavedStocksTable();
     }
 
     function updateUiForSymbol(symbol) {
@@ -798,10 +764,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // --- 11. Batch Score Calculation ---
-    // REMOVED runBatchConvictionScores function
-
-    // --- 12. Firebase Functions ---
+    // --- 11. Firebase Functions ---
     async function saveTickerDetailsToFirebase(symbol, data) {
         if (!db) return;
         try {
@@ -809,17 +772,6 @@ document.addEventListener("DOMContentLoaded", () => {
             console.log(`Details for ${symbol} saved to Firebase.`);
         } catch (error) {
             console.error(`Failed to save details for ${symbol}:`, error);
-        }
-    }
-
-    async function loadTickerDetailsFromFirebase(symbol) {
-        if (!db) return null;
-        try {
-            const snapshot = await db.ref(`financial-details/${symbol}`).get();
-            return snapshot.exists() ? snapshot.val() : null;
-        } catch (error) {
-            console.error(`Failed to load details for ${symbol} from Firebase:`, error);
-            return null;
         }
     }
     
@@ -842,10 +794,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 const allDetails = snapshot.val();
                 for (const symbol in allDetails) {
                     const stockData = allDetails[symbol];
-                    // Check for the new garpConvictionScore, otherwise don't cache a rating
                     if (stockData.hasOwnProperty('garpConvictionScore') && stockData.timestamp) {
                         appConfig.cachedStockInfo[symbol] = { 
-                            rating: stockData.garpConvictionScore, // Store score as 'rating' for UI
+                            rating: stockData.garpConvictionScore,
                             timestamp: stockData.timestamp 
                         };
                     }
@@ -857,7 +808,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // --- 13. Rendering Functions ---
+    // --- 12. Rendering Functions ---
     const formatText = (text) => text || 'N/A';
     const formatMarketCap = (num) => {
         if (!num) return 'N/A';
@@ -907,44 +858,29 @@ document.addEventListener("DOMContentLoaded", () => {
         return `<span class="${scoreClass} font-medium">${score}</span>`;
     }
     
-    function updateRatingDisplayForSymbol(symbol) {
-        document.querySelectorAll(`[data-rating-symbol="${symbol}"]`).forEach(cell => {
-            cell.innerHTML = getRatingHtml(symbol);
-        });
-    }
-
     function getRatingDateHtml(symbol) {
         const timestamp = appConfig.cachedStockInfo[symbol]?.timestamp;
         if (!timestamp) return '';
         return `<span class="text-xs text-gray-400">as of ${formatDate(timestamp)}</span>`;
     }
 
-    function updateRatingDateDisplayForSymbol(symbol) {
-        document.querySelectorAll(`[data-rating-date-symbol="${symbol}"]`).forEach(el => {
-            el.innerHTML = getRatingDateHtml(symbol);
-        });
-    }
-
-    function updateCachedOnDisplayForSymbol(symbol) {
-        const timestamp = appConfig.cachedStockInfo[symbol]?.timestamp;
-        document.querySelectorAll(`[data-cached-on-symbol="${symbol}"]`).forEach(cell => {
-            cell.textContent = formatDate(timestamp);
-        });
-    }
-
     function updateSingleStockInScreener(symbol, timestamp) {
         const numericTimestamp = new Date(timestamp).getTime();
         
-        // 1. Update the data model for the advanced screener
         const stockInDataModel = advancedScreenerData.find(s => s.symbol === symbol);
         if (stockInDataModel) {
             stockInDataModel.cachedTimestamp = numericTimestamp;
         }
 
-        // 2. Update all relevant DOM elements efficiently
-        updateRatingDisplayForSymbol(symbol);      // Handles score in all tables and cards
-        updateRatingDateDisplayForSymbol(symbol); // Handles "as of" date in cards
-        updateCachedOnDisplayForSymbol(symbol);     // Handles "Cached On" column in advanced table
+        document.querySelectorAll(`[data-rating-symbol="${symbol}"]`).forEach(cell => {
+            cell.innerHTML = getRatingHtml(symbol);
+        });
+        document.querySelectorAll(`[data-rating-date-symbol="${symbol}"]`).forEach(el => {
+            el.innerHTML = getRatingDateHtml(symbol);
+        });
+        document.querySelectorAll(`[data-cached-on-symbol="${symbol}"]`).forEach(cell => {
+            cell.textContent = formatDate(timestamp);
+        });
     }
 
     function renderAdvancedStockTable(data, container) {
@@ -1022,7 +958,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const data = await response.json();
 
             const tableRows = data.map(stock => {
-                const isSaved = savedStocks.has(stock.symbol); // Should always be true here
+                const isSaved = savedStocks.has(stock.symbol);
                 return `
                 <tr data-symbol-row="${stock.symbol}" class="saved-stock-row">
                     <td class="px-4 py-3 whitespace-nowrap text-sm">
@@ -1105,7 +1041,7 @@ document.addEventListener("DOMContentLoaded", () => {
         updateViewedIndicators();
     }
 
-    // --- 14. Financials Modal Logic ---
+    // --- 13. Financials Modal Logic ---
     function setupFinancialsModalListeners() {
         financialsModalOverlay.addEventListener('click', hideFinancialsModal);
         financialsModalCloseBtn.addEventListener('click', hideFinancialsModal);
@@ -1121,18 +1057,15 @@ document.addEventListener("DOMContentLoaded", () => {
             const symbol = refreshFinancialsBtn.dataset.symbol;
             if (symbol) {
                 document.getElementById('modal-ai-summary-content').innerHTML = '<p class="text-center text-gray-500">Refreshing analysis...</p>';
-                document.getElementById('modal-key-metrics-content').innerHTML = '<p class="text-center text-gray-500">Refreshing data...</p>';
-                document.getElementById('modal-financial-trends-content').innerHTML = '<p class="text-center text-gray-500">Refreshing trend data...</p>';
+                document.getElementById('modal-raw-data-content').innerHTML = '<p class="text-center text-gray-500">Refreshing raw data...</p>';
 
-                const liveData = await fetchFullTickerDetails(symbol, true); // Force refresh
+                const liveData = await fetchFullTickerDetails(symbol);
                 if (liveData) {
                     const garpData = mapDataForGarp(liveData);
                     const metrics = _calculateGarpScorecardMetrics(garpData);
                     
-                    populateFinancialsModal(liveData);
-                    populateFinancialTrends(liveData);
-                    populateRawDataModal(liveData);
                     populateGarpScorecardInModal(metrics);
+                    populateRawDataModal(garpData);
                     
                     const dataToSave = { ...garpData, garpConvictionScore: metrics.garpConvictionScore, timestamp: new Date().toISOString() };
                     await saveTickerDetailsToFirebase(symbol, dataToSave);
@@ -1140,7 +1073,8 @@ document.addEventListener("DOMContentLoaded", () => {
                     
                     updateSingleStockInScreener(symbol, dataToSave.timestamp);
                 } else {
-                    document.getElementById('modal-key-metrics-content').innerHTML = '<p class="text-center text-red-500">Could not refresh data.</p>';
+                    document.getElementById('modal-ai-summary-content').innerHTML = '<p class="text-center text-red-500">Could not refresh data.</p>';
+                    document.getElementById('modal-raw-data-content').innerHTML = '';
                 }
             }
         });
@@ -1161,46 +1095,48 @@ document.addEventListener("DOMContentLoaded", () => {
         showFinancialsModal();
         refreshFinancialsBtn.dataset.symbol = symbol;
         // Reset UI
-        document.getElementById('modal-ai-summary-content').innerHTML = '<p class="text-center text-gray-500">Loading GARP analysis...</p>';
-        document.getElementById('modal-key-metrics-content').innerHTML = '<p class="text-center text-gray-500">Loading financial data...</p>';
-        document.getElementById('modal-raw-data-content').innerHTML = '<p class="text-center text-gray-500">Loading raw data...</p>';
-        document.getElementById('modal-financial-trends-content').innerHTML = '<p class="text-center text-gray-500">Loading trend data...</p>';
         document.getElementById('modal-company-name').textContent = `Loading... (${symbol})`;
         document.getElementById('modal-stock-price').textContent = '';
         document.getElementById('modal-last-updated').textContent = '...';
+        document.getElementById('modal-ai-summary-content').innerHTML = '<p class="text-center text-gray-500">Loading GARP analysis...</p>';
+        document.getElementById('modal-raw-data-content').innerHTML = '<p class="text-center text-gray-500">Loading raw data...</p>';
+        
          // Reset to first tab
         financialsModalTabs.querySelectorAll('.modal-tab-button').forEach(btn => btn.classList.remove('active'));
         financialsModalTabs.querySelector('button').classList.add('active');
         document.querySelectorAll('.modal-tab-content').forEach(content => content.classList.remove('active'));
         document.querySelector('#modal-ai-summary-content').classList.add('active');
 
-        // Always fetch live data and update cache
+        // Fetch live data, calculate, render, and update cache
         const liveData = await fetchFullTickerDetails(symbol);
-            if (liveData) {
-                const garpData = mapDataForGarp(liveData);
-                const metrics = _calculateGarpScorecardMetrics(garpData);
-                
-                populateFinancialsModal(liveData);
-                populateFinancialTrends(liveData);
-                populateRawDataModal(liveData);
-                populateGarpScorecardInModal(metrics);
-                
-                const newTimestamp = new Date().toISOString();
-                const dataToSave = { ...garpData, garpConvictionScore: metrics.garpConvictionScore, timestamp: newTimestamp };
-                await saveTickerDetailsToFirebase(symbol, dataToSave);
-                appConfig.cachedStockInfo[symbol] = { rating: metrics.garpConvictionScore, timestamp: newTimestamp };
-                
-                updateSingleStockInScreener(symbol, newTimestamp);
-            } else {
-                 document.getElementById('modal-key-metrics-content').innerHTML = '<p class="text-center text-red-500">Could not fetch financial data.</p>';
-                 document.getElementById('modal-ai-summary-content').innerHTML = '';
-                 document.getElementById('modal-raw-data-content').innerHTML = '';
-                 document.getElementById('modal-financial-trends-content').innerHTML = '';
-            }
+        if (liveData) {
+            const garpData = mapDataForGarp(liveData);
+            const metrics = _calculateGarpScorecardMetrics(garpData);
+            
+            // Populate the UI
+            const profile = liveData.profile?.[0] || {};
+            document.getElementById('modal-company-name').textContent = `${profile.companyName || 'N/A'} (${profile.symbol || ''})`;
+            document.getElementById('modal-stock-price').textContent = profile.price ? `$${Number(profile.price).toFixed(2)}` : 'N/A';
+            document.getElementById('modal-last-updated').textContent = `Live Data (just now)`;
+            populateGarpScorecardInModal(metrics);
+            populateRawDataModal(garpData);
+            
+            // Save to Firebase and update local cache
+            const newTimestamp = new Date().toISOString();
+            const dataToSave = { ...garpData, garpConvictionScore: metrics.garpConvictionScore, timestamp: newTimestamp };
+            await saveTickerDetailsToFirebase(symbol, dataToSave);
+            appConfig.cachedStockInfo[symbol] = { rating: metrics.garpConvictionScore, timestamp: newTimestamp };
+            
+            updateSingleStockInScreener(symbol, newTimestamp);
+        } else {
+             document.getElementById('modal-ai-summary-content').innerHTML = '<p class="text-center text-red-500">Could not fetch financial data.</p>';
+             document.getElementById('modal-raw-data-content').innerHTML = '';
+        }
         updateViewedIndicatorForSymbol(symbol);
     }
 
     function mapDataForGarp(fetchedData) {
+        // This function now creates the exact data structure that will be saved and used for raw data view
         return {
             profile: fetchedData.profile,
             income_statement_annual: fetchedData.incomeStatement,
@@ -1209,22 +1145,18 @@ document.addEventListener("DOMContentLoaded", () => {
             analyst_estimates: fetchedData.analyst_estimates,
             key_metrics_annual: fetchedData.keyMetrics,
             ratios_annual: fetchedData.ratios,
-            balance_sheet_statement_annual: fetchedData.balanceSheet,
-            cash_flow_statement_annual: fetchedData.cashFlow
         };
     }
-
 
     async function fetchFullTickerDetails(symbol) {
         if (!appConfig.fmpApiKey) return null;
         const apiKey = appConfig.fmpApiKey;
+        // Reduced set of endpoints needed only for the conviction score
         const endpoints = {
             profile: `https://financialmodelingprep.com/api/v3/profile/${symbol}?apikey=${apiKey}`,
             keyMetrics: `https://financialmodelingprep.com/api/v3/key-metrics/${symbol}?period=annual&limit=10&apikey=${apiKey}`,
             ratios: `https://financialmodelingprep.com/api/v3/ratios/${symbol}?period=annual&limit=10&apikey=${apiKey}`,
             incomeStatement: `https://financialmodelingprep.com/api/v3/income-statement/${symbol}?period=annual&limit=10&apikey=${apiKey}`,
-            balanceSheet: `https://financialmodelingprep.com/api/v3/balance-sheet-statement/${symbol}?period=annual&limit=10&apikey=${apiKey}`,
-            cashFlow: `https://financialmodelingprep.com/api/v3/cash-flow-statement/${symbol}?period=annual&limit=10&apikey=${apiKey}`,
             key_metrics_ttm: `https://financialmodelingprep.com/api/v3/key-metrics-ttm/${symbol}?apikey=${apiKey}`,
             ratios_ttm: `https://financialmodelingprep.com/api/v3/ratios-ttm/${symbol}?apikey=${apiKey}`,
             analyst_estimates: `https://financialmodelingprep.com/api/v3/analyst-estimates/${symbol}?apikey=${apiKey}`,
@@ -1243,7 +1175,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     data[key] = result.value;
                 } else {
                     console.warn(`Failed to fetch data for ${key} (${symbol}):`, result.reason);
-                    data[key] = []; // Default to empty array on failure
+                    data[key] = [];
                 }
             });
 
@@ -1258,127 +1190,12 @@ document.addEventListener("DOMContentLoaded", () => {
     function populateGarpScorecardInModal(metrics) {
         const contentEl = document.getElementById('modal-ai-summary-content');
         if (!contentEl) return;
-        // Create a temporary container to render into
+        
         const tempContainer = document.createElement('div');
         renderGarpScorecardDashboard(tempContainer, metrics);
         renderGarpInterpretationAnalysis(tempContainer, metrics);
-        // Set the modal content to the rendered HTML
+        
         contentEl.innerHTML = tempContainer.innerHTML;
-    }
-
-
-    function populateFinancialsModal(data) {
-        const profile = data.profile?.[0] || {};
-        const metrics = (data.key_metrics_annual || data.keyMetrics)?.[0] || {};
-        const ratios = (data.ratios_annual || data.ratios)?.[0] || {};
-        const income = (data.income_statement_annual || data.incomeStatement)?.[0] || {};
-        const { timestamp } = data;
-        
-        const format = (value, prefix = '', suffix = '', digits = 2) => {
-            return (value !== null && typeof value !== 'undefined' && !isNaN(value)) ? `${prefix}${Number(value).toFixed(digits)}${suffix}` : 'N/A';
-        };
-
-        const eps = metrics.netIncomePerShare;
-        const bvps = metrics.bookValuePerShare;
-        let grahamNumber = null;
-        if (eps > 0 && bvps > 0) {
-            grahamNumber = Math.sqrt(22.5 * eps * bvps);
-        }
-        
-        document.getElementById('modal-company-name').textContent = `${profile.companyName || 'N/A'} (${profile.symbol || ''})`;
-        document.getElementById('modal-stock-price').textContent = format(profile.price, '$');
-        if (timestamp) {
-            document.getElementById('modal-last-updated').textContent = `Cached: ${formatDate(timestamp)}`;
-        } else {
-             document.getElementById('modal-last-updated').textContent = `Live Data (just now)`;
-        }
-
-        const contentEl = document.getElementById('modal-key-metrics-content');
-        contentEl.innerHTML = `
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-6">
-                <div class="space-y-3">
-                    <h4 class="font-semibold text-gray-700 border-b pb-2">Valuation Ratios (Annual)</h4>
-                    <div class="flex justify-between text-sm"><span class="text-gray-500">P/E Ratio</span><span class="font-medium">${format(metrics.peRatio)}</span></div>
-                    <div class="flex justify-between text-sm"><span class="text-gray-500">Price to Sales</span><span class="font-medium">${format(metrics.priceToSalesRatio)}</span></div>
-                    <div class="flex justify-between text-sm"><span class="text-gray-500">Price to Book</span><span class="font-medium">${format(metrics.pbRatio)}</span></div>
-                    <div class="flex justify-between text-sm"><span class="text-gray-500">EV/EBITDA</span><span class="font-medium">${format(metrics.enterpriseValueOverEBITDA)}</span></div>
-                    <div class="flex justify-between text-sm"><span class="text-gray-500">Graham Number</span><span class="font-medium">${format(grahamNumber, '$')}</span></div>
-                </div>
-                <div class="space-y-3">
-                    <h4 class="font-semibold text-gray-700 border-b pb-2">Financial Health (Annual)</h4>
-                    <div class="flex justify-between text-sm"><span class="text-gray-500">Debt to Equity</span><span class="font-medium">${format(metrics.debtToEquity)}</span></div>
-                    <div class="flex justify-between text-sm"><span class="text-gray-500">Return on Equity (ROE)</span><span class="font-medium">${format(metrics.roe * 100, '', '%')}</span></div>
-                     <div class="flex justify-between text-sm"><span class="text-gray-500">Operating Margin</span><span class="font-medium">${format(((ratios.operatingMargin || (income.operatingIncome / income.revenue)) || 0) * 100, '', '%')}</span></div>
-                    <div class="flex justify-between text-sm"><span class="text-gray-500">Net Profit Margin</span><span class="font-medium">${format((ratios.netProfitMargin || 0) * 100, '', '%')}</span></div>
-                </div>
-                <div class="space-y-3">
-                    <h4 class="font-semibold text-gray-700 border-b pb-2">Dividend Info (Annual)</h4>
-                     <div class="flex justify-between text-sm"><span class="text-gray-500">Dividend Yield</span><span class="font-medium">${format((metrics.dividendYield || 0) * 100, '', '%')}</span></div>
-                    <div class="flex justify-between text-sm"><span class="text-gray-500">Payout Ratio</span><span class="font-medium">${format((ratios.payoutRatio || 0) * 100, '', '%')}</span></div>
-                </div>
-            </div>
-        `;
-    }
-    
-    function populateFinancialTrends(data) {
-        const contentEl = document.getElementById('modal-financial-trends-content');
-        
-        const metrics = data.key_metrics_annual ? [...data.key_metrics_annual].reverse() : (data.keyMetrics ? [...data.keyMetrics].reverse() : []);
-        const income = data.income_statement_annual ? [...data.income_statement_annual].reverse() : (data.incomeStatement ? [...data.incomeStatement].reverse() : []);
-        const cashflow = data.cash_flow_statement_annual ? [...data.cash_flow_statement_annual].reverse() : (data.cashFlow ? [...data.cashFlow].reverse() : []);
-
-        if (metrics.length === 0 || income.length === 0) {
-            contentEl.innerHTML = '<p class="text-center text-gray-500">Trend data is not available.</p>';
-            return;
-        }
-        
-        const formatNum = (val, type = 'default') => {
-            if (val === null || typeof val === 'undefined' || isNaN(val)) return 'N/A';
-            if (type === 'currency') {
-                 if (Math.abs(val) >= 1e12) return `${(val / 1e12).toFixed(2)}T`;
-                 if (Math.abs(val) >= 1e9) return `${(val / 1e9).toFixed(2)}B`;
-                 if (Math.abs(val) >= 1e6) return `${(val / 1e6).toFixed(2)}M`;
-                 return val.toFixed(2);
-            }
-            if (type === 'percent') return `${(val * 100).toFixed(2)}%`;
-            if (type === 'eps') return val.toFixed(2);
-            return val.toFixed(2);
-        };
-
-        const years = income.map(i => i.calendarYear);
-        const headers = years.map(y => `<th class="px-3 py-2 text-xs text-right font-medium text-gray-500 uppercase tracking-wider">${y}</th>`).join('');
-
-        const createRow = (title, dataArray, key, formatType) => {
-            const cells = years.map(year => {
-                const record = dataArray.find(d => d.calendarYear === year);
-                const value = record ? record[key] : undefined;
-                return `<td class="px-3 py-2 whitespace-nowrap text-sm text-right text-gray-500">${formatNum(value, formatType)}</td>`;
-            }).join('');
-            return `<tr><td class="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">${title}</td>${cells}</tr>`;
-        };
-
-        const tableRows = [
-            createRow('Revenue', income, 'revenue', 'currency'),
-            createRow('Net Income', income, 'netIncome', 'currency'),
-            createRow('EPS (Diluted)', income, 'epsdiluted', 'eps'),
-            createRow('Return on Equity (ROE)', metrics, 'roe', 'percent'),
-            createRow('Debt to Equity', metrics, 'debtToEquity', 'default'),
-            createRow('Free Cash Flow', cashflow, 'freeCashflow', 'currency')
-        ].join('');
-
-        contentEl.innerHTML = `
-            <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Metric</th>
-                            ${headers}
-                        </tr>
-                    </thead>
-                    <tbody class="bg-white divide-y divide-gray-200">${tableRows}</tbody>
-                </table>
-            </div>
-        `;
     }
 
     function populateRawDataModal(data) {
