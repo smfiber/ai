@@ -1,1 +1,282 @@
+/* Apply the Inter font family */
+body {
+    font-family: 'Inter', sans-serif;
+}
 
+/* Style for the modal to be hidden by default */
+.modal {
+    display: none;
+}
+
+/* Styles for accordion transition */
+.accordion-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease-out;
+}
+
+/* Hide tab content by default */
+.tab-content {
+    display: none;
+}
+
+/* Styles for Modal Tabs */
+.modal-tab-button.active {
+    border-color: #6366f1;
+    color: #4338ca;
+    background-color: #eef2ff;
+}
+
+.modal-tab-content {
+    display: none;
+}
+
+.modal-tab-content.active {
+    display: block;
+}
+
+.viewed-indicator {
+    margin-left: 8px;
+    color: #6366f1;
+    font-size: 0.9em;
+}
+
+/* Custom Tooltip Styles */
+[data-tooltip] {
+    position: relative;
+    cursor: help;
+    display: inline-block;
+}
+
+[data-tooltip]::before,
+[data-tooltip]::after {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease-in-out;
+    z-index: 10;
+}
+
+[data-tooltip]::after {
+    /* Tooltip content box */
+    content: attr(data-tooltip);
+    background-color: #1f2937;
+    /* bg-gray-800 */
+    color: white;
+    font-size: 0.75rem;
+    /* text-xs */
+    line-height: 1.25;
+    padding: 6px 10px;
+    border-radius: 4px;
+    white-space: nowrap;
+    bottom: calc(100% + 8px);
+    /* Position above the element */
+}
+
+[data-tooltip]::before {
+    /* Tooltip arrow */
+    content: '';
+    border-style: solid;
+    border-width: 5px;
+    border-color: #1f2937 transparent transparent transparent;
+    bottom: calc(100% + 3px);
+}
+
+[data-tooltip]:hover::before,
+[data-tooltip]:hover::after {
+    opacity: 1;
+}
+
+/* Saved Stock Styles */
+.saved-stock-row {
+    background-color: #fefce8;
+    /* Tailwind yellow-50 */
+}
+
+.save-stock-btn {
+    margin-right: 8px;
+    cursor: pointer;
+    color: #9ca3af;
+    /* gray-400 */
+    transition: color 0.2s ease-in-out;
+}
+
+.save-stock-btn:hover {
+    color: #f59e0b;
+    /* yellow-500 */
+}
+
+.save-stock-btn.saved {
+    color: #facc15;
+    /* yellow-400 */
+}
+
+#modal-raw-data-content pre {
+    background-color: #111827;
+    /* gray-900 */
+    color: #d1d5db;
+    /* gray-300 */
+    padding: 1rem;
+    border-radius: 0.5rem;
+    max-height: 60vh;
+    overflow-x: auto;
+    font-size: 0.75rem;
+}
+
+#modal-dividend-analysis-content pre {
+    background-color: #111827;
+    /* gray-900 */
+    color: #d1d5db;
+    /* gray-300 */
+    padding: 1rem;
+    border-radius: 0.5rem;
+    overflow-x: auto;
+    font-size: 0.75rem;
+}
+
+/* Styling for rendered markdown from marked.js */
+.prose ul {
+    list-style-type: disc;
+    padding-left: 1.5rem;
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.prose ol {
+    list-style-type: decimal;
+    padding-left: 1.5rem;
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.prose li {
+    margin-bottom: 0.25rem;
+}
+
+.prose h3 {
+    font-size: 1.125rem;
+    /* text-lg */
+    font-weight: 700;
+    margin-top: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.prose h4 {
+    font-size: 1rem;
+    /* text-base */
+    font-weight: 600;
+    margin-top: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+/* DIVIDEND SCORECARD STYLES */
+.price-gain {
+    color: #16a34a;
+}
+
+.price-loss {
+    color: #dc2626;
+}
+
+.interp-badge {
+    display: inline-block;
+    padding: 0.2rem 0.6rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.interp-badge.exceptional-growth,
+.interp-badge.fortress-balance-sheet,
+.interp-badge.well-covered {
+    background-color: #166534;
+    color: #f0fdf4;
+}
+
+.interp-badge.safe-&-sustainable,
+.interp-badge.steady-growth,
+.interp-badge.high-yield,
+.interp-badge.manageable-debt {
+    background-color: #22c55e;
+    color: #f0fdf4;
+}
+
+.interp-badge.solid-yield,
+.interp-badge.moderate-leverage,
+.interp-badge.moderate {
+    background-color: #eab308;
+    color: #78350f;
+}
+
+.interp-badge.warning-sign,
+.interp-badge.potential-yield-trap,
+.interp-badge.high,
+.interp-badge.slow-growth {
+    background-color: #f97316;
+    color: #fff7ed;
+}
+
+.interp-badge.negative-growth,
+.interp-badge.unsupported-by-cash,
+.interp-badge.high-&-risky,
+.interp-badge.high-leverage {
+    background-color: #dc2626;
+    color: #fef2f2;
+}
+
+.metric-tile {
+    background-color: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.75rem;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.metric-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #4b5563;
+}
+
+.metric-value {
+    font-size: 1.875rem;
+    font-weight: 700;
+    line-height: 1;
+    margin-top: 0.25rem;
+}
+
+.quality-score-display {
+    text-align: center;
+    padding: 0.5rem;
+    border-radius: 0.5rem;
+    border-width: 2px;
+    border-style: solid;
+}
+
+.quality-score-display .score-value {
+    font-size: 2.25rem;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.quality-score-display.high {
+    border-color: #16a34a;
+    color: #166534;
+}
+
+.quality-score-display.medium {
+    border-color: #f59e0b;
+    color: #b45309;
+}
+
+.quality-score-display.low {
+    border-color: #ef4444;
+    color: #b91c1c;
+}
