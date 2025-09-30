@@ -841,6 +841,8 @@ export async function handleAnalysisRequest(symbol, reportType, promptConfig, fo
             payloadData = _calculateCapitalAllocatorsMetrics(data);
         } else if (reportType === 'GarpAnalysis') {
             payloadData = _calculateGarpAnalysisMetrics(data);
+        } else if (reportType === 'QarpAnalysis') {
+            payloadData = _calculateGarpScorecardMetrics(data);
         } else {
             payloadData = buildAnalysisPayload(data, requiredEndpoints);
         }
