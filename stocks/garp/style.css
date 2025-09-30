@@ -70,6 +70,35 @@ body.modal-open {
  * NEW COMPONENT STYLES
  * =================================================================
  */
+.copy-icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 9999px;
+    background-color: #e5e7eb;
+    color: #4b5563;
+    transition: all 0.2s ease-in-out;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.copy-icon-btn:hover {
+    background-color: #d1d5db;
+    color: #1f2937;
+}
+
+.copy-icon-btn.copied {
+    background-color: #22c55e;
+    color: white;
+}
+
+.copy-icon-btn svg {
+    width: 1rem;
+    height: 1rem;
+}
+
 .price-gain {
     color: #16a34a; /* text-green-600 */
 }
