@@ -117,10 +117,59 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (value < 15) return { category: 'Potentially Undervalued', text: 'The market price appears low relative to the company\'s ability to generate cash, a strong sign of value.' };
                 if (value < 25) return { category: 'Reasonable Price', text: 'A healthy valuation that suggests the market price is not excessive relative to the company\'s cash flow.' };
                 return { category: 'Expensive', text: 'The stock is trading at a high multiple of its cash flow, suggesting high expectations are priced in.' };
+            
+            case 'Interest Coverage':
+                 if (value > 10) return { category: 'Very Safe', text: 'Earnings cover interest payments many times over, indicating extremely low financial risk from debt.' };
+                 if (value > 4) return { category: 'Healthy', text: 'The company generates ample earnings to comfortably service its debt obligations.' };
+                 if (value > 2) return { category: 'Adequate', text: 'Coverage is acceptable, but a significant downturn in earnings could create pressure.' };
+                 return { category: 'High Risk', text: 'Earnings may not be sufficient to cover interest payments, a major red flag for financial distress.' };
+
+            case 'Profitable Yrs (5Y)':
+                if (value === 5) return { category: 'Highly Consistent', text: 'A perfect track record of profitability, indicating a durable and resilient business model.' };
+                if (value === 4) return { category: 'Consistent', text: 'A strong track record of profitability with only a minor blip, suggesting business strength.' };
+                return { category: 'Inconsistent', text: 'The company has struggled with consistent profitability, signaling higher operational or cyclical risk.' };
+
+            case 'Rev. Growth Stability':
+                if (value < 0.10) return { category: 'Highly Stable', text: 'Revenue growth is very consistent, indicating a predictable business with a strong competitive position.' };
+                if (value < 0.25) return { category: 'Stable', text: 'Revenue growth is relatively stable, suggesting a reliable business model.' };
+                return { category: 'Volatile', text: 'Revenue growth is erratic and unpredictable, which may point to cyclicality or competitive pressures.' };
 
             default:
                 return { category: 'N/A', text: '' };
         }
+    }
+    
+    /**
+     * Calculates consistency metrics based on 5-year historical data.
+     * @param {Array} income_statements - Array of annual income statement objects from FMP.
+     * @returns {object} An object containing profitable years count and revenue growth standard deviation.
+     */
+    function _calculateConsistencyMetrics(income_statements) {
+        const result = { profitableYears: null, revenueGrowthStdDev: null };
+        if (!income_statements || income_statements.length < 5) return result;
+
+        const recent_statements = income_statements.slice(-5);
+
+        // 1. Calculate Profitable Years
+        result.profitableYears = recent_statements.filter(stmt => stmt.eps > 0).length;
+
+        // 2. Calculate Revenue Growth Stability (Standard Deviation)
+        const growthRates = [];
+        for (let i = 1; i < recent_statements.length; i++) {
+            const prevRevenue = recent_statements[i-1].revenue;
+            const currRevenue = recent_statements[i].revenue;
+            if (prevRevenue > 0) {
+                growthRates.push((currRevenue / prevRevenue) - 1);
+            }
+        }
+        
+        if (growthRates.length > 1) {
+            const mean = growthRates.reduce((a, b) => a + b, 0) / growthRates.length;
+            const variance = growthRates.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / growthRates.length;
+            result.revenueGrowthStdDev = Math.sqrt(variance);
+        }
+
+        return result;
     }
 
 
@@ -196,6 +245,24 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (value < 1.0) return 0.5;
                 return 0;
 
+            case 'Interest Coverage':
+                if (value > 10) return 1.2;
+                if (value > 4) return 1.0;
+                if (value > 2) return 0.5;
+                return 0;
+            
+            case 'Profitable Yrs (5Y)':
+                if (value === 5) return 1.2;
+                if (value === 4) return 1.0;
+                if (value === 3) return 0.5;
+                return 0;
+            
+            case 'Rev. Growth Stability': // Lower is better
+                if (value < 0.10) return 1.2;
+                if (value < 0.25) return 1.0;
+                if (value < 0.40) return 0.5;
+                return 0;
+
             default:
                 return 0;
         }
@@ -226,6 +293,8 @@ document.addEventListener("DOMContentLoaded", () => {
         // --- CALCULATIONS ---
         const lastIndex = income.length - 1;
         const startIndex = income.length - 6;
+        const latestIncome = income[lastIndex] || {};
+
         const eps5y = income.length >= 6 ? getCagr(income[startIndex].eps, income[lastIndex].eps, 5) : null;
         const rev5y = income.length >= 6 ? getCagr(income[startIndex].revenue, income[lastIndex].revenue, 5) : null;
         
@@ -233,7 +302,6 @@ document.addEventListener("DOMContentLoaded", () => {
         const roic = metricsTtm.roic ?? latestAnnualMetrics.roic;
         const pe = metricsTtm.peRatioTTM ?? latestAnnualMetrics.peRatio;
         const de = metricsTtm.debtToEquity ?? latestAnnualMetrics.debtToEquity;
-        const ps = ratiosTtm.priceToSalesRatioTTM ?? latestAnnualRatios.priceToSalesRatio;
 
         let epsNext1y = null;
         const lastActualEps = income.length > 0 ? income[lastIndex].eps : null;
@@ -250,8 +318,8 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         let peg = null;
-        if (pe > 0 && epsNext1y > 0) {
-            peg = pe / (epsNext1y * 100);
+        if (forwardPe > 0 && epsNext1y > 0) {
+            peg = forwardPe / (epsNext1y * 100);
         }
 
         let pfcf = null;
@@ -259,20 +327,34 @@ document.addEventListener("DOMContentLoaded", () => {
         if (currentPrice > 0 && fcfPerShareTtm > 0) {
             pfcf = currentPrice / fcfPerShareTtm;
         }
+        
+        let interestCoverage = null;
+        if (latestIncome.operatingIncome && latestIncome.interestExpense > 0) {
+             interestCoverage = latestIncome.operatingIncome / latestIncome.interestExpense;
+        } else if (latestIncome.operatingIncome > 0 && latestIncome.interestExpense <= 0) {
+            interestCoverage = 999; // Effectively infinite coverage
+        }
+        
+        const consistency = _calculateConsistencyMetrics(income);
 
-        // --- METRICS DEFINITION ---
+        // --- METRICS DEFINITION (Rebalanced Weights) ---
         const metrics = {
+            // -- Growth (25%)
+            'EPS Growth (Next 1Y)': { value: epsNext1y, format: 'percent', weight: 12 },
             'EPS Growth (5Y)': { value: eps5y, format: 'percent', weight: 8 },
-            'EPS Growth (Next 1Y)': { value: epsNext1y, format: 'percent', weight: 15 },
-            'Revenue Growth (5Y)': { value: rev5y, format: 'percent', weight: 8 },
-            'Return on Equity': { value: roe, format: 'percent', weight: 12 },
+            'Revenue Growth (5Y)': { value: rev5y, format: 'percent', weight: 5 },
+            // -- Quality & Stability (40%)
             'Return on Invested Capital': { value: roic, format: 'percent', weight: 12 },
-            'P/E (TTM)': { value: pe, format: 'decimal', weight: 5 },
-            'Forward P/E': { value: forwardPe, format: 'decimal', weight: 8 },
-            'PEG Ratio': { value: peg, format: 'decimal', weight: 15 },
-            'P/S Ratio': { value: ps, format: 'decimal', weight: 5 },
-            'Price to FCF': { value: pfcf, format: 'decimal', weight: 10 },
+            'Return on Equity': { value: roe, format: 'percent', weight: 10 },
+            'Profitable Yrs (5Y)': { value: consistency.profitableYears, format: 'number', weight: 10 },
+            'Rev. Growth Stability': { value: consistency.revenueGrowthStdDev, format: 'decimal', weight: 8 },
+            // -- Financial Health (10%)
             'Debt-to-Equity': { value: de, format: 'decimal', weight: 5 },
+            'Interest Coverage': { value: interestCoverage, format: 'decimal', weight: 5 },
+            // -- Valuation (25%)
+            'PEG Ratio': { value: peg, format: 'decimal', weight: 10 },
+            'Forward P/E': { value: forwardPe, format: 'decimal', weight: 8 },
+            'Price to FCF': { value: pfcf, format: 'decimal', weight: 7 },
         };
 
         // --- CONVICTION SCORE CALCULATION ---
@@ -309,7 +391,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 colorClass = data.isMet ? 'price-gain' : 'price-loss';
                 if (data.format === 'percent') {
                     valueDisplay = `${(data.value * 100).toFixed(2)}%`;
-                } else {
+                } else if (data.format === 'number') {
+                    valueDisplay = `${data.value} / 5`;
+                }
+                else {
                     valueDisplay = data.value.toFixed(2);
                 }
             }
@@ -351,9 +436,10 @@ document.addEventListener("DOMContentLoaded", () => {
         const toKebabCase = (str) => str.replace(/\s+/g, '-').toLowerCase();
 
         const metricGroups = {
-            'Growth': ['EPS Growth (5Y)', 'EPS Growth (Next 1Y)', 'Revenue Growth (5Y)'],
-            'Profitability': ['Return on Equity', 'Return on Invested Capital'],
-            'Valuation & Debt': ['P/E (TTM)', 'Forward P/E', 'PEG Ratio', 'P/S Ratio', 'Price to FCF', 'Debt-to-Equity']
+            'Growth': ['EPS Growth (Next 1Y)', 'EPS Growth (5Y)', 'Revenue Growth (5Y)'],
+            'Quality & Consistency': ['Return on Invested Capital', 'Return on Equity', 'Profitable Yrs (5Y)', 'Rev. Growth Stability'],
+            'Financial Health': ['Debt-to-Equity', 'Interest Coverage'],
+            'Valuation': ['PEG Ratio', 'Forward P/E', 'Price to FCF']
         };
 
         let html = '<h3 class="text-lg font-bold text-gray-800 my-4 pt-4 border-t">GARP Criteria Interpretation</h3>';
