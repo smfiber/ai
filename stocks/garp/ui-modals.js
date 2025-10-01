@@ -225,7 +225,6 @@ export async function openRawDataViewer(ticker) {
     const profileDisplayContainer = document.getElementById('company-profile-display-container');
     const titleEl = document.getElementById('raw-data-viewer-modal-title');
     const garpScorecardContainer = document.getElementById('garp-scorecard-container');
-    const garpInterpretationContainer = document.getElementById('garp-interpretation-container');
     const positionAnalysisTabButton = document.querySelector('.tab-button[data-tab="position-analysis"]');
     const positionAnalysisContainer = document.getElementById('position-analysis-content-container');
     const peerAnalysisContainer = document.getElementById('peer-analysis-section-container');
@@ -236,7 +235,6 @@ export async function openRawDataViewer(ticker) {
     aiArticleContainer.innerHTML = '';
     profileDisplayContainer.innerHTML = '';
     garpScorecardContainer.innerHTML = '';
-    garpInterpretationContainer.innerHTML = '';
     positionAnalysisContainer.innerHTML = '';
     peerAnalysisContainer.innerHTML = '';
     document.getElementById('valuation-health-container').innerHTML = '';
@@ -491,7 +489,7 @@ export async function openRawDataViewer(ticker) {
         profileDisplayContainer.innerHTML = `<h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Company Overview</h3><p class="text-sm text-gray-700">${description}</p>`;
         
         const metrics = renderGarpScorecardDashboard(garpScorecardContainer, ticker, fmpData);
-        renderGarpInterpretationAnalysis(garpInterpretationContainer, metrics);
+        renderGarpInterpretationAnalysis(garpScorecardContainer, metrics);
         renderValuationHealthDashboard(document.getElementById('valuation-health-container'), ticker, fmpData);
         renderGarpAnalysisSummary(document.getElementById('ai-garp-summary-container'), ticker);
         
