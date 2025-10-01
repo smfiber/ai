@@ -154,35 +154,26 @@ Based purely on this quantitative analysis, what is the primary story? Does the 
 `.trim();
 
 const GARP_ANALYSIS_PROMPT = `
-Role: You are a growth-oriented investment analyst, specializing in the "Growth at a Reasonable Price" (GARP) philosophy. Your task is to determine if a company's valuation is justified by its growth prospects.
-Data Instructions: Your analysis MUST be based *exclusively* on the pre-calculated metrics provided in the JSON data below.
-Output Format: The final report must be in professional markdown format. Use # for the main title, ## for major sections, and bullet points for key data points. Each bullet point MUST start on a new line.
-IMPORTANT: Do not include any HTML tags in your output. Generate pure markdown only.
-Conduct a GARP analysis for {companyName} (Ticker: {tickerSymbol}) using the provided data.
+Role: You are a senior investment analyst at a GARP-focused ('Growth at a Reasonable Price') fund. Your task is to provide a balanced, data-driven synthesis of a company's complete GARP scorecard.
+Data Instructions: Your analysis MUST be based *exclusively* on the provided GARP Scorecard JSON. Your primary goal is to interpret the qualitative \`interpretation.text\` provided for each metric to build a narrative. Refer to the quantitative \`value\` to add specific data points to your analysis.
+Output Format: The final report must be in professional markdown format. Use # for the main title, ## for major sections, and bullet points.
 
-JSON Data with Pre-Calculated Metrics:
+JSON Data with Pre-Calculated GARP Scorecard:
 {jsonData}
 
-# GARP Analysis: Is {companyName} ({tickerSymbol}) Priced for Perfection?
-## 1. The Valuation Question
-Start by framing the core debate. Is this a high-quality company whose growth justifies its price, or is it an over-hyped stock? Each bullet point below must start on a new line.
-- **Current P/E Ratio:** State the value from \`valuation.peRatio\`.
-- **Current P/S Ratio:** State the value from \`valuation.psRatio\`.
-- **Valuation vs. History:** Based on \`valuation.peStatusVsHistory\`, state whether the company is trading at a premium or discount to its own past.
-## 2. The Growth Engine: Justifying the Price
-This section analyzes the growth that investors are paying for. Each bullet point below must start on a new line.
-- **Historical EPS Growth:** Based on \`growth.historicalEpsGrowth\`, state the recent track record of earnings growth.
-- **Forward EPS Growth (Analyst Forecast):** State the market's expectation for next year's earnings growth from \`growth.forwardEpsGrowth\`. This is the most critical number for the GARP thesis.
-## 3. The PEG Ratio Verdict
-The Price/Earnings-to-Growth (PEG) ratio is a key tool for GARP investors. Each bullet point below must start on a new line.
-- **Explain the PEG Ratio:** Briefly explain that a PEG ratio of around 1.0 suggests a fair balance between a stock's P/E ratio and its expected earnings growth.
-- **Calculated PEG Ratio:** State the value from \`pegRatio.value\`.
-- **Interpretation:** Based on the \`pegRatio.verdict\`, describe whether the stock appears attractively priced, fairly priced, or expensive relative to its growth forecast.
-## 4. Final Conclusion: The Investment Profile
-Synthesize all the points above into a final verdict.
-- **The Bull Case (GARP Opportunity):** Summarize the data points (e.g., strong forecast growth, PEG ratio below 1.2) that support the idea of this being a GARP opportunity.
-- **The Bear Case (Priced for Perfection):** Summarize the data points (e.g., very high P/E, slowing growth, PEG ratio above 2.0) that suggest the stock is priced for perfection and carries high expectations.
-- **Final Takeaway:** Classify the stock's profile based on this analysis. For example: "This appears to be a classic **GARP opportunity**, where strong future growth is available at a reasonable price," or "The analysis suggests this stock is **priced for perfection**, and any slowdown in growth could pose a significant risk to the share price."
+# GARP Scorecard Synthesis: {companyName} ({tickerSymbol})
+
+## 1. Executive Summary & Verdict
+(Start with a concise, one-paragraph summary. What is the overall story told by the scorecard? Conclude with a clear verdict based on the data: "This company appears to be a **strong GARP candidate**," "a **borderline GARP candidate**," or "**does not meet the criteria** for a GARP investment at this time." Reference the \`garpConvictionScore\` to support your verdict.)
+
+## 2. The Bull Case (Key Strengths)
+(Synthesize the strongest points from the scorecard. Create a bulleted list. For each point, identify a key strength (e.g., 'Exceptional Profitability') and explain it using the \`interpretation.text\` from the relevant metric(s) (e.g., Return on Equity, ROIC). Quantify your points with the metric's \`value\`.)
+
+## 3. The Bear Case (Key Risks & Concerns)
+(Synthesize the weakest points or biggest risks revealed by the scorecard. Create a bulleted list. For each point, identify a key concern (e.g., 'High Leverage') and explain it using the \`interpretation.text\` from the relevant metric(s) (e.g., Debt-to-Equity). Quantify your points with the metric's \`value\`.)
+
+## 4. Final Synthesis: The GARP Tension
+(In a final paragraph, identify the core 'GARP tension' for this stock. What is the central trade-off an investor must accept? For example: "The central question is whether the company's exceptional growth and quality justify its premium valuation," or "Is the extremely low valuation enough to compensate for the inconsistent profitability and high leverage?")
 `.trim();
 
 const MOAT_ANALYSIS_PROMPT = `
@@ -498,7 +489,7 @@ export const promptMap = {
     },
     'GarpAnalysis': {
         prompt: GARP_ANALYSIS_PROMPT,
-        requires: ['profile', 'key_metrics_annual', 'ratios_annual', 'analyst_estimates', 'income_statement_annual']
+        requires: []
     },
     'QarpAnalysis': {
         prompt: `
