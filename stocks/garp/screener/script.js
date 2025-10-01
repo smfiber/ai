@@ -280,8 +280,13 @@ document.addEventListener("DOMContentLoaded", () => {
      * @returns {object} An object containing GARP metrics with their values and pass/fail status.
      */
     function _calculateGarpScorecardMetrics(data) {
+        if (!data || !Array.isArray(data.income_statement_annual)) {
+            console.error("Invalid or incomplete data passed to _calculateGarpScorecardMetrics. Skipping.", data);
+            return { garpConvictionScore: 'ERR' };
+        }
+        
         const profile = data.profile?.[0] || {};
-        const income = (data.income_statement_annual || []).slice().reverse();
+        const income = data.income_statement_annual.slice().reverse();
         const metricsTtm = data.key_metrics_ttm?.[0] || {};
         const ratiosTtm = data.ratios_ttm?.[0] || {};
         const estimates = data.analyst_estimates || [];
@@ -924,20 +929,24 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function updateScoreInUI(symbol, score, timestamp) {
-        // Update in-memory cache
+        if (score === 'ERR') {
+            document.querySelectorAll(`[data-rating-symbol="${symbol}"]`).forEach(cell => {
+                cell.innerHTML = `<span class="text-red-500 font-bold">ERR</span>`;
+            });
+            return;
+        }
+
         appConfig.cachedStockInfo[symbol] = { 
             rating: score,
             timestamp: timestamp 
         };
         const numericTimestamp = new Date(timestamp).getTime();
 
-        // Update the screener data model if it exists
         const stockInDataModel = advancedScreenerData.find(s => s.symbol === symbol);
         if (stockInDataModel) {
             stockInDataModel.cachedTimestamp = numericTimestamp;
         }
 
-        // Update all UI elements for this symbol
         document.querySelectorAll(`[data-rating-symbol="${symbol}"]`).forEach(cell => {
             cell.innerHTML = getRatingHtml(symbol);
         });
@@ -1185,11 +1194,12 @@ document.addEventListener("DOMContentLoaded", () => {
                     const timestamp = new Date().toISOString();
                     updateScoreInUI(stock.symbol, metrics.garpConvictionScore, timestamp);
                 }
-                await delay(200); // 200ms delay to respect API rate limits
+                await delay(1000); // 1-second delay to respect API rate limits
             } catch (error) {
                 console.error(`Failed to process ${stock.symbol}:`, error);
                 batchStatus.textContent = `Error on ${stock.symbol}. Skipping...`;
-                await delay(500);
+                updateScoreInUI(stock.symbol, 'ERR', new Date().toISOString());
+                await delay(1000);
             }
         }
 
@@ -1268,7 +1278,16 @@ document.addEventListener("DOMContentLoaded", () => {
         };
 
         try {
-            const promises = Object.values(endpoints).map(url => fetch(url).then(res => res.json()));
+            const promises = Object.values(endpoints).map(url => fetch(url).then(async (res) => {
+                if (!res.ok) {
+                    // For errors like 429, the response body might contain useful info
+                    const errorBody = await res.text();
+                    console.warn(`HTTP error ${res.status} for ${url}:`, errorBody);
+                    return { error: `HTTP error ${res.status}` }; // Return an error object
+                }
+                return res.json();
+            }));
+
             const results = await Promise.allSettled(promises);
             
             const data = {};
@@ -1277,10 +1296,16 @@ document.addEventListener("DOMContentLoaded", () => {
             results.forEach((result, index) => {
                 const key = keys[index];
                 if (result.status === 'fulfilled') {
-                    data[key] = result.value;
+                    // Check if FMP returned an error message in a 200 OK response
+                    if (result.value && result.value["Error Message"]) {
+                         console.warn(`API returned an error for ${keys[index]} (${symbol}):`, result.value["Error Message"]);
+                         data[key] = []; // Treat as no data
+                    } else {
+                         data[key] = result.value;
+                    }
                 } else {
-                    console.warn(`Failed to fetch data for ${key} (${symbol}):`, result.reason);
-                    data[key] = [];
+                    console.warn(`Failed to fetch data for ${keys[index]} (${symbol}):`, result.reason);
+                    data[key] = []; // Treat as no data
                 }
             });
 
