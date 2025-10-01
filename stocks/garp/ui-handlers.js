@@ -1443,8 +1443,4 @@ export async function handleManualPeerAnalysisRequest(ticker) {
         document.getElementById('manual-peer-entry-container').classList.remove('hidden');
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
-        genericLoader.classList.remove('hidden');
     }
-}
-
-}
