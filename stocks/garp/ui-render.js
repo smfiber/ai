@@ -472,7 +472,7 @@ export function renderGarpInterpretationAnalysis(container, metrics) {
     }
     
     html += '</div>';
-    container.innerHTML = html;
+    container.innerHTML += html;
 }
 
 
