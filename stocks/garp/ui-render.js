@@ -366,12 +366,20 @@ export function renderGarpScorecardDashboard(container, ticker, fmpData) {
     const tilesHtml = Object.entries(metrics).map(([name, data]) => {
         if (name === 'garpConvictionScore') return '';
         let valueDisplay = 'N/A';
-        let colorClass = 'text-gray-500 italic'; // Muted gray for N/A
+        let colorClass = 'text-gray-500 italic';
 
         if (typeof data.value === 'number' && isFinite(data.value)) {
-            colorClass = data.isMet ? 'price-gain' : 'price-loss'; // Green for pass, Red for fail
+            // Use multiplier for color: >1 is great, 1 is good, <1 is bad
+            if (data.multiplier > 1.0) colorClass = 'price-gain';
+            else if (data.multiplier === 1.0) colorClass = 'text-yellow-600'; // Neutral/Good
+            else colorClass = 'price-loss';
+
             if (data.format === 'percent') {
                 valueDisplay = `${(data.value * 100).toFixed(2)}%`;
+            } else if (data.format === 'number') {
+                valueDisplay = `${data.value} / 5`;
+            } else if (data.format === 'ratio') {
+                valueDisplay = `${data.value.toFixed(2)}x`;
             } else {
                 valueDisplay = data.value.toFixed(2);
             }
@@ -415,7 +423,7 @@ export function renderGarpScorecardDashboard(container, ticker, fmpData) {
 }
 
 /**
- * NEW: Renders the qualitative interpretation of the GARP scorecard.
+ * Renders the qualitative interpretation of the GARP scorecard.
  * @param {HTMLElement} container The container to render the content into.
  * @param {object} metrics The enhanced metrics object from _calculateGarpScorecardMetrics.
  */
@@ -428,12 +436,13 @@ export function renderGarpInterpretationAnalysis(container, metrics) {
     const toKebabCase = (str) => str.replace(/\s+/g, '-').toLowerCase();
 
     const metricGroups = {
-        'Growth': ['EPS Growth (5Y)', 'EPS Growth (Next 1Y)', 'Revenue Growth (5Y)'],
-        'Profitability': ['Return on Equity', 'Return on Invested Capital'],
-        'Valuation & Debt': ['P/E (TTM)', 'Forward P/E', 'PEG Ratio', 'P/S Ratio', 'Price to FCF', 'Debt-to-Equity']
+        'Growth': ['EPS Growth (Next 1Y)', 'EPS Growth (5Y)', 'Revenue Growth (5Y)'],
+        'Quality & Consistency': ['Return on Invested Capital', 'Return on Equity', 'Quarterly Earnings Progress', 'Profitable Yrs (5Y)', 'Rev. Growth Stability'],
+        'Financial Health': ['Debt-to-Equity', 'Interest Coverage'],
+        'Valuation': ['PEG Ratio', 'Forward P/E', 'Price to FCF']
     };
 
-    let html = '<h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">GARP Criteria Interpretation</h3>';
+    let html = '<h3 class="text-xl font-bold text-gray-800 my-4 pt-4 border-t">GARP Criteria Interpretation</h3>';
     html += '<div class="space-y-6">';
 
     for (const groupName in metricGroups) {
