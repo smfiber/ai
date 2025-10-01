@@ -139,6 +139,13 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (value < 0.25) return { category: 'Stable', text: 'Revenue growth is relatively stable, suggesting a reliable business model.' };
                 return { category: 'Volatile', text: 'Revenue growth is erratic and unpredictable, which may point to cyclicality or competitive pressures.' };
 
+            case 'Quarterly Earnings Progress':
+                if (value > 1.15) return { category: 'Exceptional Beat', text: 'The company is significantly outperforming its seasonally-adjusted earnings targets for the year.' };
+                if (value > 1.0) return { category: 'Beating Estimates', text: 'The company is currently ahead of its seasonally-adjusted earnings estimates for the year.' };
+                if (value > 0.95) return { category: 'On Track', text: 'The company is meeting its seasonally-adjusted earnings targets for the year.' };
+                if (value > 0.85) return { category: 'Lagging', text: 'The company is slightly behind its seasonally-adjusted earnings targets, which warrants monitoring.' };
+                return { category: 'Significantly Behind', text: 'The company is substantially underperforming its earnings estimates, a potential red flag.' };
+
             default:
                 return { category: 'N/A', text: '' };
         }
@@ -174,6 +181,88 @@ document.addEventListener("DOMContentLoaded", () => {
             result.revenueGrowthStdDev = Math.sqrt(variance);
         }
 
+        return result;
+    }
+    
+    /**
+     * Calculates if a company is on track with annual estimates based on quarterly performance.
+     * @param {Array} income_statement_quarterly - Array of quarterly income statements.
+     * @param {Array} analyst_estimates_annual - Array of annual analyst estimates.
+     * @returns {object} An object containing the performance ratio.
+     */
+    function _calculateQuarterlyPerformance(income_statement_quarterly, analyst_estimates_annual) {
+        const result = { performanceRatio: null, reportedQuarters: 0 };
+        if (!income_statement_quarterly || income_statement_quarterly.length < 5 || !analyst_estimates_annual || analyst_estimates_annual.length === 0) {
+            return result;
+        }
+
+        const today = new Date();
+        const currentYear = today.getFullYear();
+        const currentMonth = today.getMonth(); // 0-11
+        
+        // Find the full-year estimate for the current year
+        const annualEstimate = analyst_estimates_annual.find(e => parseInt(e.calendarYear) === currentYear);
+        if (!annualEstimate || !annualEstimate.estimatedEpsAvg) {
+            return result;
+        }
+        const annualEpsEstimate = annualEstimate.estimatedEpsAvg;
+
+        // Group historical quarterly EPS by year
+        const historicalData = {};
+        income_statement_quarterly.slice().reverse().forEach(q => {
+            const year = parseInt(q.calendarYear);
+            if (year < currentYear) {
+                if (!historicalData[year]) {
+                    historicalData[year] = { q1: 0, q2: 0, q3: 0, q4: 0, total: 0 };
+                }
+                const quarter = parseInt(q.period.substring(1));
+                historicalData[year][`q${quarter}`] = q.eps;
+                historicalData[year].total += q.eps;
+            }
+        });
+
+        // Calculate average historical weights for each quarter
+        const weights = { q1: [], q2: [], q3: [], q4: [] };
+        let validYears = 0;
+        for (const year in historicalData) {
+            const yearData = historicalData[year];
+            if (yearData.total > 0 && yearData.q1 && yearData.q2 && yearData.q3 && yearData.q4) {
+                 validYears++;
+                 weights.q1.push(yearData.q1 / yearData.total);
+                 weights.q2.push(yearData.q2 / yearData.total);
+                 weights.q3.push(yearData.q3 / yearData.total);
+                 weights.q4.push(yearData.q4 / yearData.total);
+            }
+        }
+
+        if (validYears < 1) return result; // Need at least one full historical year
+
+        const avgWeights = {
+            q1: weights.q1.reduce((a, b) => a + b, 0) / weights.q1.length,
+            q2: weights.q2.reduce((a, b) => a + b, 0) / weights.q2.length,
+            q3: weights.q3.reduce((a, b) => a + b, 0) / weights.q3.length,
+            q4: weights.q4.reduce((a, b) => a + b, 0) / weights.q4.length,
+        };
+        
+        // Find reported quarters for the current year
+        const currentYearQuarters = income_statement_quarterly.filter(q => parseInt(q.calendarYear) === currentYear);
+        if (currentYearQuarters.length === 0) return result;
+        
+        result.reportedQuarters = currentYearQuarters.length;
+
+        // Calculate target and actual EPS for the reported period
+        let targetEpsSum = 0;
+        let actualEpsSum = 0;
+        
+        currentYearQuarters.forEach(q => {
+            const quarter = parseInt(q.period.substring(1));
+            targetEpsSum += avgWeights[`q${quarter}`] * annualEpsEstimate;
+            actualEpsSum += q.eps;
+        });
+
+        if (targetEpsSum === 0) return result;
+        
+        result.performanceRatio = actualEpsSum / targetEpsSum;
         return result;
     }
 
@@ -267,6 +356,13 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (value < 0.25) return 1.0;
                 if (value < 0.40) return 0.5;
                 return 0;
+            
+            case 'Quarterly Earnings Progress':
+                 if (value > 1.15) return 1.2; // Exceptional Beat
+                 if (value > 1.0) return 1.1; // Beating Estimates (slight bonus)
+                 if (value > 0.95) return 1.0; // On Track
+                 if (value > 0.85) return 0.5; // Lagging
+                 return 0; // Significantly Behind
 
             default:
                 return 0;
@@ -312,25 +408,24 @@ document.addEventListener("DOMContentLoaded", () => {
         const roic = metricsTtm.roic ?? latestAnnualMetrics.roic;
         const de = metricsTtm.debtToEquity ?? latestAnnualMetrics.debtToEquity;
 
-        // --- FIX: Find the correct forward-looking estimate for NEXT YEAR ---
+        // --- FIX: Find the correct forward-looking estimate ---
         const currentYear = new Date().getFullYear();
-        const nextYear = currentYear + 1;
-        const nextYearEstimate = estimates.find(est => parseInt(est.calendarYear) === nextYear);
+        // Use the CURRENT year's estimate for Forward P/E and growth from the last reported year
+        const forwardEstimate = estimates.find(est => parseInt(est.calendarYear) === currentYear);
 
         let epsNext1y = null;
         const lastActualEps = income.length > 0 ? income[lastIndex].eps : null;
-        const forwardEpsForGrowth = nextYearEstimate ? nextYearEstimate.estimatedEpsAvg : null;
-        if (lastActualEps > 0 && forwardEpsForGrowth > 0) {
-            epsNext1y = (forwardEpsForGrowth / lastActualEps) - 1;
+        const forwardEpsForGrowth = forwardEstimate ? forwardEstimate.estimatedEpsAvg : null;
+        if (lastActualEps > 0 && forwardEpsForGrowth) {
+             epsNext1y = (forwardEpsForGrowth / lastActualEps) - 1;
         }
 
         let forwardPe = null;
-        const forwardEps = nextYearEstimate ? nextYearEstimate.estimatedEpsAvg : null;
         const currentPrice = profile.price;
-        if (currentPrice > 0 && forwardEps > 0) {
-            forwardPe = currentPrice / forwardEps;
+        if (currentPrice > 0 && forwardEpsForGrowth > 0) {
+            forwardPe = currentPrice / forwardEpsForGrowth;
         }
-
+        
         let peg = null;
         if (forwardPe > 0 && epsNext1y > 0) {
             peg = forwardPe / (epsNext1y * 100);
@@ -350,6 +445,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         
         const consistency = _calculateConsistencyMetrics(income);
+        const quarterlyPerformance = _calculateQuarterlyPerformance(data.income_statement_quarterly, data.analyst_estimates);
 
         // --- METRICS DEFINITION (Rebalanced Weights) ---
         const metrics = {
@@ -358,10 +454,11 @@ document.addEventListener("DOMContentLoaded", () => {
             'EPS Growth (5Y)': { value: eps5y, format: 'percent', weight: 8 },
             'Revenue Growth (5Y)': { value: rev5y, format: 'percent', weight: 5 },
             // -- Quality & Stability (40%)
-            'Return on Invested Capital': { value: roic, format: 'percent', weight: 12 },
-            'Return on Equity': { value: roe, format: 'percent', weight: 10 },
-            'Profitable Yrs (5Y)': { value: consistency.profitableYears, format: 'number', weight: 10 },
-            'Rev. Growth Stability': { value: consistency.revenueGrowthStdDev, format: 'decimal', weight: 8 },
+            'Return on Invested Capital': { value: roic, format: 'percent', weight: 10 },
+            'Return on Equity': { value: roe, format: 'percent', weight: 8 },
+            'Quarterly Earnings Progress': { value: quarterlyPerformance.performanceRatio, format: 'ratio', weight: 8 },
+            'Profitable Yrs (5Y)': { value: consistency.profitableYears, format: 'number', weight: 8 },
+            'Rev. Growth Stability': { value: consistency.revenueGrowthStdDev, format: 'decimal', weight: 6 },
             // -- Financial Health (10%)
             'Debt-to-Equity': { value: de, format: 'decimal', weight: 5 },
             'Interest Coverage': { value: interestCoverage, format: 'decimal', weight: 5 },
@@ -418,6 +515,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 } else if (data.format === 'number') {
                     valueDisplay = `${data.value} / 5`;
                 }
+                else if (data.format === 'ratio') {
+                    valueDisplay = `${data.value.toFixed(2)}x`;
+                }
                 else {
                     valueDisplay = data.value.toFixed(2);
                 }
@@ -463,7 +563,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const metricGroups = {
             'Growth': ['EPS Growth (Next 1Y)', 'EPS Growth (5Y)', 'Revenue Growth (5Y)'],
-            'Quality & Consistency': ['Return on Invested Capital', 'Return on Equity', 'Profitable Yrs (5Y)', 'Rev. Growth Stability'],
+            'Quality & Consistency': ['Return on Invested Capital', 'Return on Equity', 'Quarterly Earnings Progress', 'Profitable Yrs (5Y)', 'Rev. Growth Stability'],
             'Financial Health': ['Debt-to-Equity', 'Interest Coverage'],
             'Valuation': ['PEG Ratio', 'Forward P/E', 'Price to FCF']
         };
@@ -1264,6 +1364,7 @@ document.addEventListener("DOMContentLoaded", () => {
         return {
             profile: fetchedData.profile,
             income_statement_annual: fetchedData.incomeStatement,
+            income_statement_quarterly: fetchedData.income_statement_quarterly,
             key_metrics_ttm: fetchedData.key_metrics_ttm,
             ratios_ttm: fetchedData.ratios_ttm,
             analyst_estimates: fetchedData.analyst_estimates,
@@ -1281,6 +1382,7 @@ document.addEventListener("DOMContentLoaded", () => {
             keyMetrics: `https://financialmodelingprep.com/api/v3/key-metrics/${symbol}?period=annual&limit=10&apikey=${apiKey}`,
             ratios: `https://financialmodelingprep.com/api/v3/ratios/${symbol}?period=annual&limit=10&apikey=${apiKey}`,
             incomeStatement: `https://financialmodelingprep.com/api/v3/income-statement/${symbol}?period=annual&limit=10&apikey=${apiKey}`,
+            income_statement_quarterly: `https://financialmodelingprep.com/api/v3/income-statement/${symbol}?period=quarter&limit=12&apikey=${apiKey}`,
             key_metrics_ttm: `https://financialmodelingprep.com/api/v3/key-metrics-ttm/${symbol}?apikey=${apiKey}`,
             ratios_ttm: `https://financialmodelingprep.com/api/v3/ratios-ttm/${symbol}?apikey=${apiKey}`,
             analyst_estimates: `https://financialmodelingprep.com/api/v3/analyst-estimates/${symbol}?apikey=${apiKey}`,
