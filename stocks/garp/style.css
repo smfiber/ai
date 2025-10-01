@@ -3,9 +3,23 @@ body {
     font-family: 'Inter', sans-serif;
 }
 
-/* Style for the modal to be hidden by default */
+/* MODAL STYLES */
 .modal {
     display: none;
+    align-items: center;
+    justify-content: center;
+    position: fixed;
+    inset: 0px;
+    z-index: 50;
+    padding: 1rem;
+}
+
+.modal.is-open {
+    display: flex;
+}
+
+body.modal-open {
+    overflow: hidden;
 }
 
 /* Styles for accordion transition */
@@ -246,6 +260,7 @@ body {
     background-color: #dc2626;
     color: #fef2f2;
 }
+
 
 .metric-tile {
     background-color: #f9fafb;
