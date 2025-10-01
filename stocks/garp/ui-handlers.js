@@ -70,7 +70,7 @@ export async function handleRefreshFmpData(symbol) {
             { name: 'ratios_ttm', path: 'ratios-ttm', version: 'v3' },
             { name: 'income_statement_quarterly', path: 'income-statement', params: 'period=quarter&limit=5', version: 'v3' },
             { name: 'stock_grade_news', path: 'grade', version: 'v3' },
-            { name: 'analyst_estimates', path: 'financial-estimates', params: 'period=annual', version: 'stable'},
+            { name: 'analyst_estimates', path: 'analyst-estimates', params: 'period=annual', version: 'stable'},
         ];
 
         let successfulFetches = 0;
