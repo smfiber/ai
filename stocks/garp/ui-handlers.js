@@ -70,7 +70,7 @@ export async function handleRefreshFmpData(symbol) {
             { name: 'ratios_ttm', path: 'ratios-ttm', version: 'v3' },
             { name: 'income_statement_quarterly', path: 'income-statement', params: 'period=quarter&limit=5', version: 'v3' },
             { name: 'stock_grade_news', path: 'grade', version: 'v3' },
-            { name: 'analyst_estimates', path: 'analyst-estimates', params: 'period=annual&limit=10', version: 'v3'},
+            { name: 'analyst_estimates', path: 'financial-estimates', params: 'period=annual', version: 'stable'},
         ];
 
         let successfulFetches = 0;
@@ -79,12 +79,13 @@ export async function handleRefreshFmpData(symbol) {
             loadingMessage.textContent = `Fetching FMP Data: ${endpoint.name.replace(/_/g, ' ')}...`;
             
             let url;
-            if (endpoint.name === 'analyst_estimates') {
-                // Use the v4 endpoint for analyst forecasts, which has a different URL structure
-                url = `https://financialmodelingprep.com/api/v4/analyst-estimates-forecast?symbol=${symbol}&apikey=${state.fmpApiKey}`;
+            const version = endpoint.version || 'v3';
+
+            if (version === 'stable') {
+                // Special URL builder for /stable endpoints
+                url = `https://financialmodelingprep.com/stable/${endpoint.path}?symbol=${symbol}&${endpoint.params ? endpoint.params + '&' : ''}apikey=${state.fmpApiKey}`;
             } else {
-                // Use the standard v3 builder for all other endpoints
-                const version = endpoint.version || 'v3';
+                // Standard URL for /api/v3 and other versioned endpoints
                 url = `https://financialmodelingprep.com/api/${version}/${endpoint.path}/${symbol}?${endpoint.params ? endpoint.params + '&' : ''}apikey=${state.fmpApiKey}`;
             }
 
