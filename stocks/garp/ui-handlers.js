@@ -78,8 +78,16 @@ export async function handleRefreshFmpData(symbol) {
         for (const endpoint of coreEndpoints) {
             loadingMessage.textContent = `Fetching FMP Data: ${endpoint.name.replace(/_/g, ' ')}...`;
             
-            const version = endpoint.version || 'v3';
-            const url = `https://financialmodelingprep.com/api/${version}/${endpoint.path}/${symbol}?${endpoint.params ? endpoint.params + '&' : ''}apikey=${state.fmpApiKey}`;
+            let url;
+            if (endpoint.name === 'analyst_estimates') {
+                // Hardcode the /stable endpoint for analyst estimates
+                url = `https://financialmodelingprep.com/stable/analyst-estimates/${symbol}?${endpoint.params ? endpoint.params + '&' : ''}apikey=${state.fmpApiKey}`;
+            } else {
+                // Use the standard v3 builder for all other endpoints
+                const version = endpoint.version || 'v3';
+                url = `https://financialmodelingprep.com/api/${version}/${endpoint.path}/${symbol}?${endpoint.params ? endpoint.params + '&' : ''}apikey=${state.fmpApiKey}`;
+            }
+
             const data = await callApi(url);
 
             if (!data || (Array.isArray(data) && data.length === 0)) {
