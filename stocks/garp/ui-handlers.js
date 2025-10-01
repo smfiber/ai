@@ -849,7 +849,7 @@ export async function handleAnalysisRequest(symbol, reportType, promptConfig, fo
         } else if (reportType === 'CapitalAllocators') {
             payloadData = _calculateCapitalAllocatorsMetrics(data);
         } else if (reportType === 'GarpAnalysis') {
-            payloadData = _calculateGarpAnalysisMetrics(data);
+            payloadData = _calculateGarpScorecardMetrics(data);
         } else if (reportType === 'QarpAnalysis') {
             payloadData = _calculateGarpScorecardMetrics(data);
         } else {
@@ -1026,7 +1026,7 @@ export async function handleGenerateAllReportsRequest(symbol) {
     };
     const metricCalculators = {
         'FinancialAnalysis': _calculateFinancialAnalysisMetrics,
-        'GarpAnalysis': _calculateGarpAnalysisMetrics,
+        'GarpAnalysis': _calculateGarpScorecardMetrics,
         'MoatAnalysis': _calculateMoatAnalysisMetrics,
         'RiskAssessment': _calculateRiskAssessmentMetrics,
         'CapitalAllocators': _calculateCapitalAllocatorsMetrics,
