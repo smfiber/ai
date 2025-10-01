@@ -411,7 +411,7 @@ document.addEventListener("DOMContentLoaded", () => {
         // --- FIX: Find the correct forward-looking estimate ---
         const currentYear = new Date().getFullYear();
         // Use the CURRENT year's estimate for Forward P/E and growth from the last reported year
-        const forwardEstimate = estimates.find(est => parseInt(est.date.substring(0, 4)) === currentYear);
+        const forwardEstimate = Array.isArray(estimates) ? estimates.find(est => parseInt(est.date.substring(0, 4)) === currentYear) : null;
 
         let epsNext1y = null;
         const lastActualEps = income.length > 0 ? income[lastIndex].eps : null;
@@ -1385,7 +1385,7 @@ document.addEventListener("DOMContentLoaded", () => {
             income_statement_quarterly: `https://financialmodelingprep.com/api/v3/income-statement/${symbol}?period=quarter&limit=12&apikey=${apiKey}`,
             key_metrics_ttm: `https://financialmodelingprep.com/api/v3/key-metrics-ttm/${symbol}?apikey=${apiKey}`,
             ratios_ttm: `https://financialmodelingprep.com/api/v3/ratios-ttm/${symbol}?apikey=${apiKey}`,
-            analyst_estimates: `https://financialmodelingprep.com/stable/analyst-estimates/${symbol}?period=annual&page=0&limit=10&apikey=${apiKey}`,
+            analyst_estimates: `https://financialmodelingprep.com/stable/analyst-estimates?symbol=${symbol}&period=annual&page=0&limit=10&apikey=${apiKey}`,
         };
 
         try {
@@ -1394,7 +1394,8 @@ document.addEventListener("DOMContentLoaded", () => {
                     // For errors like 429, the response body might contain useful info
                     const errorBody = await res.text();
                     console.warn(`HTTP error ${res.status} for ${url}:`, errorBody);
-                    return { error: `HTTP error ${res.status}` }; // Return an error object
+                    // FIX: Return an empty array for find/filter operations to prevent errors
+                    return [];
                 }
                 return res.json();
             }));
