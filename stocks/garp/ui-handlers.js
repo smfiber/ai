@@ -1253,7 +1253,7 @@ async function _fetchAndCachePeerData(tickers) {
         let allEndpointsFetched = true;
         try {
             // Check if the peer data is already cached
-            const docRef = doc(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, ticker, 'endpoints', 'profile');
+            const docRef = doc(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, ticker, 'endpoints', 'income_statement_annual');
             const docSnap = await getDoc(docRef);
 
             if (docSnap.exists()) {
