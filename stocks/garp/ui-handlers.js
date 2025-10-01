@@ -68,7 +68,7 @@ export async function handleRefreshFmpData(symbol) {
             { name: 'ratios_annual', path: 'ratios', params: 'period=annual&limit=10', version: 'v3' },
             { name: 'key_metrics_ttm', path: 'key-metrics-ttm', version: 'v3' },
             { name: 'ratios_ttm', path: 'ratios-ttm', version: 'v3' },
-            { name: 'income_statement_quarterly', path: 'income-statement', params: 'period=quarter&limit=5', version: 'v3' },
+            { name: 'income_statement_quarterly', path: 'income-statement', params: 'period=quarter&limit=12', version: 'v3' },
             { name: 'stock_grade_news', path: 'grade', version: 'v3' },
             { name: 'analyst_estimates', path: 'analyst-estimates', params: 'period=annual', version: 'stable'},
         ];
