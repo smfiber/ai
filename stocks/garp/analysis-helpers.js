@@ -21,7 +21,7 @@ function formatLargeNumber(value, precision = 2) {
 }
 
 /**
- * NEW: Analyzes a metric's value against GARP criteria to provide a qualitative interpretation.
+ * Analyzes a metric's value against GARP criteria to provide a qualitative interpretation.
  * @param {string} metricName The name of the metric being analyzed.
  * @param {number|null} value The calculated value of the metric.
  * @returns {object} An object containing the category and explanatory text.
@@ -77,6 +77,29 @@ function _getMetricInterpretation(metricName, value) {
             if (value < 15) return { category: 'Potentially Undervalued', text: 'The market price appears low relative to the company\'s ability to generate cash, a strong sign of value.' };
             if (value < 25) return { category: 'Reasonable Price', text: 'A healthy valuation that suggests the market price is not excessive relative to the company\'s cash flow.' };
             return { category: 'Expensive', text: 'The stock is trading at a high multiple of its cash flow, suggesting high expectations are priced in.' };
+        
+        case 'Interest Coverage':
+             if (value > 10) return { category: 'Very Safe', text: 'Earnings cover interest payments many times over, indicating extremely low financial risk from debt.' };
+             if (value > 4) return { category: 'Healthy', text: 'The company generates ample earnings to comfortably service its debt obligations.' };
+             if (value > 2) return { category: 'Adequate', text: 'Coverage is acceptable, but a significant downturn in earnings could create pressure.' };
+             return { category: 'High Risk', text: 'Earnings may not be sufficient to cover interest payments, a major red flag for financial distress.' };
+
+        case 'Profitable Yrs (5Y)':
+            if (value === 5) return { category: 'Highly Consistent', text: 'A perfect track record of profitability, indicating a durable and resilient business model.' };
+            if (value === 4) return { category: 'Consistent', text: 'A strong track record of profitability with only a minor blip, suggesting business strength.' };
+            return { category: 'Inconsistent', text: 'The company has struggled with consistent profitability, signaling higher operational or cyclical risk.' };
+
+        case 'Rev. Growth Stability':
+            if (value < 0.10) return { category: 'Highly Stable', text: 'Revenue growth is very consistent, indicating a predictable business with a strong competitive position.' };
+            if (value < 0.25) return { category: 'Stable', text: 'Revenue growth is relatively stable, suggesting a reliable business model.' };
+            return { category: 'Volatile', text: 'Revenue growth is erratic and unpredictable, which may point to cyclicality or competitive pressures.' };
+
+        case 'Quarterly Earnings Progress':
+            if (value > 1.15) return { category: 'Exceptional Beat', text: 'The company is significantly outperforming its seasonally-adjusted earnings targets for the year.' };
+            if (value > 1.0) return { category: 'Beating Estimates', text: 'The company is currently ahead of its seasonally-adjusted earnings estimates for the year.' };
+            if (value > 0.95) return { category: 'On Track', text: 'The company is meeting its seasonally-adjusted earnings targets for the year.' };
+            if (value > 0.85) return { category: 'Lagging', text: 'The company is slightly behind its seasonally-adjusted earnings targets, which warrants monitoring.' };
+            return { category: 'Significantly Behind', text: 'The company is substantially underperforming its earnings estimates, a potential red flag.' };
 
         default:
             return { category: 'N/A', text: '' };
@@ -142,12 +165,6 @@ function _getMetricScoreMultiplier(metricName, value) {
              if (value < 2.5) return 1.0;
              if (value < 4.0) return 0.5;
              return 0;
-        
-        case 'Debt-to-Equity':
-            if (value < 0.3) return 1.2;
-            if (value < 0.7) return 1.0;
-            if (value < 1.0) return 0.5;
-            return 0;
 
         case 'Price to FCF':
             if (value <= 0) return 0;
@@ -155,10 +172,156 @@ function _getMetricScoreMultiplier(metricName, value) {
             if (value < 25) return 1.0;
             if (value < 40) return 0.5;
             return 0;
+        
+        case 'Debt-to-Equity':
+            if (value < 0.3) return 1.2;
+            if (value < 0.7) return 1.0;
+            if (value < 1.0) return 0.5;
+            return 0;
+
+        case 'Interest Coverage':
+            if (value > 10) return 1.2;
+            if (value > 4) return 1.0;
+            if (value > 2) return 0.5;
+            return 0;
+        
+        case 'Profitable Yrs (5Y)':
+            if (value === 5) return 1.2;
+            if (value === 4) return 1.0;
+            if (value === 3) return 0.5;
+            return 0;
+        
+        case 'Rev. Growth Stability': // Lower is better
+            if (value < 0.10) return 1.2;
+            if (value < 0.25) return 1.0;
+            if (value < 0.40) return 0.5;
+            return 0;
+        
+        case 'Quarterly Earnings Progress':
+             if (value > 1.15) return 1.2; // Exceptional Beat
+             if (value > 1.0) return 1.1; // Beating Estimates (slight bonus)
+             if (value > 0.95) return 1.0; // On Track
+             if (value > 0.85) return 0.5; // Lagging
+             return 0; // Significantly Behind
 
         default:
             return 0;
     }
+}
+
+/**
+ * Calculates consistency metrics based on 5-year historical data.
+ * @param {Array} income_statements - Array of annual income statement objects from FMP.
+ * @returns {object} An object containing profitable years count and revenue growth standard deviation.
+ */
+function _calculateConsistencyMetrics(income_statements) {
+    const result = { profitableYears: null, revenueGrowthStdDev: null };
+    if (!income_statements || income_statements.length < 5) return result;
+
+    const recent_statements = income_statements.slice(-5);
+
+    // 1. Calculate Profitable Years
+    result.profitableYears = recent_statements.filter(stmt => stmt.eps > 0).length;
+
+    // 2. Calculate Revenue Growth Stability (Standard Deviation)
+    const growthRates = [];
+    for (let i = 1; i < recent_statements.length; i++) {
+        const prevRevenue = recent_statements[i-1].revenue;
+        const currRevenue = recent_statements[i].revenue;
+        if (prevRevenue > 0) {
+            growthRates.push((currRevenue / prevRevenue) - 1);
+        }
+    }
+    
+    if (growthRates.length > 1) {
+        const mean = growthRates.reduce((a, b) => a + b, 0) / growthRates.length;
+        const variance = growthRates.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / growthRates.length;
+        result.revenueGrowthStdDev = Math.sqrt(variance);
+    }
+
+    return result;
+}
+
+/**
+ * Calculates if a company is on track with annual estimates based on quarterly performance.
+ * @param {Array} income_statement_quarterly - Array of quarterly income statements.
+ * @param {Array} analyst_estimates_annual - Array of annual analyst estimates.
+ * @returns {object} An object containing the performance ratio.
+ */
+function _calculateQuarterlyPerformance(income_statement_quarterly, analyst_estimates_annual) {
+    const result = { performanceRatio: null, reportedQuarters: 0 };
+    if (!income_statement_quarterly || income_statement_quarterly.length < 5 || !analyst_estimates_annual || analyst_estimates_annual.length === 0) {
+        return result;
+    }
+
+    const today = new Date();
+    const currentYear = today.getFullYear();
+    const currentMonth = today.getMonth(); // 0-11
+    
+    // Find the full-year estimate for the current year
+    const annualEstimate = analyst_estimates_annual.find(e => parseInt(e.date.substring(0, 4)) === currentYear);
+    if (!annualEstimate || !annualEstimate.epsAvg) {
+        return result;
+    }
+    const annualEpsEstimate = annualEstimate.epsAvg;
+
+    // Group historical quarterly EPS by year
+    const historicalData = {};
+    income_statement_quarterly.slice().reverse().forEach(q => {
+        const year = parseInt(q.calendarYear);
+        if (year < currentYear) {
+            if (!historicalData[year]) {
+                historicalData[year] = { q1: 0, q2: 0, q3: 0, q4: 0, total: 0 };
+            }
+            const quarter = parseInt(q.period.substring(1));
+            historicalData[year][`q${quarter}`] = q.eps;
+            historicalData[year].total += q.eps;
+        }
+    });
+
+    // Calculate average historical weights for each quarter
+    const weights = { q1: [], q2: [], q3: [], q4: [] };
+    let validYears = 0;
+    for (const year in historicalData) {
+        const yearData = historicalData[year];
+        if (yearData.total > 0 && yearData.q1 && yearData.q2 && yearData.q3 && yearData.q4) {
+             validYears++;
+             weights.q1.push(yearData.q1 / yearData.total);
+             weights.q2.push(yearData.q2 / yearData.total);
+             weights.q3.push(yearData.q3 / yearData.total);
+             weights.q4.push(yearData.q4 / yearData.total);
+        }
+    }
+
+    if (validYears < 1) return result; // Need at least one full historical year
+
+    const avgWeights = {
+        q1: weights.q1.reduce((a, b) => a + b, 0) / weights.q1.length,
+        q2: weights.q2.reduce((a, b) => a + b, 0) / weights.q2.length,
+        q3: weights.q3.reduce((a, b) => a + b, 0) / weights.q3.length,
+        q4: weights.q4.reduce((a, b) => a + b, 0) / weights.q4.length,
+    };
+    
+    // Find reported quarters for the current year
+    const currentYearQuarters = income_statement_quarterly.filter(q => parseInt(q.calendarYear) === currentYear);
+    if (currentYearQuarters.length === 0) return result;
+    
+    result.reportedQuarters = currentYearQuarters.length;
+
+    // Calculate target and actual EPS for the reported period
+    let targetEpsSum = 0;
+    let actualEpsSum = 0;
+    
+    currentYearQuarters.forEach(q => {
+        const quarter = parseInt(q.period.substring(1));
+        targetEpsSum += avgWeights[`q${quarter}`] * annualEpsEstimate;
+        actualEpsSum += q.eps;
+    });
+
+    if (targetEpsSum === 0) return result;
+    
+    result.performanceRatio = actualEpsSum / targetEpsSum;
+    return result;
 }
 
 
@@ -168,11 +331,16 @@ function _getMetricScoreMultiplier(metricName, value) {
  * @returns {object} An object containing GARP metrics with their values and pass/fail status.
  */
 export function _calculateGarpScorecardMetrics(data) {
+    if (!data || !Array.isArray(data.income_statement_annual)) {
+        console.error("Invalid or incomplete data passed to _calculateGarpScorecardMetrics. Skipping.", data);
+        return { garpConvictionScore: 'ERR' };
+    }
+    
     const profile = data.profile?.[0] || {};
-    const income = (data.income_statement_annual || []).slice().reverse();
+    const income = data.income_statement_annual.slice().reverse();
     const metricsTtm = data.key_metrics_ttm?.[0] || {};
     const ratiosTtm = data.ratios_ttm?.[0] || {};
-    const estimates = data.analyst_estimates?.[0] || {};
+    const estimates = data.analyst_estimates || [];
     const keyMetricsAnnual = (data.key_metrics_annual || []).slice().reverse();
     const latestAnnualMetrics = keyMetricsAnnual[keyMetricsAnnual.length - 1] || {};
     const ratiosAnnual = (data.ratios_annual || []).slice().reverse();
@@ -186,54 +354,73 @@ export function _calculateGarpScorecardMetrics(data) {
     // --- CALCULATIONS ---
     const lastIndex = income.length - 1;
     const startIndex = income.length - 6;
+    const latestIncome = income[lastIndex] || {};
+
     const eps5y = income.length >= 6 ? getCagr(income[startIndex].eps, income[lastIndex].eps, 5) : null;
     const rev5y = income.length >= 6 ? getCagr(income[startIndex].revenue, income[lastIndex].revenue, 5) : null;
     
     const roe = metricsTtm.roe ?? latestAnnualMetrics.roe;
     const roic = metricsTtm.roic ?? latestAnnualMetrics.roic;
-    const pe = metricsTtm.peRatioTTM ?? latestAnnualMetrics.peRatio;
     const de = metricsTtm.debtToEquity ?? latestAnnualMetrics.debtToEquity;
-    const ps = ratiosTtm.priceToSalesRatioTTM ?? latestAnnualRatios.priceToSalesRatio;
+
+    // --- FIX: Find the correct forward-looking estimate ---
+    const currentYear = new Date().getFullYear();
+    // Use the CURRENT year's estimate for Forward P/E and growth from the last reported year
+    const forwardEstimate = Array.isArray(estimates) ? estimates.find(est => parseInt(est.date.substring(0, 4)) === currentYear) : null;
 
     let epsNext1y = null;
     const lastActualEps = income.length > 0 ? income[lastIndex].eps : null;
-    const forwardEpsForGrowth = estimates.estimatedEpsAvg;
-    if (lastActualEps > 0 && forwardEpsForGrowth > 0) {
-        epsNext1y = (forwardEpsForGrowth / lastActualEps) - 1;
+    const forwardEpsForGrowth = forwardEstimate ? forwardEstimate.epsAvg : null;
+    if (lastActualEps > 0 && forwardEpsForGrowth) {
+         epsNext1y = (forwardEpsForGrowth / lastActualEps) - 1;
     }
 
     let forwardPe = null;
-    const forwardEps = estimates.estimatedEpsAvg;
     const currentPrice = profile.price;
-    if (currentPrice > 0 && forwardEps > 0) {
-        forwardPe = currentPrice / forwardEps;
-    }
-
-    let peg = null;
-    if (pe > 0 && epsNext1y > 0) {
-        peg = pe / (epsNext1y * 100);
+    if (currentPrice > 0 && forwardEpsForGrowth > 0) {
+        forwardPe = currentPrice / forwardEpsForGrowth;
     }
     
+    let peg = null;
+    if (forwardPe > 0 && epsNext1y > 0) {
+        peg = forwardPe / (epsNext1y * 100);
+    }
+
     let pfcf = null;
     const fcfPerShareTtm = metricsTtm.freeCashFlowPerShareTTM;
     if (currentPrice > 0 && fcfPerShareTtm > 0) {
         pfcf = currentPrice / fcfPerShareTtm;
     }
+    
+    let interestCoverage = null;
+    if (latestIncome.operatingIncome && latestIncome.interestExpense > 0) {
+         interestCoverage = latestIncome.operatingIncome / latestIncome.interestExpense;
+    } else if (latestIncome.operatingIncome > 0 && latestIncome.interestExpense <= 0) {
+        interestCoverage = 999; // Effectively infinite coverage
+    }
+    
+    const consistency = _calculateConsistencyMetrics(income);
+    const quarterlyPerformance = _calculateQuarterlyPerformance(data.income_statement_quarterly, data.analyst_estimates);
 
-
-    // --- METRICS DEFINITION ---
+    // --- METRICS DEFINITION (Rebalanced Weights) ---
     const metrics = {
+        // -- Growth (25%)
+        'EPS Growth (Next 1Y)': { value: epsNext1y, format: 'percent', weight: 12 },
         'EPS Growth (5Y)': { value: eps5y, format: 'percent', weight: 8 },
-        'EPS Growth (Next 1Y)': { value: epsNext1y, format: 'percent', weight: 15 },
-        'Revenue Growth (5Y)': { value: rev5y, format: 'percent', weight: 8 },
-        'Return on Equity': { value: roe, format: 'percent', weight: 12 },
-        'Return on Invested Capital': { value: roic, format: 'percent', weight: 12 },
-        'P/E (TTM)': { value: pe, format: 'decimal', weight: 5 },
-        'Forward P/E': { value: forwardPe, format: 'decimal', weight: 8 },
-        'PEG Ratio': { value: peg, format: 'decimal', weight: 15 },
-        'P/S Ratio': { value: ps, format: 'decimal', weight: 5 },
-        'Price to FCF': { value: pfcf, format: 'decimal', weight: 10 },
+        'Revenue Growth (5Y)': { value: rev5y, format: 'percent', weight: 5 },
+        // -- Quality & Stability (40%)
+        'Return on Invested Capital': { value: roic, format: 'percent', weight: 10 },
+        'Return on Equity': { value: roe, format: 'percent', weight: 8 },
+        'Quarterly Earnings Progress': { value: quarterlyPerformance.performanceRatio, format: 'ratio', weight: 8 },
+        'Profitable Yrs (5Y)': { value: consistency.profitableYears, format: 'number', weight: 8 },
+        'Rev. Growth Stability': { value: consistency.revenueGrowthStdDev, format: 'decimal', weight: 6 },
+        // -- Financial Health (10%)
         'Debt-to-Equity': { value: de, format: 'decimal', weight: 5 },
+        'Interest Coverage': { value: interestCoverage, format: 'decimal', weight: 5 },
+        // -- Valuation (25%)
+        'PEG Ratio': { value: peg, format: 'decimal', weight: 10 },
+        'Forward P/E': { value: forwardPe, format: 'decimal', weight: 8 },
+        'Price to FCF': { value: pfcf, format: 'decimal', weight: 7 },
     };
 
     // --- CONVICTION SCORE CALCULATION ---
@@ -246,16 +433,14 @@ export function _calculateGarpScorecardMetrics(data) {
 
         totalWeight += metric.weight;
         weightedScore += metric.weight * multiplier;
-
-        // Restore the isMet property for UI coloring (pass >= 1.0)
-        metric.isMet = multiplier >= 1.0;
         
+        metric.isMet = multiplier >= 1.0;
+        metric.multiplier = multiplier;
         metric.interpretation = _getMetricInterpretation(key, metric.value);
     }
 
     const rawScore = (weightedScore / totalWeight) * 100;
     
-    // Cap the final score at 100 and handle potential NaN results
     metrics.garpConvictionScore = Math.round(Math.min(100, rawScore) || 0);
     
     return metrics;
@@ -263,49 +448,49 @@ export function _calculateGarpScorecardMetrics(data) {
 
 
 /**
- * Calculates a comprehensive summary of metrics for the "Financial Analysis" prompt.
- * @param {object} data - The full FMP data object for a stock.
- * @returns {object} A summary object with pre-calculated metrics and trends.
- */
+ * Calculates a comprehensive summary of metrics for the "Financial Analysis" prompt.
+ * @param {object} data - The full FMP data object for a stock.
+ * @returns {object} A summary object with pre-calculated metrics and trends.
+ */
 export function _calculateFinancialAnalysisMetrics(data) {
-    // 1. Helpers
-    const getTrendStatus = (series, lookback = 5, isPercentage = true) => {
-        if (!series || series.length < 3) return "Not enough data for a trend.";
-        const recentSeries = series.slice(-lookback);
-        if (recentSeries.length < 3) return "Not enough data for a trend.";
+    // 1. Helpers
+    const getTrendStatus = (series, lookback = 5, isPercentage = true) => {
+        if (!series || series.length < 3) return "Not enough data for a trend.";
+        const recentSeries = series.slice(-lookback);
+        if (recentSeries.length < 3) return "Not enough data for a trend.";
 
-        const firstHalf = recentSeries.slice(0, Math.floor(recentSeries.length / 2));
-        const secondHalf = recentSeries.slice(Math.ceil(recentSeries.length / 2));
-        
-        const avg = (arr) => arr.reduce((a, b) => a + b, 0) / arr.length;
-        const firstAvg = avg(firstHalf);
-        const secondAvg = avg(secondHalf);
+        const firstHalf = recentSeries.slice(0, Math.floor(recentSeries.length / 2));
+        const secondHalf = recentSeries.slice(Math.ceil(recentSeries.length / 2));
+        
+        const avg = (arr) => arr.reduce((a, b) => a + b, 0) / arr.length;
+        const firstAvg = avg(firstHalf);
+        const secondAvg = avg(secondHalf);
 
-        const change = ((secondAvg - firstAvg) / Math.abs(firstAvg)) * 100;
-        
-        if (change > (isPercentage ? 5 : 10)) return 'is improving';
-        if (change < -(isPercentage ? 5 : 10)) return 'is declining';
-        return 'has been stable';
-    };
-    
-    const calculateAverage = (data, key) => {
-        const values = data.slice(-5).map(d => d[key]).filter(v => typeof v === 'number');
-        if (values.length === 0) return null;
-        return values.reduce((a, b) => a + b, 0) / values.length;
-    };
+        const change = ((secondAvg - firstAvg) / Math.abs(firstAvg)) * 100;
+        
+        if (change > (isPercentage ? 5 : 10)) return 'is improving';
+        if (change < -(isPercentage ? 5 : 10)) return 'is declining';
+        return 'has been stable';
+    };
+    
+    const calculateAverage = (data, key) => {
+        const values = data.slice(-5).map(d => d[key]).filter(v => typeof v === 'number');
+        if (values.length === 0) return null;
+        return values.reduce((a, b) => a + b, 0) / values.length;
+    };
 
-    // 2. Data Preparation
-    const profile = data.profile?.[0] || {};
-    const incomeStatements = (data.income_statement_annual || []).slice().reverse();
-    const keyMetrics = (data.key_metrics_annual || []).slice().reverse();
-    const cashFlows = (data.cash_flow_statement_annual || []).slice().reverse();
-    const grades = (data.stock_grade_news || []).slice(0, 15);
-    const ratios = (data.ratios_annual || []).slice().reverse();
+    // 2. Data Preparation
+    const profile = data.profile?.[0] || {};
+    const incomeStatements = (data.income_statement_annual || []).slice().reverse();
+    const keyMetrics = (data.key_metrics_annual || []).slice().reverse();
+    const cashFlows = (data.cash_flow_statement_annual || []).slice().reverse();
+    const grades = (data.stock_grade_news || []).slice(0, 15);
+    const ratios = (data.ratios_annual || []).slice().reverse();
 
     const latestIncome = incomeStatements[incomeStatements.length - 1] || {};
-    const latestMetrics = data.key_metrics_ttm?.[0] || keyMetrics[keyMetrics.length - 1] || {};
-    const latestCashFlow = cashFlows[cashFlows.length - 1] || {};
-    const latestRatios = data.ratios_ttm?.[0] || ratios[ratios.length - 1] || {};
+    const latestMetrics = data.key_metrics_ttm?.[0] || keyMetrics[keyMetrics.length - 1] || {};
+    const latestCashFlow = cashFlows[cashFlows.length - 1] || {};
+    const latestRatios = data.ratios_ttm?.[0] || ratios[ratios.length - 1] || {};
 
     const incomeQuarterly = data.income_statement_quarterly || [];
     let recentPerformance = {
@@ -344,196 +529,196 @@ export function _calculateFinancialAnalysisMetrics(data) {
         }
     }
 
-    // 3. Calculations
+    // 3. Calculations
     const marketCapValue = profile.mktCap || data.market_cap?.[0]?.marketCap;
 
-    const analystConsensus = (() => {
-        if (grades.length === 0) return "No recent analyst ratings available.";
-        const buys = grades.filter(g => g.newGrade && ['buy', 'outperform', 'overweight', 'strong buy'].includes(g.newGrade.toLowerCase())).length;
-        const sells = grades.filter(g => g.newGrade && ['sell', 'underperform', 'underweight'].includes(g.newGrade.toLowerCase())).length;
-        const holds = grades.length - buys - sells;
-        return `Generally ${buys > sells ? 'positive' : 'neutral'}, with ${buys} buys, ${holds} holds, and ${sells} sells in the last ${grades.length} ratings.`;
-    })();
+    const analystConsensus = (() => {
+        if (grades.length === 0) return "No recent analyst ratings available.";
+        const buys = grades.filter(g => g.newGrade && ['buy', 'outperform', 'overweight', 'strong buy'].includes(g.newGrade.toLowerCase())).length;
+        const sells = grades.filter(g => g.newGrade && ['sell', 'underperform', 'underweight'].includes(g.newGrade.toLowerCase())).length;
+        const holds = grades.length - buys - sells;
+        return `Generally ${buys > sells ? 'positive' : 'neutral'}, with ${buys} buys, ${holds} holds, and ${sells} sells in the last ${grades.length} ratings.`;
+    })();
 
     const latestRoe = latestMetrics.roeTTM ?? latestMetrics.roe ?? latestMetrics.returnOnEquity;
     const highRoe = keyMetrics.slice(-5).every(k => (k.roe ?? k.returnOnEquity) > 0.15);
 
-    const summary = {
-        companyName: profile.companyName,
-        tickerSymbol: profile.symbol,
-        description: profile.description,
-        sector: profile.sector,
-        industry: profile.industry,
-        marketCap: formatLargeNumber(marketCapValue),
+    const summary = {
+        companyName: profile.companyName,
+        tickerSymbol: profile.symbol,
+        description: profile.description,
+        sector: profile.sector,
+        industry: profile.industry,
+        marketCap: formatLargeNumber(marketCapValue),
         price: profile.price ? `$${profile.price.toFixed(2)}` : 'N/A',
-        priceRange: profile.range || 'N/A',
-        analystConsensus: analystConsensus,
-        insiderOwnership: 'N/A'
-    };
+        priceRange: profile.range || 'N/A',
+        analystConsensus: analystConsensus,
+        insiderOwnership: 'N/A'
+    };
 
-    const performance = {
-        revenueTrend: `Revenue ${getTrendStatus(incomeStatements.map(i=>i.revenue), 5, false)}.`,
-        netIncomeTrend: `Net income ${getTrendStatus(incomeStatements.map(i=>i.netIncome), 5, false)}.`,
-        grossProfitMargin: { status: getTrendStatus(ratios.map(r=>r.grossProfitMargin)) },
-        operatingProfitMargin: { status: getTrendStatus(ratios.map(r=>r.operatingProfitMargin)) },
-        netProfitMargin: { status: getTrendStatus(ratios.map(r=>r.netProfitMargin)) },
-        returnOnEquity: { quality: latestRoe > 0.15 ? 'High' : (latestRoe > 0.05 ? 'Moderate' : 'Low') }
-    };
-    
-    const health = {
-        currentRatio: { status: latestRatios.currentRatio > 2 ? 'Strong' : (latestRatios.currentRatio > 1 ? 'Healthy' : 'a potential risk') },
-        debtToEquity: { status: latestMetrics.debtToEquity > 1 ? 'Aggressive' : (latestMetrics.debtToEquity > 0.5 ? 'Moderate' : 'Conservative') },
-        interestCoverage: { status: latestRatios.interestCoverage > 5 ? 'Very strong' : (latestRatios.interestCoverage > 2 ? 'Healthy' : 'a potential concern') }
-    };
+    const performance = {
+        revenueTrend: `Revenue ${getTrendStatus(incomeStatements.map(i=>i.revenue), 5, false)}.`,
+        netIncomeTrend: `Net income ${getTrendStatus(incomeStatements.map(i=>i.netIncome), 5, false)}.`,
+        grossProfitMargin: { status: getTrendStatus(ratios.map(r=>r.grossProfitMargin)) },
+        operatingProfitMargin: { status: getTrendStatus(ratios.map(r=>r.operatingProfitMargin)) },
+        netProfitMargin: { status: getTrendStatus(ratios.map(r=>r.netProfitMargin)) },
+        returnOnEquity: { quality: latestRoe > 0.15 ? 'High' : (latestRoe > 0.05 ? 'Moderate' : 'Low') }
+    };
+    
+    const health = {
+        currentRatio: { status: latestRatios.currentRatio > 2 ? 'Strong' : (latestRatios.currentRatio > 1 ? 'Healthy' : 'a potential risk') },
+        debtToEquity: { status: latestMetrics.debtToEquity > 1 ? 'Aggressive' : (latestMetrics.debtToEquity > 0.5 ? 'Moderate' : 'Conservative') },
+        interestCoverage: { status: latestRatios.interestCoverage > 5 ? 'Very strong' : (latestRatios.interestCoverage > 2 ? 'Healthy' : 'a potential concern') }
+    };
 
-    const capitalAllocationStory = (() => {
-        const recentFlows = cashFlows.slice(-3);
-        if (recentFlows.length === 0) return "Not enough data.";
-        const total = (key) => recentFlows.reduce((sum, cf) => sum + Math.abs(cf[key] || 0), 0);
-        const capex = total('capitalExpenditure');
-        const dividends = total('dividendsPaid');
-        const buybacks = total('commonStockRepurchased');
-        const debtRepay = total('debtRepayment');
-        const allocations = { 'investing in growth (CapEx)': capex, 'paying dividends': dividends, 'buying back stock': buybacks, 'paying down debt': debtRepay };
-        const largest = Object.keys(allocations).reduce((a, b) => allocations[a] > allocations[b] ? a : b);
-        return `The company is primarily in return/deleveraging mode, with its largest use of cash over the last few years being ${largest}.`;
-    })();
-    const cashFlow = {
-        qualityOfEarnings: latestCashFlow.operatingCashFlow > latestIncome.netIncome ? "Strong, as operating cash flow exceeds net income." : "A potential concern, as net income is higher than operating cash flow.",
-        capitalAllocationStory
-    };
+    const capitalAllocationStory = (() => {
+        const recentFlows = cashFlows.slice(-3);
+        if (recentFlows.length === 0) return "Not enough data.";
+        const total = (key) => recentFlows.reduce((sum, cf) => sum + Math.abs(cf[key] || 0), 0);
+        const capex = total('capitalExpenditure');
+        const dividends = total('dividendsPaid');
+        const buybacks = total('commonStockRepurchased');
+        const debtRepay = total('debtRepayment');
+        const allocations = { 'investing in growth (CapEx)': capex, 'paying dividends': dividends, 'buying back stock': buybacks, 'paying down debt': debtRepay };
+        const largest = Object.keys(allocations).reduce((a, b) => allocations[a] > allocations[b] ? a : b);
+        return `The company is primarily in return/deleveraging mode, with its largest use of cash over the last few years being ${largest}.`;
+    })();
+    const cashFlow = {
+        qualityOfEarnings: latestCashFlow.operatingCashFlow > latestIncome.netIncome ? "Strong, as operating cash flow exceeds net income." : "A potential concern, as net income is higher than operating cash flow.",
+        capitalAllocationStory
+    };
 
-    const valuationMetrics = [
-        { name: 'peRatio', key: 'peRatio', source: keyMetrics, ttmKey: 'peRatioTTM' },
-        { name: 'priceToSalesRatio', key: 'priceToSalesRatio', source: ratios, ttmKey: 'priceToSalesRatioTTM' },
-        { name: 'pbRatio', key: 'priceToBookRatio', source: ratios, ttmKey: 'priceToBookRatioTTM' },
-        { name: 'enterpriseValueToEBITDA', key: 'enterpriseValueMultiple', source: ratios, ttmKey: 'enterpriseValueMultipleTTM' }
-    ];
-    const valuation = valuationMetrics.map(metric => {
-        const currentSource = metric.ttmKey ? (metric.source === keyMetrics ? data.key_metrics_ttm?.[0] : data.ratios_ttm?.[0]) : (metric.source === keyMetrics ? latestMetrics : latestRatios);
+    const valuationMetrics = [
+        { name: 'peRatio', key: 'peRatio', source: keyMetrics, ttmKey: 'peRatioTTM' },
+        { name: 'priceToSalesRatio', key: 'priceToSalesRatio', source: ratios, ttmKey: 'priceToSalesRatioTTM' },
+        { name: 'pbRatio', key: 'priceToBookRatio', source: ratios, ttmKey: 'priceToBookRatioTTM' },
+        { name: 'enterpriseValueToEBITDA', key: 'enterpriseValueMultiple', source: ratios, ttmKey: 'enterpriseValueMultipleTTM' }
+    ];
+    const valuation = valuationMetrics.map(metric => {
+        const currentSource = metric.ttmKey ? (metric.source === keyMetrics ? data.key_metrics_ttm?.[0] : data.ratios_ttm?.[0]) : (metric.source === keyMetrics ? latestMetrics : latestRatios);
         const current = currentSource ? (currentSource[metric.ttmKey] ?? currentSource[metric.key]) : null;
-        const historicalAverage = calculateAverage(metric.source, metric.key);
-        let status = 'N/A';
-        if (current && historicalAverage) {
-            status = current > historicalAverage ? 'trading at a premium to its historical average' : 'trading at a discount to its historical average';
-        }
-        return { metric: metric.name, status };
-    });
+        const historicalAverage = calculateAverage(metric.source, metric.key);
+        let status = 'N/A';
+        if (current && historicalAverage) {
+            status = current > historicalAverage ? 'trading at a premium to its historical average' : 'trading at a discount to its historical average';
+        }
+        return { metric: metric.name, status };
+    });
 
-    const bullCasePoints = [];
-    if (performance.revenueTrend.includes('growing')) bullCasePoints.push("Consistent or growing revenue.");
-    if (cashFlow.qualityOfEarnings.includes('Strong')) bullCasePoints.push("Strong operating cash flow that exceeds net income.");
-    if (health.debtToEquity.status === 'Conservative') bullCasePoints.push("A strong balance sheet with a conservative debt load.");
-    if (performance.returnOnEquity.quality === 'High') bullCasePoints.push("High return on equity, indicating efficient use of shareholder capital.");
+    const bullCasePoints = [];
+    if (performance.revenueTrend.includes('growing')) bullCasePoints.push("Consistent or growing revenue.");
+    if (cashFlow.qualityOfEarnings.includes('Strong')) bullCasePoints.push("Strong operating cash flow that exceeds net income.");
+    if (health.debtToEquity.status === 'Conservative') bullCasePoints.push("A strong balance sheet with a conservative debt load.");
+    if (performance.returnOnEquity.quality === 'High') bullCasePoints.push("High return on equity, indicating efficient use of shareholder capital.");
 
-    const bearCasePoints = [];
-    if (performance.revenueTrend.includes('declining')) bearCasePoints.push("Declining or stagnant revenue.");
-    if (performance.netIncomeTrend.includes('declining')) bearCasePoints.push("Declining profitability.");
-    if (health.debtToEquity.status === 'Aggressive') bearCasePoints.push("High debt load, which adds financial risk.");
-    if (health.currentRatio.status === 'a potential risk') bearCasePoints.push("Low liquidity, which could be a short-term risk.");
-    
-    const moatIndicator = (() => {
-        const stableMargins = !performance.netProfitMargin.status.includes('declining');
-        if (highRoe && stableMargins) return "The data, showing consistently high ROE and stable margins, suggests the presence of a strong competitive moat.";
-        if (stableMargins) return "The data suggests a potential moat, indicated by stable profit margins.";
-        return "The data does not strongly indicate a durable competitive moat, due to fluctuating margins or returns.";
-    })();
+    const bearCasePoints = [];
+    if (performance.revenueTrend.includes('declining')) bearCasePoints.push("Declining or stagnant revenue.");
+    if (performance.netIncomeTrend.includes('declining')) bearCasePoints.push("Declining profitability.");
+    if (health.debtToEquity.status === 'Aggressive') bearCasePoints.push("High debt load, which adds financial risk.");
+    if (health.currentRatio.status === 'a potential risk') bearCasePoints.push("Low liquidity, which could be a short-term risk.");
+    
+    const moatIndicator = (() => {
+        const stableMargins = !performance.netProfitMargin.status.includes('declining');
+        if (highRoe && stableMargins) return "The data, showing consistently high ROE and stable margins, suggests the presence of a strong competitive moat.";
+        if (stableMargins) return "The data suggests a potential moat, indicated by stable profit margins.";
+        return "The data does not strongly indicate a durable competitive moat, due to fluctuating margins or returns.";
+    })();
 
-    const thesis = { bullCasePoints, bearCasePoints, moatIndicator };
-    
-    return { summary, performance, health, cashFlow, valuation, thesis, recentPerformance };
+    const thesis = { bullCasePoints, bearCasePoints, moatIndicator };
+    
+    return { summary, performance, health, cashFlow, valuation, thesis, recentPerformance };
 }
 
 /**
- * NEW: Calculates metrics for the "Moat Analysis" prompt.
- */
+ * NEW: Calculates metrics for the "Moat Analysis" prompt.
+ */
 export function _calculateMoatAnalysisMetrics(data) {
-    const profile = data.profile?.[0] || {};
-    const metrics = (data.key_metrics_annual || []).slice(0, 10);
-    const income = (data.income_statement_annual || []).slice(0, 10);
-    const cashFlow = (data.cash_flow_statement_annual || []).slice(0, 10);
-    const ratios = (data.ratios_annual || []).slice(0, 10);
+    const profile = data.profile?.[0] || {};
+    const metrics = (data.key_metrics_annual || []).slice(0, 10);
+    const income = (data.income_statement_annual || []).slice(0, 10);
+    const cashFlow = (data.cash_flow_statement_annual || []).slice(0, 10);
+    const ratios = (data.ratios_annual || []).slice(0, 10);
 
     const formatPercentTrend = (arr, key1, key2) => arr.map(item => {
         const value = item[key1] ?? item[key2];
         return { year: item.calendarYear, value: value ? `${(value * 100).toFixed(2)}%` : 'N/A' };
     });
 
-    return {
-        qualitativeClues: {
-             description: profile.description
-        },
-        roicTrend: formatPercentTrend(metrics, 'roic', 'returnOnInvestedCapital'),
-        profitabilityTrends: {
-            netProfitMargin: formatPercentTrend(ratios, 'netProfitMargin'),
-            operatingIncome: income.map(i => ({ year: i.calendarYear, value: formatLargeNumber(i.operatingIncome) })),
-            grossProfitMargin: formatPercentTrend(ratios, 'grossProfitMargin'),
-        },
-        reinvestmentTrends: {
-            capex: cashFlow.map(cf => ({ year: cf.calendarYear, value: formatLargeNumber(cf.capitalExpenditure) })),
-            rdExpenses: income.map(i => ({ year: i.calendarYear, value: formatLargeNumber(i.researchAndDevelopmentExpenses) }))
-        },
-        balanceSheetHealth: {
-            debtToEquity: metrics[metrics.length - 1]?.debtToEquity?.toFixed(2) || 'N/A'
-        }
-    };
+    return {
+        qualitativeClues: {
+             description: profile.description
+        },
+        roicTrend: formatPercentTrend(metrics, 'roic', 'returnOnInvestedCapital'),
+        profitabilityTrends: {
+            netProfitMargin: formatPercentTrend(ratios, 'netProfitMargin'),
+            operatingIncome: income.map(i => ({ year: i.calendarYear, value: formatLargeNumber(i.operatingIncome) })),
+            grossProfitMargin: formatPercentTrend(ratios, 'grossProfitMargin'),
+        },
+        reinvestmentTrends: {
+            capex: cashFlow.map(cf => ({ year: cf.calendarYear, value: formatLargeNumber(cf.capitalExpenditure) })),
+            rdExpenses: income.map(i => ({ year: i.calendarYear, value: formatLargeNumber(i.researchAndDevelopmentExpenses) }))
+        },
+        balanceSheetHealth: {
+            debtToEquity: metrics[metrics.length - 1]?.debtToEquity?.toFixed(2) || 'N/A'
+        }
+    };
 }
 
 /**
- * NEW: Calculates metrics for the "Risk Assessment" prompt.
- */
+ * NEW: Calculates metrics for the "Risk Assessment" prompt.
+ */
 export function _calculateRiskAssessmentMetrics(data) {
-    const profile = data.profile?.[0] || {};
-    const metrics = (data.key_metrics_annual || []).slice(0, 5);
-    const cashFlow = (data.cash_flow_statement_annual || []).slice(0, 5);
-    const income = (data.income_statement_annual || []).slice(0, 5);
-    const grades = (data.stock_grade_news || []).slice(0, 10);
-    const ratios = (data.ratios_annual || []).slice(0, 5);
+    const profile = data.profile?.[0] || {};
+    const metrics = (data.key_metrics_annual || []).slice(0, 5);
+    const cashFlow = (data.cash_flow_statement_annual || []).slice(0, 5);
+    const income = (data.income_statement_annual || []).slice(0, 5);
+    const grades = (data.stock_grade_news || []).slice(0, 10);
+    const ratios = (data.ratios_annual || []).slice(0, 5);
 
-    const latestRatios = data.ratios_ttm?.[0] || ratios[ratios.length - 1] || {};
-    const latestCashFlow = cashFlow[cashFlow.length - 1] || {};
-    const latestIncome = income[income.length - 1] || {};
+    const latestRatios = data.ratios_ttm?.[0] || ratios[ratios.length - 1] || {};
+    const latestCashFlow = cashFlow[cashFlow.length - 1] || {};
+    const latestIncome = income[income.length - 1] || {};
     const latestMetrics = data.key_metrics_ttm?.[0] || metrics[metrics.length - 1] || {};
 
-    return {
-        financialRisks: {
-            debtToEquity: latestMetrics.debtToEquity?.toFixed(2) || 'N/A',
-            currentRatio: latestRatios.currentRatio?.toFixed(2) || 'N/A',
-            earningsQuality: {
-                operating_cash_flow: formatLargeNumber(latestCashFlow.operatingCashFlow),
-                net_income: formatLargeNumber(latestIncome.netIncome)
-            },
-            dividends_paid: formatLargeNumber(Math.abs(latestCashFlow.dividendsPaid)),
-            net_income: formatLargeNumber(latestIncome.netIncome)
-        },
-        marketRisks: {
-            beta: profile.beta?.toFixed(2) || 'N/A',
-            valuation: {
-                peRatio: (latestMetrics.peRatioTTM ?? latestMetrics.peRatio)?.toFixed(2) || 'N/A',
-                psRatio: (latestRatios.priceToSalesRatioTTM ?? latestRatios.priceToSalesRatio)?.toFixed(2) || 'N/A'
-            },
-            analystPessimism: grades.filter(g => g.newGrade && ['sell', 'underperform', 'underweight'].includes(g.newGrade.toLowerCase()))
-                                .map(g => `${g.gradingCompany} rated ${g.newGrade}`)
-        },
-        businessRisks: {
-            recession_sensitivity_sector: profile.sector,
-            marginTrend: ratios.map(r => ({ year: r.calendarYear, net_profit_margin: r.netProfitMargin ? `${(r.netProfitMargin * 100).toFixed(2)}%` : 'N/A' })),
-            netInterestMarginTrend: (profile.sector === 'Financial Services') ? 'Data for this metric is not available in the ratios endpoint.' : 'N/A for this sector'
-        }
-    };
+    return {
+        financialRisks: {
+            debtToEquity: latestMetrics.debtToEquity?.toFixed(2) || 'N/A',
+            currentRatio: latestRatios.currentRatio?.toFixed(2) || 'N/A',
+            earningsQuality: {
+                operating_cash_flow: formatLargeNumber(latestCashFlow.operatingCashFlow),
+                net_income: formatLargeNumber(latestIncome.netIncome)
+            },
+            dividends_paid: formatLargeNumber(Math.abs(latestCashFlow.dividendsPaid)),
+            net_income: formatLargeNumber(latestIncome.netIncome)
+        },
+        marketRisks: {
+            beta: profile.beta?.toFixed(2) || 'N/A',
+            valuation: {
+                peRatio: (latestMetrics.peRatioTTM ?? latestMetrics.peRatio)?.toFixed(2) || 'N/A',
+                psRatio: (latestRatios.priceToSalesRatioTTM ?? latestRatios.priceToSalesRatio)?.toFixed(2) || 'N/A'
+            },
+            analystPessimism: grades.filter(g => g.newGrade && ['sell', 'underperform', 'underweight'].includes(g.newGrade.toLowerCase()))
+                                     .map(g => `${g.gradingCompany} rated ${g.newGrade}`)
+        },
+        businessRisks: {
+            recession_sensitivity_sector: profile.sector,
+            marginTrend: ratios.map(r => ({ year: r.calendarYear, net_profit_margin: r.netProfitMargin ? `${(r.netProfitMargin * 100).toFixed(2)}%` : 'N/A' })),
+            netInterestMarginTrend: (profile.sector === 'Financial Services') ? 'Data for this metric is not available in the ratios endpoint.' : 'N/A for this sector'
+        }
+    };
 }
 
 /**
- * NEW: Calculates metrics for the "Capital Allocators" prompt.
- */
+ * NEW: Calculates metrics for the "Capital Allocators" prompt.
+ */
 export function _calculateCapitalAllocatorsMetrics(data) {
-    const cashFlow = (data.cash_flow_statement_annual || []).slice(0, 10);
-    const metrics = (data.key_metrics_annual || []).slice(0, 10);
-    const income = (data.income_statement_annual || []).slice(0, 10);
-    const balanceSheet = (data.balance_sheet_statement_annual || []).slice(0, 10);
-    const ratios = (data.ratios_annual || []).slice(0, 10);
+    const cashFlow = (data.cash_flow_statement_annual || []).slice(0, 10);
+    const metrics = (data.key_metrics_annual || []).slice(0, 10);
+    const income = (data.income_statement_annual || []).slice(0, 10);
+    const balanceSheet = (data.balance_sheet_statement_annual || []).slice(0, 10);
+    const ratios = (data.ratios_annual || []).slice(0, 10);
 
-    const ratiosMap = new Map(ratios.map(r => [r.calendarYear, r]));
+    const ratiosMap = new Map(ratios.map(r => [r.calendarYear, r]));
     const metricsMap = new Map(metrics.map(m => [m.calendarYear, m]));
 
     const metricsWithNormalizedKeys = metrics.map(m => ({
@@ -542,50 +727,50 @@ export function _calculateCapitalAllocatorsMetrics(data) {
         returnOnEquity: m.roe ?? m.returnOnEquity
     }));
 
-    const buybacksWithValuation = cashFlow.map(cf => {
-        const correspondingRatios = ratiosMap.get(cf.calendarYear);
+    const buybacksWithValuation = cashFlow.map(cf => {
+        const correspondingRatios = ratiosMap.get(cf.calendarYear);
         const correspondingMetrics = metricsMap.get(cf.calendarYear);
-        return {
-            year: cf.calendarYear,
-            common_stock_repurchased: formatLargeNumber(cf.commonStockRepurchased),
-            pe_ratio: correspondingMetrics?.peRatio?.toFixed(2) || 'N/A',
-            pb_ratio: correspondingRatios?.priceToBookRatio?.toFixed(2) || 'N/A'
-        };
-    });
-    
-    const formatPercentTrend = (arr, key) => arr.map(item => ({ year: item.calendarYear, value: item[key] ? `${(item[key] * 100).toFixed(2)}%` : 'N/A' }));
+        return {
+            year: cf.calendarYear,
+            common_stock_repurchased: formatLargeNumber(cf.commonStockRepurchased),
+            pe_ratio: correspondingMetrics?.peRatio?.toFixed(2) || 'N/A',
+            pb_ratio: correspondingRatios?.priceToBookRatio?.toFixed(2) || 'N/A'
+        };
+    });
+    
+    const formatPercentTrend = (arr, key) => arr.map(item => ({ year: item.calendarYear, value: item[key] ? `${(item[key] * 100).toFixed(2)}%` : 'N/A' }));
 
-    return {
-        cashFlowPriorities: cashFlow.map(cf => ({
-            year: cf.calendarYear,
-            capex: formatLargeNumber(cf.capitalExpenditure),
-            acquisitions: formatLargeNumber(cf.acquisitionsNet),
-            dividends: formatLargeNumber(cf.dividendsPaid),
-            buybacks: formatLargeNumber(cf.commonStockRepurchased)
-        })),
-        reinvestmentEffectiveness: {
-            roicTrend: formatPercentTrend(metricsWithNormalizedKeys, 'returnOnInvestedCapital'),
-            roeTrend: formatPercentTrend(metricsWithNormalizedKeys, 'returnOnEquity'),
-            revenueGrowth: income.map(i => ({ year: i.calendarYear, revenue: formatLargeNumber(i.revenue) })),
-            grossProfitGrowth: income.map(i => ({ year: i.calendarYear, grossProfit: formatLargeNumber(i.grossProfit) }))
-        },
-        acquisitionHistory: balanceSheet.map(bs => ({
-            year: bs.calendarYear,
-            goodwill: formatLargeNumber(bs.goodwill),
-            acquisitions: formatLargeNumber(cashFlow.find(cf => cf.calendarYear === bs.calendarYear)?.acquisitionsNet)
-        })),
-        shareholderReturns: {
-            buybacksWithValuation: buybacksWithValuation,
-            fcfPayoutRatioTrend: cashFlow.map(cf => {
-                const dividends = Math.abs(cf.dividendsPaid || 0);
-                const fcf = cf.freeCashFlow;
-                return {
-                    year: cf.calendarYear,
-                    ratio: (fcf && fcf > 0) ? `${((dividends / fcf) * 100).toFixed(2)}%` : 'N/A'
-                };
-            })
-        }
-    };
+    return {
+        cashFlowPriorities: cashFlow.map(cf => ({
+            year: cf.calendarYear,
+            capex: formatLargeNumber(cf.capitalExpenditure),
+            acquisitions: formatLargeNumber(cf.acquisitionsNet),
+            dividends: formatLargeNumber(cf.dividendsPaid),
+            buybacks: formatLargeNumber(cf.commonStockRepurchased)
+        })),
+        reinvestmentEffectiveness: {
+            roicTrend: formatPercentTrend(metricsWithNormalizedKeys, 'returnOnInvestedCapital'),
+            roeTrend: formatPercentTrend(metricsWithNormalizedKeys, 'returnOnEquity'),
+            revenueGrowth: income.map(i => ({ year: i.calendarYear, revenue: formatLargeNumber(i.revenue) })),
+            grossProfitGrowth: income.map(i => ({ year: i.calendarYear, grossProfit: formatLargeNumber(i.grossProfit) }))
+        },
+        acquisitionHistory: balanceSheet.map(bs => ({
+            year: bs.calendarYear,
+            goodwill: formatLargeNumber(bs.goodwill),
+            acquisitions: formatLargeNumber(cashFlow.find(cf => cf.calendarYear === bs.calendarYear)?.acquisitionsNet)
+        })),
+        shareholderReturns: {
+            buybacksWithValuation: buybacksWithValuation,
+            fcfPayoutRatioTrend: cashFlow.map(cf => {
+                const dividends = Math.abs(cf.dividendsPaid || 0);
+                const fcf = cf.freeCashFlow;
+                return {
+                    year: cf.calendarYear,
+                    ratio: (fcf && fcf > 0) ? `${((dividends / fcf) * 100).toFixed(2)}%` : 'N/A'
+                };
+            })
+        }
+    };
 }
 
 /**
