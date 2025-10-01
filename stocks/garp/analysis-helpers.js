@@ -362,6 +362,7 @@ export function _calculateGarpScorecardMetrics(data) {
     const roe = metricsTtm.roe ?? latestAnnualMetrics.roe;
     const roic = metricsTtm.roic ?? latestAnnualMetrics.roic;
     const de = metricsTtm.debtToEquity ?? latestAnnualMetrics.debtToEquity;
+    const pe = metricsTtm.peRatioTTM ?? latestAnnualMetrics.peRatio;
 
     // --- FIX: Find the correct forward-looking estimate ---
     const currentYear = new Date().getFullYear();
@@ -421,6 +422,8 @@ export function _calculateGarpScorecardMetrics(data) {
         'PEG Ratio': { value: peg, format: 'decimal', weight: 10 },
         'Forward P/E': { value: forwardPe, format: 'decimal', weight: 8 },
         'Price to FCF': { value: pfcf, format: 'decimal', weight: 7 },
+        // -- For AI Prompt Compatibility (No Weight)
+        'P/E (TTM)': { value: pe, format: 'decimal' },
     };
 
     // --- CONVICTION SCORE CALCULATION ---
@@ -431,8 +434,10 @@ export function _calculateGarpScorecardMetrics(data) {
         const metric = metrics[key];
         const multiplier = _getMetricScoreMultiplier(key, metric.value);
 
-        totalWeight += metric.weight;
-        weightedScore += metric.weight * multiplier;
+        if (metric.weight) { // Only include weighted metrics in the score
+            totalWeight += metric.weight;
+            weightedScore += metric.weight * multiplier;
+        }
         
         metric.isMet = multiplier >= 1.0;
         metric.multiplier = multiplier;
