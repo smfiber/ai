@@ -201,11 +201,11 @@ document.addEventListener("DOMContentLoaded", () => {
         const currentMonth = today.getMonth(); // 0-11
         
         // Find the full-year estimate for the current year
-        const annualEstimate = analyst_estimates_annual.find(e => parseInt(e.calendarYear) === currentYear);
-        if (!annualEstimate || !annualEstimate.estimatedEpsAvg) {
+        const annualEstimate = analyst_estimates_annual.find(e => parseInt(e.date.substring(0, 4)) === currentYear);
+        if (!annualEstimate || !annualEstimate.epsAvg) {
             return result;
         }
-        const annualEpsEstimate = annualEstimate.estimatedEpsAvg;
+        const annualEpsEstimate = annualEstimate.epsAvg;
 
         // Group historical quarterly EPS by year
         const historicalData = {};
@@ -411,11 +411,11 @@ document.addEventListener("DOMContentLoaded", () => {
         // --- FIX: Find the correct forward-looking estimate ---
         const currentYear = new Date().getFullYear();
         // Use the CURRENT year's estimate for Forward P/E and growth from the last reported year
-        const forwardEstimate = estimates.find(est => parseInt(est.calendarYear) === currentYear);
+        const forwardEstimate = estimates.find(est => parseInt(est.date.substring(0, 4)) === currentYear);
 
         let epsNext1y = null;
         const lastActualEps = income.length > 0 ? income[lastIndex].eps : null;
-        const forwardEpsForGrowth = forwardEstimate ? forwardEstimate.estimatedEpsAvg : null;
+        const forwardEpsForGrowth = forwardEstimate ? forwardEstimate.epsAvg : null;
         if (lastActualEps > 0 && forwardEpsForGrowth) {
              epsNext1y = (forwardEpsForGrowth / lastActualEps) - 1;
         }
@@ -1385,7 +1385,7 @@ document.addEventListener("DOMContentLoaded", () => {
             income_statement_quarterly: `https://financialmodelingprep.com/api/v3/income-statement/${symbol}?period=quarter&limit=12&apikey=${apiKey}`,
             key_metrics_ttm: `https://financialmodelingprep.com/api/v3/key-metrics-ttm/${symbol}?apikey=${apiKey}`,
             ratios_ttm: `https://financialmodelingprep.com/api/v3/ratios-ttm/${symbol}?apikey=${apiKey}`,
-            analyst_estimates: `https://financialmodelingprep.com/api/v3/analyst-estimates/${symbol}?apikey=${apiKey}`,
+            analyst_estimates: `https://financialmodelingprep.com/stable/analyst-estimates/${symbol}?period=annual&page=0&limit=10&apikey=${apiKey}`,
         };
 
         try {
