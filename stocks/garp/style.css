@@ -1,112 +1,189 @@
-/*
- * AI Stock Research Hub Stylesheet
- * Version: 15.0.0-GARP
- * Description: Provides essential, centralized styles that supplement the Tailwind CSS framework.
- */
-
-/*
- * =================================================================
- * THEME & COLOR VARIABLES
- * =================================================================
- */
-:root {
-    --color-primary: #4f46e5;
+/* Apply the Inter font family */
+body {
     font-family: 'Inter', sans-serif;
 }
 
-body {
-    background-color: #f3f4f6; /* bg-gray-100 */
-    color: #1f2937; /* color-text */
-}
-
-/*
- * =================================================================
- * MODAL STYLES
- * =================================================================
- */
+/* Style for the modal to be hidden by default */
 .modal {
     display: none;
 }
-.modal.is-open {
-    display: flex;
-}
-body.modal-open {
+
+/* Styles for accordion transition */
+.accordion-content {
+    max-height: 0;
     overflow: hidden;
+    transition: max-height 0.3s ease-out;
 }
 
-/*
- * =================================================================
- * LOADER & SPINNER STYLES
- * =================================================================
- */
-.loader {
-    width: 4rem;
-    height: 4rem;
-    border-width: 4px;
-    border-style: solid;
-    border-radius: 9999px;
-    border-color: #e5e7eb;
-    animation: spin 1s linear infinite;
-    border-top-color: var(--color-primary);
+/* Hide tab content by default */
+.tab-content {
+    display: none;
 }
 
-#progress-bar {
-    width: 100%;
-    height: 0.625rem;
-    background-color: #4b5563;
-    border-radius: 9999px;
-    overflow: hidden;
+/* Styles for Modal Tabs */
+.modal-tab-button.active {
+    border-color: #6366f1;
+    color: #4338ca;
+    background-color: #eef2ff;
 }
 
-#progress-bar-fill {
-    height: 100%;
-    background-color: var(--color-primary);
-    border-radius: 9999px;
-    transition: width 0.3s ease-in-out;
+.modal-tab-content {
+    display: none;
 }
 
-/*
- * =================================================================
- * NEW COMPONENT STYLES
- * =================================================================
- */
-.copy-icon-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 1.75rem;
-    height: 1.75rem;
-    border-radius: 9999px;
-    background-color: #e5e7eb;
-    color: #4b5563;
-    transition: all 0.2s ease-in-out;
-    cursor: pointer;
-    flex-shrink: 0;
+.modal-tab-content.active {
+    display: block;
 }
 
-.copy-icon-btn:hover {
-    background-color: #d1d5db;
-    color: #1f2937;
+.viewed-indicator {
+    margin-left: 8px;
+    color: #6366f1;
+    font-size: 0.9em;
 }
 
-.copy-icon-btn.copied {
-    background-color: #22c55e;
+/* Custom Tooltip Styles */
+[data-tooltip] {
+    position: relative;
+    cursor: help;
+    display: inline-block;
+}
+
+[data-tooltip]::before,
+[data-tooltip]::after {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease-in-out;
+    z-index: 10;
+}
+
+[data-tooltip]::after {
+    /* Tooltip content box */
+    content: attr(data-tooltip);
+    background-color: #1f2937;
+    /* bg-gray-800 */
     color: white;
+    font-size: 0.75rem;
+    /* text-xs */
+    line-height: 1.25;
+    padding: 6px 10px;
+    border-radius: 4px;
+    white-space: nowrap;
+    bottom: calc(100% + 8px);
+    /* Position above the element */
 }
 
-.copy-icon-btn svg {
-    width: 1rem;
-    height: 1rem;
+[data-tooltip]::before {
+    /* Tooltip arrow */
+    content: '';
+    border-style: solid;
+    border-width: 5px;
+    border-color: #1f2937 transparent transparent transparent;
+    bottom: calc(100% + 3px);
 }
 
+[data-tooltip]:hover::before,
+[data-tooltip]:hover::after {
+    opacity: 1;
+}
+
+/* Saved Stock Styles */
+.saved-stock-row {
+    background-color: #fefce8;
+    /* Tailwind yellow-50 */
+}
+
+.save-stock-btn {
+    margin-right: 8px;
+    cursor: pointer;
+    color: #9ca3af;
+    /* gray-400 */
+    transition: color 0.2s ease-in-out;
+}
+
+.save-stock-btn:hover {
+    color: #f59e0b;
+    /* yellow-500 */
+}
+
+.save-stock-btn.saved {
+    color: #facc15;
+    /* yellow-400 */
+}
+
+#modal-raw-data-content pre {
+    background-color: #111827;
+    /* gray-900 */
+    color: #d1d5db;
+    /* gray-300 */
+    padding: 1rem;
+    border-radius: 0.5rem;
+    max-height: 60vh;
+    overflow-x: auto;
+    font-size: 0.75rem;
+}
+
+#modal-ai-summary-content pre {
+    background-color: #111827;
+    /* gray-900 */
+    color: #d1d5db;
+    /* gray-300 */
+    padding: 1rem;
+    border-radius: 0.5rem;
+    overflow-x: auto;
+    font-size: 0.75rem;
+}
+
+/* Styling for rendered markdown from marked.js */
+.prose ul {
+    list-style-type: disc;
+    padding-left: 1.5rem;
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.prose ol {
+    list-style-type: decimal;
+    padding-left: 1.5rem;
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.prose li {
+    margin-bottom: 0.25rem;
+}
+
+.prose h3 {
+    font-size: 1.125rem;
+    /* text-lg */
+    font-weight: 700;
+    margin-top: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.prose h4 {
+    font-size: 1rem;
+    /* text-base */
+    font-weight: 600;
+    margin-top: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+/* GARP SCORECARD STYLES */
 .price-gain {
-    color: #16a34a; /* text-green-600 */
-}
-.price-loss {
-    color: #dc2626; /* text-red-600 */
+    color: #16a34a; /* Green */
 }
 
-/* --- INTERPRETATION BADGES --- */
+.price-neutral {
+    color: #ca8a04; /* Yellow */
+}
+
+.price-loss {
+    color: #dc2626; /* Red */
+}
+
 .interp-badge {
     display: inline-block;
     padding: 0.2rem 0.6rem;
@@ -118,59 +195,56 @@ body.modal-open {
     letter-spacing: 0.025em;
 }
 
-.interp-badge.hyper-growth,
-.interp-badge.exceptional-quality {
-    background-color: #166534; /* green-800 */
-    color: #f0fdf4; /* green-50 */
+/* GREEN - Best of the Best */
+.interp-badge.exceptional-quality,
+.interp-badge.fortress-balance-sheet,
+.interp-badge.very-safe,
+.interp-badge.highly-consistent,
+.interp-badge.highly-stable,
+.interp-badge.exceptional-beat {
+    background-color: #166534;
+    color: #f0fdf4;
 }
 
+/* YELLOW - Good / Investigate */
+.interp-badge.hyper-growth,
 .interp-badge.garp-sweet-spot,
 .interp-badge.high-quality,
 .interp-badge.solid-growth,
 .interp-badge.fairly-priced,
 .interp-badge.low-leverage,
-.interp-badge.fortress-balance-sheet {
-    background-color: #22c55e; /* green-500 */
-    color: #f0fdf4; /* green-50 */
-}
-
 .interp-badge.modest-growth,
 .interp-badge.reasonable-price,
 .interp-badge.potentially-undervalued,
 .interp-badge.investigate,
-.interp-badge.rebound-growth {
-    background-color: #eab308; /* yellow-500 */
-    color: #78350f; /* yellow-900 */
+.interp-badge.rebound-growth,
+.interp-badge.healthy,
+.interp-badge.consistent,
+.interp-badge.stable {
+    background-color: #eab308;
+    color: #78350f;
 }
 
+/* ORANGE - Warning */
 .interp-badge.warning-sign,
 .interp-badge.potential-value-trap,
-.interp-badge.priced-for-perfection {
-    background-color: #f97316; /* orange-500 */
-    color: #fff7ed; /* orange-50 */
+.interp-badge.priced-for-perfection,
+.interp-badge.adequate {
+    background-color: #f97316;
+    color: #fff7ed;
 }
 
+/* RED - Bad */
 .interp-badge.negative-growth,
 .interp-badge.low-quality,
 .interp-badge.expensive,
-.interp-badge.high-leverage {
-    background-color: #dc2626; /* red-600 */
-    color: #fef2f2; /* red-50 */
-}
-
-
-/* --- VALUATION HEALTH DASHBOARD --- */
-.health-dashboard-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 1rem;
-    padding-top: 1rem;
-}
-
-@media (min-width: 1280px) { /* Corresponds to Tailwind's 'xl' breakpoint */
-    .health-dashboard-grid {
-        grid-template-columns: repeat(4, 1fr);
-    }
+.interp-badge.high-leverage,
+.interp-badge.high-risk,
+.interp-badge.inconsistent,
+.interp-badge.volatile,
+.interp-badge.slow-growth {
+    background-color: #dc2626;
+    color: #fef2f2;
 }
 
 .metric-tile {
@@ -196,220 +270,6 @@ body.modal-open {
     margin-top: 0.25rem;
 }
 
-.metric-status {
-    font-size: 0.75rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    margin-top: 0.25rem;
-}
-
-.gauge-container {
-    margin-top: 0.75rem;
-    margin-bottom: 0.5rem;
-}
-
-.gauge-bar {
-    width: 100%;
-    height: 6px;
-    background-color: #e5e7eb;
-    border-radius: 9999px;
-    overflow: hidden;
-}
-
-.gauge-fill {
-    height: 100%;
-    border-radius: 9999px;
-    transition: width 0.5s ease-in-out;
-}
-
-.sparkline-container {
-    height: 40px;
-    margin-top: 0.75rem;
-}
-
-.sparkline {
-    fill: none;
-    stroke-width: 2;
-}
-
-/* Status colors */
-.metric-status.good { color: #16a34a; }
-.gauge-fill.good { background-color: #22c55e; }
-.sparkline.good { stroke: #22c55e; }
-
-.metric-status.neutral { color: #ca8a04; }
-.gauge-fill.neutral { background-color: #f59e0b; }
-.sparkline.neutral { stroke: #f59e0b; }
-
-.metric-status.bad { color: #dc2626; }
-.gauge-fill.bad { background-color: #ef4444; }
-.sparkline.bad { stroke: #ef4444; }
-
-
-/*
- * =================================================================
- * TAB STYLES
- * =================================================================
- */
-
-.tab-button {
-    padding: 1rem 1.5rem;
-    font-weight: 600;
-    font-size: 0.875rem;
-    color: #6b7280;
-    border-bottom: 3px solid transparent;
-    transition: all 0.2s ease-in-out;
-    cursor: pointer;
-    background-color: transparent;
-    border-top: none;
-    border-left: none;
-    border-right: none;
-}
-
-.tab-button:hover {
-    color: #1f2937;
-    background-color: #f9fafb;
-}
-
-.tab-button.active {
-    color: var(--color-primary);
-    border-bottom-color: var(--color-primary);
-}
-
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-/*
- * =================================================================
- * AI-GENERATED CONTENT STYLES
- * =================================================================
- */
-.prose {
-    overflow-wrap: break-word;
-    word-wrap: break-word;
-    color: #374151;
-}
-
-.prose h1, .prose h2, .prose h3, .prose h4 {
-    color: #1f2937;
-    font-weight: 700;
-}
-
-.prose h1 { font-size: 1.875rem; margin-top: 1.5em; margin-bottom: 0.8em; }
-.prose h2 { font-size: 1.5rem; margin-top: 1.75em; margin-bottom: 1em; border-bottom: 1px solid #e5e7eb; padding-bottom: 0.3em;}
-.prose h3 { font-size: 1.25rem; margin-top: 1.5em; margin-bottom: 0.5em; }
-.prose h4 { font-size: 1.125rem; margin-top: 1.25em; margin-bottom: 0.5em; }
-
-.prose p, .prose ul, .prose ol {
-    margin-bottom: 1em;
-    line-height: 1.6;
-}
-
-.prose ul, .prose ol {
-    padding-left: 1.5em;
-}
-.prose ul { list-style-type: disc; }
-.prose ol { list-style-type: decimal; }
-
-.prose ul li, .prose ol li {
-    margin-bottom: 0.5em;
-}
-
-.prose strong {
-    font-weight: 600;
-    color: #111827;
-}
-
-.prose pre {
-    background-color: #1f2937;
-    color: #e5e7eb;
-    padding: 1rem;
-    border-radius: 0.5rem;
-    overflow-x: auto;
-    margin-top: 1.5em;
-    margin-bottom: 1.5em;
-}
-
-/*
- * =================================================================
- * COMPONENT STYLES
- * =================================================================
- */
-
-.analysis-tile {
-    width: 7.5rem;
-    height: 7.5rem;
-    padding: 0.75rem;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    background-color: white;
-    border-radius: 0.5rem;
-    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-    border: 1px solid #e5e7eb;
-    transition: all 0.2s ease-in-out;
-    position: relative;
-}
-.analysis-tile:hover {
-    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-    border-color: #4f46e5;
-    transform: translateY(-4px);
-}
-.analysis-tile .tile-icon {
-    width: 2.5rem;
-    height: 2.5rem;
-    margin-bottom: 0.5rem;
-    color: #4f46e5;
-}
-.analysis-tile .tile-name {
-    font-weight: 600;
-    color: #374151;
-    font-size: 0.875rem;
-}
-
-.custom-tooltip {
-    position: absolute;
-    background-color: #1f2937;
-    color: white;
-    padding: 0.5rem 0.75rem;
-    border-radius: 0.375rem;
-    font-size: 0.75rem;
-    font-weight: 500;
-    white-space: normal;
-    max-width: 250px;
-    text-align: center;
-    z-index: 9999;
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.2s ease-in-out;
-}
-
-.analysis-tile.has-saved-report::before {
-    content: '';
-    position: absolute;
-    top: 0.5rem;
-    right: 0.5rem;
-    width: 0.75rem;
-    height: 0.75rem;
-    background-color: #22c55e;
-    border-radius: 9999px;
-    border: 2px solid white;
-}
-
-/*
- * =================================================================
- * GARP CONVICTION SCORE
- * =================================================================
- */
 .conviction-score-display {
     text-align: center;
     padding: 0.5rem;
@@ -417,148 +277,24 @@ body.modal-open {
     border-width: 2px;
     border-style: solid;
 }
+
 .conviction-score-display .score-value {
     font-size: 2.25rem;
     font-weight: 800;
     line-height: 1;
 }
 
-.conviction-score-badge {
-    width: 2.5rem;
-    height: 2.5rem;
-    border-radius: 9999px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.875rem;
-    font-weight: 700;
-    color: white;
-    flex-shrink: 0;
-}
-
-/* Score Colors */
-.conviction-score-display.high, .conviction-score-badge.high {
+.conviction-score-display.high {
     border-color: #16a34a;
     color: #166534;
 }
-.conviction-score-badge.high {
-    background-color: #16a34a;
-    color: white;
-}
 
-.conviction-score-display.medium, .conviction-score-badge.medium {
+.conviction-score-display.medium {
     border-color: #f59e0b;
     color: #b45309;
 }
-.conviction-score-badge.medium {
-    background-color: #f59e0b;
-    color: white;
-}
 
-.conviction-score-display.low, .conviction-score-badge.low {
+.conviction-score-display.low {
     border-color: #ef4444;
     color: #b91c1c;
 }
-.conviction-score-badge.low {
-    background-color: #ef4444;
-    color: white;
-}
-
-/*
- * =================================================================
- * SECTOR MOMENTUM HEAT MAP
- * =================================================================
- */
-.heat-cell {
-    padding: 0.5rem;
-    text-align: center;
-    font-size: 0.875rem;
-    font-weight: 600;
-    border-radius: 0.375rem;
-    transition: all 0.2s ease-in-out;
-}
-.heat-cell:hover {
-    transform: scale(1.05);
-    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-}
-
-.heat-strong-positive {
-    background-color: #166534; /* green-800 */
-    color: #f0fdf4; /* green-50 */
-}
-.heat-positive {
-    background-color: #22c55e; /* green-500 */
-    color: #f0fdf4; /* green-50 */
-}
-.heat-neutral {
-    background-color: #f3f4f6; /* gray-100 */
-    color: #374151; /* gray-700 */
-}
-.heat-negative {
-    background-color: #ef4444; /* red-500 */
-    color: #fef2f2; /* red-50 */
-}
-.heat-strong-negative {
-    background-color: #b91c1c; /* red-700 */
-    color: #fee2e2; /* red-100 */
-}
-
-/*
- * =================================================================
- * PORTFOLIO SECTOR BREAKDOWN
- * =================================================================
- */
-.sector-breakdown-bar {
-    display: flex;
-    width: 100%;
-    height: 2rem; /* 32px */
-    border-radius: 0.5rem; /* 8px */
-    overflow: hidden;
-    background-color: #e5e7eb; /* gray-200 */
-    border: 1px solid #d1d5db; /* gray-300 */
-}
-
-.sector-segment {
-    height: 100%;
-    transition: width 0.5s ease-in-out;
-}
-
-.sector-legend {
-    margin-top: 1rem;
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 0.75rem;
-}
-
-@media (min-width: 640px) {
-    .sector-legend {
-        grid-template-columns: repeat(2, 1fr);
-    }
-}
-
-.legend-item {
-    display: flex;
-    align-items: center;
-    font-size: 0.875rem; /* 14px */
-}
-
-.legend-color-box {
-    width: 0.875rem; /* 14px */
-    height: 0.875rem; /* 14px */
-    border-radius: 0.25rem; /* 4px */
-    margin-right: 0.5rem; /* 8px */
-    flex-shrink: 0;
-}
-
-/* Predefined color palette for sectors */
-.sector-color-1 { background-color: #4f46e5; } /* indigo-600 */
-.sector-color-2 { background-color: #0d9488; } /* teal-600 */
-.sector-color-3 { background-color: #db2777; } /* pink-600 */
-.sector-color-4 { background-color: #eab308; } /* yellow-500 */
-.sector-color-5 { background-color: #2563eb; } /* blue-600 */
-.sector-color-6 { background-color: #9333ea; } /* purple-600 */
-.sector-color-7 { background-color: #d97706; } /* amber-600 */
-.sector-color-8 { background-color: #65a30d; } /* lime-600 */
-.sector-color-9 { background-color: #dc2626; } /* red-600 */
-.sector-color-10 { background-color: #64748b; } /* slate-500 */
-.sector-color-default { background-color: #d1d5db; } /* gray-300 */
