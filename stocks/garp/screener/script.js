@@ -823,6 +823,15 @@ document.addEventListener("DOMContentLoaded", () => {
             const response = await fetch(url);
             if (!response.ok) throw new Error(`API request failed: ${response.status}`);
             const data = await response.json();
+
+            // FIX: Restore dividend yield calculation
+            data.forEach(stock => {
+                if (stock.price > 0 && typeof stock.lastAnnualDividend === 'number') {
+                    stock.dividendYield = (stock.lastAnnualDividend / stock.price) * 100;
+                } else {
+                    stock.dividendYield = stock.dividendYieldPercentage ?? null;
+                }
+            });
             
             advancedScreenerData = data;
             currentSort = { key: 'marketCap', direction: 'desc' };
