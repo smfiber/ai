@@ -652,7 +652,7 @@ export function renderCandidacyAnalysis(container, reportContent, prompt, dilige
         `;
     }
     
-    const cleanedContent = (reportContent || '').trim().replace(/^```(?:markdown)?\s*\n/, '').replace(/\n```$/, '').trim();
+    const cleanedContent = (content || '').trim().replace(/^```(?:markdown)?\s*\n/, '').replace(/\n```$/, '').trim();
     const reportHtml = marked.parse(cleanedContent);
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = reportHtml;
@@ -802,15 +802,9 @@ export function renderDiligenceLog(container, reports) {
             const reportId = item.dataset.reportId;
             const report = reports.find(r => r.id === reportId);
             if (report) {
-                const articleContainer = document.getElementById('ai-article-container-analysis');
-                const statusContainer = document.getElementById('report-status-container-analysis');
+                const articleContainer = document.getElementById('ai-article-container-diligence');
+                const statusContainer = document.getElementById('report-status-container-diligence');
                 
-                // Switch to the 'Analysis' tab
-                document.querySelectorAll('#rawDataViewerModal .tab-content').forEach(c => c.classList.add('hidden'));
-                document.querySelectorAll('#rawDataViewerModal .tab-button').forEach(b => b.classList.remove('active'));
-                document.getElementById('analysis-tab').classList.remove('hidden');
-                document.querySelector('.tab-button[data-tab="analysis"]').classList.add('active');
-
                 displayReport(articleContainer, report.content, report.prompt);
                 
                 if (statusContainer) {
