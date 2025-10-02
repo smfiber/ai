@@ -225,7 +225,6 @@ export async function openRawDataViewer(ticker) {
     const structuredDiligenceContainer = document.getElementById('structured-diligence-content-container');
     const manualDiligenceContainer = document.getElementById('manual-diligence-content-container');
     const diligenceLogContainer = document.getElementById('diligence-log-content-container');
-    const candidacyReportContainer = document.getElementById('candidacy-report-tab');
     const profileDisplayContainer = document.getElementById('company-profile-display-container');
     const titleEl = document.getElementById('raw-data-viewer-modal-title');
     const garpScorecardContainer = document.getElementById('garp-scorecard-container');
@@ -239,13 +238,13 @@ export async function openRawDataViewer(ticker) {
     structuredDiligenceContainer.innerHTML = '';
     manualDiligenceContainer.innerHTML = '';
     diligenceLogContainer.innerHTML = '';
-    candidacyReportContainer.innerHTML = '';
     aiArticleContainer.innerHTML = '';
     profileDisplayContainer.innerHTML = '';
     garpScorecardContainer.innerHTML = '';
     positionAnalysisContainer.innerHTML = '';
     peerAnalysisContainer.innerHTML = '';
     document.getElementById('valuation-health-container').innerHTML = '';
+    document.getElementById('ai-garp-summary-container').innerHTML = '';
     
     // Reset tabs to default state
     document.querySelectorAll('#rawDataViewerModal .tab-content').forEach(c => c.classList.add('hidden'));
@@ -484,7 +483,7 @@ export async function openRawDataViewer(ticker) {
         const metrics = renderGarpScorecardDashboard(garpScorecardContainer, ticker, fmpData);
         renderGarpInterpretationAnalysis(garpScorecardContainer, metrics);
         renderValuationHealthDashboard(document.getElementById('valuation-health-container'), ticker, fmpData);
-        renderGarpAnalysisSummary(candidacyReportContainer, ticker);
+        renderGarpAnalysisSummary(document.getElementById('ai-garp-summary-container'), ticker);
         
         const peerDocRef = doc(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, ticker, 'analysis', 'peer_comparison');
         const peerDocSnap = await getDoc(peerDocRef);
@@ -541,8 +540,8 @@ export async function openRawDataViewer(ticker) {
 
         if (savedCandidacyReports.length > 0) {
             const latestReport = savedCandidacyReports[0];
-            const resultContainer = candidacyReportContainer.querySelector('#garp-analysis-container');
-            const statusContainer = candidacyReportContainer.querySelector('#garp-candidacy-status-container');
+            const resultContainer = document.getElementById('garp-analysis-container');
+            const statusContainer = document.getElementById('garp-candidacy-status-container');
             
             updateGarpCandidacyStatus(statusContainer, savedCandidacyReports, latestReport.id, ticker);
 
