@@ -34,7 +34,7 @@ async function autoSaveReport(ticker, reportType, content, prompt, diligenceQues
         const reportData = {
             ticker,
             reportType,
-            content,
+            content: content || '',
             prompt: prompt || '',
             savedAt: Timestamp.now(),
             diligenceQuestions: diligenceQuestions // Save the questions with the report
@@ -1453,5 +1453,18 @@ export async function handleManualPeerAnalysisRequest(ticker) {
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
         genericLoader.classList.remove('hidden');
+    }
+}
+
+async function _saveThesisContent(symbol, thesisContent) {
+    try {
+        const prompt = "AI-Generated Investment Thesis";
+        // Ensure marked is available or handle content differently
+        const content = typeof marked !== 'undefined' ? marked.parse(thesisContent) : thesisContent;
+        await autoSaveReport(symbol, 'DiligenceInvestigation', content, prompt);
+        console.log(`Thesis for ${symbol} was saved successfully as a diligence log entry.`);
+    } catch (error) {
+        console.error(`_saveThesisContent failed for ${symbol}:`, error);
+        displayMessageInModal(`Could not save the generated thesis: ${error.message}`, 'warning');
     }
 }
