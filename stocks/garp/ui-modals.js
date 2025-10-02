@@ -220,8 +220,10 @@ export async function openRawDataViewer(ticker) {
     modal.dataset.activeTicker = ticker; // Store ticker for later use
     
     const rawDataContainer = document.getElementById('raw-data-accordion-container');
-    const aiButtonsContainer = document.getElementById('ai-buttons-container');
-    const aiArticleContainer = document.getElementById('ai-article-container');
+    const analysisContentContainer = document.getElementById('analysis-content-container');
+    const aiArticleContainer = document.getElementById('ai-article-container-analysis');
+    const structuredDiligenceContainer = document.getElementById('structured-diligence-content-container');
+    const manualDiligenceContainer = document.getElementById('manual-diligence-content-container');
     const profileDisplayContainer = document.getElementById('company-profile-display-container');
     const titleEl = document.getElementById('raw-data-viewer-modal-title');
     const garpScorecardContainer = document.getElementById('garp-scorecard-container');
@@ -231,7 +233,9 @@ export async function openRawDataViewer(ticker) {
     
     titleEl.textContent = `Analyzing ${ticker}...`;
     rawDataContainer.innerHTML = '<div class="loader mx-auto"></div>';
-    aiButtonsContainer.innerHTML = '';
+    analysisContentContainer.innerHTML = '';
+    structuredDiligenceContainer.innerHTML = '';
+    manualDiligenceContainer.innerHTML = '';
     aiArticleContainer.innerHTML = '';
     profileDisplayContainer.innerHTML = '';
     garpScorecardContainer.innerHTML = '';
@@ -336,8 +340,6 @@ export async function openRawDataViewer(ticker) {
         }).join('');
         
         const deepDiveHtml = buildButtonHtml(deepDiveButtons);
-            
-        const candidacyBtn = `<button data-symbol="${ticker}" data-report-type="GarpCandidacy" class="generate-candidacy-button bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg text-base">Generate GARP Candidacy Report</button>`;
         const generateAllBtn = `<button data-symbol="${ticker}" id="generate-all-reports-button" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg">Generate All Deep Dives</button>`;
         const garpMemoBtn = `<button data-symbol="${ticker}" id="investment-memo-button" data-report-type="InvestmentMemo" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg text-base">Generate GARP Memo</button>`;
         const qarpBtn = `<button data-symbol="${ticker}" id="qarp-analysis-button" data-report-type="QarpAnalysis" class="ai-analysis-button bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 px-6 rounded-lg text-base">Generate QARP Analysis</button>`;
@@ -346,14 +348,14 @@ export async function openRawDataViewer(ticker) {
 
         // --- NEW STRUCTURED DILIGENCE HTML ---
         const copyIcon = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75" /></svg>`;
-        let structuredDiligenceHtml = `
+        let structuredDiligenceContent = `
             <div class="text-left mt-4 border rounded-lg p-4 bg-gray-50">
                 <h4 class="text-base font-semibold text-gray-800 mb-1">Structured Diligence</h4>
                 <p class="text-sm text-gray-500 mb-4">Answer these core questions to build a foundational thesis.</p>
                 <div id="structured-diligence-container" class="space-y-4">
         `;
         for (const [category, question] of Object.entries(STRUCTURED_DILIGENCE_QUESTIONS)) {
-            structuredDiligenceHtml += `
+            structuredDiligenceContent += `
                 <div class="diligence-card p-3 bg-white rounded-lg border border-gray-200">
                     <h5 class="font-semibold text-sm text-indigo-700 mb-2">${category}</h5>
                     <div class="flex items-start gap-2 mb-2">
@@ -367,7 +369,7 @@ export async function openRawDataViewer(ticker) {
                 </div>
             `;
         }
-        structuredDiligenceHtml += `
+        structuredDiligenceContent += `
                 </div>
                 <div class="text-right mt-4">
                     <button id="save-structured-diligence-button" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg">Save Structured Answers</button>
@@ -376,7 +378,7 @@ export async function openRawDataViewer(ticker) {
         `;
 
         // --- EXISTING MANUAL DILIGENCE HTML ---
-        const manualDiligenceHtml = `
+        const manualDiligenceContent = `
             <div class="text-left mt-6 pt-6 border-t">
                 <div class="flex justify-between items-center mb-4">
                     <div>
@@ -392,18 +394,10 @@ export async function openRawDataViewer(ticker) {
             </div>
         `;
 
-        aiButtonsContainer.innerHTML = `
+        analysisContentContainer.innerHTML = `
             <div class="space-y-8 text-center bg-gray-50 p-4 rounded-lg">
                 <div class="p-4 bg-white rounded-lg border shadow-sm">
-                    <div class="flex justify-center items-center gap-2 mb-4">
-                        <h3 class="text-lg font-bold text-gray-800">Step 1: Initial Assessment (Required)</h3>
-                        <button data-report-type="GarpCandidacy" class="ai-help-button p-1 rounded-full hover:bg-indigo-100" title="What is this?"><svg class="w-5 h-5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" /></svg></button>
-                    </div>
-                    <div class="flex justify-center">${candidacyBtn}</div>
-                </div>
-
-                <div class="p-4 bg-white rounded-lg border shadow-sm">
-                    <h3 class="text-lg font-bold text-gray-800 mb-4">Step 2: Deep Dive Analysis (Optional)</h3>
+                    <h3 class="text-lg font-bold text-gray-800 mb-4">Deep Dive Analysis (Optional)</h3>
                     <p class="text-sm text-gray-500 mb-4">Generate these reports for more detail after a promising candidacy assessment.</p>
                     <div class="flex flex-wrap gap-4 justify-center">${deepDiveHtml}</div>
                     <div class="text-center mt-4">${generateAllBtn}</div>
@@ -411,16 +405,7 @@ export async function openRawDataViewer(ticker) {
 
                 <div class="p-4 bg-white rounded-lg border shadow-sm">
                     <div class="flex justify-center items-center gap-2 mb-4">
-                        <h3 class="text-lg font-bold text-gray-800">Step 3: Diligence Investigation</h3>
-                    </div>
-                    ${diligenceLogContainerHtml}
-                    ${structuredDiligenceHtml}
-                    ${manualDiligenceHtml}
-                </div>
-
-                <div class="p-4 bg-white rounded-lg border shadow-sm">
-                    <div class="flex justify-center items-center gap-2 mb-4">
-                        <h3 class="text-lg font-bold text-gray-800">Step 4: Final Analysis & Memo</h3>
+                        <h3 class="text-lg font-bold text-gray-800">Final Analysis & Memo</h3>
                     </div>
                     <div class="flex justify-center flex-wrap gap-4">
                         ${qarpBtn}
@@ -430,9 +415,17 @@ export async function openRawDataViewer(ticker) {
             </div>
         `;
 
+        structuredDiligenceContainer.innerHTML = `
+            ${diligenceLogContainerHtml}
+            ${structuredDiligenceContent}
+        `;
+
+        manualDiligenceContainer.innerHTML = manualDiligenceContent;
+
+
         // Add copy-to-clipboard functionality for structured diligence
         const checkIcon = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>`;
-        aiButtonsContainer.addEventListener('click', (e) => {
+        structuredDiligenceContainer.addEventListener('click', (e) => {
             const copyBtn = e.target.closest('.structured-diligence-copy-btn');
             if (copyBtn) {
                 const textToCopy = copyBtn.previousElementSibling.textContent;
