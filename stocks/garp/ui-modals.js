@@ -224,6 +224,7 @@ export async function openRawDataViewer(ticker) {
     const aiArticleContainer = document.getElementById('ai-article-container-analysis');
     const structuredDiligenceContainer = document.getElementById('structured-diligence-content-container');
     const manualDiligenceContainer = document.getElementById('manual-diligence-content-container');
+    const diligenceLogContainer = document.getElementById('diligence-log-content-container');
     const profileDisplayContainer = document.getElementById('company-profile-display-container');
     const titleEl = document.getElementById('raw-data-viewer-modal-title');
     const garpScorecardContainer = document.getElementById('garp-scorecard-container');
@@ -236,6 +237,7 @@ export async function openRawDataViewer(ticker) {
     analysisContentContainer.innerHTML = '';
     structuredDiligenceContainer.innerHTML = '';
     manualDiligenceContainer.innerHTML = '';
+    diligenceLogContainer.innerHTML = '';
     aiArticleContainer.innerHTML = '';
     profileDisplayContainer.innerHTML = '';
     garpScorecardContainer.innerHTML = '';
@@ -379,7 +381,7 @@ export async function openRawDataViewer(ticker) {
 
         // --- EXISTING MANUAL DILIGENCE HTML ---
         const manualDiligenceContent = `
-            <div class="text-left mt-6 pt-6 border-t">
+            <div class="p-6 bg-white rounded-lg border shadow-sm text-left">
                 <div class="flex justify-between items-center mb-4">
                     <div>
                         <h4 class="text-base font-semibold text-gray-800">Manual Diligence Entry</h4>
@@ -415,12 +417,9 @@ export async function openRawDataViewer(ticker) {
             </div>
         `;
 
-        structuredDiligenceContainer.innerHTML = `
-            ${diligenceLogContainerHtml}
-            ${structuredDiligenceContent}
-        `;
-
+        structuredDiligenceContainer.innerHTML = structuredDiligenceContent;
         manualDiligenceContainer.innerHTML = manualDiligenceContent;
+        diligenceLogContainer.innerHTML = diligenceLogContainerHtml;
 
 
         // Add copy-to-clipboard functionality for structured diligence
@@ -473,9 +472,9 @@ export async function openRawDataViewer(ticker) {
         }
         
         const diligenceReports = allSavedReports.filter(r => r.reportType === 'DiligenceInvestigation');
-        const diligenceLogContainer = document.getElementById('diligence-log-container');
-        if (diligenceLogContainer) {
-            renderDiligenceLog(diligenceLogContainer, diligenceReports);
+        const diligenceLogRenderContainer = document.getElementById('diligence-log-container');
+        if (diligenceLogRenderContainer) {
+            renderDiligenceLog(diligenceLogRenderContainer, diligenceReports);
         }
 
         const description = profile.description || 'No description available.';
