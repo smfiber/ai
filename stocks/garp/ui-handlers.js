@@ -631,8 +631,8 @@ export async function handlePortfolioGarpAnalysisRequest() {
 export async function handleSaveReportToDb() {
     const modal = document.getElementById('rawDataViewerModal');
     const symbol = modal.dataset.activeTicker;
-    const reportType = document.getElementById('report-status-container-ai').dataset.activeReportType;
-    const contentContainer = document.getElementById('ai-article-container');
+    const reportType = document.getElementById('report-status-container-analysis').dataset.activeReportType;
+    const contentContainer = document.getElementById('ai-article-container-analysis');
 
     if (!symbol || !reportType || !contentContainer) {
         displayMessageInModal("Could not determine which report to save.", "warning");
@@ -661,9 +661,9 @@ export async function handleSaveReportToDb() {
         await addDoc(collection(state.db, CONSTANTS.DB_COLLECTION_AI_REPORTS), reportData);
         displayMessageInModal("Report saved successfully!", "info");
         
-        const aiButtonsContainer = document.getElementById('ai-buttons-container');
-        if (aiButtonsContainer) {
-            const button = aiButtonsContainer.querySelector(`button[data-report-type="${reportType}"]`);
+        const analysisContentContainer = document.getElementById('analysis-content-container');
+        if (analysisContentContainer) {
+            const button = analysisContentContainer.querySelector(`button[data-report-type="${reportType}"]`);
             if (button) {
                 button.classList.add('has-saved-report');
             }
@@ -671,7 +671,7 @@ export async function handleSaveReportToDb() {
 
         const savedReports = await getSavedReports(symbol, reportType);
         const latestReport = savedReports[0];
-        const statusContainer = document.getElementById('report-status-container-ai');
+        const statusContainer = document.getElementById('report-status-container-analysis');
         const promptConfig = promptMap[reportType];
         
         updateReportStatus(statusContainer, savedReports, latestReport.id, { symbol, reportType, promptConfig });
@@ -794,8 +794,8 @@ Format each item precisely like this:
 }
 
 export async function handleAnalysisRequest(symbol, reportType, promptConfig, forceNew = false) {
-    const contentContainer = document.getElementById('ai-article-container');
-    const statusContainer = document.getElementById('report-status-container-ai');
+    const contentContainer = document.getElementById('ai-article-container-analysis');
+    const statusContainer = document.getElementById('report-status-container-analysis');
     
     contentContainer.innerHTML = '';
     statusContainer.classList.add('hidden');
@@ -938,8 +938,8 @@ ${marked.parse(generatedThesis)}
 }
 
 export async function handleInvestmentMemoRequest(symbol, forceNew = false) {
-    const contentContainer = document.getElementById('ai-article-container');
-    const statusContainer = document.getElementById('report-status-container-ai');
+    const contentContainer = document.getElementById('ai-article-container-analysis');
+    const statusContainer = document.getElementById('report-status-container-analysis');
     contentContainer.innerHTML = '';
     statusContainer.classList.add('hidden');
 
@@ -1079,9 +1079,9 @@ export async function handleGenerateAllReportsRequest(symbol) {
             };
             await addDoc(collection(state.db, CONSTANTS.DB_COLLECTION_AI_REPORTS), reportData);
 
-            const aiButtonsContainer = document.getElementById('ai-buttons-container');
-            if (aiButtonsContainer) {
-                const button = aiButtonsContainer.querySelector(`button[data-report-type="${reportType}"]`);
+            const analysisContentContainer = document.getElementById('analysis-content-container');
+            if (analysisContentContainer) {
+                const button = analysisContentContainer.querySelector(`button[data-report-type="${reportType}"]`);
                 if (button) {
                     button.classList.add('has-saved-report');
                 }
@@ -1212,8 +1212,8 @@ export async function handleDeleteDiligenceLog(reportId, ticker) {
                 const diligenceLogContainer = document.getElementById('diligence-log-container');
                 renderDiligenceLog(diligenceLogContainer, diligenceReports);
 
-                const articleContainer = document.getElementById('ai-article-container');
-                const statusContainer = document.getElementById('report-status-container-ai');
+                const articleContainer = document.getElementById('ai-article-container-analysis');
+                const statusContainer = document.getElementById('report-status-container-analysis');
                 articleContainer.innerHTML = '';
                 statusContainer.classList.add('hidden');
 
