@@ -456,7 +456,7 @@ Investment Profile & The Deciding Factor: Classify the stock's profile (e.g., 'B
 (1 paragraph)
 Based on your analysis, propose 2-3 critical diligence questions. For each question, you MUST provide two parts:
 1.  **Human-Led Question:** A high-level, strategic question for an analyst to answer through deeper research and judgment.
-2.  **Suggested AI Investigation Query:** A specific, fact-based query designed to be used with a search-enabled AI (like the 'Diligence Investigation' tool) to find source material. This query should target information from recent earnings calls, SEC filings (10-K, 10-Q), or investor presentations.
+2.  **Suggested AI Investigation Query:** **This MUST be a concise, keyword-based search string, NOT a conversational question. It is designed for a search tool that indexes financial documents. A good query includes the company ticker, the specific topic/metric, and the desired source (e.g., "earnings call," "10-K"). Example of a good query: "XPEL Q4 2025 earnings call transcript gross margin drivers automotive segment". Example of a bad query: "Why did gross margin go up for XPEL in the last quarter?".** The query should target information from recent earnings calls, SEC filings (10-K, 10-Q), or investor presentations.
 
 Format each item precisely like this:
 - **Human-Led Question:** [Your question here]
