@@ -802,13 +802,21 @@ export function renderDiligenceLog(container, reports) {
             const reportId = item.dataset.reportId;
             const report = reports.find(r => r.id === reportId);
             if (report) {
-                const articleContainer = document.getElementById('ai-article-container');
-                const statusContainer = document.getElementById('report-status-container-ai');
+                const articleContainer = document.getElementById('ai-article-container-analysis');
+                const statusContainer = document.getElementById('report-status-container-analysis');
                 
+                // Switch to the 'Analysis' tab
+                document.querySelectorAll('#rawDataViewerModal .tab-content').forEach(c => c.classList.add('hidden'));
+                document.querySelectorAll('#rawDataViewerModal .tab-button').forEach(b => b.classList.remove('active'));
+                document.getElementById('analysis-tab').classList.remove('hidden');
+                document.querySelector('.tab-button[data-tab="analysis"]').classList.add('active');
+
                 displayReport(articleContainer, report.content, report.prompt);
                 
-                statusContainer.classList.remove('hidden');
-                statusContainer.innerHTML = `<span class="text-sm font-semibold text-blue-800">Displaying saved Diligence Investigation from: ${report.savedAt.toDate().toLocaleString()}</span>`;
+                if (statusContainer) {
+                    statusContainer.classList.remove('hidden');
+                    statusContainer.innerHTML = `<span class="text-sm font-semibold text-blue-800">Displaying saved Diligence Investigation from: ${report.savedAt.toDate().toLocaleString()}</span>`;
+                }
             }
         });
     });
