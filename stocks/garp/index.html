@@ -292,10 +292,8 @@
             <div class="border-b border-gray-200">
                 <nav id="analysis-tabs" class="flex -mb-px" aria-label="Tabs">
                     <button class="tab-button" data-tab="dashboard">Dashboard</button>
-                    <button class="tab-button" data-tab="analysis">Analysis</button>
-                    <button class="tab-button" data-tab="structured-diligence">Structured Diligence</button>
-                    <button class="tab-button" data-tab="manual-diligence">Manual Diligence</button>
-                    <button class="tab-button" data-tab="diligence-log">Diligence Log</button>
+                    <button class="tab-button" data-tab="ai-analysis">AI Analysis</button>
+                    <button class="tab-button" data-tab="diligence-hub">Diligence Hub</button>
                     <button class="tab-button" data-tab="ongoing-diligence">Ongoing Diligence</button>
                     <button class="tab-button hidden" data-tab="position-analysis">Position Analysis</button>
                     <button class="tab-button" data-tab="raw-data">Raw Data</button>
@@ -314,38 +312,15 @@
                     <div id="valuation-health-container" class="bg-white p-6 rounded-2xl shadow-lg border border-gray-200"></div>
                 </div>
 
-                <div id="analysis-tab" class="tab-content hidden p-6">
+                <div id="ai-analysis-tab" class="tab-content hidden p-6">
                     <div id="analysis-content-container" class="border-b pb-4 mb-4"></div>
                     <div id="report-status-container-analysis" class="hidden p-3 mb-4 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between gap-4"></div>
                     <div id="ai-article-container-analysis" class="prose max-w-none"></div>
                 </div>
                 
-                <div id="structured-diligence-tab" class="tab-content hidden p-6">
-                    <div id="structured-diligence-content-container"></div>
-                </div>
+                <div id="diligence-hub-tab" class="tab-content hidden p-6"></div>
 
-                <div id="manual-diligence-tab" class="tab-content hidden p-6">
-                    <div id="manual-diligence-content-container"></div>
-                </div>
-
-                <div id="diligence-log-tab" class="tab-content hidden p-6">
-                    <div id="diligence-log-content-container"></div>
-                    <div id="report-status-container-diligence" class="hidden p-3 my-4 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between gap-4"></div>
-                    <div id="ai-article-container-diligence" class="prose max-w-none mt-4"></div>
-                </div>
-
-                <div id="ongoing-diligence-tab" class="tab-content hidden p-6 space-y-6">
-                    <div id="investigation-tool-container" class="mt-8 pt-6 border-t">
-                        <h3 class="text-xl font-bold text-gray-800">Diligence Investigation Tool</h3>
-                        <p class="text-sm text-gray-500 my-2">Search earnings call transcripts for specific keywords or topics.</p>
-                        <form id="transcript-search-form" class="flex items-center gap-2">
-                            <input type="text" id="transcript-search-input" class="border border-gray-300 rounded-lg w-full p-2" placeholder="e.g., margin guidance, competitive landscape...">
-                            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg">Search</button>
-                        </form>
-                        <div id="transcript-search-results-container" class="mt-4"></div>
-                        <div id="transcript-ai-summary-container" class="mt-4"></div>
-                    </div>
-                </div>
+                <div id="ongoing-diligence-tab" class="tab-content hidden p-6 space-y-6"></div>
 
                 <div id="position-analysis-tab" class="tab-content hidden p-6">
                     <div id="report-status-container-position" class="hidden p-3 mb-4 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between gap-4"></div>
