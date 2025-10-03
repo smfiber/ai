@@ -2,7 +2,7 @@
 import { CONSTANTS, state, promptMap } from './config.js';
 import { openModal, closeModal, openStockListModal, openManageStockModal, openPortfolioManagerModal, openRawDataViewer, QUARTERLY_REVIEW_QUESTIONS } from './ui-modals.js';
 import { fetchAndCachePortfolioData, renderPortfolioManagerList } from './ui-render.js';
-import { handleResearchSubmit, handleSaveStock, handleDeleteStock, handleRefreshFmpData, handleAnalysisRequest, handleInvestmentMemoRequest, handleSaveReportToDb, handleGenerateAllReportsRequest, handleGarpCandidacyRequest, handlePortfolioGarpAnalysisRequest, handlePositionAnalysisRequest, handleReportHelpRequest, handleManualDiligenceSave, handleDeleteDiligenceLog, handleWorkflowHelpRequest, handlePeerAnalysisRequest, handleManualPeerAnalysisRequest, handleStructuredDiligenceSave, handleOngoingReviewSave } from './ui-handlers.js';
+import { handleResearchSubmit, handleSaveStock, handleDeleteStock, handleRefreshFmpData, handleAnalysisRequest, handleInvestmentMemoRequest, handleSaveReportToDb, handleGenerateAllReportsRequest, handleGarpCandidacyRequest, handlePortfolioGarpAnalysisRequest, handlePositionAnalysisRequest, handleReportHelpRequest, handleManualDiligenceSave, handleDeleteDiligenceLog, handleWorkflowHelpRequest, handlePeerAnalysisRequest, handleManualPeerAnalysisRequest, handleStructuredDiligenceSave, handleOngoingReviewSave, handleTranscriptSearch, handleTranscriptAiAnalysis } from './ui-handlers.js';
 import { getFmpStockData } from './api.js';
 
 // --- DYNAMIC TOOLTIPS ---
@@ -178,6 +178,16 @@ export function setupEventListeners() {
 
     const analysisModal = document.getElementById('rawDataViewerModal');
 
+    analysisModal.addEventListener('submit', (e) => {
+        if (e.target.id === 'transcript-search-form') {
+            e.preventDefault();
+            const symbol = analysisModal.dataset.activeTicker;
+            if (symbol) {
+                handleTranscriptSearch(symbol);
+            }
+        }
+    });
+
     analysisModal.addEventListener('click', async (e) => {
         const target = e.target.closest('button');
         if (!target) return;
@@ -314,6 +324,11 @@ export function setupEventListeners() {
             formContainer.innerHTML = '';
             formContainer.classList.add('hidden');
             document.getElementById('start-quarterly-review-button').classList.remove('hidden');
+            return;
+        }
+        
+        if (target.id === 'analyze-transcript-results-button') {
+            handleTranscriptAiAnalysis(symbol);
             return;
         }
 
