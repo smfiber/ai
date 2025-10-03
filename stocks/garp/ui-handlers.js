@@ -2,15 +2,20 @@
 import { CONSTANTS, state, promptMap, ANALYSIS_REQUIREMENTS, ANALYSIS_NAMES } from './config.js';
 import { callApi, callGeminiApi, generateRefinedArticle, generatePolishedArticleForSynthesis, getFmpStockData } from './api.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { openModal, closeModal, displayMessageInModal, openConfirmationModal, openManageStockModal, STRUCTURED_DILIGENCE_QUESTIONS } from './ui-modals.js';
-import { renderPortfolioManagerList, displayReport, updateReportStatus, fetchAndCachePortfolioData, updateGarpCandidacyStatus, renderCandidacyAnalysis, renderGarpAnalysisSummary, renderDiligenceLog, renderPeerComparisonTable, renderSectorMomentumHeatMap } from './ui-render.js';
+import { openModal, closeModal, displayMessageInModal, openConfirmationModal, openManageStockModal, STRUCTURED_DILIGENCE_QUESTIONS, QUARTERLY_REVIEW_QUESTIONS } from './ui-modals.js';
+import { renderPortfolioManagerList, displayReport, updateReportStatus, fetchAndCachePortfolioData, updateGarpCandidacyStatus, renderCandidacyAnalysis, renderGarpAnalysisSummary, renderDiligenceLog, renderPeerComparisonTable, renderSectorMomentumHeatMap, renderOngoingReviewLog } from './ui-render.js';
 import { _calculateFinancialAnalysisMetrics, _calculateMoatAnalysisMetrics, _calculateRiskAssessmentMetrics, _calculateCapitalAllocatorsMetrics, _calculateGarpAnalysisMetrics, _calculateGarpScorecardMetrics, CALCULATION_SUMMARIES } from './analysis-helpers.js';
 
 // --- UTILITY HELPERS ---
 export async function getSavedReports(ticker, reportType) {
     try {
         const reportsRef = collection(state.db, CONSTANTS.DB_COLLECTION_AI_REPORTS);
-        const q = query(reportsRef, where("ticker", "==", ticker), where("reportType", "==", reportType), orderBy("savedAt", "desc"));
+        let q;
+        if (Array.isArray(reportType)) {
+             q = query(reportsRef, where("ticker", "==", ticker), where("reportType", "in", reportType), orderBy("savedAt", "desc"));
+        } else {
+             q = query(reportsRef, where("ticker", "==", ticker), where("reportType", "==", reportType), orderBy("savedAt", "desc"));
+        }
         const querySnapshot = await getDocs(q);
         return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     } catch (error) {
@@ -1198,6 +1203,59 @@ export async function handleManualDiligenceSave(symbol) {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
 }
+
+export async function handleOngoingReviewSave(symbol) {
+    const formContainer = document.getElementById('quarterly-review-form-container');
+    const answerElements = formContainer.querySelectorAll('.ongoing-review-answer');
+    const entriesToSave = [];
+
+    answerElements.forEach(textarea => {
+        const answer = textarea.value.trim();
+        const category = textarea.dataset.category;
+        const question = QUARTERLY_REVIEW_QUESTIONS[category];
+
+        if (answer && question) {
+            entriesToSave.push({ question, answer });
+        }
+    });
+
+    if (entriesToSave.length === 0) {
+        displayMessageInModal("Please answer at least one question before saving.", "warning");
+        return;
+    }
+
+    openModal(CONSTANTS.MODAL_LOADING);
+    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Saving ${entriesToSave.length} review entries...`;
+
+    try {
+        let formattedContent = '';
+        const prompt = `Ongoing Diligence Review for ${symbol} saved on ${new Date().toLocaleDateString()}`;
+
+        entriesToSave.forEach(entry => {
+            formattedContent += `## ${entry.question}\n\n${entry.answer}\n\n---\n\n`;
+        });
+        
+        await autoSaveReport(symbol, 'QuarterlyReview', marked.parse(formattedContent), prompt);
+
+        // Reset UI
+        formContainer.innerHTML = '';
+        formContainer.classList.add('hidden');
+        document.getElementById('start-quarterly-review-button').classList.remove('hidden');
+
+        // Refresh the log
+        const ongoingReviews = await getSavedReports(symbol, ['QuarterlyReview', 'AnnualReview']);
+        renderOngoingReviewLog(document.getElementById('ongoing-review-log-container'), ongoingReviews);
+
+        displayMessageInModal(`Successfully saved ${entriesToSave.length} review entries.`, 'info');
+
+    } catch (error) {
+        console.error("Error saving ongoing review entries:", error);
+        displayMessageInModal(`Could not save review: ${error.message}`, 'error');
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
 
 export async function handleDeleteDiligenceLog(reportId, ticker) {
     openConfirmationModal(
