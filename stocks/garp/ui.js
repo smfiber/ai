@@ -1,7 +1,8 @@
+// fileName: ui.js
 import { CONSTANTS, state, promptMap } from './config.js';
-import { openModal, closeModal, openStockListModal, openManageStockModal, openPortfolioManagerModal, openRawDataViewer } from './ui-modals.js';
+import { openModal, closeModal, openStockListModal, openManageStockModal, openPortfolioManagerModal, openRawDataViewer, QUARTERLY_REVIEW_QUESTIONS } from './ui-modals.js';
 import { fetchAndCachePortfolioData, renderPortfolioManagerList } from './ui-render.js';
-import { handleResearchSubmit, handleSaveStock, handleDeleteStock, handleRefreshFmpData, handleAnalysisRequest, handleInvestmentMemoRequest, handleSaveReportToDb, handleGenerateAllReportsRequest, handleGarpCandidacyRequest, handlePortfolioGarpAnalysisRequest, handlePositionAnalysisRequest, handleReportHelpRequest, handleManualDiligenceSave, handleDeleteDiligenceLog, handleWorkflowHelpRequest, handlePeerAnalysisRequest, handleManualPeerAnalysisRequest, handleStructuredDiligenceSave } from './ui-handlers.js';
+import { handleResearchSubmit, handleSaveStock, handleDeleteStock, handleRefreshFmpData, handleAnalysisRequest, handleInvestmentMemoRequest, handleSaveReportToDb, handleGenerateAllReportsRequest, handleGarpCandidacyRequest, handlePortfolioGarpAnalysisRequest, handlePositionAnalysisRequest, handleReportHelpRequest, handleManualDiligenceSave, handleDeleteDiligenceLog, handleWorkflowHelpRequest, handlePeerAnalysisRequest, handleManualPeerAnalysisRequest, handleStructuredDiligenceSave, handleOngoingReviewSave } from './ui-handlers.js';
 
 // --- DYNAMIC TOOLTIPS ---
 function initializeTooltips() {
@@ -238,6 +239,47 @@ export function setupEventListeners() {
             if (reportId) {
                 handleDeleteDiligenceLog(reportId, symbol);
             }
+            return;
+        }
+        
+        // --- ONGOING DILIGENCE HANDLERS ---
+        if (target.id === 'start-quarterly-review-button') {
+            target.classList.add('hidden');
+            const formContainer = document.getElementById('quarterly-review-form-container');
+            let formHtml = `<div class="text-left mt-4 border rounded-lg p-4 bg-gray-50 space-y-4">`;
+            for (const [category, question] of Object.entries(QUARTERLY_REVIEW_QUESTIONS)) {
+                formHtml += `
+                    <div class="p-3 bg-white rounded-lg border border-gray-200">
+                        <h5 class="font-semibold text-sm text-indigo-700 mb-2">${category}</h5>
+                        <p class="text-xs text-gray-600 mb-2">${question}</p>
+                        <textarea class="ongoing-review-answer w-full border border-gray-300 rounded-lg p-2 text-sm" 
+                                  rows="5" 
+                                  data-category="${category}"
+                                  placeholder="Your analysis and findings here..."></textarea>
+                    </div>
+                `;
+            }
+            formHtml += `
+                <div class="text-right mt-4 flex justify-end gap-2">
+                    <button id="cancel-ongoing-review-button" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg">Cancel</button>
+                    <button id="save-ongoing-review-button" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg">Save Review</button>
+                </div>
+            </div>`;
+            formContainer.innerHTML = formHtml;
+            formContainer.classList.remove('hidden');
+            return;
+        }
+
+        if (target.id === 'save-ongoing-review-button') {
+            handleOngoingReviewSave(symbol);
+            return;
+        }
+
+        if (target.id === 'cancel-ongoing-review-button') {
+            const formContainer = document.getElementById('quarterly-review-form-container');
+            formContainer.innerHTML = '';
+            formContainer.classList.add('hidden');
+            document.getElementById('start-quarterly-review-button').classList.remove('hidden');
             return;
         }
 
