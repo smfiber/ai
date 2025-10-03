@@ -399,7 +399,7 @@ export async function openRawDataViewer(ticker) {
         `;
         
         // --- DILIGENCE HUB TAB ---
-        const copyIcon = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 0 011.5 .124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75" /></svg>`;
+        const copyIcon = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75" /></svg>`;
         
         diligenceHubContainer.innerHTML = `
             <div class="space-y-6">
@@ -451,6 +451,16 @@ export async function openRawDataViewer(ticker) {
                 </div>
                 <div id="quarterly-review-form-container" class="hidden"></div>
                 <div id="ongoing-review-log-container" class="mt-6"></div>
+            </div>
+            <div class="mt-8 pt-6 border-t">
+                <h3 class="text-xl font-bold text-gray-800">Diligence Investigation Tool</h3>
+                <p class="text-sm text-gray-500 my-2">Search earnings call transcripts for specific keywords or topics (e.g., "margin guidance," "competitive pressures").</p>
+                <form id="transcript-search-form" class="flex items-center gap-2">
+                    <input type="text" id="transcript-search-input" class="border border-gray-300 rounded-lg w-full p-2" placeholder="Search transcripts...">
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg">Search</button>
+                </form>
+                <div id="transcript-search-results-container" class="mt-4"></div>
+                <div id="transcript-ai-summary-container" class="mt-4"></div>
             </div>
         `;
         renderOngoingReviewLog(ongoingDiligenceContainer.querySelector('#ongoing-review-log-container'), ongoingReviews);
@@ -543,7 +553,7 @@ export async function openRawDataViewer(ticker) {
 
             const savedDate = latestReport.savedAt.toDate().toLocaleString();
             const tempContainer = document.createElement('div');
-            renderCandidacyAnalysis(tempContainer, latestReport.content, latestReport.prompt, diligenceQuestions);
+            renderCandidacyAnalysis(tempContainer, latestReport.content, latestReport.prompt, latestReport.diligenceQuestions);
             const accordionContent = tempContainer.innerHTML;
 
             resultContainer.innerHTML = `
