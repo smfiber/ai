@@ -227,26 +227,26 @@ export async function openRawDataViewer(ticker) {
     const modal = document.getElementById(modalId);
     modal.dataset.activeTicker = ticker; // Store ticker for later use
     
+    // Get all tab containers
     const rawDataContainer = document.getElementById('raw-data-accordion-container');
-    const analysisContentContainer = document.getElementById('analysis-content-container');
-    const aiArticleContainer = document.getElementById('ai-article-container-analysis');
-    const structuredDiligenceContainer = document.getElementById('structured-diligence-content-container');
-    const manualDiligenceContainer = document.getElementById('manual-diligence-content-container');
-    const diligenceLogContainer = document.getElementById('diligence-log-content-container');
+    const aiAnalysisContainer = document.getElementById('ai-analysis-tab');
+    const diligenceHubContainer = document.getElementById('diligence-hub-tab');
     const ongoingDiligenceContainer = document.getElementById('ongoing-diligence-tab');
+    const positionAnalysisContainer = document.getElementById('position-analysis-content-container');
+    
+    // Get specific content elements
+    const aiArticleContainer = document.getElementById('ai-article-container-analysis');
     const profileDisplayContainer = document.getElementById('company-profile-display-container');
     const titleEl = document.getElementById('raw-data-viewer-modal-title');
     const garpScorecardContainer = document.getElementById('garp-scorecard-container');
     const positionAnalysisTabButton = document.querySelector('.tab-button[data-tab="position-analysis"]');
-    const positionAnalysisContainer = document.getElementById('position-analysis-content-container');
     const peerAnalysisContainer = document.getElementById('peer-analysis-section-container');
     
+    // Clear all content areas
     titleEl.textContent = `Analyzing ${ticker}...`;
     rawDataContainer.innerHTML = '<div class="loader mx-auto"></div>';
-    analysisContentContainer.innerHTML = '';
-    structuredDiligenceContainer.innerHTML = '';
-    manualDiligenceContainer.innerHTML = '';
-    diligenceLogContainer.innerHTML = '';
+    aiAnalysisContainer.innerHTML = '';
+    diligenceHubContainer.innerHTML = '';
     ongoingDiligenceContainer.innerHTML = '';
     aiArticleContainer.innerHTML = '';
     profileDisplayContainer.innerHTML = '';
@@ -292,7 +292,7 @@ export async function openRawDataViewer(ticker) {
         titleEl.textContent = `Analysis for ${ticker}`;
         const helpIconHtml = `<button data-report-type="PositionAnalysis" class="ai-help-button p-1 rounded-full hover:bg-indigo-100" title="What is this?"><svg class="w-5 h-5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" /></svg></button>`;
 
-        // Conditionally show and populate the Position Analysis tab
+        // --- POSITION ANALYSIS TAB ---
         const portfolioData = state.portfolioCache.find(s => s.ticker === ticker);
         if (portfolioData && (portfolioData.transactions?.length > 0 || portfolioData.shares > 0)) {
             positionAnalysisTabButton.classList.remove('hidden');
@@ -310,23 +310,25 @@ export async function openRawDataViewer(ticker) {
                 <div id="position-analysis-report-container" class="prose max-w-none mt-6"></div>
             `;
         }
-
-        let accordionHtml = '';
+        
+        // --- RAW DATA TAB ---
+        let rawDataAccordionHtml = '';
         if (groupedFmpData) {
             const sortedKeys = Object.keys(groupedFmpData).sort();
             for (const key of sortedKeys) {
-                accordionHtml += `
+                rawDataAccordionHtml += `
                     <details class="mb-2 bg-white rounded-lg border">
                         <summary class="p-3 font-semibold text-gray-700 cursor-pointer hover:bg-gray-50">${key.replace(/_/g, ' ')}</summary>
                         <pre class="text-xs whitespace-pre-wrap break-all bg-gray-900 text-white p-3 rounded-b-lg">${JSON.stringify(groupedFmpData[key], null, 2)}</pre>
                     </details>
                 `;
             }
-            rawDataContainer.innerHTML = accordionHtml;
+            rawDataContainer.innerHTML = rawDataAccordionHtml;
         } else {
              rawDataContainer.innerHTML = '<p class="text-center text-gray-500 py-8">Could not load grouped raw data.</p>';
         }
 
+        // --- AI ANALYSIS TAB ---
         const deepDiveButtons = [
             { reportType: 'FinancialAnalysis', text: 'Financial Analysis', tooltip: 'Deep dive into financial statements, ratios, and health.' },
             { reportType: 'GarpAnalysis', text: 'GARP Analysis', tooltip: 'Growth at a Reasonable Price. Is the valuation justified by its growth?' },
@@ -356,58 +358,8 @@ export async function openRawDataViewer(ticker) {
         const garpMemoBtn = `<button data-symbol="${ticker}" id="investment-memo-button" data-report-type="InvestmentMemo" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg text-base">Generate GARP Memo</button>`;
         const qarpBtn = `<button data-symbol="${ticker}" id="qarp-analysis-button" data-report-type="QarpAnalysis" class="ai-analysis-button bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 px-6 rounded-lg text-base">Generate QARP Analysis</button>`;
         
-        const diligenceLogContainerHtml = `<div id="diligence-log-container" class="mb-6 text-left"></div>`;
-
-        // --- NEW STRUCTURED DILIGENCE HTML ---
-        const copyIcon = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75" /></svg>`;
-        let structuredDiligenceContent = `
-            <div class="text-left mt-4 border rounded-lg p-4 bg-gray-50">
-                <h4 class="text-base font-semibold text-gray-800 mb-1">Structured Diligence</h4>
-                <p class="text-sm text-gray-500 mb-4">Answer these core questions to build a foundational thesis.</p>
-                <div id="structured-diligence-container" class="space-y-4">
-        `;
-        for (const [category, question] of Object.entries(STRUCTURED_DILIGENCE_QUESTIONS)) {
-            structuredDiligenceContent += `
-                <div class="diligence-card p-3 bg-white rounded-lg border border-gray-200">
-                    <h5 class="font-semibold text-sm text-indigo-700 mb-2">${category}</h5>
-                    <div class="flex items-start gap-2 mb-2">
-                        <p class="text-xs text-gray-600 flex-grow" data-question-text>${question}</p>
-                        <button type="button" class="copy-icon-btn structured-diligence-copy-btn" title="Copy Question">${copyIcon}</button>
-                    </div>
-                    <textarea class="structured-diligence-answer w-full border border-gray-300 rounded-lg p-2 text-sm" 
-                              rows="4" 
-                              data-category="${category}"
-                              placeholder="Your analysis and findings here..."></textarea>
-                </div>
-            `;
-        }
-        structuredDiligenceContent += `
-                </div>
-                <div class="text-right mt-4">
-                    <button id="save-structured-diligence-button" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg">Save Structured Answers</button>
-                </div>
-            </div>
-        `;
-
-        // --- EXISTING MANUAL DILIGENCE HTML ---
-        const manualDiligenceContent = `
-            <div class="p-6 bg-white rounded-lg border shadow-sm text-left">
-                <div class="flex justify-between items-center mb-4">
-                    <div>
-                        <h4 class="text-base font-semibold text-gray-800">Manual Diligence Entry</h4>
-                        <p class="text-sm text-gray-500">Add custom questions and answers to the log.</p>
-                    </div>
-                    <button id="add-diligence-entry-button" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg text-sm">Add New Q&A</button>
-                </div>
-                <div id="manual-diligence-entries-container" class="space-y-4"></div>
-                <div class="text-right mt-4">
-                     <button id="save-manual-diligence-button" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg">Save Manual Entries</button>
-                </div>
-            </div>
-        `;
-
-        analysisContentContainer.innerHTML = `
-            <div class="space-y-8 text-center bg-gray-50 p-4 rounded-lg">
+        aiAnalysisContainer.innerHTML = `
+            <div id="analysis-content-container" class="space-y-8 text-center bg-gray-50 p-4 rounded-lg border-b pb-4 mb-4">
                 <div class="p-4 bg-white rounded-lg border shadow-sm">
                     <h3 class="text-lg font-bold text-gray-800 mb-4">Deep Dive Analysis (Optional)</h3>
                     <p class="text-sm text-gray-500 mb-4">Generate these reports for more detail after a promising candidacy assessment.</p>
@@ -425,105 +377,83 @@ export async function openRawDataViewer(ticker) {
                     </div>
                 </div>
             </div>
+            <div id="report-status-container-analysis" class="hidden p-3 mb-4 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between gap-4"></div>
+            <div id="ai-article-container-analysis" class="prose max-w-none"></div>
         `;
+        
+        // --- DILIGENCE HUB TAB ---
+        const copyIcon = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75" /></svg>`;
+        let structuredDiligenceContent = `<div class="text-left mt-4 border rounded-lg p-4 bg-gray-50">...</div>`; // (Content built dynamically below)
+        const manualDiligenceContent = `<div class="p-6 bg-white rounded-lg border shadow-sm text-left">...</div>`; // (Content built dynamically below)
+        const diligenceLogContainerHtml = `<div id="diligence-log-container" class="mb-6 text-left"></div>`;
 
-        structuredDiligenceContainer.innerHTML = structuredDiligenceContent;
-        manualDiligenceContainer.innerHTML = manualDiligenceContent;
-        diligenceLogContainer.innerHTML = diligenceLogContainerHtml;
+        diligenceHubContainer.innerHTML = `
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="space-y-6">
+                    <div id="structured-diligence-forms-container"></div>
+                    <div id="manual-diligence-forms-container"></div>
+                </div>
+                <div id="diligence-log-display-container">
+                    ${diligenceLogContainerHtml}
+                </div>
+            </div>
+        `;
+        
+        // Populate Structured Diligence
+        const structuredContainer = diligenceHubContainer.querySelector('#structured-diligence-forms-container');
+        let structuredHtml = `<div class="text-left border rounded-lg p-4 bg-gray-50"><h4 class="text-base font-semibold text-gray-800 mb-1">Structured Diligence</h4><p class="text-sm text-gray-500 mb-4">Answer these core questions to build a foundational thesis.</p><div class="space-y-4">`;
+        for (const [category, question] of Object.entries(STRUCTURED_DILIGENCE_QUESTIONS)) {
+            structuredHtml += `<div class="diligence-card p-3 bg-white rounded-lg border border-gray-200"><h5 class="font-semibold text-sm text-indigo-700 mb-2">${category}</h5><div class="flex items-start gap-2 mb-2"><p class="text-xs text-gray-600 flex-grow" data-question-text>${question}</p><button type="button" class="copy-icon-btn structured-diligence-copy-btn" title="Copy Question">${copyIcon}</button></div><textarea class="structured-diligence-answer w-full border border-gray-300 rounded-lg p-2 text-sm" rows="4" data-category="${category}" placeholder="Your analysis and findings here..."></textarea></div>`;
+        }
+        structuredHtml += `</div><div class="text-right mt-4"><button id="save-structured-diligence-button" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg">Save Structured Answers</button></div></div>`;
+        structuredContainer.innerHTML = structuredHtml;
+        
+        // Populate Manual Diligence
+        const manualContainer = diligenceHubContainer.querySelector('#manual-diligence-forms-container');
+        manualContainer.innerHTML = `<div class="p-6 bg-white rounded-lg border shadow-sm text-left"><div class="flex justify-between items-center mb-4"><div><h4 class="text-base font-semibold text-gray-800">Manual Diligence Entry</h4><p class="text-sm text-gray-500">Add custom questions and answers to the log.</p></div><button id="add-diligence-entry-button" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg text-sm">Add New Q&A</button></div><div id="manual-diligence-entries-container" class="space-y-4"></div><div class="text-right mt-4"><button id="save-manual-diligence-button" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg">Save Manual Entries</button></div></div>`;
 
-        // --- ONGOING DILIGENCE TAB LOGIC ---
+        // Populate Diligence Log
+        const diligenceReports = allSavedReports.filter(r => r.reportType === 'DiligenceInvestigation');
+        renderDiligenceLog(diligenceHubContainer.querySelector('#diligence-log-container'), diligenceReports);
+
+        // --- ONGOING DILIGENCE TAB ---
         let nextEarningsDate = 'N/A';
         if (fmpData.earning_calendar && fmpData.earning_calendar.length > 0) {
-            const today = new Date();
-            today.setHours(0, 0, 0, 0); // Normalize to start of day
-            const futureEarnings = fmpData.earning_calendar
-                .map(e => ({ ...e, dateObj: new Date(e.date) }))
-                .filter(e => e.dateObj >= today)
-                .sort((a, b) => a.dateObj - b.dateObj);
-            
-            if (futureEarnings.length > 0) {
-                nextEarningsDate = futureEarnings[0].date;
-            }
+            const today = new Date(); today.setHours(0, 0, 0, 0);
+            const futureEarnings = fmpData.earning_calendar.map(e => ({ ...e, dateObj: new Date(e.date) })).filter(e => e.dateObj >= today).sort((a, b) => a.dateObj - b.dateObj);
+            if (futureEarnings.length > 0) { nextEarningsDate = futureEarnings[0].date; }
         }
         
+        const ongoingReviews = allSavedReports.filter(r => r.reportType === 'QuarterlyReview' || r.reportType === 'AnnualReview');
         ongoingDiligenceContainer.innerHTML = `
             <div class="bg-white p-6 rounded-2xl shadow-lg border border-gray-200">
                 <div class="flex justify-between items-center mb-4 border-b pb-2">
-                    <h3 class="text-xl font-bold text-gray-800">Ongoing Diligence</h3>
+                    <h3 class="text-xl font-bold text-gray-800">Recurring Review</h3>
                     <div class="text-right">
                         <p class="text-sm font-semibold text-gray-600">Next Earnings Date</p>
                         <p class="text-lg font-bold text-indigo-700">${nextEarningsDate}</p>
                     </div>
                 </div>
                 <div id="ongoing-diligence-controls" class="text-center mb-6">
-                    <button id="start-quarterly-review-button" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-5 rounded-lg">
-                        Start New Quarterly Review
-                    </button>
+                    <button id="start-quarterly-review-button" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-5 rounded-lg">Start New Quarterly Review</button>
                 </div>
                 <div id="quarterly-review-form-container" class="hidden"></div>
                 <div id="ongoing-review-log-container" class="mt-6"></div>
             </div>
+            <div class="mt-8 pt-6 border-t">
+                <h3 class="text-xl font-bold text-gray-800">Diligence Investigation Tool</h3>
+                <p class="text-sm text-gray-500 my-2">Search earnings call transcripts for specific keywords or topics (e.g., "margin guidance," "competitive pressures").</p>
+                <form id="transcript-search-form" class="flex items-center gap-2">
+                    <input type="text" id="transcript-search-input" class="border border-gray-300 rounded-lg w-full p-2" placeholder="Search transcripts...">
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg">Search</button>
+                </form>
+                <div id="transcript-search-results-container" class="mt-4"></div>
+                <div id="transcript-ai-summary-container" class="mt-4"></div>
+            </div>
         `;
-
-        const ongoingReviews = allSavedReports.filter(r => r.reportType === 'QuarterlyReview' || r.reportType === 'AnnualReview');
-        renderOngoingReviewLog(document.getElementById('ongoing-review-log-container'), ongoingReviews);
+        renderOngoingReviewLog(ongoingDiligenceContainer.querySelector('#ongoing-review-log-container'), ongoingReviews);
         
-
-        // Add copy-to-clipboard functionality for structured diligence
-        const checkIcon = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>`;
-        structuredDiligenceContainer.addEventListener('click', (e) => {
-            const copyBtn = e.target.closest('.structured-diligence-copy-btn');
-            if (copyBtn) {
-                const textToCopy = copyBtn.previousElementSibling.textContent;
-                navigator.clipboard.writeText(textToCopy).then(() => {
-                    copyBtn.classList.add('copied');
-                    copyBtn.innerHTML = checkIcon;
-                    setTimeout(() => {
-                        copyBtn.classList.remove('copied');
-                        copyBtn.innerHTML = copyIcon;
-                    }, 2000);
-                });
-            }
-        });
-
-        const addDiligenceEntryRow = () => {
-            const container = document.getElementById('manual-diligence-entries-container');
-            if (!container) return;
-            const entryDiv = document.createElement('div');
-            entryDiv.className = 'diligence-entry-row border p-3 rounded-lg bg-gray-50 space-y-2';
-            entryDiv.innerHTML = `
-                <div class="flex justify-between items-center">
-                    <label class="block text-sm font-medium text-gray-700">New Question</label>
-                    <button type="button" class="delete-diligence-entry-button text-red-500 hover:text-red-700 font-bold text-xl">&times;</button>
-                </div>
-                <textarea class="diligence-question-manual-input w-full border border-gray-300 rounded-lg p-2 text-sm" rows="3" placeholder="Enter your diligence question..."></textarea>
-                <label class="block text-sm font-medium text-gray-700 pt-2">Answer</label>
-                <textarea class="diligence-answer-manual-input w-full border border-gray-300 rounded-lg p-2 text-sm" rows="5" placeholder="Enter the answer you found..."></textarea>
-            `;
-            container.appendChild(entryDiv);
-        };
-        
-        const addBtn = document.getElementById('add-diligence-entry-button');
-        if (addBtn) {
-            addBtn.addEventListener('click', addDiligenceEntryRow);
-        }
-
-        const entriesContainer = document.getElementById('manual-diligence-entries-container');
-        if (entriesContainer) {
-            entriesContainer.addEventListener('click', (e) => {
-                const deleteBtn = e.target.closest('.delete-diligence-entry-button');
-                if (deleteBtn) {
-                    deleteBtn.closest('.diligence-entry-row').remove();
-                }
-            });
-        }
-        
-        const diligenceReports = allSavedReports.filter(r => r.reportType === 'DiligenceInvestigation');
-        const diligenceLogRenderContainer = document.getElementById('diligence-log-container');
-        if (diligenceLogRenderContainer) {
-            renderDiligenceLog(diligenceLogRenderContainer, diligenceReports);
-        }
-
+        // --- DASHBOARD TAB (CONTINUED) ---
         const description = profile.description || 'No description available.';
         profileDisplayContainer.innerHTML = `<h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Company Overview</h3><p class="text-sm text-gray-700">${description}</p>`;
         
@@ -535,27 +465,7 @@ export async function openRawDataViewer(ticker) {
         const peerDocRef = doc(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, ticker, 'analysis', 'peer_comparison');
         const peerDocSnap = await getDoc(peerDocRef);
         const peerHelpIcon = `<button data-report-type="PeerComparison" class="ai-help-button p-1 rounded-full hover:bg-indigo-100" title="What is this?"><svg class="w-5 h-5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z"></path></svg></button>`;
-        const initialPeerHtml = `
-            <div class="flex justify-between items-center mb-4 border-b pb-2">
-                 <div class="flex items-center gap-2">
-                    <h3 class="text-xl font-bold text-gray-800">Peer Comparison</h3>
-                    ${peerHelpIcon}
-                </div>
-                <button id="fetch-peer-analysis-button" data-ticker="${ticker}" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-1 px-4 rounded-lg text-sm">
-                    Fetch Peer Data
-                </button>
-            </div>
-            <div id="peer-analysis-content-container">
-                <p class="text-gray-500 italic">Click the button to identify competitors and compare key metrics.</p>
-            </div>
-            <div id="manual-peer-entry-container" class="hidden mt-4 pt-4 border-t">
-                <label for="manual-peer-input" class="block text-sm font-medium text-gray-700">Enter comma-separated peer tickers:</label>
-                <textarea id="manual-peer-input" rows="2" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 uppercase" placeholder="e.g., MSFT, AMZN, META"></textarea>
-                <div class="mt-2 text-right">
-                    <button id="analyze-manual-peers-button" data-ticker="${ticker}" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-1 px-3 rounded-lg text-sm">Analyze Manual Peers</button>
-                </div>
-            </div>
-        `;
+        const initialPeerHtml = `...`; // Unchanged from previous version
 
         if (peerDocSnap.exists()) {
             const peerData = peerDocSnap.data();
@@ -565,9 +475,7 @@ export async function openRawDataViewer(ticker) {
                         <h3 class="text-xl font-bold text-gray-800">Peer Comparison</h3>
                         ${peerHelpIcon}
                     </div>
-                    <button id="fetch-peer-analysis-button" data-ticker="${ticker}" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-1 px-4 rounded-lg text-sm">
-                        Refresh Peer Data
-                    </button>
+                    <button id="fetch-peer-analysis-button" data-ticker="${ticker}" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-1 px-4 rounded-lg text-sm">Refresh Peer Data</button>
                 </div>
                 <div id="peer-analysis-content-container"></div>
                 <div id="manual-peer-entry-container" class="hidden mt-4 pt-4 border-t">
@@ -581,7 +489,25 @@ export async function openRawDataViewer(ticker) {
             const contentContainer = peerAnalysisContainer.querySelector('#peer-analysis-content-container');
             renderPeerComparisonTable(contentContainer, ticker, metrics, peerData);
         } else {
-            peerAnalysisContainer.innerHTML = initialPeerHtml;
+             peerAnalysisContainer.innerHTML = `
+                <div class="flex justify-between items-center mb-4 border-b pb-2">
+                     <div class="flex items-center gap-2">
+                        <h3 class="text-xl font-bold text-gray-800">Peer Comparison</h3>
+                        ${peerHelpIcon}
+                    </div>
+                    <button id="fetch-peer-analysis-button" data-ticker="${ticker}" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-1 px-4 rounded-lg text-sm">Fetch Peer Data</button>
+                </div>
+                <div id="peer-analysis-content-container">
+                    <p class="text-gray-500 italic">Click the button to identify competitors and compare key metrics.</p>
+                </div>
+                <div id="manual-peer-entry-container" class="hidden mt-4 pt-4 border-t">
+                    <label for="manual-peer-input" class="block text-sm font-medium text-gray-700">Enter comma-separated peer tickers:</label>
+                    <textarea id="manual-peer-input" rows="2" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 uppercase" placeholder="e.g., MSFT, AMZN, META"></textarea>
+                    <div class="mt-2 text-right">
+                        <button id="analyze-manual-peers-button" data-ticker="${ticker}" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-1 px-3 rounded-lg text-sm">Analyze Manual Peers</button>
+                    </div>
+                </div>
+            `;
         }
 
 
@@ -612,7 +538,7 @@ export async function openRawDataViewer(ticker) {
     } catch (error) {
         console.error('Error opening raw data viewer:', error);
         titleEl.textContent = `Error Loading Data for ${ticker}`;
-        aiArticleContainer.innerHTML = `<p class="text-red-500 text-center">${error.message}</p>`;
+        aiAnalysisContainer.querySelector('#ai-article-container-analysis').innerHTML = `<p class="text-red-500 text-center">${error.message}</p>`;
         profileDisplayContainer.innerHTML = `<p class="text-red-500 text-center">${error.message}</p>`;
     }
 }
