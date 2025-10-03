@@ -1,6 +1,6 @@
 // fileName: ui.js
 import { CONSTANTS, state, promptMap } from './config.js';
-import { openModal, closeModal, openStockListModal, openManageStockModal, openPortfolioManagerModal, openRawDataViewer, QUARTERLY_REVIEW_QUESTIONS } from './ui-modals.js';
+import { openModal, closeModal, openStockListModal, openManageStockModal, openPortfolioManagerModal, openRawDataViewer, QUARTERLY_REVIEW_QUESTIONS, addDiligenceEntryRow } from './ui-modals.js';
 import { fetchAndCachePortfolioData, renderPortfolioManagerList } from './ui-render.js';
 import { handleResearchSubmit, handleSaveStock, handleDeleteStock, handleRefreshFmpData, handleAnalysisRequest, handleInvestmentMemoRequest, handleSaveReportToDb, handleGenerateAllReportsRequest, handleGarpCandidacyRequest, handlePortfolioGarpAnalysisRequest, handlePositionAnalysisRequest, handleReportHelpRequest, handleManualDiligenceSave, handleDeleteDiligenceLog, handleWorkflowHelpRequest, handlePeerAnalysisRequest, handleManualPeerAnalysisRequest, handleStructuredDiligenceSave, handleOngoingReviewSave, handleTranscriptSearch, handleTranscriptAiAnalysis } from './ui-handlers.js';
 import { getFmpStockData } from './api.js';
@@ -243,6 +243,11 @@ export function setupEventListeners() {
         const symbol = target.dataset.symbol || analysisModal.dataset.activeTicker;
         if (!symbol) return;
         
+        if (target.id === 'add-diligence-entry-button') {
+            addDiligenceEntryRow();
+            return;
+        }
+
         // Diligence Log Management
         const deleteBtn = e.target.closest('.diligence-delete-btn');
         if (deleteBtn) {
