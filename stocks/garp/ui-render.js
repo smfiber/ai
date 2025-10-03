@@ -881,6 +881,36 @@ export function renderOngoingReviewLog(container, reports) {
     });
 }
 
+export function renderTranscriptResults(container, results, query) {
+    const aiSummaryContainer = document.getElementById('transcript-ai-summary-container');
+    aiSummaryContainer.innerHTML = '';
+    
+    if (!results || results.length === 0) {
+        container.innerHTML = `<p class="text-center text-gray-500 italic p-4 bg-gray-50 rounded-md">No results found for "${sanitizeText(query)}".</p>`;
+        return;
+    }
+
+    const highlightRegex = new RegExp(`(${query.split(' ').join('|')})`, 'gi');
+    const itemsHtml = results.map(item => {
+        const highlightedContent = sanitizeText(item.content).replace(highlightRegex, '<mark class="bg-yellow-200 rounded px-1">$1</mark>');
+        return `
+            <div class="p-4 border bg-white rounded-lg mb-3">
+                <p class="text-sm font-semibold text-indigo-700 mb-2">Q${item.quarter} ${item.year} Transcript</p>
+                <p class="text-sm text-gray-700 leading-relaxed">${highlightedContent}</p>
+            </div>
+        `;
+    }).join('');
+
+    container.innerHTML = `
+        <div class="space-y-3">${itemsHtml}</div>
+        <div class="mt-4 text-center">
+            <button id="analyze-transcript-results-button" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-5 rounded-lg">
+                Analyze Results with AI
+            </button>
+        </div>
+    `;
+}
+
 
 export function updateReportStatus(statusContainer, reports, activeReportId, analysisParams) {
     statusContainer.classList.remove('hidden');
