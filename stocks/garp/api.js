@@ -1,3 +1,4 @@
+// fileName: api.js
 import { CONSTANTS, state } from './config.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
@@ -33,7 +34,7 @@ export async function callGeminiApi(prompt) {
 
     state.sessionLog.push({ type: 'prompt', timestamp: new Date(), content: prompt });
 
-    const url = `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${state.geminiApiKey}`;
+    const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${state.geminiApiKey}`;
     const body = { contents: [{ parts: [{ "text": prompt }] }] };
     const data = await callApi(url, {
         method: 'POST',
@@ -60,7 +61,7 @@ export async function callSynthesisGeminiApi(prompt) {
 
     state.sessionLog.push({ type: 'prompt', timestamp: new Date(), content: prompt });
 
-    const url = `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${state.geminiApiKey}`;
+    const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${state.geminiApiKey}`;
     const body = { contents: [{ parts: [{ "text": prompt }] }] };
     const data = await callApi(url, {
         method: 'POST',
@@ -176,4 +177,12 @@ export async function getGroupedFmpData(symbol) {
     });
 
     return groupedData;
+}
+
+export async function searchTranscripts(symbol, query) {
+    if (!state.fmpApiKey) {
+        throw new Error("FMP API key is required for transcript search.");
+    }
+    const url = `https://financialmodelingprep.com/stable/search-transcripts?symbol=${symbol}&query=${encodeURIComponent(query)}&apikey=${state.fmpApiKey}`;
+    return await callApi(url);
 }
