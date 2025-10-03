@@ -71,6 +71,7 @@ export async function handleRefreshFmpData(symbol) {
             { name: 'income_statement_quarterly', path: 'income-statement', params: 'period=quarter&limit=12', version: 'v3' },
             { name: 'stock_grade_news', path: 'grade', version: 'v3' },
             { name: 'analyst_estimates', path: 'analyst-estimates', params: 'period=annual', version: 'stable'},
+            { name: 'earning_calendar', path: 'historical/earning_calendar', version: 'v4' },
         ];
 
         let successfulFetches = 0;
