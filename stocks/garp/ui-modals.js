@@ -1,7 +1,7 @@
 // fileName: ui-modals.js
 import { CONSTANTS, state, ANALYSIS_ICONS } from './config.js';
 import { getFmpStockData, getGroupedFmpData } from './api.js';
-import { renderValuationHealthDashboard, _renderGroupedStockList, renderPortfolioManagerList, renderGarpScorecardDashboard, renderGarpInterpretationAnalysis, updateGarpCandidacyStatus, renderCandidacyAnalysis, renderGarpAnalysisSummary, renderDiligenceLog, renderPeerComparisonTable } from './ui-render.js'; 
+import { renderValuationHealthDashboard, _renderGroupedStockList, renderPortfolioManagerList, renderGarpScorecardDashboard, renderGarpInterpretationAnalysis, updateGarpCandidacyStatus, renderCandidacyAnalysis, renderGarpAnalysisSummary, renderDiligenceLog, renderPeerComparisonTable, renderOngoingReviewLog } from './ui-render.js'; 
 import { getDocs, query, collection, where, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getSavedReports } from './ui-handlers.js';
 
@@ -212,6 +212,14 @@ export const STRUCTURED_DILIGENCE_QUESTIONS = {
     'Valuation': "Is the company's current valuation reasonable relative to its growth prospects? Analyze its PEG ratio and compare its current P/E ratio to both its own 5-year historical average and the industry average to determine if we have a margin of safety."
 };
 
+export const QUARTERLY_REVIEW_QUESTIONS = {
+    'Results vs. Expectations': "Did the company meet, beat, or miss revenue and EPS expectations? Analyze the key drivers behind the results and any significant one-time items.",
+    'Quantitative Thesis Check': "How have the key GARP Scorecard metrics (e.g., ROIC, D/E, forward growth, valuation) changed since the last review? Does the quantitative data still support the original thesis?",
+    'Management Outlook': "Summarize management's forward-looking guidance and commentary from the earnings call. Are they more optimistic or pessimistic, and what are the key opportunities and risks they highlighted?",
+    'Qualitative Thesis Check': "Does management's commentary and the quarter's results confirm or challenge the qualitative bull/bear case from the original Investment Memo? Has the core investment thesis evolved?",
+    'Action Plan': "Based on this review, what is the new investment decision? (e.g., Hold, Add, Trim, Sell). Justify the decision."
+};
+
 export async function openRawDataViewer(ticker) {
     const modalId = 'rawDataViewerModal';
     openModal(modalId);
@@ -225,6 +233,7 @@ export async function openRawDataViewer(ticker) {
     const structuredDiligenceContainer = document.getElementById('structured-diligence-content-container');
     const manualDiligenceContainer = document.getElementById('manual-diligence-content-container');
     const diligenceLogContainer = document.getElementById('diligence-log-content-container');
+    const ongoingDiligenceContainer = document.getElementById('ongoing-diligence-tab');
     const profileDisplayContainer = document.getElementById('company-profile-display-container');
     const titleEl = document.getElementById('raw-data-viewer-modal-title');
     const garpScorecardContainer = document.getElementById('garp-scorecard-container');
@@ -238,6 +247,7 @@ export async function openRawDataViewer(ticker) {
     structuredDiligenceContainer.innerHTML = '';
     manualDiligenceContainer.innerHTML = '';
     diligenceLogContainer.innerHTML = '';
+    ongoingDiligenceContainer.innerHTML = '';
     aiArticleContainer.innerHTML = '';
     profileDisplayContainer.innerHTML = '';
     garpScorecardContainer.innerHTML = '';
@@ -349,7 +359,7 @@ export async function openRawDataViewer(ticker) {
         const diligenceLogContainerHtml = `<div id="diligence-log-container" class="mb-6 text-left"></div>`;
 
         // --- NEW STRUCTURED DILIGENCE HTML ---
-        const copyIcon = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75" /></svg>`;
+        const copyIcon = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75" /></svg>`;
         let structuredDiligenceContent = `
             <div class="text-left mt-4 border rounded-lg p-4 bg-gray-50">
                 <h4 class="text-base font-semibold text-gray-800 mb-1">Structured Diligence</h4>
@@ -421,6 +431,43 @@ export async function openRawDataViewer(ticker) {
         manualDiligenceContainer.innerHTML = manualDiligenceContent;
         diligenceLogContainer.innerHTML = diligenceLogContainerHtml;
 
+        // --- ONGOING DILIGENCE TAB LOGIC ---
+        let nextEarningsDate = 'N/A';
+        if (fmpData.earning_calendar && fmpData.earning_calendar.length > 0) {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0); // Normalize to start of day
+            const futureEarnings = fmpData.earning_calendar
+                .map(e => ({ ...e, dateObj: new Date(e.date) }))
+                .filter(e => e.dateObj >= today)
+                .sort((a, b) => a.dateObj - b.dateObj);
+            
+            if (futureEarnings.length > 0) {
+                nextEarningsDate = futureEarnings[0].date;
+            }
+        }
+        
+        ongoingDiligenceContainer.innerHTML = `
+            <div class="bg-white p-6 rounded-2xl shadow-lg border border-gray-200">
+                <div class="flex justify-between items-center mb-4 border-b pb-2">
+                    <h3 class="text-xl font-bold text-gray-800">Ongoing Diligence</h3>
+                    <div class="text-right">
+                        <p class="text-sm font-semibold text-gray-600">Next Earnings Date</p>
+                        <p class="text-lg font-bold text-indigo-700">${nextEarningsDate}</p>
+                    </div>
+                </div>
+                <div id="ongoing-diligence-controls" class="text-center mb-6">
+                    <button id="start-quarterly-review-button" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-5 rounded-lg">
+                        Start New Quarterly Review
+                    </button>
+                </div>
+                <div id="quarterly-review-form-container" class="hidden"></div>
+                <div id="ongoing-review-log-container" class="mt-6"></div>
+            </div>
+        `;
+
+        const ongoingReviews = allSavedReports.filter(r => r.reportType === 'QuarterlyReview' || r.reportType === 'AnnualReview');
+        renderOngoingReviewLog(document.getElementById('ongoing-review-log-container'), ongoingReviews);
+        
 
         // Add copy-to-clipboard functionality for structured diligence
         const checkIcon = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>`;
