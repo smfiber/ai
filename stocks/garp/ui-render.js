@@ -333,6 +333,19 @@ export async function _renderGroupedStockList(container, stocksWithData, listTyp
                 scoreBadgeHtml = `<span class="conviction-score-badge ${scoreClass}">${score}</span>`;
             }
 
+            let nextEarningsDate = 'N/A';
+            if (stock.fmpData?.earning_calendar && stock.fmpData.earning_calendar.length > 0) {
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const futureEarnings = stock.fmpData.earning_calendar
+                    .map(e => ({ ...e, dateObj: new Date(e.date) }))
+                    .filter(e => e.dateObj >= today)
+                    .sort((a, b) => a.dateObj - b.dateObj);
+                if (futureEarnings.length > 0) {
+                    nextEarningsDate = futureEarnings[0].date;
+                }
+            }
+
             html += `
                 <li class="p-4 flex justify-between items-center">
                     <div class="flex items-center gap-3">
@@ -349,6 +362,7 @@ export async function _renderGroupedStockList(container, stocksWithData, listTyp
                             <button class="dashboard-item-edit bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-semibold py-1 px-3 rounded-full" data-ticker="${sanitizeText(stock.ticker)}">Edit</button>
                         </div>
                         <p class="text-xs text-gray-400 mt-2" title="Last Refreshed">Refreshed: ${refreshedAt}</p>
+                        <p class="text-xs text-gray-500 font-semibold mt-1">Next Earnings: ${nextEarningsDate}</p>
                     </div>
                 </li>`;
         });
@@ -671,7 +685,7 @@ export function renderCandidacyAnalysis(container, reportContent, prompt, dilige
         const questionsHtml = questionsContainer.innerHTML;
         const parser = new DOMParser();
         const doc = parser.parseFromString(questionsHtml, 'text/html');
-        const copyIcon = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75" /></svg>`;
+        const copyIcon = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75" /></svg>`;
 
         doc.querySelectorAll('li').forEach(li => {
             const strongTags = li.querySelectorAll('strong');
@@ -721,7 +735,7 @@ export function renderCandidacyAnalysis(container, reportContent, prompt, dilige
         });
     });
 
-    const copyIcon = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75" /></svg>`;
+    const copyIcon = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75" /></svg>`;
     const checkIcon = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>`;
     container.addEventListener('click', e => {
         const copyBtn = e.target.closest('.actionable-diligence-copy-btn');
@@ -821,6 +835,52 @@ export function renderDiligenceLog(container, reports) {
         });
     });
 }
+
+export function renderOngoingReviewLog(container, reports) {
+    if (!container) return;
+
+    if (reports.length === 0) {
+        container.innerHTML = `<p class="text-sm text-center text-gray-500 italic p-4 bg-gray-50 rounded-md">No saved reviews for this stock yet.</p>`;
+        return;
+    }
+
+    const itemsHtml = reports.map(report => {
+        const reportName = report.reportType === 'AnnualReview' ? 'Annual Review' : 'Quarterly Review';
+        const savedDate = report.savedAt.toDate().toLocaleDateString();
+
+        return `
+            <li class="p-3 hover:bg-indigo-50 flex justify-between items-center">
+                <div>
+                     <p class="font-semibold text-sm text-indigo-700">${reportName}</p>
+                     <p class="text-xs text-gray-400">Saved: ${savedDate}</p>
+                </div>
+                <button class="view-ongoing-review-answer text-xs font-semibold py-1 px-3 rounded-full bg-blue-100 text-blue-800 hover:bg-blue-200" data-report-id="${report.id}">View</button>
+            </li>
+        `;
+    }).join('');
+
+    container.innerHTML = `
+         <details class="border rounded-lg bg-white" open>
+            <summary class="p-3 font-semibold text-gray-700 cursor-pointer hover:bg-gray-50 text-lg">Review Log (${reports.length})</summary>
+            <ul class="divide-y divide-gray-200">
+                ${itemsHtml}
+            </ul>
+        </details>
+        <div id="ongoing-review-display-container" class="prose max-w-none mt-4"></div>
+    `;
+
+    container.querySelectorAll('.view-ongoing-review-answer').forEach(item => {
+        item.addEventListener('click', () => {
+            const reportId = item.dataset.reportId;
+            const report = reports.find(r => r.id === reportId);
+            if (report) {
+                const displayContainer = document.getElementById('ongoing-review-display-container');
+                displayReport(displayContainer, report.content, report.prompt);
+            }
+        });
+    });
+}
+
 
 export function updateReportStatus(statusContainer, reports, activeReportId, analysisParams) {
     statusContainer.classList.remove('hidden');
