@@ -220,6 +220,23 @@ export const QUARTERLY_REVIEW_QUESTIONS = {
     'Action Plan': "Based on this review, what is the new investment decision? (e.g., Hold, Add, Trim, Sell). Justify the decision."
 };
 
+export function addDiligenceEntryRow() {
+    const container = document.getElementById('manual-diligence-entries-container');
+    if (!container) return;
+    const entryDiv = document.createElement('div');
+    entryDiv.className = 'diligence-entry-row border p-3 rounded-lg bg-gray-50 space-y-2';
+    entryDiv.innerHTML = `
+        <div class="flex justify-between items-center">
+            <label class="block text-sm font-medium text-gray-700">New Question</label>
+            <button type="button" class="delete-diligence-entry-button text-red-500 hover:text-red-700 font-bold text-xl">&times;</button>
+        </div>
+        <textarea class="diligence-question-manual-input w-full border border-gray-300 rounded-lg p-2 text-sm" rows="3" placeholder="Enter your diligence question..."></textarea>
+        <label class="block text-sm font-medium text-gray-700 pt-2">Answer</label>
+        <textarea class="diligence-answer-manual-input w-full border border-gray-300 rounded-lg p-2 text-sm" rows="5" placeholder="Enter the answer you found..."></textarea>
+    `;
+    container.appendChild(entryDiv);
+};
+
 export async function openRawDataViewer(ticker) {
     const modalId = 'rawDataViewerModal';
     openModal(modalId);
@@ -383,9 +400,6 @@ export async function openRawDataViewer(ticker) {
         
         // --- DILIGENCE HUB TAB ---
         const copyIcon = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75" /></svg>`;
-        let structuredDiligenceContent = `<div class="text-left mt-4 border rounded-lg p-4 bg-gray-50">...</div>`; // (Content built dynamically below)
-        const manualDiligenceContent = `<div class="p-6 bg-white rounded-lg border shadow-sm text-left">...</div>`; // (Content built dynamically below)
-        const diligenceLogContainerHtml = `<div id="diligence-log-container" class="mb-6 text-left"></div>`;
 
         diligenceHubContainer.innerHTML = `
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -394,7 +408,7 @@ export async function openRawDataViewer(ticker) {
                     <div id="manual-diligence-forms-container"></div>
                 </div>
                 <div id="diligence-log-display-container">
-                    ${diligenceLogContainerHtml}
+                    <div id="diligence-log-container" class="mb-6 text-left"></div>
                 </div>
             </div>
         `;
@@ -453,6 +467,28 @@ export async function openRawDataViewer(ticker) {
         `;
         renderOngoingReviewLog(ongoingDiligenceContainer.querySelector('#ongoing-review-log-container'), ongoingReviews);
         
+        const checkIcon = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>`;
+        diligenceHubContainer.addEventListener('click', (e) => {
+            const copyBtn = e.target.closest('.structured-diligence-copy-btn');
+            if (copyBtn) {
+                const textToCopy = copyBtn.previousElementSibling.textContent;
+                navigator.clipboard.writeText(textToCopy).then(() => {
+                    copyBtn.classList.add('copied');
+                    copyBtn.innerHTML = checkIcon;
+                    setTimeout(() => {
+                        copyBtn.classList.remove('copied');
+                        copyBtn.innerHTML = copyIcon;
+                    }, 2000);
+                });
+            }
+        });
+        
+        diligenceHubContainer.addEventListener('click', (e) => {
+            if (e.target.closest('.delete-diligence-entry-button')) {
+                e.target.closest('.diligence-entry-row').remove();
+            }
+        });
+        
         // --- DASHBOARD TAB (CONTINUED) ---
         const description = profile.description || 'No description available.';
         profileDisplayContainer.innerHTML = `<h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Company Overview</h3><p class="text-sm text-gray-700">${description}</p>`;
@@ -465,7 +501,6 @@ export async function openRawDataViewer(ticker) {
         const peerDocRef = doc(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, ticker, 'analysis', 'peer_comparison');
         const peerDocSnap = await getDoc(peerDocRef);
         const peerHelpIcon = `<button data-report-type="PeerComparison" class="ai-help-button p-1 rounded-full hover:bg-indigo-100" title="What is this?"><svg class="w-5 h-5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z"></path></svg></button>`;
-        const initialPeerHtml = `...`; // Unchanged from previous version
 
         if (peerDocSnap.exists()) {
             const peerData = peerDocSnap.data();
