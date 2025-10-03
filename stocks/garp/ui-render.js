@@ -819,11 +819,11 @@ export function renderDiligenceLog(container, reports) {
                 const articleContainer = document.getElementById('ai-article-container-analysis');
                 const statusContainer = document.getElementById('report-status-container-analysis');
                 
-                // Switch to the 'Analysis' tab
+                // Switch to the 'AI Analysis' tab
                 document.querySelectorAll('#rawDataViewerModal .tab-content').forEach(c => c.classList.add('hidden'));
                 document.querySelectorAll('#rawDataViewerModal .tab-button').forEach(b => b.classList.remove('active'));
-                document.getElementById('analysis-tab').classList.remove('hidden');
-                document.querySelector('.tab-button[data-tab="analysis"]').classList.add('active');
+                document.getElementById('ai-analysis-tab').classList.remove('hidden');
+                document.querySelector('.tab-button[data-tab="ai-analysis"]').classList.add('active');
 
                 displayReport(articleContainer, report.content, report.prompt);
                 
