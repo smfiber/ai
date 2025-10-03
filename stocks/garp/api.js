@@ -178,11 +178,3 @@ export async function getGroupedFmpData(symbol) {
 
     return groupedData;
 }
-
-export async function searchTranscripts(symbol, query) {
-    if (!state.fmpApiKey) {
-        throw new Error("FMP API key is required for transcript search.");
-    }
-    const url = `https://financialmodelingprep.com/stable/search-transcripts?symbol=${symbol}&query=${encodeURIComponent(query)}&apikey=${state.fmpApiKey}`;
-    return await callApi(url);
-}
