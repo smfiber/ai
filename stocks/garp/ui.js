@@ -3,6 +3,7 @@ import { CONSTANTS, state, promptMap } from './config.js';
 import { openModal, closeModal, openStockListModal, openManageStockModal, openPortfolioManagerModal, openRawDataViewer, QUARTERLY_REVIEW_QUESTIONS } from './ui-modals.js';
 import { fetchAndCachePortfolioData, renderPortfolioManagerList } from './ui-render.js';
 import { handleResearchSubmit, handleSaveStock, handleDeleteStock, handleRefreshFmpData, handleAnalysisRequest, handleInvestmentMemoRequest, handleSaveReportToDb, handleGenerateAllReportsRequest, handleGarpCandidacyRequest, handlePortfolioGarpAnalysisRequest, handlePositionAnalysisRequest, handleReportHelpRequest, handleManualDiligenceSave, handleDeleteDiligenceLog, handleWorkflowHelpRequest, handlePeerAnalysisRequest, handleManualPeerAnalysisRequest, handleStructuredDiligenceSave, handleOngoingReviewSave } from './ui-handlers.js';
+import { getFmpStockData } from './api.js';
 
 // --- DYNAMIC TOOLTIPS ---
 function initializeTooltips() {
@@ -177,7 +178,7 @@ export function setupEventListeners() {
 
     const analysisModal = document.getElementById('rawDataViewerModal');
 
-    analysisModal.addEventListener('click', (e) => {
+    analysisModal.addEventListener('click', async (e) => {
         const target = e.target.closest('button');
         if (!target) return;
 
@@ -244,9 +245,42 @@ export function setupEventListeners() {
         
         // --- ONGOING DILIGENCE HANDLERS ---
         if (target.id === 'start-quarterly-review-button') {
+            let surpriseHtml = '';
+            try {
+                const fmpData = await getFmpStockData(symbol);
+                if (fmpData && fmpData.earning_calendar && fmpData.earning_calendar.length > 0) {
+                    const today = new Date();
+                    today.setHours(0,0,0,0);
+                    const pastEarnings = fmpData.earning_calendar
+                        .filter(e => new Date(e.date) < today)
+                        .sort((a,b) => new Date(b.date) - new Date(a.date));
+
+                    if (pastEarnings.length > 0) {
+                        const latest = pastEarnings[0];
+                        if (typeof latest.epsActual === 'number' && typeof latest.epsEstimated === 'number') {
+                            const epsSurprise = latest.epsActual - latest.epsEstimated;
+                            const epsClass = epsSurprise >= 0 ? 'price-gain' : 'price-loss';
+                            surpriseHtml += `<div class="surprise-item"><span class="font-semibold">EPS Surprise:</span> <span class="${epsClass}">${epsSurprise.toFixed(3)}</span></div>`;
+                        }
+                        if (typeof latest.revenueActual === 'number' && typeof latest.revenueEstimated === 'number') {
+                            const revSurprise = (latest.revenueActual - latest.revenueEstimated) / 1_000_000; // In millions
+                            const revClass = revSurprise >= 0 ? 'price-gain' : 'price-loss';
+                             surpriseHtml += `<div class="surprise-item"><span class="font-semibold">Revenue Surprise:</span> <span class="${revClass}">${revSurprise.toFixed(2)}M</span></div>`;
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error("Error fetching earnings surprise data:", error);
+            }
+
+            if (surpriseHtml) {
+                surpriseHtml = `<div class="p-3 mb-4 bg-indigo-50 border border-indigo-200 rounded-lg flex justify-around text-center text-sm">${surpriseHtml}</div>`;
+            }
+
             target.classList.add('hidden');
             const formContainer = document.getElementById('quarterly-review-form-container');
             let formHtml = `<div class="text-left mt-4 border rounded-lg p-4 bg-gray-50 space-y-4">`;
+            formHtml += surpriseHtml;
             for (const [category, question] of Object.entries(QUARTERLY_REVIEW_QUESTIONS)) {
                 formHtml += `
                     <div class="p-3 bg-white rounded-lg border border-gray-200">
