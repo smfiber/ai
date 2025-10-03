@@ -805,7 +805,7 @@ export function renderDiligenceLog(container, reports) {
     container.innerHTML = `
          <details class="border rounded-lg bg-white" open>
             <summary class="p-3 font-semibold text-gray-700 cursor-pointer hover:bg-gray-50 text-lg">Diligence Log (${reports.length})</summary>
-            <ul class="divide-y divide-gray-200 max-h-48 overflow-y-auto">
+            <ul class="divide-y divide-gray-200">
                 ${itemsHtml}
             </ul>
         </details>
