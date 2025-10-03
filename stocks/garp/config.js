@@ -584,5 +584,7 @@ export const ANALYSIS_NAMES = {
     'GarpConvictionScore': 'GARP Conviction Score',
     'PeerIdentification': 'Peer Identification',
     'PeerComparison': 'Peer Comparison',
-    'SectorMomentum': 'Sector Momentum'
+    'SectorMomentum': 'Sector Momentum',
+    'QuarterlyReview': 'Quarterly Review',
+    'AnnualReview': 'Annual Review'
 };
