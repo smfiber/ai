@@ -1,9 +1,9 @@
 // fileName: ui-handlers.js
 import { CONSTANTS, state, promptMap, ANALYSIS_REQUIREMENTS, ANALYSIS_NAMES } from './config.js';
-import { callApi, callGeminiApi, generateRefinedArticle, generatePolishedArticleForSynthesis, getFmpStockData } from './api.js';
+import { callApi, callGeminiApi, generateRefinedArticle, generatePolishedArticleForSynthesis, getFmpStockData, searchTranscripts } from './api.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { openModal, closeModal, displayMessageInModal, openConfirmationModal, openManageStockModal, STRUCTURED_DILIGENCE_QUESTIONS, QUARTERLY_REVIEW_QUESTIONS } from './ui-modals.js';
-import { renderPortfolioManagerList, displayReport, updateReportStatus, fetchAndCachePortfolioData, updateGarpCandidacyStatus, renderCandidacyAnalysis, renderGarpAnalysisSummary, renderDiligenceLog, renderPeerComparisonTable, renderSectorMomentumHeatMap, renderOngoingReviewLog } from './ui-render.js';
+import { renderPortfolioManagerList, displayReport, updateReportStatus, fetchAndCachePortfolioData, updateGarpCandidacyStatus, renderCandidacyAnalysis, renderGarpAnalysisSummary, renderDiligenceLog, renderPeerComparisonTable, renderSectorMomentumHeatMap, renderOngoingReviewLog, renderTranscriptResults } from './ui-render.js';
 import { _calculateFinancialAnalysisMetrics, _calculateMoatAnalysisMetrics, _calculateRiskAssessmentMetrics, _calculateCapitalAllocatorsMetrics, _calculateGarpAnalysisMetrics, _calculateGarpScorecardMetrics, CALCULATION_SUMMARIES } from './analysis-helpers.js';
 
 // --- UTILITY HELPERS ---
@@ -1286,6 +1286,64 @@ export async function handleDeleteDiligenceLog(reportId, ticker) {
         }
     );
 }
+
+export async function handleTranscriptSearch(symbol) {
+    const resultsContainer = document.getElementById('transcript-search-results-container');
+    const aiSummaryContainer = document.getElementById('transcript-ai-summary-container');
+    const input = document.getElementById('transcript-search-input');
+    const query = input.value.trim();
+
+    if (!query) {
+        displayMessageInModal("Please enter a search query.", "warning");
+        return;
+    }
+    
+    resultsContainer.innerHTML = `<div class="flex items-center justify-center p-4"><div class="loader"></div><p class="ml-4 text-gray-600 font-semibold">Searching transcripts...</p></div>`;
+    aiSummaryContainer.innerHTML = '';
+
+    try {
+        const results = await searchTranscripts(symbol, query);
+        renderTranscriptResults(resultsContainer, results, query);
+    } catch (error) {
+        console.error("Error searching transcripts:", error);
+        resultsContainer.innerHTML = `<p class="text-red-500 text-center p-4">Failed to search transcripts: ${error.message}</p>`;
+    }
+}
+
+export async function handleTranscriptAiAnalysis(symbol) {
+    const resultsContainer = document.getElementById('transcript-search-results-container');
+    const aiSummaryContainer = document.getElementById('transcript-ai-summary-container');
+    const input = document.getElementById('transcript-search-input');
+    const query = input.value.trim();
+    
+    const snippets = Array.from(resultsContainer.querySelectorAll('div.p-4.border.bg-white'))
+                          .map(div => div.textContent.trim());
+
+    if (snippets.length === 0) {
+        displayMessageInModal("No transcript results to analyze.", "warning");
+        return;
+    }
+
+    aiSummaryContainer.innerHTML = `<div class="flex items-center p-4 bg-gray-50 rounded-lg"><div class="loader"></div><p class="ml-4 text-gray-600 font-semibold">AI is analyzing snippets...</p></div>`;
+
+    const allSnippetsText = snippets.join('\n---\n');
+    const prompt = `
+        Role: You are a financial analyst AI specializing in summarizing earnings call transcripts.
+        Task: Based *only* on the following snippets from the ${symbol} earnings calls regarding the query "${query}", provide a concise, bulleted summary of management's commentary. Synthesize the key points and ignore irrelevant information.
+
+        Transcript Snippets:
+        ${allSnippetsText}
+    `;
+
+    try {
+        const summary = await callGeminiApi(prompt);
+        aiSummaryContainer.innerHTML = `<div class="prose prose-sm max-w-none p-4 bg-blue-50/50 border border-blue-200 rounded-lg">${marked.parse(summary)}</div>`;
+    } catch (error) {
+        console.error("Error analyzing transcript snippets:", error);
+        aiSummaryContainer.innerHTML = `<p class="text-red-500 text-center p-4">AI analysis failed: ${error.message}</p>`;
+    }
+}
+
 
 async function _fetchAndCachePeerData(tickers) {
     if (!state.fmpApiKey) {
