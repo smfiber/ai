@@ -40,32 +40,16 @@ export const CONSTANTS = {
 
 // --- Master List of Top Investors ---
 export const TOP_25_INVESTORS = [
-    { name: "BlackRock Inc.", cik: "1364742" },
-    { name: "The Vanguard Group", cik: "102109" },
-    { name: "State Street Corporation", cik: "93751" },
-    { name: "Fidelity (FMR LLC)", cik: "35325" },
-    { name: "Morgan Stanley", cik: "895421" },
-    { name: "JPMorgan Chase & Co.", cik: "19617" },
-    { name: "Geode Capital Management", cik: "1134267" },
-    { name: "Bank of America Corporation", cik: "70858" },
-    { name: "Goldman Sachs Group, Inc.", cik: "886982" },
-    { name: "Wellington Management Company", cik: "105233" },
-    { name: "T. Rowe Price Associates, Inc.", cik: "105223" },
-    { name: "Invesco Ltd.", cik: "914208" },
-    { name: "Northern Trust Corporation", cik: "73124" },
-    { name: "Bridgewater Associates (Ray Dalio)", cik: "1066395" },
     { name: "Berkshire Hathaway (Warren Buffett)", cik: "1067983" },
-    { name: "Citadel Advisors (Ken Griffin)", cik: "1423053" },
-    { name: "Millennium Management", cik: "1273087" },
-    { name: "Renaissance Technologies (Jim Simons)", cik: "1037389" },
-    { name: "Two Sigma Investments", cik: "1551336" },
-    { name: "Elliott Investment Management", cik: "908862" },
-    { name: "Appaloosa Management (David Tepper)", cik: "1079121" },
     { name: "Scion Asset Management (Michael Burry)", cik: "1649339" },
     { name: "Pershing Square Capital (Bill Ackman)", cik: "1336528" },
     { name: "Soros Fund Management", cik: "1029160" },
     { name: "Duquesne Family Office (Stan Druckenmiller)", cik: "1536411" },
-    { name: "Icahn Capital Management (Carl Icahn)", cik: "1011868" },
+    { name: "Greenlight Capital (David Einhorn)", cik: "1079114" },
+    { name: "Starboard Value (Jeffrey Smith)", cik: "1449333" },
+    { name: "Trian Fund Management (Nelson Peltz)", cik: "1338697" },
+    { name: "ValueAct Capital Management", cik: "1157444" },
+    { name: "Third Point (Dan Loeb)", cik: "1040273" },    
 ];
 
 export const FORM_8K_ANALYSIS_PROMPT = `...`; // Unchanged
