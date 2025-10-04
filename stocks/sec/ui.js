@@ -1,5 +1,5 @@
 import { CONSTANTS, state } from './config.js';
-import { fetchAndRenderRecentFilings, renderCompanyDeepDive } from './ui-render.js';
+import { fetchAndRenderRecentFilings, renderCompanyDeepDive, renderInsiderTrackerView, renderInstitutionalTrackerView } from './ui-render.js';
 import { closeModal, openDeepDiveModal } from './ui-modals.js';
 import { handleFilingAnalysis } from './ui-handlers.js';
 
@@ -49,6 +49,36 @@ function setupGlobalEventListeners() {
                 if (filingUrl && formType && ticker) {
                     handleFilingAnalysis(filingUrl, formType, ticker);
                 }
+            }
+        });
+    }
+    
+    // Event delegation for the main tabs
+    const mainTabs = document.getElementById('main-tabs');
+    if (mainTabs) {
+        mainTabs.addEventListener('click', (e) => {
+            const tabButton = e.target.closest('.tab-button');
+            if (!tabButton || tabButton.classList.contains('active')) return;
+
+            const tabId = tabButton.dataset.tab;
+
+            // Update tab styles
+            document.querySelectorAll('#main-tabs .tab-button').forEach(b => b.classList.remove('active'));
+            tabButton.classList.add('active');
+
+            // Show/hide content
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+            document.getElementById(tabId).classList.remove('hidden');
+
+            // Lazy-load content for tracker tabs
+            const isLoaded = tabButton.dataset.loaded === 'true';
+            if (!isLoaded) {
+                if (tabId === 'insider-tracker-view') {
+                    renderInsiderTrackerView();
+                } else if (tabId === 'institutional-tracker-view') {
+                    renderInstitutionalTrackerView();
+                }
+                tabButton.dataset.loaded = 'true';
             }
         });
     }
