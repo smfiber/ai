@@ -40,7 +40,7 @@ export async function getSecInsiderTrading(ticker) {
                 transactionCode: txn.transactionCoding?.transactionCode,
                 transactionShares: txn.transactionShares?.value,
                 transactionPricePerShare: txn.transactionPricePerShare?.value,
-                ticker: filing.ticker // Add ticker to the transaction object
+                ticker: filing.ticker
             }));
         }
     });
@@ -67,7 +67,7 @@ export async function getSecInstitutionalOwnership(ticker) {
             shares: holdingInfo?.shrsOrPrnAmt?.sshPrnamt,
             value: holdingInfo?.value,
             filedAt: filing.filedAt,
-            ticker: ticker // Add ticker to the holding object
+            ticker: ticker
         };
     }).filter(h => h.value > 0);
 }
@@ -80,7 +80,7 @@ export async function getSecMaterialEvents(ticker) {
     const queryObject = {
       "query": { "query_string": { "query": `formType:\"8-K\" AND ticker:${ticker} AND filedAt:[${twoYearsAgoDateString} TO *]` } },
       "from": "0",
-      "size": "50", // Increased size to capture all within 2 years
+      "size": "50",
       "sort": [{ "filedAt": { "order": "desc" } }]
     };
     const result = await callSecQueryApi(queryObject);
@@ -186,4 +186,20 @@ export async function getPortfolioInstitutionalOwnership(tickers) {
     };
     const result = await callSecQueryApi(queryObject);
     return result?.filings || [];
+}
+
+/**
+ * CORRECTED: Fetches the detailed holdings of a specific 13F filing.
+ * @param {string} accessionNo The accession number of the 13F filing.
+ * @returns {Promise<Array>} A promise that resolves to the array of holdings.
+ */
+export async function get13FHoldings(accessionNo) {
+    if (!state.secApiKey) throw new Error("SEC API Key is not configured.");
+    if (!accessionNo) throw new Error("An accession number is required.");
+    
+    // This is the correct, dedicated endpoint for 13F holdings data.
+    const url = `https://api.sec-api.io/form-13f/holdings?accessionNo=${accessionNo}&token=${state.secApiKey}`;
+    
+    const data = await callApi(url);
+    return data.holdings || []; // Return holdings array or an empty array
 }
