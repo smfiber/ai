@@ -229,7 +229,7 @@ export async function getWhaleFilings(cik) {
     const startDateString = startDate.toISOString().split('T')[0];
 
     const payload = {
-        "query": "*",
+        "query": "cusip",
         "ciks": [cik],
         "formTypes": ["13F-HR"],
         "startDate": startDateString,
