@@ -62,7 +62,7 @@ export const CONSTANTS = {
  * =================================================================
  * Master list of top institutional investors and their CIKs.
  */
-export const TOP_9_INVESTORS = [
+export const TOP_25_INVESTORS = [
     { "name": "Berkshire Hathaway (Warren Buffett & Greg Abel)", "cik": "1067983" },
     { "name": "Cevian Capital", "cik": "1365341" },
     { "name": "Duquesne Family Office (Stan Druckenmiller)", "cik": "1536411" },
