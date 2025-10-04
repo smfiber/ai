@@ -231,7 +231,10 @@ export async function getWhaleFilings(cik) {
     const queryObject = {
       "query": {
         "query_string": {
-          "query": `formType:\"13F-HR\" AND cik:\"${cik}\" AND filedAt:[${formatDate(startDate)} TO ${formatDate(endDate)}]`
+          // --- BUG FIX STARTS HERE ---
+          // Updated query to fetch both original (13F-HR) and amended (13F-HR/A) filings.
+          "query": `formType:("13F-HR" OR "13F-HR/A") AND cik:\"${cik}\" AND filedAt:[${formatDate(startDate)} TO ${formatDate(endDate)}]`
+          // --- BUG FIX ENDS HERE ---
         }
       },
       "from": "0",
