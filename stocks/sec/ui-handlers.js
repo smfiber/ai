@@ -31,6 +31,8 @@ export async function handleFilingAnalysis(filingUrl, formType, ticker) {
             reportType = 'Form10KAnalysis';
         } else if (formType === '10-Q') {
             reportType = 'Form10QAnalysis';
+        } else if (formType === '8-K') {
+            reportType = 'Form8KAnalysis';
         } else {
             throw new Error(`Analysis for form type ${formType} is not supported.`);
         }
