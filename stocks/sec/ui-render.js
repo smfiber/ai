@@ -1,5 +1,5 @@
 import { CONSTANTS, state } from './config.js'; 
-import { getRecentPortfolioFilings, getEarningsCalendar } from './api.js';
+import { getRecentPortfolioFilings, getEarningsCalendar, getPortfolioInsiderTrading, getPortfolioInstitutionalOwnership } from './api.js';
 import { getSecMaterialEvents, getSecAnnualReports, getSecQuarterlyReports } from './sec-api.js';
 
 // --- UTILITY & SECURITY HELPERS ---
@@ -224,11 +224,163 @@ export async function renderCompanyDeepDive(ticker) {
                 }).join('')}
             </ul>
         `;
-
         container.innerHTML = listHtml;
-
     } catch (error) {
         console.error(`Error rendering deep dive for ${ticker}:`, error);
         container.innerHTML = `<p class="text-center text-red-500 p-4">Could not load historical filings: ${error.message}</p>`;
+    }
+}
+
+// --- ACTIVITY TRACKER RENDERING ---
+
+export async function renderInsiderTrackerView() {
+    const container = document.getElementById('insider-tracker-view');
+    if (!container) return;
+    container.innerHTML = `<div class="loader mx-auto my-8"></div>`;
+
+    try {
+        const tickers = state.portfolioCache.filter(s => s.status === 'Portfolio').map(s => s.ticker);
+        if (tickers.length === 0) {
+            container.innerHTML = `<p class="text-center text-gray-500 py-8">Your portfolio is empty.</p>`;
+            return;
+        }
+
+        const filings = await getPortfolioInsiderTrading(tickers);
+        const transactions = filings.flatMap(filing => {
+            const allTxns = [
+                ...(filing.transactionTable?.nonDerivativeTable || []),
+                ...(filing.transactionTable?.derivativeTable || [])
+            ];
+            return allTxns
+                .filter(txn => ['P', 'S'].includes(txn.transactionCoding?.transactionCode))
+                .map(txn => ({
+                    filedAt: filing.filedAt,
+                    ticker: filing.ticker,
+                    reportingOwnerName: filing.reportingOwnerName,
+                    linkToFilingDetails: filing.linkToFilingDetails,
+                    transactionCode: txn.transactionCoding?.transactionCode,
+                    transactionShares: txn.transactionShares?.value,
+                    transactionPricePerShare: txn.transactionPricePerShare?.value
+                }));
+        }).sort((a, b) => new Date(b.filedAt) - new Date(a.filedAt));
+
+        if (transactions.length === 0) {
+            container.innerHTML = `<p class="text-center text-gray-500 py-8">No recent insider transactions (buys or sells) found for your portfolio.</p>`;
+            return;
+        }
+
+        const tableHtml = `
+            <div class="dashboard-card">
+                <h2 class="dashboard-card-title">Portfolio-Wide Insider Transactions (Form 4)</h2>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200 text-sm">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-4 py-2 text-left font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                                <th class="px-4 py-2 text-left font-medium text-gray-500 uppercase tracking-wider">Ticker</th>
+                                <th class="px-4 py-2 text-left font-medium text-gray-500 uppercase tracking-wider">Filer</th>
+                                <th class="px-4 py-2 text-left font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                                <th class="px-4 py-2 text-right font-medium text-gray-500 uppercase tracking-wider">Value</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            ${transactions.map(t => {
+                                const type = t.transactionCode === 'P' ? 'Buy' : 'Sell';
+                                const typeClass = type === 'Buy' ? 'text-green-600 font-semibold' : 'text-red-600 font-semibold';
+                                const value = (t.transactionPricePerShare || 0) * (t.transactionShares || 0);
+                                return `
+                                    <tr>
+                                        <td class="px-4 py-2 whitespace-nowrap">${new Date(t.filedAt).toLocaleDateString()}</td>
+                                        <td class="px-4 py-2 whitespace-nowrap font-bold">${sanitizeText(t.ticker)}</td>
+                                        <td class="px-4 py-2 whitespace-nowrap"><a href="${sanitizeText(t.linkToFilingDetails)}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:underline">${sanitizeText(t.reportingOwnerName)}</a></td>
+                                        <td class="px-4 py-2 whitespace-nowrap ${typeClass}">${type}</td>
+                                        <td class="px-4 py-2 whitespace-nowrap text-right">$${value.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td>
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            </div>`;
+        container.innerHTML = tableHtml;
+    } catch (error) {
+        console.error("Error rendering insider tracker:", error);
+        container.innerHTML = `<p class="text-center text-red-500 p-8">Could not load insider activity: ${error.message}</p>`;
+    }
+}
+
+export async function renderInstitutionalTrackerView() {
+    const container = document.getElementById('institutional-tracker-view');
+    if (!container) return;
+    container.innerHTML = `<div class="loader mx-auto my-8"></div>`;
+
+    try {
+        const portfolioTickers = state.portfolioCache.filter(s => s.status === 'Portfolio').map(s => s.ticker);
+        if (portfolioTickers.length === 0) {
+            container.innerHTML = `<p class="text-center text-gray-500 py-8">Your portfolio is empty.</p>`;
+            return;
+        }
+
+        const filings = await getPortfolioInstitutionalOwnership(portfolioTickers);
+
+        const holdingsByInstitution = filings.reduce((acc, filing) => {
+            const institution = filing.companyName;
+            if (!acc[institution]) {
+                acc[institution] = { holdings: [], latestFiling: '1970-01-01' };
+            }
+            // Only add holdings from the user's portfolio
+            filing.holdings.forEach(h => {
+                if (portfolioTickers.includes(h.ticker)) {
+                    acc[institution].holdings.push(h);
+                }
+            });
+            if (filing.filedAt > acc[institution].latestFiling) {
+                acc[institution].latestFiling = filing.filedAt;
+            }
+            return acc;
+        }, {});
+        
+        if (Object.keys(holdingsByInstitution).length === 0) {
+             container.innerHTML = `<p class="text-center text-gray-500 py-8">No recent institutional ownership filings found for your portfolio.</p>`;
+            return;
+        }
+
+        // Sort institutions by the total value of their holdings in the user's portfolio
+        const sortedInstitutions = Object.entries(holdingsByInstitution)
+            .map(([name, data]) => ({ name, ...data, totalValue: data.holdings.reduce((sum, h) => sum + h.value, 0) }))
+            .filter(inst => inst.totalValue > 0) // Filter out institutions that no longer hold any portfolio stocks
+            .sort((a, b) => b.totalValue - a.totalValue);
+
+        let html = `<div class="dashboard-card">
+                        <h2 class="dashboard-card-title">Portfolio-Wide Institutional Ownership (Form 13F)</h2>
+                        <div class="space-y-4">`;
+
+        sortedInstitutions.slice(0, 50).forEach(inst => { // Limit to top 50 institutions
+            html += `
+                <details class="sector-group">
+                    <summary class="sector-header">
+                        <span class="truncate">${sanitizeText(inst.name)}</span>
+                        <span class="font-normal text-gray-600 text-sm">$${inst.totalValue.toLocaleString()}</span>
+                    </summary>
+                    <div class="sector-content">
+                        <ul class="divide-y divide-gray-100">
+                        ${inst.holdings.map(h => `
+                            <li class="p-3 flex justify-between items-center">
+                                <span class="font-semibold">${sanitizeText(h.ticker)}</span>
+                                <span class="text-sm text-gray-700">$${h.value.toLocaleString()}</span>
+                            </li>
+                        `).join('')}
+                        </ul>
+                    </div>
+                </details>
+            `;
+        });
+
+        html += '</div></div>';
+        container.innerHTML = html;
+
+    } catch (error) {
+        console.error("Error rendering institutional tracker:", error);
+        container.innerHTML = `<p class="text-center text-red-500 p-8">Could not load institutional ownership: ${error.message}</p>`;
     }
 }
