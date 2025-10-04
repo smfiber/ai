@@ -8,8 +8,9 @@ import { getFilingContent } from './sec-api.js';
  * @param {string} filingUrl The URL of the filing to analyze.
  * @param {string} formType The type of the filing (e.g., '10-K', '10-Q').
  * @param {string} ticker The stock ticker.
+ * @param {string|null} filingItem The specific item from an 8-K filing, if applicable.
  */
-export async function handleFilingAnalysis(filingUrl, formType, ticker) {
+export async function handleFilingAnalysis(filingUrl, formType, ticker, filingItem = null) {
     const analysisContainer = document.getElementById('filing-analysis-container');
     const loadingMessage = document.getElementById('loading-message');
     if (!analysisContainer || !loadingMessage) return;
@@ -19,7 +20,7 @@ export async function handleFilingAnalysis(filingUrl, formType, ticker) {
     analysisContainer.innerHTML = '';
 
     try {
-        const filingText = await getFilingContent(filingUrl);
+        const filingText = await getFilingContent(filingUrl, filingItem);
 
         loadingMessage.textContent = 'AI is analyzing the filing...';
 
