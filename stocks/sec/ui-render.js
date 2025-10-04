@@ -578,15 +578,28 @@ export async function renderWhaleWatchingView() {
             }
             // If no merge is needed, return the latest one available (amendment or original)
             return group.amendment || group.original;
-        // --- BUG FIX STARTS HERE ---
         // Sort by the 'periodOfReport' to ensure true chronological order of quarters.
         }).sort((a, b) => new Date(b.periodOfReport) - new Date(a.periodOfReport));
-        // --- BUG FIX ENDS HERE ---
+        
+        // Cache the processed filings data for the comparison function to use
+        state.whaleFilingsCache = filingsToRender;
         
         let html = `
             <div class="dashboard-card">
-                <h2 class="dashboard-card-title">Whale Watching: ${WHALE_NAME}</h2>
-                <p class="text-sm text-gray-500 mb-6">Displaying aggregated quarterly holdings from the last year.</p>
+                <div class="flex justify-between items-center mb-6 border-b pb-4">
+                    <div>
+                        <h2 class="text-xl font-bold text-indigo-800">Whale Watching: ${WHALE_NAME}</h2>
+                        <p class="text-sm text-gray-500">Displaying aggregated quarterly holdings from the last year.</p>
+                    </div>
+                    ${filingsToRender.length >= 2 ? `
+                        <button id="compare-quarters-btn" class="text-sm bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg shadow-sm">
+                            Compare Latest Quarters
+                        </button>
+                    ` : ''}
+                </div>
+                
+                <div id="whale-comparison-container" class="mb-8"></div>
+
                 <div class="space-y-4">`;
 
         for (const filing of filingsToRender) {
@@ -615,7 +628,7 @@ export async function renderWhaleWatchingView() {
             })).sort((a, b) => b.value - a.value); // Sort by highest value
 
             html += `
-                <details class="sector-group" open>
+                <details class="sector-group">
                     <summary class="sector-header">
                         <span>Filing Date: ${filingDate} (For Period: ${periodOfReport})</span>
                         <span>${holdings.length} Holdings</span>
@@ -657,4 +670,119 @@ export async function renderWhaleWatchingView() {
                  <p class="mt-2 text-red-600 bg-red-50 p-4 rounded-md">${error.message}</p>
             </div>`;
     }
+}
+
+// --- NEW FUNCTION TO RENDER THE COMPARISON ---
+export function renderWhaleComparisonView() {
+    const container = document.getElementById('whale-comparison-container');
+    if (!container) return;
+    
+    if (!state.whaleFilingsCache || state.whaleFilingsCache.length < 2) {
+        container.innerHTML = `<p class="text-center text-gray-500">Not enough data to perform a comparison.</p>`;
+        return;
+    }
+
+    const latestFiling = state.whaleFilingsCache[0];
+    const previousFiling = state.whaleFilingsCache[1];
+
+    // After aggregation, the holdings are on the top-level filing object, not nested.
+    // We need to re-run the aggregation logic for both to get the clean list.
+    const aggregate = (filing) => {
+        return (filing.holdings || []).reduce((acc, holding) => {
+            const ticker = holding.ticker || 'N/A';
+            if (!acc[ticker]) {
+                acc[ticker] = {
+                    cusip: holding.cusip,
+                    nameOfIssuer: holding.nameOfIssuer,
+                    shares: 0,
+                    value: 0
+                };
+            }
+            acc[ticker].shares += Number(holding.shrsOrPrnAmt.sshPrnamt);
+            acc[ticker].value += (holding.value * 1000);
+            return acc;
+        }, {});
+    };
+    
+    const latestHoldings = aggregate(latestFiling);
+    const previousHoldings = aggregate(previousFiling);
+
+    const latestHoldingsMap = new Map(Object.entries(latestHoldings));
+    const previousHoldingsMap = new Map(Object.entries(previousHoldings));
+    
+    const changes = {
+        new: [],
+        exited: [],
+        increased: [],
+        decreased: []
+    };
+
+    // Find New, Increased, Decreased
+    for (const [ticker, latest] of latestHoldingsMap.entries()) {
+        const previous = previousHoldingsMap.get(ticker);
+        
+        if (!previous) {
+            changes.new.push({ticker, ...latest});
+        } else {
+            if (latest.shares > previous.shares) {
+                changes.increased.push({ ticker, ...latest, change: latest.shares - previous.shares });
+            } else if (latest.shares < previous.shares) {
+                changes.decreased.push({ ticker, ...latest, change: latest.shares - previous.shares });
+            }
+        }
+    }
+
+    // Find Exited
+    for (const [ticker, previous] of previousHoldingsMap.entries()) {
+        if (!latestHoldingsMap.has(ticker)) {
+            changes.exited.push({ticker, ...previous});
+        }
+    }
+
+    // --- HTML Rendering ---
+    const renderChangeTable = (title, holdings, color, showChange = false) => {
+        if (holdings.length === 0) return '';
+        
+        holdings.sort((a,b) => b.value - a.value);
+
+        return `
+            <div class="mb-6">
+                <h3 class="text-lg font-semibold ${color} mb-2">${title} (${holdings.length})</h3>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200 text-sm">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-2 py-2 text-left font-medium text-gray-500 uppercase tracking-wider">Ticker</th>
+                                <th class="px-2 py-2 text-left font-medium text-gray-500 uppercase tracking-wider">Issuer</th>
+                                ${showChange ? `<th class="px-2 py-2 text-right font-medium text-gray-500 uppercase tracking-wider">Share Change</th>` : ''}
+                                <th class="px-2 py-2 text-right font-medium text-gray-500 uppercase tracking-wider">Current Value ($)</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            ${holdings.map(h => `
+                                <tr>
+                                    <td class="px-2 py-2 whitespace-nowrap font-bold">${sanitizeText(h.ticker)}</td>
+                                    <td class="px-2 py-2 whitespace-nowrap">${sanitizeText(h.nameOfIssuer)}</td>
+                                    ${showChange ? `<td class="px-2 py-2 whitespace-nowrap text-right font-medium">${h.change.toLocaleString()}</td>` : ''}
+                                    <td class="px-2 py-2 whitespace-nowrap text-right">${h.value.toLocaleString()}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            </div>`;
+    };
+    
+    const latestPeriod = new Date(latestFiling.periodOfReport).toLocaleDateString();
+    const prevPeriod = new Date(previousFiling.periodOfReport).toLocaleDateString();
+
+    container.innerHTML = `
+        <div class="p-4 border-l-4 border-indigo-500 bg-indigo-50 rounded-lg">
+             <h2 class="text-xl font-bold text-gray-800 mb-2">Portfolio Changes: ${prevPeriod} vs. ${latestPeriod}</h2>
+             ${renderChangeTable('🆕 New Positions', changes.new, 'text-green-700')}
+             ${renderChangeTable('📈 Increased Positions', changes.increased, 'text-green-600', true)}
+             ${renderChangeTable('📉 Decreased Positions', changes.decreased, 'text-red-600', true)}
+             ${renderChangeTable('❌ Exited Positions', changes.exited, 'text-red-700')}
+        </div>
+    `;
 }
