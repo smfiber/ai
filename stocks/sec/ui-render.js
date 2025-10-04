@@ -194,13 +194,17 @@ export async function renderCompanyDeepDive(ticker) {
             <ul class="divide-y divide-gray-200">
                 ${allFilings.map(filing => {
                     const filingDate = new Date(filing.filedAt).toLocaleDateString();
-                     let formTypeBadge = '';
+                    let formTypeBadge = '';
+                    let analyzeButton = '';
+
                     if (filing.formType === '8-K') {
                         formTypeBadge = '<span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-800">8-K</span>';
-                    } else if (filing.formType === '10-K') {
-                        formTypeBadge = '<span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-800">10-K</span>';
-                    } else if (filing.formType === '10-Q') {
-                        formTypeBadge = '<span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800">10-Q</span>';
+                    } else if (filing.formType === '10-K' || filing.formType === '10-Q') {
+                        formTypeBadge = filing.formType === '10-K'
+                            ? '<span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-800">10-K</span>'
+                            : '<span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800">10-Q</span>';
+                        
+                        analyzeButton = `<button class="analyze-filing-btn text-sm bg-green-600 hover:bg-green-700 text-white font-semibold py-1 px-3 rounded-lg" data-filing-url="${sanitizeText(filing.linkToFilingDetails)}" data-form-type="${sanitizeText(filing.formType)}" data-ticker="${sanitizeText(ticker)}">Analyze</button>`;
                     }
 
                     return `
@@ -211,6 +215,7 @@ export async function renderCompanyDeepDive(ticker) {
                                     <p class="text-xs text-gray-500 mt-1">Filed: ${filingDate}</p>
                                 </div>
                                 <div class="flex items-center gap-2">
+                                    ${analyzeButton}
                                     <a href="${sanitizeText(filing.linkToFilingDetails)}" target="_blank" rel="noopener noreferrer" class="text-sm bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-1 px-3 rounded-lg">View</a>
                                 </div>
                             </div>
