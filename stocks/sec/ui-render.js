@@ -521,10 +521,8 @@ export async function renderWhaleWatchingView() {
 
         const url = `https://api.sec-api.io?token=${state.secApiKey}`;
         const queryObject = {
-            // --- FIX: Fetch more filings to find two distinct quarters ---
             "query": { "query_string": { "query": `formType:\"13F-HR\" AND cik:\"${WHALE_CIK}\"` } },
             "from": "0", "size": "10", "sort": [{ "filedAt": { "order": "desc" } }]
-            // --- END FIX ---
         };
         const result = await callApi(url, { method: 'POST', body: JSON.stringify(queryObject) });
         const allFilings = result.filings;
@@ -534,7 +532,6 @@ export async function renderWhaleWatchingView() {
             return;
         }
 
-        // --- FIX: Find the two latest filings with DIFFERENT reporting periods ---
         const latestFiling = allFilings[0];
         const previousFiling = allFilings.find(f => f.periodOfReport !== latestFiling.periodOfReport);
 
@@ -542,7 +539,6 @@ export async function renderWhaleWatchingView() {
             container.innerHTML = `<p class="text-center text-gray-500 py-8">Not enough historical data to compare for ${WHALE_NAME}.</p>`;
             return;
         }
-        // --- END FIX ---
 
         const currentHoldings = latestFiling.holdings || [];
         const prevHoldings = previousFiling.holdings || [];
@@ -553,10 +549,12 @@ export async function renderWhaleWatchingView() {
         const newPositions = [], soldPositions = [], increased = [], decreased = [];
 
         for (const [ticker, holding] of currentHoldingsMap.entries()) {
-            if (!ticker) continue; // Skip entries with no ticker
+            if (!ticker) continue;
             if (prevHoldingsMap.has(ticker)) {
                 const prevHolding = prevHoldingsMap.get(ticker);
-                const shareChange = holding.shrsOrPrnAmt.sshPrnamt - prevHolding.shrsOrPrnAmt.sshPrnamt;
+                // --- FIX: Ensure share counts are treated as numbers ---
+                const shareChange = Number(holding.shrsOrPrnAmt.sshPrnamt) - Number(prevHolding.shrsOrPrnAmt.sshPrnamt);
+                // --- END FIX ---
                 if (shareChange > 0) increased.push({ ...holding, change: shareChange });
                 else if (shareChange < 0) decreased.push({ ...holding, change: shareChange });
             } else {
@@ -564,7 +562,7 @@ export async function renderWhaleWatchingView() {
             }
         }
         for (const [ticker, holding] of prevHoldingsMap.entries()) {
-            if (!ticker) continue; // Skip entries with no ticker
+            if (!ticker) continue; 
             if (!currentHoldingsMap.has(ticker)) soldPositions.push(holding);
         }
 
@@ -590,8 +588,15 @@ export async function renderWhaleWatchingView() {
                 </div>`;
         };
 
-        const currentQuarter = new Date(latestFiling.periodOfReport).toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
-        const prevQuarter = new Date(previousFiling.periodOfReport).toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
+        // --- FIX: More robust date formatting to avoid timezone issues ---
+        const formatDate = (dateString) => {
+            const [year, month] = dateString.split('-');
+            const date = new Date(year, month - 1, 1);
+            return date.toLocaleString('default', { month: 'short' }) + ` ${year}`;
+        }
+        const currentQuarter = formatDate(latestFiling.periodOfReport);
+        const prevQuarter = formatDate(previousFiling.periodOfReport);
+        // --- END FIX ---
 
         container.innerHTML = `
             <div class="dashboard-card">
