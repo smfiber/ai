@@ -1,6 +1,6 @@
 import { CONSTANTS, state } from './config.js'; 
-import { getRecentPortfolioFilings, getEarningsCalendar, getPortfolioInsiderTrading, getPortfolioInstitutionalOwnership } from './api.js';
-import { getSecMaterialEvents, getSecAnnualReports, getSecQuarterlyReports } from './sec-api.js';
+import { getEarningsCalendar } from './api.js';
+import { getRecentPortfolioFilings, getPortfolioInsiderTrading, getPortfolioInstitutionalOwnership, getSecMaterialEvents, getSecAnnualReports, getSecQuarterlyReports } from './sec-api.js';
 
 // --- UTILITY & SECURITY HELPERS ---
 function sanitizeText(text) {
