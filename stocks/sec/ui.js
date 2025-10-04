@@ -1,5 +1,5 @@
 import { CONSTANTS, state } from './config.js';
-import { fetchAndRenderRecentFilings, renderCompanyDeepDive, renderInsiderTrackerView, renderInstitutionalTrackerView, renderUpcomingEarningsView, renderFilingsActivityView, renderWhaleWatchingView, renderWhaleComparisonView } from './ui-render.js';
+import { fetchAndRenderRecentFilings, renderCompanyDeepDive, renderInsiderTrackerView, renderInstitutionalTrackerView, renderUpcomingEarningsView, renderFilingsActivityView, renderWhaleWatchingView, renderWhaleComparisonView, renderInvestorFilingsView } from './ui-render.js';
 import { closeModal, openDeepDiveModal } from './ui-modals.js';
 import { handleFilingAnalysis } from './ui-handlers.js';
 
@@ -34,22 +34,38 @@ function setupGlobalEventListeners() {
             return;
         }
 
-        // UPDATED: Handle click for whale comparison button (now a toggle)
+        // Handle click for whale comparison button (now a toggle)
         if (target.closest('#compare-quarters-btn')) {
             const btn = target.closest('#compare-quarters-btn');
             const comparisonContainer = document.getElementById('whale-comparison-container');
 
-            // Check if the container is already populated
             if (comparisonContainer && comparisonContainer.innerHTML !== '') {
-                // If it is, clear it and reset the button
                 comparisonContainer.innerHTML = '';
                 btn.textContent = 'Compare Latest Quarters';
             } else {
-                // If it's empty, run the comparison and update the button
                 renderWhaleComparisonView();
                 btn.textContent = 'Hide Comparison';
             }
             return;
+        }
+    });
+
+    // NEW: Add a 'change' event listener for the new investor dropdown
+    appContainer.addEventListener('change', (e) => {
+        const target = e.target;
+
+        if (target.id === 'investor-select') {
+            const cik = target.value;
+            const selectedOption = target.options[target.selectedIndex];
+            const investorName = selectedOption.dataset.name;
+            
+            if (cik) {
+                renderInvestorFilingsView(cik, investorName);
+            } else {
+                // Clear the results if the placeholder is selected
+                const container = document.getElementById('investor-filings-container');
+                if (container) container.innerHTML = '';
+            }
         }
     });
 
