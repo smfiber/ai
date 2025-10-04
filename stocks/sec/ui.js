@@ -34,12 +34,21 @@ function setupGlobalEventListeners() {
             return;
         }
 
-        // NEW: Handle click for whale comparison button
+        // UPDATED: Handle click for whale comparison button (now a toggle)
         if (target.closest('#compare-quarters-btn')) {
-            renderWhaleComparisonView();
-            // Optional: Disable button after click to prevent multiple renders
-            target.closest('#compare-quarters-btn').disabled = true;
-            target.closest('#compare-quarters-btn').textContent = 'Comparison Loaded';
+            const btn = target.closest('#compare-quarters-btn');
+            const comparisonContainer = document.getElementById('whale-comparison-container');
+
+            // Check if the container is already populated
+            if (comparisonContainer && comparisonContainer.innerHTML !== '') {
+                // If it is, clear it and reset the button
+                comparisonContainer.innerHTML = '';
+                btn.textContent = 'Compare Latest Quarters';
+            } else {
+                // If it's empty, run the comparison and update the button
+                renderWhaleComparisonView();
+                btn.textContent = 'Hide Comparison';
+            }
             return;
         }
     });
@@ -55,9 +64,9 @@ function setupGlobalEventListeners() {
                 const filingUrl = target.dataset.filingUrl;
                 const formType = target.dataset.formType;
                 const ticker = target.dataset.ticker;
-                const filingItem = target.dataset.filingItem; // Add this line
+                const filingItem = target.dataset.filingItem;
                 if (filingUrl && formType && ticker) {
-                    handleFilingAnalysis(filingUrl, formType, ticker, filingItem); // Add filingItem here
+                    handleFilingAnalysis(filingUrl, formType, ticker, filingItem);
                 }
             }
         });
@@ -87,7 +96,7 @@ function setupGlobalEventListeners() {
                     renderInsiderTrackerView();
                 } else if (tabId === 'institutional-tracker-view') {
                     renderInstitutionalTrackerView();
-                } else if (tabId === 'whale-watching-view') { // NEW
+                } else if (tabId === 'whale-watching-view') {
                     renderWhaleWatchingView();
                 } else if (tabId === 'earnings-calendar-view') {
                     renderUpcomingEarningsView();
