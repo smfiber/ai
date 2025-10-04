@@ -6,16 +6,16 @@ import { callApi } from './api.js';
 
 // --- NEW: List of popular investors ---
 const POPULAR_INVESTORS = [
-    { name: "Berkshire Hathaway", cik: "1067983" },
-    { name: "Scion Asset Management (Michael Burry)", cik: "1649339" },
-    { name: "Pershing Square Capital (Bill Ackman)", cik: "1336528" },
-    { name: "Bridgewater Associates (Ray Dalio)", cik: "1066395" },
-    { name: "Icahn Capital Management (Carl Icahn)", cik: "1011868" },
-    { name: "Duquesne Family Office (Stan Druckenmiller)", cik: "1536411" },
-    { name: "Soros Fund Management", cik: "1029160" },
-    { name: "Appaloosa Management (David Tepper)", cik: "1079121" },
-    { name: "BlackRock Inc.", cik: "1364742" },
-    { name: "The Vanguard Group", cik: "102109" },
+    { name: "Berkshire Hathaway", cik: "0001067983" },
+    { name: "Scion Asset Management (Michael Burry)", cik: "0001649339" },
+    { name: "Pershing Square Capital (Bill Ackman)", cik: "0001336528" },
+    { name: "Bridgewater Associates (Ray Dalio)", cik: "0001066395" },
+    { name: "Icahn Capital Management (Carl Icahn)", cik: "0001011868" },
+    { name: "Duquesne Family Office (Stan Druckenmiller)", cik: "0001536411" },
+    { name: "Soros Fund Management", cik: "0001029160" },
+    { name: "Appaloosa Management (David Tepper)", cik: "0001079121" },
+    { name: "BlackRock Inc.", cik: "0001364742" },
+    { name: "The Vanguard Group", cik: "0000102109" },
 ];
 
 // --- UTILITY & SECURITY HELPERS ---
