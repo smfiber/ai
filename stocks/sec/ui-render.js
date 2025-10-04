@@ -729,12 +729,12 @@ export function renderWhaleComparisonView() {
                 holdingsMap.set(ticker, {
                     nameOfIssuer: holding.nameOfIssuer,
                     shares: 0,
-                    value: 0
+                    value: 0 // Value will be stored in thousands
                 });
             }
             const existing = holdingsMap.get(ticker);
             existing.shares += Number(holding.shrsOrPrnAmt.sshPrnamt);
-            existing.value += (holding.value * 1000);
+            existing.value += holding.value; // No longer multiplying by 1000 here
         }
         return holdingsMap;
     };
@@ -773,7 +773,7 @@ export function renderWhaleComparisonView() {
     }
 
     // --- HTML Rendering ---
-    const renderChangeTable = (title, holdings, color, showChange = false) => {
+    const renderChangeTable = (title, holdings, color, showChange = false, isExited = false) => {
         if (holdings.length === 0) return '';
         
         holdings.sort((a,b) => b.value - a.value);
@@ -788,7 +788,7 @@ export function renderWhaleComparisonView() {
                                 <th class="px-2 py-2 text-left font-medium text-gray-500 uppercase tracking-wider">Ticker</th>
                                 <th class="px-2 py-2 text-left font-medium text-gray-500 uppercase tracking-wider">Issuer</th>
                                 ${showChange ? `<th class="px-2 py-2 text-right font-medium text-gray-500 uppercase tracking-wider">Share Change</th>` : ''}
-                                <th class="px-2 py-2 text-right font-medium text-gray-500 uppercase tracking-wider">Current Value</th>
+                                <th class="px-2 py-2 text-right font-medium text-gray-500 uppercase tracking-wider">${isExited ? 'Value at Previous Qtr' : 'Current Value'}</th>
                             </tr>
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
@@ -797,7 +797,7 @@ export function renderWhaleComparisonView() {
                                     <td class="px-2 py-2 whitespace-nowrap font-bold">${sanitizeText(h.ticker)}</td>
                                     <td class="px-2 py-2 whitespace-nowrap">${sanitizeText(h.nameOfIssuer)}</td>
                                     ${showChange ? `<td class="px-2 py-2 whitespace-nowrap text-right font-medium">${h.change.toLocaleString()}</td>` : ''}
-                                    <td class="px-2 py-2 whitespace-nowrap text-right">${h.value.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 })}</td>
+                                    <td class="px-2 py-2 whitespace-nowrap text-right">${(h.value * 1000).toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 })}</td>
                                 </tr>
                             `).join('')}
                         </tbody>
@@ -815,7 +815,7 @@ export function renderWhaleComparisonView() {
              ${renderChangeTable('🆕 New Positions', changes.new, 'text-green-700')}
              ${renderChangeTable('📈 Increased Positions', changes.increased, 'text-green-600', true)}
              ${renderChangeTable('📉 Decreased Positions', changes.decreased, 'text-red-600', true)}
-             ${renderChangeTable('❌ Exited Positions', changes.exited, 'text-red-700')}
+             ${renderChangeTable('❌ Exited Positions', changes.exited, 'text-red-700', false, true)}
         </div>
     `;
 }
