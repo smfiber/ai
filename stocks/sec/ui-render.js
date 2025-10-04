@@ -4,6 +4,20 @@ import { getEarningsCalendar } from './api.js';
 import { getRecentPortfolioFilings, getPortfolioInsiderTrading, getPortfolioInstitutionalOwnership, getSecMaterialEvents, getSecAnnualReports, getSecQuarterlyReports, get13FHoldings, getWhaleFilings } from './sec-api.js';
 import { callApi } from './api.js';
 
+// --- NEW: List of popular investors ---
+const POPULAR_INVESTORS = [
+    { name: "Berkshire Hathaway", cik: "1067983" },
+    { name: "Scion Asset Management (Michael Burry)", cik: "1649339" },
+    { name: "Pershing Square Capital (Bill Ackman)", cik: "1336528" },
+    { name: "Bridgewater Associates (Ray Dalio)", cik: "1066395" },
+    { name: "Icahn Capital Management (Carl Icahn)", cik: "1011868" },
+    { name: "Duquesne Family Office (Stan Druckenmiller)", cik: "1536411" },
+    { name: "Soros Fund Management", cik: "1029160" },
+    { name: "Appaloosa Management (David Tepper)", cik: "1079121" },
+    { name: "BlackRock Inc.", cik: "1364742" },
+    { name: "The Vanguard Group", cik: "102109" },
+];
+
 // --- UTILITY & SECURITY HELPERS ---
 function sanitizeText(text) {
     if (typeof text !== 'string') return '';
@@ -510,16 +524,39 @@ export async function renderInstitutionalTrackerView() {
     }
 }
 
-export async function renderWhaleWatchingView() {
+// --- REPURPOSED: This now renders the initial search/dropdown view ---
+export function renderWhaleWatchingView() {
     const container = document.getElementById('whale-watching-view');
     if (!container) return;
-    container.innerHTML = `<div class="loader mx-auto my-8"></div>`;
+
+    const optionsHtml = POPULAR_INVESTORS
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .map(investor => `<option value="${investor.cik}" data-name="${investor.name}">${investor.name}</option>`)
+        .join('');
+
+    container.innerHTML = `
+        <div class="dashboard-card">
+            <h2 class="dashboard-card-title">Investor 13F Filings</h2>
+            <div class="max-w-xl">
+                <label for="investor-select" class="block text-sm font-medium text-gray-700 mb-2">Select a popular investor to track:</label>
+                <select id="investor-select" class="block w-full p-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                    <option value="">-- Choose an Investor --</option>
+                    ${optionsHtml}
+                </select>
+            </div>
+        </div>
+        <div id="investor-filings-container" class="mt-8"></div>
+    `;
+}
+
+// --- REFACTORED: The old logic is now in this reusable function ---
+export async function renderInvestorFilingsView(cik, investorName) {
+    const container = document.getElementById('investor-filings-container');
+    if (!container) return;
+    container.innerHTML = `<div class="dashboard-card"><div class="loader mx-auto my-8"></div></div>`;
 
     try {
-        const WHALE_CIK = '1067983'; 
-        const WHALE_NAME = 'Berkshire Hathaway Inc.';
-
-        const { filings, payload } = await getWhaleFilings(WHALE_CIK);
+        const { filings, payload } = await getWhaleFilings(cik);
 
         const renderDebugInfo = () => {
             return `
@@ -542,8 +579,8 @@ export async function renderWhaleWatchingView() {
         if (!filings || filings.length === 0) {
             container.innerHTML = `
                 <div class="dashboard-card">
-                    <h2 class="dashboard-card-title">Whale Watching: ${WHALE_NAME}</h2>
-                    <p class="text-center text-gray-500 py-8">No 13F filings found for ${WHALE_NAME} in the last year.</p>
+                    <h2 class="dashboard-card-title">Filings for: ${investorName}</h2>
+                    <p class="text-center text-gray-500 py-8">No 13F filings found for this investor in the last year.</p>
                     ${renderDebugInfo()}
                 </div>`;
             return;
@@ -588,7 +625,7 @@ export async function renderWhaleWatchingView() {
             <div class="dashboard-card">
                 <div class="flex justify-between items-center mb-6 border-b pb-4">
                     <div>
-                        <h2 class="text-xl font-bold text-indigo-800">Whale Watching: ${WHALE_NAME}</h2>
+                        <h2 class="text-xl font-bold text-indigo-800">Filings for: ${investorName}</h2>
                         <p class="text-sm text-gray-500">Displaying aggregated quarterly holdings from the last year.</p>
                     </div>
                     ${filingsToRender.length >= 2 ? `
@@ -663,16 +700,12 @@ export async function renderWhaleWatchingView() {
         container.innerHTML = html;
 
     } catch(error) {
-        console.error("Error rendering whale watching view:", error);
-        container.innerHTML = `
-            <div class="dashboard-card">
-                 <h3 class="font-bold text-lg text-red-700">Error Loading Whale Watching Data</h3>
-                 <p class="mt-2 text-red-600 bg-red-50 p-4 rounded-md">${error.message}</p>
-            </div>`;
+        console.error("Error rendering investor filings view:", error);
+        container.innerHTML = `<div class="dashboard-card"><p class="text-red-500">Error: ${error.message}</p></div>`;
     }
 }
 
-// --- NEW FUNCTION TO RENDER THE COMPARISON ---
+// --- FUNCTION TO RENDER THE COMPARISON ---
 export function renderWhaleComparisonView() {
     const container = document.getElementById('whale-comparison-container');
     if (!container) return;
