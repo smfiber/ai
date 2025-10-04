@@ -1,4 +1,4 @@
-import { CONSTANTS, state, GEMINI_COMPETITOR_PROMPT } from './config.js';
+import { CONSTANTS, state } from './config.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- UTILITY & SECURITY HELPERS (Moved from ui.js) ---
