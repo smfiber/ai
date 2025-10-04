@@ -64,25 +64,25 @@ export const CONSTANTS = {
  */
 export const TOP_25_INVESTORS = [
     { "name": "Abrams Capital Management (David Abrams)", "cik": "1056111" },
-    { "name": "Arlington Value Capital (Allan Mecham)", "cik": "1451009" },
+    { "name": "Arlington Value Capital (Allan Mecham)", "cik": "1568820" },
     { "name": "Berkshire Hathaway (Warren Buffett & Greg Abel)", "cik": "1067983" },
-    { "name": "Cevian Capital", "cik": "1596328" },
+    { "name": "Cevian Capital", "cik": "1365341" },
     { "name": "Duquesne Family Office (Stan Druckenmiller)", "cik": "1536411" },
-    { "name": "Elliott Management (Paul Singer)", "cik": "1033288" },
+    { "name": "Elliott Management (Paul Singer)", "cik": "1791786" },
     { "name": "Fairholme Fund (Bruce Berkowitz)", "cik": "1135891" },
     { "name": "Greenlight Capital (David Einhorn)", "cik": "1079114" },
     { "name": "Harris Associates", "cik": "897698" },
-    { "name": "Icahn Enterprises (Carl Icahn)", "cik": "1042752" },
-    { "name": "JANA Partners (Barry Rosenstein)", "cik": "1141383" },
+    { "name": "Icahn Enterprises (Carl Icahn)", "cik": "921669" },
+    { "name": "JANA Partners (Barry Rosenstein)", "cik": "1159159" },
     { "name": "Pabrai Investment Funds (Mohnish Pabrai)", "cik": "1352211" },
     { "name": "Pershing Square Capital (Bill Ackman)", "cik": "1336528" },
     { "name": "Scion Asset Management (Michael Burry)", "cik": "1649339" },
-    { "name": "Sequoia Fund (Ruane, Cunniff & Goldfarb)", "cik": "89043" },
+    { "name": "Sequoia Fund (Ruane, Cunniff & Goldfarb)", "cik": "1913045" },
     { "name": "Soros Fund Management (Dawn Fitzpatrick)", "cik": "1029160" },
-    { "name": "Starboard Value (Jeffrey Smith)", "cik": "1449333" },
+    { "name": "Starboard Value (Jeffrey Smith)", "cik": "1517137" },
     { "name": "Third Point (Dan Loeb)", "cik": "1040273" },
     { "name": "Trian Fund Management (Nelson Peltz)", "cik": "1338697" },
-    { "name": "ValueAct Capital Management (Mason Morfit & Rob Hale)", "cik": "1157444" },
+    { "name": "ValueAct Capital Management (Mason Morfit & Rob Hale)", "cik": "1351069" },
     { "name": "Yacktman Asset Management", "cik": "875235" }
 ];
 
