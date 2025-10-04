@@ -140,10 +140,8 @@ export async function getFilingContent(filingUrl, item = null) {
     if (!state.secApiKey) throw new Error("SEC API Key is not configured.");
     if (!filingUrl) throw new Error("A filing URL is required.");
 
-    // Base URL for the extractor endpoint
     let url = `https://api.sec-api.io/extractor?url=${encodeURIComponent(filingUrl)}&type=text&token=${state.secApiKey}`;
 
-    // Append the item parameter if it's provided (for 8-K filings)
     if (item) {
         url += `&item=${item}`;
     }
@@ -154,7 +152,6 @@ export async function getFilingContent(filingUrl, item = null) {
         const errorText = await response.text();
         throw new Error(`Failed to fetch filing text: ${response.statusText} - ${errorText}`);
     }
-    // This endpoint returns raw text, not JSON
     return await response.text();
 }
 
@@ -165,7 +162,7 @@ export async function getPortfolioInsiderTrading(tickers) {
     const queryObject = {
       "query": { "query_string": { "query": `formType:\"4\" AND ticker:(${tickerQueryString})` } },
       "from": "0",
-      "size": "100", // Get more results for a portfolio-wide view
+      "size": "100", 
       "sort": [{ "filedAt": { "order": "desc" } }]
     };
 
@@ -189,20 +186,4 @@ export async function getPortfolioInstitutionalOwnership(tickers) {
     };
     const result = await callSecQueryApi(queryObject);
     return result?.filings || [];
-}
-
-/**
- * NEW FUNCTION: Fetches the detailed holdings of a specific 13F filing.
- * @param {string} accessionNo The accession number of the 13F filing.
- * @returns {Promise<Array>} A promise that resolves to the array of holdings.
- */
-export async function get13FHoldings(accessionNo) {
-    if (!state.secApiKey) throw new Error("SEC API Key is not configured.");
-    if (!accessionNo) throw new Error("An accession number is required.");
-    
-    // This endpoint is a guess based on API documentation patterns for fetching specific filing data.
-    const url = `https://api.sec-api.io/filing/${accessionNo}/holdings?token=${state.secApiKey}`;
-    
-    const data = await callApi(url);
-    return data || []; // Return holdings array or an empty array
 }
