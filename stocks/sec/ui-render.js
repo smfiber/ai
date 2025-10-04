@@ -625,5 +625,3 @@ export async function renderWhaleWatchingView() {
         container.innerHTML = `<p class="text-center text-red-500 p-8">Could not load whale watching data: ${error.message}</p>`;
     }
 }
-
-}
