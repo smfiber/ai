@@ -1,22 +1,8 @@
-import { CONSTANTS, state } from './config.js'; 
+import { CONSTANTS, state, TOP_25_INVESTORS } from './config.js'; 
 import { getDocs, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getEarningsCalendar } from './api.js';
 import { getRecentPortfolioFilings, getPortfolioInsiderTrading, getPortfolioInstitutionalOwnership, getSecMaterialEvents, getSecAnnualReports, getSecQuarterlyReports, get13FHoldings, getWhaleFilings } from './sec-api.js';
 import { callApi } from './api.js';
-
-// --- List of popular investors ---
-const POPULAR_INVESTORS = [
-    { name: "Berkshire Hathaway", cik: "0001067983" },
-    { name: "Scion Asset Management (Michael Burry)", cik: "0001649339" },
-    { name: "Pershing Square Capital (Bill Ackman)", cik: "0001336528" },
-    { name: "Bridgewater Associates (Ray Dalio)", cik: "0001066395" },
-    { name: "Icahn Capital Management (Carl Icahn)", cik: "0001011868" },
-    { name: "Duquesne Family Office (Stan Druckenmiller)", cik: "0001536411" },
-    { name: "Soros Fund Management", cik: "0001029160" },
-    { name: "Appaloosa Management (David Tepper)", cik: "0001079121" },
-    { name: "BlackRock Inc.", cik: "0001364742" },
-    { name: "The Vanguard Group", cik: "0000102109" },
-];
 
 // --- UTILITY & SECURITY HELPERS ---
 function sanitizeText(text) {
@@ -562,7 +548,9 @@ export function renderInvestorFilingsDropdownView() {
     const container = document.getElementById('investor-filings-view');
     if (!container) return;
 
-    const optionsHtml = POPULAR_INVESTORS
+    const popularInvestors = TOP_25_INVESTORS.filter(investor => investor.popular);
+    
+    const optionsHtml = popularInvestors
         .sort((a, b) => a.name.localeCompare(b.name))
         .map(investor => `<option value="${investor.cik}" data-name="${investor.name}">${investor.name}</option>`)
         .join('');
