@@ -115,9 +115,25 @@ export async function getRecentPortfolioFilings(tickers) {
             } 
         },
         "from": "0",
-        "size": "50", // Fetch the latest 50 filings across the entire portfolio
+        "size": "50",
         "sort": [{ "filedAt": { "order": "desc" } }]
     };
     const result = await callSecQueryApi(queryObject);
     return result?.filings || [];
+}
+
+export async function getFilingContent(filingUrl) {
+    if (!state.secApiKey) throw new Error("SEC API Key is not configured.");
+    if (!filingUrl) throw new Error("A filing URL is required.");
+
+    // The SEC API text extraction endpoint is a simple GET request
+    const url = `https://api.sec-api.io/filing-text?token=${state.secApiKey}&url=${encodeURIComponent(filingUrl)}`;
+    
+    // We expect a plain text response, so we handle it differently than callApi which expects JSON
+    const response = await fetch(url);
+    if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to fetch filing text: ${response.statusText} - ${errorText}`);
+    }
+    return await response.text();
 }
