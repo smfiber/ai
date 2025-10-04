@@ -1,5 +1,5 @@
 import { CONSTANTS, state } from './config.js'; 
-import { getRecentPortfolioFilings, getEarningsCalendar } from './sec-api.js';
+import { getRecentPortfolioFilings, getEarningsCalendar } from './api.js';
 
 // --- UTILITY & SECURITY HELPERS ---
 function sanitizeText(text) {
@@ -50,7 +50,7 @@ export async function renderFilingsByCompany(filings) {
         <ul class="divide-y divide-gray-200">
             ${Object.entries(filingsByCompany).map(([ticker, count]) => `
                 <li class="p-2 flex justify-between items-center text-sm">
-                    <span class="font-semibold text-gray-700">${sanitizeText(ticker)}</span>
+                    <a href="#" class="company-link font-semibold text-gray-700 hover:text-indigo-600" data-ticker="${sanitizeText(ticker)}">${sanitizeText(ticker)}</a>
                     <span class="px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 font-medium">${count} new</span>
                 </li>
             `).join('')}
@@ -139,7 +139,9 @@ export async function fetchAndRenderRecentFilings() {
                         return `
                             <li class="p-4 hover:bg-gray-50 flex justify-between items-center">
                                 <div>
-                                    <p class="font-semibold text-gray-800">${sanitizeText(companyName)} (${sanitizeText(filing.ticker)})</p>
+                                    <a href="#" class="company-link font-semibold text-gray-800 hover:text-indigo-600" data-ticker="${sanitizeText(filing.ticker)}">
+                                        ${sanitizeText(companyName)} (${sanitizeText(filing.ticker)})
+                                    </a>
                                     <p class="text-sm text-gray-500">Filed on ${filingDate}</p>
                                 </div>
                                 <div class="flex items-center gap-4">
