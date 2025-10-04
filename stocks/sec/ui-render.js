@@ -105,6 +105,7 @@ export async function fetchAndRenderRecentFilings() {
             '10-K': new Map()
         };
 
+        // Since the API returns filings sorted by date descending, the first one we encounter for a ticker is the latest.
         for (const filing of allFilings) {
             const formType = filing.formType;
             const ticker = filing.ticker;
@@ -244,11 +245,13 @@ export async function renderCompanyDeepDive(ticker) {
 
                     if (filing.formType === '8-K') {
                         formTypeBadge = '<span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-800">8-K</span>';
-                    } else if (filing.formType === '10-K' || filing.formType === '10-Q') {
-                        formTypeBadge = filing.formType === '10-K'
-                            ? '<span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-800">10-K</span>'
-                            : '<span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800">10-Q</span>';
-                        
+                    } else if (filing.formType === '10-K') {
+                        formTypeBadge = '<span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-800">10-K</span>';
+                    } else if (filing.formType === '10-Q') {
+                        formTypeBadge = '<span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800">10-Q</span>';
+                    }
+
+                    if (['8-K', '10-K', '10-Q'].includes(filing.formType)) {
                         analyzeButton = `<button class="analyze-filing-btn text-sm bg-green-600 hover:bg-green-700 text-white font-semibold py-1 px-3 rounded-lg" data-filing-url="${sanitizeText(filing.linkToFilingDetails)}" data-form-type="${sanitizeText(filing.formType)}" data-ticker="${sanitizeText(ticker)}">Analyze</button>`;
                     }
 
