@@ -1,5 +1,6 @@
 import { CONSTANTS, state } from './config.js'; 
 import { getRecentPortfolioFilings, getEarningsCalendar } from './api.js';
+import { getSecMaterialEvents, getSecAnnualReports, getSecQuarterlyReports } from './sec-api.js';
 
 // --- UTILITY & SECURITY HELPERS ---
 function sanitizeText(text) {
@@ -24,7 +25,7 @@ export async function fetchAndCachePortfolioData() {
     }
 }
 
-// --- NEW SEC DASHBOARD RENDERING ---
+// --- DASHBOARD RENDERING ---
 
 export async function renderFilingsByCompany(filings) {
     const container = document.getElementById('filings-by-company-container');
@@ -165,5 +166,64 @@ export async function fetchAndRenderRecentFilings() {
     } catch (error) {
         console.error("Error fetching or rendering recent filings:", error);
         container.innerHTML = `<p class="text-center text-red-500 p-8">Could not load filings: ${error.message}</p>`;
+    }
+}
+
+// --- DEEP DIVE MODAL RENDERING ---
+export async function renderCompanyDeepDive(ticker) {
+    const container = document.getElementById('historical-filings-container');
+    if (!container) return;
+
+    try {
+        const [events, annual, quarterly] = await Promise.all([
+            getSecMaterialEvents(ticker),
+            getSecAnnualReports(ticker),
+            getSecQuarterlyReports(ticker)
+        ]);
+
+        const allFilings = [...events, ...annual, ...quarterly];
+
+        if (allFilings.length === 0) {
+            container.innerHTML = `<p class="text-center text-gray-500 py-8">No filings found for ${ticker}.</p>`;
+            return;
+        }
+
+        allFilings.sort((a, b) => new Date(b.filedAt) - new Date(a.filedAt));
+
+        const listHtml = `
+            <ul class="divide-y divide-gray-200">
+                ${allFilings.map(filing => {
+                    const filingDate = new Date(filing.filedAt).toLocaleDateString();
+                     let formTypeBadge = '';
+                    if (filing.formType === '8-K') {
+                        formTypeBadge = '<span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-800">8-K</span>';
+                    } else if (filing.formType === '10-K') {
+                        formTypeBadge = '<span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-800">10-K</span>';
+                    } else if (filing.formType === '10-Q') {
+                        formTypeBadge = '<span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800">10-Q</span>';
+                    }
+
+                    return `
+                        <li class="p-3 hover:bg-gray-50">
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <p class="font-semibold text-gray-700">${formTypeBadge}</p>
+                                    <p class="text-xs text-gray-500 mt-1">Filed: ${filingDate}</p>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <a href="${sanitizeText(filing.linkToFilingDetails)}" target="_blank" rel="noopener noreferrer" class="text-sm bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-1 px-3 rounded-lg">View</a>
+                                </div>
+                            </div>
+                        </li>
+                    `;
+                }).join('')}
+            </ul>
+        `;
+
+        container.innerHTML = listHtml;
+
+    } catch (error) {
+        console.error(`Error rendering deep dive for ${ticker}:`, error);
+        container.innerHTML = `<p class="text-center text-red-500 p-4">Could not load historical filings: ${error.message}</p>`;
     }
 }
