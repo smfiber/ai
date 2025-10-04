@@ -39,7 +39,8 @@ export async function getSecInsiderTrading(ticker) {
                 linkToFilingDetails: filing.linkToFilingDetails,
                 transactionCode: txn.transactionCoding?.transactionCode,
                 transactionShares: txn.transactionShares?.value,
-                transactionPricePerShare: txn.transactionPricePerShare?.value
+                transactionPricePerShare: txn.transactionPricePerShare?.value,
+                ticker: filing.ticker // Add ticker to the transaction object
             }));
         }
     });
@@ -65,7 +66,8 @@ export async function getSecInstitutionalOwnership(ticker) {
             investorName: filing.companyName,
             shares: holdingInfo?.shrsOrPrnAmt?.sshPrnamt,
             value: holdingInfo?.value,
-            filedAt: filing.filedAt
+            filedAt: filing.filedAt,
+            ticker: ticker // Add ticker to the holding object
         };
     }).filter(h => h.value > 0);
 }
@@ -126,14 +128,45 @@ export async function getFilingContent(filingUrl) {
     if (!state.secApiKey) throw new Error("SEC API Key is not configured.");
     if (!filingUrl) throw new Error("A filing URL is required.");
 
-    // The SEC API text extraction endpoint is a simple GET request
     const url = `https://api.sec-api.io/filing-text?token=${state.secApiKey}&url=${encodeURIComponent(filingUrl)}`;
     
-    // We expect a plain text response, so we handle it differently than callApi which expects JSON
     const response = await fetch(url);
     if (!response.ok) {
         const errorText = await response.text();
         throw new Error(`Failed to fetch filing text: ${response.statusText} - ${errorText}`);
     }
     return await response.text();
+}
+
+export async function getPortfolioInsiderTrading(tickers) {
+    if (!tickers || tickers.length === 0) return [];
+    
+    const tickerQueryString = tickers.join(" OR ");
+    const queryObject = {
+      "query": { "query_string": { "query": `formType:\"4\" AND ticker:(${tickerQueryString})` } },
+      "from": "0",
+      "size": "100", // Get more results for a portfolio-wide view
+      "sort": [{ "filedAt": { "order": "desc" } }]
+    };
+
+    const result = await callSecQueryApi(queryObject);
+    return result?.filings || [];
+}
+
+export async function getPortfolioInstitutionalOwnership(tickers) {
+    if (!tickers || tickers.length === 0) return [];
+
+    const tickerQueryString = tickers.join(" OR ");
+    const queryObject = {
+        "query": {
+            "query_string": {
+                "query": `formType:\"13F-HR\" AND holdings.ticker:(${tickerQueryString})`
+            }
+        },
+        "from": "0",
+        "size": "100",
+        "sort": [{ "filedAt": { "order": "desc" } }]
+    };
+    const result = await callSecQueryApi(queryObject);
+    return result?.filings || [];
 }
