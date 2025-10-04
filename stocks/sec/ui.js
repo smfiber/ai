@@ -46,8 +46,9 @@ function setupGlobalEventListeners() {
                 const filingUrl = target.dataset.filingUrl;
                 const formType = target.dataset.formType;
                 const ticker = target.dataset.ticker;
+                const filingItem = target.dataset.filingItem; // Add this line
                 if (filingUrl && formType && ticker) {
-                    handleFilingAnalysis(filingUrl, formType, ticker);
+                    handleFilingAnalysis(filingUrl, formType, ticker, filingItem); // Add filingItem here
                 }
             }
         });
