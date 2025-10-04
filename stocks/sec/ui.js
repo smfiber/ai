@@ -1,22 +1,39 @@
 import { CONSTANTS, state } from './config.js';
-import { fetchAndRenderRecentFilings } from './ui-render.js';
+import { fetchAndRenderRecentFilings, renderCompanyDeepDive } from './ui-render.js';
+import { closeModal, openDeepDiveModal } from './ui-modals.js';
 
 function setupGlobalEventListeners() {
-    const refreshButton = document.getElementById('refresh-filings-button');
-    if (refreshButton) {
-        refreshButton.addEventListener('click', () => {
-            // Add a visual cue for the user
+    const appContainer = document.getElementById('app-container');
+    if (!appContainer) return;
+
+    // Main event delegation for the app
+    appContainer.addEventListener('click', (e) => {
+        const target = e.target;
+
+        // Handle refresh button clicks
+        if (target.closest('#refresh-filings-button')) {
+            const refreshButton = target.closest('#refresh-filings-button');
             const icon = refreshButton.querySelector('svg');
-            if(icon) icon.classList.add('animate-spin');
+            if (icon) icon.classList.add('animate-spin');
             
             fetchAndRenderRecentFilings().finally(() => {
-                // Remove the spin animation after the fetch is complete
-                if(icon) icon.classList.remove('animate-spin');
+                if (icon) icon.classList.remove('animate-spin');
             });
-        });
-    }
+            return;
+        }
 
-    // Add other global event listeners for the new SPA here as needed
+        // Handle clicks on company links to open the deep dive modal
+        if (target.closest('.company-link')) {
+            e.preventDefault();
+            const ticker = target.closest('.company-link').dataset.ticker;
+            if (ticker) {
+                openDeepDiveModal(ticker);
+                // We will build this function in the next step
+                // renderCompanyDeepDive(ticker); 
+            }
+            return;
+        }
+    });
 }
 
 export function setupEventListeners() {
@@ -24,10 +41,18 @@ export function setupEventListeners() {
 
     const modalsToClose = [
         { modal: CONSTANTS.MODAL_CONFIRMATION, button: 'cancel-button'},
+        { modal: 'deepDiveModal', button: 'close-deep-dive-modal', bg: 'close-deep-dive-modal-bg' },
     ];
 
     modalsToClose.forEach(item => {
         const close = () => closeModal(item.modal);
-        if (item.button) document.getElementById(item.button)?.addEventListener('click', close);
+        if (item.button) {
+            const buttonEl = document.getElementById(item.button);
+            if(buttonEl) buttonEl.addEventListener('click', close);
+        }
+        if (item.bg) {
+            const bgEl = document.getElementById(item.bg);
+            if(bgEl) bgEl.addEventListener('click', close);
+        }
     });
 }
