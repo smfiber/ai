@@ -28,16 +28,17 @@ export async function fetchAndCachePortfolioData() {
 
 // --- DASHBOARD RENDERING ---
 
-function renderFilingsCard(containerId, filings, formType) {
+function renderFilingsCard(containerId, filings) {
     const container = document.getElementById(containerId);
     if (!container) return;
+
+    const formType = containerId.includes('8k') ? '8-K' : (containerId.includes('10q') ? '10-Q' : '10-K');
 
     if (filings.length === 0) {
         container.innerHTML = `<p class="text-center text-gray-500 py-4">No recent ${formType} filings found.</p>`;
         return;
     }
 
-    // Sort by date descending before rendering
     filings.sort((a, b) => new Date(b.filedAt) - new Date(a.filedAt));
 
     const filingsHtml = `
@@ -96,6 +97,7 @@ export async function fetchAndRenderRecentFilings() {
 
         const tickers = portfolioStocks.map(s => s.ticker);
         const allFilings = await getRecentPortfolioFilings(tickers);
+        state.recentFilingsCache = allFilings; // Cache the results
 
         const latestFilings = {
             '8-K': new Map(),
@@ -103,7 +105,6 @@ export async function fetchAndRenderRecentFilings() {
             '10-K': new Map()
         };
 
-        // Since the API returns filings sorted by date descending, the first one we encounter for a ticker is the latest.
         for (const filing of allFilings) {
             const formType = filing.formType;
             const ticker = filing.ticker;
@@ -113,9 +114,9 @@ export async function fetchAndRenderRecentFilings() {
             }
         }
         
-        renderFilingsCard('recent-8k-container', Array.from(latestFilings['8-K'].values()), '8-K');
-        renderFilingsCard('recent-10q-container', Array.from(latestFilings['10-Q'].values()), '10-Q');
-        renderFilingsCard('recent-10k-container', Array.from(latestFilings['10-K'].values()), '10-K');
+        renderFilingsCard('recent-8k-container', Array.from(latestFilings['8-K'].values()));
+        renderFilingsCard('recent-10q-container', Array.from(latestFilings['10-Q'].values()));
+        renderFilingsCard('recent-10k-container', Array.from(latestFilings['10-K'].values()));
         
     } catch (error) {
         console.error("Error fetching or rendering recent filings:", error);
@@ -124,6 +125,92 @@ export async function fetchAndRenderRecentFilings() {
             if(container) container.innerHTML = errorMsg;
         });
     }
+}
+
+// --- NEW TAB CONTENT RENDERERS ---
+
+function renderFilingsByCompany(filings) {
+    const container = document.getElementById('filings-by-company-container');
+    if (!container) return;
+
+    const sevenDaysAgo = new Date(Date.now() - 168 * 60 * 60 * 1000);
+    const recentFilings = filings.filter(f => new Date(f.filedAt) > sevenDaysAgo);
+
+    if (recentFilings.length === 0) {
+        container.innerHTML = `<p class="text-center text-gray-500 py-4">No new filings in the last 7 days.</p>`;
+        return;
+    }
+
+    const filingsByCompany = recentFilings.reduce((acc, filing) => {
+        if (!acc[filing.ticker]) {
+            acc[filing.ticker] = 0;
+        }
+        acc[filing.ticker]++;
+        return acc;
+    }, {});
+
+    const listHtml = `
+        <ul class="divide-y divide-gray-200">
+            ${Object.entries(filingsByCompany).map(([ticker, count]) => `
+                <li class="p-2 flex justify-between items-center text-sm">
+                    <a href="#" class="company-link font-semibold text-gray-700 hover:text-indigo-600" data-ticker="${sanitizeText(ticker)}">${sanitizeText(ticker)}</a>
+                    <span class="px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 font-medium">${count} new</span>
+                </li>
+            `).join('')}
+        </ul>
+    `;
+    container.innerHTML = listHtml;
+}
+
+async function renderUpcomingEarnings() {
+    const container = document.getElementById('upcoming-filings-container');
+    if (!container) return;
+    container.innerHTML = `<div class="loader mx-auto my-8"></div>`;
+
+    try {
+        const tickers = state.portfolioCache.filter(s => s.status === 'Portfolio').map(s => s.ticker);
+        if (tickers.length === 0) {
+             container.innerHTML = `<p class="text-center text-gray-500 py-4">Your portfolio is empty.</p>`;
+            return;
+        }
+
+        const earningsData = await getEarningsCalendar(tickers);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const upcomingEarnings = earningsData
+            .filter(e => e.date && new Date(e.date) >= today)
+            .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+        if (upcomingEarnings.length === 0) {
+            container.innerHTML = `<p class="text-center text-gray-500 py-4">No upcoming earnings scheduled.</p>`;
+            return;
+        }
+        
+        const listHtml = `
+            <ul class="divide-y divide-gray-200">
+                ${upcomingEarnings.slice(0, 25).map(e => `
+                     <li class="p-2 flex justify-between items-center text-sm">
+                        <span class="font-semibold text-gray-700">${sanitizeText(e.symbol)}</span>
+                        <span class="text-gray-600">${new Date(e.date).toLocaleDateString()}</span>
+                    </li>
+                `).join('')}
+            </ul>
+        `;
+        container.innerHTML = listHtml;
+
+    } catch (error) {
+        console.error("Error rendering upcoming earnings:", error);
+        container.innerHTML = `<p class="text-center text-red-500 py-4">Could not load earnings data.</p>`;
+    }
+}
+
+export function renderUpcomingEarningsView() {
+    renderUpcomingEarnings();
+}
+
+export function renderFilingsActivityView() {
+    renderFilingsByCompany(state.recentFilingsCache);
 }
 
 
