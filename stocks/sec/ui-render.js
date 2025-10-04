@@ -1,7 +1,7 @@
 import { CONSTANTS, state } from './config.js'; 
 import { getDocs, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getEarningsCalendar } from './api.js';
-import { getRecentPortfolioFilings, getPortfolioInsiderTrading, getPortfolioInstitutionalOwnership, getSecMaterialEvents, getSecAnnualReports, getSecQuarterlyReports } from './sec-api.js';
+import { getRecentPortfolioFilings, getPortfolioInsiderTrading, getPortfolioInstitutionalOwnership, getSecMaterialEvents, getSecAnnualReports, getSecQuarterlyReports, get13FHoldings } from './sec-api.js';
 import { callApi } from './api.js';
 
 // --- UTILITY & SECURITY HELPERS ---
@@ -540,8 +540,13 @@ export async function renderWhaleWatchingView() {
             return;
         }
 
-        const currentHoldings = latestFiling.holdings || [];
-        const prevHoldings = previousFiling.holdings || [];
+        // --- CORRECTED LOGIC ---
+        // Use the new get13FHoldings function to fetch the detailed data for each filing.
+        const [currentHoldings, prevHoldings] = await Promise.all([
+            get13FHoldings(latestFiling.accessionNo),
+            get13FHoldings(previousFiling.accessionNo)
+        ]);
+        // --- END CORRECTION ---
 
         const currentHoldingsMap = new Map(currentHoldings.map(h => [h.ticker, h]));
         const prevHoldingsMap = new Map(prevHoldings.map(h => [h.ticker, h]));
@@ -552,9 +557,7 @@ export async function renderWhaleWatchingView() {
             if (!ticker) continue;
             if (prevHoldingsMap.has(ticker)) {
                 const prevHolding = prevHoldingsMap.get(ticker);
-                // --- FIX: Ensure share counts are treated as numbers ---
                 const shareChange = Number(holding.shrsOrPrnAmt.sshPrnamt) - Number(prevHolding.shrsOrPrnAmt.sshPrnamt);
-                // --- END FIX ---
                 if (shareChange > 0) increased.push({ ...holding, change: shareChange });
                 else if (shareChange < 0) decreased.push({ ...holding, change: shareChange });
             } else {
@@ -580,15 +583,14 @@ export async function renderWhaleWatchingView() {
                                     <p class="text-xs text-gray-500 truncate">${sanitizeText(h.nameOfIssuer)}</p>
                                 </div>
                                 <div class="text-right">
-                                    <span class="font-semibold">$${h.value.toLocaleString()}</span>
+                                    <span class="font-semibold">$${(h.value * 1000).toLocaleString()}</span>
                                     ${showChange ? `<p class="text-xs ${h.change > 0 ? 'text-green-600' : 'text-red-600'}">${h.change.toLocaleString()} shares</p>` : ''}
                                 </div>
                             </li>`).join('')}
                     </ul>
                 </div>`;
         };
-
-        // --- FIX: More robust date formatting to avoid timezone issues ---
+        
         const formatDate = (dateString) => {
             const [year, month] = dateString.split('-');
             const date = new Date(year, month - 1, 1);
@@ -596,7 +598,6 @@ export async function renderWhaleWatchingView() {
         }
         const currentQuarter = formatDate(latestFiling.periodOfReport);
         const prevQuarter = formatDate(previousFiling.periodOfReport);
-        // --- END FIX ---
 
         container.innerHTML = `
             <div class="dashboard-card">
