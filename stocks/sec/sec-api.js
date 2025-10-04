@@ -73,10 +73,14 @@ export async function getSecInstitutionalOwnership(ticker) {
 }
 
 export async function getSecMaterialEvents(ticker) {
+    const twoYearsAgo = new Date();
+    twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
+    const twoYearsAgoDateString = twoYearsAgo.toISOString().split('T')[0];
+
     const queryObject = {
-      "query": { "query_string": { "query": `formType:\"8-K\" AND ticker:${ticker}` } },
+      "query": { "query_string": { "query": `formType:\"8-K\" AND ticker:${ticker} AND filedAt:[${twoYearsAgoDateString} TO *]` } },
       "from": "0",
-      "size": "25",
+      "size": "50", // Increased size to capture all within 2 years
       "sort": [{ "filedAt": { "order": "desc" } }]
     };
     const result = await callSecQueryApi(queryObject);
@@ -84,8 +88,12 @@ export async function getSecMaterialEvents(ticker) {
 }
 
 export async function getSecAnnualReports(ticker) {
+    const twoYearsAgo = new Date();
+    twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
+    const twoYearsAgoDateString = twoYearsAgo.toISOString().split('T')[0];
+
     const queryObject = {
-      "query": { "query_string": { "query": `formType:\"10-K\" AND ticker:${ticker}` } },
+      "query": { "query_string": { "query": `formType:\"10-K\" AND ticker:${ticker} AND filedAt:[${twoYearsAgoDateString} TO *]` } },
       "from": "0",
       "size": "10",
       "sort": [{ "filedAt": { "order": "desc" } }]
@@ -95,8 +103,12 @@ export async function getSecAnnualReports(ticker) {
 }
 
 export async function getSecQuarterlyReports(ticker) {
+    const twoYearsAgo = new Date();
+    twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
+    const twoYearsAgoDateString = twoYearsAgo.toISOString().split('T')[0];
+
     const queryObject = {
-      "query": { "query_string": { "query": `formType:\"10-Q\" AND ticker:${ticker}` } },
+      "query": { "query_string": { "query": `formType:\"10-Q\" AND ticker:${ticker} AND filedAt:[${twoYearsAgoDateString} TO *]` } },
       "from": "0",
       "size": "10",
       "sort": [{ "filedAt": { "order": "desc" } }]
