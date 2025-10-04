@@ -549,8 +549,6 @@ export async function renderWhaleWatchingView() {
             return;
         }
         
-        // --- START OF NEW MERGE LOGIC ---
-
         // 1. Group filings by reporting period to handle originals and amendments
         const groupedByPeriod = filings.reduce((acc, filing) => {
             const period = filing.periodOfReport;
@@ -580,10 +578,11 @@ export async function renderWhaleWatchingView() {
             }
             // If no merge is needed, return the latest one available (amendment or original)
             return group.amendment || group.original;
-        }).sort((a, b) => new Date(b.filedAt) - new Date(a.filedAt));
+        // --- BUG FIX STARTS HERE ---
+        // Sort by the 'periodOfReport' to ensure true chronological order of quarters.
+        }).sort((a, b) => new Date(b.periodOfReport) - new Date(a.periodOfReport));
+        // --- BUG FIX ENDS HERE ---
         
-        // --- END OF NEW MERGE LOGIC ---
-
         let html = `
             <div class="dashboard-card">
                 <h2 class="dashboard-card-title">Whale Watching: ${WHALE_NAME}</h2>
