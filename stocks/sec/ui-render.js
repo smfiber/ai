@@ -524,6 +524,40 @@ export async function renderInstitutionalTrackerView() {
     }
 }
 
+// --- NEW FUNCTION TO RENDER THE MARKET ANALYSIS VIEW ---
+export function renderMarketAnalysisView() {
+    const container = document.getElementById('market-analysis-view');
+    if (!container) return;
+
+    const html = `
+        <div class="dashboard-card max-w-4xl mx-auto">
+            <h2 class="dashboard-card-title">Institutional Market-Wide Analysis</h2>
+            <div class="p-4 border rounded-lg bg-gray-50">
+                <h3 class="font-semibold text-gray-800">Phase 1: Data Aggregation</h3>
+                <p class="text-sm text-gray-600 mt-1 mb-4">
+                    Process the latest 13F filings from the top 25 institutional investors. This collects and calculates all portfolio changes (new buys, sells, etc.) and saves them to the database for analysis. This may take a few minutes.
+                </p>
+                <button id="start-batch-process-btn" class="text-sm bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg shadow-sm">
+                    Process All Investor Data
+                </button>
+                <div id="batch-progress-container" class="mt-4"></div>
+            </div>
+
+            <div class="p-4 border rounded-lg bg-gray-50 mt-6">
+                <h3 class="font-semibold text-gray-800">Phase 2: AI-Powered Trend Analysis</h3>
+                <p class="text-sm text-gray-600 mt-1 mb-4">
+                    After the data has been processed, you can analyze it. This will query all the aggregated changes and use an AI to identify and summarize key market trends, sector rotations, and high-conviction trades.
+                </p>
+                <button id="analyze-market-data-btn" class="hidden text-sm bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg shadow-sm">
+                    Analyze Market Data
+                </button>
+            </div>
+             <div id="market-analysis-container" class="mt-6"></div>
+        </div>
+    `;
+    container.innerHTML = html;
+}
+
 // --- REPURPOSED: This now renders the initial search/dropdown view ---
 export function renderWhaleWatchingView() {
     const container = document.getElementById('whale-watching-view');
