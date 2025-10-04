@@ -519,14 +519,7 @@ export async function renderWhaleWatchingView() {
         const WHALE_CIK = '1067983'; 
         const WHALE_NAME = 'Berkshire Hathaway Inc.';
 
-        const allFilings = await getWhaleFilings(WHALE_CIK);
-        
-        // For debug display
-        const queryForDebug = {
-            "query": "*",
-            "ciks": [WHALE_CIK],
-            "formTypes": ["13F-HR"]
-        };
+        const { filings: allFilings, payload: queryForDebug } = await getWhaleFilings(WHALE_CIK);
 
         if (!allFilings || allFilings.length === 0) {
             container.innerHTML = `<p class="text-center text-gray-500 py-8">No filing data available for ${WHALE_NAME}.</p>`;
@@ -544,6 +537,7 @@ export async function renderWhaleWatchingView() {
         const latestPeriod = uniquePeriods[0];
         const previousPeriod = uniquePeriods[1];
         
+        // The original `allFilings` list is already sorted by filedAt desc from the API function
         const latestFiling = validFilings.find(f => f.periodOfReport === latestPeriod);
         const previousFiling = validFilings.find(f => f.periodOfReport === previousPeriod);
         
@@ -552,6 +546,7 @@ export async function renderWhaleWatchingView() {
             return;
         }
 
+        // We can't get holdings from the full-text search, so we still need get13FHoldings
         const [currentHoldings, prevHoldings] = await Promise.all([
             get13FHoldings(latestFiling.accessionNo),
             get13FHoldings(previousFiling.accessionNo)
