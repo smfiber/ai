@@ -1,5 +1,5 @@
 import { CONSTANTS, state } from './config.js';
-import { fetchAndRenderRecentFilings, renderCompanyDeepDive, renderInsiderTrackerView, renderInstitutionalTrackerView, renderUpcomingEarningsView, renderFilingsActivityView } from './ui-render.js';
+import { fetchAndRenderRecentFilings, renderCompanyDeepDive, renderInsiderTrackerView, renderInstitutionalTrackerView, renderUpcomingEarningsView, renderFilingsActivityView, renderWhaleWatchingView } from './ui-render.js';
 import { closeModal, openDeepDiveModal } from './ui-modals.js';
 import { handleFilingAnalysis } from './ui-handlers.js';
 
@@ -78,6 +78,8 @@ function setupGlobalEventListeners() {
                     renderInsiderTrackerView();
                 } else if (tabId === 'institutional-tracker-view') {
                     renderInstitutionalTrackerView();
+                } else if (tabId === 'whale-watching-view') { // NEW
+                    renderWhaleWatchingView();
                 } else if (tabId === 'earnings-calendar-view') {
                     renderUpcomingEarningsView();
                 } else if (tabId === 'filings-activity-view') {
