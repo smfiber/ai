@@ -1,5 +1,5 @@
 import { CONSTANTS, state } from './config.js';
-import { fetchAndRenderRecentFilings, renderCompanyDeepDive, renderInsiderTrackerView, renderInstitutionalTrackerView, renderUpcomingEarningsView, renderFilingsActivityView, renderWhaleWatchingView } from './ui-render.js';
+import { fetchAndRenderRecentFilings, renderCompanyDeepDive, renderInsiderTrackerView, renderInstitutionalTrackerView, renderUpcomingEarningsView, renderFilingsActivityView, renderWhaleWatchingView, renderWhaleComparisonView } from './ui-render.js';
 import { closeModal, openDeepDiveModal } from './ui-modals.js';
 import { handleFilingAnalysis } from './ui-handlers.js';
 
@@ -31,6 +31,15 @@ function setupGlobalEventListeners() {
                 openDeepDiveModal(ticker);
                 renderCompanyDeepDive(ticker); 
             }
+            return;
+        }
+
+        // NEW: Handle click for whale comparison button
+        if (target.closest('#compare-quarters-btn')) {
+            renderWhaleComparisonView();
+            // Optional: Disable button after click to prevent multiple renders
+            target.closest('#compare-quarters-btn').disabled = true;
+            target.closest('#compare-quarters-btn').textContent = 'Comparison Loaded';
             return;
         }
     });
