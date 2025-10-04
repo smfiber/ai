@@ -232,8 +232,8 @@ export async function getWhaleFilings(cik) {
       "query": {
         "query_string": {
           // --- BUG FIX STARTS HERE ---
-          // Updated query to fetch both original (13F-HR) and amended (13F-HR/A) filings.
-          "query": `formType:("13F-HR" OR "13F-HR/A") AND cik:\"${cik}\" AND filedAt:[${formatDate(startDate)} TO ${formatDate(endDate)}]`
+          // Updated query to remove quotes around the CIK, which is required by the API for some CIKs.
+          "query": `formType:("13F-HR" OR "13F-HR/A") AND cik:${cik} AND filedAt:[${formatDate(startDate)} TO ${formatDate(endDate)}]`
           // --- BUG FIX ENDS HERE ---
         }
       },
