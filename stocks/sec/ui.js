@@ -1,5 +1,5 @@
 import { CONSTANTS, state } from './config.js';
-import { fetchAndRenderRecentFilings, renderCompanyDeepDive, renderInsiderTrackerView, renderInstitutionalTrackerView, renderUpcomingEarningsView, renderFilingsActivityView, renderMarketAnalysisView } from './ui-render.js';
+import { fetchAndRenderRecentFilings, renderCompanyDeepDive, renderInsiderTrackerView, renderInstitutionalTrackerView, renderUpcomingEarningsView, renderFilingsActivityView, renderMarketAnalysisView, renderInvestorFilingsDropdownView, renderInvestorFilingsView, renderWhaleComparisonView } from './ui-render.js';
 import { closeModal, openDeepDiveModal } from './ui-modals.js';
 import { handleFilingAnalysis, handleBatchProcess, handleMarketAnalysis } from './ui-handlers.js';
 
@@ -19,7 +19,6 @@ function setupGlobalEventListeners() {
             // ... (unchanged) ...
         }
 
-        // NEW: Handle clicks for new Market Analysis buttons
         if (target.closest('#start-batch-process-btn')) {
             handleBatchProcess();
             return;
@@ -28,6 +27,30 @@ function setupGlobalEventListeners() {
         if (target.closest('#analyze-market-data-btn')) {
             handleMarketAnalysis();
             return;
+        }
+
+        // Handle compare quarters button click in the new Investor Filings tab
+        if (target.closest('#compare-quarters-btn')) {
+            renderWhaleComparisonView();
+            target.closest('#compare-quarters-btn').remove(); // Remove button after clicking
+            return;
+        }
+    });
+
+    // Listen for changes on the investor dropdown
+    appContainer.addEventListener('change', (e) => {
+        const target = e.target;
+        if (target.id === 'investor-select') {
+            const selectedOption = target.options[target.selectedIndex];
+            const cik = selectedOption.value;
+            const investorName = selectedOption.dataset.name;
+            if (cik) {
+                renderInvestorFilingsView(cik, investorName);
+            } else {
+                // Clear the view if they select the placeholder
+                const container = document.getElementById('investor-filings-container');
+                if (container) container.innerHTML = '';
+            }
         }
     });
 
@@ -60,6 +83,8 @@ function setupGlobalEventListeners() {
                     renderInstitutionalTrackerView();
                 } else if (tabId === 'market-analysis-view') {
                     renderMarketAnalysisView();
+                } else if (tabId === 'investor-filings-view') {
+                    renderInvestorFilingsDropdownView();
                 } else if (tabId === 'earnings-calendar-view') {
                     renderUpcomingEarningsView();
                 } else if (tabId === 'filings-activity-view') {
