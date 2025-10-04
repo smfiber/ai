@@ -1,7 +1,6 @@
 import { CONSTANTS, state } from './config.js'; 
 import { getDocs, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getEarningsCalendar } from './api.js';
-// REMOVED get13FHoldings FROM THIS IMPORT
 import { getRecentPortfolioFilings, getPortfolioInsiderTrading, getPortfolioInstitutionalOwnership, getSecMaterialEvents, getSecAnnualReports, getSecQuarterlyReports } from './sec-api.js';
 import { callApi } from './api.js';
 
@@ -522,22 +521,31 @@ export async function renderWhaleWatchingView() {
 
         const url = `https://api.sec-api.io?token=${state.secApiKey}`;
         const queryObject = {
+            // --- FIX: Fetch more filings to find two distinct quarters ---
             "query": { "query_string": { "query": `formType:\"13F-HR\" AND cik:\"${WHALE_CIK}\"` } },
-            "from": "0", "size": "2", "sort": [{ "filedAt": { "order": "desc" } }]
+            "from": "0", "size": "10", "sort": [{ "filedAt": { "order": "desc" } }]
+            // --- END FIX ---
         };
         const result = await callApi(url, { method: 'POST', body: JSON.stringify(queryObject) });
-        const filings = result.filings;
+        const allFilings = result.filings;
 
-        if (!filings || filings.length < 2) {
-            container.innerHTML = `<p class="text-center text-gray-500 py-8">Not enough filing data available for ${WHALE_NAME}.</p>`;
+        if (!allFilings || allFilings.length === 0) {
+            container.innerHTML = `<p class="text-center text-gray-500 py-8">No filing data available for ${WHALE_NAME}.</p>`;
             return;
         }
 
-        // --- CHANGED ---
-        // The holdings data is already in the filing object. No need for another API call.
-        const currentHoldings = filings[0].holdings || [];
-        const prevHoldings = filings[1].holdings || [];
-        // --- END CHANGE ---
+        // --- FIX: Find the two latest filings with DIFFERENT reporting periods ---
+        const latestFiling = allFilings[0];
+        const previousFiling = allFilings.find(f => f.periodOfReport !== latestFiling.periodOfReport);
+
+        if (!previousFiling) {
+            container.innerHTML = `<p class="text-center text-gray-500 py-8">Not enough historical data to compare for ${WHALE_NAME}.</p>`;
+            return;
+        }
+        // --- END FIX ---
+
+        const currentHoldings = latestFiling.holdings || [];
+        const prevHoldings = previousFiling.holdings || [];
 
         const currentHoldingsMap = new Map(currentHoldings.map(h => [h.ticker, h]));
         const prevHoldingsMap = new Map(prevHoldings.map(h => [h.ticker, h]));
@@ -545,6 +553,7 @@ export async function renderWhaleWatchingView() {
         const newPositions = [], soldPositions = [], increased = [], decreased = [];
 
         for (const [ticker, holding] of currentHoldingsMap.entries()) {
+            if (!ticker) continue; // Skip entries with no ticker
             if (prevHoldingsMap.has(ticker)) {
                 const prevHolding = prevHoldingsMap.get(ticker);
                 const shareChange = holding.shrsOrPrnAmt.sshPrnamt - prevHolding.shrsOrPrnAmt.sshPrnamt;
@@ -555,6 +564,7 @@ export async function renderWhaleWatchingView() {
             }
         }
         for (const [ticker, holding] of prevHoldingsMap.entries()) {
+            if (!ticker) continue; // Skip entries with no ticker
             if (!currentHoldingsMap.has(ticker)) soldPositions.push(holding);
         }
 
@@ -580,8 +590,8 @@ export async function renderWhaleWatchingView() {
                 </div>`;
         };
 
-        const currentQuarter = new Date(filings[0].periodOfReport).toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
-        const prevQuarter = new Date(filings[1].periodOfReport).toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
+        const currentQuarter = new Date(latestFiling.periodOfReport).toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
+        const prevQuarter = new Date(previousFiling.periodOfReport).toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
 
         container.innerHTML = `
             <div class="dashboard-card">
