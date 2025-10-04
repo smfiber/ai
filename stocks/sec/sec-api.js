@@ -190,3 +190,19 @@ export async function getPortfolioInstitutionalOwnership(tickers) {
     const result = await callSecQueryApi(queryObject);
     return result?.filings || [];
 }
+
+/**
+ * NEW FUNCTION: Fetches the detailed holdings of a specific 13F filing.
+ * @param {string} accessionNo The accession number of the 13F filing.
+ * @returns {Promise<Array>} A promise that resolves to the array of holdings.
+ */
+export async function get13FHoldings(accessionNo) {
+    if (!state.secApiKey) throw new Error("SEC API Key is not configured.");
+    if (!accessionNo) throw new Error("An accession number is required.");
+    
+    // This endpoint is a guess based on API documentation patterns for fetching specific filing data.
+    const url = `https://api.sec-api.io/filing/${accessionNo}/holdings?token=${state.secApiKey}`;
+    
+    const data = await callApi(url);
+    return data || []; // Return holdings array or an empty array
+}
