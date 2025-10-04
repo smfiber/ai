@@ -37,6 +37,8 @@
                     <button class="tab-button active" data-tab="dashboard-view">Dashboard</button>
                     <button class="tab-button" data-tab="insider-tracker-view">Insider Tracker</button>
                     <button class="tab-button" data-tab="institutional-tracker-view">Institutional Tracker</button>
+                    <button class="tab-button" data-tab="earnings-calendar-view">Earnings Calendar</button>
+                    <button class="tab-button" data-tab="filings-activity-view">Filings Activity</button>
                 </nav>
             </div>
 
@@ -77,11 +79,26 @@
                 </div>
             </div>
 
-            <div id="insider-tracker-view" class="tab-content hidden">
+            <div id="insider-tracker-view" class="tab-content hidden"></div>
+            <div id="institutional-tracker-view" class="tab-content hidden"></div>
+            
+            <div id="earnings-calendar-view" class="tab-content hidden">
+                 <div id="upcoming-filings-card" class="dashboard-card max-w-2xl mx-auto">
+                    <h2 class="dashboard-card-title">Upcoming Earnings</h2>
+                    <div id="upcoming-filings-container">
+                        <p class="text-center text-gray-500 py-4">Loading...</p>
+                    </div>
                 </div>
-
-            <div id="institutional-tracker-view" class="tab-content hidden">
+            </div>
+            
+            <div id="filings-activity-view" class="tab-content hidden">
+                <div id="filings-by-company-card" class="dashboard-card max-w-2xl mx-auto">
+                    <h2 class="dashboard-card-title">Filings By Company (7d)</h2>
+                    <div id="filings-by-company-container">
+                        <p class="text-center text-gray-500 py-4">Loading...</p>
+                    </div>
                 </div>
+            </div>
 
         </main>
     </div>
@@ -129,7 +146,7 @@
         </div>
     </div>
     <div id="messageModal" class="fixed inset-0 z-[110] items-center justify-center p-4 modal"><div class="absolute inset-0 bg-gray-900 bg-opacity-75"></div><div class="relative modal-content"></div></div>
-    <div id="confirmationModal" class="fixed inset-0 z-[110] items-center justify-center p-4 modal"><div class="absolute inset-0 bg-gray-900 bg-opacity-75"></div><div class="relative bg-white rounded-2xl shadow-lg border border-gray-200 p-8 w-full max-w-sm m-4 text-center"><h2 id="confirmation-title" class="text-2xl font-bold mb-4">Are you sure?</h2><p id="confirmation-message" class="mb-6 text-gray-500">This action cannot be undone.</p><div class="flex justify-center gap-4"><button id="cancel-button" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-5 rounded-lg w-full">Cancel</button><button id="confirm-button" class="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-5 rounded-lg w-full">Confirm</button></div></div></div>
+    <div id="confirmationModal" class="fixed inset-0 z-[110] items-center justify-center p-4 modal"><div class="absolute inset-0 bg-gray-900 bg-opacity-75"></div><div class="relative bg-white rounded-2xl shadow-lg border border-gray-200 p-8 w-full max-w-sm m-4 text-center"><h2 id="confirmation-title" class="text-2xl font-bold mb-4">Are you sure?</h2><p id="confirmation-message" class="mb-6 text-gray-500">This action cannot be undone.</p<div class="flex justify-center gap-4"><button id="cancel-button" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-5 rounded-lg w-full">Cancel</button><button id="confirm-button" class="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-5 rounded-lg w-full">Confirm</button></div></div></div>
 
     <div id="deepDiveModal" class="fixed inset-0 z-[105] items-center justify-center p-4 modal">
         <div class="absolute inset-0 bg-gray-900 bg-opacity-75" id="close-deep-dive-modal-bg"></div>
