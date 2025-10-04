@@ -40,8 +40,8 @@ export const CONSTANTS = {
 
 // --- Master List of Top Investors ---
 export const TOP_25_INVESTORS = [
-    { name: "BlackRock Inc.", cik: "1364742", popular: true },
-    { name: "The Vanguard Group", cik: "102109", popular: true },
+    { name: "BlackRock Inc.", cik: "1364742" },
+    { name: "The Vanguard Group", cik: "102109" },
     { name: "State Street Corporation", cik: "93751" },
     { name: "Fidelity (FMR LLC)", cik: "35325" },
     { name: "Morgan Stanley", cik: "895421" },
@@ -53,22 +53,20 @@ export const TOP_25_INVESTORS = [
     { name: "T. Rowe Price Associates, Inc.", cik: "105223" },
     { name: "Invesco Ltd.", cik: "914208" },
     { name: "Northern Trust Corporation", cik: "73124" },
-    { name: "Bridgewater Associates (Ray Dalio)", cik: "1066395", popular: true },
-    { name: "Berkshire Hathaway (Warren Buffett)", cik: "1067983", popular: true },
+    { name: "Bridgewater Associates (Ray Dalio)", cik: "1066395" },
+    { name: "Berkshire Hathaway (Warren Buffett)", cik: "1067983" },
     { name: "Citadel Advisors (Ken Griffin)", cik: "1423053" },
     { name: "Millennium Management", cik: "1273087" },
     { name: "Renaissance Technologies (Jim Simons)", cik: "1037389" },
     { name: "Two Sigma Investments", cik: "1551336" },
     { name: "Elliott Investment Management", cik: "908862" },
-    { name: "Appaloosa Management (David Tepper)", cik: "1079121", popular: true },
-    { name: "Scion Asset Management (Michael Burry)", cik: "1649339", popular: true },
-    { name: "Pershing Square Capital (Bill Ackman)", cik: "1336528", popular: true },
-    { name: "Soros Fund Management", cik: "1029160", popular: true },
-    { name: "Duquesne Family Office (Stan Druckenmiller)", cik: "1536411", popular: true },
-    // Icahn was missing from the TOP_25 list but was in the popular list. Adding here for completeness.
-    { name: "Icahn Capital Management (Carl Icahn)", cik: "1011868", popular: true },
+    { name: "Appaloosa Management (David Tepper)", cik: "1079121" },
+    { name: "Scion Asset Management (Michael Burry)", cik: "1649339" },
+    { name: "Pershing Square Capital (Bill Ackman)", cik: "1336528" },
+    { name: "Soros Fund Management", cik: "1029160" },
+    { name: "Duquesne Family Office (Stan Druckenmiller)", cik: "1536411" },
+    { name: "Icahn Capital Management (Carl Icahn)", cik: "1011868" },
 ];
-
 
 export const FORM_8K_ANALYSIS_PROMPT = `...`; // Unchanged
 export const FORM_10K_ANALYSIS_PROMPT = `...`; // Unchanged
