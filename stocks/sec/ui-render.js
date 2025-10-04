@@ -4,7 +4,7 @@ import { getEarningsCalendar } from './api.js';
 import { getRecentPortfolioFilings, getPortfolioInsiderTrading, getPortfolioInstitutionalOwnership, getSecMaterialEvents, getSecAnnualReports, getSecQuarterlyReports, get13FHoldings, getWhaleFilings } from './sec-api.js';
 import { callApi } from './api.js';
 
-// --- NEW: List of popular investors ---
+// --- List of popular investors ---
 const POPULAR_INVESTORS = [
     { name: "Berkshire Hathaway", cik: "0001067983" },
     { name: "Scion Asset Management (Michael Burry)", cik: "0001649339" },
@@ -524,7 +524,6 @@ export async function renderInstitutionalTrackerView() {
     }
 }
 
-// --- NEW FUNCTION TO RENDER THE MARKET ANALYSIS VIEW ---
 export function renderMarketAnalysisView() {
     const container = document.getElementById('market-analysis-view');
     if (!container) return;
@@ -558,9 +557,9 @@ export function renderMarketAnalysisView() {
     container.innerHTML = html;
 }
 
-// --- REPURPOSED: This now renders the initial search/dropdown view ---
-export function renderWhaleWatchingView() {
-    const container = document.getElementById('whale-watching-view');
+// --- Renders the initial dropdown for the Investor Filings tab ---
+export function renderInvestorFilingsDropdownView() {
+    const container = document.getElementById('investor-filings-view');
     if (!container) return;
 
     const optionsHtml = POPULAR_INVESTORS
@@ -572,7 +571,7 @@ export function renderWhaleWatchingView() {
         <div class="dashboard-card">
             <h2 class="dashboard-card-title">Investor 13F Filings</h2>
             <div class="max-w-xl">
-                <label for="investor-select" class="block text-sm font-medium text-gray-700 mb-2">Select a popular investor to track:</label>
+                <label for="investor-select" class="block text-sm font-medium text-gray-700 mb-2">Select a popular investor to track their quarterly holdings:</label>
                 <select id="investor-select" class="block w-full p-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
                     <option value="">-- Choose an Investor --</option>
                     ${optionsHtml}
@@ -583,7 +582,7 @@ export function renderWhaleWatchingView() {
     `;
 }
 
-// --- REFACTORED: The old logic is now in this reusable function ---
+// --- Renders the detailed filings for a selected investor ---
 export async function renderInvestorFilingsView(cik, investorName) {
     const container = document.getElementById('investor-filings-container');
     if (!container) return;
@@ -739,7 +738,7 @@ export async function renderInvestorFilingsView(cik, investorName) {
     }
 }
 
-// --- FUNCTION TO RENDER THE COMPARISON ---
+// --- Renders the comparison view for a selected investor ---
 export function renderWhaleComparisonView() {
     const container = document.getElementById('whale-comparison-container');
     if (!container) return;
