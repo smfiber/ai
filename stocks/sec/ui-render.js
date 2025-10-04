@@ -549,21 +549,40 @@ export async function renderWhaleWatchingView() {
             return;
         }
         
-        // 1. Consolidate filings to handle amendments (13F-HR/A)
-        // This creates a map where each reporting period has only one definitive filing.
-        // If an amendment exists, it will overwrite the original filing for that same period.
-        const consolidatedFilings = new Map();
-        for (const filing of filings) {
+        // --- START OF NEW MERGE LOGIC ---
+
+        // 1. Group filings by reporting period to handle originals and amendments
+        const groupedByPeriod = filings.reduce((acc, filing) => {
             const period = filing.periodOfReport;
-            // If we already have a filing for this period, only replace it if the new one is an amendment.
-            if (!consolidatedFilings.has(period) || filing.formType.endsWith('/A')) {
-                consolidatedFilings.set(period, filing);
+            if (!acc[period]) {
+                acc[period] = {};
             }
-        }
+            if (filing.formType.endsWith('/A')) {
+                acc[period].amendment = filing;
+            } else {
+                acc[period].original = filing;
+            }
+            return acc;
+        }, {});
+
+        // 2. Create the final list of filings, merging where necessary
+        const filingsToRender = Object.values(groupedByPeriod).map(group => {
+            if (group.original && group.amendment) {
+                // MERGE: Use original as base, update with amendment
+                const holdingsMap = new Map(group.original.holdings.map(h => [h.cusip, h]));
+                group.amendment.holdings.forEach(h => holdingsMap.set(h.cusip, h));
+                
+                // Return a new filing object with merged data, using amendment's metadata
+                return {
+                    ...group.amendment,
+                    holdings: Array.from(holdingsMap.values()),
+                };
+            }
+            // If no merge is needed, return the latest one available (amendment or original)
+            return group.amendment || group.original;
+        }).sort((a, b) => new Date(b.filedAt) - new Date(a.filedAt));
         
-        // Convert map back to an array and sort chronologically
-        const filingsToRender = Array.from(consolidatedFilings.values())
-            .sort((a, b) => new Date(b.filedAt) - new Date(a.filedAt));
+        // --- END OF NEW MERGE LOGIC ---
 
         let html = `
             <div class="dashboard-card">
@@ -575,7 +594,7 @@ export async function renderWhaleWatchingView() {
             const filingDate = new Date(filing.filedAt).toLocaleDateString();
             const periodOfReport = filing.periodOfReport ? new Date(filing.periodOfReport).toLocaleDateString() : 'N/A';
             
-            // 2. Aggregate holdings within each filing to combine duplicate tickers
+            // Aggregate holdings within each filing to combine duplicate tickers
             const aggregatedHoldings = (filing.holdings || []).reduce((acc, holding) => {
                 const ticker = holding.ticker || 'N/A';
                 if (!acc[ticker]) {
