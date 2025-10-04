@@ -548,18 +548,19 @@ export function renderInvestorFilingsDropdownView() {
     const container = document.getElementById('investor-filings-view');
     if (!container) return;
 
-    const popularInvestors = TOP_25_INVESTORS.filter(investor => investor.popular);
-    
-    const optionsHtml = popularInvestors
+    // --- CHANGE STARTS HERE ---
+    // Use the full TOP_25_INVESTORS list instead of a filtered one.
+    const optionsHtml = TOP_25_INVESTORS
         .sort((a, b) => a.name.localeCompare(b.name))
         .map(investor => `<option value="${investor.cik}" data-name="${investor.name}">${investor.name}</option>`)
         .join('');
+    // --- CHANGE ENDS HERE ---
 
     container.innerHTML = `
         <div class="dashboard-card">
             <h2 class="dashboard-card-title">Investor 13F Filings</h2>
             <div class="max-w-xl">
-                <label for="investor-select" class="block text-sm font-medium text-gray-700 mb-2">Select a popular investor to track their quarterly holdings:</label>
+                <label for="investor-select" class="block text-sm font-medium text-gray-700 mb-2">Select an investor to track their quarterly holdings:</label>
                 <select id="investor-select" class="block w-full p-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
                     <option value="">-- Choose an Investor --</option>
                     ${optionsHtml}
