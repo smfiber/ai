@@ -211,3 +211,35 @@ export async function get13FHoldings(accessionNo) {
     
     return [];
 }
+
+/**
+ * Fetches the most recent 13F-HR filings for a specific CIK using the Full-Text Search API.
+ * @param {string} cik The CIK of the whale investor.
+ * @returns {Promise<Array>} A promise that resolves to the array of filings.
+ */
+export async function getWhaleFilings(cik) {
+    if (!state.secApiKey) throw new Error("SEC API Key is not configured.");
+    if (!cik) throw new Error("A CIK is required.");
+
+    const url = `https://api.sec-api.io/full-text-search?token=${state.secApiKey}`;
+    
+    const payload = {
+        "query": "*",
+        "ciks": [cik],
+        "formTypes": ["13F-HR"]
+    };
+
+    const result = await callApi(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    });
+    
+    if (result && result.filings) {
+        // This endpoint sorts by relevance, not date, so we must sort manually.
+        result.filings.sort((a, b) => new Date(b.filedAt) - new Date(a.filedAt));
+        return result.filings;
+    }
+    
+    return [];
+}
