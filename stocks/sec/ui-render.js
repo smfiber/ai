@@ -1,4 +1,5 @@
 import { CONSTANTS, state } from './config.js'; 
+import { getDocs, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getEarningsCalendar } from './api.js';
 import { getRecentPortfolioFilings, getPortfolioInsiderTrading, getPortfolioInstitutionalOwnership, getSecMaterialEvents, getSecAnnualReports, getSecQuarterlyReports } from './sec-api.js';
 
