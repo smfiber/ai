@@ -549,22 +549,55 @@ export async function renderWhaleWatchingView() {
             return;
         }
         
-        // This is the only change needed. We can use the 'filings' array directly.
-        const filingsWithHoldings = filings;
+        // 1. Consolidate filings to handle amendments (13F-HR/A)
+        // This creates a map where each reporting period has only one definitive filing.
+        // If an amendment exists, it will overwrite the original filing for that same period.
+        const consolidatedFilings = new Map();
+        for (const filing of filings) {
+            const period = filing.periodOfReport;
+            // If we already have a filing for this period, only replace it if the new one is an amendment.
+            if (!consolidatedFilings.has(period) || filing.formType.endsWith('/A')) {
+                consolidatedFilings.set(period, filing);
+            }
+        }
+        
+        // Convert map back to an array and sort chronologically
+        const filingsToRender = Array.from(consolidatedFilings.values())
+            .sort((a, b) => new Date(b.filedAt) - new Date(a.filedAt));
 
         let html = `
             <div class="dashboard-card">
                 <h2 class="dashboard-card-title">Whale Watching: ${WHALE_NAME}</h2>
-                <p class="text-sm text-gray-500 mb-6">Displaying all quarterly holdings from the last year.</p>
+                <p class="text-sm text-gray-500 mb-6">Displaying aggregated quarterly holdings from the last year.</p>
                 <div class="space-y-4">`;
 
-        for (const filing of filingsWithHoldings) {
+        for (const filing of filingsToRender) {
             const filingDate = new Date(filing.filedAt).toLocaleDateString();
             const periodOfReport = filing.periodOfReport ? new Date(filing.periodOfReport).toLocaleDateString() : 'N/A';
-            const holdings = filing.holdings || [];
+            
+            // 2. Aggregate holdings within each filing to combine duplicate tickers
+            const aggregatedHoldings = (filing.holdings || []).reduce((acc, holding) => {
+                const ticker = holding.ticker || 'N/A';
+                if (!acc[ticker]) {
+                    acc[ticker] = {
+                        nameOfIssuer: holding.nameOfIssuer,
+                        shares: 0,
+                        value: 0
+                    };
+                }
+                acc[ticker].shares += Number(holding.shrsOrPrnAmt.sshPrnamt);
+                acc[ticker].value += (holding.value * 1000); // Value is reported in thousands
+                return acc;
+            }, {});
+            
+            // Convert the aggregated object back into a sorted array
+            const holdings = Object.entries(aggregatedHoldings).map(([ticker, data]) => ({
+                ticker,
+                ...data
+            })).sort((a, b) => b.value - a.value); // Sort by highest value
 
             html += `
-                <details class="sector-group">
+                <details class="sector-group" open>
                     <summary class="sector-header">
                         <span>Filing Date: ${filingDate} (For Period: ${periodOfReport})</span>
                         <span>${holdings.length} Holdings</span>
@@ -582,10 +615,10 @@ export async function renderWhaleWatchingView() {
                             <tbody class="bg-white divide-y divide-gray-200">
                                 ${holdings.map(h => `
                                     <tr>
-                                        <td class="px-4 py-2 whitespace-nowrap font-bold">${sanitizeText(h.ticker || 'N/A')}</td>
+                                        <td class="px-4 py-2 whitespace-nowrap font-bold">${sanitizeText(h.ticker)}</td>
                                         <td class="px-4 py-2 whitespace-nowrap">${sanitizeText(h.nameOfIssuer)}</td>
-                                        <td class="px-4 py-2 whitespace-nowrap text-right">${Number(h.shrsOrPrnAmt.sshPrnamt).toLocaleString()}</td>
-                                        <td class="px-4 py-2 whitespace-nowrap text-right">${(h.value * 1000).toLocaleString()}</td>
+                                        <td class="px-4 py-2 whitespace-nowrap text-right">${h.shares.toLocaleString()}</td>
+                                        <td class="px-4 py-2 whitespace-nowrap text-right">${h.value.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 })}</td>
                                     </tr>
                                 `).join('')}
                             </tbody>
