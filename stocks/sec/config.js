@@ -62,7 +62,6 @@ export const TOP_25_INVESTORS = [
   { "name": "Trian Fund Management (Nelson Peltz)", "cik": "1338697" },
   { "name": "ValueAct Capital Management (Mason Morfit & Rob Hale)", "cik": "1157444" },
   { "name": "Yacktman Asset Management", "cik": "875235" }
-]
 ];
 
 export const FORM_8K_ANALYSIS_PROMPT = `...`; // Unchanged
