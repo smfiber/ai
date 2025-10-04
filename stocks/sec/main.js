@@ -24,6 +24,9 @@ async function initializeAppContent() {
     if (state.appIsInitialized) return;
     state.appIsInitialized = true;
     
+    // First, ensure the portfolio data is loaded into the cache
+    await fetchAndCachePortfolioData();
+
     const lastCheckTimestamp = localStorage.getItem('lastFilingCheck');
     const twentyFourHours = 24 * 60 * 60 * 1000;
     const now = new Date().getTime();
@@ -32,11 +35,9 @@ async function initializeAppContent() {
     if (!lastCheckTimestamp || (now - parseInt(lastCheckTimestamp) > twentyFourHours)) {
         await checkForNewFilings();
         localStorage.setItem('lastFilingCheck', now.toString());
-    } else {
-        await fetchAndCachePortfolioData();
     }
     
-    // --- NEW: Call the function to populate our new dashboard ---
+    // Now, call the function to populate our new dashboard
     await fetchAndRenderRecentFilings();
 }
 
@@ -184,7 +185,7 @@ function setupAuthUI(user) {
 
 // --- APP INITIALIZATION TRIGGER ---
 function initializeApplication() {
-    setupEventListeners(); // We will simplify this file next
+    setupEventListeners();
     document.getElementById(CONSTANTS.FORM_API_KEY)?.addEventListener('submit', handleApiKeySubmit);
     openModal(CONSTANTS.MODAL_API_KEY);
 }
