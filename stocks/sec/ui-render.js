@@ -521,7 +521,6 @@ export async function renderWhaleWatchingView() {
 
         const { filings, payload } = await getWhaleFilings(WHALE_CIK);
 
-        // It's crucial to have the debug info available even if there are no filings.
         const renderDebugInfo = () => {
             return `
                 <div class="mt-6 border-t pt-4 space-y-2">
@@ -549,14 +548,9 @@ export async function renderWhaleWatchingView() {
                 </div>`;
             return;
         }
-
-        const holdingsPromises = filings.map(filing => 
-            get13FHoldings(filing.accessionNo).then(holdings => ({
-                ...filing,
-                holdings: holdings 
-            }))
-        );
-        const filingsWithHoldings = await Promise.all(holdingsPromises);
+        
+        // This is the only change needed. We can use the 'filings' array directly.
+        const filingsWithHoldings = filings;
 
         let html = `
             <div class="dashboard-card">
@@ -567,12 +561,13 @@ export async function renderWhaleWatchingView() {
         for (const filing of filingsWithHoldings) {
             const filingDate = new Date(filing.filedAt).toLocaleDateString();
             const periodOfReport = filing.periodOfReport ? new Date(filing.periodOfReport).toLocaleDateString() : 'N/A';
+            const holdings = filing.holdings || [];
 
             html += `
                 <details class="sector-group">
                     <summary class="sector-header">
                         <span>Filing Date: ${filingDate} (For Period: ${periodOfReport})</span>
-                        <span>${filing.holdings.length} Holdings</span>
+                        <span>${holdings.length} Holdings</span>
                     </summary>
                     <div class="sector-content overflow-x-auto">
                         <table class="min-w-full divide-y divide-gray-200 text-sm">
@@ -585,7 +580,7 @@ export async function renderWhaleWatchingView() {
                                 </tr>
                             </thead>
                             <tbody class="bg-white divide-y divide-gray-200">
-                                ${(filing.holdings || []).map(h => `
+                                ${holdings.map(h => `
                                     <tr>
                                         <td class="px-4 py-2 whitespace-nowrap font-bold">${sanitizeText(h.ticker || 'N/A')}</td>
                                         <td class="px-4 py-2 whitespace-nowrap">${sanitizeText(h.nameOfIssuer)}</td>
