@@ -1,6 +1,7 @@
 import { CONSTANTS, state } from './config.js';
 import { fetchAndRenderRecentFilings, renderCompanyDeepDive } from './ui-render.js';
 import { closeModal, openDeepDiveModal } from './ui-modals.js';
+import { handleFilingAnalysis } from './ui-handlers.js';
 
 function setupGlobalEventListeners() {
     const appContainer = document.getElementById('app-container');
@@ -28,12 +29,29 @@ function setupGlobalEventListeners() {
             const ticker = target.closest('.company-link').dataset.ticker;
             if (ticker) {
                 openDeepDiveModal(ticker);
-                // This function will now be called to populate the modal
                 renderCompanyDeepDive(ticker); 
             }
             return;
         }
     });
+
+    // Event delegation for the Deep Dive Modal
+    const deepDiveModal = document.getElementById('deepDiveModal');
+    if (deepDiveModal) {
+        deepDiveModal.addEventListener('click', (e) => {
+            const target = e.target.closest('button');
+            if (!target) return;
+
+            if (target.classList.contains('analyze-filing-btn')) {
+                const filingUrl = target.dataset.filingUrl;
+                const formType = target.dataset.formType;
+                const ticker = target.dataset.ticker;
+                if (filingUrl && formType && ticker) {
+                    handleFilingAnalysis(filingUrl, formType, ticker);
+                }
+            }
+        });
+    }
 }
 
 export function setupEventListeners() {
