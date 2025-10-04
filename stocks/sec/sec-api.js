@@ -213,42 +213,35 @@ export async function get13FHoldings(accessionNo) {
 }
 
 /**
- * Fetches the most recent 13F-HR filings for a specific CIK using the Full-Text Search API.
- * This new version uses a more reliable query to find filings within the last year.
+ * Fetches the most recent 13F-HR filings for a specific CIK using the Query API.
+ * This is a more reliable method than full-text search for this use case.
  * @param {string} cik The CIK of the whale investor.
- * @returns {Promise<{filings: Array, payload: object}>} A promise that resolves to an object containing the filings and the request payload.
+ * @returns {Promise<{filings: Array, payload: object}>} A promise that resolves to an object containing the filings (with holdings included) and the request payload.
  */
 export async function getWhaleFilings(cik) {
     if (!state.secApiKey) throw new Error("SEC API Key is not configured.");
     if (!cik) throw new Error("A CIK is required.");
 
-    const url = `https://api.sec-api.io/full-text-search?token=${state.secApiKey}`;
-    
     const endDate = new Date();
     const startDate = new Date();
     startDate.setFullYear(startDate.getFullYear() - 1);
     
     const formatDate = (date) => date.toISOString().split('T')[0];
 
-    const payload = {
-        "query": "\"nameOfIssuer\"",
-        "ciks": [cik],
-        "formTypes": ["13F-HR"],
-        "startDate": formatDate(startDate),
-        "endDate": formatDate(endDate)
+    const queryObject = {
+      "query": {
+        "query_string": {
+          "query": `formType:\"13F-HR\" AND cik:\"${cik}\" AND filedAt:[${formatDate(startDate)} TO ${formatDate(endDate)}]`
+        }
+      },
+      "from": "0",
+      "size": "20",
+      "sort": [{ "filedAt": { "order": "desc" } }]
     };
 
-    const result = await callApi(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-    });
+    const result = await callSecQueryApi(queryObject);
     
-    let filings = [];
-    if (result && result.filings) {
-        result.filings.sort((a, b) => new Date(b.filedAt) - new Date(a.filedAt));
-        filings = result.filings;
-    }
+    const filings = result?.filings || [];
     
-    return { filings, payload };
+    return { filings: filings, payload: queryObject };
 }
