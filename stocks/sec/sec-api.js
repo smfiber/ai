@@ -136,14 +136,18 @@ export async function getRecentPortfolioFilings(tickers) {
     return result?.filings || [];
 }
 
-export async function getFilingContent(filingUrl) {
+export async function getFilingContent(filingUrl, item = null) {
     if (!state.secApiKey) throw new Error("SEC API Key is not configured.");
     if (!filingUrl) throw new Error("A filing URL is required.");
 
-    // Correct endpoint for extracting filing text via GET request
-    const url = `https://api.sec-api.io/extractor?url=${encodeURIComponent(filingUrl)}&type=text&token=${state.secApiKey}`;
+    // Base URL for the extractor endpoint
+    let url = `https://api.sec-api.io/extractor?url=${encodeURIComponent(filingUrl)}&type=text&token=${state.secApiKey}`;
 
-    // The fetch call is now a simple GET request
+    // Append the item parameter if it's provided (for 8-K filings)
+    if (item) {
+        url += `&item=${item}`;
+    }
+
     const response = await fetch(url);
 
     if (!response.ok) {
