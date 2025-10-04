@@ -532,21 +532,28 @@ export async function renderWhaleWatchingView() {
             return;
         }
 
-        const latestFiling = allFilings[0];
-        const previousFiling = allFilings.find(f => f.periodOfReport !== latestFiling.periodOfReport);
-
-        if (!previousFiling) {
+        const uniquePeriods = [...new Set(allFilings.map(f => f.periodOfReport))].sort().reverse();
+        
+        if (uniquePeriods.length < 2) {
             container.innerHTML = `<p class="text-center text-gray-500 py-8">Not enough historical data to compare for ${WHALE_NAME}.</p>`;
             return;
         }
 
-        // --- CORRECTED LOGIC ---
-        // Use the new get13FHoldings function to fetch the detailed data for each filing.
+        const latestPeriod = uniquePeriods[0];
+        const previousPeriod = uniquePeriods[1];
+        
+        const latestFiling = allFilings.find(f => f.periodOfReport === latestPeriod);
+        const previousFiling = allFilings.find(f => f.periodOfReport === previousPeriod);
+        
+        if (!latestFiling || !previousFiling) {
+            container.innerHTML = `<p class="text-center text-gray-500 py-8">Could not identify two distinct filing periods to compare for ${WHALE_NAME}.</p>`;
+            return;
+        }
+
         const [currentHoldings, prevHoldings] = await Promise.all([
             get13FHoldings(latestFiling.accessionNo),
             get13FHoldings(previousFiling.accessionNo)
         ]);
-        // --- END CORRECTION ---
 
         const currentHoldingsMap = new Map(currentHoldings.map(h => [h.ticker, h]));
         const prevHoldingsMap = new Map(prevHoldings.map(h => [h.ticker, h]));
@@ -591,13 +598,15 @@ export async function renderWhaleWatchingView() {
                 </div>`;
         };
         
-        const formatDate = (dateString) => {
+        const formatQuarter = (dateString) => {
+            if (!dateString) return 'N/A';
             const [year, month] = dateString.split('-');
-            const date = new Date(year, month - 1, 1);
-            return date.toLocaleString('default', { month: 'short' }) + ` ${year}`;
-        }
-        const currentQuarter = formatDate(latestFiling.periodOfReport);
-        const prevQuarter = formatDate(previousFiling.periodOfReport);
+            const quarter = Math.ceil(parseInt(month) / 3);
+            return `Q${quarter} ${year}`;
+        };
+
+        const currentQuarter = formatQuarter(latestFiling.periodOfReport);
+        const prevQuarter = formatQuarter(previousFiling.periodOfReport);
 
         container.innerHTML = `
             <div class="dashboard-card">
@@ -615,4 +624,6 @@ export async function renderWhaleWatchingView() {
         console.error("Error rendering whale watching view:", error);
         container.innerHTML = `<p class="text-center text-red-500 p-8">Could not load whale watching data: ${error.message}</p>`;
     }
+}
+
 }
