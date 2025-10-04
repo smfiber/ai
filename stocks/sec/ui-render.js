@@ -1,7 +1,8 @@
 import { CONSTANTS, state } from './config.js'; 
 import { getDocs, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getEarningsCalendar } from './api.js';
-import { getRecentPortfolioFilings, getPortfolioInsiderTrading, getPortfolioInstitutionalOwnership, getSecMaterialEvents, getSecAnnualReports, getSecQuarterlyReports } from './sec-api.js';
+import { getRecentPortfolioFilings, getPortfolioInsiderTrading, getPortfolioInstitutionalOwnership, getSecMaterialEvents, getSecAnnualReports, getSecQuarterlyReports, get13FHoldings } from './sec-api.js';
+import { callApi } from './api.js'; // We may need the generic callApi for the Query API
 
 // --- UTILITY & SECURITY HELPERS ---
 function sanitizeText(text) {
@@ -216,9 +217,97 @@ export function renderFilingsActivityView() {
 
 
 // --- DEEP DIVE MODAL RENDERING ---
+/**
+ * NEW: Renders the institutional ownership flow for a given stock.
+ */
+async function renderOwnershipFlow(ticker) {
+    const container = document.getElementById('ownership-flow-container');
+    if (!container) return;
+    container.innerHTML = `<div class="p-4"><div class="loader mx-auto"></div></div>`;
+
+    try {
+        const url = `https://api.sec-api.io?token=${state.secApiKey}`;
+        const queryObject = {
+            "query": { "query_string": { "query": `formType:\"13F-HR\" AND holdings.ticker:\"${ticker}\"` } },
+            "from": "0", "size": "250", "sort": [{ "filedAt": { "order": "desc" } }]
+        };
+        const result = await callApi(url, { method: 'POST', body: JSON.stringify(queryObject) });
+        const allFilings = result.filings || [];
+
+        const filingsByQuarter = allFilings.reduce((acc, f) => {
+            const quarter = f.periodOfReport;
+            if (!acc[quarter]) acc[quarter] = [];
+            acc[quarter].push(f);
+            return acc;
+        }, {});
+
+        const sortedQuarters = Object.keys(filingsByQuarter).sort().reverse();
+        if (sortedQuarters.length < 2) {
+            container.innerHTML = `<p class="text-sm text-center text-gray-500 p-4">Not enough historical data to compare ownership.</p>`;
+            return;
+        }
+
+        const currentHoldingsList = filingsByQuarter[sortedQuarters[0]];
+        const prevHoldingsList = filingsByQuarter[sortedQuarters[1]];
+        
+        const currentHoldings = new Map(currentHoldingsList.map(f => [f.companyName, f.holdings.find(h => h.ticker === ticker).value]));
+        const prevHoldings = new Map(prevHoldingsList.map(f => [f.companyName, f.holdings.find(h => h.ticker === ticker).value]));
+
+        const increased = [], decreased = [], newPositions = [], soldPositions = [];
+
+        for (const [name, value] of currentHoldings.entries()) {
+            if (prevHoldings.has(name)) {
+                if (value > prevHoldings.get(name)) increased.push({ name, value });
+                else if (value < prevHoldings.get(name)) decreased.push({ name, value });
+            } else {
+                newPositions.push({ name, value });
+            }
+        }
+        for (const [name, value] of prevHoldings.entries()) {
+            if (!currentHoldings.has(name)) soldPositions.push({ name, value });
+        }
+        
+        const renderList = (title, items, color) => {
+            if (items.length === 0) return '';
+            return `
+                <div>
+                    <h4 class="font-semibold text-xs uppercase tracking-wider text-gray-500 mb-1">${title}</h4>
+                    <ul class="text-sm space-y-1">
+                        ${items.sort((a,b) => b.value - a.value).slice(0, 5).map(item => `
+                            <li class="flex justify-between items-center">
+                                <span class="truncate pr-2">${sanitizeText(item.name)}</span>
+                                <span class="font-mono text-xs ${color} font-semibold">$${item.value.toLocaleString()}</span>
+                            </li>
+                        `).join('')}
+                    </ul>
+                </div>`;
+        };
+
+        container.innerHTML = `
+             <div class="p-3 border rounded-lg bg-gray-50">
+                <h3 class="text-base font-semibold text-gray-800 mb-3">Institutional Ownership Flow</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    ${renderList('New Positions', newPositions, 'text-green-600')}
+                    ${renderList('Increased Positions', increased, 'text-green-500')}
+                    ${renderList('Sold Out', soldPositions, 'text-red-600')}
+                    ${renderList('Decreased Positions', decreased, 'text-red-500')}
+                </div>
+            </div>`;
+
+    } catch (error) {
+        console.error('Error rendering ownership flow:', error);
+        container.innerHTML = `<p class="text-sm text-center text-red-500 p-4">Could not load ownership data.</p>`;
+    }
+}
+
+
 export async function renderCompanyDeepDive(ticker) {
     const container = document.getElementById('historical-filings-container');
-    if (!container) return;
+    const ownershipContainer = document.getElementById('ownership-flow-container');
+    if (!container || !ownershipContainer) return;
+    
+    // NEW: Trigger ownership flow rendering
+    renderOwnershipFlow(ticker);
 
     try {
         const [events, annual, quarterly] = await Promise.all([
@@ -258,6 +347,7 @@ export async function renderCompanyDeepDive(ticker) {
                                     <p class="text-xs text-gray-500 mt-1">Filed: ${filingDate}</p>
                                 </div>
                                 <div class="flex items-center gap-2">
+                                     <button data-filing-url="${sanitizeText(filing.linkToFilingDetails)}" data-form-type="${filing.formType}" data-ticker="${ticker}" class="analyze-filing-btn text-sm bg-indigo-100 hover:bg-indigo-200 text-indigo-800 font-semibold py-1 px-3 rounded-lg">Analyze</button>
                                     <a href="${sanitizeText(filing.linkToFilingDetails)}" target="_blank" rel="noopener noreferrer" class="text-sm bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-1 px-3 rounded-lg">View</a>
                                 </div>
                             </div>
@@ -424,5 +514,99 @@ export async function renderInstitutionalTrackerView() {
     } catch (error) {
         console.error("Error rendering institutional tracker:", error);
         container.innerHTML = `<p class="text-center text-red-500 p-8">Could not load institutional ownership: ${error.message}</p>`;
+    }
+}
+
+/**
+ * NEW: Renders the Whale Watching view.
+ */
+export async function renderWhaleWatchingView() {
+    const container = document.getElementById('whale-watching-view');
+    if (!container) return;
+    container.innerHTML = `<div class="loader mx-auto my-8"></div>`;
+
+    try {
+        // For this example, we'll hardcode Berkshire Hathaway's CIK
+        const WHALE_CIK = '1067983'; 
+        const WHALE_NAME = 'Berkshire Hathaway Inc.';
+
+        // Use the Query API to get the two most recent 13F filings for our whale
+        const url = `https://api.sec-api.io?token=${state.secApiKey}`;
+        const queryObject = {
+            "query": { "query_string": { "query": `formType:\"13F-HR\" AND cik:\"${WHALE_CIK}\"` } },
+            "from": "0", "size": "2", "sort": [{ "filedAt": { "order": "desc" } }]
+        };
+        const result = await callApi(url, { method: 'POST', body: JSON.stringify(queryObject) });
+        const filings = result.filings;
+
+        if (!filings || filings.length < 2) {
+            container.innerHTML = `<p class="text-center text-gray-500 py-8">Not enough filing data available for ${WHALE_NAME}.</p>`;
+            return;
+        }
+
+        const [currentHoldings, prevHoldings] = await Promise.all([
+            get13FHoldings(filings[0].accessionNo),
+            get13FHoldings(filings[1].accessionNo)
+        ]);
+
+        const currentHoldingsMap = new Map(currentHoldings.map(h => [h.ticker, h]));
+        const prevHoldingsMap = new Map(prevHoldings.map(h => [h.ticker, h]));
+
+        const newPositions = [], soldPositions = [], increased = [], decreased = [];
+
+        for (const [ticker, holding] of currentHoldingsMap.entries()) {
+            if (prevHoldingsMap.has(ticker)) {
+                const prevHolding = prevHoldingsMap.get(ticker);
+                const shareChange = holding.shrsOrPrnAmt.sshPrnamt - prevHolding.shrsOrPrnAmt.sshPrnamt;
+                if (shareChange > 0) increased.push({ ...holding, change: shareChange });
+                else if (shareChange < 0) decreased.push({ ...holding, change: shareChange });
+            } else {
+                newPositions.push(holding);
+            }
+        }
+        for (const [ticker, holding] of prevHoldingsMap.entries()) {
+            if (!currentHoldingsMap.has(ticker)) soldPositions.push(holding);
+        }
+
+        const renderHoldingList = (title, items, showChange = false) => {
+            if (!items || items.length === 0) return '';
+            items.sort((a, b) => b.value - a.value); // Sort by value
+            return `
+                <div class="dashboard-card">
+                    <h3 class="dashboard-card-title">${title} (${items.length})</h3>
+                    <ul class="divide-y divide-gray-200">
+                        ${items.slice(0, 15).map(h => `
+                            <li class="p-2 text-sm flex justify-between items-center">
+                                <div>
+                                    <span class="font-bold">${sanitizeText(h.ticker || 'N/A')}</span>
+                                    <p class="text-xs text-gray-500 truncate">${sanitizeText(h.nameOfIssuer)}</p>
+                                </div>
+                                <div class="text-right">
+                                    <span class="font-semibold">$${h.value.toLocaleString()}</span>
+                                    ${showChange ? `<p class="text-xs ${h.change > 0 ? 'text-green-600' : 'text-red-600'}">${h.change.toLocaleString()} shares</p>` : ''}
+                                </div>
+                            </li>`).join('')}
+                    </ul>
+                </div>`;
+        };
+
+        const currentQuarter = new Date(filings[0].periodOfReport).toLocaleDateString(undefined, { quarter: 'short', year: 'numeric' });
+        const prevQuarter = new Date(filings[1].periodOfReport).toLocaleDateString(undefined, { quarter: 'short', year: 'numeric' });
+
+        container.innerHTML = `
+            <div class="dashboard-card">
+                <h2 class="dashboard-card-title">Whale Watching: ${WHALE_NAME}</h2>
+                <p class="text-sm text-gray-500 mb-6">Comparing ${currentQuarter} vs. ${prevQuarter} filings.</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    ${renderHoldingList('New Positions', newPositions)}
+                    ${renderHoldingList('Sold Out', soldPositions)}
+                    ${renderHoldingList('Increased Positions', increased, true)}
+                    ${renderHoldingList('Decreased Positions', decreased, true)}
+                </div>
+            </div>`;
+
+    } catch(error) {
+        console.error("Error rendering whale watching view:", error);
+        container.innerHTML = `<p class="text-center text-red-500 p-8">Could not load whale watching data: ${error.message}</p>`;
     }
 }
