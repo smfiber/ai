@@ -1,7 +1,7 @@
 import { CONSTANTS, state } from './config.js'; 
 import { getDocs, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getEarningsCalendar } from './api.js';
-import { getRecentPortfolioFilings, getPortfolioInsiderTrading, getPortfolioInstitutionalOwnership, getSecMaterialEvents, getSecAnnualReports, getSecQuarterlyReports, get13FHoldings } from './sec-api.js';
+import { getRecentPortfolioFilings, getPortfolioInsiderTrading, getPortfolioInstitutionalOwnership, getSecMaterialEvents, getSecAnnualReports, getSecQuarterlyReports, get13FHoldings, getWhaleFilings } from './sec-api.js';
 import { callApi } from './api.js';
 
 // --- UTILITY & SECURITY HELPERS ---
@@ -519,13 +519,14 @@ export async function renderWhaleWatchingView() {
         const WHALE_CIK = '1067983'; 
         const WHALE_NAME = 'Berkshire Hathaway Inc.';
 
-        const url = `https://api.sec-api.io?token=${state.secApiKey}`;
-        const queryObject = {
-            "query": { "query_string": { "query": `formType:\"13F-HR\" AND cik:\"${WHALE_CIK}\"` } },
-            "from": "0", "size": "10", "sort": [{ "filedAt": { "order": "desc" } }]
+        const allFilings = await getWhaleFilings(WHALE_CIK);
+        
+        // For debug display
+        const queryForDebug = {
+            "query": "*",
+            "ciks": [WHALE_CIK],
+            "formTypes": ["13F-HR"]
         };
-        const result = await callApi(url, { method: 'POST', body: JSON.stringify(queryObject) });
-        const allFilings = result.filings;
 
         if (!allFilings || allFilings.length === 0) {
             container.innerHTML = `<p class="text-center text-gray-500 py-8">No filing data available for ${WHALE_NAME}.</p>`;
@@ -635,8 +636,8 @@ export async function renderWhaleWatchingView() {
         // Now populate the debug info
         const debugQueryEl = document.getElementById('debug-query');
         const debugResponseEl = document.getElementById('debug-response');
-        if (debugQueryEl) debugQueryEl.textContent = JSON.stringify(queryObject, null, 2);
-        if (debugResponseEl) debugResponseEl.textContent = JSON.stringify(result.filings, null, 2);
+        if (debugQueryEl) debugQueryEl.textContent = JSON.stringify(queryForDebug, null, 2);
+        if (debugResponseEl) debugResponseEl.textContent = JSON.stringify(allFilings, null, 2);
 
     } catch(error) {
         console.error("Error rendering whale watching view:", error);
