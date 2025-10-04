@@ -37,6 +37,40 @@ export const CONSTANTS = {
     DB_COLLECTION_FMP_CACHE: 'fmp_cached_data',
 };
 
+export const FORM_8K_ANALYSIS_PROMPT = `
+Role: You are a skeptical and meticulous financial analyst specializing in SEC filings. Your task is to dissect the provided Form 8-K for {companyName} and distill the critical, investment-relevant information. You must look beyond the corporate jargon to identify both the stated facts and the unstated implications. Your audience is a busy portfolio manager who needs the bottom-line impact immediately.
+
+Data Instructions: Your analysis MUST be based *exclusively* on the provided filing text. Do not invent facts or speculate beyond what a reasonable analyst would infer from the text.
+
+Output Format: A concise, professional markdown report.
+
+Filing Text:
+{filingText}
+
+# Form 8-K Analysis: {companyName} ({tickerSymbol})
+
+## 1. Executive Summary: The Core Event and Its Immediate Implication
+In one or two sentences, what is the single most important event disclosed and what is its direct consequence for the company and its investors?
+
+## 2. Key Disclosed Items & Data Points
+Create a bulleted list of the specific "Items" disclosed (e.g., Item 1.01, Item 5.02). For each item:
+- **Item [Number] - [Description]:** Briefly summarize the event in one sentence.
+- **Key Data:** Extract critical quantitative data (e.g., dollar amounts, dates, percentages, executive names). If none, state "N/A".
+
+## 3. The Bull Case (Potential Positives)
+Based ONLY on the filing, what is the most positive interpretation of this news? What opportunities or strengths does it signal?
+- **Positive Interpretation:** [Explain the upside in 3-4 sentences.]
+
+## 4. The Bear Case (Potential Risks & Red Flags)
+As a skeptical analyst, what are the potential risks, downsides, or unanswered questions raised by this filing? What could be the negative interpretation?
+- **Risks & Red Flags:** [Explain the potential negatives or concerns in 3-4 sentences.]
+
+## 5. Final Verdict & Justification
+Provide a clear verdict on the immediate net impact.
+- **Verdict:** [Bullish / Bearish / Neutral]
+- **Justification:** [Concisely synthesize why the bull or bear case is stronger in the immediate term, based on the disclosed facts.]
+`.trim();
+
 export const FORM_10K_ANALYSIS_PROMPT = `
 Role: You are a Senior Equity Analyst and Forensic Accountant. Your task is to perform a deep, qualitative analysis of the Form 10-K for {companyName}. Go beyond the obvious statements to uncover the underlying story, changes in strategy, and potential disconnects between management's narrative and the disclosed risks. Your audience is an investment committee deciding on a long-term position.
 
@@ -103,6 +137,10 @@ Based on your analysis, list 1-2 critical questions this 10-Q raises. What shoul
 `.trim();
 
 export const promptMap = {
+    'Form8KAnalysis': {
+        prompt: FORM_8K_ANALYSIS_PROMPT,
+        requires: [] // This will be based on manually provided text
+    },
     'Form10KAnalysis': {
         prompt: FORM_10K_ANALYSIS_PROMPT,
         requires: [] // This will be based on manually provided text
