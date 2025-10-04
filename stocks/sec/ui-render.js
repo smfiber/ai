@@ -532,7 +532,8 @@ export async function renderWhaleWatchingView() {
             return;
         }
 
-        const uniquePeriods = [...new Set(allFilings.map(f => f.periodOfReport))].sort().reverse();
+        const validFilings = allFilings.filter(f => f && f.periodOfReport);
+        const uniquePeriods = [...new Set(validFilings.map(f => f.periodOfReport))].sort().reverse();
         
         if (uniquePeriods.length < 2) {
             container.innerHTML = `<p class="text-center text-gray-500 py-8">Not enough historical data to compare for ${WHALE_NAME}.</p>`;
@@ -542,8 +543,8 @@ export async function renderWhaleWatchingView() {
         const latestPeriod = uniquePeriods[0];
         const previousPeriod = uniquePeriods[1];
         
-        const latestFiling = allFilings.find(f => f.periodOfReport === latestPeriod);
-        const previousFiling = allFilings.find(f => f.periodOfReport === previousPeriod);
+        const latestFiling = validFilings.find(f => f.periodOfReport === latestPeriod);
+        const previousFiling = validFilings.find(f => f.periodOfReport === previousPeriod);
         
         if (!latestFiling || !previousFiling) {
             container.innerHTML = `<p class="text-center text-gray-500 py-8">Could not identify two distinct filing periods to compare for ${WHALE_NAME}.</p>`;
@@ -608,7 +609,7 @@ export async function renderWhaleWatchingView() {
         const currentQuarter = formatQuarter(latestFiling.periodOfReport);
         const prevQuarter = formatQuarter(previousFiling.periodOfReport);
 
-        container.innerHTML = `
+        const mainContentHtml = `
             <div class="dashboard-card">
                 <h2 class="dashboard-card-title">Whale Watching: ${WHALE_NAME}</h2>
                 <p class="text-sm text-gray-500 mb-6">Comparing ${currentQuarter} vs. ${prevQuarter} filings.</p>
@@ -618,7 +619,24 @@ export async function renderWhaleWatchingView() {
                     ${renderHoldingList('Increased Positions', increased, true)}
                     ${renderHoldingList('Decreased Positions', decreased, true)}
                 </div>
+                <details class="mt-6 border-t pt-4">
+                    <summary class="cursor-pointer text-sm font-semibold text-gray-500 hover:text-gray-800">Show API Debug Info</summary>
+                    <div class="mt-2 p-4 bg-gray-800 text-white text-xs rounded-lg overflow-x-auto">
+                        <h4 class="font-bold text-gray-300 mb-1">API Query:</h4>
+                        <pre><code id="debug-query"></code></pre>
+                        <h4 class="mt-3 font-bold text-gray-300 mb-1">API Response (Filings List):</h4>
+                        <pre><code id="debug-response"></code></pre>
+                    </div>
+                </details>
             </div>`;
+
+        container.innerHTML = mainContentHtml;
+
+        // Now populate the debug info
+        const debugQueryEl = document.getElementById('debug-query');
+        const debugResponseEl = document.getElementById('debug-response');
+        if (debugQueryEl) debugQueryEl.textContent = JSON.stringify(queryObject, null, 2);
+        if (debugResponseEl) debugResponseEl.textContent = JSON.stringify(result.filings, null, 2);
 
     } catch(error) {
         console.error("Error rendering whale watching view:", error);
