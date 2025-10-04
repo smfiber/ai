@@ -16,7 +16,8 @@ export const state = {
     secApiKey: "",
     portfolioCache: [],
     sessionLog: [], // To hold prompts and responses for the current session
-    recentFilingsCache: [] // To cache filings for the new tabs
+    recentFilingsCache: [], // To cache filings for the new tabs
+    whaleFilingsCache: [] // NEW: To cache whale filings for comparison
 };
 
 // --- Constants ---
