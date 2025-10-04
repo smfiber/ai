@@ -128,13 +128,24 @@ export async function getFilingContent(filingUrl) {
     if (!state.secApiKey) throw new Error("SEC API Key is not configured.");
     if (!filingUrl) throw new Error("A filing URL is required.");
 
-    const url = `https://api.sec-api.io/filing-text?token=${state.secApiKey}&url=${encodeURIComponent(filingUrl)}`;
+    // This endpoint now uses a POST request
+    const url = `https://api.sec-api.io/filing-text`;
+    const body = {
+        token: state.secApiKey,
+        url: filingUrl
+    };
     
-    const response = await fetch(url);
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+    });
+
     if (!response.ok) {
         const errorText = await response.text();
         throw new Error(`Failed to fetch filing text: ${response.statusText} - ${errorText}`);
     }
+    // This endpoint returns raw text, not JSON
     return await response.text();
 }
 
