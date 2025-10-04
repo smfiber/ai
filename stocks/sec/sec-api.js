@@ -117,7 +117,7 @@ export async function getRecentPortfolioFilings(tickers) {
             } 
         },
         "from": "0",
-        "size": "50",
+        "size": "200",
         "sort": [{ "filedAt": { "order": "desc" } }]
     };
     const result = await callSecQueryApi(queryObject);
