@@ -685,30 +685,30 @@ export function renderWhaleComparisonView() {
     const latestFiling = state.whaleFilingsCache[0];
     const previousFiling = state.whaleFilingsCache[1];
 
-    // After aggregation, the holdings are on the top-level filing object, not nested.
-    // We need to re-run the aggregation logic for both to get the clean list.
-    const aggregate = (filing) => {
-        return (filing.holdings || []).reduce((acc, holding) => {
+    // Helper function to correctly aggregate holdings by ticker for a given filing
+    const aggregateHoldingsByTicker = (filing) => {
+        if (!filing || !filing.holdings) return new Map();
+        
+        const holdingsMap = new Map();
+        for (const holding of filing.holdings) {
             const ticker = holding.ticker || 'N/A';
-            if (!acc[ticker]) {
-                acc[ticker] = {
-                    cusip: holding.cusip,
+            if (!holdingsMap.has(ticker)) {
+                holdingsMap.set(ticker, {
                     nameOfIssuer: holding.nameOfIssuer,
                     shares: 0,
                     value: 0
-                };
+                });
             }
-            acc[ticker].shares += Number(holding.shrsOrPrnAmt.sshPrnamt);
-            acc[ticker].value += (holding.value * 1000);
-            return acc;
-        }, {});
+            const existing = holdingsMap.get(ticker);
+            existing.shares += Number(holding.shrsOrPrnAmt.sshPrnamt);
+            existing.value += (holding.value * 1000);
+        }
+        return holdingsMap;
     };
-    
-    const latestHoldings = aggregate(latestFiling);
-    const previousHoldings = aggregate(previousFiling);
 
-    const latestHoldingsMap = new Map(Object.entries(latestHoldings));
-    const previousHoldingsMap = new Map(Object.entries(previousHoldings));
+    // --- The Corrected Comparison Logic ---
+    const latestHoldingsMap = aggregateHoldingsByTicker(latestFiling);
+    const previousHoldingsMap = aggregateHoldingsByTicker(previousFiling);
     
     const changes = {
         new: [],
@@ -722,7 +722,7 @@ export function renderWhaleComparisonView() {
         const previous = previousHoldingsMap.get(ticker);
         
         if (!previous) {
-            changes.new.push({ticker, ...latest});
+            changes.new.push({ ticker, ...latest });
         } else {
             if (latest.shares > previous.shares) {
                 changes.increased.push({ ticker, ...latest, change: latest.shares - previous.shares });
@@ -735,7 +735,7 @@ export function renderWhaleComparisonView() {
     // Find Exited
     for (const [ticker, previous] of previousHoldingsMap.entries()) {
         if (!latestHoldingsMap.has(ticker)) {
-            changes.exited.push({ticker, ...previous});
+            changes.exited.push({ ticker, ...previous });
         }
     }
 
@@ -755,7 +755,7 @@ export function renderWhaleComparisonView() {
                                 <th class="px-2 py-2 text-left font-medium text-gray-500 uppercase tracking-wider">Ticker</th>
                                 <th class="px-2 py-2 text-left font-medium text-gray-500 uppercase tracking-wider">Issuer</th>
                                 ${showChange ? `<th class="px-2 py-2 text-right font-medium text-gray-500 uppercase tracking-wider">Share Change</th>` : ''}
-                                <th class="px-2 py-2 text-right font-medium text-gray-500 uppercase tracking-wider">Current Value ($)</th>
+                                <th class="px-2 py-2 text-right font-medium text-gray-500 uppercase tracking-wider">Current Value</th>
                             </tr>
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
@@ -764,7 +764,7 @@ export function renderWhaleComparisonView() {
                                     <td class="px-2 py-2 whitespace-nowrap font-bold">${sanitizeText(h.ticker)}</td>
                                     <td class="px-2 py-2 whitespace-nowrap">${sanitizeText(h.nameOfIssuer)}</td>
                                     ${showChange ? `<td class="px-2 py-2 whitespace-nowrap text-right font-medium">${h.change.toLocaleString()}</td>` : ''}
-                                    <td class="px-2 py-2 whitespace-nowrap text-right">${h.value.toLocaleString()}</td>
+                                    <td class="px-2 py-2 whitespace-nowrap text-right">${h.value.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 })}</td>
                                 </tr>
                             `).join('')}
                         </tbody>
