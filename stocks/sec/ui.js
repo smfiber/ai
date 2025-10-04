@@ -28,8 +28,8 @@ function setupGlobalEventListeners() {
             const ticker = target.closest('.company-link').dataset.ticker;
             if (ticker) {
                 openDeepDiveModal(ticker);
-                // We will build this function in the next step
-                // renderCompanyDeepDive(ticker); 
+                // This function will now be called to populate the modal
+                renderCompanyDeepDive(ticker); 
             }
             return;
         }
