@@ -215,7 +215,7 @@ export async function get13FHoldings(accessionNo) {
 /**
  * Fetches the most recent 13F-HR filings for a specific CIK using the Full-Text Search API.
  * @param {string} cik The CIK of the whale investor.
- * @returns {Promise<Array>} A promise that resolves to the array of filings.
+ * @returns {Promise<{filings: Array, payload: object}>} A promise that resolves to an object containing the filings and the request payload.
  */
 export async function getWhaleFilings(cik) {
     if (!state.secApiKey) throw new Error("SEC API Key is not configured.");
@@ -223,10 +223,17 @@ export async function getWhaleFilings(cik) {
 
     const url = `https://api.sec-api.io/full-text-search?token=${state.secApiKey}`;
     
+    const endDate = new Date().toISOString().split('T')[0];
+    const startDate = new Date();
+    startDate.setFullYear(startDate.getFullYear() - 3);
+    const startDateString = startDate.toISOString().split('T')[0];
+
     const payload = {
         "query": "*",
         "ciks": [cik],
-        "formTypes": ["13F-HR"]
+        "formTypes": ["13F-HR"],
+        "startDate": startDateString,
+        "endDate": endDate
     };
 
     const result = await callApi(url, {
@@ -235,11 +242,12 @@ export async function getWhaleFilings(cik) {
         body: JSON.stringify(payload)
     });
     
+    let filings = [];
     if (result && result.filings) {
         // This endpoint sorts by relevance, not date, so we must sort manually.
         result.filings.sort((a, b) => new Date(b.filedAt) - new Date(a.filedAt));
-        return result.filings;
+        filings = result.filings;
     }
     
-    return [];
+    return { filings, payload };
 }
