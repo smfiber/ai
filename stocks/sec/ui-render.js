@@ -242,9 +242,15 @@ export async function renderCompanyDeepDive(ticker) {
                     const filingDate = new Date(filing.filedAt).toLocaleDateString();
                     let formTypeBadge = '';
                     let analyzeButton = '';
+                    let filingItemAttr = '';
 
                     if (filing.formType === '8-K') {
                         formTypeBadge = '<span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-800">8-K</span>';
+                        // For 8-K, find the first available item and add it as a data attribute
+                        const firstItem = filing.items?.[0];
+                        if (firstItem) {
+                            filingItemAttr = `data-filing-item="${sanitizeText(firstItem)}"`;
+                        }
                     } else if (filing.formType === '10-K') {
                         formTypeBadge = '<span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-800">10-K</span>';
                     } else if (filing.formType === '10-Q') {
@@ -252,7 +258,7 @@ export async function renderCompanyDeepDive(ticker) {
                     }
 
                     if (['8-K', '10-K', '10-Q'].includes(filing.formType)) {
-                        analyzeButton = `<button class="analyze-filing-btn text-sm bg-green-600 hover:bg-green-700 text-white font-semibold py-1 px-3 rounded-lg" data-filing-url="${sanitizeText(filing.linkToFilingDetails)}" data-form-type="${sanitizeText(filing.formType)}" data-ticker="${sanitizeText(ticker)}">Analyze</button>`;
+                        analyzeButton = `<button class="analyze-filing-btn text-sm bg-green-600 hover:bg-green-700 text-white font-semibold py-1 px-3 rounded-lg" data-filing-url="${sanitizeText(filing.linkToFilingDetails)}" data-form-type="${sanitizeText(filing.formType)}" data-ticker="${sanitizeText(ticker)}" ${filingItemAttr}>Analyze</button>`;
                     }
 
                     return `
