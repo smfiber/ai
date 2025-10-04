@@ -1,8 +1,9 @@
 import { CONSTANTS, state } from './config.js'; 
 import { getDocs, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getEarningsCalendar } from './api.js';
-import { getRecentPortfolioFilings, getPortfolioInsiderTrading, getPortfolioInstitutionalOwnership, getSecMaterialEvents, getSecAnnualReports, getSecQuarterlyReports, get13FHoldings } from './sec-api.js';
-import { callApi } from './api.js'; // We may need the generic callApi for the Query API
+// REMOVED get13FHoldings FROM THIS IMPORT
+import { getRecentPortfolioFilings, getPortfolioInsiderTrading, getPortfolioInstitutionalOwnership, getSecMaterialEvents, getSecAnnualReports, getSecQuarterlyReports } from './sec-api.js';
+import { callApi } from './api.js';
 
 // --- UTILITY & SECURITY HELPERS ---
 function sanitizeText(text) {
@@ -106,7 +107,6 @@ export async function fetchAndRenderRecentFilings() {
             '10-K': new Map()
         };
 
-        // Since the API returns filings sorted by date descending, the first one we encounter for a ticker is the latest.
         for (const filing of allFilings) {
             const formType = filing.formType;
             const ticker = filing.ticker;
@@ -217,9 +217,6 @@ export function renderFilingsActivityView() {
 
 
 // --- DEEP DIVE MODAL RENDERING ---
-/**
- * NEW: Renders the institutional ownership flow for a given stock.
- */
 async function renderOwnershipFlow(ticker) {
     const container = document.getElementById('ownership-flow-container');
     if (!container) return;
@@ -306,7 +303,6 @@ export async function renderCompanyDeepDive(ticker) {
     const ownershipContainer = document.getElementById('ownership-flow-container');
     if (!container || !ownershipContainer) return;
     
-    // NEW: Trigger ownership flow rendering
     renderOwnershipFlow(ticker);
 
     try {
@@ -460,7 +456,6 @@ export async function renderInstitutionalTrackerView() {
             if (!acc[institution]) {
                 acc[institution] = { holdings: [], latestFiling: '1970-01-01' };
             }
-            // Only add holdings from the user's portfolio
             filing.holdings.forEach(h => {
                 if (portfolioTickers.includes(h.ticker)) {
                     acc[institution].holdings.push(h);
@@ -477,17 +472,16 @@ export async function renderInstitutionalTrackerView() {
             return;
         }
 
-        // Sort institutions by the total value of their holdings in the user's portfolio
         const sortedInstitutions = Object.entries(holdingsByInstitution)
             .map(([name, data]) => ({ name, ...data, totalValue: data.holdings.reduce((sum, h) => sum + h.value, 0) }))
-            .filter(inst => inst.totalValue > 0) // Filter out institutions that no longer hold any portfolio stocks
+            .filter(inst => inst.totalValue > 0)
             .sort((a, b) => b.totalValue - a.totalValue);
 
         let html = `<div class="dashboard-card">
                         <h2 class="dashboard-card-title">Portfolio-Wide Institutional Ownership (Form 13F)</h2>
                         <div class="space-y-4">`;
 
-        sortedInstitutions.slice(0, 50).forEach(inst => { // Limit to top 50 institutions
+        sortedInstitutions.slice(0, 50).forEach(inst => {
             html += `
                 <details class="sector-group">
                     <summary class="sector-header">
@@ -517,20 +511,15 @@ export async function renderInstitutionalTrackerView() {
     }
 }
 
-/**
- * NEW: Renders the Whale Watching view.
- */
 export async function renderWhaleWatchingView() {
     const container = document.getElementById('whale-watching-view');
     if (!container) return;
     container.innerHTML = `<div class="loader mx-auto my-8"></div>`;
 
     try {
-        // For this example, we'll hardcode Berkshire Hathaway's CIK
         const WHALE_CIK = '1067983'; 
         const WHALE_NAME = 'Berkshire Hathaway Inc.';
 
-        // Use the Query API to get the two most recent 13F filings for our whale
         const url = `https://api.sec-api.io?token=${state.secApiKey}`;
         const queryObject = {
             "query": { "query_string": { "query": `formType:\"13F-HR\" AND cik:\"${WHALE_CIK}\"` } },
@@ -544,10 +533,11 @@ export async function renderWhaleWatchingView() {
             return;
         }
 
-        const [currentHoldings, prevHoldings] = await Promise.all([
-            get13FHoldings(filings[0].accessionNo),
-            get13FHoldings(filings[1].accessionNo)
-        ]);
+        // --- CHANGED ---
+        // The holdings data is already in the filing object. No need for another API call.
+        const currentHoldings = filings[0].holdings || [];
+        const prevHoldings = filings[1].holdings || [];
+        // --- END CHANGE ---
 
         const currentHoldingsMap = new Map(currentHoldings.map(h => [h.ticker, h]));
         const prevHoldingsMap = new Map(prevHoldings.map(h => [h.ticker, h]));
@@ -570,7 +560,7 @@ export async function renderWhaleWatchingView() {
 
         const renderHoldingList = (title, items, showChange = false) => {
             if (!items || items.length === 0) return '';
-            items.sort((a, b) => b.value - a.value); // Sort by value
+            items.sort((a, b) => b.value - a.value); 
             return `
                 <div class="dashboard-card">
                     <h3 class="dashboard-card-title">${title} (${items.length})</h3>
@@ -590,8 +580,8 @@ export async function renderWhaleWatchingView() {
                 </div>`;
         };
 
-        const currentQuarter = new Date(filings[0].periodOfReport).toLocaleDateString(undefined, { quarter: 'short', year: 'numeric' });
-        const prevQuarter = new Date(filings[1].periodOfReport).toLocaleDateString(undefined, { quarter: 'short', year: 'numeric' });
+        const currentQuarter = new Date(filings[0].periodOfReport).toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
+        const prevQuarter = new Date(filings[1].periodOfReport).toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
 
         container.innerHTML = `
             <div class="dashboard-card">
