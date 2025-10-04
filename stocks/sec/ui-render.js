@@ -243,11 +243,21 @@ async function renderOwnershipFlow(ticker) {
             return;
         }
 
-        const currentHoldingsList = filingsByQuarter[sortedQuarters[0]];
-        const prevHoldingsList = filingsByQuarter[sortedQuarters[1]];
-        
-        const currentHoldings = new Map(currentHoldingsList.map(f => [f.companyName, f.holdings.find(h => h.ticker === ticker).value]));
-        const prevHoldings = new Map(prevHoldingsList.map(f => [f.companyName, f.holdings.find(h => h.ticker === ticker).value]));
+        // Helper to aggregate holdings from multiple filings in the same quarter
+        const aggregateHoldings = (filings) => {
+            const holdingsMap = new Map();
+            for (const filing of filings) {
+                const holding = filing.holdings.find(h => h.ticker === ticker);
+                if (holding) {
+                    // Use companyName as the key to store each institution's holding value
+                    holdingsMap.set(filing.companyName, holding.value);
+                }
+            }
+            return holdingsMap;
+        };
+
+        const currentHoldings = aggregateHoldings(filingsByQuarter[sortedQuarters[0]]);
+        const prevHoldings = aggregateHoldings(filingsByQuarter[sortedQuarters[1]]);
 
         const increased = [], decreased = [], newPositions = [], soldPositions = [];
 
@@ -519,91 +529,123 @@ export async function renderWhaleWatchingView() {
         const WHALE_CIK = '1067983'; 
         const WHALE_NAME = 'Berkshire Hathaway Inc.';
 
-        const { filings, payload } = await getWhaleFilings(WHALE_CIK);
+        const { filings: allFilings, payload: queryForDebug } = await getWhaleFilings(WHALE_CIK);
 
-        const renderDebugInfo = () => {
-            return `
-                <div class="mt-6 border-t pt-4 space-y-2">
-                    <details>
-                        <summary class="cursor-pointer text-sm font-semibold text-gray-500 hover:text-gray-800">Show API Query Payload</summary>
-                        <div class="mt-2 p-4 bg-gray-800 text-white text-xs rounded-lg overflow-x-auto">
-                            <pre><code>${sanitizeText(JSON.stringify(payload, null, 2))}</code></pre>
-                        </div>
-                    </details>
-                    <details>
-                        <summary class="cursor-pointer text-sm font-semibold text-gray-500 hover:text-gray-800">Show Raw API Response (Filings List)</summary>
-                        <div class="mt-2 p-4 bg-gray-800 text-white text-xs rounded-lg overflow-x-auto">
-                            <pre><code>${sanitizeText(JSON.stringify({ total: filings.length, filings: filings }, null, 2))}</code></pre>
-                        </div>
-                    </details>
-                </div>`;
-        };
-
-        if (!filings || filings.length === 0) {
-            container.innerHTML = `
-                <div class="dashboard-card">
-                    <h2 class="dashboard-card-title">Whale Watching: ${WHALE_NAME}</h2>
-                    <p class="text-center text-gray-500 py-8">No 13F filings found for ${WHALE_NAME} in the last year.</p>
-                    ${renderDebugInfo()}
-                </div>`;
+        if (!allFilings || allFilings.length === 0) {
+            container.innerHTML = `<p class="text-center text-gray-500 py-8">No filing data available for ${WHALE_NAME}.</p>`;
             return;
         }
+
+        const validFilings = allFilings.filter(f => f && f.periodOfReport);
+        const uniquePeriods = [...new Set(validFilings.map(f => f.periodOfReport))].sort().reverse();
         
-        // This is the only change needed. We can use the 'filings' array directly.
-        const filingsWithHoldings = filings;
-
-        let html = `
-            <div class="dashboard-card">
-                <h2 class="dashboard-card-title">Whale Watching: ${WHALE_NAME}</h2>
-                <p class="text-sm text-gray-500 mb-6">Displaying all quarterly holdings from the last year.</p>
-                <div class="space-y-4">`;
-
-        for (const filing of filingsWithHoldings) {
-            const filingDate = new Date(filing.filedAt).toLocaleDateString();
-            const periodOfReport = filing.periodOfReport ? new Date(filing.periodOfReport).toLocaleDateString() : 'N/A';
-            const holdings = filing.holdings || [];
-
-            html += `
-                <details class="sector-group">
-                    <summary class="sector-header">
-                        <span>Filing Date: ${filingDate} (For Period: ${periodOfReport})</span>
-                        <span>${holdings.length} Holdings</span>
-                    </summary>
-                    <div class="sector-content overflow-x-auto">
-                        <table class="min-w-full divide-y divide-gray-200 text-sm">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th class="px-4 py-2 text-left font-medium text-gray-500 uppercase tracking-wider">Ticker</th>
-                                    <th class="px-4 py-2 text-left font-medium text-gray-500 uppercase tracking-wider">Name of Issuer</th>
-                                    <th class="px-4 py-2 text-right font-medium text-gray-500 uppercase tracking-wider">Shares</th>
-                                    <th class="px-4 py-2 text-right font-medium text-gray-500 uppercase tracking-wider">Value ($)</th>
-                                </tr>
-                            </thead>
-                            <tbody class="bg-white divide-y divide-gray-200">
-                                ${holdings.map(h => `
-                                    <tr>
-                                        <td class="px-4 py-2 whitespace-nowrap font-bold">${sanitizeText(h.ticker || 'N/A')}</td>
-                                        <td class="px-4 py-2 whitespace-nowrap">${sanitizeText(h.nameOfIssuer)}</td>
-                                        <td class="px-4 py-2 whitespace-nowrap text-right">${Number(h.shrsOrPrnAmt.sshPrnamt).toLocaleString()}</td>
-                                        <td class="px-4 py-2 whitespace-nowrap text-right">${(h.value * 1000).toLocaleString()}</td>
-                                    </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
-                    </div>
-                </details>
-            `;
+        if (uniquePeriods.length < 2) {
+            container.innerHTML = `<p class="text-center text-gray-500 py-8">Not enough historical data to compare for ${WHALE_NAME}.</p>`;
+            return;
         }
 
-        html += `</div>${renderDebugInfo()}</div>`;
-        container.innerHTML = html;
+        const latestPeriod = uniquePeriods[0];
+        const previousPeriod = uniquePeriods[1];
+        
+        // The original `allFilings` list is already sorted by filedAt desc from the API function
+        const latestFiling = validFilings.find(f => f.periodOfReport === latestPeriod);
+        const previousFiling = validFilings.find(f => f.periodOfReport === previousPeriod);
+        
+        if (!latestFiling || !previousFiling) {
+            container.innerHTML = `<p class="text-center text-gray-500 py-8">Could not identify two distinct filing periods to compare for ${WHALE_NAME}.</p>`;
+            return;
+        }
+
+        // We can't get holdings from the full-text search, so we still need get13FHoldings
+        const [currentHoldings, prevHoldings] = await Promise.all([
+            get13FHoldings(latestFiling.accessionNo),
+            get13FHoldings(previousFiling.accessionNo)
+        ]);
+
+        const currentHoldingsMap = new Map(currentHoldings.map(h => [h.ticker, h]));
+        const prevHoldingsMap = new Map(prevHoldings.map(h => [h.ticker, h]));
+
+        const newPositions = [], soldPositions = [], increased = [], decreased = [];
+
+        for (const [ticker, holding] of currentHoldingsMap.entries()) {
+            if (!ticker) continue;
+            if (prevHoldingsMap.has(ticker)) {
+                const prevHolding = prevHoldingsMap.get(ticker);
+                const shareChange = Number(holding.shrsOrPrnAmt.sshPrnamt) - Number(prevHolding.shrsOrPrnAmt.sshPrnamt);
+                if (shareChange > 0) increased.push({ ...holding, change: shareChange });
+                else if (shareChange < 0) decreased.push({ ...holding, change: shareChange });
+            } else {
+                newPositions.push(holding);
+            }
+        }
+        for (const [ticker, holding] of prevHoldingsMap.entries()) {
+            if (!ticker) continue; 
+            if (!currentHoldingsMap.has(ticker)) soldPositions.push(holding);
+        }
+
+        const renderHoldingList = (title, items, showChange = false) => {
+            if (!items || items.length === 0) return '';
+            items.sort((a, b) => b.value - a.value); 
+            return `
+                <div class="dashboard-card">
+                    <h3 class="dashboard-card-title">${title} (${items.length})</h3>
+                    <ul class="divide-y divide-gray-200">
+                        ${items.slice(0, 15).map(h => `
+                            <li class="p-2 text-sm flex justify-between items-center">
+                                <div>
+                                    <span class="font-bold">${sanitizeText(h.ticker || 'N/A')}</span>
+                                    <p class="text-xs text-gray-500 truncate">${sanitizeText(h.nameOfIssuer)}</p>
+                                </div>
+                                <div class="text-right">
+                                    <span class="font-semibold">$${(h.value * 1000).toLocaleString()}</span>
+                                    ${showChange ? `<p class="text-xs ${h.change > 0 ? 'text-green-600' : 'text-red-600'}">${h.change.toLocaleString()} shares</p>` : ''}
+                                </div>
+                            </li>`).join('')}
+                    </ul>
+                </div>`;
+        };
+        
+        const formatQuarter = (dateString) => {
+            if (!dateString) return 'N/A';
+            const [year, month] = dateString.split('-');
+            const quarter = Math.ceil(parseInt(month) / 3);
+            return `Q${quarter} ${year}`;
+        };
+
+        const currentQuarter = formatQuarter(latestFiling.periodOfReport);
+        const prevQuarter = formatQuarter(previousFiling.periodOfReport);
+
+        const mainContentHtml = `
+            <div class="dashboard-card">
+                <h2 class="dashboard-card-title">Whale Watching: ${WHALE_NAME}</h2>
+                <p class="text-sm text-gray-500 mb-6">Comparing ${currentQuarter} vs. ${prevQuarter} filings.</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    ${renderHoldingList('New Positions', newPositions)}
+                    ${renderHoldingList('Sold Out', soldPositions)}
+                    ${renderHoldingList('Increased Positions', increased, true)}
+                    ${renderHoldingList('Decreased Positions', decreased, true)}
+                </div>
+                <details class="mt-6 border-t pt-4">
+                    <summary class="cursor-pointer text-sm font-semibold text-gray-500 hover:text-gray-800">Show API Debug Info</summary>
+                    <div class="mt-2 p-4 bg-gray-800 text-white text-xs rounded-lg overflow-x-auto">
+                        <h4 class="font-bold text-gray-300 mb-1">API Query:</h4>
+                        <pre><code id="debug-query"></code></pre>
+                        <h4 class="mt-3 font-bold text-gray-300 mb-1">API Response (Filings List):</h4>
+                        <pre><code id="debug-response"></code></pre>
+                    </div>
+                </details>
+            </div>`;
+
+        container.innerHTML = mainContentHtml;
+
+        // Now populate the debug info
+        const debugQueryEl = document.getElementById('debug-query');
+        const debugResponseEl = document.getElementById('debug-response');
+        if (debugQueryEl) debugQueryEl.textContent = JSON.stringify(queryForDebug, null, 2);
+        if (debugResponseEl) debugResponseEl.textContent = JSON.stringify(allFilings, null, 2);
 
     } catch(error) {
         console.error("Error rendering whale watching view:", error);
-        container.innerHTML = `
-            <div class="dashboard-card">
-                 <h3 class="font-bold text-lg text-red-700">Error Loading Whale Watching Data</h3>
-                 <p class="mt-2 text-red-600 bg-red-50 p-4 rounded-md">${error.message}</p>
-            </div>`;
+        container.innerHTML = `<p class="text-center text-red-500 p-8">Could not load whale watching data: ${error.message}</p>`;
     }
 }
