@@ -214,6 +214,7 @@ export async function get13FHoldings(accessionNo) {
 
 /**
  * Fetches the most recent 13F-HR filings for a specific CIK using the Full-Text Search API.
+ * This new version uses a more reliable query to find filings within the last year.
  * @param {string} cik The CIK of the whale investor.
  * @returns {Promise<{filings: Array, payload: object}>} A promise that resolves to an object containing the filings and the request payload.
  */
@@ -223,17 +224,18 @@ export async function getWhaleFilings(cik) {
 
     const url = `https://api.sec-api.io/full-text-search?token=${state.secApiKey}`;
     
-    const endDate = new Date().toISOString().split('T')[0];
+    const endDate = new Date();
     const startDate = new Date();
-    startDate.setFullYear(startDate.getFullYear() - 3);
-    const startDateString = startDate.toISOString().split('T')[0];
+    startDate.setFullYear(startDate.getFullYear() - 1);
+    
+    const formatDate = (date) => date.toISOString().split('T')[0];
 
     const payload = {
-        "query": "cusip",
+        "query": "\"nameOfIssuer\"",
         "ciks": [cik],
         "formTypes": ["13F-HR"],
-        "startDate": startDateString,
-        "endDate": endDate
+        "startDate": formatDate(startDate),
+        "endDate": formatDate(endDate)
     };
 
     const result = await callApi(url, {
@@ -244,7 +246,6 @@ export async function getWhaleFilings(cik) {
     
     let filings = [];
     if (result && result.filings) {
-        // This endpoint sorts by relevance, not date, so we must sort manually.
         result.filings.sort((a, b) => new Date(b.filedAt) - new Date(a.filedAt));
         filings = result.filings;
     }
