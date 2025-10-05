@@ -1239,7 +1239,8 @@ export async function handleSaveFilingDiligenceRequest(symbol) {
 
         // Refresh log
         const logContainer = document.getElementById('ongoing-review-log-container');
-        const savedReports = await getSavedReports(symbol, ['FilingDiligence', 'UpdatedGarpMemo', 'UpdatedQarpMemo']);
+        const reportTypes = ['FilingDiligence', 'EightKAnalysis', 'UpdatedGarpMemo', 'UpdatedQarpMemo'];
+        const savedReports = await getSavedReports(symbol, reportTypes);
         renderOngoingReviewLog(logContainer, savedReports);
         
         // Show the updated memo section
@@ -1323,6 +1324,55 @@ export async function handleGenerateFilingQuestionsRequest(symbol) {
     }
 }
 
+export async function handleAnalyzeEightKRequest(symbol) {
+    const filingTextarea = document.getElementById('filing-diligence-textarea');
+    const filingText = filingTextarea.value.trim();
+    if (!filingText) {
+        displayMessageInModal("Please paste the 8-K filing text into the text area first.", "warning");
+        return;
+    }
+
+    openModal(CONSTANTS.MODAL_LOADING);
+    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+    loadingMessage.textContent = `AI is analyzing the 8-K filing...`;
+
+    try {
+        const profile = state.portfolioCache.find(s => s.ticker === symbol);
+        const companyName = profile ? profile.companyName : symbol;
+        
+        const reportType = 'EightKAnalysis';
+        const promptConfig = promptMap[reportType];
+        const prompt = promptConfig.prompt
+            .replace('{companyName}', companyName)
+            .replace('{filingText}', filingText);
+
+        const analysisResult = await generateRefinedArticle(prompt);
+        
+        await autoSaveReport(symbol, reportType, analysisResult, prompt);
+        
+        filingTextarea.value = '';
+
+        const logContainer = document.getElementById('ongoing-review-log-container');
+        const reportTypes = ['FilingDiligence', 'EightKAnalysis', 'UpdatedGarpMemo', 'UpdatedQarpMemo'];
+        const savedReports = await getSavedReports(symbol, reportTypes);
+        renderOngoingReviewLog(logContainer, savedReports);
+
+        const displayContainer = document.getElementById('ongoing-review-display-container');
+        if (displayContainer) {
+            displayReport(displayContainer, analysisResult, prompt);
+        }
+
+        displayMessageInModal('8-K analysis saved to the log.', 'info');
+
+    } catch (error) {
+        console.error("Error analyzing 8-K filing:", error);
+        displayMessageInModal(`Could not complete 8-K analysis: ${error.message}`, 'error');
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
+
 export async function handleDeleteFilingDiligenceLog(reportId, ticker) {
     openConfirmationModal(
         'Delete Filing Log?',
@@ -1335,7 +1385,8 @@ export async function handleDeleteFilingDiligenceLog(reportId, ticker) {
 
                 const logContainer = document.getElementById('ongoing-review-log-container');
                 const displayContainer = document.getElementById('ongoing-review-display-container');
-                const savedReports = await getSavedReports(ticker, ['FilingDiligence', 'UpdatedGarpMemo', 'UpdatedQarpMemo']);
+                const reportTypes = ['FilingDiligence', 'EightKAnalysis', 'UpdatedGarpMemo', 'UpdatedQarpMemo'];
+                const savedReports = await getSavedReports(ticker, reportTypes);
                 renderOngoingReviewLog(logContainer, savedReports);
                 
                 if (displayContainer) {
@@ -1373,6 +1424,7 @@ async function generateUpdatedMemo(symbol, memoType) {
         // Step 1: Gather all diligence logs
         const diligenceInvestigationReports = await getSavedReports(symbol, 'DiligenceInvestigation');
         const filingDiligenceReports = await getSavedReports(symbol, 'FilingDiligence');
+        const eightKReports = await getSavedReports(symbol, 'EightKAnalysis');
         
         let combinedDiligenceLog = '';
         const logs = [];
@@ -1389,6 +1441,11 @@ async function generateUpdatedMemo(symbol, memoType) {
         if (filingDiligenceReports.length > 0) {
             const filingLog = filingDiligenceReports.map(report => report.content).join('\n\n');
             logs.push(filingLog);
+        }
+
+        if (eightKReports.length > 0) {
+            const eightKLog = eightKReports.map(report => `**8-K Analysis Summary (from ${report.savedAt.toDate().toLocaleDateString()}):**\n${report.content}`).join('\n\n---\n\n');
+            logs.push(eightKLog);
         }
 
         combinedDiligenceLog = logs.length > 0 ? logs.join('\n\n---\n\n') : 'No diligence logs available.';
@@ -1434,7 +1491,8 @@ async function generateUpdatedMemo(symbol, memoType) {
 
         // Refresh log
         const logContainer = document.getElementById('ongoing-review-log-container');
-        const savedReports = await getSavedReports(symbol, ['FilingDiligence', 'UpdatedGarpMemo', 'UpdatedQarpMemo']);
+        const reportTypes = ['FilingDiligence', 'EightKAnalysis', 'UpdatedGarpMemo', 'UpdatedQarpMemo'];
+        const savedReports = await getSavedReports(symbol, reportTypes);
         renderOngoingReviewLog(logContainer, savedReports);
 
     } catch(error) {
