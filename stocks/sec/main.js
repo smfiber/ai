@@ -1,10 +1,9 @@
 import { setupEventListeners } from './ui.js';
 import { openModal, closeModal, displayMessageInModal } from './ui-modals.js';
-// --- MODIFICATION: Removed imports for functions that don't exist in this app ---
 import { fetchAndCachePortfolioData, fetchAndRenderRecentFilings } from './ui-render.js';
-import { CONSTANTS, state } from './config.js';
+import { CONSTANTS, APP_VERSION, state } from './config.js';
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, signOut, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { checkForNewFilings } from './monitoring.js';
 
@@ -28,16 +27,17 @@ async function initializeAppContent() {
     // First, ensure the portfolio data is loaded into the cache
     await fetchAndCachePortfolioData();
 
-    // This background check is still useful for other parts of the app
     const lastCheckTimestamp = localStorage.getItem('lastFilingCheck');
     const twentyFourHours = 24 * 60 * 60 * 1000;
     const now = new Date().getTime();
+
+    // This background check is still useful for other parts of the app
     if (!lastCheckTimestamp || (now - parseInt(lastCheckTimestamp) > twentyFourHours)) {
         await checkForNewFilings();
         localStorage.setItem('lastFilingCheck', now.toString());
     }
     
-    // Now, call the function to populate the dashboard
+    // Now, call the function to populate our new dashboard
     await fetchAndRenderRecentFilings();
 }
 
@@ -61,15 +61,28 @@ async function initializeFirebase() {
                 }
                 state.appIsInitialized = false;
                 
-                // Simplified logout cleanup for this app's structure
-                const containerIds = ['recent-8k-container', 'recent-10q-container', 'recent-10k-container'];
+                // Clear dynamic content if logged out, checking if elements exist first
+                const containerIds = [
+                    'recent-8k-container', 
+                    'recent-10q-container', 
+                    'recent-10k-container',
+                    'filings-by-company-container', 
+                    'upcoming-filings-container'
+                ];
+
                 containerIds.forEach(id => {
                     const el = document.getElementById(id);
-                    if (el) el.innerHTML = '';
+                    if (el) {
+                        el.innerHTML = '';
+                    }
                 });
             }
             setupAuthUI(user);
         });
+        
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+            await signInWithCustomToken(state.auth, __initial_auth_token);
+        }
 
     } catch (error) {
         console.error("Firebase initialization error:", error);
@@ -80,7 +93,7 @@ async function initializeFirebase() {
 async function handleApiKeySubmit(e) {
     e.preventDefault();
     const fmpApiKey = document.getElementById('fmpApiKeyInput').value.trim();
-    const geminiApiKey = document.getElementById('geminiApiKeyInput')?.value.trim();
+    const geminiApiKey = document.getElementById('geminiApiKeyInput')?.value.trim(); // Optional for this SPA
     const googleClientId = document.getElementById('googleClientIdInput').value.trim();
     const secApiKey = document.getElementById('secApiKeyInput').value.trim();
     const tempFirebaseConfigText = document.getElementById('firebaseConfigInput').value.trim();
@@ -91,6 +104,7 @@ async function handleApiKeySubmit(e) {
         return;
     }
     
+    // Assign to state
     state.fmpApiKey = fmpApiKey;
     state.geminiApiKey = geminiApiKey;
     state.googleClientId = googleClientId;
@@ -98,6 +112,9 @@ async function handleApiKeySubmit(e) {
 
     try {
         tempFirebaseConfig = safeParseConfig(tempFirebaseConfigText);
+        if (!tempFirebaseConfig.apiKey || !tempFirebaseConfig.projectId) {
+            throw new Error("The parsed Firebase config is invalid or missing required properties.");
+        }
     } catch (err) {
         displayMessageInModal(`Invalid Firebase Config: ${err.message}`, "error");
         return;
@@ -140,7 +157,11 @@ async function handleCredentialResponse(response) {
 
 function handleLogout() {
     if (state.auth) {
+        // --- CHANGE STARTS HERE ---
+        // Removed the aggressive google.accounts.id.revoke() which was causing errors.
+        // The standard signOut is sufficient.
         signOut(state.auth).catch(error => console.error("Sign out failed:", error));
+        // --- CHANGE ENDS HERE ---
     }
     if (typeof google !== 'undefined' && google.accounts) {
         google.accounts.id.disableAutoSelect();
