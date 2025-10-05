@@ -445,25 +445,35 @@ export async function openRawDataViewer(ticker) {
             if (futureEarnings.length > 0) { nextEarningsDate = futureEarnings[0].date; }
         }
         
-        const ongoingReviews = allSavedReports.filter(r => r.reportType === 'QuarterlyReview' || r.reportType === 'AnnualReview');
+        const filingDiligenceReports = allSavedReports.filter(r => r.reportType === 'FilingDiligence');
         ongoingDiligenceContainer.innerHTML = `
             <div class="bg-white p-6 rounded-2xl shadow-lg border border-gray-200">
                 <div class="flex justify-between items-center mb-4 border-b pb-2">
-                    <h3 class="text-xl font-bold text-gray-800">Recurring Review</h3>
+                    <h3 class="text-xl font-bold text-gray-800">Filing Diligence Workflow</h3>
                     <div class="text-right">
                         <p class="text-sm font-semibold text-gray-600">Next Earnings Date</p>
                         <p class="text-lg font-bold text-indigo-700">${nextEarningsDate}</p>
                     </div>
                 </div>
-                <div id="ongoing-diligence-controls" class="text-center mb-6 flex justify-center gap-4">
-                    <button id="start-quarterly-review-button" data-review-type="Quarterly" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-5 rounded-lg">Start New Quarterly Review</button>
-                    <button id="start-annual-review-button" data-review-type="Annual" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-5 rounded-lg">Start New Annual Review</button>
+                
+                <div id="filing-diligence-input-container">
+                    <label for="filing-diligence-textarea" class="block text-sm font-medium text-gray-700 mb-2">Paste 10-Q or 10-K Filing Text</label>
+                    <textarea id="filing-diligence-textarea" class="w-full border border-gray-300 rounded-lg p-2 text-sm" rows="10" placeholder="Paste the full text from the company's latest SEC filing here..."></textarea>
+                    <div class="text-center mt-4">
+                        <button id="generate-filing-questions-button" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-5 rounded-lg">
+                            Generate Diligence Questions
+                        </button>
+                    </div>
                 </div>
-                <div id="quarterly-review-form-container" class="hidden"></div>
-                <div id="ongoing-review-log-container" class="mt-6"></div>
+
+                <div id="filing-diligence-form-container" class="hidden mt-4">
+                    </div>
+                
+                <div id="ongoing-review-log-container" class="mt-6">
+                    </div>
             </div>
         `;
-        renderOngoingReviewLog(ongoingDiligenceContainer.querySelector('#ongoing-review-log-container'), ongoingReviews);
+        renderOngoingReviewLog(ongoingDiligenceContainer.querySelector('#ongoing-review-log-container'), filingDiligenceReports);
         
         const checkIcon = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>`;
         diligenceHubContainer.addEventListener('click', (e) => {
