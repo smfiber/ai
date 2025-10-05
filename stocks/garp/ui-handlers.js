@@ -1256,6 +1256,90 @@ export async function handleOngoingReviewSave(symbol) {
     }
 }
 
+export async function handleFilingAnalysisRequest(symbol) {
+    const filingTextarea = document.getElementById('quarterly-filing-textarea');
+    const formContainer = document.getElementById('quarterly-review-form-container');
+    const suggestedQuestionsContainer = document.getElementById('ai-suggested-questions-container');
+
+    const filingText = filingTextarea.value.trim();
+    if (!filingText) {
+        displayMessageInModal("Please paste the 10-Q filing text into the text area first.", "warning");
+        return;
+    }
+
+    openModal(CONSTANTS.MODAL_LOADING);
+    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+    loadingMessage.textContent = "AI is analyzing the 10-Q filing. This may take a moment...";
+
+    try {
+        const profile = state.portfolioCache.find(s => s.ticker === symbol);
+        const companyName = profile ? profile.companyName : symbol;
+        
+        const promptConfig = promptMap['QuarterlyReview'];
+        const prompt = promptConfig.prompt
+            .replace(/{companyName}/g, companyName)
+            .replace('{questionsJson}', JSON.stringify(QUARTERLY_REVIEW_QUESTIONS, null, 2))
+            .replace('{filingText}', filingText);
+
+        const aiResponse = await callGeminiApi(prompt);
+        
+        const responseParts = aiResponse.split('---||---');
+        const mainAnalysis = responseParts[0] || '';
+        const suggestedQueries = responseParts[1] || '';
+        
+        let formHtml = `<div class="text-left mt-4 border rounded-lg p-4 bg-gray-50 space-y-4">`;
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = marked.parse(mainAnalysis);
+        
+        for (const [category, question] of Object.entries(QUARTERLY_REVIEW_QUESTIONS)) {
+            const heading = Array.from(tempDiv.querySelectorAll('h1, h2, h3, h4, h5, h6')).find(h => h.textContent.includes(category));
+            let answerContent = 'AI could not generate an answer for this section.';
+            if (heading) {
+                let content = '';
+                let nextElem = heading.nextElementSibling;
+                while (nextElem && !['H1', 'H2', 'H3', 'H4', 'H5', 'H6'].includes(nextElem.tagName)) {
+                    content += nextElem.outerHTML;
+                    nextElem = nextElem.nextElementSibling;
+                }
+                answerContent = content;
+            }
+
+            formHtml += `
+                <div class="p-3 bg-white rounded-lg border border-gray-200">
+                    <h5 class="font-semibold text-sm text-indigo-700 mb-2">${category}</h5>
+                    <p class="text-xs text-gray-600 mb-2">${question}</p>
+                    <div class="prose prose-sm max-w-none bg-indigo-50 p-3 rounded-md border border-indigo-200">${answerContent}</div>
+                </div>
+            `;
+        }
+         formHtml += `
+            <div class="text-right mt-4 flex justify-end gap-2">
+                <button id="cancel-ongoing-review-button" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg">Cancel</button>
+                <button id="save-ongoing-review-button" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg">Save Review</button>
+            </div>
+        </div>`;
+        formContainer.innerHTML = formHtml;
+        formContainer.classList.remove('hidden');
+        document.getElementById('quarterly-filing-input-container').classList.add('hidden');
+
+        if (suggestedQueries.trim()) {
+            suggestedQuestionsContainer.innerHTML = `
+                <h4 class="text-lg font-semibold text-gray-700 mb-3 pt-4 border-t">AI-Suggested Investigation Queries</h4>
+                <div class="prose prose-sm max-w-none bg-gray-50 p-4 rounded-md border">
+                    ${marked.parse(suggestedQueries)}
+                </div>
+            `;
+            suggestedQuestionsContainer.classList.remove('hidden');
+        }
+
+    } catch (error) {
+        console.error("Error analyzing filing:", error);
+        displayMessageInModal(`Could not analyze the filing: ${error.message}`, 'error');
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
 
 export async function handleDeleteDiligenceLog(reportId, ticker) {
     openConfirmationModal(
