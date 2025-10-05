@@ -1358,14 +1358,16 @@ async function generateUpdatedMemo(symbol, memoType) {
     if (!updatedMemoContainer) return;
     updatedMemoContainer.innerHTML = `<div class="p-4 text-center">Generating updated ${memoType} memo... <div class="loader mx-auto mt-2"></div></div>`;
     
-    // Placeholder for QARP memo since it requires a new prompt
-    if (memoType === 'QARP') {
-        updatedMemoContainer.innerHTML = `<div class="p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-800">The 'Updated QARP Memo' functionality requires a new dedicated prompt. This can be added in a future step.</div>`;
-        return; 
-    }
+    let reportType;
+    let promptTemplate;
 
-    const reportType = 'UpdatedGarpMemo';
-    const originalMemoPromptName = 'InvestmentMemo';
+    if (memoType === 'QARP') {
+        reportType = 'UpdatedQarpMemo';
+        promptTemplate = promptMap.UpdatedQarpMemo.prompt;
+    } else { // Default to GARP
+        reportType = 'UpdatedGarpMemo';
+        promptTemplate = promptMap.InvestmentMemo.prompt;
+    }
 
     try {
         // Step 1: Gather all diligence logs
@@ -1392,12 +1394,6 @@ async function generateUpdatedMemo(symbol, memoType) {
         combinedDiligenceLog = logs.length > 0 ? logs.join('\n\n---\n\n') : 'No diligence logs available.';
 
         // Step 2: Gather other required data (candidacy report, scorecard)
-        const candidacyReports = await getSavedReports(symbol, 'GarpCandidacy');
-        if (candidacyReports.length === 0) {
-            throw new Error(`The foundational 'GARP Candidacy Report' must be generated first.`);
-        }
-        const candidacyReportContent = candidacyReports[0].content;
-
         const data = await getFmpStockData(symbol);
         if (!data) throw new Error(`Could not retrieve financial data for ${symbol}.`);
         const scorecardData = _calculateGarpScorecardMetrics(data);
@@ -1406,14 +1402,27 @@ async function generateUpdatedMemo(symbol, memoType) {
         const companyName = profile.companyName || 'the company';
         
         // Step 3: Build and call the prompt
-        const promptTemplate = promptMap[originalMemoPromptName].prompt;
+        let prompt;
+        if (memoType === 'QARP') {
+             prompt = promptTemplate
+                .replace(/{companyName}/g, companyName)
+                .replace(/{tickerSymbol}/g, symbol)
+                .replace('{jsonData}', JSON.stringify(scorecardData, null, 2))
+                .replace('{diligenceLog}', combinedDiligenceLog);
+        } else { // GARP
+            const candidacyReports = await getSavedReports(symbol, 'GarpCandidacy');
+            if (candidacyReports.length === 0) {
+                throw new Error(`The foundational 'GARP Candidacy Report' must be generated first.`);
+            }
+            const candidacyReportContent = candidacyReports[0].content;
 
-        const prompt = promptTemplate
-            .replace(/{companyName}/g, companyName)
-            .replace(/{tickerSymbol}/g, symbol)
-            .replace('{scorecardJson}', JSON.stringify(scorecardData, null, 2))
-            .replace('{diligenceLog}', combinedDiligenceLog)
-            .replace('{garpCandidacyReport}', candidacyReportContent);
+            prompt = promptTemplate
+                .replace(/{companyName}/g, companyName)
+                .replace(/{tickerSymbol}/g, symbol)
+                .replace('{scorecardJson}', JSON.stringify(scorecardData, null, 2))
+                .replace('{diligenceLog}', combinedDiligenceLog)
+                .replace('{garpCandidacyReport}', candidacyReportContent);
+        }
 
         const memoContent = await generateRefinedArticle(prompt);
 
