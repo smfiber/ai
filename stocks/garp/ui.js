@@ -1,6 +1,6 @@
 // fileName: ui.js
 import { CONSTANTS, state, promptMap } from './config.js';
-import { openModal, closeModal, openStockListModal, openManageStockModal, openPortfolioManagerModal, openRawDataViewer, QUARTERLY_REVIEW_QUESTIONS, addDiligenceEntryRow } from './ui-modals.js';
+import { openModal, closeModal, openStockListModal, openManageStockModal, openPortfolioManagerModal, openRawDataViewer, QUARTERLY_REVIEW_QUESTIONS, ANNUAL_REVIEW_QUESTIONS, addDiligenceEntryRow } from './ui-modals.js';
 import { fetchAndCachePortfolioData, renderPortfolioManagerList } from './ui-render.js';
 import { handleResearchSubmit, handleSaveStock, handleDeleteStock, handleRefreshFmpData, handleAnalysisRequest, handleInvestmentMemoRequest, handleSaveReportToDb, handleGenerateAllReportsRequest, handleGarpCandidacyRequest, handlePortfolioGarpAnalysisRequest, handlePositionAnalysisRequest, handleReportHelpRequest, handleManualDiligenceSave, handleDeleteDiligenceLog, handleWorkflowHelpRequest, handlePeerAnalysisRequest, handleManualPeerAnalysisRequest, handleStructuredDiligenceSave, handleOngoingReviewSave, handleFilingAnalysisRequest } from './ui-handlers.js';
 import { getFmpStockData } from './api.js';
@@ -260,48 +260,20 @@ export function setupEventListeners() {
         
         // --- ONGOING DILIGENCE HANDLERS ---
         if (target.id === 'analyze-filing-button') {
-            handleFilingAnalysisRequest(symbol);
+            const reviewType = target.dataset.reviewType || 'Quarterly'; // Default to Quarterly
+            handleFilingAnalysisRequest(symbol, reviewType);
             return;
         }
 
-        if (target.id === 'start-quarterly-review-button') {
-            let surpriseHtml = '';
-            try {
-                const fmpData = await getFmpStockData(symbol);
-                if (fmpData && fmpData.earning_calendar && fmpData.earning_calendar.length > 0) {
-                    const today = new Date();
-                    today.setHours(0,0,0,0);
-                    const pastEarnings = fmpData.earning_calendar
-                        .filter(e => new Date(e.date) < today)
-                        .sort((a,b) => new Date(b.date) - new Date(a.date));
-
-                    if (pastEarnings.length > 0) {
-                        const latest = pastEarnings[0];
-                        if (typeof latest.epsActual === 'number' && typeof latest.epsEstimated === 'number') {
-                            const epsSurprise = latest.epsActual - latest.epsEstimated;
-                            const epsClass = epsSurprise >= 0 ? 'price-gain' : 'price-loss';
-                            surpriseHtml += `<div class="surprise-item"><span class="font-semibold">EPS Surprise:</span> <span class="${epsClass}">${epsSurprise.toFixed(3)}</span></div>`;
-                        }
-                        if (typeof latest.revenueActual === 'number' && typeof latest.revenueEstimated === 'number') {
-                            const revSurprise = (latest.revenueActual - latest.revenueEstimated) / 1_000_000; // In millions
-                            const revClass = revSurprise >= 0 ? 'price-gain' : 'price-loss';
-                             surpriseHtml += `<div class="surprise-item"><span class="font-semibold">Revenue Surprise:</span> <span class="${revClass}">${revSurprise.toFixed(2)}M</span></div>`;
-                        }
-                    }
-                }
-            } catch (error) {
-                console.error("Error fetching earnings surprise data:", error);
-            }
-
-            if (surpriseHtml) {
-                surpriseHtml = `<div class="p-3 mb-4 bg-indigo-50 border border-indigo-200 rounded-lg flex justify-around text-center text-sm">${surpriseHtml}</div>`;
-            }
-
-            target.classList.add('hidden');
+        if (target.id === 'start-quarterly-review-button' || target.id === 'start-annual-review-button') {
+            const reviewType = target.dataset.reviewType; // 'Quarterly' or 'Annual'
+            const questionSet = reviewType === 'Annual' ? ANNUAL_REVIEW_QUESTIONS : QUARTERLY_REVIEW_QUESTIONS;
+            
+            document.getElementById('ongoing-diligence-controls').classList.add('hidden');
             const formContainer = document.getElementById('quarterly-review-form-container');
-            let formHtml = `<div class="text-left mt-4 border rounded-lg p-4 bg-gray-50 space-y-4">`;
-            formHtml += surpriseHtml;
-            for (const [category, question] of Object.entries(QUARTERLY_REVIEW_QUESTIONS)) {
+            
+            let formHtml = `<div class="text-left mt-4 border rounded-lg p-4 bg-gray-50 space-y-4" data-review-type="${reviewType}">`;
+            for (const [category, question] of Object.entries(questionSet)) {
                 formHtml += `
                     <div class="p-3 bg-white rounded-lg border border-gray-200">
                         <h5 class="font-semibold text-sm text-indigo-700 mb-2">${category}</h5>
@@ -324,8 +296,11 @@ export function setupEventListeners() {
             return;
         }
 
+
         if (target.id === 'save-ongoing-review-button') {
-            handleOngoingReviewSave(symbol);
+            const form = target.closest('[data-review-type]');
+            const reviewType = form.dataset.reviewType;
+            handleOngoingReviewSave(symbol, reviewType);
             return;
         }
 
@@ -333,7 +308,7 @@ export function setupEventListeners() {
             const formContainer = document.getElementById('quarterly-review-form-container');
             formContainer.innerHTML = '';
             formContainer.classList.add('hidden');
-            document.getElementById('start-quarterly-review-button').classList.remove('hidden');
+            document.getElementById('ongoing-diligence-controls').classList.remove('hidden');
             return;
         }
         
