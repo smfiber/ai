@@ -1,5 +1,6 @@
 import { CONSTANTS, state, TOP_25_INVESTORS } from './config.js'; 
-import { getDocs, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+// --- MODIFICATION: Added 'query' and 'where' for user-specific data fetching ---
+import { getDocs, collection, query, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getEarningsCalendar } from './api.js';
 import { getRecentPortfolioFilings, getPortfolioInsiderTrading, getPortfolioInstitutionalOwnership, getSecMaterialEvents, getSecAnnualReports, getSecQuarterlyReports, get13FHoldings, getWhaleFilings } from './sec-api.js';
 import { callApi } from './api.js';
@@ -20,10 +21,13 @@ export async function fetchAndCachePortfolioData() {
             state.portfolioCache = [];
             return;
         }
+        
         // --- CHANGE STARTS HERE ---
-        // Fetch from a user-specific subcollection for security and correctness.
-        const portfolioPath = `users/${state.userId}/${CONSTANTS.DB_COLLECTION_PORTFOLIO}`;
-        const querySnapshot = await getDocs(collection(state.db, portfolioPath));
+        // This is the critical fix. It now queries the correct top-level collection ('portfolio_stocks')
+        // and securely filters for documents that have a 'userId' field matching the logged-in user.
+        const portfolioCollectionRef = collection(state.db, CONSTANTS.DB_COLLECTION_PORTFOLIO);
+        const q = query(portfolioCollectionRef, where("userId", "==", state.userId));
+        const querySnapshot = await getDocs(q);
         // --- CHANGE ENDS HERE ---
         
         state.portfolioCache = querySnapshot.docs.map(doc => ({ ticker: doc.id, ...doc.data() }));
@@ -555,13 +559,10 @@ export function renderInvestorFilingsDropdownView() {
     const container = document.getElementById('investor-filings-view');
     if (!container) return;
 
-    // --- CHANGE STARTS HERE ---
-    // Use the full TOP_25_INVESTORS list instead of a filtered one.
     const optionsHtml = TOP_25_INVESTORS
         .sort((a, b) => a.name.localeCompare(b.name))
         .map(investor => `<option value="${investor.cik}" data-name="${investor.name}">${investor.name}</option>`)
         .join('');
-    // --- CHANGE ENDS HERE ---
 
     container.innerHTML = `
         <div class="dashboard-card">
@@ -615,7 +616,6 @@ export async function renderInvestorFilingsView(cik, investorName) {
             return;
         }
         
-        // 1. Group filings by reporting period to handle originals and amendments
         const groupedByPeriod = filings.reduce((acc, filing) => {
             const period = filing.periodOfReport;
             if (!acc[period]) {
@@ -629,25 +629,19 @@ export async function renderInvestorFilingsView(cik, investorName) {
             return acc;
         }, {});
 
-        // 2. Create the final list of filings, merging where necessary
         const filingsToRender = Object.values(groupedByPeriod).map(group => {
             if (group.original && group.amendment) {
-                // MERGE: Use original as base, update with amendment
                 const holdingsMap = new Map(group.original.holdings.map(h => [h.cusip, h]));
                 group.amendment.holdings.forEach(h => holdingsMap.set(h.cusip, h));
                 
-                // Return a new filing object with merged data, using amendment's metadata
                 return {
                     ...group.amendment,
                     holdings: Array.from(holdingsMap.values()),
                 };
             }
-            // If no merge is needed, return the latest one available (amendment or original)
             return group.amendment || group.original;
-        // Sort by the 'periodOfReport' to ensure true chronological order of quarters.
         }).sort((a, b) => new Date(b.periodOfReport) - new Date(a.periodOfReport));
         
-        // Cache the processed filings data for the comparison function to use
         state.whaleFilingsCache = filingsToRender;
         
         let html = `
@@ -672,7 +666,6 @@ export async function renderInvestorFilingsView(cik, investorName) {
             const filingDate = new Date(filing.filedAt).toLocaleDateString();
             const periodOfReport = filing.periodOfReport ? new Date(filing.periodOfReport).toLocaleDateString() : 'N/A';
             
-            // Aggregate holdings within each filing to combine duplicate tickers
             const aggregatedHoldings = (filing.holdings || []).reduce((acc, holding) => {
                 const ticker = holding.ticker || 'N/A';
                 if (!acc[ticker]) {
@@ -683,15 +676,14 @@ export async function renderInvestorFilingsView(cik, investorName) {
                     };
                 }
                 acc[ticker].shares += Number(holding.shrsOrPrnAmt.sshPrnamt);
-                acc[ticker].value += (holding.value * 1000); // Value is reported in thousands
+                acc[ticker].value += (holding.value * 1000);
                 return acc;
             }, {});
             
-            // Convert the aggregated object back into a sorted array
             const holdings = Object.entries(aggregatedHoldings).map(([ticker, data]) => ({
                 ticker,
                 ...data
-            })).sort((a, b) => b.value - a.value); // Sort by highest value
+            })).sort((a, b) => b.value - a.value);
 
             html += `
                 <details class="sector-group">
@@ -747,7 +739,6 @@ export function renderWhaleComparisonView() {
     const latestFiling = state.whaleFilingsCache[0];
     const previousFiling = state.whaleFilingsCache[1];
 
-    // Helper function to correctly aggregate holdings by ticker for a given filing
     const aggregateHoldingsByTicker = (filing) => {
         if (!filing || !filing.holdings) return new Map();
         
@@ -758,17 +749,16 @@ export function renderWhaleComparisonView() {
                 holdingsMap.set(ticker, {
                     nameOfIssuer: holding.nameOfIssuer,
                     shares: 0,
-                    value: 0 // Value will be stored in thousands
+                    value: 0
                 });
             }
             const existing = holdingsMap.get(ticker);
             existing.shares += Number(holding.shrsOrPrnAmt.sshPrnamt);
-            existing.value += holding.value; // No longer multiplying by 1000 here
+            existing.value += holding.value;
         }
         return holdingsMap;
     };
 
-    // --- The Corrected Comparison Logic ---
     const latestHoldingsMap = aggregateHoldingsByTicker(latestFiling);
     const previousHoldingsMap = aggregateHoldingsByTicker(previousFiling);
     
@@ -779,7 +769,6 @@ export function renderWhaleComparisonView() {
         decreased: []
     };
 
-    // Find New, Increased, Decreased
     for (const [ticker, latest] of latestHoldingsMap.entries()) {
         const previous = previousHoldingsMap.get(ticker);
         
@@ -794,14 +783,12 @@ export function renderWhaleComparisonView() {
         }
     }
 
-    // Find Exited
     for (const [ticker, previous] of previousHoldingsMap.entries()) {
         if (!latestHoldingsMap.has(ticker)) {
             changes.exited.push({ ticker, ...previous });
         }
     }
 
-    // --- HTML Rendering ---
     const renderChangeTable = (title, holdings, color, showChange = false, isExited = false) => {
         if (holdings.length === 0) return '';
         
