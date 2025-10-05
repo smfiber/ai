@@ -460,11 +460,14 @@ export async function openRawDataViewer(ticker) {
                 </div>
                 
                 <div id="filing-diligence-input-container">
-                    <label for="filing-diligence-textarea" class="block text-sm font-medium text-gray-700 mb-2">Paste 10-Q or 10-K Filing Text</label>
-                    <textarea id="filing-diligence-textarea" class="w-full border border-gray-300 rounded-lg p-2 text-sm" rows="10" placeholder="Paste the full text from the company's latest SEC filing here..."></textarea>
-                    <div class="text-center mt-4">
+                    <label for="filing-diligence-textarea" class="block text-sm font-medium text-gray-700 mb-2">Paste 10-Q, 10-K, or 8-K Filing Text</label>
+                    <textarea id="filing-diligence-textarea" class="w-full border border-gray-300 rounded-lg p-2 text-sm" rows="10" placeholder="Paste the full text from the company's latest SEC filing (10-Q, 10-K, 8-K) here..."></textarea>
+                    <div class="text-center mt-4 flex justify-center gap-4">
                         <button id="generate-filing-questions-button" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-5 rounded-lg">
                             Generate Diligence Questions
+                        </button>
+                        <button id="analyze-eight-k-button" class="bg-sky-600 hover:bg-sky-700 text-white font-bold py-2 px-5 rounded-lg">
+                            Analyze 8-K Filing
                         </button>
                     </div>
                 </div>
