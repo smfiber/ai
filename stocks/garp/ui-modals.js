@@ -445,7 +445,10 @@ export async function openRawDataViewer(ticker) {
             if (futureEarnings.length > 0) { nextEarningsDate = futureEarnings[0].date; }
         }
         
-        const filingDiligenceReports = allSavedReports.filter(r => r.reportType === 'FilingDiligence');
+        const reportTypesForLog = ['FilingDiligence', 'UpdatedGarpMemo', 'UpdatedQarpMemo'];
+        const filingDiligenceReports = allSavedReports.filter(r => reportTypesForLog.includes(r.reportType));
+        const hasFilingDiligence = filingDiligenceReports.some(r => r.reportType === 'FilingDiligence');
+
         ongoingDiligenceContainer.innerHTML = `
             <div class="bg-white p-6 rounded-2xl shadow-lg border border-gray-200">
                 <div class="flex justify-between items-center mb-4 border-b pb-2">
@@ -466,11 +469,19 @@ export async function openRawDataViewer(ticker) {
                     </div>
                 </div>
 
-                <div id="filing-diligence-form-container" class="hidden mt-4">
-                    </div>
+                <div id="filing-diligence-form-container" class="hidden mt-4"></div>
                 
-                <div id="ongoing-review-log-container" class="mt-6">
-                    </div>
+                <div id="ongoing-review-log-container" class="mt-6"></div>
+
+                <div id="updated-memo-section" class="${hasFilingDiligence ? '' : 'hidden'} mt-6 pt-6 border-t">
+                     <h3 class="text-xl font-bold text-gray-800 mb-4">Generate Updated Memo</h3>
+                     <p class="text-sm text-gray-500 mb-4">Generate a new GARP or QARP memo that incorporates the Filing Diligence Q&A you saved above.</p>
+                     <div class="flex justify-center gap-4">
+                        <button id="generate-updated-garp-memo-button" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-5 rounded-lg">Generate Updated GARP Memo</button>
+                        <button id="generate-updated-qarp-memo-button" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-5 rounded-lg">Generate Updated QARP Memo</button>
+                     </div>
+                     <div id="updated-memo-container" class="mt-6"></div>
+                </div>
             </div>
         `;
         renderOngoingReviewLog(ongoingDiligenceContainer.querySelector('#ongoing-review-log-container'), filingDiligenceReports);
