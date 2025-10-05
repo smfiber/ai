@@ -471,12 +471,12 @@ Data Summary:
 {jsonData}
 `.trim();
 
-const QUARTERLY_REVIEW_PROMPT = `
+const FILING_REVIEW_PROMPT = `
 **Persona & Role:**
-You are a meticulous financial analyst AI. Your sole task is to analyze the provided 10-Q filing for {companyName} and answer a specific set of questions based *only* on the information contained within that document.
+You are a meticulous financial analyst AI. Your sole task is to analyze the provided filing (10-Q or 10-K) for {companyName} and answer a specific set of questions based *only* on the information contained within that document.
 
 **Critical Instructions:**
-1.  **Source Limitation:** Your answers MUST be derived exclusively from the provided "10-Q Filing Text". Do not use any external knowledge.
+1.  **Source Limitation:** Your answers MUST be derived exclusively from the provided "Filing Text". Do not use any external knowledge.
 2.  **Quote and Cite:** For each answer, you MUST support your key points by extracting direct, relevant quotes from the filing.
 3.  **Strict Output Format:** You MUST format your entire response using the exact structure below. Use "---||---" as a unique separator between the final answer and the suggested questions section. Do not add any other text or formatting.
 
@@ -487,7 +487,7 @@ You are a meticulous financial analyst AI. Your sole task is to analyze the prov
 {questionsJson}
 \`\`\`
 
-**2. 10-Q Filing Text:**
+**2. Filing Text:**
 \`\`\`
 {filingText}
 \`\`\`
@@ -496,28 +496,15 @@ You are a meticulous financial analyst AI. Your sole task is to analyze the prov
 
 **BEGIN AI RESPONSE**
 
-### 10-Q Analysis: {companyName}
+### Filing Analysis: {companyName}
 
-**1. Results vs. Expectations:**
-(Your detailed analysis and supporting quotes go here.)
-
-**2. Quantitative Thesis Check:**
-(Your detailed analysis and supporting quotes go here.)
-
-**3. Management Outlook:**
-(Your detailed analysis and supporting quotes go here.)
-
-**4. Qualitative Thesis Check:**
-(Your detailed analysis and supporting quotes go here.)
-
-**5. Action Plan:**
-(Your detailed analysis and supporting quotes go here.)
+(Based on the questions provided in the JSON, create a numbered list of answers. Each answer should be a detailed analysis with supporting quotes.)
 
 ---||---
 
 ### Suggested AI Investigation Queries
 
-(Based on your analysis of the 10-Q, generate 3-4 new, keyword-based search queries for a human analyst to investigate further. Format each as a bullet point with the query in quotes.)
+(Based on your analysis of the filing, generate 3-4 new, keyword-based search queries for a human analyst to investigate further. Format each as a bullet point with the query in quotes.)
 
 - "[Your first query here]"
 - "[Your second query here]"
@@ -611,8 +598,8 @@ JSON Data with Pre-Calculated Metrics:
         prompt: SECTOR_MOMENTUM_PROMPT,
         requires: []
     },
-    'QuarterlyReview': {
-        prompt: QUARTERLY_REVIEW_PROMPT,
+    'FilingReview': {
+        prompt: FILING_REVIEW_PROMPT,
         requires: []
     }
 };
@@ -642,6 +629,7 @@ export const ANALYSIS_NAMES = {
     'PeerIdentification': 'Peer Identification',
     'PeerComparison': 'Peer Comparison',
     'SectorMomentum': 'Sector Momentum',
+    'FilingReview': 'Filing Review',
     'QuarterlyReview': 'Quarterly Review',
     'AnnualReview': 'Annual Review'
 };
