@@ -60,10 +60,22 @@ async function initializeFirebase() {
                     displayMessageInModal("Your session has expired. Please log in again to continue.", "warning");
                 }
                 state.appIsInitialized = false;
-                // Clear any dynamic content if logged out
-                document.getElementById('recent-filings-container').innerHTML = '';
-                document.getElementById('filings-by-company-container').innerHTML = '';
-                document.getElementById('upcoming-filings-container').innerHTML = '';
+                
+                // Clear dynamic content if logged out, checking if elements exist first
+                const containerIds = [
+                    'recent-8k-container', 
+                    'recent-10q-container', 
+                    'recent-10k-container',
+                    'filings-by-company-container', 
+                    'upcoming-filings-container'
+                ];
+
+                containerIds.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) {
+                        el.innerHTML = '';
+                    }
+                });
             }
             setupAuthUI(user);
         });
