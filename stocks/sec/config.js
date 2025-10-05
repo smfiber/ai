@@ -4,8 +4,6 @@ export const APP_VERSION = '1.0.0';
  * =================================================================
  * GLOBAL STATE MANAGEMENT
  * =================================================================
- * This object holds all the dynamic state for the application.
- * It is imported and mutated by various modules.
  */
 export const state = {
     // API Keys & Config
@@ -34,7 +32,6 @@ export const state = {
  * =================================================================
  * APPLICATION CONSTANTS
  * =================================================================
- * This object holds static, unchanging values used across the app.
  */
 export const CONSTANTS = {
     // Element IDs
@@ -50,8 +47,10 @@ export const CONSTANTS = {
     // CSS Classes
     CLASS_HIDDEN: 'hidden',
 
+    // --- CHANGE STARTS HERE ---
     // Firestore Collections
-    DB_COLLECTION_PORTFOLIO: 'portfolio',
+    DB_COLLECTION_PORTFOLIO: 'portfolio_stocks',
+    // --- CHANGE ENDS HERE ---
     DB_COLLECTION_INVESTOR_DATA: 'investorData',
     DB_COLLECTION_FMP_CACHE: 'fmpCache',
 };
@@ -60,23 +59,37 @@ export const CONSTANTS = {
  * =================================================================
  * STATIC DATA
  * =================================================================
- * Master list of top institutional investors and their CIKs.
  */
 export const TOP_25_INVESTORS = [
+    { "name": "Appaloosa Management (David Tepper)", "cik": "1079114" },
+    { "name": "Baupost Group (Seth Klarman)", "cik": "1061768" },
     { "name": "Berkshire Hathaway (Warren Buffett & Greg Abel)", "cik": "1067983" },
+    { "name": "Bridgewater Associates (Ray Dalio)", "cik": "1350694" },
     { "name": "Cevian Capital", "cik": "1365341" },
+    { "name": "Coatue Management", "cik": "1103273" },
+    { "name": "Corvex Management (Keith Meister)", "cik": "1543829" },
+    { "name": "Dalton Investments", "cik": "1074784" },
     { "name": "Duquesne Family Office (Stan Druckenmiller)", "cik": "1536411" },
     { "name": "Elliott Management (Paul Singer)", "cik": "1791786" },
+    { "name": "ESL Investments (Eddie Lampert)", "cik": "1069315" },
+    { "name": "Fairholme Capital (Bruce Berkowitz)", "cik": "1093049" },
+    { "name": "Greenlight Capital (David Einhorn)", "cik": "1079121" },
     { "name": "Icahn Enterprises (Carl Icahn)", "cik": "921669" },
+    { "name": "Lone Pine Capital (Stephen Mandel)", "cik": "1061167" },
+    { "name": "Melvin Capital Management", "cik": "1628110" },
     { "name": "Pershing Square Capital (Bill Ackman)", "cik": "1336528" },
+    { "name": "Point72 Asset Management (Steve Cohen)", "cik": "1603426" },
+    { "name": "Renaissance Technologies (Jim Simons)", "cik": "1037389" },
     { "name": "Scion Asset Management (Michael Burry)", "cik": "1649339" },
     { "name": "Soros Fund Management (Dawn Fitzpatrick)", "cik": "1029160" },
     { "name": "Starboard Value (Jeffrey Smith)", "cik": "1517137" },
+    { "name": "Third Point (Dan Loeb)", "cik": "1040273" },
+    { "name": "Tiger Global Management", "cik": "1167483" },
+    { "name": "Viking Global Investors (Andreas Halvorsen)", "cik": "1063682" }
 ];
 
 /**
  * Prompts for analyzing different types of SEC filings.
- * Each prompt is tailored to extract specific, relevant information.
  */
 export const promptMap = {
     '8-K': `
