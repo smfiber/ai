@@ -1204,66 +1204,57 @@ export async function handleManualDiligenceSave(symbol) {
     }
 }
 
-export async function handleOngoingReviewSave(symbol, reviewType) {
-    const formContainer = document.getElementById('quarterly-review-form-container');
-    const answerElements = formContainer.querySelectorAll('.ongoing-review-answer');
-    const entriesToSave = [];
-    const questionSet = reviewType === 'Annual' ? ANNUAL_REVIEW_QUESTIONS : QUARTERLY_REVIEW_QUESTIONS;
+export async function handleSaveFilingDiligenceRequest(symbol) {
+    const formContainer = document.getElementById('filing-diligence-form-container');
+    const qaPairs = formContainer.querySelectorAll('.filing-qa-pair');
+    
+    let reportContent = '';
+    qaPairs.forEach(pair => {
+        const question = pair.querySelector('.filing-question-text').textContent;
+        const answer = pair.querySelector('.filing-answer-textarea').value.trim();
 
-    answerElements.forEach(textarea => {
-        const answer = textarea.value.trim();
-        const category = textarea.dataset.category;
-        const question = questionSet[category];
-
-        if (answer && question) {
-            entriesToSave.push({ question, answer });
+        if (answer) {
+            reportContent += `## ${question}\n\n${answer}\n\n---\n\n`;
         }
     });
 
-    if (entriesToSave.length === 0) {
+    if (!reportContent) {
         displayMessageInModal("Please answer at least one question before saving.", "warning");
         return;
     }
 
     openModal(CONSTANTS.MODAL_LOADING);
-    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Saving ${entriesToSave.length} review entries...`;
-
+    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Saving your diligence answers...`;
+    
     try {
-        let formattedContent = '';
-        const reportType = `${reviewType}Review`;
-        const prompt = `Ongoing Diligence Review for ${symbol} saved on ${new Date().toLocaleDateString()}`;
-
-        entriesToSave.forEach(entry => {
-            formattedContent += `## ${entry.question}\n\n${entry.answer}\n\n---\n\n`;
-        });
+        const reportType = 'FilingDiligence';
+        const prompt = `User-answered diligence questions from SEC filing for ${symbol} saved on ${new Date().toLocaleDateString()}`;
+        await autoSaveReport(symbol, reportType, marked.parse(reportContent), prompt);
         
-        await autoSaveReport(symbol, reportType, marked.parse(formattedContent), prompt);
-
         // Reset UI
         formContainer.innerHTML = '';
         formContainer.classList.add('hidden');
-        document.getElementById('ongoing-diligence-controls').classList.remove('hidden');
+        document.getElementById('filing-diligence-input-container').classList.remove('hidden');
+        document.getElementById('filing-diligence-textarea').value = '';
 
+        // Refresh log
+        const logContainer = document.getElementById('ongoing-review-log-container');
+        const savedReports = await getSavedReports(symbol, reportType);
+        renderOngoingReviewLog(logContainer, savedReports);
 
-        // Refresh the log
-        const ongoingReviews = await getSavedReports(symbol, ['QuarterlyReview', 'AnnualReview']);
-        renderOngoingReviewLog(document.getElementById('ongoing-review-log-container'), ongoingReviews);
-
-        displayMessageInModal(`Successfully saved ${entriesToSave.length} review entries.`, 'info');
-
+        displayMessageInModal('Your filing diligence has been saved successfully.', 'info');
     } catch (error) {
-        console.error("Error saving ongoing review entries:", error);
-        displayMessageInModal(`Could not save review: ${error.message}`, 'error');
+        console.error("Error saving filing diligence:", error);
+        displayMessageInModal(`Could not save your answers: ${error.message}`, 'error');
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
 }
 
-export async function handleFilingAnalysisRequest(symbol, reviewType) {
-    const filingTextarea = document.getElementById('quarterly-filing-textarea');
-    const formContainer = document.getElementById('quarterly-review-form-container');
-    const suggestedQuestionsContainer = document.getElementById('ai-suggested-questions-container');
-
+export async function handleGenerateFilingQuestionsRequest(symbol) {
+    const filingTextarea = document.getElementById('filing-diligence-textarea');
+    const formContainer = document.getElementById('filing-diligence-form-container');
+    
     const filingText = filingTextarea.value.trim();
     if (!filingText) {
         displayMessageInModal("Please paste the filing text into the text area first.", "warning");
@@ -1272,73 +1263,53 @@ export async function handleFilingAnalysisRequest(symbol, reviewType) {
 
     openModal(CONSTANTS.MODAL_LOADING);
     const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
-    loadingMessage.textContent = `AI is analyzing the ${reviewType} filing. This may take a moment...`;
+    loadingMessage.textContent = `AI is analyzing the filing to generate questions...`;
 
     try {
         const profile = state.portfolioCache.find(s => s.ticker === symbol);
         const companyName = profile ? profile.companyName : symbol;
-        const questionSet = reviewType === 'Annual' ? ANNUAL_REVIEW_QUESTIONS : QUARTERLY_REVIEW_QUESTIONS;
         
-        const promptConfig = promptMap['FilingReview'];
+        const promptConfig = promptMap['FilingQuestionGeneration'];
         const prompt = promptConfig.prompt
-            .replace(/{companyName}/g, companyName)
-            .replace('{questionsJson}', JSON.stringify(questionSet, null, 2))
+            .replace('{companyName}', companyName)
             .replace('{filingText}', filingText);
 
         const aiResponse = await callGeminiApi(prompt);
         
-        const responseParts = aiResponse.split('---||---');
-        const mainAnalysis = responseParts[0] || '';
-        const suggestedQueries = responseParts[1] || '';
-        
-        let formHtml = `<div class="text-left mt-4 border rounded-lg p-4 bg-gray-50 space-y-4" data-review-type="${reviewType}">`;
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = marked.parse(mainAnalysis);
-        
-        for (const [category, question] of Object.entries(questionSet)) {
-            const heading = Array.from(tempDiv.querySelectorAll('h1, h2, h3, h4, h5, h6')).find(h => h.textContent.includes(category));
-            let answerContent = 'AI could not generate an answer for this section.';
-            if (heading) {
-                let content = '';
-                let nextElem = heading.nextElementSibling;
-                while (nextElem && !['H1', 'H2', 'H3', 'H4', 'H5', 'H6'].includes(nextElem.tagName)) {
-                    content += nextElem.outerHTML;
-                    nextElem = nextElem.nextElementSibling;
-                }
-                answerContent = content;
-            }
+        // Clean the response to ensure it's valid JSON
+        const cleanedResponse = aiResponse.trim().replace(/^```json\s*|```\s*$/g, '');
+        const questions = JSON.parse(cleanedResponse);
 
+        if (!Array.isArray(questions) || questions.length === 0) {
+            throw new Error("AI did not return a valid list of questions.");
+        }
+
+        let formHtml = `<div class="text-left mt-4 border rounded-lg p-4 bg-gray-50 space-y-4">`;
+        questions.forEach((q, index) => {
             formHtml += `
-                <div class="p-3 bg-white rounded-lg border border-gray-200">
-                    <h5 class="font-semibold text-sm text-indigo-700 mb-2">${category}</h5>
-                    <p class="text-xs text-gray-600 mb-2">${question}</p>
-                    <div class="prose prose-sm max-w-none bg-indigo-50 p-3 rounded-md border border-indigo-200">${answerContent}</div>
+                <div class="filing-qa-pair p-3 bg-white rounded-lg border border-gray-200">
+                    <p class="filing-question-text font-semibold text-sm text-indigo-700 mb-2">${q}</p>
+                    <textarea class="filing-answer-textarea w-full border border-gray-300 rounded-lg p-2 text-sm" 
+                              rows="5" 
+                              data-question-index="${index}"
+                              placeholder="Your analysis and findings here..."></textarea>
                 </div>
             `;
-        }
-         formHtml += `
+        });
+        formHtml += `
             <div class="text-right mt-4 flex justify-end gap-2">
-                <button id="cancel-ongoing-review-button" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg">Cancel</button>
-                <button id="save-ongoing-review-button" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg">Save Review</button>
+                <button id="cancel-filing-diligence-button" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg">Cancel</button>
+                <button id="save-filing-diligence-button" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg">Save Answers</button>
             </div>
         </div>`;
+        
         formContainer.innerHTML = formHtml;
         formContainer.classList.remove('hidden');
-        document.getElementById('quarterly-filing-input-container').classList.add('hidden');
-
-        if (suggestedQueries.trim()) {
-            suggestedQuestionsContainer.innerHTML = `
-                <h4 class="text-lg font-semibold text-gray-700 mb-3 pt-4 border-t">AI-Suggested Investigation Queries</h4>
-                <div class="prose prose-sm max-w-none bg-gray-50 p-4 rounded-md border">
-                    ${marked.parse(suggestedQueries)}
-                </div>
-            `;
-            suggestedQuestionsContainer.classList.remove('hidden');
-        }
+        document.getElementById('filing-diligence-input-container').classList.add('hidden');
 
     } catch (error) {
-        console.error("Error analyzing filing:", error);
-        displayMessageInModal(`Could not analyze the filing: ${error.message}`, 'error');
+        console.error("Error generating filing questions:", error);
+        displayMessageInModal(`Could not generate questions. The AI may have returned an invalid format. Error: ${error.message}`, 'error');
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
