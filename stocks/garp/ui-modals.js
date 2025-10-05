@@ -220,6 +220,15 @@ export const QUARTERLY_REVIEW_QUESTIONS = {
     'Action Plan': "Based on this review, what is the new investment decision? (e.g., Hold, Add, Trim, Sell). Justify the decision."
 };
 
+export const ANNUAL_REVIEW_QUESTIONS = {
+    'Full-Year Performance vs. Guidance': "Did the company meet its full-year guidance for revenue and EPS? Analyze the primary drivers of outperformance or underperformance for the year.",
+    'Strategic Progress & Capital Allocation': "Review the company's strategic initiatives from the start of the year. Was capital allocated effectively (e.g., acquisitions, buybacks, R&D)? How has ROIC trended over the full year?",
+    'Updated Competitive Landscape': "Based on the 10-K's 'Competition' and 'Risk Factors' sections, have there been any material changes to the competitive environment or long-term business risks?",
+    'Long-Term Thesis Validation': "Does the full-year performance and management's outlook for the next year strengthen or weaken the original long-term investment thesis? Re-evaluate the core bull and bear cases.",
+    'Forward-Looking Action Plan': "Given the full-year results and outlook, what is the investment plan for the stock over the next 6-12 months? (e.g., Hold, Add on weakness, Trim on strength, Exit position). Justify the plan."
+};
+
+
 export function addDiligenceEntryRow() {
     const container = document.getElementById('manual-diligence-entries-container');
     if (!container) return;
@@ -440,26 +449,17 @@ export async function openRawDataViewer(ticker) {
         ongoingDiligenceContainer.innerHTML = `
             <div class="bg-white p-6 rounded-2xl shadow-lg border border-gray-200">
                 <div class="flex justify-between items-center mb-4 border-b pb-2">
-                    <div>
-                        <h3 class="text-xl font-bold text-gray-800">Recurring Review Workflow</h3>
-                        <p class="text-sm text-gray-500">Analyze 10-Q filings to validate your thesis.</p>
-                    </div>
+                    <h3 class="text-xl font-bold text-gray-800">Recurring Review</h3>
                     <div class="text-right">
                         <p class="text-sm font-semibold text-gray-600">Next Earnings Date</p>
                         <p class="text-lg font-bold text-indigo-700">${nextEarningsDate}</p>
                     </div>
                 </div>
-
-                <div id="quarterly-filing-input-container" class="mb-6">
-                    <label for="quarterly-filing-textarea" class="block text-sm font-medium text-gray-700 mb-2">Paste 10-Q Filing Text</label>
-                    <textarea id="quarterly-filing-textarea" rows="10" class="w-full border border-gray-300 rounded-lg p-2 text-sm font-mono" placeholder="Paste the full text from the company's latest 10-Q filing here..."></textarea>
-                    <div class="text-center mt-4">
-                        <button id="analyze-filing-button" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-5 rounded-lg">Analyze Filing with AI</button>
-                    </div>
+                <div id="ongoing-diligence-controls" class="text-center mb-6 flex justify-center gap-4">
+                    <button id="start-quarterly-review-button" data-review-type="Quarterly" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-5 rounded-lg">Start New Quarterly Review</button>
+                    <button id="start-annual-review-button" data-review-type="Annual" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-5 rounded-lg">Start New Annual Review</button>
                 </div>
-
                 <div id="quarterly-review-form-container" class="hidden"></div>
-                <div id="ai-suggested-questions-container" class="hidden mt-6"></div>
                 <div id="ongoing-review-log-container" class="mt-6"></div>
             </div>
         `;
