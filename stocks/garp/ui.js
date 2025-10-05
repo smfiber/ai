@@ -2,7 +2,7 @@
 import { CONSTANTS, state, promptMap } from './config.js';
 import { openModal, closeModal, openStockListModal, openManageStockModal, openPortfolioManagerModal, openRawDataViewer, QUARTERLY_REVIEW_QUESTIONS, ANNUAL_REVIEW_QUESTIONS, addDiligenceEntryRow } from './ui-modals.js';
 import { fetchAndCachePortfolioData, renderPortfolioManagerList } from './ui-render.js';
-import { handleResearchSubmit, handleSaveStock, handleDeleteStock, handleRefreshFmpData, handleAnalysisRequest, handleInvestmentMemoRequest, handleSaveReportToDb, handleGenerateAllReportsRequest, handleGarpCandidacyRequest, handlePortfolioGarpAnalysisRequest, handlePositionAnalysisRequest, handleReportHelpRequest, handleManualDiligenceSave, handleDeleteDiligenceLog, handleWorkflowHelpRequest, handlePeerAnalysisRequest, handleManualPeerAnalysisRequest, handleStructuredDiligenceSave, handleGenerateFilingQuestionsRequest, handleSaveFilingDiligenceRequest } from './ui-handlers.js';
+import { handleResearchSubmit, handleSaveStock, handleDeleteStock, handleRefreshFmpData, handleAnalysisRequest, handleInvestmentMemoRequest, handleSaveReportToDb, handleGenerateAllReportsRequest, handleGarpCandidacyRequest, handlePortfolioGarpAnalysisRequest, handlePositionAnalysisRequest, handleReportHelpRequest, handleManualDiligenceSave, handleDeleteDiligenceLog, handleWorkflowHelpRequest, handlePeerAnalysisRequest, handleManualPeerAnalysisRequest, handleStructuredDiligenceSave, handleGenerateFilingQuestionsRequest, handleSaveFilingDiligenceRequest, handleDeleteFilingDiligenceLog, handleGenerateUpdatedGarpMemoRequest, handleGenerateUpdatedQarpMemoRequest } from './ui-handlers.js';
 import { getFmpStockData } from './api.js';
 
 // --- DYNAMIC TOOLTIPS ---
@@ -274,6 +274,40 @@ export function setupEventListeners() {
             formContainer.innerHTML = '';
             formContainer.classList.add('hidden');
             document.getElementById('filing-diligence-input-container').classList.remove('hidden');
+            return;
+        }
+
+        const deleteFilingBtn = e.target.closest('.delete-filing-diligence-log-btn');
+        if (deleteFilingBtn) {
+            const reportId = deleteFilingBtn.dataset.reportId;
+            if (reportId) {
+                handleDeleteFilingDiligenceLog(reportId, symbol);
+            }
+            return;
+        }
+
+        const copyFilingQuestionBtn = e.target.closest('.copy-filing-question-btn');
+        if (copyFilingQuestionBtn) {
+            const questionText = copyFilingQuestionBtn.previousElementSibling.textContent;
+            navigator.clipboard.writeText(questionText).then(() => {
+                copyFilingQuestionBtn.classList.add('copied');
+                const originalIcon = copyFilingQuestionBtn.innerHTML;
+                copyFilingQuestionBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>`;
+                setTimeout(() => {
+                    copyFilingQuestionBtn.classList.remove('copied');
+                    copyFilingQuestionBtn.innerHTML = originalIcon;
+                }, 2000);
+            });
+            return;
+        }
+
+        if (target.id === 'generate-updated-garp-memo-button') {
+            handleGenerateUpdatedGarpMemoRequest(symbol);
+            return;
+        }
+
+        if (target.id === 'generate-updated-qarp-memo-button') {
+            handleGenerateUpdatedQarpMemoRequest(symbol);
             return;
         }
         
