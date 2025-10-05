@@ -2,7 +2,7 @@
 import { CONSTANTS, state, promptMap } from './config.js';
 import { openModal, closeModal, openStockListModal, openManageStockModal, openPortfolioManagerModal, openRawDataViewer, QUARTERLY_REVIEW_QUESTIONS, ANNUAL_REVIEW_QUESTIONS, addDiligenceEntryRow } from './ui-modals.js';
 import { fetchAndCachePortfolioData, renderPortfolioManagerList } from './ui-render.js';
-import { handleResearchSubmit, handleSaveStock, handleDeleteStock, handleRefreshFmpData, handleAnalysisRequest, handleInvestmentMemoRequest, handleSaveReportToDb, handleGenerateAllReportsRequest, handleGarpCandidacyRequest, handlePortfolioGarpAnalysisRequest, handlePositionAnalysisRequest, handleReportHelpRequest, handleManualDiligenceSave, handleDeleteDiligenceLog, handleWorkflowHelpRequest, handlePeerAnalysisRequest, handleManualPeerAnalysisRequest, handleStructuredDiligenceSave, handleOngoingReviewSave, handleFilingAnalysisRequest } from './ui-handlers.js';
+import { handleResearchSubmit, handleSaveStock, handleDeleteStock, handleRefreshFmpData, handleAnalysisRequest, handleInvestmentMemoRequest, handleSaveReportToDb, handleGenerateAllReportsRequest, handleGarpCandidacyRequest, handlePortfolioGarpAnalysisRequest, handlePositionAnalysisRequest, handleReportHelpRequest, handleManualDiligenceSave, handleDeleteDiligenceLog, handleWorkflowHelpRequest, handlePeerAnalysisRequest, handleManualPeerAnalysisRequest, handleStructuredDiligenceSave, handleGenerateFilingQuestionsRequest, handleSaveFilingDiligenceRequest } from './ui-handlers.js';
 import { getFmpStockData } from './api.js';
 
 // --- DYNAMIC TOOLTIPS ---
@@ -259,56 +259,21 @@ export function setupEventListeners() {
         }
         
         // --- ONGOING DILIGENCE HANDLERS ---
-        if (target.id === 'analyze-filing-button') {
-            const reviewType = target.dataset.reviewType || 'Quarterly'; // Default to Quarterly
-            handleFilingAnalysisRequest(symbol, reviewType);
+        if (target.id === 'generate-filing-questions-button') {
+            handleGenerateFilingQuestionsRequest(symbol);
+            return;
+        }
+        
+        if (target.id === 'save-filing-diligence-button') {
+            handleSaveFilingDiligenceRequest(symbol);
             return;
         }
 
-        if (target.id === 'start-quarterly-review-button' || target.id === 'start-annual-review-button') {
-            const reviewType = target.dataset.reviewType; // 'Quarterly' or 'Annual'
-            const questionSet = reviewType === 'Annual' ? ANNUAL_REVIEW_QUESTIONS : QUARTERLY_REVIEW_QUESTIONS;
-            
-            document.getElementById('ongoing-diligence-controls').classList.add('hidden');
-            const formContainer = document.getElementById('quarterly-review-form-container');
-            
-            let formHtml = `<div class="text-left mt-4 border rounded-lg p-4 bg-gray-50 space-y-4" data-review-type="${reviewType}">`;
-            for (const [category, question] of Object.entries(questionSet)) {
-                formHtml += `
-                    <div class="p-3 bg-white rounded-lg border border-gray-200">
-                        <h5 class="font-semibold text-sm text-indigo-700 mb-2">${category}</h5>
-                        <p class="text-xs text-gray-600 mb-2">${question}</p>
-                        <textarea class="ongoing-review-answer w-full border border-gray-300 rounded-lg p-2 text-sm" 
-                                  rows="5" 
-                                  data-category="${category}"
-                                  placeholder="Your analysis and findings here..."></textarea>
-                    </div>
-                `;
-            }
-            formHtml += `
-                <div class="text-right mt-4 flex justify-end gap-2">
-                    <button id="cancel-ongoing-review-button" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg">Cancel</button>
-                    <button id="save-ongoing-review-button" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg">Save Review</button>
-                </div>
-            </div>`;
-            formContainer.innerHTML = formHtml;
-            formContainer.classList.remove('hidden');
-            return;
-        }
-
-
-        if (target.id === 'save-ongoing-review-button') {
-            const form = target.closest('[data-review-type]');
-            const reviewType = form.dataset.reviewType;
-            handleOngoingReviewSave(symbol, reviewType);
-            return;
-        }
-
-        if (target.id === 'cancel-ongoing-review-button') {
-            const formContainer = document.getElementById('quarterly-review-form-container');
+        if (target.id === 'cancel-filing-diligence-button') {
+            const formContainer = document.getElementById('filing-diligence-form-container');
             formContainer.innerHTML = '';
             formContainer.classList.add('hidden');
-            document.getElementById('ongoing-diligence-controls').classList.remove('hidden');
+            document.getElementById('filing-diligence-input-container').classList.remove('hidden');
             return;
         }
         
