@@ -2,7 +2,7 @@
 import { CONSTANTS, state, promptMap } from './config.js';
 import { openModal, closeModal, openStockListModal, openManageStockModal, openPortfolioManagerModal, openRawDataViewer, QUARTERLY_REVIEW_QUESTIONS, addDiligenceEntryRow } from './ui-modals.js';
 import { fetchAndCachePortfolioData, renderPortfolioManagerList } from './ui-render.js';
-import { handleResearchSubmit, handleSaveStock, handleDeleteStock, handleRefreshFmpData, handleAnalysisRequest, handleInvestmentMemoRequest, handleSaveReportToDb, handleGenerateAllReportsRequest, handleGarpCandidacyRequest, handlePortfolioGarpAnalysisRequest, handlePositionAnalysisRequest, handleReportHelpRequest, handleManualDiligenceSave, handleDeleteDiligenceLog, handleWorkflowHelpRequest, handlePeerAnalysisRequest, handleManualPeerAnalysisRequest, handleStructuredDiligenceSave, handleOngoingReviewSave } from './ui-handlers.js';
+import { handleResearchSubmit, handleSaveStock, handleDeleteStock, handleRefreshFmpData, handleAnalysisRequest, handleInvestmentMemoRequest, handleSaveReportToDb, handleGenerateAllReportsRequest, handleGarpCandidacyRequest, handlePortfolioGarpAnalysisRequest, handlePositionAnalysisRequest, handleReportHelpRequest, handleManualDiligenceSave, handleDeleteDiligenceLog, handleWorkflowHelpRequest, handlePeerAnalysisRequest, handleManualPeerAnalysisRequest, handleStructuredDiligenceSave, handleOngoingReviewSave, handleFilingAnalysisRequest } from './ui-handlers.js';
 import { getFmpStockData } from './api.js';
 
 // --- DYNAMIC TOOLTIPS ---
@@ -259,6 +259,11 @@ export function setupEventListeners() {
         }
         
         // --- ONGOING DILIGENCE HANDLERS ---
+        if (target.id === 'analyze-filing-button') {
+            handleFilingAnalysisRequest(symbol);
+            return;
+        }
+
         if (target.id === 'start-quarterly-review-button') {
             let surpriseHtml = '';
             try {
