@@ -1,6 +1,6 @@
 import { CONSTANTS, state, TOP_25_INVESTORS } from './config.js'; 
-// --- MODIFICATION: Added 'query' and 'where' for user-specific data fetching ---
-import { getDocs, collection, query, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+// --- MODIFICATION: Removed 'query' and 'where' as they are no longer needed ---
+import { getDocs, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getEarningsCalendar } from './api.js';
 import { getRecentPortfolioFilings, getPortfolioInsiderTrading, getPortfolioInstitutionalOwnership, getSecMaterialEvents, getSecAnnualReports, getSecQuarterlyReports, get13FHoldings, getWhaleFilings } from './sec-api.js';
 import { callApi } from './api.js';
@@ -16,18 +16,16 @@ function sanitizeText(text) {
 // --- DATA FETCHING & CACHING ---
 export async function fetchAndCachePortfolioData() {
     try {
-        if (!state.db || !state.userId) {
-            console.error("Firestore or User ID is not available for fetching portfolio.");
+        if (!state.db) {
+            console.error("Firestore is not initialized.");
             state.portfolioCache = [];
             return;
         }
         
         // --- CHANGE STARTS HERE ---
-        // This is the critical fix. It now queries the correct top-level collection ('portfolio_stocks')
-        // and securely filters for documents that have a 'userId' field matching the logged-in user.
-        const portfolioCollectionRef = collection(state.db, CONSTANTS.DB_COLLECTION_PORTFOLIO);
-        const q = query(portfolioCollectionRef, where("userId", "==", state.userId));
-        const querySnapshot = await getDocs(q);
+        // Reverted to fetching the entire collection, per user request, to match other apps.
+        // This is less secure in a multi-user environment but will work for a single user.
+        const querySnapshot = await getDocs(collection(state.db, CONSTANTS.DB_COLLECTION_PORTFOLIO));
         // --- CHANGE ENDS HERE ---
         
         state.portfolioCache = querySnapshot.docs.map(doc => ({ ticker: doc.id, ...doc.data() }));
