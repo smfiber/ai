@@ -858,11 +858,14 @@ export function renderOngoingReviewLog(container, reports) {
 
         return `
             <li class="p-3 hover:bg-indigo-50 flex justify-between items-center">
-                <div>
-                     <p class="font-semibold text-sm text-indigo-700">${reportName}</p>
+                <div class="flex-grow min-w-0">
+                     <p class="font-semibold text-sm text-indigo-700 truncate" title="${reportName}">${reportName}</p>
                      <p class="text-xs text-gray-400">Saved: ${savedDate}</p>
                 </div>
-                <button class="view-ongoing-review-answer text-xs font-semibold py-1 px-3 rounded-full bg-blue-100 text-blue-800 hover:bg-blue-200" data-report-id="${report.id}">View</button>
+                <div class="flex items-center gap-2 flex-shrink-0 ml-4">
+                    <button class="view-ongoing-review-answer text-xs font-semibold py-1 px-3 rounded-full bg-blue-100 text-blue-800 hover:bg-blue-200" data-report-id="${report.id}">View</button>
+                    <button class="delete-filing-diligence-log-btn text-xs font-semibold py-1 px-3 rounded-full bg-red-100 text-red-800 hover:bg-red-200" title="Delete this entry" data-report-id="${report.id}">Delete</button>
+                </div>
             </li>
         `;
     }).join('');
