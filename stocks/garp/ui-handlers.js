@@ -1353,6 +1353,96 @@ export async function handleDeleteFilingDiligenceLog(reportId, ticker) {
     );
 }
 
+async function generateUpdatedMemo(symbol, memoType) {
+    const updatedMemoContainer = document.getElementById('updated-memo-container');
+    if (!updatedMemoContainer) return;
+    updatedMemoContainer.innerHTML = `<div class="p-4 text-center">Generating updated ${memoType} memo... <div class="loader mx-auto mt-2"></div></div>`;
+    
+    // Placeholder for QARP memo since it requires a new prompt
+    if (memoType === 'QARP') {
+        updatedMemoContainer.innerHTML = `<div class="p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-800">The 'Updated QARP Memo' functionality requires a new dedicated prompt. This can be added in a future step.</div>`;
+        return; 
+    }
+
+    const reportType = 'UpdatedGarpMemo';
+    const originalMemoPromptName = 'InvestmentMemo';
+
+    try {
+        // Step 1: Gather all diligence logs
+        const diligenceInvestigationReports = await getSavedReports(symbol, 'DiligenceInvestigation');
+        const filingDiligenceReports = await getSavedReports(symbol, 'FilingDiligence');
+        
+        let combinedDiligenceLog = '';
+        const logs = [];
+
+        if (diligenceInvestigationReports.length > 0) {
+            const investigationLog = diligenceInvestigationReports.map(report => {
+                const question = report.prompt.split('Diligence Question from User:')[1]?.trim() || 'Question not found.';
+                const answer = report.content; // Assumes raw markdown
+                return `**Question:** ${question}\n\n**Answer:**\n${answer}`;
+            }).join('\n\n---\n\n');
+            logs.push(investigationLog);
+        }
+
+        if (filingDiligenceReports.length > 0) {
+            const filingLog = filingDiligenceReports.map(report => report.content).join('\n\n');
+            logs.push(filingLog);
+        }
+
+        combinedDiligenceLog = logs.length > 0 ? logs.join('\n\n---\n\n') : 'No diligence logs available.';
+
+        // Step 2: Gather other required data (candidacy report, scorecard)
+        const candidacyReports = await getSavedReports(symbol, 'GarpCandidacy');
+        if (candidacyReports.length === 0) {
+            throw new Error(`The foundational 'GARP Candidacy Report' must be generated first.`);
+        }
+        const candidacyReportContent = candidacyReports[0].content;
+
+        const data = await getFmpStockData(symbol);
+        if (!data) throw new Error(`Could not retrieve financial data for ${symbol}.`);
+        const scorecardData = _calculateGarpScorecardMetrics(data);
+
+        const profile = data.profile?.[0] || {};
+        const companyName = profile.companyName || 'the company';
+        
+        // Step 3: Build and call the prompt
+        const promptTemplate = promptMap[originalMemoPromptName].prompt;
+
+        const prompt = promptTemplate
+            .replace(/{companyName}/g, companyName)
+            .replace(/{tickerSymbol}/g, symbol)
+            .replace('{scorecardJson}', JSON.stringify(scorecardData, null, 2))
+            .replace('{diligenceLog}', combinedDiligenceLog)
+            .replace('{garpCandidacyReport}', candidacyReportContent);
+
+        const memoContent = await generateRefinedArticle(prompt);
+
+        // Step 4: Save and Display
+        await autoSaveReport(symbol, reportType, memoContent, prompt);
+        
+        updatedMemoContainer.innerHTML = `<div class="prose max-w-none">${marked.parse(memoContent)}</div>`;
+        displayMessageInModal(`Updated ${memoType} Memo generated and saved.`, 'info');
+
+        // Refresh log
+        const logContainer = document.getElementById('ongoing-review-log-container');
+        const savedReports = await getSavedReports(symbol, ['FilingDiligence', 'UpdatedGarpMemo', 'UpdatedQarpMemo']);
+        renderOngoingReviewLog(logContainer, savedReports);
+
+    } catch(error) {
+        console.error(`Error generating updated ${memoType} memo:`, error);
+        updatedMemoContainer.innerHTML = `<p class="text-red-500">${error.message}</p>`;
+    }
+}
+
+export async function handleGenerateUpdatedGarpMemoRequest(symbol) {
+    await generateUpdatedMemo(symbol, 'GARP');
+}
+
+export async function handleGenerateUpdatedQarpMemoRequest(symbol) {
+    await generateUpdatedMemo(symbol, 'QARP');
+}
+
+
 export async function handleDeleteDiligenceLog(reportId, ticker) {
     openConfirmationModal(
         'Delete Log Entry?',
