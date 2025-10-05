@@ -1229,7 +1229,7 @@ export async function handleSaveFilingDiligenceRequest(symbol) {
     try {
         const reportType = 'FilingDiligence';
         const prompt = `User-answered diligence questions from SEC filing for ${symbol} saved on ${new Date().toLocaleDateString()}`;
-        await autoSaveReport(symbol, reportType, marked.parse(reportContent), prompt);
+        await autoSaveReport(symbol, reportType, reportContent, prompt);
         
         // Reset UI
         formContainer.innerHTML = '';
