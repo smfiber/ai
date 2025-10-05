@@ -471,6 +471,59 @@ Data Summary:
 {jsonData}
 `.trim();
 
+const QUARTERLY_REVIEW_PROMPT = `
+**Persona & Role:**
+You are a meticulous financial analyst AI. Your sole task is to analyze the provided 10-Q filing for {companyName} and answer a specific set of questions based *only* on the information contained within that document.
+
+**Critical Instructions:**
+1.  **Source Limitation:** Your answers MUST be derived exclusively from the provided "10-Q Filing Text". Do not use any external knowledge.
+2.  **Quote and Cite:** For each answer, you MUST support your key points by extracting direct, relevant quotes from the filing.
+3.  **Strict Output Format:** You MUST format your entire response using the exact structure below. Use "---||---" as a unique separator between the final answer and the suggested questions section. Do not add any other text or formatting.
+
+**Input Data:**
+
+**1. Questions to Answer:**
+\`\`\`json
+{questionsJson}
+\`\`\`
+
+**2. 10-Q Filing Text:**
+\`\`\`
+{filingText}
+\`\`\`
+
+---
+
+**BEGIN AI RESPONSE**
+
+### 10-Q Analysis: {companyName}
+
+**1. Results vs. Expectations:**
+(Your detailed analysis and supporting quotes go here.)
+
+**2. Quantitative Thesis Check:**
+(Your detailed analysis and supporting quotes go here.)
+
+**3. Management Outlook:**
+(Your detailed analysis and supporting quotes go here.)
+
+**4. Qualitative Thesis Check:**
+(Your detailed analysis and supporting quotes go here.)
+
+**5. Action Plan:**
+(Your detailed analysis and supporting quotes go here.)
+
+---||---
+
+### Suggested AI Investigation Queries
+
+(Based on your analysis of the 10-Q, generate 3-4 new, keyword-based search queries for a human analyst to investigate further. Format each as a bullet point with the query in quotes.)
+
+- "[Your first query here]"
+- "[Your second query here]"
+- "[Your third query here]"
+`.trim();
+
 export const promptMap = {
     'PeerIdentification': {
         prompt: PEER_IDENTIFICATION_PROMPT,
@@ -556,6 +609,10 @@ JSON Data with Pre-Calculated Metrics:
     },
     'SectorMomentum': {
         prompt: SECTOR_MOMENTUM_PROMPT,
+        requires: []
+    },
+    'QuarterlyReview': {
+        prompt: QUARTERLY_REVIEW_PROMPT,
         requires: []
     }
 };
