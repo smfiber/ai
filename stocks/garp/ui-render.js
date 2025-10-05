@@ -850,6 +850,7 @@ export function renderOngoingReviewLog(container, reports) {
                 case 'AnnualReview': return 'Annual Review';
                 case 'QuarterlyReview': return 'Quarterly Review';
                 case 'FilingDiligence': return 'Filing Diligence Q&A';
+                case 'EightKAnalysis': return '8-K Analysis';
                 default: return 'Review';
             }
         };
