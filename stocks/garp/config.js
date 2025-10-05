@@ -540,6 +540,47 @@ Output Format: The final report must be in professional markdown format. Use # f
 (Synthesize all findings into a final conclusion. The diligence log is critical here. Does it confirm the quantitative story, or does it reveal risks that make the numbers less reliable? Explain the trade-offs and justify your final verdict.)
 `.trim();
 
+const EIGHT_K_ANALYSIS_PROMPT = `
+**Persona & Role:**
+You are a financial analyst AI specializing in the rapid assessment of SEC Form 8-K filings for GARP ("Growth at a Reasonable Price") investors. Your analysis must be objective, concise, and focused on the material impact to a long-term investment thesis.
+
+**Core Task:**
+Read the provided 8-K filing text for {companyName} and generate a structured analysis that summarizes the event and assesses its impact.
+
+**Critical Instructions:**
+1.  **Source Limitation:** Your entire analysis must be derived *exclusively* from the provided 'Filing Text'. Do not infer information or use outside knowledge.
+2.  **Strict Output Format:** You MUST return a response in markdown that follows this structure precisely. Do not add any introductory or concluding paragraphs outside of this structure.
+
+**Input Data:**
+
+**1. Company Name:**
+{companyName}
+
+**2. Filing Text:**
+\`\`\`
+{filingText}
+\`\`\`
+
+---
+
+# 8-K Material Event Analysis: {companyName}
+
+## 1. Event Summary
+(In one paragraph, concisely summarize the core event being reported in the 8-K. For example: "The company announced the acquisition of Competitor Corp. for $500 million in cash and stock," or "The company announced the immediate resignation of its CEO, Jane Doe, for personal reasons.")
+
+## 2. Impact on Investment Thesis
+(For each of the three pillars below, write a brief, one-sentence analysis of the event's potential impact. If the filing does not provide enough information to make an assessment, state "The filing does not provide enough information to assess the impact.")
+* **Growth:**
+* **Quality / Risk Profile:**
+* **Capital Allocation:**
+
+## 3. Overall Significance
+(Provide one of the following three verdicts, bolded, followed by a single sentence explaining your choice.)
+* **Thesis-Altering:**
+* **Monitor Closely:**
+* **Minor / Informational:**
+`.trim();
+
 export const promptMap = {
     'PeerIdentification': {
         prompt: PEER_IDENTIFICATION_PROMPT,
@@ -634,6 +675,10 @@ JSON Data with Pre-Calculated Metrics:
     'FilingQuestionGeneration': {
         prompt: FILING_QUESTION_GENERATION_PROMPT,
         requires: []
+    },
+    'EightKAnalysis': {
+        prompt: EIGHT_K_ANALYSIS_PROMPT,
+        requires: []
     }
 };
 
@@ -645,6 +690,7 @@ export const ANALYSIS_ICONS = {
     'RiskAssessment': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" /></svg>`,
     'CapitalAllocators': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15.91 15.91a2.25 2.25 0 01-3.182 0l-3.03-3.03a.75.75 0 011.06-1.061l2.47 2.47 2.47-2.47a.75.75 0 011.06 1.06l-3.03 3.03z" /></svg>`,
     'InvestmentMemo': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>`,
+    'EightKAnalysis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" /></svg>`,
 };
 
 export const ANALYSIS_NAMES = {
@@ -665,6 +711,7 @@ export const ANALYSIS_NAMES = {
     'SectorMomentum': 'Sector Momentum',
     'FilingQuestionGeneration': 'Filing Question Generation',
     'FilingDiligence': 'Filing Diligence',
+    'EightKAnalysis': '8-K Filing Analysis',
     'QuarterlyReview': 'Quarterly Review',
     'AnnualReview': 'Annual Review'
 };
