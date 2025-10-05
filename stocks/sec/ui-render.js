@@ -15,15 +15,22 @@ function sanitizeText(text) {
 // --- DATA FETCHING & CACHING ---
 export async function fetchAndCachePortfolioData() {
     try {
-        if (!state.db) {
-            console.error("Firestore is not initialized.");
+        if (!state.db || !state.userId) {
+            console.error("Firestore or User ID is not available for fetching portfolio.");
+            state.portfolioCache = [];
             return;
         }
-        const querySnapshot = await getDocs(collection(state.db, CONSTANTS.DB_COLLECTION_PORTFOLIO));
+        // --- CHANGE STARTS HERE ---
+        // Fetch from a user-specific subcollection for security and correctness.
+        const portfolioPath = `users/${state.userId}/${CONSTANTS.DB_COLLECTION_PORTFOLIO}`;
+        const querySnapshot = await getDocs(collection(state.db, portfolioPath));
+        // --- CHANGE ENDS HERE ---
+        
         state.portfolioCache = querySnapshot.docs.map(doc => ({ ticker: doc.id, ...doc.data() }));
         
     } catch (error) {
         console.error("Error fetching portfolio data:", error);
+        state.portfolioCache = []; // Ensure cache is empty on error
     }
 }
 
