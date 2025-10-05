@@ -2,7 +2,7 @@
 import { CONSTANTS, state, promptMap, ANALYSIS_REQUIREMENTS, ANALYSIS_NAMES } from './config.js';
 import { callApi, callGeminiApi, generateRefinedArticle, generatePolishedArticleForSynthesis, getFmpStockData } from './api.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { openModal, closeModal, displayMessageInModal, openConfirmationModal, openManageStockModal, STRUCTURED_DILIGENCE_QUESTIONS, QUARTERLY_REVIEW_QUESTIONS } from './ui-modals.js';
+import { openModal, closeModal, displayMessageInModal, openConfirmationModal, openManageStockModal, STRUCTURED_DILIGENCE_QUESTIONS, QUARTERLY_REVIEW_QUESTIONS, ANNUAL_REVIEW_QUESTIONS } from './ui-modals.js';
 import { renderPortfolioManagerList, displayReport, updateReportStatus, fetchAndCachePortfolioData, updateGarpCandidacyStatus, renderCandidacyAnalysis, renderGarpAnalysisSummary, renderDiligenceLog, renderPeerComparisonTable, renderSectorMomentumHeatMap, renderOngoingReviewLog } from './ui-render.js';
 import { _calculateFinancialAnalysisMetrics, _calculateMoatAnalysisMetrics, _calculateRiskAssessmentMetrics, _calculateCapitalAllocatorsMetrics, _calculateGarpAnalysisMetrics, _calculateGarpScorecardMetrics, CALCULATION_SUMMARIES } from './analysis-helpers.js';
 
@@ -1204,15 +1204,16 @@ export async function handleManualDiligenceSave(symbol) {
     }
 }
 
-export async function handleOngoingReviewSave(symbol) {
+export async function handleOngoingReviewSave(symbol, reviewType) {
     const formContainer = document.getElementById('quarterly-review-form-container');
     const answerElements = formContainer.querySelectorAll('.ongoing-review-answer');
     const entriesToSave = [];
+    const questionSet = reviewType === 'Annual' ? ANNUAL_REVIEW_QUESTIONS : QUARTERLY_REVIEW_QUESTIONS;
 
     answerElements.forEach(textarea => {
         const answer = textarea.value.trim();
         const category = textarea.dataset.category;
-        const question = QUARTERLY_REVIEW_QUESTIONS[category];
+        const question = questionSet[category];
 
         if (answer && question) {
             entriesToSave.push({ question, answer });
@@ -1229,18 +1230,20 @@ export async function handleOngoingReviewSave(symbol) {
 
     try {
         let formattedContent = '';
+        const reportType = `${reviewType}Review`;
         const prompt = `Ongoing Diligence Review for ${symbol} saved on ${new Date().toLocaleDateString()}`;
 
         entriesToSave.forEach(entry => {
             formattedContent += `## ${entry.question}\n\n${entry.answer}\n\n---\n\n`;
         });
         
-        await autoSaveReport(symbol, 'QuarterlyReview', marked.parse(formattedContent), prompt);
+        await autoSaveReport(symbol, reportType, marked.parse(formattedContent), prompt);
 
         // Reset UI
         formContainer.innerHTML = '';
         formContainer.classList.add('hidden');
-        document.getElementById('start-quarterly-review-button').classList.remove('hidden');
+        document.getElementById('ongoing-diligence-controls').classList.remove('hidden');
+
 
         // Refresh the log
         const ongoingReviews = await getSavedReports(symbol, ['QuarterlyReview', 'AnnualReview']);
@@ -1256,29 +1259,30 @@ export async function handleOngoingReviewSave(symbol) {
     }
 }
 
-export async function handleFilingAnalysisRequest(symbol) {
+export async function handleFilingAnalysisRequest(symbol, reviewType) {
     const filingTextarea = document.getElementById('quarterly-filing-textarea');
     const formContainer = document.getElementById('quarterly-review-form-container');
     const suggestedQuestionsContainer = document.getElementById('ai-suggested-questions-container');
 
     const filingText = filingTextarea.value.trim();
     if (!filingText) {
-        displayMessageInModal("Please paste the 10-Q filing text into the text area first.", "warning");
+        displayMessageInModal("Please paste the filing text into the text area first.", "warning");
         return;
     }
 
     openModal(CONSTANTS.MODAL_LOADING);
     const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
-    loadingMessage.textContent = "AI is analyzing the 10-Q filing. This may take a moment...";
+    loadingMessage.textContent = `AI is analyzing the ${reviewType} filing. This may take a moment...`;
 
     try {
         const profile = state.portfolioCache.find(s => s.ticker === symbol);
         const companyName = profile ? profile.companyName : symbol;
+        const questionSet = reviewType === 'Annual' ? ANNUAL_REVIEW_QUESTIONS : QUARTERLY_REVIEW_QUESTIONS;
         
-        const promptConfig = promptMap['QuarterlyReview'];
+        const promptConfig = promptMap['FilingReview'];
         const prompt = promptConfig.prompt
             .replace(/{companyName}/g, companyName)
-            .replace('{questionsJson}', JSON.stringify(QUARTERLY_REVIEW_QUESTIONS, null, 2))
+            .replace('{questionsJson}', JSON.stringify(questionSet, null, 2))
             .replace('{filingText}', filingText);
 
         const aiResponse = await callGeminiApi(prompt);
@@ -1287,11 +1291,11 @@ export async function handleFilingAnalysisRequest(symbol) {
         const mainAnalysis = responseParts[0] || '';
         const suggestedQueries = responseParts[1] || '';
         
-        let formHtml = `<div class="text-left mt-4 border rounded-lg p-4 bg-gray-50 space-y-4">`;
+        let formHtml = `<div class="text-left mt-4 border rounded-lg p-4 bg-gray-50 space-y-4" data-review-type="${reviewType}">`;
         const tempDiv = document.createElement('div');
         tempDiv.innerHTML = marked.parse(mainAnalysis);
         
-        for (const [category, question] of Object.entries(QUARTERLY_REVIEW_QUESTIONS)) {
+        for (const [category, question] of Object.entries(questionSet)) {
             const heading = Array.from(tempDiv.querySelectorAll('h1, h2, h3, h4, h5, h6')).find(h => h.textContent.includes(category));
             let answerContent = 'AI could not generate an answer for this section.';
             if (heading) {
