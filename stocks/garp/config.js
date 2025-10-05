@@ -498,6 +498,38 @@ You are a senior financial analyst AI with expertise in forensic accounting and 
 ]
 `.trim();
 
+const UPDATED_QARP_MEMO_PROMPT = `
+Role: You are a Senior Investment Analyst specializing in the "Quality at a Reasonable Price" (QARP) philosophy. Your task is to provide an updated, rigorous, data-driven analysis that synthesizes a quantitative scorecard with a qualitative diligence log.
+Data Instructions: Your analysis MUST be based *exclusively* on the two data sources provided below: the scorecard metrics and the diligence log.
+Output Format: The final report must be in professional markdown format. Use # for the main title, ## for major sections, and bullet points. Your analysis in each section should now integrate relevant findings from the diligence log to add context to the quantitative data.
+
+**1. Quantitative Scorecard (JSON):**
+{jsonData}
+
+**2. Recent Diligence Log (Q&A):**
+{diligenceLog}
+
+# Updated QARP Memo: {companyName} ({tickerSymbol})
+
+## 1. Executive Summary & Verdict
+(Provide a concise, one-paragraph summary. Your verdict must now consider both the quantitative score and the qualitative findings from the diligence log. Conclude with a clear verdict: "This company appears to be a **strong QARP candidate**," "a **borderline QARP candidate**," or "**does not meet the criteria** for a QARP investment at this time.")
+
+## 2. The "Quality" Pillar: Is This a Superior Business?
+(Analyze the company's quality using the scorecard data, now contextualized by the diligence log. For example, if ROE is high, check the log for management's discussion on what drives it.)
+- **Profitability & Efficiency:** Based on the **Return on Equity (ROE)** and **Return on Invested Capital (ROIC)**, how effectively does management generate profits?
+- **Financial Strength:** How resilient is the company? Analyze the **Debt-to-Equity** ratio to assess its financial leverage and risk.
+- **Growth Stability:** Evaluate the **EPS Growth (5Y)** and **Revenue Growth (5Y)**. Do these figures suggest a history of durable, consistent growth?
+
+## 3. The "Reasonable Price" Pillar: Are We Overpaying?
+(Analyze the company's valuation, using the diligence log to add nuance. For example, if the P/E seems high, does the log explain why this might be temporary or justified?)
+- **Core Valuation:** Based on the **P/E (TTM)** and **Forward P/E** ratios, does the stock appear cheap or expensive on an earnings basis?
+- **Growth-Adjusted Valuation:** Use the **PEG Ratio** to determine if the price is justified by its forward growth estimates.
+- **Cash Flow Valuation:** Analyze the **Price to FCF** ratio. How does the valuation look when measured against the actual cash the business generates?
+
+## 4. Final Synthesis: The QARP Verdict
+(Synthesize all findings into a final conclusion. The diligence log is critical here. Does it confirm the quantitative story, or does it reveal risks that make the numbers less reliable? Explain the trade-offs and justify your final verdict.)
+`.trim();
+
 export const promptMap = {
     'PeerIdentification': {
         prompt: PEER_IDENTIFICATION_PROMPT,
@@ -548,6 +580,10 @@ JSON Data with Pre-Calculated Metrics:
 (Synthesize the findings from the two pillars into a final conclusion. Explain the trade-offs. For example, is this a very high-quality company trading at a slight premium, or a medium-quality company at a very cheap price? Based on this balance, reiterate and justify your final verdict.)
         `.trim(),
         requires: [] // Uses the same scorecard data as GARP Candidacy
+    },
+    'UpdatedQarpMemo': {
+        prompt: UPDATED_QARP_MEMO_PROMPT,
+        requires: []
     },
     'MoatAnalysis': {
         prompt: MOAT_ANALYSIS_PROMPT,
@@ -605,6 +641,7 @@ export const ANALYSIS_NAMES = {
     'FinancialAnalysis': 'Financial Analysis',
     'GarpAnalysis': 'GARP Analysis',
     'QarpAnalysis': 'QARP Analysis',
+    'UpdatedQarpMemo': 'Updated QARP Memo',
     'MoatAnalysis': 'Moat Analysis',
     'RiskAssessment': 'Risk Assessment',
     'CapitalAllocators': 'Capital Allocators',
