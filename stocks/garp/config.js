@@ -471,44 +471,31 @@ Data Summary:
 {jsonData}
 `.trim();
 
-const FILING_REVIEW_PROMPT = `
+const FILING_QUESTION_GENERATION_PROMPT = `
 **Persona & Role:**
-You are a meticulous financial analyst AI. Your sole task is to analyze the provided filing (10-Q or 10-K) for {companyName} and answer a specific set of questions based *only* on the information contained within that document.
+You are a senior financial analyst AI with expertise in forensic accounting and deep-dive due diligence. Your task is to read the provided SEC filing (10-Q or 10-K) for {companyName} and generate critical questions that an investor must answer.
 
 **Critical Instructions:**
-1.  **Source Limitation:** Your answers MUST be derived exclusively from the provided "Filing Text". Do not use any external knowledge.
-2.  **Quote and Cite:** For each answer, you MUST support your key points by extracting direct, relevant quotes from the filing.
-3.  **Strict Output Format:** You MUST format your entire response using the exact structure below. Use "---||---" as a unique separator between the final answer and the suggested questions section. Do not add any other text or formatting.
+1.  **Source Limitation:** Your questions MUST be based exclusively from the provided "Filing Text". Do not use external knowledge.
+2.  **Focus:** Generate questions that probe potential risks, changes in strategy, accounting irregularities, or key performance drivers mentioned in the text.
+3.  **Strict Output Format:** You MUST return ONLY a valid JSON array of 5 to 7 questions as strings. Do not add any other text, explanations, or markdown formatting.
 
 **Input Data:**
 
-**1. Questions to Answer:**
-\`\`\`json
-{questionsJson}
-\`\`\`
+**1. Company Name:**
+{companyName}
 
 **2. Filing Text:**
 \`\`\`
 {filingText}
 \`\`\`
 
----
-
-**BEGIN AI RESPONSE**
-
-### Filing Analysis: {companyName}
-
-(Based on the questions provided in the JSON, create a numbered list of answers. Each answer should be a detailed analysis with supporting quotes.)
-
----||---
-
-### Suggested AI Investigation Queries
-
-(Based on your analysis of the filing, generate 3-4 new, keyword-based search queries for a human analyst to investigate further. Format each as a bullet point with the query in quotes.)
-
-- "[Your first query here]"
-- "[Your second query here]"
-- "[Your third query here]"
+**Example Output:**
+[
+    "The filing mentions a 15% increase in inventory levels while revenue only grew 5%. What is driving this inventory build-up, and does it pose a risk of future write-downs?",
+    "Management discusses a new strategic partnership in the MD&A section. What are the specific financial commitments and expected revenue synergies from this partnership?",
+    "There's a new legal proceeding disclosed in the footnotes. What is the potential maximum liability and how might it impact future earnings?"
+]
 `.trim();
 
 export const promptMap = {
@@ -598,8 +585,8 @@ JSON Data with Pre-Calculated Metrics:
         prompt: SECTOR_MOMENTUM_PROMPT,
         requires: []
     },
-    'FilingReview': {
-        prompt: FILING_REVIEW_PROMPT,
+    'FilingQuestionGeneration': {
+        prompt: FILING_QUESTION_GENERATION_PROMPT,
         requires: []
     }
 };
@@ -629,7 +616,8 @@ export const ANALYSIS_NAMES = {
     'PeerIdentification': 'Peer Identification',
     'PeerComparison': 'Peer Comparison',
     'SectorMomentum': 'Sector Momentum',
-    'FilingReview': 'Filing Review',
+    'FilingQuestionGeneration': 'Filing Question Generation',
+    'FilingDiligence': 'Filing Diligence',
     'QuarterlyReview': 'Quarterly Review',
     'AnnualReview': 'Annual Review'
 };
