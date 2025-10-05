@@ -1239,8 +1239,11 @@ export async function handleSaveFilingDiligenceRequest(symbol) {
 
         // Refresh log
         const logContainer = document.getElementById('ongoing-review-log-container');
-        const savedReports = await getSavedReports(symbol, reportType);
+        const savedReports = await getSavedReports(symbol, ['FilingDiligence', 'UpdatedGarpMemo', 'UpdatedQarpMemo']);
         renderOngoingReviewLog(logContainer, savedReports);
+        
+        // Show the updated memo section
+        document.getElementById('updated-memo-section').classList.remove('hidden');
 
         displayMessageInModal('Your filing diligence has been saved successfully.', 'info');
     } catch (error) {
@@ -1320,6 +1323,35 @@ export async function handleGenerateFilingQuestionsRequest(symbol) {
     }
 }
 
+export async function handleDeleteFilingDiligenceLog(reportId, ticker) {
+    openConfirmationModal(
+        'Delete Filing Log?',
+        'Are you sure you want to permanently delete this Q&A entry? This action cannot be undone.',
+        async () => {
+            openModal(CONSTANTS.MODAL_LOADING);
+            document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Deleting entry...`;
+            try {
+                await deleteDoc(doc(state.db, CONSTANTS.DB_COLLECTION_AI_REPORTS, reportId));
+
+                const logContainer = document.getElementById('ongoing-review-log-container');
+                const displayContainer = document.getElementById('ongoing-review-display-container');
+                const savedReports = await getSavedReports(ticker, ['FilingDiligence', 'UpdatedGarpMemo', 'UpdatedQarpMemo']);
+                renderOngoingReviewLog(logContainer, savedReports);
+                
+                if (displayContainer) {
+                    displayContainer.innerHTML = '';
+                }
+
+                displayMessageInModal('Filing log entry deleted.', 'info');
+            } catch (error) {
+                console.error("Error deleting filing log:", error);
+                displayMessageInModal(`Could not delete entry: ${error.message}`, 'error');
+            } finally {
+                closeModal(CONSTANTS.MODAL_LOADING);
+            }
+        }
+    );
+}
 
 export async function handleDeleteDiligenceLog(reportId, ticker) {
     openConfirmationModal(
