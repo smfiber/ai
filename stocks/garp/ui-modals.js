@@ -440,16 +440,26 @@ export async function openRawDataViewer(ticker) {
         ongoingDiligenceContainer.innerHTML = `
             <div class="bg-white p-6 rounded-2xl shadow-lg border border-gray-200">
                 <div class="flex justify-between items-center mb-4 border-b pb-2">
-                    <h3 class="text-xl font-bold text-gray-800">Recurring Review</h3>
+                    <div>
+                        <h3 class="text-xl font-bold text-gray-800">Recurring Review Workflow</h3>
+                        <p class="text-sm text-gray-500">Analyze 10-Q filings to validate your thesis.</p>
+                    </div>
                     <div class="text-right">
                         <p class="text-sm font-semibold text-gray-600">Next Earnings Date</p>
                         <p class="text-lg font-bold text-indigo-700">${nextEarningsDate}</p>
                     </div>
                 </div>
-                <div id="ongoing-diligence-controls" class="text-center mb-6">
-                    <button id="start-quarterly-review-button" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-5 rounded-lg">Start New Quarterly Review</button>
+
+                <div id="quarterly-filing-input-container" class="mb-6">
+                    <label for="quarterly-filing-textarea" class="block text-sm font-medium text-gray-700 mb-2">Paste 10-Q Filing Text</label>
+                    <textarea id="quarterly-filing-textarea" rows="10" class="w-full border border-gray-300 rounded-lg p-2 text-sm font-mono" placeholder="Paste the full text from the company's latest 10-Q filing here..."></textarea>
+                    <div class="text-center mt-4">
+                        <button id="analyze-filing-button" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-5 rounded-lg">Analyze Filing with AI</button>
+                    </div>
                 </div>
+
                 <div id="quarterly-review-form-container" class="hidden"></div>
+                <div id="ai-suggested-questions-container" class="hidden mt-6"></div>
                 <div id="ongoing-review-log-container" class="mt-6"></div>
             </div>
         `;
