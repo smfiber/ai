@@ -12,6 +12,15 @@ export async function handleFilingAnalysis(filingUrl, formType, ticker, filingIt
     // ... (no changes in this function) ...
 }
 
+// --- CHANGE STARTS HERE ---
+/**
+ * Helper function to create a delay.
+ * @param {number} ms Milliseconds to wait.
+ * @returns {Promise<void>}
+ */
+const delay = ms => new Promise(res => setTimeout(res, ms));
+// --- CHANGE ENDS HERE ---
+
 
 // --- NEW: PHASE 1 BATCH PROCESSING ---
 export async function handleBatchProcess() {
@@ -38,6 +47,11 @@ export async function handleBatchProcess() {
             
             statusBar.textContent = `(${i + 1}/${TOP_25_INVESTORS.length}) Fetching filings for ${investor.name}...`;
             progressBar.style.width = `${progress}%`;
+            
+            // --- CHANGE STARTS HERE ---
+            // Add a 1-second delay between each request to avoid hitting the API rate limit.
+            await delay(1000); 
+            // --- CHANGE ENDS HERE ---
 
             // 1. Fetch filings
             const { filings } = await getWhaleFilings(investor.cik);
