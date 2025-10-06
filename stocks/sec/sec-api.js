@@ -222,6 +222,12 @@ export async function getWhaleFilings(cik) {
     if (!state.secApiKey) throw new Error("SEC API Key is not configured.");
     if (!cik) throw new Error("A CIK is required.");
 
+    // --- FIX STARTS HERE ---
+    // The API requires the full 10-digit CIK for reliability.
+    // We pad the CIK with leading zeros to meet this standard.
+    const paddedCik = cik.padStart(10, '0');
+    // --- FIX ENDS HERE ---
+
     const endDate = new Date();
     const startDate = new Date();
     startDate.setFullYear(startDate.getFullYear() - 1);
@@ -231,10 +237,9 @@ export async function getWhaleFilings(cik) {
     const queryObject = {
       "query": {
         "query_string": {
-          // --- BUG FIX STARTS HERE ---
-          // Updated query to remove quotes around the CIK, which is required by the API for some CIKs.
-          "query": `formType:("13F-HR" OR "13F-HR/A") AND cik:${cik} AND filedAt:[${formatDate(startDate)} TO ${formatDate(endDate)}]`
-          // --- BUG FIX ENDS HERE ---
+          // --- CHANGE IS HERE ---
+          // Use the padded CIK without quotes. This resolves the inconsistency.
+          "query": `formType:("13F-HR" OR "13F-HR/A") AND cik:${paddedCik} AND filedAt:[${formatDate(startDate)} TO ${formatDate(endDate)}]`
         }
       },
       "from": "0",
