@@ -3,6 +3,10 @@ import { getSecMaterialEvents, getSecAnnualReports, getSecQuarterlyReports } fro
 import { state, CONSTANTS } from './config.js';
 import { fetchAndCachePortfolioData } from './ui-render.js';
 
+// --- CHANGE STARTS HERE ---
+const delay = ms => new Promise(res => setTimeout(res, ms));
+// --- CHANGE ENDS HERE ---
+
 export async function checkForNewFilings() {
   console.log("Checking for new SEC filings...");
   try {
@@ -15,6 +19,11 @@ export async function checkForNewFilings() {
       const ticker = stockDoc.id;
       // Use a very old date as a default if one isn't stored
       const lastKnownDate = stockData.lastKnownFilingDate ? stockData.lastKnownFilingDate.toDate() : new Date(0);
+
+      // --- CHANGE STARTS HERE ---
+      // Add a small delay to avoid hitting rate limits on large portfolios
+      await delay(250);
+      // --- CHANGE ENDS HERE ---
 
       // Fetch the single most recent filing of each type
       const latest8K = (await getSecMaterialEvents(ticker)).slice(0, 1);
