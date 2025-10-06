@@ -100,6 +100,9 @@ export async function getFmpStockData(symbol) {
     return stockData;
 }
 
+// --- CHANGE STARTS HERE ---
+const delay = ms => new Promise(res => setTimeout(res, ms));
+
 export async function getEarningsCalendar(tickers) {
     if (!state.fmpApiKey) {
         throw new Error("FMP API Key is required for this feature.");
@@ -108,15 +111,21 @@ export async function getEarningsCalendar(tickers) {
         return [];
     }
 
-    const earningsPromises = tickers.map(ticker => {
-        const url = `https://financialmodelingprep.com/api/v3/historical/earning_calendar/${ticker}?apikey=${state.fmpApiKey}`;
-        return callApi(url).catch(error => {
+    const allEarnings = [];
+    // Switched from Promise.all to a sequential loop to prevent rate limiting
+    for (const ticker of tickers) {
+        try {
+            const url = `https://financialmodelingprep.com/api/v3/historical/earning_calendar/${ticker}?apikey=${state.fmpApiKey}`;
+            const result = await callApi(url);
+            if (Array.isArray(result)) {
+                allEarnings.push(...result);
+            }
+            await delay(200); // Add a small delay between each request
+        } catch (error) {
             console.warn(`Could not fetch earnings for ${ticker}:`, error);
-            return []; // Return an empty array for this ticker on failure
-        });
-    });
-
-    const results = await Promise.all(earningsPromises);
-    // Flatten the array of arrays into a single array of earnings events
-    return results.flat();
+        }
+    }
+    
+    return allEarnings;
 }
+// --- CHANGE ENDS HERE ---
