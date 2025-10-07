@@ -157,18 +157,77 @@ export async function handleMarketAnalysis() {
 
         // 3. Construct GenAI Prompt
         const prompt = `
-            You are a hedge fund analyst summarizing quarterly 13F filing trends for a portfolio manager. Based on the following aggregated data from 25 top investment firms, provide a concise market summary. Data shows the most frequently bought and sold stocks in the last quarter.
-
-            Top Buys (by number of firms buying):
-            ${JSON.stringify(topBuys, null, 2)}
-
-            Top Sells (by number of firms selling):
-            ${JSON.stringify(topSells, null, 2)}
-
-            Your analysis must include:
-            1.  **Overall Market Sentiment:** Does this activity suggest a risk-on or risk-off sentiment?
-            2.  **Key Sector Themes:** Which sectors are being favored (from the buys) or sold off?
-            3.  **Top Conviction Trades:** Highlight the 3-5 most notable stocks that were either newly bought or heavily sold by multiple, respected managers. Explain the likely thesis.
+        You are a senior hedge fund analyst delivering a concise, data-driven market briefing to your Portfolio Manager. Your analysis will synthesize historical institutional positioning (from 13F filings) with the immediate, real-time market and macroeconomic context to identify potential investment opportunities.
+        
+        Contextual Data:
+        
+        Timestamp: ${new Date().toISOString()}
+        
+        Current US Economic Indicators:
+        
+        Latest CPI (YoY): [Insert latest CPI %]
+        
+        Latest Unemployment Rate: [Insert latest Unemployment %]
+        
+        Latest Non-Farm Payrolls: [Insert latest NFP number]
+        
+        Fed Funds Rate: [Insert current Fed Funds Rate Range]
+        
+        US 10-Year Treasury Yield: [Insert current 10-Yr Yield]
+        
+        Today's Market Snapshot:
+        
+        S&P 500: [Insert S&P 500 daily change %]
+        
+        NASDAQ 100: [Insert NASDAQ 100 daily change %]
+        
+        CBOE Volatility Index (VIX): [Insert current VIX level]
+        
+        Aggregated 13F Data (Last Quarter) from 25 Top Firms:
+        
+        Top Buys (by conviction & number of firms):
+        Data should include symbol, sector, number of firms buying, total shares added, and number of firms initiating a new position.
+        
+        JSON
+        
+        ${JSON.stringify(topBuys, null, 2)}
+        Top Sells (by conviction & number of firms):
+        Data should include symbol, sector, number of firms selling, total shares sold, and number of firms exiting their position completely.
+        
+        JSON
+        
+        ${JSON.stringify(topSells, null, 2)}
+        Analysis Required:
+        
+        Executive Summary (The "So What?"):
+        
+        Synthesize the macro context with the institutional positioning. Is the "smart money" positioning (from the 13Fs) aligned with or contrary to the latest economic data?
+        
+        Based on this synthesis, characterize the prevailing market sentiment. Is it risk-on, risk-off, or something more nuanced (e.g., cautiously optimistic, defensively positioned for a slowdown)?
+        
+        Key Sector & Thematic Rotations:
+        
+        Identify the top 2-3 sectors being bought and the top 2-3 sectors being sold.
+        
+        What macro-thematic narrative do these flows suggest? (e.g., a rotation into cyclical value, a flight to defensive tech, an exit from consumer discretionary due to inflation fears, etc.).
+        
+        High-Conviction Stock Analysis:
+        
+        Highlight the top 2-3 stocks with the highest conviction from the topBuys data (consider new positions and large share increases). For each, provide a plausible thesis explaining why top managers are buying now.
+        
+        Highlight the most notable stock from the topSells data, especially if it represents a major trend reversal or an exit by multiple respected firms. What is the likely bear thesis?
+        
+        Prospective QARP & GARP Screener:
+        
+        From the topBuys list, identify 2-3 potential GARP candidates. Justify your selection based on their sector, growth narrative, and the fact that respected growth-oriented funds are accumulating shares.
+        
+        From the topBuys list, identify 2-3 potential QARP candidates. Justify your selection based on their likely stable earnings, strong balance sheets, and acquisition by value or quality-focused managers at a perceived reasonable valuation.
+        
+        Contrarian & Risk Signals:
+        
+        Are there any highly crowded trades evident in the data that might pose a risk?
+        
+        Does the selling activity point to any sectors or themes that may be falling out of favor, presenting a potential "value trap" or short opportunity?
         `.trim();
 
         // 4. Get and render analysis
