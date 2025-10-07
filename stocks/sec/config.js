@@ -61,7 +61,6 @@ export const CONSTANTS = {
  * =================================================================
  */
 export const TOP_25_INVESTORS = [
-[
     { "name": "Adage Capital Management", "cik": "1134739" },
     { "name": "Anchorage Capital Group", "cik": "1537929" },
     { "name": "AQR Capital Management", "cik": "1352422" },
