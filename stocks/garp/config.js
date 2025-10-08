@@ -581,6 +581,67 @@ Read the provided 8-K filing text for {companyName} and generate a structured an
 * **Minor / Informational:**
 `.trim();
 
+const LONG_TERM_COMPOUNDER_PROMPT = `
+Role: You are a long-term, business-focused investment analyst, in the style of Warren Buffett or Chuck Akre. Your goal is to determine if {companyName} is a "wonderful business" that can be held for a decade or more, a true "compounder."
+Data Instructions: Your analysis must be a synthesis of the two reports provided below: the 'Moat Analysis' and the 'Capital Allocators' report. Do not use any other data. Your job is to connect the findings from these two reports into a single, cohesive narrative.
+Output Format: The final report must be in professional markdown format.
+
+**Input Report 1: Moat Analysis**
+{moatAnalysisReport}
+
+**Input Report 2: Capital Allocators Analysis**
+{capitalAllocatorsReport}
+
+# Long-Term Compounder Memo: {companyName} ({tickerSymbol})
+
+## 1. The Core Investment Question
+(Start with a one-paragraph summary. Based on the two reports, what is the single most important question an investor must answer about this company's long-term prospects? For example, "Is management's aggressive acquisition strategy sustainably widening the company's narrow moat, or is it a 'diworsification' that risks eroding shareholder value?")
+
+## 2. The Makings of a "Wonderful Business"
+(Synthesize the BULL case from both reports into a bulleted list.)
+- **Competitive Advantage (The Moat):** What did the Moat Analysis conclude? Is it Wide, Narrow, or None? What is the primary source of that advantage (e.g., network effects, high switching costs)?
+- **Management Quality (The Jockeys):** What grade did the Capital Allocators report assign to management? What are their greatest strengths as demonstrated by their track record (e.g., shrewd buybacks, high-ROIC internal projects)?
+- **Profitability Engine:** Connect the two reports. Does the company's high ROIC (from the Capital Allocators report) confirm the existence and strength of the moat (from the Moat Analysis)? Explain the connection.
+
+## 3. Potential Cracks in the Fortress
+(Synthesize the BEAR case and risks from both reports into a bulleted list.)
+- **Moat Sustainability Risks:** What are the biggest threats to the company's competitive advantage as identified in the Moat Analysis?
+- **Capital Allocation Red Flags:** What were the biggest weaknesses identified in the Capital Allocators report (e.g., overpaying for acquisitions, buying back stock at high valuations)?
+- **The Core Tension:** How do the risks from one report potentially impact the strengths of the other? (e.g., "While the company currently enjoys a wide moat, management's recent low-ROIC acquisitions could signal a deterioration of that advantage over time.")
+
+## 4. Final Verdict: A True Compounder?
+(Provide a final, one-paragraph verdict. Based *only* on the synthesis of these two reports, does the company have the key ingredients of a long-term compounder: a durable moat and exceptional management? Conclude with one of the following classifications: **"High-Conviction Compounder," "Potential Compounder with Reservations,"** or **"Not a Compounder."** Justify your choice.)
+`.trim();
+
+const FINAL_INVESTMENT_THESIS_PROMPT = `
+Role: You are the Chief Investment Officer of a multi-strategy fund. You have received three analyst reports on {companyName}: a GARP analysis, a QARP analysis, and a Long-Term Compounder assessment. Your task is to synthesize these three perspectives into a final, decisive investment thesis.
+Data Instructions: Your analysis MUST be based exclusively on the content of the three reports provided. Your primary role is to identify areas of agreement and disagreement between the reports and resolve them into a single, actionable conclusion.
+Output Format: The final report must be in professional markdown format.
+
+**Input Report 1: GARP Candidacy Report (Growth at a Reasonable Price)**
+{garpCandidacyReport}
+
+**Input Report 2: QARP Analysis (Quality at a Reasonable Price)**
+{qarpAnalysisReport}
+
+**Input Report 3: Long-Term Compounder Memo**
+{longTermCompounderMemo}
+
+# Final Investment Thesis: {companyName} ({tickerSymbol})
+
+## 1. Executive Summary & Investment Profile
+(In one paragraph, synthesize the key takeaways from all three reports. Start by identifying the stock's "investment profile." For example: "The consensus from our analysts suggests {companyName} is a **High-Quality Compounder trading at a temporary discount,**" or "This appears to be a **classic GARP stock whose long-term durability is questionable.**" State the final recommendation clearly.)
+
+## 2. Thesis Points of Agreement (The Core Bull Case)
+(Create a bulleted list of the strongest bullish points where at least two of the three analyst reports are in agreement. For each point, state the consensus view and briefly mention which reports support it. Example: "- **Exceptional Profitability:** Both the QARP and Compounder analyses highlight the company's consistently high ROIC, confirming its status as a high-quality business.")
+
+## 3. Thesis Points of Disagreement (The Core Tension)
+(In one paragraph, identify the central conflict or tension between the reports. This is the most critical part of your analysis. For example: "The primary disagreement is on valuation. The GARP report sees the current P/E as a clear buying opportunity, while the QARP and Compounder memos argue that this valuation is merely 'fair' for a business of this quality and does not offer a significant margin of safety.")
+
+## 4. Final Recommendation & Rationale
+(Provide a final, one-paragraph recommendation. You must resolve the tension identified in the previous section. State which analyst's view you ultimately favor and why. Conclude with a clear, final recommendation: **"Initiate a Full Position," "Initiate a Half Position," "Add to Watchlist,"** or **"Pass."** Justify your decision based on the overall weight of the evidence.)
+`.trim();
+
 export const promptMap = {
     'PeerIdentification': {
         prompt: PEER_IDENTIFICATION_PROMPT,
@@ -679,6 +740,14 @@ JSON Data with Pre-Calculated Metrics:
     'EightKAnalysis': {
         prompt: EIGHT_K_ANALYSIS_PROMPT,
         requires: []
+    },
+    'LongTermCompounder': {
+        prompt: LONG_TERM_COMPOUNDER_PROMPT,
+        requires: [] // Synthesis report, no direct FMP data
+    },
+    'FinalInvestmentThesis': {
+        prompt: FINAL_INVESTMENT_THESIS_PROMPT,
+        requires: [] // Synthesis report, no direct FMP data
     }
 };
 
@@ -713,5 +782,7 @@ export const ANALYSIS_NAMES = {
     'FilingDiligence': 'Filing Diligence',
     'EightKAnalysis': '8-K Filing Analysis',
     'QuarterlyReview': 'Quarterly Review',
-    'AnnualReview': 'Annual Review'
+    'AnnualReview': 'Annual Review',
+    'LongTermCompounder': 'Long-Term Compounder Memo',
+    'FinalInvestmentThesis': 'Final Investment Thesis'
 };
