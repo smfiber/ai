@@ -2,7 +2,7 @@
 import { CONSTANTS, state, promptMap } from './config.js';
 import { openModal, closeModal, openStockListModal, openManageStockModal, openPortfolioManagerModal, openRawDataViewer, QUARTERLY_REVIEW_QUESTIONS, ANNUAL_REVIEW_QUESTIONS, addDiligenceEntryRow } from './ui-modals.js';
 import { fetchAndCachePortfolioData, renderPortfolioManagerList } from './ui-render.js';
-import { handleResearchSubmit, handleSaveStock, handleDeleteStock, handleRefreshFmpData, handleAnalysisRequest, handleGarpMemoRequest, handleSaveReportToDb, handleGenerateAllReportsRequest, handleGarpCandidacyRequest, handlePortfolioGarpAnalysisRequest, handlePositionAnalysisRequest, handleReportHelpRequest, handleManualDiligenceSave, handleDeleteDiligenceLog, handleWorkflowHelpRequest, handlePeerAnalysisRequest, handleManualPeerAnalysisRequest, handleStructuredDiligenceSave, handleGenerateFilingQuestionsRequest, handleSaveFilingDiligenceRequest, handleDeleteFilingDiligenceLog, handleGenerateUpdatedGarpMemoRequest, handleGenerateUpdatedQarpMemoRequest, handleAnalyzeEightKRequest, handleCompounderMemoRequest, handleFinalThesisRequest } from './ui-handlers.js';
+import { handleResearchSubmit, handleSaveStock, handleDeleteStock, handleRefreshFmpData, handleAnalysisRequest, handleGarpMemoRequest, handleSaveReportToDb, handleGeneratePrereqsRequest, handleGarpCandidacyRequest, handlePortfolioGarpAnalysisRequest, handlePositionAnalysisRequest, handleReportHelpRequest, handleManualDiligenceSave, handleDeleteDiligenceLog, handleWorkflowHelpRequest, handlePeerAnalysisRequest, handleManualPeerAnalysisRequest, handleStructuredDiligenceSave, handleGenerateFilingQuestionsRequest, handleSaveFilingDiligenceRequest, handleDeleteFilingDiligenceLog, handleGenerateUpdatedGarpMemoRequest, handleGenerateUpdatedQarpMemoRequest, handleAnalyzeEightKRequest, handleCompounderMemoRequest, handleFinalThesisRequest } from './ui-handlers.js';
 import { getFmpStockData } from './api.js';
 
 // --- DYNAMIC TOOLTIPS ---
@@ -347,7 +347,7 @@ export function setupEventListeners() {
         if (target.id === 'garp-memo-button') handleGarpMemoRequest(symbol);
         if (target.id === 'long-term-compounder-button') handleCompounderMemoRequest(symbol);
         if (target.id === 'final-thesis-button') handleFinalThesisRequest(symbol);
-        if (target.id === 'generate-all-reports-button') handleGenerateAllReportsRequest(symbol);
+        if (target.id === 'generate-prereqs-button') handleGeneratePrereqsRequest(symbol);
     });
     
     setupGlobalEventListeners();
