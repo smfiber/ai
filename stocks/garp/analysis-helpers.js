@@ -363,6 +363,7 @@ export function _calculateGarpScorecardMetrics(data) {
     const roic = metricsTtm.roic ?? latestAnnualMetrics.roic;
     const de = metricsTtm.debtToEquity ?? latestAnnualMetrics.debtToEquity;
     const pe = metricsTtm.peRatioTTM ?? latestAnnualMetrics.peRatio;
+    const psRatio = ratiosTtm.priceToSalesRatioTTM ?? latestAnnualRatios.priceToSalesRatio;
 
     // --- FIX: Find the correct forward-looking estimate ---
     const currentYear = new Date().getFullYear();
@@ -409,19 +410,20 @@ export function _calculateGarpScorecardMetrics(data) {
         'EPS Growth (Next 1Y)': { value: epsNext1y, format: 'percent', weight: 12 },
         'EPS Growth (5Y)': { value: eps5y, format: 'percent', weight: 8 },
         'Revenue Growth (5Y)': { value: rev5y, format: 'percent', weight: 5 },
-        // -- Quality & Stability (40%)
+        // -- Quality & Stability (35%)
         'Return on Invested Capital': { value: roic, format: 'percent', weight: 10 },
         'Return on Equity': { value: roe, format: 'percent', weight: 8 },
         'Quarterly Earnings Progress': { value: quarterlyPerformance.performanceRatio, format: 'ratio', weight: 8 },
-        'Profitable Yrs (5Y)': { value: consistency.profitableYears, format: 'number', weight: 8 },
-        'Rev. Growth Stability': { value: consistency.revenueGrowthStdDev, format: 'decimal', weight: 6 },
+        'Profitable Yrs (5Y)': { value: consistency.profitableYears, format: 'number', weight: 6 },
+        'Rev. Growth Stability': { value: consistency.revenueGrowthStdDev, format: 'decimal', weight: 3 },
         // -- Financial Health (10%)
         'Debt-to-Equity': { value: de, format: 'decimal', weight: 5 },
         'Interest Coverage': { value: interestCoverage, format: 'decimal', weight: 5 },
-        // -- Valuation (25%)
+        // -- Valuation (30%)
         'PEG Ratio': { value: peg, format: 'decimal', weight: 10 },
         'Forward P/E': { value: forwardPe, format: 'decimal', weight: 8 },
         'Price to FCF': { value: pfcf, format: 'decimal', weight: 7 },
+        'P/S Ratio': { value: psRatio, format: 'decimal', weight: 5 },
         // -- For AI Prompt Compatibility (No Weight)
         'P/E (TTM)': { value: pe, format: 'decimal' },
     };
