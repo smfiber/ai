@@ -943,7 +943,7 @@ ${marked.parse(generatedThesis)}
     }
 }
 
-export async function handleInvestmentMemoRequest(symbol, forceNew = false) {
+export async function handleGarpMemoRequest(symbol, forceNew = false) {
     const contentContainer = document.getElementById('ai-article-container-analysis');
     const statusContainer = document.getElementById('report-status-container-analysis');
     contentContainer.innerHTML = '';
@@ -1020,6 +1020,117 @@ export async function handleInvestmentMemoRequest(symbol, forceNew = false) {
         }
     }
 }
+
+export async function handleCompounderMemoRequest(symbol, forceNew = false) {
+    const contentContainer = document.getElementById('ai-article-container-analysis');
+    const statusContainer = document.getElementById('report-status-container-analysis');
+    contentContainer.innerHTML = '';
+    statusContainer.classList.add('hidden');
+
+    try {
+        const reportType = 'LongTermCompounder';
+        const promptConfig = promptMap[reportType];
+        const savedReports = await getSavedReports(symbol, reportType);
+
+        if (savedReports.length > 0 && !forceNew) {
+            const latestReport = savedReports[0];
+            displayReport(contentContainer, latestReport.content, latestReport.prompt);
+            updateReportStatus(statusContainer, savedReports, latestReport.id, { symbol, reportType, promptConfig });
+            return;
+        }
+
+        openModal(CONSTANTS.MODAL_LOADING);
+        const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+        loadingMessage.textContent = "Gathering prerequisite reports for Compounder Memo...";
+
+        const moatReports = await getSavedReports(symbol, 'MoatAnalysis');
+        const capitalReports = await getSavedReports(symbol, 'CapitalAllocators');
+
+        if (moatReports.length === 0 || capitalReports.length === 0) {
+            throw new Error("The 'Moat Analysis' and 'Capital Allocators' reports must be generated first.");
+        }
+
+        const profile = state.portfolioCache.find(s => s.ticker === symbol);
+        const companyName = profile ? profile.companyName : symbol;
+
+        const prompt = promptConfig.prompt
+            .replace(/{companyName}/g, companyName)
+            .replace(/{tickerSymbol}/g, symbol)
+            .replace('{moatAnalysisReport}', moatReports[0].content)
+            .replace('{capitalAllocatorsReport}', capitalReports[0].content);
+
+        const memoContent = await generateRefinedArticle(prompt, loadingMessage);
+        await autoSaveReport(symbol, reportType, memoContent, prompt);
+
+        const refreshedReports = await getSavedReports(symbol, reportType);
+        displayReport(contentContainer, memoContent, prompt);
+        updateReportStatus(statusContainer, refreshedReports, refreshedReports[0].id, { symbol, reportType, promptConfig });
+
+    } catch (error) {
+        console.error("Error generating Long-Term Compounder memo:", error);
+        displayMessageInModal(`Could not generate memo: ${error.message}`, 'error');
+        contentContainer.innerHTML = `<p class="text-red-500">${error.message}</p>`;
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
+export async function handleFinalThesisRequest(symbol, forceNew = false) {
+    const contentContainer = document.getElementById('ai-article-container-analysis');
+    const statusContainer = document.getElementById('report-status-container-analysis');
+    contentContainer.innerHTML = '';
+    statusContainer.classList.add('hidden');
+
+    try {
+        const reportType = 'FinalInvestmentThesis';
+        const promptConfig = promptMap[reportType];
+        const savedReports = await getSavedReports(symbol, reportType);
+
+        if (savedReports.length > 0 && !forceNew) {
+            const latestReport = savedReports[0];
+            displayReport(contentContainer, latestReport.content, latestReport.prompt);
+            updateReportStatus(statusContainer, savedReports, latestReport.id, { symbol, reportType, promptConfig });
+            return;
+        }
+
+        openModal(CONSTANTS.MODAL_LOADING);
+        const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+        loadingMessage.textContent = "Gathering all memos for final synthesis...";
+
+        const garpReports = await getSavedReports(symbol, 'GarpCandidacy');
+        const qarpReports = await getSavedReports(symbol, 'QarpAnalysis');
+        const compounderReports = await getSavedReports(symbol, 'LongTermCompounder');
+
+        if (garpReports.length === 0 || qarpReports.length === 0 || compounderReports.length === 0) {
+            throw new Error("The GARP, QARP, and Long-Term Compounder memos must all be generated before the final thesis.");
+        }
+
+        const profile = state.portfolioCache.find(s => s.ticker === symbol);
+        const companyName = profile ? profile.companyName : symbol;
+
+        const prompt = promptConfig.prompt
+            .replace(/{companyName}/g, companyName)
+            .replace(/{tickerSymbol}/g, symbol)
+            .replace('{garpCandidacyReport}', garpReports[0].content)
+            .replace('{qarpAnalysisReport}', qarpReports[0].content)
+            .replace('{longTermCompounderMemo}', compounderReports[0].content);
+
+        const memoContent = await generateRefinedArticle(prompt, loadingMessage);
+        await autoSaveReport(symbol, reportType, memoContent, prompt);
+
+        const refreshedReports = await getSavedReports(symbol, reportType);
+        displayReport(contentContainer, memoContent, prompt);
+        updateReportStatus(statusContainer, refreshedReports, refreshedReports[0].id, { symbol, reportType, promptConfig });
+
+    } catch (error) {
+        console.error("Error generating Final Investment Thesis:", error);
+        displayMessageInModal(`Could not generate final thesis: ${error.message}`, 'error');
+        contentContainer.innerHTML = `<p class="text-red-500">${error.message}</p>`;
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
 
 export async function handleGenerateAllReportsRequest(symbol) {
     const reportTypes = ['GarpAnalysis', 'FinancialAnalysis', 'RiskAssessment', 'MoatAnalysis', 'CapitalAllocators'];
