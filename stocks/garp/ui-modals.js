@@ -380,7 +380,7 @@ export async function openRawDataViewer(ticker) {
         }).join('');
         
         const deepDiveHtml = buildButtonHtml(deepDiveButtons);
-        const generateAllBtn = `<button data-symbol="${ticker}" id="generate-all-reports-button" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg">Generate All Deep Dives</button>`;
+        const prereqsBtn = `<button data-symbol="${ticker}" id="generate-prereqs-button" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg">Generate Memo Prerequisites</button>`;
         const garpMemoBtn = `<button data-symbol="${ticker}" id="garp-memo-button" data-report-type="InvestmentMemo" class="ai-analysis-button bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg text-base">Generate GARP Memo</button>`;
 
         const compounderBtn = `<button data-symbol="${ticker}" id="long-term-compounder-button" data-report-type="LongTermCompounder" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg text-base">Generate Compounder Memo</button>`;
@@ -397,7 +397,7 @@ export async function openRawDataViewer(ticker) {
                     </div>
                     <div class="text-center mt-6 flex flex-wrap gap-4 justify-center">
                         ${garpMemoBtn}
-                        ${generateAllBtn}
+                        ${prereqsBtn}
                     </div>
                 </div>
 
