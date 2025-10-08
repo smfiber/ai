@@ -1132,20 +1132,14 @@ export async function handleFinalThesisRequest(symbol, forceNew = false) {
 }
 
 
-export async function handleGenerateAllReportsRequest(symbol) {
-    const reportTypes = ['GarpAnalysis', 'FinancialAnalysis', 'RiskAssessment', 'MoatAnalysis', 'CapitalAllocators'];
+export async function handleGeneratePrereqsRequest(symbol) {
+    const reportTypes = ['MoatAnalysis', 'CapitalAllocators'];
     const reportDisplayNames = {
-        'GarpAnalysis': 'GARP Analysis',
-        'FinancialAnalysis': 'Financial Analysis',
-        'RiskAssessment': 'Risk Assessment',
         'MoatAnalysis': 'Moat Analysis',
         'CapitalAllocators': 'Capital Allocators',
     };
     const metricCalculators = {
-        'FinancialAnalysis': _calculateFinancialAnalysisMetrics,
-        'GarpAnalysis': _calculateGarpScorecardMetrics,
         'MoatAnalysis': _calculateMoatAnalysisMetrics,
-        'RiskAssessment': _calculateRiskAssessmentMetrics,
         'CapitalAllocators': _calculateCapitalAllocatorsMetrics,
     };
 
@@ -1207,7 +1201,7 @@ export async function handleGenerateAllReportsRequest(symbol) {
             progressBarFill.style.width = `${progress}%`;
         }
 
-        displayMessageInModal(`Successfully generated and saved all prerequisite reports for ${symbol}. You can now generate the Investment Memo.`, 'info');
+        displayMessageInModal(`Successfully generated prerequisites for ${symbol}. You can now generate the synthesis memos.`, 'info');
 
     } catch (error) {
         console.error("Error generating all reports:", error);
