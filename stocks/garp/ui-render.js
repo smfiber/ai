@@ -2,7 +2,7 @@
 import { CONSTANTS, state } from './config.js';
 import { getDocs, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { _calculateGarpScorecardMetrics } from './analysis-helpers.js';
-import { handleAnalysisRequest, handleInvestmentMemoRequest, handleGarpCandidacyRequest, handlePositionAnalysisRequest } from './ui-handlers.js';
+import { handleAnalysisRequest, handleGarpMemoRequest, handleGarpCandidacyRequest, handlePositionAnalysisRequest } from './ui-handlers.js';
 import { getFmpStockData } from './api.js';
 
 // --- UTILITY & SECURITY HELPERS ---
@@ -969,7 +969,7 @@ export function updateReportStatus(statusContainer, reports, activeReportId, ana
     if (generateNewBtn) {
         generateNewBtn.addEventListener('click', () => {
             if (analysisParams.reportType === 'InvestmentMemo') {
-                handleInvestmentMemoRequest(analysisParams.symbol, true);
+                handleGarpMemoRequest(analysisParams.symbol, true);
             } else if (analysisParams.reportType === 'PositionAnalysis') {
                 handlePositionAnalysisRequest(analysisParams.symbol, true);
             } else {
