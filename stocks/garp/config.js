@@ -228,27 +228,33 @@ Based on the risks you identified above, provide a brief, 1-2 sentence summary h
 `.trim();
 
 const CAPITAL_ALLOCATORS_PROMPT = `
-	Act as a discerning investment strategist, channeling the analytical rigor and long-term perspective of firms like Berkshire Hathaway. Your analysis must be in the style of a detailed shareholder letter and based *only* on the provided financial data for {companyName}. **Be critical; praise should be reserved for exceptional, data-backed performance.**
-	Article Title: "The Capital Allocators: A Deep Dive into the Financial Stewardship of {companyName}'s Leadership"
-	## 1. The CEO's Inferred Philosophy
-	**Instead of their stated approach, deduce their *actual* philosophy from the numbers.** Based on the flow of capital over the last decade, what do their actions reveal about their priorities? Do they favor aggressive growth, maintaining a fortress balance sheet, or maximizing shareholder returns?
-	## 2. A Quantitative Analysis of the Track Record
-	Analyze their capital allocation decisions over the last 5-10 years, using specific metrics to judge their effectiveness:
-	- **Reinvestment in the Business (The Primary Engine):**
-		- Analyze the trend in **Return on Invested Capital (ROIC)**. Is it consistently high and stable, or is it volatile or declining? **This is the single most important measure of internal investment skill.**
-		- Is the company's ROIC comfortably above its Weighted Average Cost of Capital (WACC)? **Value is only created when ROIC > WACC.**
-	- **Acquisitions (M&A):**
-		- Examine the company's **profit margins** and **ROIC** in the years immediately following major acquisitions. Did the deals enhance profitability (accretive) or dilute it (destructive)?
-		- Analyze the growth of **\`goodwill\`** on the balance sheet. A large increase in goodwill followed by stagnant or declining ROIC is a major red flag for overpayment ("diworsification").
-	- **Returning Capital to Shareholders:**
-		- **Stock Buybacks:** Correlate the timing and volume of share repurchases with the stock's historical valuation (e.g., Price-to-Earnings or Price-to-Book ratio). **Did they opportunistically buy back shares when the stock was cheap, or did they buy high?**
-		- **Dividends:** Analyze the **dividend payout ratio** against free cash flow. Is the dividend safely covered, and is its growth rational and sustainable?
-	## 3. Final Scorecard & Investment Thesis
-	- **Provide a final letter grade (A through F) for the management team's overall skill as capital allocators.** Justify this grade by summarizing the strongest and weakest points from your quantitative analysis above.
-	- Based on this track record, formulate a concise investment thesis. Why should (or shouldn't) an investor trust this team to be wise stewards of capital in the future?
-	- **Conclude with a "Key Risks & Red Flags" section**, highlighting any concerning trends (e.g., declining ROIC, value-destructive M&A, or ill-timed buybacks).
-	Crucial Disclaimer: This article is for informational purposes only and should not be considered financial advice. Readers should consult with a qualified financial professional before making any investment decisions.
-`;
+Role: You are a critical, business-focused investment analyst. Your task is to evaluate the skill of {companyName}'s management team as capital allocators, based *only* on the provided financial data.
+Data Instructions: Your analysis must be derived exclusively from the provided JSON data. Be objective; praise should be reserved for exceptional, data-backed performance.
+Output Format: Provide a detailed report in professional markdown format.
+
+JSON Data:
+{jsonData}
+
+# Capital Allocation Report: {companyName} ({tickerSymbol})
+
+## 1. Deduced Capital Allocation Philosophy
+Based on the 'cashFlowPriorities' data, what have been the company's primary uses of cash over the last decade? Is management's philosophy geared towards aggressive growth (CapEx, acquisitions), shareholder returns (dividends, buybacks), or maintaining a fortress balance sheet (debt repayment)?
+
+## 2. Reinvestment Effectiveness
+- **Return on Invested Capital (ROIC):** This is the key measure of management's skill. Analyze the 'reinvestmentEffectiveness.roicTrend'. Is it consistently high (e.g., >15%), stable, rising, or volatile/declining? A strong ROIC trend is the clearest sign of effective capital deployment.
+- **Revenue & Profit Growth:** How has the reinvestment translated into top-line and bottom-line growth? Analyze the trends in 'reinvestmentEffectiveness.revenueGrowth' and 'reinvestmentEffectiveness.grossProfitGrowth'. Is growth accelerating or decelerating?
+
+## 3. Acquisition Track Record (M&A)
+- Analyze the 'acquisitionHistory' data. Correlate periods of significant acquisition spending ('acquisitions') with the 'reinvestmentEffectiveness.roicTrend'. Did ROIC improve or decline after major acquisitions?
+- Look at the 'goodwill' trend. A large increase in goodwill followed by stagnant or declining ROIC is a major red flag for overpaying for deals.
+
+## 4. Shareholder Returns
+- **Stock Buybacks:** Analyze the 'shareholderReturns.buybacksWithValuation' data. Did management opportunistically repurchase shares when valuation multiples (P/E, P/B) were low, or did they buy back stock at high valuations? Be critical here.
+- **Dividends:** Analyze the 'shareholderReturns.fcfPayoutRatioTrend'. Is the dividend safely covered by free cash flow, and is its growth rational and sustainable?
+
+## 5. Final Grade & Justification
+- **Provide a final letter grade (A through F) for the management team's overall skill as capital allocators.** Justify this grade by summarizing the strongest and weakest points from your quantitative analysis above. Conclude with a bottom-line assessment for a long-term investor.
+`.trim();
 
 const SECTOR_MOMENTUM_PROMPT = `
 Role: You are a market analyst AI. Your task is to provide a concise, data-driven summary of sector performance based on the provided JSON data.
@@ -538,203 +544,11 @@ Output Format: The final report must be in professional markdown format. Use # f
 
 ## 4. Final Synthesis: The QARP Verdict
 (Synthesize all findings into a final conclusion. The diligence log is critical here. Does it confirm the quantitative story, or does it reveal risks that make the numbers less reliable? Explain the trade-offs and justify your final verdict.)
-`.trim();
-
-const EIGHT_K_ANALYSIS_PROMPT = `
-**Persona & Role:**
-You are a financial analyst AI specializing in the rapid assessment of SEC Form 8-K filings for GARP ("Growth at a Reasonable Price") investors. Your analysis must be objective, concise, and focused on the material impact to a long-term investment thesis.
-
-**Core Task:**
-Read the provided 8-K filing text for {companyName} and generate a structured analysis that summarizes the event and assesses its impact.
-
-**Critical Instructions:**
-1.  **Source Limitation:** Your entire analysis must be derived *exclusively* from the provided 'Filing Text'. Do not infer information or use outside knowledge.
-2.  **Strict Output Format:** You MUST return a response in markdown that follows this structure precisely. Do not add any introductory or concluding paragraphs outside of this structure.
-
-**Input Data:**
-
-**1. Company Name:**
-{companyName}
-
-**2. Filing Text:**
-\`\`\`
-{filingText}
-\`\`\`
-
----
-
-# 8-K Material Event Analysis: {companyName}
-
-## 1. Event Summary
-(In one paragraph, concisely summarize the core event being reported in the 8-K. For example: "The company announced the acquisition of Competitor Corp. for $500 million in cash and stock," or "The company announced the immediate resignation of its CEO, Jane Doe, for personal reasons.")
-
-## 2. Impact on Investment Thesis
-(For each of the three pillars below, write a brief, one-sentence analysis of the event's potential impact. If the filing does not provide enough information to make an assessment, state "The filing does not provide enough information to assess the impact.")
-* **Growth:**
-* **Quality / Risk Profile:**
-* **Capital Allocation:**
-
-## 3. Overall Significance
-(Provide one of the following three verdicts, bolded, followed by a single sentence explaining your choice.)
-* **Thesis-Altering:**
-* **Monitor Closely:**
-* **Minor / Informational:**
-`.trim();
-
-const LONG_TERM_COMPOUNDER_PROMPT = `
-Role: You are a long-term, business-focused investment analyst, in the style of Warren Buffett or Chuck Akre. Your goal is to determine if {companyName} is a "wonderful business" that can be held for a decade or more, a true "compounder."
-Data Instructions: Your analysis must be a synthesis of the two reports provided below: the 'Moat Analysis' and the 'Capital Allocators' report. Do not use any other data. Your job is to connect the findings from these two reports into a single, cohesive narrative.
-Output Format: The final report must be in professional markdown format.
-
-**Input Report 1: Moat Analysis**
-{moatAnalysisReport}
-
-**Input Report 2: Capital Allocators Analysis**
-{capitalAllocatorsReport}
-
-# Long-Term Compounder Memo: {companyName} ({tickerSymbol})
-
-## 1. The Core Investment Question
-(Start with a one-paragraph summary. Based on the two reports, what is the single most important question an investor must answer about this company's long-term prospects? For example, "Is management's aggressive acquisition strategy sustainably widening the company's narrow moat, or is it a 'diworsification' that risks eroding shareholder value?")
-
-## 2. The Makings of a "Wonderful Business"
-(Synthesize the BULL case from both reports into a bulleted list.)
-- **Competitive Advantage (The Moat):** What did the Moat Analysis conclude? Is it Wide, Narrow, or None? What is the primary source of that advantage (e.g., network effects, high switching costs)?
-- **Management Quality (The Jockeys):** What grade did the Capital Allocators report assign to management? What are their greatest strengths as demonstrated by their track record (e.g., shrewd buybacks, high-ROIC internal projects)?
-- **Profitability Engine:** Connect the two reports. Does the company's high ROIC (from the Capital Allocators report) confirm the existence and strength of the moat (from the Moat Analysis)? Explain the connection.
-
-## 3. Potential Cracks in the Fortress
-(Synthesize the BEAR case and risks from both reports into a bulleted list.)
-- **Moat Sustainability Risks:** What are the biggest threats to the company's competitive advantage as identified in the Moat Analysis?
-- **Capital Allocation Red Flags:** What were the biggest weaknesses identified in the Capital Allocators report (e.g., overpaying for acquisitions, buying back stock at high valuations)?
-- **The Core Tension:** How do the risks from one report potentially impact the strengths of the other? (e.g., "While the company currently enjoys a wide moat, management's recent low-ROIC acquisitions could signal a deterioration of that advantage over time.")
-
-## 4. Final Verdict: A True Compounder?
-(Provide a final, one-paragraph verdict. Based *only* on the synthesis of these two reports, does the company have the key ingredients of a long-term compounder: a durable moat and exceptional management? Conclude with one of the following classifications: **"High-Conviction Compounder," "Potential Compounder with Reservations,"** or **"Not a Compounder."** Justify your choice.)
-`.trim();
-
-const FINAL_INVESTMENT_THESIS_PROMPT = `
-Role: You are the Chief Investment Officer of a multi-strategy fund. You have received three analyst reports on {companyName}: a GARP analysis, a QARP analysis, and a Long-Term Compounder assessment. Your task is to synthesize these three perspectives into a final, decisive investment thesis.
-Data Instructions: Your analysis MUST be based exclusively on the content of the three reports provided. Your primary role is to identify areas of agreement and disagreement between the reports and resolve them into a single, actionable conclusion.
-Output Format: The final report must be in professional markdown format.
-
-**Input Report 1: GARP Candidacy Report (Growth at a Reasonable Price)**
-{garpCandidacyReport}
-
-**Input Report 2: QARP Analysis (Quality at a Reasonable Price)**
-{qarpAnalysisReport}
-
-**Input Report 3: Long-Term Compounder Memo**
-{longTermCompounderMemo}
-
-# Final Investment Thesis: {companyName} ({tickerSymbol})
-
-## 1. Executive Summary & Investment Profile
-(In one paragraph, synthesize the key takeaways from all three reports. Start by identifying the stock's "investment profile." For example: "The consensus from our analysts suggests {companyName} is a **High-Quality Compounder trading at a temporary discount,**" or "This appears to be a **classic GARP stock whose long-term durability is questionable.**" State the final recommendation clearly.)
-
-## 2. Thesis Points of Agreement (The Core Bull Case)
-(Create a bulleted list of the strongest bullish points where at least two of the three analyst reports are in agreement. For each point, state the consensus view and briefly mention which reports support it. Example: "- **Exceptional Profitability:** Both the QARP and Compounder analyses highlight the company's consistently high ROIC, confirming its status as a high-quality business.")
-
-## 3. Thesis Points of Disagreement (The Core Tension)
-(In one paragraph, identify the central conflict or tension between the reports. This is the most critical part of your analysis. For example: "The primary disagreement is on valuation. The GARP report sees the current P/E as a clear buying opportunity, while the QARP and Compounder memos argue that this valuation is merely 'fair' for a business of this quality and does not offer a significant margin of safety.")
-
-## 4. Final Recommendation & Rationale
-(Provide a final, one-paragraph recommendation. You must resolve the tension identified in the previous section. State which analyst's view you ultimately favor and why. Conclude with a clear, final recommendation: **"Initiate a Full Position," "Initiate a Half Position," "Add to Watchlist,"** or **"Pass."** Justify your decision based on the overall weight of the evidence.)
-`.trim();
-
-export const promptMap = {
-    'PeerIdentification': {
-        prompt: PEER_IDENTIFICATION_PROMPT,
-        requires: ['profile']
-    },
-    'PeerIdentificationFallback': {
-        prompt: PEER_IDENTIFICATION_FALLBACK_PROMPT,
-        requires: ['profile']
-    },
-    'PeerComparison': {
-        prompt: 'N/A' // Placeholder to satisfy help handler check
-    },
-    'FinancialAnalysis': {
-        prompt: FINANCIAL_ANALYSIS_PROMPT,
-        requires: ['profile', 'key_metrics_annual', 'stock_grade_news', 'income_statement_annual', 'cash_flow_statement_annual', 'income_statement_quarterly']
-    },
-    'GarpAnalysis': {
-        prompt: GARP_ANALYSIS_PROMPT,
-        requires: []
-    },
-    'QarpAnalysis': {
-        prompt: `
-Role: You are a Senior Investment Analyst specializing in the "Quality at a Reasonable Price" (QARP) philosophy. Your task is to provide a rigorous, data-driven analysis that weighs a company's quality against its current valuation.
-Data Instructions: Your analysis MUST be based *exclusively* on the pre-calculated metrics provided in the JSON data below. Do not recalculate any values.
-Output Format: The final report must be in professional markdown format. Use # for the main title, ## for major sections, and bullet points.
-
-JSON Data with Pre-Calculated Metrics:
-{jsonData}
-
-# QARP Analysis: {companyName} ({tickerSymbol})
-
-## 1. Executive Summary & Verdict
-(Provide a concise, one-paragraph summary. Conclude with a clear verdict: "This company appears to be a **strong QARP candidate**," "a **borderline QARP candidate**," or "**does not meet the criteria** for a QARP investment at this time.")
-
-## 2. The "Quality" Pillar: Is This a Superior Business?
-(Analyze the company's quality using the scorecard data. Address the following:)
-- **Profitability & Efficiency:** Based on the **Return on Equity (ROE)** and **Return on Invested Capital (ROIC)**, how effectively does management generate profits?
-- **Financial Strength:** How resilient is the company? Analyze the **Debt-to-Equity** ratio to assess its financial leverage and risk.
-- **Growth Stability:** Evaluate the **EPS Growth (5Y)** and **Revenue Growth (5Y)**. Do these figures suggest a history of durable, consistent growth?
-
-## 3. The "Reasonable Price" Pillar: Are We Overpaying?
-(Analyze the company's valuation using the scorecard data. Address the following:)
-- **Core Valuation:** Based on the **P/E (TTM)** and **Forward P/E** ratios, does the stock appear cheap or expensive on an earnings basis?
-- **Growth-Adjusted Valuation:** Use the **PEG Ratio** to determine if the price is justified by its forward growth estimates.
-- **Cash Flow Valuation:** Analyze the **Price to FCF** ratio. How does the valuation look when measured against the actual cash the business generates?
-
-## 4. Final Synthesis: The QARP Verdict
-(Synthesize the findings from the two pillars into a final conclusion. Explain the trade-offs. For example, is this a very high-quality company trading at a slight premium, or a medium-quality company at a very cheap price? Based on this balance, reiterate and justify your final verdict.)
         `.trim(),
         requires: [] // Uses the same scorecard data as GARP Candidacy
     },
     'UpdatedQarpMemo': {
         prompt: UPDATED_QARP_MEMO_PROMPT,
-        requires: []
-    },
-    'MoatAnalysis': {
-        prompt: MOAT_ANALYSIS_PROMPT,
-        requires: ['profile', 'key_metrics_annual', 'income_statement_annual', 'cash_flow_statement_annual', 'ratios_annual']
-    },
-    'RiskAssessment': {
-        prompt: RISK_ASSESSMENT_PROMPT,
-        requires: ['profile', 'key_metrics_annual', 'cash_flow_statement_annual', 'income_statement_annual', 'stock_grade_news', 'ratios_annual']
-    },
-    'CapitalAllocators': {
-        prompt: CAPITAL_ALLOCATORS_PROMPT,
-        requires: ['cash_flow_statement_annual', 'key_metrics_annual', 'income_statement_annual', 'balance_sheet_statement_annual', 'ratios_annual']
-    },
-    'InvestmentMemo': {
-        prompt: INVESTMENT_MEMO_PROMPT,
-        requires: []
-    },
-    'PortfolioGarpAnalysis': {
-        prompt: PORTFOLIO_GARP_ANALYSIS_PROMPT,
-        requires: []
-    },
-    'PositionAnalysis': {
-        prompt: POSITION_ANALYSIS_PROMPT,
-        requires: []
-    },
-    'GarpCandidacy': {
-        prompt: GARP_CANDIDACY_PROMPT,
-        requires: [] // This analysis calculates its own data, doesn't need pre-filtered FMP endpoints
-    },
-    'GarpConvictionScore': {
-        prompt: GARP_CONVICTION_SCORE_PROMPT,
-        requires: []
-    },
-    'SectorMomentum': {
-        prompt: SECTOR_MOMENTUM_PROMPT,
-        requires: []
-    },
-    'FilingQuestionGeneration': {
-        prompt: FILING_QUESTION_GENERATION_PROMPT,
         requires: []
     },
     'EightKAnalysis': {
