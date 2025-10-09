@@ -259,7 +259,6 @@ export async function openRawDataViewer(ticker) {
     const diligenceHubContainer = document.getElementById('diligence-hub-tab');
     const ongoingDiligenceContainer = document.getElementById('ongoing-diligence-tab');
     const positionAnalysisContainer = document.getElementById('position-analysis-content-container');
-    const manualDataContainer = document.getElementById('manual-data-tab');
     
     // Get specific content elements
     const aiArticleContainer = document.getElementById('ai-article-container-analysis');
@@ -275,7 +274,6 @@ export async function openRawDataViewer(ticker) {
     aiAnalysisContainer.innerHTML = '';
     diligenceHubContainer.innerHTML = '';
     ongoingDiligenceContainer.innerHTML = '';
-    if(manualDataContainer) manualDataContainer.innerHTML = '';
     aiArticleContainer.innerHTML = '';
     profileDisplayContainer.innerHTML = '';
     garpScorecardContainer.innerHTML = '';
@@ -295,6 +293,20 @@ export async function openRawDataViewer(ticker) {
     document.querySelector('.tab-button[data-tab="dashboard"]').classList.add('active');
 
     try {
+        const contentContainer = document.getElementById('raw-data-viewer-content');
+        
+        // Add new tab structure if it doesn't exist, using a non-destructive method
+        if (!contentContainer.querySelector('[data-tab="manual-data"]')) {
+            const nav = contentContainer.querySelector('#analysis-tabs');
+            nav.insertAdjacentHTML('beforeend', `<button class="tab-button" data-tab="manual-data">Manual Data Entry</button>`);
+            
+            const tabContainer = contentContainer.querySelector('.flex-grow.overflow-y-auto');
+            tabContainer.insertAdjacentHTML('beforeend', `<div id="manual-data-tab" class="tab-content hidden p-6"></div>`);
+        }
+        
+        const manualDataContainer = document.getElementById('manual-data-tab');
+        if(manualDataContainer) manualDataContainer.innerHTML = ''; // Clear manual tab content for redraw
+
         const fmpDataPromise = getFmpStockData(ticker);
         const groupedDataPromise = getGroupedFmpData(ticker);
         const savedReportsPromise = getDocs(query(collection(state.db, CONSTANTS.DB_COLLECTION_AI_REPORTS), where("ticker", "==", ticker)));
@@ -304,7 +316,7 @@ export async function openRawDataViewer(ticker) {
 
         const [fmpData, groupedFmpData, savedReportsSnapshot, savedCandidacyReports] = await Promise.all([fmpDataPromise, groupedDataPromise, savedReportsPromise, savedCandidacyReportsPromise]);
 
-        if (!fmpData || !fmpData.profile || fmpData.profile.length === 0) {
+        if (!fmpData || !fmpData.profile || !fmpData.profile.length === 0) {
             closeModal(modalId);
             displayMessageInModal(
                 `Crucial data is missing for ${ticker}. Please use the "Refresh FMP" button for this stock, then try again.`,
@@ -320,17 +332,6 @@ export async function openRawDataViewer(ticker) {
         titleEl.textContent = `Analysis for ${ticker}`;
         const helpIconHtml = `<button data-report-type="PositionAnalysis" class="ai-help-button p-1 rounded-full hover:bg-indigo-100" title="What is this?"><svg class="w-5 h-5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" /></svg></button>`;
         
-        const contentContainer = document.getElementById('raw-data-viewer-content');
-        
-        // Add new tab structure if it doesn't exist
-        if (!contentContainer.querySelector('[data-tab="manual-data"]')) {
-            const nav = contentContainer.querySelector('#analysis-tabs');
-            nav.innerHTML += `<button class="tab-button" data-tab="manual-data">Manual Data Entry</button>`;
-            const tabContainer = contentContainer.querySelector('.flex-grow.overflow-y-auto');
-            tabContainer.innerHTML += `<div id="manual-data-tab" class="tab-content hidden p-6"></div>`;
-        }
-
-
         // --- POSITION ANALYSIS TAB ---
         const portfolioData = state.portfolioCache.find(s => s.ticker === ticker);
         if (portfolioData && (portfolioData.transactions?.length > 0 || portfolioData.shares > 0)) {
