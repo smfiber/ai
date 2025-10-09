@@ -653,8 +653,8 @@ Role: You are the Chief Investment Officer of a multi-strategy fund. You have re
 Data Instructions: Your analysis MUST be based exclusively on the content of the three reports provided. Your primary role is to identify areas of agreement and disagreement between the reports and resolve them into a single, actionable conclusion.
 Output Format: The final report must be in professional markdown format.
 
-**Input Report 1: GARP Candidacy Report (Growth at a Reasonable Price)**
-{garpCandidacyReport}
+**Input Report 1: GARP Memo (Growth at a Reasonable Price)**
+{garpMemo}
 
 **Input Report 2: QARP Analysis (Quality at a Reasonable Price)**
 {qarpAnalysisReport}
