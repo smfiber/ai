@@ -34,7 +34,7 @@ export async function callGeminiApi(prompt) {
 
     state.sessionLog.push({ type: 'prompt', timestamp: new Date(), content: prompt });
 
-    const url = `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${state.geminiApiKey}`;
+    const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${state.geminiApiKey}`;
     const body = { contents: [{ parts: [{ "text": prompt }] }] };
     const data = await callApi(url, {
         method: 'POST',
@@ -61,7 +61,7 @@ export async function callSynthesisGeminiApi(prompt) {
 
     state.sessionLog.push({ type: 'prompt', timestamp: new Date(), content: prompt });
 
-    const url = `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${state.geminiApiKey}`;
+    const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${state.geminiApiKey}`;
     const body = { contents: [{ parts: [{ "text": prompt }] }] };
     const data = await callApi(url, {
         method: 'POST',
@@ -133,18 +133,26 @@ export async function generatePolishedArticleForSynthesis(initialPrompt, loading
 
 
 export async function getFmpStockData(symbol) {
-    const fmpCacheRef = collection(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, symbol, 'endpoints');
-    const fmpCacheSnapshot = await getDocs(fmpCacheRef);
+    // Promise to get all endpoint documents
+    const endpointsRef = collection(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, symbol, 'endpoints');
+    const endpointsPromise = getDocs(endpointsRef);
 
-    if (fmpCacheSnapshot.empty) {
+    // Promise to get the manual overrides document
+    const overridesRef = doc(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, symbol, 'analysis', 'manual_overrides');
+    const overridesPromise = getDoc(overridesRef);
+
+    const [endpointsSnapshot, overridesSnapshot] = await Promise.all([endpointsPromise, overridesPromise]);
+
+    if (endpointsSnapshot.empty) {
         console.warn(`No FMP data found for ${symbol}.`);
         return null;
     }
 
-    const stockData = { cachedAt: null };
+    const stockData = { cachedAt: null, manualOverrides: null };
     let latestTimestamp = null;
 
-    fmpCacheSnapshot.forEach(docSnap => {
+    // Process endpoint data
+    endpointsSnapshot.forEach(docSnap => {
         const docData = docSnap.data();
         stockData[docSnap.id] = docData.data;
 
@@ -154,6 +162,11 @@ export async function getFmpStockData(symbol) {
             }
         }
     });
+    
+    // Process and attach manual overrides
+    if (overridesSnapshot.exists()) {
+        stockData.manualOverrides = overridesSnapshot.data();
+    }
 
     stockData.cachedAt = latestTimestamp;
     return stockData;
