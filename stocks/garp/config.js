@@ -773,7 +773,7 @@ export const ANALYSIS_ICONS = {
 export const ANALYSIS_NAMES = {
     'FinancialAnalysis': 'Financial Analysis',
     'GarpAnalysis': 'GARP Analysis',
-    'QarpAnalysis': 'QARP Memo',
+    'QarpAnalysis': 'QARP Analysis',
     'UpdatedQarpMemo': 'Updated QARP Memo',
     'MoatAnalysis': 'Moat Analysis',
     'RiskAssessment': 'Risk Assessment',
