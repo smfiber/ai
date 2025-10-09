@@ -259,6 +259,7 @@ export async function openRawDataViewer(ticker) {
     const diligenceHubContainer = document.getElementById('diligence-hub-tab');
     const ongoingDiligenceContainer = document.getElementById('ongoing-diligence-tab');
     const positionAnalysisContainer = document.getElementById('position-analysis-content-container');
+    const manualDataContainer = document.getElementById('manual-data-tab');
     
     // Get specific content elements
     const aiArticleContainer = document.getElementById('ai-article-container-analysis');
@@ -274,6 +275,7 @@ export async function openRawDataViewer(ticker) {
     aiAnalysisContainer.innerHTML = '';
     diligenceHubContainer.innerHTML = '';
     ongoingDiligenceContainer.innerHTML = '';
+    if(manualDataContainer) manualDataContainer.innerHTML = '';
     aiArticleContainer.innerHTML = '';
     profileDisplayContainer.innerHTML = '';
     garpScorecardContainer.innerHTML = '';
@@ -317,6 +319,17 @@ export async function openRawDataViewer(ticker) {
         
         titleEl.textContent = `Analysis for ${ticker}`;
         const helpIconHtml = `<button data-report-type="PositionAnalysis" class="ai-help-button p-1 rounded-full hover:bg-indigo-100" title="What is this?"><svg class="w-5 h-5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" /></svg></button>`;
+        
+        const contentContainer = document.getElementById('raw-data-viewer-content');
+        
+        // Add new tab structure if it doesn't exist
+        if (!contentContainer.querySelector('[data-tab="manual-data"]')) {
+            const nav = contentContainer.querySelector('#analysis-tabs');
+            nav.innerHTML += `<button class="tab-button" data-tab="manual-data">Manual Data Entry</button>`;
+            const tabContainer = contentContainer.querySelector('.flex-grow.overflow-y-auto');
+            tabContainer.innerHTML += `<div id="manual-data-tab" class="tab-content hidden p-6"></div>`;
+        }
+
 
         // --- POSITION ANALYSIS TAB ---
         const portfolioData = state.portfolioCache.find(s => s.ticker === ticker);
@@ -519,6 +532,65 @@ export async function openRawDataViewer(ticker) {
                 e.target.closest('.diligence-entry-row').remove();
             }
         });
+
+        // --- MANUAL DATA TAB ---
+        const manualDataTab = document.getElementById('manual-data-tab');
+        if(manualDataTab) {
+            manualDataTab.innerHTML = `
+                <div class="bg-white p-6 rounded-2xl shadow-lg border border-gray-200">
+                    <h3 class="text-xl font-bold text-gray-800">Manual Data Entry for GARP Scorecard</h3>
+                    <p class="text-sm text-gray-500 mt-1 mb-6">Enter values to override or fill in missing data from the API. The scorecard will recalculate using this data upon saving.</p>
+                    <form id="manual-data-form" data-ticker="${ticker}" class="space-y-4">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-6">
+                            <div class="space-y-4">
+                                <h4 class="font-semibold text-gray-700 border-b pb-1">Growth Metrics</h4>
+                                <div><label for="manual-eps_growth_next_1y" class="block text-sm font-medium text-gray-600">EPS Growth (Next 1Y) (%)</label><input type="number" step="any" id="manual-eps_growth_next_1y" class="manual-data-input mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2 text-sm" placeholder="e.g., 15.5"></div>
+                                <div><label for="manual-eps_growth_5y" class="block text-sm font-medium text-gray-600">EPS Growth (5Y) (%)</label><input type="number" step="any" id="manual-eps_growth_5y" class="manual-data-input mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2 text-sm" placeholder="e.g., 12.0"></div>
+                                <div><label for="manual-rev_growth_5y" class="block text-sm font-medium text-gray-600">Revenue Growth (5Y) (%)</label><input type="number" step="any" id="manual-rev_growth_5y" class="manual-data-input mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2 text-sm" placeholder="e.g., 8.2"></div>
+                            </div>
+                            <div class="space-y-4">
+                                <h4 class="font-semibold text-gray-700 border-b pb-1">Quality & Health</h4>
+                                <div><label for="manual-roic" class="block text-sm font-medium text-gray-600">ROIC (%)</label><input type="number" step="any" id="manual-roic" class="manual-data-input mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2 text-sm" placeholder="e.g., 18.1"></div>
+                                <div><label for="manual-roe" class="block text-sm font-medium text-gray-600">ROE (%)</label><input type="number" step="any" id="manual-roe" class="manual-data-input mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2 text-sm" placeholder="e.g., 21.3"></div>
+                                <div><label for="manual-de" class="block text-sm font-medium text-gray-600">Debt-to-Equity</label><input type="number" step="any" id="manual-de" class="manual-data-input mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2 text-sm" placeholder="e.g., 0.45"></div>
+                                <div><label for="manual-interest_coverage" class="block text-sm font-medium text-gray-600">Interest Coverage</label><input type="number" step="any" id="manual-interest_coverage" class="manual-data-input mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2 text-sm" placeholder="e.g., 12.5"></div>
+                                <div><label for="manual-profitable_yrs" class="block text-sm font-medium text-gray-600">Profitable Yrs (out of 5)</label><input type="number" id="manual-profitable_yrs" class="manual-data-input mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2 text-sm" placeholder="e.g., 5"></div>
+                            </div>
+                            <div class="space-y-4">
+                                <h4 class="font-semibold text-gray-700 border-b pb-1">Valuation</h4>
+                                <div><label for="manual-pe_ttm" class="block text-sm font-medium text-gray-600">P/E (TTM)</label><input type="number" step="any" id="manual-pe_ttm" class="manual-data-input mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2 text-sm" placeholder="e.g., 19.5"></div>
+                                <div><label for="manual-forward_pe" class="block text-sm font-medium text-gray-600">Forward P/E</label><input type="number" step="any" id="manual-forward_pe" class="manual-data-input mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2 text-sm" placeholder="e.g., 17.2"></div>
+                                <div><label for="manual-peg" class="block text-sm font-medium text-gray-600">PEG Ratio</label><input type="number" step="any" id="manual-peg" class="manual-data-input mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2 text-sm" placeholder="e.g., 1.1"></div>
+                                <div><label for="manual-ps_ratio" class="block text-sm font-medium text-gray-600">P/S Ratio</label><input type="number" step="any" id="manual-ps_ratio" class="manual-data-input mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2 text-sm" placeholder="e.g., 2.5"></div>
+                                <div><label for="manual-pfcf" class="block text-sm font-medium text-gray-600">Price to FCF</label><input type="number" step="any" id="manual-pfcf" class="manual-data-input mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2 text-sm" placeholder="e.g., 22.0"></div>
+                            </div>
+                        </div>
+                        <div class="pt-5 text-right">
+                            <button type="submit" id="save-manual-data-button" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-5 rounded-lg shadow-md">Save Manual Data</button>
+                        </div>
+                    </form>
+                </div>
+            `;
+        }
+
+        const manualDataForm = document.getElementById('manual-data-form');
+        const overridesDocRef = doc(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, ticker, 'analysis', 'manual_overrides');
+        const overridesDocSnap = await getDoc(overridesDocRef);
+        if (overridesDocSnap.exists() && manualDataForm) {
+            const overrides = overridesDocSnap.data();
+            for (const key in overrides) {
+                const inputId = `manual-${key.replace(/_/g, '-')}`;
+                const input = manualDataForm.querySelector(`#${inputId}`);
+                if (input) {
+                    const value = overrides[key];
+                    if (['eps_growth_next_1y', 'eps_growth_5y', 'rev_growth_5y', 'roic', 'roe'].includes(key)) {
+                        input.value = (value * 100).toFixed(2);
+                    } else {
+                        input.value = value;
+                    }
+                }
+            }
+        }
         
         // --- DASHBOARD TAB (CONTINUED) ---
         const description = profile.description || 'No description available.';
