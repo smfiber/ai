@@ -1097,12 +1097,12 @@ export async function handleFinalThesisRequest(symbol, forceNew = false) {
         const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
         loadingMessage.textContent = "Gathering all memos for final synthesis...";
 
-        const garpReports = await getSavedReports(symbol, 'GarpCandidacy');
+        const investmentMemoReports = await getSavedReports(symbol, 'InvestmentMemo');
         const qarpReports = await getSavedReports(symbol, 'QarpAnalysis');
         const compounderReports = await getSavedReports(symbol, 'LongTermCompounder');
 
-        if (garpReports.length === 0 || qarpReports.length === 0 || compounderReports.length === 0) {
-            throw new Error("The GARP, QARP, and Long-Term Compounder memos must all be generated before the final thesis.");
+        if (investmentMemoReports.length === 0 || qarpReports.length === 0 || compounderReports.length === 0) {
+            throw new Error("The GARP Memo, QARP Analysis, and Long-Term Compounder memos must all be generated before the final thesis.");
         }
 
         const profile = state.portfolioCache.find(s => s.ticker === symbol);
@@ -1111,7 +1111,7 @@ export async function handleFinalThesisRequest(symbol, forceNew = false) {
         const prompt = promptConfig.prompt
             .replace(/{companyName}/g, companyName)
             .replace(/{tickerSymbol}/g, symbol)
-            .replace('{garpCandidacyReport}', garpReports[0].content)
+            .replace('{garpMemo}', investmentMemoReports[0].content)
             .replace('{qarpAnalysisReport}', qarpReports[0].content)
             .replace('{longTermCompounderMemo}', compounderReports[0].content);
 
