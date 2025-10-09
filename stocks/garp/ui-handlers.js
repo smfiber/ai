@@ -807,6 +807,64 @@ export async function handleAnalysisRequest(symbol, reportType, promptConfig, fo
     statusContainer.classList.add('hidden');
 
     try {
+        // --- MODIFICATION START: Handle QARP Memo as a special case ---
+        if (reportType === 'QarpAnalysis') {
+            const savedReports = await getSavedReports(symbol, reportType);
+            if (savedReports.length > 0 && !forceNew) {
+                const latestReport = savedReports[0];
+                displayReport(contentContainer, latestReport.content, latestReport.prompt);
+                updateReportStatus(statusContainer, savedReports, latestReport.id, { symbol, reportType, promptConfig });
+                return;
+            }
+
+            openModal(CONSTANTS.MODAL_LOADING);
+            const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+            loadingMessage.textContent = "Gathering data for QARP Memo synthesis...";
+
+            const diligenceReportTypes = ['DiligenceInvestigation', 'FilingDiligence', 'EightKAnalysis'];
+            const allDiligenceReports = await getSavedReports(symbol, diligenceReportTypes);
+            
+            let diligenceLog = 'No recent diligence is available.';
+            if (allDiligenceReports.length > 0) {
+                diligenceLog = allDiligenceReports.map(report => {
+                     if (report.reportType === 'DiligenceInvestigation') {
+                        const question = report.prompt.split('Diligence Question from User:')[1]?.trim() || 'Question not found.';
+                        return `**Diligence Hub Q&A:**\n**Question:** ${question}\n\n**Answer:**\n${report.content}`;
+                    } else if (report.reportType === 'FilingDiligence') {
+                        return `**Saved Filing Diligence (from ${report.savedAt.toDate().toLocaleDateString()}):**\n${report.content}`;
+                    } else if (report.reportType === 'EightKAnalysis') {
+                        return `**8-K Analysis Summary (from ${report.savedAt.toDate().toLocaleDateString()}):**\n${report.content}`;
+                    }
+                    return '';
+                }).join('\n\n---\n\n');
+            }
+
+            const data = await getFmpStockData(symbol);
+            if (!data) throw new Error(`Could not retrieve financial data for ${symbol}.`);
+            const scorecardData = _calculateGarpScorecardMetrics(data);
+            const profile = data.profile?.[0] || {};
+            const companyName = profile.companyName || 'the company';
+            
+            const qarpPromptConfig = promptMap.UpdatedQarpMemo;
+            const prompt = qarpPromptConfig.prompt
+                .replace(/{companyName}/g, companyName)
+                .replace(/{tickerSymbol}/g, symbol)
+                .replace('{jsonData}', JSON.stringify(scorecardData, null, 2))
+                .replace('{diligenceLog}', diligenceLog);
+
+            const memoContent = await generateRefinedArticle(prompt, loadingMessage);
+            
+            await autoSaveReport(symbol, reportType, memoContent, prompt);
+            const refreshedReports = await getSavedReports(symbol, reportType);
+            
+            displayReport(contentContainer, memoContent, prompt);
+            updateReportStatus(statusContainer, refreshedReports, refreshedReports[0]?.id, { symbol, reportType, promptConfig: qarpPromptConfig });
+            
+            closeModal(CONSTANTS.MODAL_LOADING);
+            return; // Exit the function as we have handled this special case
+        }
+        // --- MODIFICATION END ---
+        
         const savedReports = await getSavedReports(symbol, reportType);
 
         if (savedReports.length > 0 && !forceNew) {
@@ -855,8 +913,6 @@ export async function handleAnalysisRequest(symbol, reportType, promptConfig, fo
         } else if (reportType === 'CapitalAllocators') {
             payloadData = _calculateCapitalAllocatorsMetrics(data);
         } else if (reportType === 'GarpAnalysis') {
-            payloadData = _calculateGarpScorecardMetrics(data);
-        } else if (reportType === 'QarpAnalysis') {
             payloadData = _calculateGarpScorecardMetrics(data);
         } else {
             payloadData = buildAnalysisPayload(data, requiredEndpoints);
@@ -974,15 +1030,25 @@ export async function handleGarpMemoRequest(symbol, forceNew = false) {
         }
         const candidacyReportContent = candidacyReports[0].content;
         
-        const diligenceReports = await getSavedReports(symbol, 'DiligenceInvestigation');
+        // --- MODIFICATION START: Fetch all diligence types ---
+        const diligenceReportTypes = ['DiligenceInvestigation', 'FilingDiligence', 'EightKAnalysis'];
+        const allDiligenceReports = await getSavedReports(symbol, diligenceReportTypes);
+        
         let diligenceLog = 'No recent diligence is available.';
-        if (diligenceReports.length > 0) {
-            diligenceLog = diligenceReports.map(report => {
-                const question = report.prompt.split('Diligence Question from User:')[1]?.trim() || 'Question not found.';
-                const answer = report.content;
-                return `**Question:** ${question}\n\n**Answer:**\n${answer}\n\n---`;
-            }).join('\n\n');
+        if (allDiligenceReports.length > 0) {
+            diligenceLog = allDiligenceReports.map(report => {
+                if (report.reportType === 'DiligenceInvestigation') {
+                    const question = report.prompt.split('Diligence Question from User:')[1]?.trim() || 'Question not found.';
+                    return `**Diligence Hub Q&A:**\n**Question:** ${question}\n\n**Answer:**\n${report.content}`;
+                } else if (report.reportType === 'FilingDiligence') {
+                    return `**Saved Filing Diligence (from ${report.savedAt.toDate().toLocaleDateString()}):**\n${report.content}`;
+                } else if (report.reportType === 'EightKAnalysis') {
+                     return `**8-K Analysis Summary (from ${report.savedAt.toDate().toLocaleDateString()}):**\n${report.content}`;
+                }
+                return ''; // Should not happen if types are correct
+            }).join('\n\n---\n\n');
         }
+        // --- MODIFICATION END ---
 
         const data = await getFmpStockData(symbol);
         if (!data) throw new Error(`Could not retrieve financial data for ${symbol}.`);
