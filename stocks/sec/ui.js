@@ -1,5 +1,5 @@
 import { CONSTANTS, state } from './config.js';
-import { fetchAndRenderRecentFilings, renderCompanyDeepDive, renderInsiderTrackerView, renderInstitutionalTrackerView, renderUpcomingEarningsView, renderFilingsActivityView, renderMarketAnalysisView, renderInvestorFilingsDropdownView, renderInvestorFilingsView, renderWhaleComparisonView } from './ui-render.js';
+import { fetchAndRenderRecentFilings, fetchAndRenderReviewWatchlistFilings, renderCompanyDeepDive, renderInsiderTrackerView, renderInstitutionalTrackerView, renderUpcomingEarningsView, renderFilingsActivityView, renderMarketAnalysisView, renderInvestorFilingsDropdownView, renderInvestorFilingsView, renderWhaleComparisonView } from './ui-render.js';
 import { closeModal, openDeepDiveModal } from './ui-modals.js';
 import { handleFilingAnalysis, handleBatchProcess, handleMarketAnalysis } from './ui-handlers.js';
 
@@ -77,7 +77,9 @@ function setupGlobalEventListeners() {
 
             const isLoaded = tabButton.dataset.loaded === 'true';
             if (!isLoaded) {
-                if (tabId === 'insider-tracker-view') {
+                if (tabId === 'review-watchlist-view') {
+                    fetchAndRenderReviewWatchlistFilings();
+                } else if (tabId === 'insider-tracker-view') {
                     renderInsiderTrackerView();
                 } else if (tabId === 'institutional-tracker-view') {
                     renderInstitutionalTrackerView();
