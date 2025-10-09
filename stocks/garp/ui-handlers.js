@@ -2,7 +2,7 @@
 import { CONSTANTS, state, promptMap, ANALYSIS_REQUIREMENTS, ANALYSIS_NAMES } from './config.js';
 import { callApi, callGeminiApi, generateRefinedArticle, generatePolishedArticleForSynthesis, getFmpStockData } from './api.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { openModal, closeModal, displayMessageInModal, openConfirmationModal, openManageStockModal, STRUCTURED_DILIGENCE_QUESTIONS, QUARTERLY_REVIEW_QUESTIONS, ANNUAL_REVIEW_QUESTIONS } from './ui-modals.js';
+import { openModal, closeModal, displayMessageInModal, openConfirmationModal, openManageStockModal, STRUCTURED_DILIGENCE_QUESTIONS, QUARTERLY_REVIEW_QUESTIONS, ANNUAL_REVIEW_QUESTIONS, openRawDataViewer } from './ui-modals.js';
 import { renderPortfolioManagerList, displayReport, updateReportStatus, fetchAndCachePortfolioData, updateGarpCandidacyStatus, renderCandidacyAnalysis, renderGarpAnalysisSummary, renderDiligenceLog, renderPeerComparisonTable, renderSectorMomentumHeatMap, renderOngoingReviewLog } from './ui-render.js';
 import { _calculateFinancialAnalysisMetrics, _calculateMoatAnalysisMetrics, _calculateRiskAssessmentMetrics, _calculateCapitalAllocatorsMetrics, _calculateGarpAnalysisMetrics, _calculateGarpScorecardMetrics, CALCULATION_SUMMARIES } from './analysis-helpers.js';
 
@@ -444,6 +444,64 @@ export async function handleReportHelpRequest(reportType) {
     } catch (error) {
         console.error('Error generating help content:', error);
         helpContent.innerHTML = `<p class="text-red-500">Sorry, I couldn't generate an explanation at this time. Error: ${error.message}</p>`;
+    }
+}
+
+export async function handleSaveManualData(e) {
+    e.preventDefault();
+    const form = e.target;
+    const ticker = form.dataset.ticker;
+
+    if (!ticker) {
+        displayMessageInModal("Could not identify the stock ticker.", "error");
+        return;
+    }
+
+    const overrides = {};
+    const inputs = form.querySelectorAll('input.manual-data-input');
+
+    inputs.forEach(input => {
+        const key = input.id.replace('manual-', '').replace(/-/g, '_');
+        const value = parseFloat(input.value);
+
+        if (!isNaN(value)) {
+            // Convert percentage values back to decimals for storage
+            if (['eps_growth_next_1y', 'eps_growth_5y', 'rev_growth_5y', 'roic', 'roe'].includes(key)) {
+                overrides[key] = value / 100;
+            } else {
+                overrides[key] = value;
+            }
+        }
+    });
+
+    if (Object.keys(overrides).length === 0) {
+        displayMessageInModal("No data entered. Please fill in at least one field.", "warning");
+        return;
+    }
+
+    openModal(CONSTANTS.MODAL_LOADING);
+    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Saving manual data for ${ticker}...`;
+
+    try {
+        const overridesDocRef = doc(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, ticker, 'analysis', 'manual_overrides');
+        await setDoc(overridesDocRef, overrides, { merge: true });
+
+        // Force a full refresh of the modal to reflect the new data
+        await openRawDataViewer(ticker);
+        
+        // Switch to the dashboard tab to show the user the updated scorecard
+        document.querySelectorAll('#rawDataViewerModal .tab-content').forEach(c => c.classList.add('hidden'));
+        document.querySelectorAll('#rawDataViewerModal .tab-button').forEach(b => b.classList.remove('active'));
+        document.getElementById('dashboard-tab').classList.remove('hidden');
+        document.querySelector('.tab-button[data-tab="dashboard"]').classList.add('active');
+
+        displayMessageInModal("Manual data saved and scorecard updated!", "info");
+
+    } catch (error) {
+        console.error("Error saving manual data:", error);
+        displayMessageInModal(`Could not save manual data: ${error.message}`, 'error');
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
     }
 }
 
