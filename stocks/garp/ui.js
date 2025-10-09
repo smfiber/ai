@@ -104,7 +104,6 @@ function setupGlobalEventListeners() {
         const ticker = target.dataset.ticker;
         if (ticker) {
             if (target.classList.contains('dashboard-item-edit')) {
-                closeModal(CONSTANTS.MODAL_STOCK_LIST);
                 const stockData = state.portfolioCache.find(s => s.ticker === ticker);
                 if (stockData) {
                     openManageStockModal({ ...stockData, isEditMode: true });
