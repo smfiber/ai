@@ -1,12 +1,11 @@
-// fileName: ui-render.js
-import { CONSTANTS, state } from './config.js';
+import { CONSTANTS, state, TOP_25_INVESTORS } from './config.js'; 
+// --- MODIFICATION: Removed 'query' and 'where' as they are no longer needed ---
 import { getDocs, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { _calculateGarpScorecardMetrics } from './analysis-helpers.js';
-import { handleAnalysisRequest, handleGarpMemoRequest, handleGarpCandidacyRequest, handlePositionAnalysisRequest } from './ui-handlers.js';
-import { getFmpStockData } from './api.js';
+import { getEarningsCalendar } from './api.js';
+import { getRecentPortfolioFilings, getPortfolioInsiderTrading, getPortfolioInstitutionalOwnership, getSecMaterialEvents, getSecAnnualReports, getSecQuarterlyReports, get13FHoldings, getWhaleFilings } from './sec-api.js';
+import { callApi } from './api.js';
 
 // --- UTILITY & SECURITY HELPERS ---
-
 function sanitizeText(text) {
     if (typeof text !== 'string') return '';
     const tempDiv = document.createElement('div');
@@ -15,966 +14,878 @@ function sanitizeText(text) {
 }
 
 // --- DATA FETCHING & CACHING ---
-
 export async function fetchAndCachePortfolioData() {
     try {
         if (!state.db) {
             console.error("Firestore is not initialized.");
+            state.portfolioCache = [];
             return;
         }
-        const querySnapshot = await getDocs(collection(state.db, CONSTANTS.DB_COLLECTION_PORTFOLIO));
-        state.portfolioCache = querySnapshot.docs.map(doc => ({ ticker: doc.id, ...doc.data() }));
-
-        // Update dashboard counts
-        const portfolioCount = state.portfolioCache.filter(s => s.status === 'Portfolio').length;
-        const watchlistCount = state.portfolioCache.filter(s => s.status === 'Watchlist').length;
-        const revisit3MonthsCount = state.portfolioCache.filter(s => s.status === 'Revisit 3 months').length;
-        const revisit6MonthsCount = state.portfolioCache.filter(s => s.status === 'Revisit 6 months').length;
-
-        document.getElementById('portfolio-count').textContent = portfolioCount;
-        document.getElementById('watchlist-count').textContent = watchlistCount;
-        document.getElementById('revisit-3-months-count').textContent = revisit3MonthsCount;
-        document.getElementById('revisit-6-months-count').textContent = revisit6MonthsCount;
         
-        // Render the new overview card after data is fetched
-        await renderPortfolioGarpOverview();
+        // --- CHANGE STARTS HERE ---
+        // Reverted to fetching the entire collection, per user request, to match other apps.
+        // This is less secure in a multi-user environment but will work for a single user.
+        const querySnapshot = await getDocs(collection(state.db, CONSTANTS.DB_COLLECTION_PORTFOLIO));
+        // --- CHANGE ENDS HERE ---
+        
+        state.portfolioCache = querySnapshot.docs.map(doc => ({ ticker: doc.id, ...doc.data() }));
         
     } catch (error) {
         console.error("Error fetching portfolio data:", error);
+        state.portfolioCache = []; // Ensure cache is empty on error
     }
 }
 
+// --- DASHBOARD RENDERING ---
 
-// --- UI RENDERING ---
+function renderFilingsCard(containerId, filings) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
 
-export function renderSectorMomentumHeatMap(performanceData, aiSummary) {
-    const section = document.getElementById('sector-momentum-section');
-    const summaryContainer = document.getElementById('sector-momentum-ai-summary');
-    const container = document.getElementById('sector-momentum-container');
+    const formType = containerId.includes('8k') ? '8-K' : (containerId.includes('10q') ? '10-Q' : '10-K');
 
-    if (!section || !summaryContainer || !container) return;
-
-    summaryContainer.textContent = aiSummary || 'AI summary is currently unavailable.';
-    
-    const getHeatClass = (value) => {
-        if (typeof value !== 'number' || !isFinite(value)) return 'heat-neutral';
-        if (value > 5) return 'heat-strong-positive';
-        if (value > 1) return 'heat-positive';
-        if (value < -5) return 'heat-strong-negative';
-        if (value < -1) return 'heat-negative';
-        return 'heat-neutral';
-    };
-
-    let tableHtml = `
-        <div class="overflow-x-auto">
-            <table class="w-full text-sm border-collapse">
-                <thead>
-                    <tr class="bg-gray-100">
-                        <th class="text-left font-semibold text-gray-700 p-3">Sector</th>
-                        <th class="text-center font-semibold text-gray-700 p-3">1-Month</th>
-                        <th class="text-center font-semibold text-gray-700 p-3">3-Month</th>
-                        <th class="text-center font-semibold text-gray-700 p-3">YTD</th>
-                    </tr>
-                </thead>
-                <tbody>
-    `;
-
-    performanceData.forEach(item => {
-        const perf1M = parseFloat(item.perf1M);
-        const perf3M = parseFloat(item.perf3M);
-        const perfYTD = parseFloat(item.perfYTD);
-
-        tableHtml += `
-            <tr class="border-b border-gray-200">
-                <td class="p-3 font-semibold text-gray-800">${sanitizeText(item.sector)}</td>
-                <td class="p-2"><div class="heat-cell ${getHeatClass(perf1M)}">${isFinite(perf1M) ? perf1M.toFixed(2) + '%' : 'N/A'}</div></td>
-                <td class="p-2"><div class="heat-cell ${getHeatClass(perf3M)}">${isFinite(perf3M) ? perf3M.toFixed(2) + '%' : 'N/A'}</div></td>
-                <td class="p-2"><div class="heat-cell ${getHeatClass(perfYTD)}">${isFinite(perfYTD) ? perfYTD.toFixed(2) + '%' : 'N/A'}</div></td>
-            </tr>
-        `;
-    });
-
-    tableHtml += '</tbody></table></div>';
-    container.innerHTML = tableHtml;
-    section.classList.remove('hidden');
-}
-
-export function renderPeerComparisonTable(container, ticker, companyMetrics, peerData) {
-    if (!container || !companyMetrics || !peerData || !peerData.averages) {
-        container.innerHTML = '<p class="text-center text-gray-500 p-4">Could not render peer comparison data.</p>';
+    if (filings.length === 0) {
+        container.innerHTML = `<p class="text-center text-gray-500 py-4">No recent ${formType} filings found.</p>`;
         return;
     }
 
-    const metricsToCompare = [
-        { key: 'P/E (TTM)', label: 'P/E Ratio', higherIsBetter: false, format: 'decimal' },
-        { key: 'P/S Ratio', label: 'P/S Ratio', higherIsBetter: false, format: 'decimal' },
-        { key: 'Price to FCF', label: 'P/FCF Ratio', higherIsBetter: false, format: 'decimal' },
-        { key: 'Return on Equity', label: 'ROE', higherIsBetter: true, format: 'percent' }
-    ];
+    filings.sort((a, b) => new Date(b.filedAt) - new Date(a.filedAt));
 
-    const formatValue = (value, format) => {
-        if (typeof value !== 'number' || !isFinite(value)) return 'N/A';
-        if (format === 'percent') return `${(value * 100).toFixed(1)}%`;
-        return value.toFixed(2);
-    };
+    const filingsHtml = `
+        <ul class="divide-y divide-gray-200">
+            ${filings.map(filing => {
+                const stock = state.portfolioCache.find(s => s.ticker === filing.ticker);
+                const companyName = stock ? stock.companyName : filing.ticker;
+                const filingDate = new Date(filing.filedAt).toLocaleDateDate();
 
-    let tableRowsHtml = '';
-    for (const metric of metricsToCompare) {
-        const companyValue = companyMetrics[metric.key]?.value;
-        const peerValue = peerData.averages[metric.key];
-        
-        let premiumHtml = '<td class="text-center text-gray-500">N/A</td>';
-        if (typeof companyValue === 'number' && typeof peerValue === 'number' && peerValue !== 0) {
-            const premium = (companyValue / peerValue) - 1;
-            let premiumClass = '';
-
-            if (companyValue > 0 && peerValue < 0) {
-                premiumClass = metric.higherIsBetter ? 'price-gain' : 'price-loss';
-            } else if (companyValue < 0 && peerValue > 0) {
-                premiumClass = metric.higherIsBetter ? 'price-loss' : 'price-gain';
-            } else {
-                if (!metric.higherIsBetter && companyValue < 0) {
-                    premiumClass = 'price-loss'; 
-                } else if (premium > 0.001) {
-                    premiumClass = metric.higherIsBetter ? 'price-gain' : 'price-loss';
-                } else if (premium < -0.001) {
-                    premiumClass = metric.higherIsBetter ? 'price-loss' : 'price-gain';
-                }
-            }
-            premiumHtml = `<td class="text-center font-semibold ${premiumClass}">${(premium * 100).toFixed(1)}%</td>`;
-        }
-        
-        tableRowsHtml += `
-            <tr class="border-b">
-                <td class="py-2 px-3 font-semibold text-gray-700">${metric.label}</td>
-                <td class="text-center">${formatValue(companyValue, metric.format)}</td>
-                <td class="text-center">${formatValue(peerValue, metric.format)}</td>
-                ${premiumHtml}
-            </tr>
-        `;
-    }
-
-    const peerList = peerData.peers.join(', ');
-    const lastUpdated = peerData.cachedAt ? `Last updated: ${peerData.cachedAt.toDate().toLocaleDateString()}` : '';
-
-    container.innerHTML = `
-        <div class="overflow-x-auto">
-            <table class="w-full text-sm">
-                <thead>
-                    <tr class="bg-gray-100">
-                        <th class="text-left py-2 px-3">Metric</th>
-                        <th class="text-center">${ticker}</th>
-                        <th class="text-center">Peer Average</th>
-                        <th class="text-center">Premium / (Discount)</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${tableRowsHtml}
-                </tbody>
-            </table>
-        </div>
-        <div class="mt-3 text-xs text-gray-500">
-            <p><strong>Peers:</strong> ${peerList}</p>
-            <p>${lastUpdated}</p>
-        </div>
+                return `
+                    <li class="p-3 hover:bg-gray-50">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <a href="#" class="company-link font-semibold text-sm text-gray-800 hover:text-indigo-600" data-ticker="${sanitizeText(filing.ticker)}">
+                                    ${sanitizeText(companyName)} (${sanitizeText(filing.ticker)})
+                                </a>
+                                <p class="text-xs text-gray-500 mt-1">Filed on ${filingDate}</p>
+                            </div>
+                            <a href="${sanitizeText(filing.linkToFilingDetails)}" target="_blank" rel="noopener noreferrer" class="text-sm bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-1 px-3 rounded-lg">
+                                View
+                            </a>
+                        </div>
+                    </li>
+                `;
+            }).join('')}
+        </ul>
     `;
+    container.innerHTML = filingsHtml;
 }
 
 
-export async function renderPortfolioGarpOverview() {
-    const overviewContainer = document.getElementById('portfolio-garp-overview-container');
-    const aiSummaryContainer = document.getElementById('portfolio-garp-ai-summary-container');
+export async function fetchAndRenderRecentFilings() {
+    const containers = {
+        '8-K': document.getElementById('recent-8k-container'),
+        '10-Q': document.getElementById('recent-10q-container'),
+        '10-K': document.getElementById('recent-10k-container'),
+    };
     
-    if (aiSummaryContainer) aiSummaryContainer.innerHTML = ''; 
-    if (!overviewContainer) return;
+    const loadingHtml = `
+        <div class="loader mx-auto my-8"></div>
+        <p class="text-center text-gray-500">Loading...</p>`;
+    
+    Object.values(containers).forEach(container => {
+        if(container) container.innerHTML = loadingHtml;
+    });
 
     try {
         const portfolioStocks = state.portfolioCache.filter(s => s.status === 'Portfolio');
-
         if (portfolioStocks.length === 0) {
-            overviewContainer.innerHTML = `<p class="text-center text-gray-500 py-8">Add stocks to your portfolio to see a summary here.</p>`;
+            const emptyMsg = `<p class="text-center text-gray-500 py-8">Your portfolio is empty.</p>`;
+            Object.values(containers).forEach(container => {
+                if(container) container.innerHTML = emptyMsg;
+            });
             return;
         }
 
-        const sectorCounts = portfolioStocks.reduce((acc, stock) => {
-            const sector = stock.sector || 'Uncategorized';
-            acc[sector] = (acc[sector] || 0) + 1;
+        const tickers = portfolioStocks.map(s => s.ticker);
+        const allFilings = await getRecentPortfolioFilings(tickers);
+        state.recentFilingsCache = allFilings; // Cache the results
+
+        const latestFilings = {
+            '8-K': new Map(),
+            '10-Q': new Map(),
+            '10-K': new Map()
+        };
+
+        for (const filing of allFilings) {
+            const formType = filing.formType;
+            const ticker = filing.ticker;
+
+            if (latestFilings[formType] && !latestFilings[formType].has(ticker)) {
+                latestFilings[formType].set(ticker, filing);
+            }
+        }
+        
+        renderFilingsCard('recent-8k-container', Array.from(latestFilings['8-K'].values()));
+        renderFilingsCard('recent-10q-container', Array.from(latestFilings['10-Q'].values()));
+        renderFilingsCard('recent-10k-container', Array.from(latestFilings['10-K'].values()));
+        
+    } catch (error) {
+        console.error("Error fetching or rendering recent filings:", error);
+        const errorMsg = `<p class="text-center text-red-500 p-8">Could not load filings: ${error.message}</p>`;
+        Object.values(containers).forEach(container => {
+            if(container) container.innerHTML = errorMsg;
+        });
+    }
+}
+
+export async function fetchAndRenderReviewWatchlistFilings() {
+    const containers = {
+        '8-K': document.getElementById('review-8k-container'),
+        '10-Q': document.getElementById('review-10q-container'),
+        '10-K': document.getElementById('review-10k-container'),
+    };
+    
+    const loadingHtml = `
+        <div class="loader mx-auto my-8"></div>
+        <p class="text-center text-gray-500">Loading...</p>`;
+    
+    Object.values(containers).forEach(container => {
+        if(container) container.innerHTML = loadingHtml;
+    });
+
+    try {
+        const reviewStocks = state.portfolioCache.filter(s => s.status === 'Revisit 6 months' || s.status === 'Watchlist');
+        if (reviewStocks.length === 0) {
+            const emptyMsg = `<p class="text-center text-gray-500 py-8">Your review watchlist is empty.</p>`;
+            Object.values(containers).forEach(container => {
+                if(container) container.innerHTML = emptyMsg;
+            });
+            return;
+        }
+
+        const tickers = reviewStocks.map(s => s.ticker);
+        const allFilings = await getRecentPortfolioFilings(tickers);
+
+        const latestFilings = {
+            '8-K': new Map(),
+            '10-Q': new Map(),
+            '10-K': new Map()
+        };
+
+        for (const filing of allFilings) {
+            const formType = filing.formType;
+            const ticker = filing.ticker;
+
+            if (latestFilings[formType] && !latestFilings[formType].has(ticker)) {
+                latestFilings[formType].set(ticker, filing);
+            }
+        }
+        
+        renderFilingsCard('review-8k-container', Array.from(latestFilings['8-K'].values()));
+        renderFilingsCard('review-10q-container', Array.from(latestFilings['10-Q'].values()));
+        renderFilingsCard('review-10k-container', Array.from(latestFilings['10-K'].values()));
+        
+    } catch (error) {
+        console.error("Error fetching or rendering review watchlist filings:", error);
+        const errorMsg = `<p class="text-center text-red-500 p-8">Could not load filings: ${error.message}</p>`;
+        Object.values(containers).forEach(container => {
+            if(container) container.innerHTML = errorMsg;
+        });
+    }
+}
+
+// --- NEW TAB CONTENT RENDERERS ---
+
+function renderFilingsByCompany(filings) {
+    const container = document.getElementById('filings-by-company-container');
+    if (!container) return;
+
+    const sevenDaysAgo = new Date(Date.now() - 168 * 60 * 60 * 1000);
+    const recentFilings = filings.filter(f => new Date(f.filedAt) > sevenDaysAgo);
+
+    if (recentFilings.length === 0) {
+        container.innerHTML = `<p class="text-center text-gray-500 py-4">No new filings in the last 7 days.</p>`;
+        return;
+    }
+
+    const filingsByCompany = recentFilings.reduce((acc, filing) => {
+        if (!acc[filing.ticker]) {
+            acc[filing.ticker] = 0;
+        }
+        acc[filing.ticker]++;
+        return acc;
+    }, {});
+
+    const listHtml = `
+        <ul class="divide-y divide-gray-200">
+            ${Object.entries(filingsByCompany).map(([ticker, count]) => `
+                <li class="p-2 flex justify-between items-center text-sm">
+                    <a href="#" class="company-link font-semibold text-gray-700 hover:text-indigo-600" data-ticker="${sanitizeText(ticker)}">${sanitizeText(ticker)}</a>
+                    <span class="px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 font-medium">${count} new</span>
+                </li>
+            `).join('')}
+        </ul>
+    `;
+    container.innerHTML = listHtml;
+}
+
+async function renderUpcomingEarnings() {
+    const container = document.getElementById('upcoming-filings-container');
+    if (!container) return;
+    container.innerHTML = `<div class="loader mx-auto my-8"></div>`;
+
+    try {
+        const tickers = state.portfolioCache.filter(s => s.status === 'Portfolio').map(s => s.ticker);
+        if (tickers.length === 0) {
+             container.innerHTML = `<p class="text-center text-gray-500 py-4">Your portfolio is empty.</p>`;
+            return;
+        }
+
+        const earningsData = await getEarningsCalendar(tickers);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const upcomingEarnings = earningsData
+            .filter(e => e.date && new Date(e.date) >= today)
+            .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+        if (upcomingEarnings.length === 0) {
+            container.innerHTML = `<p class="text-center text-gray-500 py-4">No upcoming earnings scheduled.</p>`;
+            return;
+        }
+        
+        const listHtml = `
+            <ul class="divide-y divide-gray-200">
+                ${upcomingEarnings.slice(0, 25).map(e => `
+                     <li class="p-2 flex justify-between items-center text-sm">
+                        <span class="font-semibold text-gray-700">${sanitizeText(e.symbol)}</span>
+                        <span class="text-gray-600">${new Date(e.date).toLocaleDateDate()}</span>
+                    </li>
+                `).join('')}
+            </ul>
+        `;
+        container.innerHTML = listHtml;
+
+    } catch (error) {
+        console.error("Error rendering upcoming earnings:", error);
+        container.innerHTML = `<p class="text-center text-red-500 py-4">Could not load earnings data.</p>`;
+    }
+}
+
+export function renderUpcomingEarningsView() {
+    renderUpcomingEarnings();
+}
+
+export function renderFilingsActivityView() {
+    renderFilingsByCompany(state.recentFilingsCache);
+}
+
+
+// --- DEEP DIVE MODAL RENDERING ---
+async function renderOwnershipFlow(ticker) {
+    const container = document.getElementById('ownership-flow-container');
+    if (!container) return;
+    container.innerHTML = `<div class="p-4"><div class="loader mx-auto"></div></div>`;
+
+    try {
+        const url = `https://api.sec-api.io?token=${state.secApiKey}`;
+        const queryObject = {
+            "query": { "query_string": { "query": `formType:\"13F-HR\" AND holdings.ticker:\"${ticker}\"` } },
+            "from": "0", "size": "250", "sort": [{ "filedAt": { "order": "desc" } }]
+        };
+        const result = await callApi(url, { method: 'POST', body: JSON.stringify(queryObject) });
+        const allFilings = result.filings || [];
+
+        const filingsByQuarter = allFilings.reduce((acc, f) => {
+            const quarter = f.periodOfReport;
+            if (!acc[quarter]) acc[quarter] = [];
+            acc[quarter].push(f);
             return acc;
         }, {});
 
-        const totalStocks = portfolioStocks.length;
-        const sortedSectors = Object.entries(sectorCounts)
-            .map(([name, count]) => ({
-                name,
-                count,
-                percentage: (count / totalStocks) * 100,
-            }))
-            .sort((a, b) => b.count - a.count);
+        const sortedQuarters = Object.keys(filingsByQuarter).sort().reverse();
+        if (sortedQuarters.length < 2) {
+            container.innerHTML = `<p class="text-sm text-center text-gray-500 p-4">Not enough historical data to compare ownership.</p>`;
+            return;
+        }
 
-        const barHtml = sortedSectors.map((sector, index) => {
-            const colorClass = `sector-color-${(index % 10) + 1}`;
-            const tooltip = `${sector.name}: ${sector.count} stock(s) (${sector.percentage.toFixed(1)}%)`;
-            return `<div class="sector-segment ${colorClass}" style="width: ${sector.percentage}%;" title="${tooltip}"></div>`;
-        }).join('');
+        const currentHoldingsList = filingsByQuarter[sortedQuarters[0]];
+        const prevHoldingsList = filingsByQuarter[sortedQuarters[1]];
+        
+        const currentHoldings = new Map(currentHoldingsList.map(f => [f.companyName, f.holdings.find(h => h.ticker === ticker).value]));
+        const prevHoldings = new Map(prevHoldingsList.map(f => [f.companyName, f.holdings.find(h => h.ticker === ticker).value]));
 
-        const legendHtml = sortedSectors.map((sector, index) => {
-            const colorClass = `sector-color-${(index % 10) + 1}`;
+        const increased = [], decreased = [], newPositions = [], soldPositions = [];
+
+        for (const [name, value] of currentHoldings.entries()) {
+            if (prevHoldings.has(name)) {
+                if (value > prevHoldings.get(name)) increased.push({ name, value });
+                else if (value < prevHoldings.get(name)) decreased.push({ name, value });
+            } else {
+                newPositions.push({ name, value });
+            }
+        }
+        for (const [name, value] of prevHoldings.entries()) {
+            if (!currentHoldings.has(name)) soldPositions.push({ name, value });
+        }
+        
+        const renderList = (title, items, color) => {
+            if (items.length === 0) return '';
             return `
-                <div class="legend-item">
-                    <div class="legend-color-box ${colorClass}"></div>
-                    <div class="text-gray-700">
-                        <span class="font-semibold">${sanitizeText(sector.name)}</span>
-                        <span class="text-gray-500 ml-2">(${sector.count}, ${sector.percentage.toFixed(1)}%)</span>
-                    </div>
+                <div>
+                    <h4 class="font-semibold text-xs uppercase tracking-wider text-gray-500 mb-1">${title}</h4>
+                    <ul class="text-sm space-y-1">
+                        ${items.sort((a,b) => b.value - a.value).slice(0, 5).map(item => `
+                            <li class="flex justify-between items-center">
+                                <span class="truncate pr-2">${sanitizeText(item.name)}</span>
+                                <span class="font-mono text-xs ${color} font-semibold">$${item.value.toLocaleString()}</span>
+                            </li>
+                        `).join('')}
+                    </ul>
                 </div>`;
-        }).join('');
+        };
 
-        const finalHtml = `
-            <div class="sector-breakdown-bar">${barHtml}</div>
-            <div class="sector-legend">${legendHtml}</div>
-        `;
-        overviewContainer.innerHTML = finalHtml;
+        container.innerHTML = `
+             <div class="p-3 border rounded-lg bg-gray-50">
+                <h3 class="text-base font-semibold text-gray-800 mb-3">Institutional Ownership Flow</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    ${renderList('New Positions', newPositions, 'text-green-600')}
+                    ${renderList('Increased Positions', increased, 'text-green-500')}
+                    ${renderList('Sold Out', soldPositions, 'text-red-600')}
+                    ${renderList('Decreased Positions', decreased, 'text-red-500')}
+                </div>
+            </div>`;
 
     } catch (error) {
-        console.error("Error rendering portfolio GARP overview:", error);
-        overviewContainer.innerHTML = `<p class="text-center text-red-500 py-8">Could not load the overview: ${error.message}</p>`;
+        console.error('Error rendering ownership flow:', error);
+        container.innerHTML = `<p class="text-sm text-center text-red-500 p-4">Could not load ownership data.</p>`;
     }
 }
 
 
-export function renderPortfolioManagerList() {
-    const container = document.getElementById('portfolio-manager-list-container');
-    if (!container) return;
-
-    if (state.portfolioCache.length === 0) {
-        container.innerHTML = `<p class="text-center text-gray-500 p-8">No stocks in your portfolio or watchlist.</p>`;
-        return;
-    }
-
-    const groupedBySector = state.portfolioCache.reduce((acc, stock) => {
-        const sector = stock.sector || 'Uncategorized';
-        if (!acc[sector]) {
-            acc[sector] = [];
-        }
-        acc[sector].push(stock);
-        return acc;
-    }, {});
-
-    let html = '';
-    const sortedSectors = Object.keys(groupedBySector).sort();
+export async function renderCompanyDeepDive(ticker) {
+    const container = document.getElementById('historical-filings-container');
+    const ownershipContainer = document.getElementById('ownership-flow-container');
+    if (!container || !ownershipContainer) return;
     
-    for (const sector of sortedSectors) {
-        html += `<div class="p-2 sticky top-0 bg-indigo-50 text-indigo-800 font-semibold text-sm">${sanitizeText(sector)}</div>`;
-        html += '<ul class="divide-y divide-gray-200">';
-        groupedBySector[sector].sort((a,b) => a.companyName.localeCompare(b.companyName)).forEach(stock => {
-            let statusBadge = '';
-            switch (stock.status) {
-                case 'Portfolio':
-                    statusBadge = '<span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-green-100 text-green-800">Portfolio</span>';
-                    break;
-                default:
-                    statusBadge = `<span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-gray-100 text-gray-800">${sanitizeText(stock.status)}</span>`;
-            }
+    renderOwnershipFlow(ticker);
 
-            html += `
-                <li class="p-4 flex justify-between items-center hover:bg-gray-50">
-                    <div>
-                        <p class="font-semibold text-gray-800 flex items-center">${sanitizeText(stock.companyName)} (${sanitizeText(stock.ticker)})</p>
-                        <p class="text-sm text-gray-500">${statusBadge}</p>
-                    </div>
-                    <div class="flex gap-2">
-                        <button class="edit-stock-btn text-sm font-medium text-indigo-600 hover:text-indigo-800" data-ticker="${sanitizeText(stock.ticker)}">Edit</button>
-                        <button class="delete-stock-btn text-sm font-medium text-red-600 hover:text-red-800" data-ticker="${sanitizeText(stock.ticker)}">Delete</button>
-                    </div>
-                </li>
-            `;
-        });
-        html += '</ul>';
-    }
-    container.innerHTML = html;
-}
+    try {
+        const [events, annual, quarterly] = await Promise.all([
+            getSecMaterialEvents(ticker),
+            getSecAnnualReports(ticker),
+            getSecQuarterlyReports(ticker)
+        ]);
 
-export async function _renderGroupedStockList(container, stocksWithData, listType) {
-    container.innerHTML = ''; 
-    if (stocksWithData.length === 0) {
-        container.innerHTML = `<p class="text-center text-gray-500 py-8">No stocks in your ${listType}.</p>`;
-        return;
-    }
+        const allFilings = [...events, ...annual, ...quarterly];
 
-    const groupedBySector = stocksWithData.reduce((acc, stock) => {
-        const sector = stock.sector || 'Uncategorized';
-        if (!acc[sector]) acc[sector] = [];
-        acc[sector].push(stock);
-        return acc;
-    }, {});
-
-    const sortedSectors = Object.keys(groupedBySector).sort();
-
-    let html = '';
-    sortedSectors.forEach(sector => {
-        const stocks = groupedBySector[sector].sort((a, b) => (b.garpConvictionScore || 0) - (a.garpConvictionScore || 0));
-        html += `
-            <details class="border-b" open>
-                <summary class="p-3 font-semibold cursor-pointer hover:bg-gray-50 flex justify-between">
-                    <span>${sanitizeText(sector)}</span>
-                    <span>&#9660;</span>
-                </summary>
-                <div class="bg-gray-50">
-                    <ul class="divide-y divide-gray-200">`;
-        
-        stocks.forEach(stock => {
-            const refreshedAt = stock.fmpData?.cachedAt ? stock.fmpData.cachedAt.toDate().toLocaleString() : 'N/A';
-            const score = stock.garpConvictionScore;
-            let scoreBadgeHtml = '';
-            if (score) {
-                let scoreClass = 'low';
-                if (score > 75) scoreClass = 'high';
-                else if (score > 50) scoreClass = 'medium';
-                scoreBadgeHtml = `<span class="conviction-score-badge ${scoreClass}">${score}</span>`;
-            }
-
-            let nextEarningsDate = 'N/A';
-            if (stock.fmpData?.earning_calendar && stock.fmpData.earning_calendar.length > 0) {
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
-                const futureEarnings = stock.fmpData.earning_calendar
-                    .map(e => ({ ...e, dateObj: new Date(e.date) }))
-                    .filter(e => e.dateObj >= today)
-                    .sort((a, b) => a.dateObj - b.dateObj);
-                if (futureEarnings.length > 0) {
-                    nextEarningsDate = futureEarnings[0].date;
-                }
-            }
-
-            html += `
-                <li class="p-4 flex justify-between items-center">
-                    <div class="flex items-center gap-3">
-                        ${scoreBadgeHtml}
-                        <div>
-                            <p class="font-bold text-indigo-700">${sanitizeText(stock.companyName)}</p>
-                            <p class="text-sm text-gray-600">${sanitizeText(stock.ticker)}</p>
-                        </div>
-                    </div>
-                    <div class="text-right">
-                        <div class="flex items-center justify-end gap-2">
-                            <button class="dashboard-item-view bg-blue-500 hover:bg-blue-600 text-white text-xs font-semibold py-1 px-3 rounded-full" data-ticker="${sanitizeText(stock.ticker)}">View</button>
-                            <button class="dashboard-item-refresh bg-cyan-500 hover:bg-cyan-600 text-white text-xs font-semibold py-1 px-3 rounded-full" data-ticker="${sanitizeText(stock.ticker)}">Refresh</button>
-                            <button class="dashboard-item-edit bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-semibold py-1 px-3 rounded-full" data-ticker="${sanitizeText(stock.ticker)}">Edit</button>
-                        </div>
-                        <p class="text-xs text-gray-400 mt-2" title="Last Refreshed">Refreshed: ${refreshedAt}</p>
-                        <p class="text-xs text-gray-500 font-semibold mt-1">Next Earnings: ${nextEarningsDate}</p>
-                    </div>
-                </li>`;
-        });
-
-        html += `</ul></div></details>`;
-    });
-    container.innerHTML = html;
-}
-
-export function renderGarpScorecardDashboard(container, ticker, fmpData) {
-    if (!container) return;
-
-    const metrics = _calculateGarpScorecardMetrics(fmpData);
-    
-    const tilesHtml = Object.entries(metrics).map(([name, data]) => {
-        if (name === 'garpConvictionScore') return '';
-        let valueDisplay = 'N/A';
-        let colorClass = 'text-gray-500 italic';
-
-        if (typeof data.value === 'number' && isFinite(data.value)) {
-            // Use multiplier for color: >1 is great, 1 is good, <1 is bad
-            if (data.multiplier > 1.0) colorClass = 'price-gain';
-            else if (data.multiplier === 1.0) colorClass = 'text-yellow-600'; // Neutral/Good
-            else colorClass = 'price-loss';
-
-            if (data.format === 'percent') {
-                valueDisplay = `${(data.value * 100).toFixed(2)}%`;
-            } else if (data.format === 'number') {
-                valueDisplay = `${data.value} / 5`;
-            } else if (data.format === 'ratio') {
-                valueDisplay = `${data.value.toFixed(2)}x`;
-            } else {
-                valueDisplay = data.value.toFixed(2);
-            }
+        if (allFilings.length === 0) {
+            container.innerHTML = `<p class="text-center text-gray-500 py-8">No filings found for ${ticker}.</p>`;
+            return;
         }
-        
-        return `
-            <div class="metric-tile p-4">
-                <p class="metric-title text-sm">${name}</p>
-                <p class="metric-value text-2xl ${colorClass}">${valueDisplay}</p>
-            </div>
+
+        allFilings.sort((a, b) => new Date(b.filedAt) - new Date(a.filedAt));
+
+        const listHtml = `
+            <ul class="divide-y divide-gray-200">
+                ${allFilings.map(filing => {
+                    const filingDate = new Date(filing.filedAt).toLocaleDateDate();
+                    let formTypeBadge = '';
+
+                    if (filing.formType === '8-K') {
+                        formTypeBadge = '<span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-800">8-K</span>';
+                    } else if (filing.formType === '10-K') {
+                        formTypeBadge = '<span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-800">10-K</span>';
+                    } else if (filing.formType === '10-Q') {
+                        formTypeBadge = '<span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800">10-Q</span>';
+                    }
+
+                    return `
+                        <li class="p-3 hover:bg-gray-50">
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <p class="font-semibold text-gray-700">${formTypeBadge}</p>
+                                    <p class="text-xs text-gray-500 mt-1">Filed: ${filingDate}</p>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                     <button data-filing-url="${sanitizeText(filing.linkToFilingDetails)}" data-form-type="${filing.formType}" data-ticker="${ticker}" class="analyze-filing-btn text-sm bg-indigo-100 hover:bg-indigo-200 text-indigo-800 font-semibold py-1 px-3 rounded-lg">Analyze</button>
+                                    <a href="${sanitizeText(filing.linkToFilingDetails)}" target="_blank" rel="noopener noreferrer" class="text-sm bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-1 px-3 rounded-lg">View</a>
+                                </div>
+                            </div>
+                        </li>
+                    `;
+                }).join('')}
+            </ul>
         `;
-    }).join('');
-
-    const score = metrics.garpConvictionScore;
-    let scoreClass = 'low';
-    if (score > 75) scoreClass = 'high';
-    else if (score > 50) scoreClass = 'medium';
-    
-    const helpIconSvg = `<button data-report-type="GarpConvictionScore" class="ai-help-button p-1 rounded-full hover:bg-indigo-100" title="What is this?"><svg class="w-5 h-5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" /></svg></button>`;
-
-    const scoreHtml = `
-        <div class="conviction-score-display ${scoreClass}">
-            <div class="flex items-center justify-center gap-2">
-                <div class="text-sm font-bold text-gray-600">CONVICTION SCORE</div>
-                ${helpIconSvg}
-            </div>
-            <div class="score-value">${score}</div>
-        </div>
-    `;
-
-    container.innerHTML = `
-        <div class="flex justify-between items-start mb-4 border-b pb-2">
-            <h3 class="text-xl font-bold text-gray-800">GARP Scorecard</h3>
-            <div class="flex items-center space-x-2">
-                ${scoreHtml}
-            </div>
-        </div>
-        <div class="grid grid-cols-2 md:grid-cols-5 gap-4">${tilesHtml}</div>`;
-    
-    return metrics; // Return metrics for reuse
+        container.innerHTML = listHtml;
+    } catch (error) {
+        console.error(`Error rendering deep dive for ${ticker}:`, error);
+        container.innerHTML = `<p class="text-center text-red-500 p-4">Could not load historical filings: ${error.message}</p>`;
+    }
 }
 
-/**
- * Renders the qualitative interpretation of the GARP scorecard.
- * @param {HTMLElement} container The container to render the content into.
- * @param {object} metrics The enhanced metrics object from _calculateGarpScorecardMetrics.
- */
-export function renderGarpInterpretationAnalysis(container, metrics) {
-    if (!container || !metrics) {
-        container.innerHTML = '';
-        return;
-    };
+// --- ACTIVITY TRACKER RENDERING ---
 
-    const toKebabCase = (str) => str.replace(/\s+/g, '-').toLowerCase();
+export async function renderInsiderTrackerView() {
+    const container = document.getElementById('insider-tracker-view');
+    if (!container) return;
+    container.innerHTML = `<div class="loader mx-auto my-8"></div>`;
 
-    const metricGroups = {
-        'Growth': ['EPS Growth (Next 1Y)', 'EPS Growth (5Y)', 'Revenue Growth (5Y)'],
-        'Quality & Consistency': ['Return on Invested Capital', 'Return on Equity', 'Quarterly Earnings Progress', 'Profitable Yrs (5Y)', 'Rev. Growth Stability'],
-        'Financial Health': ['Debt-to-Equity', 'Interest Coverage'],
-        'Valuation': ['PEG Ratio', 'Forward P/E', 'Price to FCF']
-    };
+    try {
+        const tickers = state.portfolioCache.filter(s => s.status === 'Portfolio').map(s => s.ticker);
+        if (tickers.length === 0) {
+            container.innerHTML = `<p class="text-center text-gray-500 py-8">Your portfolio is empty.</p>`;
+            return;
+        }
 
-    let html = '<h3 class="text-xl font-bold text-gray-800 my-4 pt-4 border-t">GARP Criteria Interpretation</h3>';
-    html += '<div class="space-y-6">';
+        const filings = await getPortfolioInsiderTrading(tickers);
+        const transactions = filings.flatMap(filing => {
+            const allTxns = [
+                ...(filing.transactionTable?.nonDerivativeTable || []),
+                ...(filing.transactionTable?.derivativeTable || [])
+            ];
+            return allTxns
+                .filter(txn => ['P', 'S'].includes(txn.transactionCoding?.transactionCode))
+                .map(txn => ({
+                    filedAt: filing.filedAt,
+                    ticker: filing.ticker,
+                    reportingOwnerName: filing.reportingOwnerName,
+                    linkToFilingDetails: filing.linkToFilingDetails,
+                    transactionCode: txn.transactionCoding?.transactionCode,
+                    transactionShares: txn.transactionShares?.value,
+                    transactionPricePerShare: txn.transactionPricePerShare?.value
+                }));
+        }).sort((a, b) => new Date(b.filedAt) - new Date(a.filedAt));
 
-    for (const groupName in metricGroups) {
-        html += '<div>';
-        html += `<h4 class="text-lg font-semibold text-gray-700 mb-3">${groupName} Analysis</h4>`;
-        html += '<div class="space-y-4">';
+        if (transactions.length === 0) {
+            container.innerHTML = `<p class="text-center text-gray-500 py-8">No recent insider transactions (buys or sells) found for your portfolio.</p>`;
+            return;
+        }
 
-        metricGroups[groupName].forEach(metricName => {
-            const metricData = metrics[metricName];
-            if (metricData && metricData.interpretation) {
-                const interp = metricData.interpretation;
-                const badgeClass = toKebabCase(interp.category);
-                
-                html += `
-                    <div class="p-3 bg-gray-50 rounded-lg border">
-                        <p class="font-semibold text-gray-800 flex items-center gap-3">
-                            ${metricName}
-                            <span class="interp-badge ${badgeClass}">${interp.category}</span>
-                        </p>
-                        <p class="text-sm text-gray-600 mt-1">${interp.text}</p>
-                    </div>
-                `;
+        const tableHtml = `
+            <div class="dashboard-card">
+                <h2 class="dashboard-card-title">Portfolio-Wide Insider Transactions (Form 4)</h2>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200 text-sm">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-4 py-2 text-left font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                                <th class="px-4 py-2 text-left font-medium text-gray-500 uppercase tracking-wider">Ticker</th>
+                                <th class="px-4 py-2 text-left font-medium text-gray-500 uppercase tracking-wider">Filer</th>
+                                <th class="px-4 py-2 text-left font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                                <th class="px-4 py-2 text-right font-medium text-gray-500 uppercase tracking-wider">Value</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            ${transactions.map(t => {
+                                const type = t.transactionCode === 'P' ? 'Buy' : 'Sell';
+                                const typeClass = type === 'Buy' ? 'text-green-600 font-semibold' : 'text-red-600 font-semibold';
+                                const value = (t.transactionPricePerShare || 0) * (t.transactionShares || 0);
+                                return `
+                                    <tr>
+                                        <td class="px-4 py-2 whitespace-nowrap">${new Date(t.filedAt).toLocaleDateDate()}</td>
+                                        <td class="px-4 py-2 whitespace-nowrap font-bold">${sanitizeText(t.ticker)}</td>
+                                        <td class="px-4 py-2 whitespace-nowrap"><a href="${sanitizeText(t.linkToFilingDetails)}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:underline">${sanitizeText(t.reportingOwnerName)}</a></td>
+                                        <td class="px-4 py-2 whitespace-nowrap ${typeClass}">${type}</td>
+                                        <td class="px-4 py-2 whitespace-nowrap text-right">$${value.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td>
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            </div>`;
+        container.innerHTML = tableHtml;
+    } catch (error) {
+        console.error("Error rendering insider tracker:", error);
+        container.innerHTML = `<p class="text-center text-red-500 p-8">Could not load insider activity: ${error.message}</p>`;
+    }
+}
+
+export async function renderInstitutionalTrackerView() {
+    const container = document.getElementById('institutional-tracker-view');
+    if (!container) return;
+    container.innerHTML = `<div class="loader mx-auto my-8"></div>`;
+
+    try {
+        const portfolioTickers = state.portfolioCache.filter(s => s.status === 'Portfolio').map(s => s.ticker);
+        if (portfolioTickers.length === 0) {
+            container.innerHTML = `<p class="text-center text-gray-500 py-8">Your portfolio is empty.</p>`;
+            return;
+        }
+
+        const filings = await getPortfolioInstitutionalOwnership(portfolioTickers);
+
+        const holdingsByInstitution = filings.reduce((acc, filing) => {
+            const institution = filing.companyName;
+            if (!acc[institution]) {
+                acc[institution] = { holdings: [], latestFiling: '1970-01-01' };
             }
+            filing.holdings.forEach(h => {
+                if (portfolioTickers.includes(h.ticker)) {
+                    acc[institution].holdings.push(h);
+                }
+            });
+            if (filing.filedAt > acc[institution].latestFiling) {
+                acc[institution].latestFiling = filing.filedAt;
+            }
+            return acc;
+        }, {});
+        
+        if (Object.keys(holdingsByInstitution).length === 0) {
+             container.innerHTML = `<p class="text-center text-gray-500 py-8">No recent institutional ownership filings found for your portfolio.</p>`;
+            return;
+        }
+
+        const sortedInstitutions = Object.entries(holdingsByInstitution)
+            .map(([name, data]) => ({ name, ...data, totalValue: data.holdings.reduce((sum, h) => sum + h.value, 0) }))
+            .filter(inst => inst.totalValue > 0)
+            .sort((a, b) => b.totalValue - a.totalValue);
+
+        let html = `<div class="dashboard-card">
+                        <h2 class="dashboard-card-title">Portfolio-Wide Institutional Ownership (Form 13F)</h2>
+                        <div class="space-y-4">`;
+
+        sortedInstitutions.slice(0, 50).forEach(inst => {
+            html += `
+                <details class="sector-group">
+                    <summary class="sector-header">
+                        <span class="truncate">${sanitizeText(inst.name)}</span>
+                        <span class="font-normal text-gray-600 text-sm">$${inst.totalValue.toLocaleString()}</span>
+                    </summary>
+                    <div class="sector-content">
+                        <ul class="divide-y divide-gray-100">
+                        ${inst.holdings.map(h => `
+                            <li class="p-3 flex justify-between items-center">
+                                <span class="font-semibold">${sanitizeText(h.ticker)}</span>
+                                <span class="text-sm text-gray-700">$${h.value.toLocaleString()}</span>
+                            </li>
+                        `).join('')}
+                        </ul>
+                    </div>
+                </details>
+            `;
         });
 
         html += '</div></div>';
+        container.innerHTML = html;
+
+    } catch (error) {
+        console.error("Error rendering institutional tracker:", error);
+        container.innerHTML = `<p class="text-center text-red-500 p-8">Could not load institutional ownership: ${error.message}</p>`;
     }
-    
-    html += '</div>';
-    container.innerHTML += html;
 }
 
-
-export function renderValuationHealthDashboard(container, ticker, fmpData) {
+export function renderMarketAnalysisView() {
+    const container = document.getElementById('market-analysis-view');
     if (!container) return;
 
-    const createSparkline = (data, statusClass) => {
-        if (!data || data.length < 2) return '';
-        const validData = data.filter(d => typeof d === 'number' && isFinite(d));
-        if (validData.length < 2) return '';
-
-        const width = 100;
-        const height = 40;
-        const min = Math.min(...validData);
-        const max = Math.max(...validData);
-        const range = max - min === 0 ? 1 : max - min;
-
-        const points = validData.map((d, i) => {
-            const x = (i / (validData.length - 1)) * width;
-            const y = height - ((d - min) / range) * (height - 4) + 2;
-            return `${x},${y}`;
-        }).join(' ');
-        
-        return `<svg viewBox="0 0 ${width} ${height}" class="sparkline-container"><polyline points="${points}" class="sparkline ${statusClass}" /></svg>`;
-    };
-    
-    const evaluateMetric = (name, key, history, type, isPercentage, lowerIsBetter) => {
-        const latest = history[history.length - 1]?.[key];
-        const dataPoints = history.map(h => h[key]).filter(v => typeof v === 'number');
-        if (typeof latest !== 'number') return { value: 'N/A', status: 'neutral', text: 'No Data', gaugePercent: 0, sparkline: '' };
-        
-        const avg = dataPoints.reduce((a, b) => a + b, 0) / dataPoints.length;
-        let text, gaugePercent, statusClass;
-
-        if (type === 'ratio') {
-            const premium = ((latest / avg) - 1);
-            if (premium < -0.2) { statusClass = 'good'; text = 'Undervalued'; }
-            else if (premium > 0.2) { statusClass = 'bad'; text = 'Expensive'; }
-            else { statusClass = 'neutral'; text = 'Fair Value'; }
-            gaugePercent = Math.max(0, Math.min(100, 50 - (premium * 100)));
-        } else if (type === 'health') {
-            const thresholds = {
-                'Debt/Equity': [0.5, 1.5], 'Current Ratio': [2, 1], 'ROE': [0.15, 0.05], 'Net Margin': [0.10, 0],
-                'Gross Margin': [0.40, 0.20], 'ROA': [0.08, 0.03], 'Debt/Assets': [0.4, 0.6]
-            };
-            const [good, bad] = thresholds[name];
-            if ((!lowerIsBetter && latest >= good) || (lowerIsBetter && latest <= good)) { statusClass = 'good'; text = name.includes('Debt') ? 'Conservative' : 'High'; }
-            else if ((!lowerIsBetter && latest < bad) || (lowerIsBetter && latest > bad)) { statusClass = 'bad'; text = name.includes('Debt') ? 'Aggressive' : 'Low'; }
-            else { statusClass = 'neutral'; text = 'Moderate'; }
-            gaugePercent = (latest - bad) / (good - bad) * 100;
-            if (lowerIsBetter) gaugePercent = 100 - gaugePercent;
-            gaugePercent = Math.max(0, Math.min(100, gaugePercent));
-        } else {
-            statusClass = 'neutral';
-            text = 'Trend';
-            gaugePercent = 50;
-        }
-
-        return {
-            value: isPercentage ? `${(latest * 100).toFixed(2)}%` : (name === 'Market Cap' ? (latest / 1e9).toFixed(2) + 'B' : latest.toFixed(2)),
-            status: statusClass,
-            text: text,
-            gaugePercent: gaugePercent,
-            sparkline: createSparkline(dataPoints, statusClass)
-        };
-    };
-
-    const profile = fmpData.profile?.[0] || {};
-    const keyMetrics = (fmpData.key_metrics_annual || []).slice(0, 5).reverse();
-    const ratios = (fmpData.ratios_annual || []).slice(0, 5).reverse();
-    
-    if (keyMetrics.length > 0) {
-        keyMetrics[keyMetrics.length - 1].marketCap = profile.mktCap;
-    }
-
-    if (keyMetrics.length < 2 || ratios.length < 2) {
-        container.innerHTML = `<h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Valuation & Health Dashboard</h3><p class="text-center text-gray-500 py-8">Not enough historical data to generate the dashboard.</p>`;
-        return;
-    }
-
-    const dashboardMetrics = [
-        { name: 'P/E Ratio', key: 'peRatio', source: keyMetrics, type: 'ratio', isPct: false, lowerIsBetter: true, tooltip: 'Price-to-Earnings (P/E) Ratio: Measures how expensive a stock is relative to its annual earnings. A lower P/E may indicate a bargain.' },
-        { name: 'P/S Ratio', key: 'priceToSalesRatio', source: ratios, type: 'ratio', isPct: false, lowerIsBetter: true, tooltip: 'Price-to-Sales (P/S) Ratio: Compares the stock price to its revenue per share. Useful for valuing companies that are not yet profitable.' },
-        { name: 'ROE', key: 'roe', source: keyMetrics, type: 'health', isPct: true, lowerIsBetter: false, tooltip: 'Return on Equity (ROE): A measure of profitability that calculates how many dollars of profit a company generates with each dollar of shareholders\' equity.' },
-        { name: 'Debt/Equity', key: 'debtToEquity', source: keyMetrics, type: 'health', isPct: false, lowerIsBetter: true, tooltip: 'Debt/Equity Ratio: Measures a company\'s financial leverage by dividing its total liabilities by shareholder equity. A high ratio indicates more debt.' },
-    ];
-    
-    const tilesHtml = dashboardMetrics.map(m => {
-        const data = evaluateMetric(m.name, m.key, m.source, m.type, m.isPct, m.lowerIsBetter);
-        return `
-            <div class="metric-tile" data-tooltip="${sanitizeText(m.tooltip)}">
-                <div>
-                    <p class="metric-title">${m.name}</p>
-                    <p class="metric-value">${data.value}</p>
-                    <p class="metric-status ${data.status}">${data.text}</p>
-                    <div class="gauge-container">
-                        <div class="gauge-bar">
-                            <div class="gauge-fill ${data.status}" style="width: ${data.gaugePercent}%;"></div>
-                        </div>
-                    </div>
-                </div>
-                ${data.sparkline}
+    const html = `
+        <div class="dashboard-card max-w-4xl mx-auto">
+            <h2 class="dashboard-card-title">Institutional Market-Wide Analysis</h2>
+            <div class="p-4 border rounded-lg bg-gray-50">
+                <h3 class="font-semibold text-gray-800">Phase 1: Data Aggregation</h3>
+                <p class="text-sm text-gray-600 mt-1 mb-4">
+                    Process the latest 13F filings from the top 25 institutional investors. This collects and calculates all portfolio changes (new buys, sells, etc.) and saves them to the database for analysis. This may take a few minutes.
+                </p>
+                <button id="start-batch-process-btn" class="text-sm bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg shadow-sm">
+                    Process All Investor Data
+                </button>
+                <div id="batch-progress-container" class="mt-4"></div>
             </div>
-        `;
-    }).join('');
 
-    container.innerHTML = `
-        <h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Valuation & Health Dashboard</h3>
-        <div class="health-dashboard-grid">${tilesHtml}</div>`;
-}
-
-export function renderGarpAnalysisSummary(container, ticker) {
-    if (!container) return;
-    const helpIconSvg = `<button data-report-type="GarpCandidacy" class="ai-help-button p-1 rounded-full hover:bg-indigo-100" title="What is this?"><svg class="w-5 h-5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" /></svg></button>`;
-
-    container.innerHTML = `
-        <div class="flex justify-between items-center mb-4 border-b pb-2">
-            <div class="flex items-center gap-2">
-                <h3 class="text-xl font-bold text-gray-800">AI GARP Candidacy Analysis</h3>
-                ${helpIconSvg}
+            <div class="p-4 border rounded-lg bg-gray-50 mt-6">
+                <h3 class="font-semibold text-gray-800">Phase 2: AI-Powered Trend Analysis</h3>
+                <p class="text-sm text-gray-600 mt-1 mb-4">
+                    After the data has been processed, you can analyze it. This will query all the aggregated changes and use an AI to identify and summarize key market trends, sector rotations, and high-conviction trades.
+                </p>
+                <button id="analyze-market-data-btn" class="hidden text-sm bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg shadow-sm">
+                    Analyze Market Data
+                </button>
             </div>
-             <button id="analyze-garp-button" data-ticker="${ticker}" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-1 px-4 rounded-lg text-sm">
-                Analyze Candidacy
-            </button>
-        </div>
-        <div id="garp-candidacy-status-container" class="hidden p-2 mb-2 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between gap-4"></div>
-        <div id="garp-analysis-container" class="prose prose-sm max-w-none bg-gray-50 p-4 rounded-md border min-h-[100px]">
-            <p class="text-gray-500 italic">Click the button to have AI analyze this stock's GARP characteristics based on the scorecard data.</p>
+             <div id="market-analysis-container" class="mt-6"></div>
         </div>
     `;
+    container.innerHTML = html;
 }
 
-export function updateGarpCandidacyStatus(statusContainer, reports, activeReportId, ticker) {
-    statusContainer.classList.remove('hidden');
-    let statusHtml = '';
-
-    const activeReport = reports.find(r => r.id === activeReportId) || reports[0];
-    const savedDate = activeReport.savedAt.toDate().toLocaleString();
-    
-    statusHtml = `
-        <div class="flex items-center gap-2">
-            <span class="text-sm font-semibold text-blue-800">Displaying report from:</span>
-            <select id="version-selector-candidacy" class="text-sm border-gray-300 rounded-md">
-                ${reports.map(r => `<option value="${r.id}" ${r.id === activeReport.id ? 'selected' : ''}>${r.savedAt.toDate().toLocaleString()}</option>`).join('')}
-            </select>
-        </div>
-        <button id="generate-new-candidacy" data-ticker="${ticker}" class="bg-green-500 hover:bg-green-600 text-white text-xs font-semibold py-1 px-3 rounded-full">Generate New</button>
-    `;
-    
-    statusContainer.innerHTML = statusHtml;
-
-    document.getElementById('version-selector-candidacy')?.addEventListener('change', (e) => {
-        const selectedReport = reports.find(r => r.id === e.target.value);
-        if (selectedReport) {
-            const contentContainer = document.getElementById('garp-analysis-container');
-            renderCandidacyAnalysis(contentContainer, selectedReport.content, selectedReport.prompt, selectedReport.diligenceQuestions);
-            updateGarpCandidacyStatus(statusContainer, reports, selectedReport.id, ticker);
-        }
-    });
-
-    document.getElementById('generate-new-candidacy')?.addEventListener('click', (e) => {
-        handleGarpCandidacyRequest(e.target.dataset.ticker);
-    });
-}
-
-export function renderCandidacyAnalysis(container, reportContent, prompt, diligenceQuestions = []) {
-    let accordionHtml = '';
-    if (prompt) {
-        const sanitizedPrompt = sanitizeText(prompt);
-        accordionHtml = `
-            <div class="mb-4 border-b pb-4">
-                <details class="border rounded-md">
-                    <summary class="p-2 font-semibold text-sm text-gray-700 cursor-pointer hover:bg-gray-50 bg-gray-100">View Full Prompt Sent to AI</summary>
-                    <pre class="text-xs whitespace-pre-wrap break-all bg-gray-900 text-white p-3 rounded-b-md">${sanitizedPrompt}</pre>
-                </details>
-            </div>
-        `;
-    }
-    
-    const cleanedContent = (reportContent || '').trim().replace(/^```(?:markdown)?\s*\n/, '').replace(/\n```$/, '').trim();
-    const reportHtml = marked.parse(cleanedContent);
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = reportHtml;
-
-    const diligenceSection = tempDiv.querySelector('h2#actionable-diligence-questions');
-    if (diligenceSection) {
-        let currentElement = diligenceSection.nextElementSibling;
-        const questionsContainer = document.createElement('div');
-
-        while(currentElement && currentElement.tagName !== 'H2') {
-            const nextElement = currentElement.nextElementSibling;
-            questionsContainer.appendChild(currentElement);
-            currentElement = nextElement;
-        }
-
-        const questionsHtml = questionsContainer.innerHTML;
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(questionsHtml, 'text/html');
-        const copyIcon = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 0 011.5 .124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75" /></svg>`;
-
-        doc.querySelectorAll('li').forEach(li => {
-            const strongTags = li.querySelectorAll('strong');
-            if (strongTags.length === 2) {
-                const humanQuestionText = strongTags[0].nextSibling?.textContent.trim();
-                const aiQueryText = strongTags[1].nextSibling?.textContent.trim().replace(/^:/, '').replace(/^"|"$/g, '').trim();
-
-                if (humanQuestionText && aiQueryText) {
-                    const newContainer = document.createElement('div');
-                    newContainer.className = 'p-3 bg-indigo-50 border border-indigo-200 rounded-lg mb-2 space-y-2';
-                    newContainer.innerHTML = `
-                        <div class="flex items-start gap-2">
-                            <div class="flex-grow">
-                                <strong class="text-sm text-indigo-800">Human-Led Question:</strong>
-                                <span class="text-sm text-indigo-900">${sanitizeText(humanQuestionText)}</span>
-                            </div>
-                            <button type="button" class="copy-icon-btn actionable-diligence-copy-btn" title="Copy Question">${copyIcon}</button>
-                        </div>
-                        <div class="flex items-start gap-2">
-                            <div class="flex-grow cursor-pointer hover:underline" data-ai-query="${sanitizeText(aiQueryText)}" title="Click to investigate">
-                                <strong class="text-sm text-indigo-800">Suggested AI Investigation Query:</strong>
-                                <span class="text-sm text-indigo-900">${sanitizeText(aiQueryText)}</span>
-                            </div>
-                            <button type="button" class="copy-icon-btn actionable-diligence-copy-btn" title="Copy Query">${copyIcon}</button>
-                        </div>
-                    `;
-                    li.parentNode.replaceChild(newContainer, li);
-                }
-            }
-        });
-
-        diligenceSection.innerHTML = `Actionable Diligence Questions`;
-        diligenceSection.after(doc.body);
-    }
-    
-    const finalHtml = accordionHtml + tempDiv.innerHTML;
-    container.innerHTML = finalHtml;
-    
-    container.querySelectorAll('[data-ai-query]').forEach(item => {
-        item.addEventListener('click', () => {
-            const query = item.dataset.aiQuery;
-            const diligenceInput = document.getElementById('diligence-question-input');
-            if (diligenceInput) {
-                diligenceInput.value = query;
-                diligenceInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }
-        });
-    });
-
-    const copyIcon = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 0 011.5 .124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75" /></svg>`;
-    const checkIcon = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>`;
-    container.addEventListener('click', e => {
-        const copyBtn = e.target.closest('.actionable-diligence-copy-btn');
-        if (copyBtn) {
-            const parentDiv = copyBtn.parentElement;
-            const textContainer = parentDiv.querySelector('.flex-grow');
-            const textToCopy = textContainer.querySelector('span').textContent;
-            
-            navigator.clipboard.writeText(textToCopy).then(() => {
-                copyBtn.classList.add('copied');
-                copyBtn.innerHTML = checkIcon;
-                setTimeout(() => {
-                    copyBtn.classList.remove('copied');
-                    copyBtn.innerHTML = copyIcon;
-                }, 2000);
-            });
-        }
-    });
-}
-
-
-export function displayReport(container, content, prompt = null) {
-    let finalHtml = '';
-    if (prompt) {
-        finalHtml += `
-            <details class="mb-4 border rounded-lg">
-                <summary class="p-2 font-semibold text-sm text-gray-700 cursor-pointer hover:bg-gray-50 bg-gray-100">View Prompt</summary>
-                <pre class="text-xs whitespace-pre-wrap break-all bg-gray-900 text-white p-3 rounded-b-lg">${sanitizeText(prompt)}</pre>
-            </details>
-        `;
-    }
-
-    const cleanedContent = (content || '').trim().replace(/^```(?:markdown)?\s*\n/, '').replace(/\n```$/, '').trim();
-    finalHtml += marked.parse(cleanedContent);
-    container.innerHTML = finalHtml;
-}
-
-export function renderDiligenceLog(container, reports) {
+// --- Renders the initial dropdown for the Investor Filings tab ---
+export function renderInvestorFilingsDropdownView() {
+    const container = document.getElementById('investor-filings-view');
     if (!container) return;
 
-    if (reports.length === 0) {
-        container.innerHTML = `
-            <h3 class="text-lg font-semibold text-gray-800 mb-2">Diligence Log</h3>
-            <p class="text-sm text-center text-gray-500 italic p-4 bg-gray-50 rounded-md">No saved investigations for this stock yet.</p>
-        `;
-        return;
-    }
-
-    const itemsHtml = reports.map(report => {
-        const prompt = report.prompt || '';
-        const question = prompt.split('Diligence Question from User:')[1]?.trim() || 'Could not parse question.';
-        const savedDate = report.savedAt.toDate().toLocaleDateString();
-
-        return `
-            <li class="p-3 hover:bg-indigo-50 flex justify-between items-center">
-                <div class="flex-grow min-w-0">
-                     <p class="font-semibold text-sm text-indigo-700 truncate cursor-pointer view-diligence-answer" title="${sanitizeText(question)}" data-report-id="${report.id}">${sanitizeText(question)}</p>
-                     <p class="text-xs text-gray-400">Saved: ${savedDate}</p>
-                </div>
-                <div class="flex items-center gap-2 flex-shrink-0 ml-4">
-                    <button class="diligence-delete-btn text-xs font-semibold py-1 px-3 rounded-full bg-red-100 text-red-800 hover:bg-red-200" title="Delete this entry" data-report-id="${report.id}">Delete</button>
-                </div>
-            </li>
-        `;
-    }).join('');
+    const optionsHtml = TOP_25_INVESTORS
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .map(investor => `<option value="${investor.cik}" data-name="${investor.name}">${investor.name}</option>`)
+        .join('');
 
     container.innerHTML = `
-         <details class="border rounded-lg bg-white" open>
-            <summary class="p-3 font-semibold text-gray-700 cursor-pointer hover:bg-gray-50 text-lg">Diligence Log (${reports.length})</summary>
-            <ul class="divide-y divide-gray-200">
-                ${itemsHtml}
-            </ul>
-        </details>
-    `;
-
-    container.querySelectorAll('.view-diligence-answer').forEach(item => {
-        item.addEventListener('click', () => {
-            const reportId = item.dataset.reportId;
-            const report = reports.find(r => r.id === reportId);
-            if (report) {
-                const articleContainer = document.getElementById('ai-article-container-analysis');
-                const statusContainer = document.getElementById('report-status-container-analysis');
-                
-                // Switch to the 'AI Analysis' tab
-                document.querySelectorAll('#rawDataViewerModal .tab-content').forEach(c => c.classList.add('hidden'));
-                document.querySelectorAll('#rawDataViewerModal .tab-button').forEach(b => b.classList.remove('active'));
-                document.getElementById('ai-analysis-tab').classList.remove('hidden');
-                document.querySelector('.tab-button[data-tab="ai-analysis"]').classList.add('active');
-
-                displayReport(articleContainer, report.content, report.prompt);
-                
-                if (statusContainer) {
-                    statusContainer.classList.remove('hidden');
-                    statusContainer.innerHTML = `<span class="text-sm font-semibold text-blue-800">Displaying saved Diligence Investigation from: ${report.savedAt.toDate().toLocaleString()}</span>`;
-                }
-            }
-        });
-    });
-}
-
-export function renderOngoingReviewLog(container, reports) {
-    if (!container) return;
-
-    if (reports.length === 0) {
-        container.innerHTML = `<p class="text-sm text-center text-gray-500 italic p-4 bg-gray-50 rounded-md">No saved reviews for this stock yet.</p>`;
-        return;
-    }
-
-    const itemsHtml = reports.map(report => {
-        const getReportName = (type) => {
-            switch(type) {
-                case 'AnnualReview': return 'Annual Review';
-                case 'QuarterlyReview': return 'Quarterly Review';
-                case 'FilingDiligence': return 'Filing Diligence Q&A';
-                case 'EightKAnalysis': return '8-K Analysis';
-                default: return 'Review';
-            }
-        };
-        const reportName = getReportName(report.reportType);
-        const savedDate = report.savedAt.toDate().toLocaleDateString();
-
-        return `
-            <li class="p-3 hover:bg-indigo-50 flex justify-between items-center">
-                <div class="flex-grow min-w-0">
-                     <p class="font-semibold text-sm text-indigo-700 truncate" title="${reportName}">${reportName}</p>
-                     <p class="text-xs text-gray-400">Saved: ${savedDate}</p>
-                </div>
-                <div class="flex items-center gap-2 flex-shrink-0 ml-4">
-                    <button class="view-ongoing-review-answer text-xs font-semibold py-1 px-3 rounded-full bg-blue-100 text-blue-800 hover:bg-blue-200" data-report-id="${report.id}">View</button>
-                    <button class="delete-filing-diligence-log-btn text-xs font-semibold py-1 px-3 rounded-full bg-red-100 text-red-800 hover:bg-red-200" title="Delete this entry" data-report-id="${report.id}">Delete</button>
-                </div>
-            </li>
-        `;
-    }).join('');
-
-    container.innerHTML = `
-         <details class="border rounded-lg bg-white" open>
-            <summary class="p-3 font-semibold text-gray-700 cursor-pointer hover:bg-gray-50 text-lg">Review Log (${reports.length})</summary>
-            <ul class="divide-y divide-gray-200">
-                ${itemsHtml}
-            </ul>
-        </details>
-        <div id="ongoing-review-display-container" class="prose max-w-none mt-4"></div>
-    `;
-
-    container.querySelectorAll('.view-ongoing-review-answer').forEach(item => {
-        item.addEventListener('click', () => {
-            const reportId = item.dataset.reportId;
-            const report = reports.find(r => r.id === reportId);
-            if (report) {
-                const displayContainer = document.getElementById('ongoing-review-display-container');
-                displayReport(displayContainer, report.content, report.prompt);
-            }
-        });
-    });
-}
-
-export function renderTranscriptResults(container, results, query) {
-    const aiSummaryContainer = document.getElementById('transcript-ai-summary-container');
-    aiSummaryContainer.innerHTML = '';
-    
-    if (!results || results.length === 0) {
-        container.innerHTML = `<p class="text-center text-gray-500 italic p-4 bg-gray-50 rounded-md">No results found for "${sanitizeText(query)}".</p>`;
-        return;
-    }
-
-    const highlightRegex = new RegExp(`(${query.split(' ').join('|')})`, 'gi');
-    const itemsHtml = results.map(item => {
-        const highlightedContent = sanitizeText(item.content).replace(highlightRegex, '<mark class="bg-yellow-200 rounded px-1">$1</mark>');
-        return `
-            <div class="p-4 border bg-white rounded-lg mb-3">
-                <p class="text-sm font-semibold text-indigo-700 mb-2">Q${item.quarter} ${item.year} Transcript</p>
-                <p class="text-sm text-gray-700 leading-relaxed">${highlightedContent}</p>
-            </div>
-        `;
-    }).join('');
-
-    container.innerHTML = `
-        <div class="space-y-3">${itemsHtml}</div>
-        <div class="mt-4 text-center">
-            <button id="analyze-transcript-results-button" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-5 rounded-lg">
-                Analyze Results with AI
-            </button>
-        </div>
-    `;
-}
-
-
-export function updateReportStatus(statusContainer, reports, activeReportId, analysisParams) {
-    statusContainer.classList.remove('hidden');
-    statusContainer.dataset.activeReportType = analysisParams.reportType;
-    let statusHtml = '';
-
-    if (reports.length > 0) {
-        const activeReport = reports.find(r => r.id === activeReportId) || reports[0];
-        const savedDate = activeReport.savedAt.toDate().toLocaleString();
-        
-        statusHtml = `
-            <div class="flex items-center gap-2">
-                <span class="text-sm font-semibold text-blue-800">Displaying report from: ${savedDate}</span>
-                <select id="version-selector-${analysisParams.reportType}" class="text-sm border-gray-300 rounded-md">
-                    ${reports.map(r => `<option value="${r.id}" ${r.id === activeReport.id ? 'selected' : ''}>${r.savedAt.toDate().toLocaleString()}</option>`).join('')}
+        <div class="dashboard-card">
+            <h2 class="dashboard-card-title">Investor 13F Filings</h2>
+            <div class="max-w-xl">
+                <label for="investor-select" class="block text-sm font-medium text-gray-700 mb-2">Select an investor to track their quarterly holdings:</label>
+                <select id="investor-select" class="block w-full p-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                    <option value="">-- Choose an Investor --</option>
+                    ${optionsHtml}
                 </select>
             </div>
-            <button id="generate-new-${analysisParams.reportType}" class="bg-green-500 hover:bg-green-600 text-white text-xs font-semibold py-1 px-3 rounded-full">Generate New Report</button>
-        `;
-    } else {
-        statusHtml = `
-            <span class="text-sm font-semibold text-green-800">Displaying newly generated report.</span>
-            <button id="generate-new-${analysisParams.reportType}" class="bg-green-500 hover:bg-green-600 text-white text-xs font-semibold py-1 px-3 rounded-full">Generate New Report</button>
-        `;
-    }
-    
-    statusContainer.innerHTML = statusHtml;
+        </div>
+        <div id="investor-filings-container" class="mt-8"></div>
+    `;
+}
 
-    const versionSelector = document.getElementById(`version-selector-${analysisParams.reportType}`);
-    if (versionSelector) {
-        versionSelector.addEventListener('change', (e) => {
-            const selectedReport = reports.find(r => r.id === e.target.value);
-            if (selectedReport) {
-                const contentContainer = statusContainer.nextElementSibling;
-                displayReport(contentContainer, selectedReport.content, selectedReport.prompt);
-                contentContainer.dataset.currentPrompt = selectedReport.prompt || '';
-                contentContainer.dataset.rawMarkdown = selectedReport.content;
-                updateReportStatus(statusContainer, reports, selectedReport.id, analysisParams);
+// --- Renders the detailed filings for a selected investor ---
+export async function renderInvestorFilingsView(cik, investorName) {
+    const container = document.getElementById('investor-filings-container');
+    if (!container) return;
+    container.innerHTML = `<div class="dashboard-card"><div class="loader mx-auto my-8"></div></div>`;
+
+    try {
+        const { filings, payload } = await getWhaleFilings(cik);
+
+        const renderDebugInfo = () => {
+            return `
+                <div class="mt-6 border-t pt-4 space-y-2">
+                    <details>
+                        <summary class="cursor-pointer text-sm font-semibold text-gray-500 hover:text-gray-800">Show API Query Payload</summary>
+                        <div class="mt-2 p-4 bg-gray-800 text-white text-xs rounded-lg overflow-x-auto">
+                            <pre><code>${sanitizeText(JSON.stringify(payload, null, 2))}</code></pre>
+                        </div>
+                    </details>
+                    <details>
+                        <summary class="cursor-pointer text-sm font-semibold text-gray-500 hover:text-gray-800">Show Raw API Response (Filings List)</summary>
+                        <div class="mt-2 p-4 bg-gray-800 text-white text-xs rounded-lg overflow-x-auto">
+                            <pre><code>${sanitizeText(JSON.stringify({ total: filings.length, filings: filings }, null, 2))}</code></pre>
+                        </div>
+                    </details>
+                </div>`;
+        };
+
+        if (!filings || filings.length === 0) {
+            container.innerHTML = `
+                <div class="dashboard-card">
+                    <h2 class="dashboard-card-title">Filings for: ${investorName}</h2>
+                    <p class="text-center text-gray-500 py-8">No 13F filings found for this investor in the last year.</p>
+                    ${renderDebugInfo()}
+                </div>`;
+            return;
+        }
+        
+        const groupedByPeriod = filings.reduce((acc, filing) => {
+            const period = filing.periodOfReport;
+            if (!acc[period]) {
+                acc[period] = {};
             }
-        });
-    }
-
-    const generateNewBtn = document.getElementById(`generate-new-${analysisParams.reportType}`);
-    if (generateNewBtn) {
-        generateNewBtn.addEventListener('click', () => {
-            if (analysisParams.reportType === 'InvestmentMemo') {
-                handleGarpMemoRequest(analysisParams.symbol, true);
-            } else if (analysisParams.reportType === 'PositionAnalysis') {
-                handlePositionAnalysisRequest(analysisParams.symbol, true);
+            if (filing.formType.endsWith('/A')) {
+                acc[period].amendment = filing;
             } else {
-                handleAnalysisRequest(analysisParams.symbol, analysisParams.reportType, analysisParams.promptConfig, true);
+                acc[period].original = filing;
             }
-        });
+            return acc;
+        }, {});
+
+        const filingsToRender = Object.values(groupedByPeriod).map(group => {
+            if (group.original && group.amendment) {
+                const holdingsMap = new Map(group.original.holdings.map(h => [h.cusip, h]));
+                group.amendment.holdings.forEach(h => holdingsMap.set(h.cusip, h));
+                
+                return {
+                    ...group.amendment,
+                    holdings: Array.from(holdingsMap.values()),
+                };
+            }
+            return group.amendment || group.original;
+        }).sort((a, b) => new Date(b.periodOfReport) - new Date(a.periodOfReport));
+        
+        state.whaleFilingsCache = filingsToRender;
+        
+        let html = `
+            <div class="dashboard-card">
+                <div class="flex justify-between items-center mb-6 border-b pb-4">
+                    <div>
+                        <h2 class="text-xl font-bold text-indigo-800">Filings for: ${investorName}</h2>
+                        <p class="text-sm text-gray-500">Displaying aggregated quarterly holdings from the last year.</p>
+                    </div>
+                    ${filingsToRender.length >= 2 ? `
+                        <button id="compare-quarters-btn" class="text-sm bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg shadow-sm">
+                            Compare Latest Quarters
+                        </button>
+                    ` : ''}
+                </div>
+                
+                <div id="whale-comparison-container" class="mb-8"></div>
+
+                <div class="space-y-4">`;
+
+        for (const filing of filingsToRender) {
+            const filingDate = new Date(filing.filedAt).toLocaleDateDate();
+            const periodOfReport = filing.periodOfReport ? new Date(filing.periodOfReport).toLocaleDateDate() : 'N/A';
+            
+            const aggregatedHoldings = (filing.holdings || []).reduce((acc, holding) => {
+                const ticker = holding.ticker || 'N/A';
+                if (!acc[ticker]) {
+                    acc[ticker] = {
+                        nameOfIssuer: holding.nameOfIssuer,
+                        shares: 0,
+                        value: 0
+                    };
+                }
+                acc[ticker].shares += Number(holding.shrsOrPrnAmt.sshPrnamt);
+                acc[ticker].value += (holding.value * 1000);
+                return acc;
+            }, {});
+            
+            const holdings = Object.entries(aggregatedHoldings).map(([ticker, data]) => ({
+                ticker,
+                ...data
+            })).sort((a, b) => b.value - a.value);
+
+            html += `
+                <details class="sector-group">
+                    <summary class="sector-header">
+                        <span>Filing Date: ${filingDate} (For Period: ${periodOfReport})</span>
+                        <span>${holdings.length} Holdings</span>
+                    </summary>
+                    <div class="sector-content overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200 text-sm">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-4 py-2 text-left font-medium text-gray-500 uppercase tracking-wider">Ticker</th>
+                                    <th class="px-4 py-2 text-left font-medium text-gray-500 uppercase tracking-wider">Name of Issuer</th>
+                                    <th class="px-4 py-2 text-right font-medium text-gray-500 uppercase tracking-wider">Shares</th>
+                                    <th class="px-4 py-2 text-right font-medium text-gray-500 uppercase tracking-wider">Value ($)</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                ${holdings.map(h => `
+                                    <tr>
+                                        <td class="px-4 py-2 whitespace-nowrap font-bold">${sanitizeText(h.ticker)}</td>
+                                        <td class="px-4 py-2 whitespace-nowrap">${sanitizeText(h.nameOfIssuer)}</td>
+                                        <td class="px-4 py-2 whitespace-nowrap text-right">${h.shares.toLocaleString()}</td>
+                                        <td class="px-4 py-2 whitespace-nowrap text-right">${h.value.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 })}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </details>
+            `;
+        }
+
+        html += `</div>${renderDebugInfo()}</div>`;
+        container.innerHTML = html;
+
+    } catch(error) {
+        console.error("Error rendering investor filings view:", error);
+        container.innerHTML = `<div class="dashboard-card"><p class="text-red-500">Error: ${error.message}</p></div>`;
     }
+}
+
+// --- Renders the comparison view for a selected investor ---
+export function renderWhaleComparisonView() {
+    const container = document.getElementById('whale-comparison-container');
+    if (!container) return;
+    
+    if (!state.whaleFilingsCache || state.whaleFilingsCache.length < 2) {
+        container.innerHTML = `<p class="text-center text-gray-500">Not enough data to perform a comparison.</p>`;
+        return;
+    }
+
+    const latestFiling = state.whaleFilingsCache[0];
+    const previousFiling = state.whaleFilingsCache[1];
+
+    const aggregateHoldingsByTicker = (filing) => {
+        if (!filing || !filing.holdings) return new Map();
+        
+        const holdingsMap = new Map();
+        for (const holding of filing.holdings) {
+            const ticker = holding.ticker || 'N/A';
+            if (!holdingsMap.has(ticker)) {
+                holdingsMap.set(ticker, {
+                    nameOfIssuer: holding.nameOfIssuer,
+                    shares: 0,
+                    value: 0
+                });
+            }
+            const existing = holdingsMap.get(ticker);
+            existing.shares += Number(holding.shrsOrPrnAmt.sshPrnamt);
+            existing.value += holding.value;
+        }
+        return holdingsMap;
+    };
+
+    const latestHoldingsMap = aggregateHoldingsByTicker(latestFiling);
+    const previousHoldingsMap = aggregateHoldingsByTicker(previousFiling);
+    
+    const changes = {
+        new: [],
+        exited: [],
+        increased: [],
+        decreased: []
+    };
+
+    for (const [ticker, latest] of latestHoldingsMap.entries()) {
+        const previous = previousHoldingsMap.get(ticker);
+        
+        if (!previous) {
+            changes.new.push({ ticker, ...latest });
+        } else {
+            if (latest.shares > previous.shares) {
+                changes.increased.push({ ticker, ...latest, change: latest.shares - previous.shares });
+            } else if (latest.shares < previous.shares) {
+                changes.decreased.push({ ticker, ...latest, change: latest.shares - previous.shares });
+            }
+        }
+    }
+
+    for (const [ticker, previous] of previousHoldingsMap.entries()) {
+        if (!latestHoldingsMap.has(ticker)) {
+            changes.exited.push({ ticker, ...previous });
+        }
+    }
+
+    const renderChangeTable = (title, holdings, color, showChange = false, isExited = false) => {
+        if (holdings.length === 0) return '';
+        
+        holdings.sort((a,b) => b.value - a.value);
+
+        return `
+            <div class="mb-6">
+                <h3 class="text-lg font-semibold ${color} mb-2">${title} (${holdings.length})</h3>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200 text-sm">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-2 py-2 text-left font-medium text-gray-500 uppercase tracking-wider">Ticker</th>
+                                <th class="px-2 py-2 text-left font-medium text-gray-500 uppercase tracking-wider">Issuer</th>
+                                ${showChange ? `<th class="px-2 py-2 text-right font-medium text-gray-500 uppercase tracking-wider">Share Change</th>` : ''}
+                                <th class="px-2 py-2 text-right font-medium text-gray-500 uppercase tracking-wider">${isExited ? 'Value at Previous Qtr' : 'Current Value'}</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            ${holdings.map(h => `
+                                <tr>
+                                    <td class="px-2 py-2 whitespace-nowrap font-bold">${sanitizeText(h.ticker)}</td>
+                                    <td class="px-2 py-2 whitespace-nowrap">${sanitizeText(h.nameOfIssuer)}</td>
+                                    ${showChange ? `<td class="px-2 py-2 whitespace-nowrap text-right font-medium">${h.change.toLocaleString()}</td>` : ''}
+                                    <td class="px-2 py-2 whitespace-nowrap text-right">${(h.value * 1000).toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 })}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            </div>`;
+    };
+    
+    const latestPeriod = new Date(latestFiling.periodOfReport).toLocaleDateDate();
+    const prevPeriod = new Date(previousFiling.periodOfReport).toLocaleDateDate();
+
+    container.innerHTML = `
+        <div class="p-4 border-l-4 border-indigo-500 bg-indigo-50 rounded-lg">
+             <h2 class="text-xl font-bold text-gray-800 mb-2">Portfolio Changes: ${prevPeriod} vs. ${latestPeriod}</h2>
+             ${renderChangeTable('🆕 New Positions', changes.new, 'text-green-700')}
+             ${renderChangeTable('📈 Increased Positions', changes.increased, 'text-green-600', true)}
+             ${renderChangeTable('📉 Decreased Positions', changes.decreased, 'text-red-600', true)}
+             ${renderChangeTable('❌ Exited Positions', changes.exited, 'text-red-700', false, true)}
+        </div>
+    `;
 }
