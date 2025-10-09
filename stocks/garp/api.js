@@ -5,7 +5,7 @@ import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, ge
 // --- API CALLS ---
 export async function callApi(url, options = {}) {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 60000);
+    const timeoutId = setTimeout(() => controller.abort(), 90000);
     try {
         const response = await fetch(url, { ...options, signal: controller.signal });
         clearTimeout(timeoutId);
