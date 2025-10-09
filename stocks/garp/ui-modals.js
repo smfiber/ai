@@ -384,7 +384,7 @@ export async function openRawDataViewer(ticker) {
         const garpMemoBtn = `<button data-symbol="${ticker}" id="garp-memo-button" data-report-type="InvestmentMemo" class="ai-analysis-button bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg text-base">Generate GARP Memo</button>`;
 
         const compounderBtn = `<button data-symbol="${ticker}" id="long-term-compounder-button" data-report-type="LongTermCompounder" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg text-base">Generate Compounder Memo</button>`;
-        const qarpBtn = `<button data-symbol="${ticker}" id="qarp-analysis-button" data-report-type="QarpAnalysis" class="ai-analysis-button bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 px-6 rounded-lg text-base">Generate QARP Analysis</button>`;
+        const qarpBtn = `<button data-symbol="${ticker}" id="qarp-memo-button" data-report-type="QarpAnalysis" class="ai-analysis-button bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 px-6 rounded-lg text-base">Generate QARP Memo</button>`;
         const finalThesisBtn = `<button data-symbol="${ticker}" id="final-thesis-button" data-report-type="FinalInvestmentThesis" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-6 rounded-lg text-base">Generate Final Thesis</button>`;
         
         aiAnalysisContainer.innerHTML = `
@@ -544,7 +544,7 @@ export async function openRawDataViewer(ticker) {
                 <p class="text-gray-500 italic">Enter comma-separated tickers below and click "Analyze Peers" to build a comparison table.</p>
             </div>
             <div id="manual-peer-entry-container" class="mt-4 pt-4 border-t">
-                <label for="manual-peer-input" class="block text-sm font-medium text-gray-700">Enter Comma-Separated Peer Tickers:</label>
+                <label for="manual-peer-input" class="block text-sm font-medium text-gray-700">Enter Comma-Separated Peer T tickers:</label>
                 <textarea id="manual-peer-input" rows="2" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 uppercase" placeholder="e.g., PEP, KOF, CCEP"></textarea>
                 <div class="mt-2 text-right">
                     <button id="analyze-manual-peers-button" data-ticker="${ticker}" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-1 px-4 rounded-lg text-sm">Analyze Peers</button>
