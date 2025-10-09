@@ -974,15 +974,32 @@ export async function handleGarpMemoRequest(symbol, forceNew = false) {
         }
         const candidacyReportContent = candidacyReports[0].content;
         
-        const diligenceReports = await getSavedReports(symbol, 'DiligenceInvestigation');
-        let diligenceLog = 'No recent diligence is available.';
-        if (diligenceReports.length > 0) {
-            diligenceLog = diligenceReports.map(report => {
+        const diligenceInvestigationReports = await getSavedReports(symbol, 'DiligenceInvestigation');
+        const filingDiligenceReports = await getSavedReports(symbol, 'FilingDiligence');
+        const eightKReports = await getSavedReports(symbol, 'EightKAnalysis');
+        
+        const logs = [];
+
+        if (diligenceInvestigationReports.length > 0) {
+            const investigationLog = diligenceInvestigationReports.map(report => {
                 const question = report.prompt.split('Diligence Question from User:')[1]?.trim() || 'Question not found.';
                 const answer = report.content;
-                return `**Question:** ${question}\n\n**Answer:**\n${answer}\n\n---`;
-            }).join('\n\n');
+                return `**Question:** ${question}\n\n**Answer:**\n${answer}`;
+            }).join('\n\n---\n\n');
+            logs.push(investigationLog);
         }
+        
+        if (filingDiligenceReports.length > 0) {
+            const filingLog = filingDiligenceReports.map(report => `**Filing Diligence Q&A (from ${report.savedAt.toDate().toLocaleDateString()}):**\n${report.content}`).join('\n\n---\n\n');
+            logs.push(filingLog);
+        }
+
+        if (eightKReports.length > 0) {
+            const eightKLog = eightKReports.map(report => `**8-K Analysis Summary (from ${report.savedAt.toDate().toLocaleDateString()}):**\n${report.content}`).join('\n\n---\n\n');
+            logs.push(eightKLog);
+        }
+        
+        const diligenceLog = logs.length > 0 ? logs.join('\n\n---\n\n') : 'No diligence logs available.';
 
         const data = await getFmpStockData(symbol);
         if (!data) throw new Error(`Could not retrieve financial data for ${symbol}.`);
@@ -1544,7 +1561,7 @@ async function generateUpdatedMemo(symbol, memoType) {
         }
 
         if (filingDiligenceReports.length > 0) {
-            const filingLog = filingDiligenceReports.map(report => report.content).join('\n\n');
+            const filingLog = filingDiligenceReports.map(report => `**Filing Diligence Q&A (from ${report.savedAt.toDate().toLocaleDateString()}):**\n${report.content}`).join('\n\n---\n\n');
             logs.push(filingLog);
         }
 
