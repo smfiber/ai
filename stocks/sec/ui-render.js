@@ -137,59 +137,81 @@ export async function fetchAndRenderRecentFilings() {
     }
 }
 
-export async function fetchAndRenderReviewWatchlistFilings() {
+export async function fetchAndRenderRevisitFilings() {
     const containers = {
-        '8-K': document.getElementById('review-8k-container'),
-        '10-Q': document.getElementById('review-10q-container'),
-        '10-K': document.getElementById('review-10k-container'),
+        '8-K': document.getElementById('revisit-8k-container'),
+        '10-Q': document.getElementById('revisit-10q-container'),
+        '10-K': document.getElementById('revisit-10k-container'),
     };
     
-    const loadingHtml = `
-        <div class="loader mx-auto my-8"></div>
-        <p class="text-center text-gray-500">Loading...</p>`;
-    
-    Object.values(containers).forEach(container => {
-        if(container) container.innerHTML = loadingHtml;
-    });
+    const loadingHtml = `<div class="loader mx-auto my-8"></div><p class="text-center text-gray-500">Loading...</p>`;
+    Object.values(containers).forEach(c => { if(c) c.innerHTML = loadingHtml; });
 
     try {
-        const reviewStocks = state.portfolioCache.filter(s => s.status === 'Revisit 6 months');
-        if (reviewStocks.length === 0) {
-            const emptyMsg = `<p class="text-center text-gray-500 py-8">Your review watchlist is empty.</p>`;
-            Object.values(containers).forEach(container => {
-                if(container) container.innerHTML = emptyMsg;
-            });
+        const revisitStocks = state.portfolioCache.filter(s => s.status === 'Revisit 6 months');
+        if (revisitStocks.length === 0) {
+            const emptyMsg = `<p class="text-center text-gray-500 py-8">No stocks to revisit.</p>`;
+            Object.values(containers).forEach(c => { if(c) c.innerHTML = emptyMsg; });
             return;
         }
 
-        const tickers = reviewStocks.map(s => s.ticker);
+        const tickers = revisitStocks.map(s => s.ticker);
         const allFilings = await getRecentPortfolioFilings(tickers);
-
-        const latestFilings = {
-            '8-K': new Map(),
-            '10-Q': new Map(),
-            '10-K': new Map()
-        };
+        const latestFilings = { '8-K': new Map(), '10-Q': new Map(), '10-K': new Map() };
 
         for (const filing of allFilings) {
-            const formType = filing.formType;
-            const ticker = filing.ticker;
-
-            if (latestFilings[formType] && !latestFilings[formType].has(ticker)) {
-                latestFilings[formType].set(ticker, filing);
+            if (latestFilings[filing.formType] && !latestFilings[filing.formType].has(filing.ticker)) {
+                latestFilings[filing.formType].set(filing.ticker, filing);
             }
         }
         
-        renderFilingsCard('review-8k-container', Array.from(latestFilings['8-K'].values()));
-        renderFilingsCard('review-10q-container', Array.from(latestFilings['10-Q'].values()));
-        renderFilingsCard('review-10k-container', Array.from(latestFilings['10-K'].values()));
+        renderFilingsCard('revisit-8k-container', Array.from(latestFilings['8-K'].values()));
+        renderFilingsCard('revisit-10q-container', Array.from(latestFilings['10-Q'].values()));
+        renderFilingsCard('revisit-10k-container', Array.from(latestFilings['10-K'].values()));
         
     } catch (error) {
-        console.error("Error fetching or rendering review watchlist filings:", error);
+        console.error("Error fetching revisit filings:", error);
         const errorMsg = `<p class="text-center text-red-500 p-8">Could not load filings: ${error.message}</p>`;
-        Object.values(containers).forEach(container => {
-            if(container) container.innerHTML = errorMsg;
-        });
+        Object.values(containers).forEach(c => { if(c) c.innerHTML = errorMsg; });
+    }
+}
+
+export async function fetchAndRenderWatchlistFilings() {
+    const containers = {
+        '8-K': document.getElementById('watchlist-8k-container'),
+        '10-Q': document.getElementById('watchlist-10q-container'),
+        '10-K': document.getElementById('watchlist-10k-container'),
+    };
+    
+    const loadingHtml = `<div class="loader mx-auto my-8"></div><p class="text-center text-gray-500">Loading...</p>`;
+    Object.values(containers).forEach(c => { if(c) c.innerHTML = loadingHtml; });
+
+    try {
+        const watchlistStocks = state.portfolioCache.filter(s => s.status === 'Watchlist');
+        if (watchlistStocks.length === 0) {
+            const emptyMsg = `<p class="text-center text-gray-500 py-8">Your watchlist is empty.</p>`;
+            Object.values(containers).forEach(c => { if(c) c.innerHTML = emptyMsg; });
+            return;
+        }
+
+        const tickers = watchlistStocks.map(s => s.ticker);
+        const allFilings = await getRecentPortfolioFilings(tickers);
+        const latestFilings = { '8-K': new Map(), '10-Q': new Map(), '10-K': new Map() };
+
+        for (const filing of allFilings) {
+            if (latestFilings[filing.formType] && !latestFilings[filing.formType].has(filing.ticker)) {
+                latestFilings[filing.formType].set(filing.ticker, filing);
+            }
+        }
+        
+        renderFilingsCard('watchlist-8k-container', Array.from(latestFilings['8-K'].values()));
+        renderFilingsCard('watchlist-10q-container', Array.from(latestFilings['10-Q'].values()));
+        renderFilingsCard('watchlist-10k-container', Array.from(latestFilings['10-K'].values()));
+        
+    } catch (error) {
+        console.error("Error fetching watchlist filings:", error);
+        const errorMsg = `<p class="text-center text-red-500 p-8">Could not load filings: ${error.message}</p>`;
+        Object.values(containers).forEach(c => { if(c) c.innerHTML = errorMsg; });
     }
 }
 
