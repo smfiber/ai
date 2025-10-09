@@ -336,6 +336,7 @@ export function _calculateGarpScorecardMetrics(data) {
         return { garpConvictionScore: 'ERR' };
     }
     
+    const overrides = data.manualOverrides || {};
     const profile = data.profile?.[0] || {};
     const income = data.income_statement_annual.slice().reverse();
     const metricsTtm = data.key_metrics_ttm?.[0] || {};
@@ -356,52 +357,40 @@ export function _calculateGarpScorecardMetrics(data) {
     const startIndex = income.length - 6;
     const latestIncome = income[lastIndex] || {};
 
-    const eps5y = income.length >= 6 ? getCagr(income[startIndex].eps, income[lastIndex].eps, 5) : null;
-    const rev5y = income.length >= 6 ? getCagr(income[startIndex].revenue, income[lastIndex].revenue, 5) : null;
+    const eps5y = overrides.eps_growth_5y ?? (income.length >= 6 ? getCagr(income[startIndex].eps, income[lastIndex].eps, 5) : null);
+    const rev5y = overrides.rev_growth_5y ?? (income.length >= 6 ? getCagr(income[startIndex].revenue, income[lastIndex].revenue, 5) : null);
     
-    const roe = metricsTtm.roe ?? latestAnnualMetrics.roe;
-    const roic = metricsTtm.roic ?? latestAnnualMetrics.roic;
-    const de = metricsTtm.debtToEquity ?? latestAnnualMetrics.debtToEquity;
-    const pe = metricsTtm.peRatioTTM ?? latestAnnualMetrics.peRatio;
-    const psRatio = ratiosTtm.priceToSalesRatioTTM ?? latestAnnualRatios.priceToSalesRatio;
+    const roe = overrides.roe ?? metricsTtm.roe ?? latestAnnualMetrics.roe;
+    const roic = overrides.roic ?? metricsTtm.roic ?? latestAnnualMetrics.roic;
+    const de = overrides.de ?? metricsTtm.debtToEquity ?? latestAnnualMetrics.debtToEquity;
+    const pe = overrides.pe_ttm ?? metricsTtm.peRatioTTM ?? latestAnnualMetrics.peRatio;
+    const psRatio = overrides.ps_ratio ?? ratiosTtm.priceToSalesRatioTTM ?? latestAnnualRatios.priceToSalesRatio;
 
     // --- FIX: Find the correct forward-looking estimate ---
     const currentYear = new Date().getFullYear();
-    // Use the CURRENT year's estimate for Forward P/E and growth from the last reported year
     const forwardEstimate = Array.isArray(estimates) ? estimates.find(est => parseInt(est.date.substring(0, 4)) === currentYear) : null;
 
-    let epsNext1y = null;
     const lastActualEps = income.length > 0 ? income[lastIndex].eps : null;
     const forwardEpsForGrowth = forwardEstimate ? forwardEstimate.epsAvg : null;
-    if (lastActualEps > 0 && forwardEpsForGrowth) {
-         epsNext1y = (forwardEpsForGrowth / lastActualEps) - 1;
-    }
+    const epsNext1y = overrides.eps_growth_next_1y ?? (lastActualEps > 0 && forwardEpsForGrowth ? (forwardEpsForGrowth / lastActualEps) - 1 : null);
 
-    let forwardPe = null;
     const currentPrice = profile.price;
-    if (currentPrice > 0 && forwardEpsForGrowth > 0) {
-        forwardPe = currentPrice / forwardEpsForGrowth;
-    }
+    const forwardPe = overrides.forward_pe ?? (currentPrice > 0 && forwardEpsForGrowth > 0 ? currentPrice / forwardEpsForGrowth : null);
     
-    let peg = null;
-    if (forwardPe > 0 && epsNext1y > 0) {
-        peg = forwardPe / (epsNext1y * 100);
-    }
+    const peg = overrides.peg ?? (forwardPe > 0 && epsNext1y > 0 ? forwardPe / (epsNext1y * 100) : null);
 
-    let pfcf = null;
     const fcfPerShareTtm = metricsTtm.freeCashFlowPerShareTTM;
-    if (currentPrice > 0 && fcfPerShareTtm > 0) {
-        pfcf = currentPrice / fcfPerShareTtm;
-    }
+    const pfcf = overrides.pfcf ?? (currentPrice > 0 && fcfPerShareTtm > 0 ? currentPrice / fcfPerShareTtm : null);
     
-    let interestCoverage = null;
-    if (latestIncome.operatingIncome && latestIncome.interestExpense > 0) {
-         interestCoverage = latestIncome.operatingIncome / latestIncome.interestExpense;
-    } else if (latestIncome.operatingIncome > 0 && latestIncome.interestExpense <= 0) {
-        interestCoverage = 999; // Effectively infinite coverage
-    }
+    const interestCoverageCalc = () => {
+        if (latestIncome.operatingIncome && latestIncome.interestExpense > 0) return latestIncome.operatingIncome / latestIncome.interestExpense;
+        if (latestIncome.operatingIncome > 0 && latestIncome.interestExpense <= 0) return 999;
+        return null;
+    };
+    const interestCoverage = overrides.interest_coverage ?? interestCoverageCalc();
     
     const consistency = _calculateConsistencyMetrics(income);
+    const profitableYears = overrides.profitable_yrs ?? consistency.profitableYears;
     const quarterlyPerformance = _calculateQuarterlyPerformance(data.income_statement_quarterly, data.analyst_estimates);
 
     // --- METRICS DEFINITION (Rebalanced Weights) ---
@@ -414,7 +403,7 @@ export function _calculateGarpScorecardMetrics(data) {
         'Return on Invested Capital': { value: roic, format: 'percent', weight: 10 },
         'Return on Equity': { value: roe, format: 'percent', weight: 8 },
         'Quarterly Earnings Progress': { value: quarterlyPerformance.performanceRatio, format: 'ratio', weight: 8 },
-        'Profitable Yrs (5Y)': { value: consistency.profitableYears, format: 'number', weight: 6 },
+        'Profitable Yrs (5Y)': { value: profitableYears, format: 'number', weight: 6 },
         'Rev. Growth Stability': { value: consistency.revenueGrowthStdDev, format: 'decimal', weight: 3 },
         // -- Financial Health (10%)
         'Debt-to-Equity': { value: de, format: 'decimal', weight: 5 },
