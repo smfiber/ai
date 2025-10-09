@@ -56,7 +56,7 @@ function renderFilingsCard(containerId, filings) {
             ${filings.map(filing => {
                 const stock = state.portfolioCache.find(s => s.ticker === filing.ticker);
                 const companyName = stock ? stock.companyName : filing.ticker;
-                const filingDate = new Date(filing.filedAt).toLocaleDateDate();
+                const filingDate = new Date(filing.filedAt).toLocaleDateString();
 
                 return `
                     <li class="p-3 hover:bg-gray-50">
@@ -258,7 +258,7 @@ async function renderUpcomingEarnings() {
                 ${upcomingEarnings.slice(0, 25).map(e => `
                      <li class="p-2 flex justify-between items-center text-sm">
                         <span class="font-semibold text-gray-700">${sanitizeText(e.symbol)}</span>
-                        <span class="text-gray-600">${new Date(e.date).toLocaleDateDate()}</span>
+                        <span class="text-gray-600">${new Date(e.date).toLocaleDateString()}</span>
                     </li>
                 `).join('')}
             </ul>
@@ -388,7 +388,7 @@ export async function renderCompanyDeepDive(ticker) {
         const listHtml = `
             <ul class="divide-y divide-gray-200">
                 ${allFilings.map(filing => {
-                    const filingDate = new Date(filing.filedAt).toLocaleDateDate();
+                    const filingDate = new Date(filing.filedAt).toLocaleDateString();
                     let formTypeBadge = '';
 
                     if (filing.formType === '8-K') {
@@ -482,7 +482,7 @@ export async function renderInsiderTrackerView() {
                                 const value = (t.transactionPricePerShare || 0) * (t.transactionShares || 0);
                                 return `
                                     <tr>
-                                        <td class="px-4 py-2 whitespace-nowrap">${new Date(t.filedAt).toLocaleDateDate()}</td>
+                                        <td class="px-4 py-2 whitespace-nowrap">${new Date(t.filedAt).toLocaleDateString()}</td>
                                         <td class="px-4 py-2 whitespace-nowrap font-bold">${sanitizeText(t.ticker)}</td>
                                         <td class="px-4 py-2 whitespace-nowrap"><a href="${sanitizeText(t.linkToFilingDetails)}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:underline">${sanitizeText(t.reportingOwnerName)}</a></td>
                                         <td class="px-4 py-2 whitespace-nowrap ${typeClass}">${type}</td>
@@ -717,8 +717,8 @@ export async function renderInvestorFilingsView(cik, investorName) {
                 <div class="space-y-4">`;
 
         for (const filing of filingsToRender) {
-            const filingDate = new Date(filing.filedAt).toLocaleDateDate();
-            const periodOfReport = filing.periodOfReport ? new Date(filing.periodOfReport).toLocaleDateDate() : 'N/A';
+            const filingDate = new Date(filing.filedAt).toLocaleDateString();
+            const periodOfReport = filing.periodOfReport ? new Date(filing.periodOfReport).toLocaleDateString() : 'N/A';
             
             const aggregatedHoldings = (filing.holdings || []).reduce((acc, holding) => {
                 const ticker = holding.ticker || 'N/A';
@@ -876,8 +876,8 @@ export function renderWhaleComparisonView() {
             </div>`;
     };
     
-    const latestPeriod = new Date(latestFiling.periodOfReport).toLocaleDateDate();
-    const prevPeriod = new Date(previousFiling.periodOfReport).toLocaleDateDate();
+    const latestPeriod = new Date(latestFiling.periodOfReport).toLocaleDateString();
+    const prevPeriod = new Date(previousFiling.periodOfReport).toLocaleDateString();
 
     container.innerHTML = `
         <div class="p-4 border-l-4 border-indigo-500 bg-indigo-50 rounded-lg">
