@@ -1,7 +1,6 @@
 // fileName: ui-handlers.js
 import { CONSTANTS, state, promptMap, ANALYSIS_REQUIREMENTS, ANALYSIS_NAMES, SECTOR_KPI_SUGGESTIONS } from './config.js';
 import { callApi, callGeminiApi, generateRefinedArticle, generatePolishedArticleForSynthesis, getFmpStockData } from './api.js';
-import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { openModal, closeModal, displayMessageInModal, openConfirmationModal, openManageStockModal, STRUCTURED_DILIGENCE_QUESTIONS, QUARTERLY_REVIEW_QUESTIONS, ANNUAL_REVIEW_QUESTIONS, addKpiRow } from './ui-modals.js';
 import { renderPortfolioManagerList, displayReport, updateReportStatus, fetchAndCachePortfolioData, updateGarpCandidacyStatus, renderCandidacyAnalysis, renderGarpAnalysisSummary, renderDiligenceLog, renderPeerComparisonTable, renderSectorMomentumHeatMap, renderOngoingReviewLog } from './ui-render.js';
 import { _calculateFinancialAnalysisMetrics, _calculateMoatAnalysisMetrics, _calculateRiskAssessmentMetrics, _calculateCapitalAllocatorsMetrics, _calculateGarpAnalysisMetrics, _calculateGarpScorecardMetrics, CALCULATION_SUMMARIES } from './analysis-helpers.js';
@@ -9,14 +8,14 @@ import { _calculateFinancialAnalysisMetrics, _calculateMoatAnalysisMetrics, _cal
 // --- UTILITY HELPERS ---
 export async function getSavedReports(ticker, reportType) {
     try {
-        const reportsRef = collection(state.db, CONSTANTS.DB_COLLECTION_AI_REPORTS);
+        const reportsRef = state.db.collection(CONSTANTS.DB_COLLECTION_AI_REPORTS);
         let q;
         if (Array.isArray(reportType)) {
-             q = query(reportsRef, where("ticker", "==", ticker), where("reportType", "in", reportType), orderBy("savedAt", "desc"));
+             q = reportsRef.where("ticker", "==", ticker).where("reportType", "in", reportType).orderBy("savedAt", "desc");
         } else {
-             q = query(reportsRef, where("ticker", "==", ticker), where("reportType", "==", reportType), orderBy("savedAt", "desc"));
+             q = reportsRef.where("ticker", "==", ticker).where("reportType", "==", reportType).orderBy("savedAt", "desc");
         }
-        const querySnapshot = await getDocs(q);
+        const querySnapshot = await q.get();
         return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     } catch (error) {
         console.error("Error fetching saved reports:", error);
@@ -41,10 +40,10 @@ async function autoSaveReport(ticker, reportType, content, prompt, diligenceQues
             reportType,
             content,
             prompt: prompt || '',
-            savedAt: Timestamp.now(),
+            savedAt: firebase.firestore.Timestamp.now(),
             diligenceQuestions: diligenceQuestions // Save the questions with the report
         };
-        await addDoc(collection(state.db, CONSTANTS.DB_COLLECTION_AI_REPORTS), reportData);
+        await state.db.collection(CONSTANTS.DB_COLLECTION_AI_REPORTS).add(reportData);
         console.log(`${reportType} for ${ticker} was auto-saved successfully.`);
     } catch (error) {
         console.error(`Auto-save for ${reportType} failed:`, error);
@@ -102,8 +101,8 @@ export async function handleRefreshFmpData(symbol) {
                 continue;
             }
 
-            const docRef = doc(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, symbol, 'endpoints', endpoint.name);
-            await setDoc(docRef, { cachedAt: Timestamp.now(), data: data });
+            const docRef = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(symbol).collection('endpoints').doc(endpoint.name);
+            await docRef.set({ cachedAt: firebase.firestore.Timestamp.now(), data: data });
             successfulFetches++;
         }
         
@@ -266,13 +265,13 @@ export async function handleSaveStock(e) {
     
     try {
         if (originalTicker && originalTicker !== newTicker) {
-            await deleteDoc(doc(state.db, CONSTANTS.DB_COLLECTION_PORTFOLIO, originalTicker));
+            await state.db.collection(CONSTANTS.DB_COLLECTION_PORTFOLIO).doc(originalTicker).delete();
         }
 
-        await setDoc(doc(state.db, CONSTANTS.DB_COLLECTION_PORTFOLIO, newTicker), stockData, { merge: true });
+        await state.db.collection(CONSTANTS.DB_COLLECTION_PORTFOLIO).doc(newTicker).set(stockData, { merge: true });
 
-        const fmpCacheRef = collection(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, newTicker, 'endpoints');
-        const fmpSnapshot = await getDocs(query(fmpCacheRef, limit(1)));
+        const fmpCacheRef = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(newTicker).collection('endpoints');
+        const fmpSnapshot = await fmpCacheRef.limit(1).get();
         if (fmpSnapshot.empty) {
             document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `First time setup: Caching FMP data for ${newTicker}...`;
             await handleRefreshFmpData(newTicker);
@@ -296,7 +295,7 @@ export async function handleDeleteStock(ticker) {
             openModal(CONSTANTS.MODAL_LOADING);
             document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Deleting ${ticker}...`;
             try {
-                await deleteDoc(doc(state.db, CONSTANTS.DB_COLLECTION_PORTFOLIO, ticker));
+                await state.db.collection(CONSTANTS.DB_COLLECTION_PORTFOLIO).doc(ticker).delete();
                 await fetchAndCachePortfolioData();
                 if(document.getElementById(CONSTANTS.MODAL_PORTFOLIO_MANAGER).classList.contains(CONSTANTS.CLASS_MODAL_OPEN)) {
                     renderPortfolioManagerList();
@@ -326,8 +325,8 @@ export async function handleResearchSubmit(e) {
     document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Checking your lists for ${symbol}...`;
     
     try {
-        const docRef = doc(state.db, CONSTANTS.DB_COLLECTION_PORTFOLIO, symbol);
-        if ((await getDoc(docRef)).exists()) {
+        const docRef = state.db.collection(CONSTANTS.DB_COLLECTION_PORTFOLIO).doc(symbol);
+        if ((await docRef.get()).exists) {
              displayMessageInModal(`${symbol} is already in your lists. You can edit it from the dashboard.`, 'info');
              tickerInput.value = '';
              closeModal(CONSTANTS.MODAL_LOADING);
@@ -691,10 +690,10 @@ export async function handleSaveReportToDb() {
             ticker: symbol,
             reportType: reportType,
             content: contentToSave,
-            savedAt: Timestamp.now(),
+            savedAt: firebase.firestore.Timestamp.now(),
             prompt: promptToSave || ''
         };
-        await addDoc(collection(state.db, CONSTANTS.DB_COLLECTION_AI_REPORTS), reportData);
+        await state.db.collection(CONSTANTS.DB_COLLECTION_AI_REPORTS).add(reportData);
         displayMessageInModal("Report saved successfully!", "info");
         
         const analysisContentContainer = document.getElementById('analysis-content-container');
@@ -736,8 +735,8 @@ export async function handleGarpCandidacyRequest(ticker) {
         const newScore = scorecardData.garpConvictionScore;
 
         // Save the new score to the database
-        const stockDocRef = doc(state.db, CONSTANTS.DB_COLLECTION_PORTFOLIO, ticker);
-        await updateDoc(stockDocRef, { garpConvictionScore: newScore });
+        const stockDocRef = state.db.collection(CONSTANTS.DB_COLLECTION_PORTFOLIO).doc(ticker);
+        await stockDocRef.update({ garpConvictionScore: newScore });
         
         // Refresh local cache to reflect the change immediately
         await fetchAndCachePortfolioData();
@@ -746,10 +745,10 @@ export async function handleGarpCandidacyRequest(ticker) {
         const companyName = profile.companyName || ticker;
         const tickerSymbol = profile.symbol || ticker;
         const sector = profile.sector || 'N/A';
-        const peerDocRef = doc(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, ticker, 'analysis', 'peer_comparison');
-        const peerDocSnap = await getDoc(peerDocRef);
-        const peerAverages = peerDocSnap.exists() ? peerDocSnap.data().averages : null;
-        const peerDataChanges = peerDocSnap.exists() ? peerDocSnap.data().changes : null;
+        const peerDocRef = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(ticker).collection('analysis').doc('peer_comparison');
+        const peerDocSnap = await peerDocRef.get();
+        const peerAverages = peerDocSnap.exists ? peerDocSnap.data().averages : null;
+        const peerDataChanges = peerDocSnap.exists ? peerDocSnap.data().changes : null;
 
 
         // Check for hyper-growth to generate diligence questions
@@ -1215,10 +1214,10 @@ export async function handleGeneratePrereqsRequest(symbol) {
                 ticker: symbol,
                 reportType: reportType,
                 content: reportContent,
-                savedAt: Timestamp.now(),
+                savedAt: firebase.firestore.Timestamp.now(),
                 prompt: prompt
             };
-            await addDoc(collection(state.db, CONSTANTS.DB_COLLECTION_AI_REPORTS), reportData);
+            await state.db.collection(CONSTANTS.DB_COLLECTION_AI_REPORTS).add(reportData);
 
             const analysisContentContainer = document.getElementById('analysis-content-container');
             if (analysisContentContainer) {
@@ -1516,7 +1515,7 @@ export async function handleDeleteFilingDiligenceLog(reportId, ticker) {
             openModal(CONSTANTS.MODAL_LOADING);
             document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Deleting entry...`;
             try {
-                await deleteDoc(doc(state.db, CONSTANTS.DB_COLLECTION_AI_REPORTS, reportId));
+                await state.db.collection(CONSTANTS.DB_COLLECTION_AI_REPORTS).doc(reportId).delete();
 
                 const logContainer = document.getElementById('ongoing-review-log-container');
                 const displayContainer = document.getElementById('ongoing-review-display-container');
@@ -1653,7 +1652,7 @@ export async function handleDeleteDiligenceLog(reportId, ticker) {
             openModal(CONSTANTS.MODAL_LOADING);
             document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Deleting entry...`;
             try {
-                await deleteDoc(doc(state.db, CONSTANTS.DB_COLLECTION_AI_REPORTS, reportId));
+                await state.db.collection(CONSTANTS.DB_COLLECTION_AI_REPORTS).doc(reportId).delete();
 
                 const diligenceReports = await getSavedReports(ticker, 'DiligenceInvestigation');
                 const diligenceLogContainer = document.getElementById('diligence-log-container');
@@ -1700,10 +1699,10 @@ async function _fetchAndCachePeerData(tickers) {
         let allEndpointsFetched = true;
         try {
             // Check if the peer data is already cached
-            const docRef = doc(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, ticker, 'endpoints', 'income_statement_annual');
-            const docSnap = await getDoc(docRef);
+            const docRef = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(ticker).collection('endpoints').doc('income_statement_annual');
+            const docSnap = await docRef.get();
 
-            if (docSnap.exists()) {
+            if (docSnap.exists) {
                 console.log(`Peer data for ${ticker} already in cache. Skipping fetch.`);
                 successfullyFetchedTickers.push(ticker);
                 fetchedCount += endpointsToFetch.length;
@@ -1723,8 +1722,8 @@ async function _fetchAndCachePeerData(tickers) {
                 const data = await callApi(url);
 
                 if (data && (!Array.isArray(data) || data.length > 0)) {
-                    const endpointDocRef = doc(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, ticker, 'endpoints', endpoint);
-                    await setDoc(endpointDocRef, { cachedAt: Timestamp.now(), data: data });
+                    const endpointDocRef = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(ticker).collection('endpoints').doc(endpoint);
+                    await endpointDocRef.set({ cachedAt: firebase.firestore.Timestamp.now(), data: data });
                 } else {
                     console.warn(`No data returned from FMP for peer endpoint: ${endpoint} for ticker ${ticker}.`);
                     allEndpointsFetched = false;
@@ -1787,11 +1786,11 @@ async function runPeerAnalysis(primaryTicker, peerTickers) {
     const finalPeerDataObject = {
         peers: peerTickers,
         averages: peerAverages,
-        cachedAt: Timestamp.now()
+        cachedAt: firebase.firestore.Timestamp.now()
     };
 
-    const peerDocRef = doc(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, primaryTicker, 'analysis', 'peer_comparison');
-    await setDoc(peerDocRef, finalPeerDataObject);
+    const peerDocRef = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(primaryTicker).collection('analysis').doc('peer_comparison');
+    await peerDocRef.set(finalPeerDataObject);
     
     renderPeerComparisonTable(container, primaryTicker, companyMetrics, finalPeerDataObject);
 }
