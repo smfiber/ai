@@ -1,8 +1,8 @@
 // fileName: ui.js
 import { CONSTANTS, state, promptMap } from './config.js';
-import { openModal, closeModal, openStockListModal, openManageStockModal, openPortfolioManagerModal, openRawDataViewer, QUARTERLY_REVIEW_QUESTIONS, ANNUAL_REVIEW_QUESTIONS, addDiligenceEntryRow } from './ui-modals.js';
+import { openModal, closeModal, openStockListModal, openManageStockModal, openPortfolioManagerModal, openRawDataViewer, QUARTERLY_REVIEW_QUESTIONS, ANNUAL_REVIEW_QUESTIONS, addDiligenceEntryRow, addKpiRow } from './ui-modals.js';
 import { fetchAndCachePortfolioData, renderPortfolioManagerList } from './ui-render.js';
-import { handleResearchSubmit, handleSaveStock, handleDeleteStock, handleRefreshFmpData, handleAnalysisRequest, handleGarpMemoRequest, handleSaveReportToDb, handleGeneratePrereqsRequest, handleGarpCandidacyRequest, handlePortfolioGarpAnalysisRequest, handlePositionAnalysisRequest, handleReportHelpRequest, handleManualDiligenceSave, handleDeleteDiligenceLog, handleWorkflowHelpRequest, handleManualPeerAnalysisRequest, handleStructuredDiligenceSave, handleGenerateFilingQuestionsRequest, handleSaveFilingDiligenceRequest, handleDeleteFilingDiligenceLog, handleGenerateUpdatedGarpMemoRequest, handleGenerateUpdatedQarpMemoRequest, handleAnalyzeEightKRequest, handleCompounderMemoRequest, handleFinalThesisRequest, handleSaveManualData } from './ui-handlers.js';
+import { handleResearchSubmit, handleSaveStock, handleDeleteStock, handleRefreshFmpData, handleAnalysisRequest, handleGarpMemoRequest, handleSaveReportToDb, handleGeneratePrereqsRequest, handleGarpCandidacyRequest, handlePortfolioGarpAnalysisRequest, handlePositionAnalysisRequest, handleReportHelpRequest, handleManualDiligenceSave, handleDeleteDiligenceLog, handleWorkflowHelpRequest, handleManualPeerAnalysisRequest, handleStructuredDiligenceSave, handleGenerateFilingQuestionsRequest, handleSaveFilingDiligenceRequest, handleDeleteFilingDiligenceLog, handleGenerateUpdatedGarpMemoRequest, handleGenerateUpdatedQarpMemoRequest, handleAnalyzeEightKRequest, handleCompounderMemoRequest, handleFinalThesisRequest, handleKpiSuggestionRequest } from './ui-handlers.js';
 import { getFmpStockData } from './api.js';
 
 // --- DYNAMIC TOOLTIPS ---
@@ -104,6 +104,7 @@ function setupGlobalEventListeners() {
         const ticker = target.dataset.ticker;
         if (ticker) {
             if (target.classList.contains('dashboard-item-edit')) {
+                closeModal(CONSTANTS.MODAL_STOCK_LIST);
                 const stockData = state.portfolioCache.find(s => s.ticker === ticker);
                 if (stockData) {
                     openManageStockModal({ ...stockData, isEditMode: true });
@@ -147,6 +148,19 @@ export function setupEventListeners() {
         }
     });
 
+    // Event delegation for the Manage Stock modal
+    document.getElementById('manageStockModal')?.addEventListener('click', (e) => {
+        if (e.target.closest('#suggest-kpis-button')) {
+            handleKpiSuggestionRequest();
+        }
+        const suggestionChip = e.target.closest('.kpi-suggestion-chip');
+        if (suggestionChip) {
+            const kpiName = suggestionChip.dataset.kpiName;
+            addKpiRow({ name: kpiName });
+        }
+    });
+
+
     document.querySelectorAll('.save-to-db-button').forEach(button => {
         button.addEventListener('click', handleSaveReportToDb);
     });
@@ -184,10 +198,6 @@ export function setupEventListeners() {
             if (symbol) {
                 handleTranscriptSearch(symbol);
             }
-        }
-        if (e.target.id === 'manual-data-form') {
-            e.preventDefault();
-            handleSaveManualData(e);
         }
     });
 
