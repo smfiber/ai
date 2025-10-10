@@ -3,9 +3,6 @@ import { openModal, closeModal, displayMessageInModal } from './ui-modals.js';
 import { fetchAndCachePortfolioData } from './ui-render.js';
 import { handleSectorMomentumRequest } from './ui-handlers.js';
 import { CONSTANTS, APP_VERSION, state } from './config.js';
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, signOut, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- CONFIG & INITIALIZATION ---
 function safeParseConfig(str) {
@@ -34,11 +31,11 @@ async function initializeAppContent() {
 async function initializeFirebase() {
     if (!state.firebaseConfig) return;
     try {
-        const app = initializeApp(state.firebaseConfig);
-        state.db = getFirestore(app);
-        state.auth = getAuth(app);
+        const app = firebase.initializeApp(state.firebaseConfig);
+        state.db = firebase.firestore();
+        state.auth = firebase.auth();
 
-        onAuthStateChanged(state.auth, user => {
+        state.auth.onAuthStateChanged(user => {
             if (user) {
                 state.userId = user.uid;
                 if (!state.appIsInitialized) {
@@ -55,7 +52,7 @@ async function initializeFirebase() {
         });
         
         if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-            await signInWithCustomToken(state.auth, __initial_auth_token);
+            await state.auth.signInWithCustomToken(__initial_auth_token);
         }
 
     } catch (error) {
@@ -112,8 +109,8 @@ async function handleCredentialResponse(response) {
     openModal(CONSTANTS.MODAL_LOADING);
     document.getElementById('loading-message').textContent = "Verifying login...";
     try {
-        const credential = GoogleAuthProvider.credential(response.credential);
-        await signInWithCredential(state.auth, credential);
+        const credential = firebase.auth.GoogleAuthProvider.credential(response.credential);
+        await state.auth.signInWithCredential(credential);
     } catch (error) {
         console.error("Firebase sign-in with Google credential failed:", error);
         displayMessageInModal(`Login failed: ${error.message}`, 'error');
@@ -124,7 +121,7 @@ async function handleCredentialResponse(response) {
 
 function handleLogout() {
     if (state.auth) {
-        signOut(state.auth).catch(error => console.error("Sign out failed:", error));
+        state.auth.signOut().catch(error => console.error("Sign out failed:", error));
     }
     if (typeof google !== 'undefined' && google.accounts) {
         google.accounts.id.disableAutoSelect();
