@@ -152,11 +152,24 @@ export function setupEventListeners() {
     document.getElementById('manageStockModal')?.addEventListener('click', (e) => {
         if (e.target.closest('#suggest-kpis-button')) {
             handleKpiSuggestionRequest();
+            return;
         }
+        if (e.target.closest('#add-kpi-button')) {
+            addKpiRow();
+            return;
+        }
+
         const suggestionChip = e.target.closest('.kpi-suggestion-chip');
         if (suggestionChip) {
             const kpiName = suggestionChip.dataset.kpiName;
             addKpiRow({ name: kpiName });
+            return;
+        }
+        
+        const removeKpiButton = e.target.closest('.remove-kpi-button');
+        if (removeKpiButton) {
+            removeKpiButton.closest('.kpi-row').remove();
+            return;
         }
     });
 
