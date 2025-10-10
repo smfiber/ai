@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GARP Research Hub</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script src="https://apis.google.com/js/api.js" async defer></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="data:,">
+</head>
+<body class="bg-gray-100">
+
+    <header class="bg-gray-800 text-white p-6 shadow-lg">
+        <div class="relative container mx-auto flex justify-between items-center">
+            <div>
+                <h1 class="text-3xl font-bold tracking-tight">GARP Research Hub</h1>
+                <div class="flex items-center gap-x-3">
+                    <p class="text-sm text-gray-300 mt-1">Your Personal Market Co-Pilot</p>
+                    <span id="app-version-display" class="text-xs text-gray-400 mt-1"></span>
+                </div>
+            </div>
+            <div id="auth-status" class="flex items-center"></div>
+        </div>
+    </header>
+
+    <div id="app-container" class="hidden">
+        <main class="container mx-auto p-4 sm:p-6 lg:p-8">
+
+            <div id="stock-screener-section" class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 mb-8 hidden">
+                <h2 class="text-xl font-bold mb-1 text-emerald-500">Add Stock to Portfolio</h2>
+                <p class="text-sm text-gray-500 mb-4">Enter a stock ticker to begin the analysis workflow.</p>
+                <form id="stock-research-form" class="flex items-center gap-4">
+                    <label for="ticker-input" class="sr-only">Stock Ticker Symbol</label>
+                    <input type="text" id="ticker-input" class="border border-gray-300 rounded-lg w-full transition-all duration-200 ease-in-out focus:ring-2 focus:ring-indigo-600 focus:border-transparent bg-white text-gray-800 shadow-sm flex-grow p-3 text-lg uppercase" placeholder="e.g., AAPL, MSFT, NVDA">
+                    <button type="submit" id="research-button" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-5 rounded-lg shadow-md transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-600">Add Stock</button>
+                </form>
+            </div>
+
+            <div id="dashboard-section" class="grid grid-cols-1 lg:grid-cols-2 gap-8 hidden">
+                <div>
+                     <div class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
+                        <h2 class="text-xl font-bold mb-4 pb-2 border-b text-indigo-800 flex justify-between items-center">
+                            <span>My Portfolio (<span id="portfolio-count">0</span>)</span>
+                             <button class="dashboard-refresh-button p-1 rounded-full hover:bg-indigo-100" title="Refresh Dashboard">
+                                <svg class="w-5 h-5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0011.664 0M2.985 19.644A8.25 8.25 0 0116.023 9.348" />
+                                </svg>
+                            </button>
+                        </h2>
+                        <div>
+                            <button data-status="Portfolio" class="dashboard-list-button w-full h-48 bg-indigo-50 hover:bg-indigo-100 rounded-lg flex items-center justify-center transition-colors duration-200">
+                                <span class="text-2xl font-bold text-indigo-700">View Portfolio</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="mt-8 grid grid-cols-1 gap-6">
+                        <div class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
+                            <h3 class="text-lg font-bold text-gray-800 mb-3">Other Lists</h3>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <h4 class="font-semibold text-gray-600">Watchlist (<span id="watchlist-count">0</span>)</h4>
+                                    <button data-status="Watchlist" class="dashboard-list-button mt-2 w-full h-24 bg-gray-50 hover:bg-gray-100 rounded-lg flex items-center justify-center transition-colors duration-200">
+                                        <span class="text-lg font-bold text-gray-700">View List</span>
+                                    </button>
+                                </div>
+                                <div>
+                                    <h4 class="font-semibold text-gray-600">Revisit 3 Mo. (<span id="revisit-3-months-count">0</span>)</h4>
+                                    <button data-status="Revisit 3 months" class="dashboard-list-button mt-2 w-full h-24 bg-gray-50 hover:bg-gray-100 rounded-lg flex items-center justify-center transition-colors duration-200">
+                                        <span class="text-lg font-bold text-gray-700">View List</span>
+                                    </button>
+                                </div>
+                                <div class="sm:col-span-2">
+                                     <h4 class="font-semibold text-gray-600">Revisit 6 Mo. (<span id="revisit-6-months-count">0</span>)</h4>
+                                    <button data-status="Revisit 6 months" class="dashboard-list-button mt-2 w-full h-24 bg-gray-50 hover:bg-gray-100 rounded-lg flex items-center justify-center transition-colors duration-200">
+                                        <span class="text-lg font-bold text-gray-700">View List</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="lg:col-span-1">
+                    <div class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 h-full flex flex-col">
+                        <h2 class="text-xl font-bold mb-4 pb-2 border-b text-indigo-800 flex justify-between items-center">
+                            <span>Portfolio GARP Overview</span>
+                            <button data-report-type="PortfolioGarpAnalysis" class="ai-help-button p-1 rounded-full hover:bg-indigo-100" title="What is this?">
+                                <svg class="w-5 h-5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" />
+                                </svg>
+                            </button>
+                        </h2>
+                        
+                        <div class="mb-4">
+                            <button id="analyze-portfolio-garp-button" data-report-type="PortfolioGarpAnalysis" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors">
+                                Analyze Portfolio with AI
+                            </button>
+                        </div>
+                        
+                        <div id="portfolio-garp-ai-summary-container" class="prose prose-sm max-w-none mb-4"></div>
+                        <div id="portfolio-garp-breakdown-container" class="mb-4"></div>
+
+                        <div id="portfolio-garp-overview-container" class="space-y-6 overflow-y-auto pr-2 flex-grow">
+                            </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="sector-momentum-section" class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 my-8 hidden">
+                <div class="flex justify-between items-center mb-4 pb-2 border-b">
+                    <h2 class="text-xl font-bold text-indigo-800">Sector Momentum Heat Map</h2>
+                    <button data-report-type="SectorMomentum" class="ai-help-button p-1 rounded-full hover:bg-indigo-100" title="What is this?">
+                        <svg class="w-5 h-5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" /></svg>
+                    </button>
+                </div>
+                <div id="sector-momentum-ai-summary" class="text-sm text-gray-600 mb-4 p-3 bg-gray-50 rounded-lg border"></div>
+                <div id="sector-momentum-container">
+                    </div>
+            </div>
+
+        </main>
+        
+        <button id="manage-all-stocks-button" class="fixed w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-transform duration-200 hover:scale-110 bg-indigo-600 hover:bg-indigo-700 text-white z-30" style="bottom: 2rem; right: 2rem;" title="Manage All Stocks">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+            </svg>
+        </button>
+
+        <button id="workflow-guide-button" class="fixed w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-transform duration-200 hover:scale-110 bg-gray-600 hover:bg-gray-700 text-white z-30" style="bottom: 2rem; left: 2rem;" title="Workflow Guide">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+        </button>
+    </div>
+
+    <div id="apiKeyModal" class="fixed inset-0 z-[100] items-center justify-center p-4 modal">
+        <div class="absolute inset-0 bg-gray-900 bg-opacity-75"></div>
+        <div class="relative bg-white rounded-2xl shadow-lg border border-gray-200 p-8 w-full max-w-lg m-4 overflow-y-auto max-h-[90vh]">
+            <h2 class="text-2xl font-bold mb-4">API Keys Required</h2>
+            <p class="text-gray-500 mb-6">Please provide your API keys to get started. These are required for the application to function.</p>
+            <form id="apiKeyForm">
+                <div class="space-y-4">
+                    <div>
+                        <label for="geminiApiKeyInput" class="block text-sm font-semibold text-gray-800 mb-1">Google Gemini API Key</label>
+                        <input type="text" id="geminiApiKeyInput" class="border border-gray-300 rounded-lg w-full p-2" placeholder="Enter your Google Gemini API Key">
+                    </div>
+                    <div>
+                        <label for="googleClientIdInput" class="block text-sm font-semibold text-gray-800 mb-1">Google Cloud Client ID</label>
+                        <input type="text" id="googleClientIdInput" class="border border-gray-300 rounded-lg w-full p-2" placeholder="Enter your Google Cloud Web Client ID">
+                    </div>
+                    <div>
+                        <label for="fmpApiKeyInput" class="block text-sm font-semibold text-gray-800 mb-1">Financial Modeling Prep API Key</label>
+                        <input type="text" id="fmpApiKeyInput" class="border border-gray-300 rounded-lg w-full p-2" placeholder="Enter your FMP API Key">
+                    </div>
+                    <div>
+                        <label for="firebaseConfigInput" class="block text-sm font-semibold text-gray-800 mb-1">Firebase Web App Config</label>
+                        <textarea id="firebaseConfigInput" class="border border-gray-300 rounded-lg w-full p-2" rows="6" placeholder="Paste your Firebase Web App Config Object"></textarea>
+                    </div>
+                </div>
+                <p id="api-key-error" class="text-red-500 text-sm mt-2"></p>
+                <div class="mt-6 flex justify-end">
+                    <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-5 rounded-lg shadow-md">Save and Continue</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <div id="loadingStateModal" class="fixed inset-0 z-[110] flex-col items-center justify-center p-4 modal">
+        <div class="absolute inset-0 bg-gray-900 bg-opacity-75"></div>
+        <div class="relative flex flex-col items-center text-center text-white w-full max-w-md">
+            <div id="progress-container" class="w-full mb-4 hidden">
+                <h3 id="progress-status" class="text-lg font-semibold">Generating Reports...</h3>
+                <p id="current-report-name" class="text-sm text-gray-300 mb-2">Starting...</p>
+                <div id="progress-bar" class="w-full bg-gray-600 rounded-full h-2.5">
+                    <div id="progress-bar-fill" class="bg-indigo-500 h-2.5 rounded-full" style="width: 0%"></div>
+                </div>
+            </div>
+            <div id="generic-loader-container">
+                <div class="loader"></div>
+            </div>
+            <p id="loading-message" class="mt-4"></p>
+        </div>
+    </div>
+    <div id="messageModal" class="fixed inset-0 z-[110] items-center justify-center p-4 modal"><div class="absolute inset-0 bg-gray-900 bg-opacity-75"></div><div class="relative modal-content"></div></div>
+    <div id="confirmationModal" class="fixed inset-0 z-[110] items-center justify-center p-4 modal"><div class="absolute inset-0 bg-gray-900 bg-opacity-75"></div><div class="relative bg-white rounded-2xl shadow-lg border border-gray-200 p-8 w-full max-w-sm m-4 text-center"><h2 id="confirmation-title" class="text-2xl font-bold mb-4 text-yellow-600">Are you sure?</h2><p id="confirmation-message" class="mb-6 text-gray-500">This action cannot be undone.</p><div class="flex justify-center gap-4"><button id="cancel-button" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-5 rounded-lg w-full">Cancel</button><button id="confirm-button" class="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-5 rounded-lg w-full">Confirm</button></div></div></div>
+    
+    <div id="portfolioManagerModal" class="fixed inset-0 z-[102] items-center justify-center p-4 modal">
+        <div class="absolute inset-0 bg-gray-900 bg-opacity-75" id="close-portfolio-manager-modal-bg"></div>
+        <div class="relative bg-white rounded-2xl shadow-lg border border-gray-200 flex flex-col w-full max-w-2xl h-full max-h-[90vh] m-4">
+            <div class="p-6 border-b border-gray-200 flex justify-between items-center">
+                <h2 class="text-2xl font-bold text-gray-800">Portfolio Manager</h2>
+                <button id="close-portfolio-manager-modal" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+            </div>
+            <div id="portfolio-manager-list-container" class="overflow-y-auto flex-grow"></div>
+        </div>
+    </div>
+
+    <div id="manageStockModal" class="fixed inset-0 z-[103] items-center justify-center p-4 modal">
+        <div class="absolute inset-0 bg-gray-900 bg-opacity-75" id="close-manage-stock-modal-bg"></div>
+        <div class="relative bg-white rounded-2xl shadow-lg border border-gray-200 flex flex-col w-full max-w-2xl h-full max-h-[90vh] m-4">
+            <form id="manage-stock-form" class="flex flex-col h-full">
+                <div class="p-6 border-b border-gray-200">
+                    <h2 id="manage-stock-modal-title" class="text-2xl font-bold text-gray-800">Manage Stock</h2>
+                </div>
+                <div class="p-6 overflow-y-auto flex-grow space-y-4">
+                    <input type="hidden" id="manage-stock-original-ticker">
+                    <div>
+                        <label for="manage-stock-ticker" class="block text-sm font-medium text-gray-700">Ticker Symbol</label>
+                        <input type="text" id="manage-stock-ticker" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 uppercase" required>
+                    </div>
+                    <div>
+                        <label for="manage-stock-name" class="block text-sm font-medium text-gray-700">Company Name</label>
+                        <input type="text" id="manage-stock-name" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required>
+                    </div>
+                    <div>
+                        <label for="manage-stock-exchange" class="block text-sm font-medium text-gray-700">Exchange</label>
+                        <input type="text" id="manage-stock-exchange" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required>
+                    </div>
+                    <div>
+                        <label for="manage-stock-sector" class="block text-sm font-medium text-gray-700">Sector</label>
+                        <input type="text" id="manage-stock-sector" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 bg-gray-100" readonly>
+                    </div>
+                    <div>
+                        <label for="manage-stock-industry" class="block text-sm font-medium text-gray-700">Industry</label>
+                        <input type="text" id="manage-stock-industry" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 bg-gray-100" readonly>
+                    </div>
+
+                    <div class="border-t pt-4">
+                        <div class="flex justify-between items-center mb-2">
+                            <label class="block text-sm font-medium text-gray-700">Custom KPIs</label>
+                            <button type="button" id="suggest-kpis-button" class="bg-teal-500 hover:bg-teal-600 text-white text-sm font-semibold py-1 px-3 rounded-lg">
+                                Suggest KPIs for this Sector
+                            </button>
+                        </div>
+                        <div id="kpi-suggestion-container" class="mb-3"></div>
+                        <div id="kpi-list-container" class="space-y-3"></div>
+                        <div class="mt-3 text-right">
+                            <button type="button" id="add-kpi-button" class="bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold py-1 px-3 rounded-lg">
+                                Add Custom KPI
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="border-t pt-4">
+                        <div class="flex justify-between items-center mb-2">
+                             <label class="block text-sm font-medium text-gray-700">Purchase Lots / Dividends</label>
+                             <button type="button" id="add-transaction-button" class="bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold py-1 px-3 rounded-lg">
+                                Add Purchase / Dividend
+                            </button>
+                        </div>
+                        <div id="transaction-list-container" class="space-y-3"></div>
+                    </div>
+
+                    <div>
+                        <label for="manage-stock-status" class="block text-sm font-medium text-gray-700">Status</label>
+                        <select id="manage-stock-status" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
+                            <option value="Portfolio">Portfolio</option>
+                            <option value="Watchlist">Watchlist</option>
+                            <option value="Revisit 3 months">Revisit 3 Mo.</option>
+                            <option value="Revisit 6 months">Revisit 6 Mo.</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="p-4 border-t border-gray-200 bg-gray-50 flex justify-between items-center">
+                    <button type="button" id="delete-stock-button" class="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg">Delete</button>
+                    <div class="flex gap-4">
+                        <button type="button" id="cancel-manage-stock-button" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg">Cancel</button>
+                        <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg">Save Changes</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="stockListModal" class="fixed inset-0 z-[102] items-center justify-center p-4 modal">
+        <div class="absolute inset-0 bg-gray-900 bg-opacity-75" id="close-stock-list-modal-bg"></div>
+        <div class="relative bg-white rounded-2xl shadow-lg border border-gray-200 flex flex-col w-full max-w-3xl h-full max-h-[90vh] m-4">
+            <div class="p-6 border-b border-gray-200 flex justify-between items-center">
+                <h2 id="stock-list-modal-title" class="text-2xl font-bold text-gray-800">My List</h2>
+                <div class="flex items-center gap-2">
+                    <button id="expand-all-button" class="text-sm bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-1 px-3 rounded-lg">Expand All</button>
+                    <button id="collapse-all-button" class="text-sm bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-1 px-3 rounded-lg">Collapse All</button>
+                    <button id="close-stock-list-modal" class="text-gray-400 hover:text-gray-600 text-2xl ml-4">&times;</button>
+                </div>
+            </div>
+            <div id="stock-list-modal-content" class="overflow-y-auto flex-grow p-2"></div>
+        </div>
+    </div>
+
+<div id="rawDataViewerModal" class="fixed inset-0 z-[105] items-center justify-center p-4 modal">
+    <div class="absolute inset-0 bg-gray-900 bg-opacity-75" id="close-raw-data-viewer-modal-bg"></div>
+    <div class="relative bg-white rounded-2xl shadow-lg border border-gray-200 flex flex-col w-full max-w-6xl h-full max-h-[90vh] m-4">
+        <div class="p-6 border-b border-gray-200 flex justify-between items-center">
+            <h2 id="raw-data-viewer-modal-title" class="text-2xl font-bold text-gray-800">Raw FMP Data</h2>
+            <button id="close-raw-data-viewer-modal" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+        </div>
+        <div id="raw-data-viewer-content" class="flex-grow flex flex-col overflow-hidden">
+            <div class="border-b border-gray-200">
+                <nav id="analysis-tabs" class="flex -mb-px" aria-label="Tabs">
+                    <button class="tab-button" data-tab="dashboard">Dashboard</button>
+                    <button class="tab-button" data-tab="ai-analysis">AI Analysis</button>
+                    <button class="tab-button" data-tab="diligence-hub">Diligence Hub</button>
+                    <button class="tab-button" data-tab="ongoing-diligence">Ongoing Diligence</button>
+                    <button class="tab-button hidden" data-tab="position-analysis">Position Analysis</button>
+                    <button class="tab-button" data-tab="raw-data">Raw Data</button>
+                </nav>
+            </div>
+
+            <div class="flex-grow overflow-y-auto">
+                <div id="dashboard-tab" class="tab-content p-6 space-y-8">
+                    <div class="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-8">
+                        <div id="company-profile-display-container" class="bg-white p-6 rounded-2xl shadow-lg border border-gray-200"></div>
+                        <div id="peer-analysis-section-container" class="bg-white p-6 rounded-2xl shadow-lg border border-gray-200"></div>
+                    </div>
+                    <div id="ai-garp-summary-container" class="bg-white p-6 rounded-2xl shadow-lg border border-gray-200"></div>
+                    <div id="garp-scorecard-container" class="bg-white p-6 rounded-2xl shadow-lg border border-gray-200"></div>
+                    <div id="garp-interpretation-container" class="bg-white p-6 rounded-2xl shadow-lg border border-gray-200"></div>
+                    <div id="valuation-health-container" class="bg-white p-6 rounded-2xl shadow-lg border border-gray-200"></div>
+                </div>
+
+                <div id="ai-analysis-tab" class="tab-content hidden p-6">
+                    <div id="analysis-content-container" class="border-b pb-4 mb-4"></div>
+                    <div id="report-status-container-analysis" class="hidden p-3 mb-4 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between gap-4"></div>
+                    <div id="ai-article-container-analysis" class="prose max-w-none"></div>
+                </div>
+                
+                <div id="diligence-hub-tab" class="tab-content hidden p-6"></div>
+
+                <div id="ongoing-diligence-tab" class="tab-content hidden p-6 space-y-6"></div>
+
+                <div id="position-analysis-tab" class="tab-content hidden p-6">
+                    <div id="report-status-container-position" class="hidden p-3 mb-4 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between gap-4"></div>
+                    <div id="position-analysis-content-container"></div>
+                </div>
+
+                <div id="raw-data-tab" class="tab-content hidden p-6 bg-gray-50">
+                    <div id="raw-data-accordion-container"></div>
+                </div>
+            </div>
+        </div>
+        <div class="p-4 bg-gray-50 border-t flex justify-end gap-4">
+            <button type="button" id="close-raw-data-viewer-modal-button" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg">Close</button>
+            <button data-modal-id="rawDataViewerModal" class="save-to-db-button bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg">Save Report</button>
+        </div>
+    </div>
+</div>
+
+<div id="sessionLogModal" class="fixed inset-0 z-[102] items-center justify-center p-4 modal">
+    <div class="absolute inset-0 bg-gray-900 bg-opacity-75" id="close-session-log-modal-bg"></div>
+    <div class="relative bg-white rounded-2xl shadow-lg border border-gray-200 flex flex-col w-full max-w-4xl h-full max-h-[90vh] m-4">
+        <div class="p-6 border-b border-gray-200 flex justify-between items-center">
+            <h2 class="text-2xl font-bold text-gray-800">AI Session Log</h2>
+            <button id="close-session-log-modal" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+        </div>
+        <div id="session-log-content" class="p-6 overflow-y-auto flex-grow bg-gray-50 space-y-4">
+            </div>
+    </div>
+</div>
+
+<div id="helpModal" class="fixed inset-0 z-[104] items-center justify-center p-4 modal">
+    <div class="absolute inset-0 bg-gray-900 bg-opacity-75" id="close-help-modal-bg"></div>
+    <div class="relative bg-white rounded-2xl shadow-lg border border-gray-200 flex flex-col w-full max-w-2xl max-h-[90vh] m-4">
+        <div class="p-6 border-b border-gray-200 flex justify-between items-center">
+            <h2 id="help-modal-title" class="text-2xl font-bold text-gray-800">Report Explanation</h2>
+            <button id="close-help-modal" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+        </div>
+        <div id="help-modal-content" class="p-6 overflow-y-auto flex-grow prose max-w-none">
+            </div>
+        <div class="p-4 bg-gray-50 border-t flex justify-end">
+            <button type="button" id="close-help-modal-button" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg">Close</button>
+        </div>
+    </div>
+</div>
+
+    <script type="module" src="config.js"></script>
+    <script type="module" src="api.js"></script>
+    <script type="module" src="analysis-helpers.js"></script>
+    <script type="module" src="ui-render.js"></script>
+    <script type="module" src="ui-modals.js"></script>
+    <script type="module" src="ui-handlers.js"></script>
+    <script type="module" src="ui.js"></script>
+    <script type="module" src="main.js"></script>
+</body>
+</html>
