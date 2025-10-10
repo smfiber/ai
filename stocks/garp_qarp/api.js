@@ -1,6 +1,5 @@
 // fileName: api.js
 import { CONSTANTS, state } from './config.js';
-import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- API CALLS ---
 export async function callApi(url, options = {}) {
@@ -134,12 +133,12 @@ export async function generatePolishedArticleForSynthesis(initialPrompt, loading
 
 export async function getFmpStockData(symbol) {
     // Promise to get all endpoint documents
-    const endpointsRef = collection(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, symbol, 'endpoints');
-    const endpointsPromise = getDocs(endpointsRef);
+    const endpointsRef = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(symbol).collection('endpoints');
+    const endpointsPromise = endpointsRef.get();
 
     // Promise to get the manual overrides document
-    const overridesRef = doc(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, symbol, 'analysis', 'manual_overrides');
-    const overridesPromise = getDoc(overridesRef);
+    const overridesRef = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(symbol).collection('analysis').doc('manual_overrides');
+    const overridesPromise = overridesRef.get();
 
     const [endpointsSnapshot, overridesSnapshot] = await Promise.all([endpointsPromise, overridesPromise]);
 
@@ -164,7 +163,7 @@ export async function getFmpStockData(symbol) {
     });
     
     // Process and attach manual overrides
-    if (overridesSnapshot.exists()) {
+    if (overridesSnapshot.exists) {
         stockData.manualOverrides = overridesSnapshot.data();
     }
 
@@ -173,8 +172,8 @@ export async function getFmpStockData(symbol) {
 }
 
 export async function getGroupedFmpData(symbol) {
-    const fmpCacheRef = collection(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, symbol, 'endpoints');
-    const fmpCacheSnapshot = await getDocs(fmpCacheRef);
+    const fmpCacheRef = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(symbol).collection('endpoints');
+    const fmpCacheSnapshot = await fmpCacheRef.get();
 
     if (fmpCacheSnapshot.empty) {
         console.warn(`No FMP data found for ${symbol}.`);
