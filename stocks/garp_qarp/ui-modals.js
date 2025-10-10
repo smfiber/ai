@@ -138,12 +138,6 @@ export function openManageStockModal(stockData) {
         addKpiRow(); // Add one blank row for a new stock
     }
 
-    kpiContainer.addEventListener('click', (e) => {
-        if (e.target.closest('.remove-kpi-button')) {
-            e.target.closest('.kpi-row').remove();
-        }
-    });
-
     // --- Transaction Logic ---
     const transactionContainer = document.getElementById('transaction-list-container');
     transactionContainer.innerHTML = ''; // Clear previous rows
@@ -192,11 +186,6 @@ export function openManageStockModal(stockData) {
     addButton.parentNode.replaceChild(newAddButton, addButton);
     newAddButton.addEventListener('click', () => addTransactionRow());
     
-    const addKpiButton = document.getElementById('add-kpi-button');
-    const newAddKpiButton = addKpiButton.cloneNode(true);
-    addKpiButton.parentNode.replaceChild(newAddKpiButton, addKpiButton);
-    newAddKpiButton.addEventListener('click', () => addKpiRow());
-
     openModal(CONSTANTS.MODAL_MANAGE_STOCK);
 }
 
