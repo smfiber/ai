@@ -3,7 +3,7 @@ import { CONSTANTS, state, promptMap, ANALYSIS_REQUIREMENTS, ANALYSIS_NAMES, SEC
 import { callApi, callGeminiApi, generateRefinedArticle, generatePolishedArticleForSynthesis, getFmpStockData } from './api.js';
 import { openModal, closeModal, displayMessageInModal, openConfirmationModal, openManageStockModal, STRUCTURED_DILIGENCE_QUESTIONS, QUALITATIVE_DILIGENCE_QUESTIONS, QUARTERLY_REVIEW_QUESTIONS, ANNUAL_REVIEW_QUESTIONS, addKpiRow } from './ui-modals.js';
 import { renderPortfolioManagerList, displayReport, updateReportStatus, fetchAndCachePortfolioData, updateGarpCandidacyStatus, renderCandidacyAnalysis, renderGarpAnalysisSummary, renderDiligenceLog, renderPeerComparisonTable, renderSectorMomentumHeatMap, renderOngoingReviewLog } from './ui-render.js';
-import { _calculateFinancialAnalysisMetrics, _calculateMoatAnalysisMetrics, _calculateRiskAssessmentMetrics, _calculateCapitalAllocatorsMetrics, _calculateGarpAnalysisMetrics, _calculateGarpScorecardMetrics, CALCULATION_SUMMARIES } from './analysis-helpers.js';
+import { _calculateMoatAnalysisMetrics, _calculateCapitalAllocatorsMetrics, _calculateGarpScorecardMetrics, CALCULATION_SUMMARIES } from './analysis-helpers.js';
 
 // --- UTILITY HELPERS ---
 export async function getSavedReports(ticker, reportType) {
@@ -875,16 +875,10 @@ export async function handleAnalysisRequest(symbol, reportType, promptConfig, fo
         }
         
         let payloadData;
-        if (reportType === 'FinancialAnalysis') {
-            payloadData = _calculateFinancialAnalysisMetrics(data);
-        } else if (reportType === 'MoatAnalysis') {
+        if (reportType === 'MoatAnalysis') {
             payloadData = _calculateMoatAnalysisMetrics(data);
-        } else if (reportType === 'RiskAssessment') {
-            payloadData = _calculateRiskAssessmentMetrics(data);
         } else if (reportType === 'CapitalAllocators') {
             payloadData = _calculateCapitalAllocatorsMetrics(data);
-        } else if (reportType === 'GarpAnalysis') {
-            payloadData = _calculateGarpScorecardMetrics(data);
         } else if (reportType === 'QarpAnalysis') {
             payloadData = _calculateGarpScorecardMetrics(data);
         } else {
@@ -903,62 +897,13 @@ export async function handleAnalysisRequest(symbol, reportType, promptConfig, fo
 
         contentContainer.dataset.currentPrompt = prompt;
 
-        let finalReportContent;
-        let generatedThesis = '';
-
-        if (reportType === 'GarpAnalysis') {
-            loadingMessage.textContent = "AI is drafting the GARP Analysis report...";
-            const garpReportContent = await generateRefinedArticle(prompt, loadingMessage);
-
-            const thesisSynthesisPrompt = `
-Role: You are a concise investment writer.
-Context: You are given a full GARP analysis report and the source JSON data used to create it.
-Task: Synthesize these two sources into a formal investment thesis suitable for a thesis tracker. The thesis must consist of 2-3 bullet points, and each point must be quantified with specific data from the JSON source.
-
-GARP Report:
-${garpReportContent}
-
-Source JSON:
-${JSON.stringify(payloadData, null, 2)}
-            `;
-
-            loadingMessage.textContent = "AI is synthesizing the investment thesis...";
-            generatedThesis = await callGeminiApi(thesisSynthesisPrompt);
-
-            finalReportContent = `
-${garpReportContent}
-
----
-
-<div class="flex justify-between items-center my-4">
-    <h2 class="text-2xl font-bold !my-0">AI-Generated Investment Thesis</h2>
-    <button id="insert-thesis-button" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg text-sm">Insert into Thesis Tracker</button>
-</div>
-
-${marked.parse(generatedThesis)}
-            `;
-        } else {
-            finalReportContent = await generateRefinedArticle(prompt, loadingMessage);
-        }
+        const finalReportContent = await generateRefinedArticle(prompt, loadingMessage);
 
         contentContainer.dataset.rawMarkdown = finalReportContent;
         await autoSaveReport(symbol, reportType, finalReportContent, prompt);
         const refreshedReports = await getSavedReports(symbol, reportType);
         
         displayReport(contentContainer, finalReportContent, prompt);
-
-        if (reportType === 'GarpAnalysis') {
-            const insertButton = document.getElementById('insert-thesis-button');
-            if (insertButton) {
-                insertButton.addEventListener('click', async () => {
-                    await _saveThesisContent(symbol, generatedThesis);
-                    insertButton.textContent = 'Thesis Saved!';
-                    insertButton.disabled = true;
-                    insertButton.classList.add('bg-green-600', 'hover:bg-green-600');
-                    insertButton.classList.remove('bg-indigo-600', 'hover:bg-indigo-700');
-                }, { once: true });
-            }
-        }
         
         updateReportStatus(statusContainer, refreshedReports, refreshedReports[0]?.id, { symbol, reportType, promptConfig });
 
@@ -1104,6 +1049,60 @@ export async function handleCompounderMemoRequest(symbol, forceNew = false) {
     }
 }
 
+export async function handleBmqvMemoRequest(symbol, forceNew = false) {
+    const contentContainer = document.getElementById('ai-article-container-analysis');
+    const statusContainer = document.getElementById('report-status-container-analysis');
+    contentContainer.innerHTML = '';
+    statusContainer.classList.add('hidden');
+
+    try {
+        const reportType = 'BmqvMemo';
+        const promptConfig = promptMap[reportType];
+        const savedReports = await getSavedReports(symbol, reportType);
+
+        if (savedReports.length > 0 && !forceNew) {
+            const latestReport = savedReports[0];
+            displayReport(contentContainer, latestReport.content, latestReport.prompt);
+            updateReportStatus(statusContainer, savedReports, latestReport.id, { symbol, reportType, promptConfig });
+            return;
+        }
+
+        openModal(CONSTANTS.MODAL_LOADING);
+        const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+        loadingMessage.textContent = "Gathering prerequisite reports for BMQV Memo...";
+
+        const moatReports = await getSavedReports(symbol, 'MoatAnalysis');
+        const capitalReports = await getSavedReports(symbol, 'CapitalAllocators');
+
+        if (moatReports.length === 0 || capitalReports.length === 0) {
+            throw new Error("The 'Moat Analysis' and 'Capital Allocators' reports must be generated first.");
+        }
+
+        const profile = state.portfolioCache.find(s => s.ticker === symbol);
+        const companyName = profile ? profile.companyName : symbol;
+
+        const prompt = promptConfig.prompt
+            .replace(/{companyName}/g, companyName)
+            .replace(/{tickerSymbol}/g, symbol)
+            .replace('{moatAnalysisReport}', moatReports[0].content)
+            .replace('{capitalAllocatorsReport}', capitalReports[0].content);
+
+        const memoContent = await generateRefinedArticle(prompt, loadingMessage);
+        await autoSaveReport(symbol, reportType, memoContent, prompt);
+
+        const refreshedReports = await getSavedReports(symbol, reportType);
+        displayReport(contentContainer, memoContent, prompt);
+        updateReportStatus(statusContainer, refreshedReports, refreshedReports[0].id, { symbol, reportType, promptConfig });
+
+    } catch (error) {
+        console.error("Error generating Buffett-Munger Q&V memo:", error);
+        displayMessageInModal(`Could not generate memo: ${error.message}`, 'error');
+        contentContainer.innerHTML = `<p class="text-red-500">${error.message}</p>`;
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
 export async function handleFinalThesisRequest(symbol, forceNew = false) {
     const contentContainer = document.getElementById('ai-article-container-analysis');
     const statusContainer = document.getElementById('report-status-container-analysis');
@@ -1129,9 +1128,11 @@ export async function handleFinalThesisRequest(symbol, forceNew = false) {
         const investmentMemoReports = await getSavedReports(symbol, 'InvestmentMemo');
         const qarpReports = await getSavedReports(symbol, 'QarpAnalysis');
         const compounderReports = await getSavedReports(symbol, 'LongTermCompounder');
+        const bmqvMemoReports = await getSavedReports(symbol, 'BmqvMemo');
 
-        if (investmentMemoReports.length === 0 || qarpReports.length === 0 || compounderReports.length === 0) {
-            throw new Error("The GARP Memo, QARP Analysis, and Long-Term Compounder memos must all be generated before the final thesis.");
+
+        if (investmentMemoReports.length === 0 || qarpReports.length === 0 || compounderReports.length === 0 || bmqvMemoReports.length === 0) {
+            throw new Error("The GARP, QARP, Compounder, and BMQV memos must all be generated before the final thesis.");
         }
 
         const profile = state.portfolioCache.find(s => s.ticker === symbol);
@@ -1142,7 +1143,8 @@ export async function handleFinalThesisRequest(symbol, forceNew = false) {
             .replace(/{tickerSymbol}/g, symbol)
             .replace('{garpMemo}', investmentMemoReports[0].content)
             .replace('{qarpAnalysisReport}', qarpReports[0].content)
-            .replace('{longTermCompounderMemo}', compounderReports[0].content);
+            .replace('{longTermCompounderMemo}', compounderReports[0].content)
+            .replace('{bmqvMemo}', bmqvMemoReports[0].content);
 
         const memoContent = await generateRefinedArticle(prompt, loadingMessage);
         await autoSaveReport(symbol, reportType, memoContent, prompt);
