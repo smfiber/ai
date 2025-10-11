@@ -1139,14 +1139,10 @@ export async function handleFinalThesisRequest(symbol, forceNew = false) {
         const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
         loadingMessage.textContent = "Gathering all memos for final synthesis...";
 
-        const requiredReports = {
-            InvestmentMemo: null,
-            QarpAnalysis: null,
-            LongTermCompounder: null,
-            BmqvMemo: null
-        };
+        const requiredReportTypes = ['InvestmentMemo', 'QarpAnalysis', 'LongTermCompounder', 'BmqvMemo'];
+        const requiredReports = {};
 
-        const reportPromises = Object.keys(requiredReports).map(async (type) => {
+        const reportPromises = requiredReportTypes.map(async (type) => {
             const reports = await getSavedReports(symbol, type);
             if (reports.length === 0) {
                 throw new Error(`The prerequisite '${ANALYSIS_NAMES[type]}' has not been generated yet.`);
@@ -1156,12 +1152,40 @@ export async function handleFinalThesisRequest(symbol, forceNew = false) {
 
         await Promise.all(reportPromises);
 
+        loadingMessage.textContent = "Stage 1: Reliably extracting conclusions from each memo...";
+        
+        const conclusions = {};
+        const extractorPromptTemplate = promptMap['MemoConclusionsExtractor'].prompt;
+
+        for (const type of requiredReportTypes) {
+            const memoContent = requiredReports[type].content;
+            const extractorPrompt = extractorPromptTemplate.replace('{memoContent}', memoContent);
+            const jsonResponse = await callGeminiApi(extractorPrompt);
+            
+            try {
+                const cleanedResponse = jsonResponse.trim().replace(/^```json\s*|```\s*$/g, '');
+                const parsed = JSON.parse(cleanedResponse);
+                let key;
+                if(type === 'InvestmentMemo') key = 'garpMemo';
+                else if(type === 'QarpAnalysis') key = 'qarpAnalysis';
+                else if(type === 'LongTermCompounder') key = 'longTermCompounderMemo';
+                else if(type === 'BmqvMemo') key = 'bmqvMemo';
+                conclusions[key] = { recommendation: parsed.recommendation || 'Not Found' };
+            } catch (e) {
+                console.error(`Failed to parse JSON from extractor for ${type}:`, jsonResponse);
+                throw new Error(`The AI failed to return a valid conclusion for the ${ANALYSIS_NAMES[type]} memo.`);
+            }
+        }
+        
+        loadingMessage.textContent = "Stage 2: Synthesizing final thesis...";
+        
         const profile = state.portfolioCache.find(s => s.ticker === symbol);
         const companyName = profile ? profile.companyName : symbol;
 
         const prompt = promptConfig.prompt
             .replace(/{companyName}/g, companyName)
             .replace(/{tickerSymbol}/g, symbol)
+            .replace('{conclusionsJson}', JSON.stringify(conclusions, null, 2))
             .replace('{garpMemo}', requiredReports.InvestmentMemo.content)
             .replace('{qarpAnalysisReport}', requiredReports.QarpAnalysis.content)
             .replace('{longTermCompounderMemo}', requiredReports.LongTermCompounder.content)
