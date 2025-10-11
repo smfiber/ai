@@ -2,6 +2,7 @@
 import { CONSTANTS, state, ANALYSIS_ICONS, SECTOR_KPI_SUGGESTIONS } from './config.js';
 import { getFmpStockData, getGroupedFmpData } from './api.js';
 import { renderValuationHealthDashboard, _renderGroupedStockList, renderPortfolioManagerList, renderGarpScorecardDashboard, renderGarpInterpretationAnalysis, updateGarpCandidacyStatus, renderCandidacyAnalysis, renderGarpAnalysisSummary, renderDiligenceLog, renderPeerComparisonTable, renderOngoingReviewLog } from './ui-render.js'; 
+import { getDocs, query, collection, where, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getSavedReports } from './ui-handlers.js';
 
 // --- GENERIC MODAL HELPERS ---
@@ -286,30 +287,23 @@ export function addDiligenceEntryRow() {
     container.appendChild(entryDiv);
 }
 
-export async function openRawDataViewer(ticker) {
-    const modalId = 'rawDataViewerModal';
-    openModal(modalId);
-
-    const modal = document.getElementById(modalId);
-    modal.dataset.activeTicker = ticker; // Store ticker for later use
-    
-    // Get all tab containers
+/**
+ * Resets the analysis modal to a clean state. This is the "erase the whiteboard" action.
+ */
+function _resetAnalysisModal() {
+    // Get all tab containers and content elements
     const rawDataContainer = document.getElementById('raw-data-accordion-container');
     const aiAnalysisContainer = document.getElementById('ai-analysis-tab');
     const diligenceHubContainer = document.getElementById('diligence-hub-tab');
     const ongoingDiligenceContainer = document.getElementById('ongoing-diligence-tab');
     const positionAnalysisContainer = document.getElementById('position-analysis-content-container');
-    
-    // Get specific content elements
     const aiArticleContainer = document.getElementById('ai-article-container-analysis');
     const profileDisplayContainer = document.getElementById('company-profile-display-container');
-    const titleEl = document.getElementById('raw-data-viewer-modal-title');
     const garpScorecardContainer = document.getElementById('garp-scorecard-container');
     const positionAnalysisTabButton = document.querySelector('.tab-button[data-tab="position-analysis"]');
     const peerAnalysisContainer = document.getElementById('peer-analysis-section-container');
     
-    // Clear all content areas
-    titleEl.textContent = `Analyzing ${ticker}...`;
+    // Clear all content areas to their initial state
     rawDataContainer.innerHTML = '<div class="loader mx-auto"></div>';
     aiAnalysisContainer.innerHTML = '';
     diligenceHubContainer.innerHTML = '';
@@ -321,8 +315,10 @@ export async function openRawDataViewer(ticker) {
     peerAnalysisContainer.innerHTML = '';
     document.getElementById('valuation-health-container').innerHTML = '';
     document.getElementById('ai-garp-summary-container').innerHTML = '';
+    document.getElementById('report-status-container-analysis').innerHTML = '';
+    document.getElementById('report-status-container-analysis').classList.add('hidden');
     
-    // Reset tabs to default state
+    // Reset tabs to default view
     document.querySelectorAll('#rawDataViewerModal .tab-content').forEach(c => c.classList.add('hidden'));
     document.querySelectorAll('#rawDataViewerModal .tab-button').forEach(b => {
         b.classList.remove('active');
@@ -331,11 +327,37 @@ export async function openRawDataViewer(ticker) {
     positionAnalysisTabButton.classList.add('hidden');
     document.getElementById('dashboard-tab').classList.remove('hidden');
     document.querySelector('.tab-button[data-tab="dashboard"]').classList.add('active');
+}
+
+export async function openRawDataViewer(ticker) {
+    const modalId = 'rawDataViewerModal';
+    openModal(modalId);
+
+    // 1. ✅ ERASE THE WHITEBOARD FIRST
+    _resetAnalysisModal();
+
+    // 2. Set the context for the new analysis
+    const modal = document.getElementById(modalId);
+    modal.dataset.activeTicker = ticker; // Store ticker for later use
+    const titleEl = document.getElementById('raw-data-viewer-modal-title');
+    titleEl.textContent = `Analyzing ${ticker}...`;
 
     try {
+        // Re-acquire handles to containers now that they are clean
+        const rawDataContainer = document.getElementById('raw-data-accordion-container');
+        const aiAnalysisContainer = document.getElementById('ai-analysis-tab');
+        const diligenceHubContainer = document.getElementById('diligence-hub-tab');
+        const ongoingDiligenceContainer = document.getElementById('ongoing-diligence-tab');
+        const positionAnalysisContainer = document.getElementById('position-analysis-content-container');
+        const profileDisplayContainer = document.getElementById('company-profile-display-container');
+        const garpScorecardContainer = document.getElementById('garp-scorecard-container');
+        const positionAnalysisTabButton = document.querySelector('.tab-button[data-tab="position-analysis"]');
+        const peerAnalysisContainer = document.getElementById('peer-analysis-section-container');
+
+        // 3. THEN, FETCH THE NEW DATA
         const fmpDataPromise = getFmpStockData(ticker);
         const groupedDataPromise = getGroupedFmpData(ticker);
-        const savedReportsPromise = state.db.collection(CONSTANTS.DB_COLLECTION_AI_REPORTS).where("ticker", "==", ticker).get();
+        const savedReportsPromise = getDocs(query(collection(state.db, CONSTANTS.DB_COLLECTION_AI_REPORTS), where("ticker", "==", ticker)));
         const candidacyReportType = 'GarpCandidacy';
         const savedCandidacyReportsPromise = getSavedReports(ticker, candidacyReportType);
 
@@ -355,6 +377,7 @@ export async function openRawDataViewer(ticker) {
         const allSavedReports = savedReportsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         const profile = fmpData.profile[0];
         
+        // 4. POPULATE THE CLEAN STATE
         titleEl.textContent = `Analysis for ${ticker}`;
         const helpIconHtml = `<button data-report-type="PositionAnalysis" class="ai-help-button p-1 rounded-full hover:bg-indigo-100" title="What is this?"><svg class="w-5 h-5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" /></svg></button>`;
 
@@ -580,8 +603,8 @@ export async function openRawDataViewer(ticker) {
         renderValuationHealthDashboard(document.getElementById('valuation-health-container'), ticker, fmpData);
         renderGarpAnalysisSummary(document.getElementById('ai-garp-summary-container'), ticker);
         
-        const peerDocRef = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(ticker).collection('analysis').doc('peer_comparison');
-        const peerDocSnap = await peerDocRef.get();
+        const peerDocRef = doc(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, ticker, 'analysis', 'peer_comparison');
+        const peerDocSnap = await getDoc(peerDocRef);
         const peerHelpIcon = `<button data-report-type="PeerComparison" class="ai-help-button p-1 rounded-full hover:bg-indigo-100" title="What is this?"><svg class="w-5 h-5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z"></path></svg></button>`;
 
         peerAnalysisContainer.innerHTML = `
@@ -631,7 +654,7 @@ export async function openRawDataViewer(ticker) {
     } catch (error) {
         console.error('Error opening raw data viewer:', error);
         titleEl.textContent = `Error Loading Data for ${ticker}`;
-        aiAnalysisContainer.querySelector('#ai-article-container-analysis').innerHTML = `<p class="text-red-500 text-center">${error.message}</p>`;
-        profileDisplayContainer.innerHTML = `<p class="text-red-500 text-center">${error.message}</p>`;
+        document.getElementById('ai-article-container-analysis').innerHTML = `<p class="text-red-500 text-center">${error.message}</p>`;
+        document.getElementById('company-profile-display-container').innerHTML = `<p class="text-red-500 text-center">${error.message}</p>`;
     }
 }
