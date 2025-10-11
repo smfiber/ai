@@ -567,31 +567,51 @@ export function _extractMemoConclusions(reportContent, reportType) {
         // Use 's' flag for dot to match newlines, and 'i' for case-insensitivity
         const re = new RegExp(regex, 'si');
         const match = content.match(re);
-        return match ? match[1].trim() : 'Not Found';
+        // Clean up the match: remove asterisks, quotes, and trim whitespace
+        return match ? match[1].replace(/["*]/g, '').trim() : 'Not Found';
     };
 
     switch (reportType) {
         case 'InvestmentMemo':
-            conclusions.recommendation = getMatch('### Recommendation\\s*\\n\\s*\\*\\*(.*?)\\*\\*', reportContent);
-            conclusions.confidenceScore = getMatch('### Confidence Score\\s*\\n\\s*\\*\\*(.*?)\\*\\*', reportContent);
+            conclusions.recommendation = getMatch('### Recommendation\\s*\\n\\s*(.*?)(?=\\n)', reportContent);
+            conclusions.confidenceScore = getMatch('### Confidence Score\\s*\\n\\s*.*?([0-9.]+)', reportContent);
             break;
 
         case 'QarpAnalysis':
-            conclusions.finalVerdict = getMatch('appears to be a \\*\\*(.*?)\\*\\*', reportContent);
+            conclusions.finalVerdict = getMatch('(strong QARP candidate|borderline QARP candidate|does not meet the criteria|strong QARP candidate with significant growth caveats)', reportContent);
             break;
 
         case 'LongTermCompounder':
-            conclusions.finalVerdict = getMatch('classifications: \\*\\*(.*?)\\*\\*', reportContent);
-            conclusions.moatAssessment = getMatch('concluded that.*?possesses a \\*\\*(.*? Moat)\\*\\*', reportContent);
+            conclusions.finalVerdict = getMatch('classifications:.*?\\*\\*(.*?)\\*\\*', reportContent);
+            if (conclusions.finalVerdict === 'Not Found') { // Fallback for different phrasing
+                conclusions.finalVerdict = getMatch('classified as a \\*\\*(.*?)\\*\\*', reportContent);
+            }
+            conclusions.moatAssessment = getMatch('Moat Analysis concluded.*?\\*\\*(.*?Moat)\\*\\*', reportContent);
             break;
 
         case 'BmqvMemo':
-            conclusions.finalVerdict = getMatch('classifications: \\*\\*(.*?)\\*\\*', reportContent);
-            conclusions.moatAssessment = getMatch('A Durable Moat.*?The Moat Analysis concludes \\*\\*(.*?)\\*\\*', reportContent);
+             conclusions.finalVerdict = getMatch('classified as \\*\\*"(.*?)"\\*\\*|classifications:.*?\\*\\*(.*?)\\*\\*', reportContent);
+             if (conclusions.finalVerdict === 'Not Found') { // Fallback
+                conclusions.finalVerdict = getMatch('Final Verdict\\s*\\n.*?\\*\\*"(.*?)"\\*\\*', reportContent);
+             }
+             conclusions.moatAssessment = getMatch('Moat Analysis is.*?\\*\\*(.*?Moat)\\*\\*', reportContent);
+             if (conclusions.moatAssessment === 'Not Found') { // Fallback
+                conclusions.moatAssessment = getMatch('final verdict from the Moat Analysis is a \\*\\*(.*?Moat)\\*\\*', reportContent);
+             }
             break;
             
         default:
             return null;
+    }
+     // Cleanup any nested matches from OR statements in regex
+    for (const key in conclusions) {
+        if (typeof conclusions[key] === 'string' && conclusions[key].includes('**')) {
+            const nestedMatch = conclusions[key].match(/\*\*(.*?)\*\*/);
+            if (nestedMatch) conclusions[key] = nestedMatch[1];
+        }
+        if (typeof conclusions[key] === 'string') {
+             conclusions[key] = conclusions[key].replace(/["*]/g, '').trim();
+        }
     }
     return conclusions;
 }
