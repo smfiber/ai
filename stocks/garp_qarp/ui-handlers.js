@@ -1162,6 +1162,9 @@ export async function handleFinalThesisRequest(symbol, forceNew = false) {
             longTermCompounderMemo: _extractMemoConclusions(requiredReports.LongTermCompounder.content, 'LongTermCompounder'),
             bmqvMemo: _extractMemoConclusions(requiredReports.BmqvMemo.content, 'BmqvMemo'),
         };
+        
+        // --- DEBUGGING ---
+        console.log("Structured Conclusions JSON for Thesis Prompt:", JSON.stringify(conclusions, null, 2));
 
         const profile = state.portfolioCache.find(s => s.ticker === symbol);
         const companyName = profile ? profile.companyName : symbol;
@@ -1903,4 +1906,6 @@ export async function handleManualPeerAnalysisRequest(ticker) {
         closeModal(CONSTANTS.MODAL_LOADING);
         genericLoader.classList.remove('hidden');
     }
+}
+
 }
