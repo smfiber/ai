@@ -290,32 +290,32 @@ export function addDiligenceEntryRow() {
  * Resets the analysis modal to a clean state. This is the "erase the whiteboard" action.
  */
 function _resetAnalysisModal() {
-    // Get all tab containers and content elements
-    const rawDataContainer = document.getElementById('raw-data-accordion-container');
-    const aiAnalysisContainer = document.getElementById('ai-analysis-tab');
-    const diligenceHubContainer = document.getElementById('diligence-hub-tab');
-    const ongoingDiligenceContainer = document.getElementById('ongoing-diligence-tab');
-    const positionAnalysisContainer = document.getElementById('position-analysis-content-container');
-    const aiArticleContainer = document.getElementById('ai-article-container-analysis');
-    const profileDisplayContainer = document.getElementById('company-profile-display-container');
-    const garpScorecardContainer = document.getElementById('garp-scorecard-container');
-    const positionAnalysisTabButton = document.querySelector('.tab-button[data-tab="position-analysis"]');
-    const peerAnalysisContainer = document.getElementById('peer-analysis-section-container');
-    
+    // Helper to safely clear an element if it exists
+    const safeClear = (id, content = '') => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.innerHTML = content;
+        }
+    };
+
     // Clear all content areas to their initial state
-    rawDataContainer.innerHTML = '<div class="loader mx-auto"></div>';
-    aiAnalysisContainer.innerHTML = '';
-    diligenceHubContainer.innerHTML = '';
-    ongoingDiligenceContainer.innerHTML = '';
-    aiArticleContainer.innerHTML = '';
-    profileDisplayContainer.innerHTML = '';
-    garpScorecardContainer.innerHTML = '';
-    positionAnalysisContainer.innerHTML = '';
-    peerAnalysisContainer.innerHTML = '';
-    document.getElementById('valuation-health-container').innerHTML = '';
-    document.getElementById('ai-garp-summary-container').innerHTML = '';
-    document.getElementById('report-status-container-analysis').innerHTML = '';
-    document.getElementById('report-status-container-analysis').classList.add('hidden');
+    safeClear('raw-data-accordion-container', '<div class="loader mx-auto"></div>');
+    safeClear('ai-analysis-tab');
+    safeClear('diligence-hub-tab');
+    safeClear('ongoing-diligence-tab');
+    safeClear('position-analysis-content-container');
+    safeClear('ai-article-container-analysis');
+    safeClear('company-profile-display-container');
+    safeClear('garp-scorecard-container');
+    safeClear('peer-analysis-section-container');
+    safeClear('valuation-health-container');
+    safeClear('ai-garp-summary-container');
+    
+    const statusContainer = document.getElementById('report-status-container-analysis');
+    if (statusContainer) {
+        statusContainer.innerHTML = '';
+        statusContainer.classList.add('hidden');
+    }
     
     // Reset tabs to default view
     document.querySelectorAll('#rawDataViewerModal .tab-content').forEach(c => c.classList.add('hidden'));
@@ -323,9 +323,21 @@ function _resetAnalysisModal() {
         b.classList.remove('active');
         b.removeAttribute('data-loaded');
     });
-    positionAnalysisTabButton.classList.add('hidden');
-    document.getElementById('dashboard-tab').classList.remove('hidden');
-    document.querySelector('.tab-button[data-tab="dashboard"]').classList.add('active');
+
+    const positionAnalysisTabButton = document.querySelector('.tab-button[data-tab="position-analysis"]');
+    if (positionAnalysisTabButton) {
+        positionAnalysisTabButton.classList.add('hidden');
+    }
+    
+    const dashboardTab = document.getElementById('dashboard-tab');
+    if (dashboardTab) {
+        dashboardTab.classList.remove('hidden');
+    }
+
+    const dashboardButton = document.querySelector('.tab-button[data-tab="dashboard"]');
+    if (dashboardButton) {
+        dashboardButton.classList.add('active');
+    }
 }
 
 export async function openRawDataViewer(ticker) {
