@@ -683,9 +683,9 @@ Output Format: The final report must be in professional markdown format.
 `.trim();
 
 const FINAL_INVESTMENT_THESIS_PROMPT = `
-Role: You are the Chief Investment Officer of a multi-strategy fund. You have received three analyst reports on {companyName}: a GARP analysis, a QARP analysis, and a Long-Term Compounder assessment. Your task is to synthesize these three perspectives into a final, decisive investment thesis.
-Data Instructions: Your analysis MUST be based exclusively on the content of the three reports provided. Your primary role is to identify areas of agreement and disagreement between the reports and resolve them into a single, actionable conclusion.
-Output Format: The final report must be in professional markdown format.
+Role: You are the Chief Investment Officer of a multi-strategy fund. Your task is to synthesize three analyst reports on {companyName} into a final, decisive investment thesis.
+Data Instructions: Your analysis MUST be based exclusively on the content of the three reports provided. Your primary role is to identify areas of agreement and disagreement, weigh the evidence, and resolve them into a single, actionable conclusion.
+Output Format: The final report must be in professional markdown format and follow the structure below precisely.
 
 **Input Report 1: GARP Memo (Growth at a Reasonable Price)**
 {garpMemo}
@@ -698,17 +698,14 @@ Output Format: The final report must be in professional markdown format.
 
 # Final Investment Thesis: {companyName} ({tickerSymbol})
 
-## 1. Executive Summary & Investment Profile
-(In one paragraph, synthesize the key takeaways from all three reports. Start by identifying the stock's "investment profile." For example: "The consensus from our analysts suggests {companyName} is a **High-Quality Compounder trading at a temporary discount,**" or "This appears to be a **classic GARP stock whose long-term durability is questionable.**" State the final recommendation clearly.)
+## 1. Analyst Recommendations & Consensus
+(First, explicitly state the final recommendation from each of the three reports. Then, state the majority consensus. For example: "The GARP Memo recommends 'Pass / Sell', the QARP analysis concludes 'Does not meet criteria', and the Compounder memo offers a 'Potential Compounder with Reservations'. The majority consensus, with two of three reports being negative, is against an investment at this time.")
 
-## 2. Thesis Points of Agreement (The Core Bull Case)
-(Create a bulleted list of the strongest bullish points where at least two of the three analyst reports are in agreement. For each point, state the consensus view and briefly mention which reports support it. Example: "- **Exceptional Profitability:** Both the QARP and Compounder analyses highlight the company's consistently high ROIC, confirming its status as a high-quality business.")
+## 2. The Core Disagreement (The Fulcrum)
+(In one paragraph, identify and explain the fundamental disagreement between the reports. Do not focus on price. Focus on the core business characteristic they disagree on. For example: "The central conflict is the assessment of business quality. The GARP and QARP memos view the negative profitability and high debt as signs of a broken, low-quality business, making the low valuation a 'value trap'. In contrast, the Compounder memo views these as temporary issues, overshadowed by a durable moat and long-term potential.")
 
-## 3. Thesis Points of Disagreement (The Core Tension)
-(In one paragraph, identify the central conflict or tension between the reports. This is the most critical part of your analysis. For example: "The primary disagreement is on valuation. The GARP report sees the current P/E as a clear buying opportunity, while the QARP and Compounder memos argue that this valuation is merely 'fair' for a business of this quality and does not offer a significant margin of safety.")
-
-## 4. Final Recommendation & Rationale
-(Provide a final, one-paragraph recommendation. You must resolve the tension identified in the previous section. State which analyst's view you ultimately favor and why. Conclude with a clear, final recommendation: **"Initiate a Full Position," "Initiate a Half Position," "Add to Watchlist,"** or **"Pass."** Justify your decision based on the overall weight of the evidence.)
+## 3. Final Verdict & Rationale
+(Provide a final, one-paragraph recommendation. You must resolve the tension identified above and justify your decision. Your recommendation must align with the majority consensus unless you provide a powerful, data-driven reason to override it. Conclude with a clear, final recommendation: **"Initiate a Full Position," "Initiate a Half Position," "Add to Watchlist,"** or **"Pass."**)
 `.trim();
 
 export const promptMap = {
