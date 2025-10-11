@@ -602,39 +602,41 @@ Output Format: The final report must be in professional markdown format.
 `.trim();
 
 const FINAL_INVESTMENT_THESIS_PROMPT = `
-Role: You are the Chief Investment Officer of a multi-strategy fund. Your task is to synthesize four analyst reports on {companyName} into a final, decisive investment thesis.
+Role: You are the Chief Investment Officer of a multi-strategy fund, known for your ability to synthesize multiple analyst viewpoints into a single, decisive investment thesis. Your judgment is final.
 
-Data Instructions: Your analysis MUST be based exclusively on the content of the four reports and the structured JSON data provided.
+Data Instructions: Your entire analysis MUST be based exclusively on the full text of the four provided analyst memos.
 
 Core Task & Methodology:
-1.  **Summarize Analyst Recommendations:** In the first section, you MUST use the provided 'conclusionsJson' data to accurately state the final recommendation from each of the four reports.
-2.  **Synthesize and Conclude:** For the remaining sections, synthesize the full text of the four reports to identify areas of agreement/disagreement and form a final, actionable conclusion. You must resolve any conflicts, giving the highest weight to the conclusion from the **BMQV Memo** on overall business quality.
-3.  **Strict Output Format:** Your output MUST follow the markdown structure precisely.
+1.  **Extract & Summarize:** In the first section, you will read all four memos and accurately extract the final recommendation or verdict from each.
+2.  **Synthesize & Resolve Conflict:** In the subsequent sections, you will synthesize the full text of the reports to identify the core areas of agreement and disagreement. You must then resolve any conflicts by adhering to a strict hierarchy: the conclusion from the **BMQV Memo** regarding overall business quality is the most heavily weighted factor.
+3.  **Strict Output Format:** Your output MUST follow the markdown structure below precisely.
 
+---
+**INPUTS FOR ANALYSIS:**
+
+**1. GARP Memo:**
+{garpMemo}
+
+**2. QARP Analysis Report:**
+{qarpAnalysisReport}
+
+**3. Long-Term Compounder Memo:**
+{longTermCompounderMemo}
+
+**4. BMQV Memo:**
+{bmqvMemo}
 ---
 
 # Final Investment Thesis: {companyName} ({tickerSymbol})
 
 ## 1. Analyst Recommendations & Consensus
-(First, explicitly and accurately state the final recommendation from each of the four reports, using the data provided in 'conclusionsJson'. Then, summarize the consensus based on that data.)
+(Read each of the four memos provided above. For each memo, create a bullet point that accurately states its final recommendation or verdict. After listing the four recommendations, write a single sentence that summarizes the overall consensus or key disagreement.)
 
-## 2. The Core Disagreement (The Fulcrum)
-(In one paragraph, identify and explain the fundamental disagreement between the reports by synthesizing their full text. Focus on the core business characteristic they disagree on. For example: "The central conflict is valuation vs. quality. The GARP and QARP memos view the high valuation as a deal-breaker, while the Compounder and BMQV memos argue that the exceptional business quality and durable moat justify the premium price.")
+## 2. The Core Tension: The Investment Fulcrum
+(In one paragraph, synthesize the full text of the reports to identify the fundamental disagreement or trade-off the analysts are grappling with. For example: "The central conflict is valuation versus quality. The GARP and QARP memos view the high valuation as a deal-breaker, while the Compounder and BMQV memos argue that the exceptional business quality and durable moat justify the premium price.")
 
 ## 3. Final Verdict & Rationale
-(Provide a final, one-paragraph recommendation. You must resolve the tension identified above, giving primary weight to the **BMQV Memo's** verdict on business quality (as stated in the JSON data). Your recommendation must align with this quality-first approach unless you provide a powerful, data-driven reason from the other memos to override it. Conclude with a clear, final recommendation: **"Initiate a Full Position," "Initiate a Half Position," "Add to Watchlist,"** or **"Pass."**)
-
----
-**INPUTS FOR ANALYSIS:**
-
-**1. Structured Conclusions from Prerequisite Memos (JSON):**
-{conclusionsJson}
-
-**2. Full Memo Text (for Qualitative Synthesis):**
-- **GARP Memo:** {garpMemo}
-- **QARP Analysis:** {qarpAnalysisReport}
-- **Long-Term Compounder Memo:** {longTermCompounderMemo}
-- **BMQV Memo:** {bmqvMemo}
+(Provide a final, one-paragraph recommendation. You must resolve the tension identified above. **Your final verdict's conviction level must be anchored to the BMQV Memo's assessment of business quality.** For example, if the BMQV memo calls it "A Wonderful Business," a "Pass" recommendation is not appropriate. If it calls it "Not a Wonderful Business," a "High Conviction Buy" is inappropriate. Your rationale must explain how you weighed the other reports' findings against this anchor. Conclude with a clear, final recommendation: **"Initiate a Full Position," "Initiate a Half Position," "Add to Watchlist,"** or **"Pass."**)
 `.trim();
 
 export const promptMap = {
