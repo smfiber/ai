@@ -1907,5 +1907,3 @@ export async function handleManualPeerAnalysisRequest(ticker) {
         genericLoader.classList.remove('hidden');
     }
 }
-
-}
