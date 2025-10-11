@@ -3,7 +3,7 @@ import { CONSTANTS, state, promptMap, ANALYSIS_REQUIREMENTS, ANALYSIS_NAMES, SEC
 import { callApi, callGeminiApi, generateRefinedArticle, generatePolishedArticleForSynthesis, getFmpStockData } from './api.js';
 import { openModal, closeModal, displayMessageInModal, openConfirmationModal, openManageStockModal, STRUCTURED_DILIGENCE_QUESTIONS, QUALITATIVE_DILIGENCE_QUESTIONS, QUARTERLY_REVIEW_QUESTIONS, ANNUAL_REVIEW_QUESTIONS, addKpiRow } from './ui-modals.js';
 import { renderPortfolioManagerList, displayReport, updateReportStatus, fetchAndCachePortfolioData, updateGarpCandidacyStatus, renderCandidacyAnalysis, renderGarpAnalysisSummary, renderDiligenceLog, renderPeerComparisonTable, renderSectorMomentumHeatMap, renderOngoingReviewLog } from './ui-render.js';
-import { _calculateMoatAnalysisMetrics, _calculateCapitalAllocatorsMetrics, _calculateGarpScorecardMetrics, CALCULATION_SUMMARIES } from './analysis-helpers.js';
+import { _calculateMoatAnalysisMetrics, _calculateCapitalAllocatorsMetrics, _calculateGarpScorecardMetrics, CALCULATION_SUMMARIES, _extractMemoConclusions } from './analysis-helpers.js';
 
 // --- UTILITY HELPERS ---
 export async function getSavedReports(ticker, reportType) {
@@ -1154,29 +1154,13 @@ export async function handleFinalThesisRequest(symbol, forceNew = false) {
 
         loadingMessage.textContent = "Stage 1: Reliably extracting conclusions from each memo...";
         
-        const conclusions = {};
-        const extractorPromptTemplate = promptMap['MemoConclusionsExtractor'].prompt;
+        const conclusions = {
+            garpMemo: _extractMemoConclusions(requiredReports.InvestmentMemo.content, 'InvestmentMemo'),
+            qarpAnalysis: _extractMemoConclusions(requiredReports.QarpAnalysis.content, 'QarpAnalysis'),
+            longTermCompounderMemo: _extractMemoConclusions(requiredReports.LongTermCompounder.content, 'LongTermCompounder'),
+            bmqvMemo: _extractMemoConclusions(requiredReports.BmqvMemo.content, 'BmqvMemo'),
+        };
 
-        for (const type of requiredReportTypes) {
-            const memoContent = requiredReports[type].content;
-            const extractorPrompt = extractorPromptTemplate.replace('{memoContent}', memoContent);
-            const jsonResponse = await callGeminiApi(extractorPrompt);
-            
-            try {
-                const cleanedResponse = jsonResponse.trim().replace(/^```json\s*|```\s*$/g, '');
-                const parsed = JSON.parse(cleanedResponse);
-                let key;
-                if(type === 'InvestmentMemo') key = 'garpMemo';
-                else if(type === 'QarpAnalysis') key = 'qarpAnalysis';
-                else if(type === 'LongTermCompounder') key = 'longTermCompounderMemo';
-                else if(type === 'BmqvMemo') key = 'bmqvMemo';
-                conclusions[key] = { recommendation: parsed.recommendation || 'Not Found' };
-            } catch (e) {
-                console.error(`Failed to parse JSON from extractor for ${type}:`, jsonResponse);
-                throw new Error(`The AI failed to return a valid conclusion for the ${ANALYSIS_NAMES[type]} memo.`);
-            }
-        }
-        
         loadingMessage.textContent = "Stage 2: Synthesizing final thesis...";
         
         const profile = state.portfolioCache.find(s => s.ticker === symbol);
