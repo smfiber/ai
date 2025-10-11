@@ -1,6 +1,5 @@
 // fileName: ui-render.js
 import { CONSTANTS, state } from './config.js';
-import { getDocs, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { _calculateGarpScorecardMetrics } from './analysis-helpers.js';
 import { handleAnalysisRequest, handleGarpMemoRequest, handleGarpCandidacyRequest, handlePositionAnalysisRequest } from './ui-handlers.js';
 import { getFmpStockData } from './api.js';
@@ -22,7 +21,7 @@ export async function fetchAndCachePortfolioData() {
             console.error("Firestore is not initialized.");
             return;
         }
-        const querySnapshot = await getDocs(collection(state.db, CONSTANTS.DB_COLLECTION_PORTFOLIO));
+        const querySnapshot = await state.db.collection(CONSTANTS.DB_COLLECTION_PORTFOLIO).get();
         state.portfolioCache = querySnapshot.docs.map(doc => ({ ticker: doc.id, ...doc.data() }));
 
         // Update dashboard counts
