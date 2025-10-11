@@ -3,7 +3,7 @@ import { CONSTANTS, state, promptMap, ANALYSIS_REQUIREMENTS, ANALYSIS_NAMES, SEC
 import { callApi, callGeminiApi, generateRefinedArticle, generatePolishedArticleForSynthesis, getFmpStockData } from './api.js';
 import { openModal, closeModal, displayMessageInModal, openConfirmationModal, openManageStockModal, STRUCTURED_DILIGENCE_QUESTIONS, QUALITATIVE_DILIGENCE_QUESTIONS, QUARTERLY_REVIEW_QUESTIONS, ANNUAL_REVIEW_QUESTIONS, addKpiRow } from './ui-modals.js';
 import { renderPortfolioManagerList, displayReport, updateReportStatus, fetchAndCachePortfolioData, updateGarpCandidacyStatus, renderCandidacyAnalysis, renderGarpAnalysisSummary, renderDiligenceLog, renderPeerComparisonTable, renderSectorMomentumHeatMap, renderOngoingReviewLog } from './ui-render.js';
-import { _calculateMoatAnalysisMetrics, _calculateCapitalAllocatorsMetrics, _calculateGarpScorecardMetrics, CALCULATION_SUMMARIES } from './analysis-helpers.js';
+import { _calculateMoatAnalysisMetrics, _calculateCapitalAllocatorsMetrics, _calculateGarpScorecardMetrics, CALCULATION_SUMMARIES, _extractMemoConclusions } from './analysis-helpers.js';
 
 // --- UTILITY HELPERS ---
 export async function getSavedReports(ticker, reportType) {
@@ -1139,15 +1139,29 @@ export async function handleFinalThesisRequest(symbol, forceNew = false) {
         const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
         loadingMessage.textContent = "Gathering all memos for final synthesis...";
 
-        const investmentMemoReports = await getSavedReports(symbol, 'InvestmentMemo');
-        const qarpReports = await getSavedReports(symbol, 'QarpAnalysis');
-        const compounderReports = await getSavedReports(symbol, 'LongTermCompounder');
-        const bmqvMemoReports = await getSavedReports(symbol, 'BmqvMemo');
+        const requiredReports = {
+            InvestmentMemo: null,
+            QarpAnalysis: null,
+            LongTermCompounder: null,
+            BmqvMemo: null
+        };
 
+        const reportPromises = Object.keys(requiredReports).map(async (type) => {
+            const reports = await getSavedReports(symbol, type);
+            if (reports.length === 0) {
+                throw new Error(`The prerequisite '${ANALYSIS_NAMES[type]}' has not been generated yet.`);
+            }
+            requiredReports[type] = reports[0];
+        });
 
-        if (investmentMemoReports.length === 0 || qarpReports.length === 0 || compounderReports.length === 0 || bmqvMemoReports.length === 0) {
-            throw new Error("The GARP, QARP, Compounder, and BMQV memos must all be generated before the final thesis.");
-        }
+        await Promise.all(reportPromises);
+
+        const conclusions = {
+            garpMemo: _extractMemoConclusions(requiredReports.InvestmentMemo.content, 'InvestmentMemo'),
+            qarpAnalysis: _extractMemoConclusions(requiredReports.QarpAnalysis.content, 'QarpAnalysis'),
+            longTermCompounderMemo: _extractMemoConclusions(requiredReports.LongTermCompounder.content, 'LongTermCompounder'),
+            bmqvMemo: _extractMemoConclusions(requiredReports.BmqvMemo.content, 'BmqvMemo'),
+        };
 
         const profile = state.portfolioCache.find(s => s.ticker === symbol);
         const companyName = profile ? profile.companyName : symbol;
@@ -1155,10 +1169,11 @@ export async function handleFinalThesisRequest(symbol, forceNew = false) {
         const prompt = promptConfig.prompt
             .replace(/{companyName}/g, companyName)
             .replace(/{tickerSymbol}/g, symbol)
-            .replace('{garpMemo}', investmentMemoReports[0].content)
-            .replace('{qarpAnalysisReport}', qarpReports[0].content)
-            .replace('{longTermCompounderMemo}', compounderReports[0].content)
-            .replace('{bmqvMemo}', bmqvMemoReports[0].content);
+            .replace('{conclusionsJson}', JSON.stringify(conclusions, null, 2))
+            .replace('{garpMemo}', requiredReports.InvestmentMemo.content)
+            .replace('{qarpAnalysisReport}', requiredReports.QarpAnalysis.content)
+            .replace('{longTermCompounderMemo}', requiredReports.LongTermCompounder.content)
+            .replace('{bmqvMemo}', requiredReports.BmqvMemo.content);
 
         const memoContent = await generateRefinedArticle(prompt, loadingMessage);
         await autoSaveReport(symbol, reportType, memoContent, prompt);
