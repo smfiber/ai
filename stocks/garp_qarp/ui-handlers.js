@@ -1,7 +1,7 @@
 // fileName: ui-handlers.js
 import { CONSTANTS, state, promptMap, ANALYSIS_REQUIREMENTS, ANALYSIS_NAMES, SECTOR_KPI_SUGGESTIONS } from './config.js';
 import { callApi, callGeminiApi, generateRefinedArticle, generatePolishedArticleForSynthesis, getFmpStockData } from './api.js';
-import { openModal, closeModal, displayMessageInModal, openConfirmationModal, openManageStockModal, STRUCTURED_DILIGENCE_QUESTIONS, QUARTERLY_REVIEW_QUESTIONS, ANNUAL_REVIEW_QUESTIONS, addKpiRow } from './ui-modals.js';
+import { openModal, closeModal, displayMessageInModal, openConfirmationModal, openManageStockModal, STRUCTURED_DILIGENCE_QUESTIONS, QUALITATIVE_DILIGENCE_QUESTIONS, QUARTERLY_REVIEW_QUESTIONS, ANNUAL_REVIEW_QUESTIONS, addKpiRow } from './ui-modals.js';
 import { renderPortfolioManagerList, displayReport, updateReportStatus, fetchAndCachePortfolioData, updateGarpCandidacyStatus, renderCandidacyAnalysis, renderGarpAnalysisSummary, renderDiligenceLog, renderPeerComparisonTable, renderSectorMomentumHeatMap, renderOngoingReviewLog } from './ui-render.js';
 import { _calculateFinancialAnalysisMetrics, _calculateMoatAnalysisMetrics, _calculateRiskAssessmentMetrics, _calculateCapitalAllocatorsMetrics, _calculateGarpAnalysisMetrics, _calculateGarpScorecardMetrics, CALCULATION_SUMMARIES } from './analysis-helpers.js';
 
@@ -1240,6 +1240,56 @@ export async function handleGeneratePrereqsRequest(symbol) {
         progressContainer.classList.add('hidden');
     }
 }
+
+export async function handleQualitativeDiligenceSave(symbol) {
+    const answerElements = document.querySelectorAll('.qualitative-diligence-answer');
+    const entriesToSave = [];
+
+    answerElements.forEach(textarea => {
+        const answer = textarea.value.trim();
+        const category = textarea.dataset.category;
+        const question = QUALITATIVE_DILIGENCE_QUESTIONS[category];
+
+        if (answer && question) {
+            entriesToSave.push({ question, answer, textarea });
+        }
+    });
+
+    if (entriesToSave.length === 0) {
+        displayMessageInModal("Please add an answer to at least one qualitative diligence question before saving.", "warning");
+        return;
+    }
+
+    openModal(CONSTANTS.MODAL_LOADING);
+    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Saving ${entriesToSave.length} qualitative diligence log(s)...`;
+
+    try {
+        const savePromises = entriesToSave.map(entry => {
+            const prompt = `Diligence Question from User: ${entry.question}`;
+            const content = entry.answer;
+            return autoSaveReport(symbol, 'DiligenceInvestigation', content, prompt);
+        });
+
+        await Promise.all(savePromises);
+
+        entriesToSave.forEach(entry => {
+            entry.textarea.value = '';
+        });
+
+        const diligenceReports = await getSavedReports(symbol, 'DiligenceInvestigation');
+        const diligenceLogContainer = document.getElementById('diligence-log-container');
+        renderDiligenceLog(diligenceLogContainer, diligenceReports);
+
+        displayMessageInModal(`Successfully saved ${entriesToSave.length} qualitative diligence entries.`, 'info');
+
+    } catch (error) {
+        console.error("Error saving qualitative diligence entries:", error);
+        displayMessageInModal(`Could not save entries: ${error.message}`, 'error');
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
 
 export async function handleStructuredDiligenceSave(symbol) {
     const answerElements = document.querySelectorAll('.structured-diligence-answer');
