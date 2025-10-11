@@ -1,5 +1,5 @@
 // fileName: api.js
-import { CONSTANTS, state } from './config.js';
+import { CONSTANTS, state, promptMap } from './config.js';
 
 // --- API CALLS ---
 export async function callApi(url, options = {}) {
@@ -130,6 +130,28 @@ export async function generatePolishedArticleForSynthesis(initialPrompt, loading
     const finalArticle = await callSynthesisGeminiApi(flairPrompt);
 
     return finalArticle;
+}
+
+export async function extractSynthesisData(reportContent, reportType) {
+    const extractionPromptConfig = promptMap[`${reportType}_Extract`];
+    if (!extractionPromptConfig) {
+        console.warn(`No extraction prompt configured for report type: ${reportType}. Skipping synthesis data extraction.`);
+        return null;
+    }
+
+    try {
+        const prompt = extractionPromptConfig.prompt.replace('{reportContent}', reportContent);
+        const jsonString = await callGeminiApi(prompt);
+        
+        // Clean the response to ensure it's valid JSON
+        const cleanedResponse = jsonString.trim().replace(/^```json\s*|```\s*$/g, '');
+        const data = JSON.parse(cleanedResponse);
+        return data;
+    } catch (error) {
+        console.error(`Failed to extract synthesis data for ${reportType}:`, error);
+        // Return null or a default error structure if the extraction fails
+        return null;
+    }
 }
 
 
