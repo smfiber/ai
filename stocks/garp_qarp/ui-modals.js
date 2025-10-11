@@ -2,7 +2,6 @@
 import { CONSTANTS, state, ANALYSIS_ICONS, SECTOR_KPI_SUGGESTIONS } from './config.js';
 import { getFmpStockData, getGroupedFmpData } from './api.js';
 import { renderValuationHealthDashboard, _renderGroupedStockList, renderPortfolioManagerList, renderGarpScorecardDashboard, renderGarpInterpretationAnalysis, updateGarpCandidacyStatus, renderCandidacyAnalysis, renderGarpAnalysisSummary, renderDiligenceLog, renderPeerComparisonTable, renderOngoingReviewLog } from './ui-render.js'; 
-import { getDocs, query, collection, where, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getSavedReports } from './ui-handlers.js';
 
 // --- GENERIC MODAL HELPERS ---
@@ -357,7 +356,7 @@ export async function openRawDataViewer(ticker) {
         // 3. THEN, FETCH THE NEW DATA
         const fmpDataPromise = getFmpStockData(ticker);
         const groupedDataPromise = getGroupedFmpData(ticker);
-        const savedReportsPromise = getDocs(query(collection(state.db, CONSTANTS.DB_COLLECTION_AI_REPORTS), where("ticker", "==", ticker)));
+        const savedReportsPromise = state.db.collection(CONSTANTS.DB_COLLECTION_AI_REPORTS).where("ticker", "==", ticker).get();
         const candidacyReportType = 'GarpCandidacy';
         const savedCandidacyReportsPromise = getSavedReports(ticker, candidacyReportType);
 
@@ -603,8 +602,8 @@ export async function openRawDataViewer(ticker) {
         renderValuationHealthDashboard(document.getElementById('valuation-health-container'), ticker, fmpData);
         renderGarpAnalysisSummary(document.getElementById('ai-garp-summary-container'), ticker);
         
-        const peerDocRef = doc(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, ticker, 'analysis', 'peer_comparison');
-        const peerDocSnap = await getDoc(peerDocRef);
+        const peerDocRef = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(ticker).collection('analysis').doc('peer_comparison');
+        const peerDocSnap = await peerDocRef.get();
         const peerHelpIcon = `<button data-report-type="PeerComparison" class="ai-help-button p-1 rounded-full hover:bg-indigo-100" title="What is this?"><svg class="w-5 h-5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z"></path></svg></button>`;
 
         peerAnalysisContainer.innerHTML = `
