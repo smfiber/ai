@@ -601,36 +601,128 @@ Output Format: The final report must be in professional markdown format.
 (Provide a final, one-paragraph verdict. Based on your synthesis, does the company meet the high bar of a "wonderful business" in the Buffett-Munger sense? Conclude with one of the following classifications: **"A Wonderful Business," "A Good Business with Flaws,"** or **"Not a Wonderful Business."** Justify your choice by referencing the trade-offs between the moat and management's skill.)
 `.trim();
 
+// --- NEW EXTRACTION & SYNTHESIS PROMPTS (VERSION 2.0) ---
+
+const MOAT_ANALYSIS_EXTRACT_PROMPT = `
+Role: You are a data extraction AI.
+Task: Your only job is to read the provided 'Economic Moat Analysis' report and extract three specific pieces of information.
+CRITICAL INSTRUCTIONS:
+- You MUST return ONLY a valid JSON object.
+- Do not add any text, explanations, or markdown formatting before or after the JSON.
+- For 'verdict', extract one of three possible values: "Wide", "Narrow", or "None".
+- For 'primarySource' and 'keyWeakness', extract the single most important reason, summarizing it in a short phrase.
+
+Report Text:
+{reportContent}
+
+JSON Output Format:
+{
+  "verdict": "...",
+  "primarySource": "...",
+  "keyWeakness": "..."
+}
+`.trim();
+
+const CAPITAL_ALLOCATORS_EXTRACT_PROMPT = `
+Role: You are a data extraction AI.
+Task: Your only job is to read the provided 'Capital Allocation Report' and extract three specific pieces of information.
+CRITICAL INSTRUCTIONS:
+- You MUST return ONLY a valid JSON object.
+- Do not add any text, explanations, or markdown formatting before or after the JSON.
+- For 'verdict', extract the final letter grade (e.g., "A", "C").
+- For 'primaryStrength' and 'primaryWeakness', extract the single most important reason, summarizing it in a short phrase.
+
+Report Text:
+{reportContent}
+
+JSON Output Format:
+{
+  "verdict": "...",
+  "primaryStrength": "...",
+  "primaryWeakness": "..."
+}
+`.trim();
+
+const GARP_MEMO_EXTRACT_PROMPT = `
+Role: You are a data extraction AI.
+Task: Your only job is to read the provided 'Investment Memo' and extract three specific pieces of information.
+CRITICAL INSTRUCTIONS:
+- You MUST return ONLY a valid JSON object.
+- Do not add any text, explanations, or markdown formatting before or after the JSON.
+- For 'verdict', extract the final recommendation (e.g., "High Conviction Buy", "Pass / Sell").
+- For 'coreTension', extract the central conflict the memo aims to resolve.
+- For 'valuationVerdict', extract the memo's final conclusion on valuation.
+
+Report Text:
+{reportContent}
+
+JSON Output Format:
+{
+  "verdict": "...",
+  "coreTension": "...",
+  "valuationVerdict": "..."
+}
+`.trim();
+
+const QARP_ANALYSIS_EXTRACT_PROMPT = `
+Role: You are a data extraction AI.
+Task: Your only job is to read the provided 'QARP Analysis' report and extract three specific pieces of information.
+CRITICAL INSTRUCTIONS:
+- You MUST return ONLY a valid JSON object.
+- Do not add any text, explanations, or markdown formatting before or after the JSON.
+- For 'verdict', extract the final verdict (e.g., "strong QARP candidate", "borderline QARP candidate").
+- For 'coreTension', synthesize the main trade-off discussed in the final synthesis section.
+- For 'valuationVerdict', extract the report's overall conclusion on valuation.
+
+Report Text:
+{reportContent}
+
+JSON Output Format:
+{
+  "verdict": "...",
+  "coreTension": "...",
+  "valuationVerdict": "..."
+}
+`.trim();
+
+const FINAL_THESIS_CONFLICT_ID_PROMPT = `
+Role: You are a conflict identification AI.
+Task: Based ONLY on the following JSON of analyst summaries, what is the core disagreement between these reports? Explain the conflict in one concise paragraph. Do not use markdown or headings.
+
+JSON Data:
+{jsonData}
+`.trim();
+
 const FINAL_INVESTMENT_THESIS_PROMPT = `
 Role: You are the Chief Investment Officer of a multi-strategy fund. Your task is to synthesize four separate analyst reports on {companyName} into a final, decisive investment thesis.
-
-Data Instructions: Your analysis MUST be based exclusively on the full text of the four reports provided below.
-
-Core Task & Methodology:
-1.  **Read and Synthesize:** Read the full text of the four memos (GARP, QARP, Compounder, BMQV).
-2.  **Identify Conflicts:** Your primary goal is to identify the core tension or disagreement between the reports. For example, do the GARP/QARP memos focus on a high valuation as a deal-breaker, while the Compounder/BMQV memos argue the business quality justifies the price?
-3.  **Resolve and Recommend:** As CIO, you must resolve this conflict. Give the highest weight to the conclusion from the **BMQV Memo** on overall business quality. Form a final verdict and provide a clear, actionable recommendation.
-4.  **Strict Output Format:** Your output MUST follow the markdown structure precisely.
-
----
-
-# Final Investment Thesis: {companyName} ({tickerSymbol})
-
-## 1. The Core Disagreement (The Fulcrum)
-(In one paragraph, identify and explain the fundamental disagreement between the reports by synthesizing their full text. Focus on the core business characteristic they disagree on. For example: "The central conflict is valuation vs. quality. The GARP and QARP memos view the high valuation as a deal-breaker, while the Compounder and BMQV memos argue that the exceptional business quality and durable moat justify the premium price.")
-
-## 2. Final Verdict & Rationale
-(Provide a final, one-paragraph recommendation. You must resolve the tension identified above, giving primary weight to the **BMQV Memo's** verdict on business quality. Your recommendation must align with this quality-first approach unless you provide a powerful, data-driven reason from the other memos to override it. Conclude with a clear, final recommendation: **"Initiate a Full Position," "Initiate a Half Position," "Add to Watchlist,"** or **"Pass."**)
+CRITICAL INSTRUCTION: Your analysis MUST be based exclusively on the provided Analyst Summaries and the Core Conflict. Use the Full Memo Text only for deeper context if needed.
 
 ---
 **INPUTS FOR ANALYSIS:**
 
-**Full Memo Text (for Qualitative Synthesis):**
+**1. The Core Conflict (Your primary focus):**
+{coreConflict}
+
+**2. Analyst Summaries (Key arguments):**
+\`\`\`json
+{analystSummaries}
+\`\`\`
+
+**3. Full Memo Text (For contextual background):**
 - **GARP Memo:** {garpMemo}
 - **QARP Analysis:** {qarpAnalysisReport}
 - **Long-Term Compounder Memo:** {longTermCompounderMemo}
 - **BMQV Memo:** {bmqvMemo}
+
+---
+**YOUR TASK (Strict Output Format):**
+
+# Final Investment Thesis: {companyName} ({tickerSymbol})
+
+## 1. Final Verdict & Rationale
+(Provide a final, one-paragraph recommendation. You must resolve the tension identified in "The Core Conflict." Per our fund's mandate, give the highest weight to the **BMQV Memo's** verdict on overall business quality. Your recommendation must align with this quality-first approach unless you provide a powerful, data-driven reason from the other memos to override it. Conclude with a clear, final recommendation: **"Initiate a Full Position," "Initiate a Half Position," "Add to Watchlist,"** or **"Pass."**)
 `.trim();
+
 
 export const promptMap = {
     'PeerIdentification': {
@@ -700,6 +792,12 @@ export const promptMap = {
         prompt: BMQV_MEMO_PROMPT,
         requires: [] // Synthesis report, no direct FMP data
     },
+    // --- V2 EXTRACTION & SYNTHESIS PROMPTS ---
+    'MoatAnalysis_Extract': { prompt: MOAT_ANALYSIS_EXTRACT_PROMPT },
+    'CapitalAllocators_Extract': { prompt: CAPITAL_ALLOCATORS_EXTRACT_PROMPT },
+    'InvestmentMemo_Extract': { prompt: GARP_MEMO_EXTRACT_PROMPT },
+    'QarpAnalysis_Extract': { prompt: QARP_ANALYSIS_EXTRACT_PROMPT },
+    'FinalThesis_ConflictID': { prompt: FINAL_THESIS_CONFLICT_ID_PROMPT },
     'FinalInvestmentThesis': {
         prompt: FINAL_INVESTMENT_THESIS_PROMPT,
         requires: [] // Synthesis report, no direct FMP data
