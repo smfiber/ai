@@ -554,3 +554,44 @@ export const CALCULATION_SUMMARIES = {
     'GarpConvictionScore': 'The GARP Conviction Score is a proprietary metric calculated out of 100, designed to provide a nuanced view of a company\'s quality. Instead of a simple pass/fail, it uses a scaled scoring system. Each of the 10 GARP criteria (covering Growth, Profitability, and Valuation) is graded on its performance, earning a score multiplier (e.g., 0x for poor, 1.0x for good, 1.2x for exceptional). The final score is the weighted sum of these graded results, providing a more precise measure of a company\'s alignment with the GARP strategy.',
     'SectorMomentum': 'This report fetches historical sector performance data from the FMP API, which provides a cumulative year-to-date return for each day. It then calculates the 1-month and 3-month performance by comparing the most recent cumulative figure against the figures from one and three months prior. The Year-to-Date (YTD) figure is the latest cumulative performance data available. The AI then summarizes these trends to identify market leaders and laggards.'
 };
+
+/**
+ * Extracts key conclusions from memo reports using regular expressions.
+ * @param {string} reportContent The text content of the memo.
+ * @param {string} reportType The type of the memo ('InvestmentMemo', 'QarpAnalysis', etc.).
+ * @returns {object} A structured object with the extracted conclusions.
+ */
+export function _extractMemoConclusions(reportContent, reportType) {
+    const conclusions = {};
+    const getMatch = (regex, content) => {
+        // Use 's' flag for dot to match newlines, and 'i' for case-insensitivity
+        const re = new RegExp(regex, 'si');
+        const match = content.match(re);
+        return match ? match[1].trim() : 'Not Found';
+    };
+
+    switch (reportType) {
+        case 'InvestmentMemo':
+            conclusions.recommendation = getMatch('### Recommendation\\s*\\n\\s*\\*\\*(.*?)\\*\\*', reportContent);
+            conclusions.confidenceScore = getMatch('### Confidence Score\\s*\\n\\s*\\*\\*(.*?)\\*\\*', reportContent);
+            break;
+
+        case 'QarpAnalysis':
+            conclusions.finalVerdict = getMatch('appears to be a \\*\\*(.*?)\\*\\*', reportContent);
+            break;
+
+        case 'LongTermCompounder':
+            conclusions.finalVerdict = getMatch('classifications: \\*\\*(.*?)\\*\\*', reportContent);
+            conclusions.moatAssessment = getMatch('concluded that.*?possesses a \\*\\*(.*? Moat)\\*\\*', reportContent);
+            break;
+
+        case 'BmqvMemo':
+            conclusions.finalVerdict = getMatch('classifications: \\*\\*(.*?)\\*\\*', reportContent);
+            conclusions.moatAssessment = getMatch('A Durable Moat.*?The Moat Analysis concludes \\*\\*(.*?)\\*\\*', reportContent);
+            break;
+            
+        default:
+            return null;
+    }
+    return conclusions;
+}
