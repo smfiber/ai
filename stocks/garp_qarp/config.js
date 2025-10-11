@@ -595,7 +595,7 @@ Output Format: The final report must be in professional markdown format.
 ## 3. Potential Impairments to Long-Term Value
 (Synthesize the primary risks and concerns identified in both reports into a bulleted list.)
 - **Moat Erosion Risks:** What are the biggest long-term threats to the company's competitive advantage as identified in the Moat Analysis?
-- **Capital Allocation Red Flags:** What were the most significant weaknesses identified in the Capital Allocators report (e.g., overpaying for deals, buying back stock at high valuations)?
+- **Capital Allocation Red Flags:** What were the most significant weaknesses identified in the most significant weaknesses identified in the Capital Allocators report (e.g., overpaying for deals, buying back stock at high valuations)?
 
 ## 4. Final Verdict
 (Provide a final, one-paragraph verdict. Based on your synthesis, does the company meet the high bar of a "wonderful business" in the Buffett-Munger sense? Conclude with one of the following classifications: **"A Wonderful Business," "A Good Business with Flaws,"** or **"Not a Wonderful Business."** Justify your choice by referencing the trade-offs between the moat and management's skill.)
@@ -604,60 +604,37 @@ Output Format: The final report must be in professional markdown format.
 const FINAL_INVESTMENT_THESIS_PROMPT = `
 Role: You are the Chief Investment Officer of a multi-strategy fund. Your task is to synthesize four analyst reports on {companyName} into a final, decisive investment thesis.
 
-Data Instructions: Your analysis MUST be based exclusively on the content of the four reports provided. Your primary role is to identify areas of agreement and disagreement, weigh the evidence, and resolve them into a single, actionable conclusion.
+Data Instructions: Your analysis MUST be based exclusively on the content of the four reports and the structured JSON data provided.
 
-Core Task & Methodology: You will follow a strict two-step process.
-1.  **Step 1: Data Extraction & Verification.** First, you will extract the key conclusions from each of the four provided reports. You will present this information under a specific "Data Extraction" heading. This step is for verification only and ensures your final synthesis is grounded in the source material.
-2.  **Step 2: Synthesis & Final Verdict.** Second, using ONLY the information you extracted in Step 1, you will write the final investment thesis. You must resolve any conflicts, giving the highest weight to the conclusion from the **BMQV Memo** on overall business quality.
-
----
-### Step 1: Data Extraction & Verification (Your Internal Analysis)
-*(Do not include this section header in your final output. First, internally complete this step by extracting the following data points. Use direct quotes where possible.)*
-
-> **GARP Memo:**
-> - Recommendation: [Extract the final recommendation, e.g., "Initiate Position (Pilot)"]
-> - Confidence Score: [Extract the score, e.g., "3.6"]
->
-> **QARP Analysis:**
-> - Final Verdict: [Extract the final verdict, e.g., "This company appears to be a strong QARP candidate."]
->
-> **Long-Term Compounder Memo:**
-> - Final Verdict: [Extract the final classification, e.g., "Potential Compounder with Reservations"]
-> - Moat Assessment: [Extract the moat width, e.g., "Narrow Moat"]
->
-> **BMQV Memo:**
-> - Final Verdict: [Extract the final classification, e.g., "A Good Business with Flaws"]
-> - Moat Assessment: [Extract the moat width, e.g., "Narrow"]
+Core Task & Methodology:
+1.  **Summarize Analyst Recommendations:** In the first section, you MUST use the provided 'conclusionsJson' data to accurately state the final recommendation from each of the four reports.
+2.  **Synthesize and Conclude:** For the remaining sections, synthesize the full text of the four reports to identify areas of agreement/disagreement and form a final, actionable conclusion. You must resolve any conflicts, giving the highest weight to the conclusion from the **BMQV Memo** on overall business quality.
+3.  **Strict Output Format:** Your output MUST follow the markdown structure precisely.
 
 ---
-### Step 2: Synthesis & Final Verdict (Final Output)
-*(Now, generate the final report below using only the data you extracted above. Your output MUST follow this markdown structure precisely.)*
 
 # Final Investment Thesis: {companyName} ({tickerSymbol})
 
 ## 1. Analyst Recommendations & Consensus
-(First, explicitly and accurately state the final recommendation from each of the four reports, using the data you extracted above. Then, summarize the consensus. For example: "The GARP Memo recommends 'Initiate Position (Pilot)' while the QARP analysis is positive. The Compounder and BMQV memos express reservations, classifying the business as a 'Potential Compounder' and a 'Good Business with Flaws,' respectively. The overall consensus is that this is a high-quality company, but with notable risks and an imperfect profile.")
+(First, explicitly and accurately state the final recommendation from each of the four reports, using the data provided in 'conclusionsJson'. Then, summarize the consensus based on that data.)
 
 ## 2. The Core Disagreement (The Fulcrum)
-(In one paragraph, identify and explain the fundamental disagreement between the reports, based on your extracted data. Focus on the core business characteristic they disagree on. For example: "The central conflict is valuation vs. quality. The GARP and QARP memos view the high valuation as a deal-breaker, while the Compounder and BMQV memos argue that the exceptional business quality and durable moat justify the premium price.")
+(In one paragraph, identify and explain the fundamental disagreement between the reports by synthesizing their full text. Focus on the core business characteristic they disagree on. For example: "The central conflict is valuation vs. quality. The GARP and QARP memos view the high valuation as a deal-breaker, while the Compounder and BMQV memos argue that the exceptional business quality and durable moat justify the premium price.")
 
 ## 3. Final Verdict & Rationale
-(Provide a final, one-paragraph recommendation. You must resolve the tension identified above, giving primary weight to the **BMQV Memo's** verdict on business quality that you extracted. Your recommendation must align with this quality-first approach unless you provide a powerful, data-driven reason to override it. Conclude with a clear, final recommendation: **"Initiate a Full Position," "Initiate a Half Position," "Add to Watchlist,"** or **"Pass."**)
+(Provide a final, one-paragraph recommendation. You must resolve the tension identified above, giving primary weight to the **BMQV Memo's** verdict on business quality (as stated in the JSON data). Your recommendation must align with this quality-first approach unless you provide a powerful, data-driven reason from the other memos to override it. Conclude with a clear, final recommendation: **"Initiate a Full Position," "Initiate a Half Position," "Add to Watchlist,"** or **"Pass."**)
 
 ---
 **INPUTS FOR ANALYSIS:**
 
-**Input Report 1: GARP Memo (Growth at a Reasonable Price)**
-{garpMemo}
+**1. Structured Conclusions from Prerequisite Memos (JSON):**
+{conclusionsJson}
 
-**Input Report 2: QARP Analysis (Quality at a Reasonable Price)**
-{qarpAnalysisReport}
-
-**Input Report 3: Long-Term Compounder Memo**
-{longTermCompounderMemo}
-
-**Input Report 4: Buffett-Munger Q&V Memo**
-{bmqvMemo}
+**2. Full Memo Text (for Qualitative Synthesis):**
+- **GARP Memo:** {garpMemo}
+- **QARP Analysis:** {qarpAnalysisReport}
+- **Long-Term Compounder Memo:** {longTermCompounderMemo}
+- **BMQV Memo:** {bmqvMemo}
 `.trim();
 
 export const promptMap = {
@@ -765,3 +742,5 @@ export const ANALYSIS_NAMES = {
     'BmqvMemo': 'Buffett-Munger Q&V Memo',
     'FinalInvestmentThesis': 'Final Investment Thesis'
 };
+
+}
