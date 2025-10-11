@@ -1,6 +1,6 @@
 // fileName: ui-handlers.js
 import { CONSTANTS, state, promptMap, ANALYSIS_REQUIREMENTS, ANALYSIS_NAMES, SECTOR_KPI_SUGGESTIONS } from './config.js';
-import { callApi, callGeminiApi, generateRefinedArticle, generatePolishedArticleForSynthesis, getFmpStockData } from './api.js';
+import { callApi, callGeminiApi, generateRefinedArticle, generatePolishedArticleForSynthesis, getFmpStockData, extractSynthesisData } from './api.js';
 import { openModal, closeModal, displayMessageInModal, openConfirmationModal, openManageStockModal, STRUCTURED_DILIGENCE_QUESTIONS, QUALITATIVE_DILIGENCE_QUESTIONS, QUARTERLY_REVIEW_QUESTIONS, ANNUAL_REVIEW_QUESTIONS, addKpiRow } from './ui-modals.js';
 import { renderPortfolioManagerList, displayReport, updateReportStatus, fetchAndCachePortfolioData, updateGarpCandidacyStatus, renderCandidacyAnalysis, renderGarpAnalysisSummary, renderDiligenceLog, renderPeerComparisonTable, renderSectorMomentumHeatMap, renderOngoingReviewLog } from './ui-render.js';
 import { _calculateMoatAnalysisMetrics, _calculateCapitalAllocatorsMetrics, _calculateGarpScorecardMetrics, CALCULATION_SUMMARIES } from './analysis-helpers.js';
@@ -33,7 +33,7 @@ function buildAnalysisPayload(fullData, requiredEndpoints) {
     return payload;
 }
 
-async function autoSaveReport(ticker, reportType, content, prompt, diligenceQuestions = null) {
+async function autoSaveReport(ticker, reportType, content, prompt, diligenceQuestions = null, synthesisData = null) {
     try {
         const reportTypesToPreserve = [
             'DiligenceInvestigation',
@@ -63,7 +63,8 @@ async function autoSaveReport(ticker, reportType, content, prompt, diligenceQues
             content,
             prompt: prompt || '',
             savedAt: firebase.firestore.Timestamp.now(),
-            diligenceQuestions: diligenceQuestions
+            diligenceQuestions: diligenceQuestions,
+            ...(synthesisData && { synthesis_data: synthesisData })
         };
         await state.db.collection(CONSTANTS.DB_COLLECTION_AI_REPORTS).add(reportData);
         console.log(`${reportType} for ${ticker} was auto-saved successfully.`);
@@ -912,9 +913,15 @@ export async function handleAnalysisRequest(symbol, reportType, promptConfig, fo
         contentContainer.dataset.currentPrompt = prompt;
 
         const finalReportContent = await generateRefinedArticle(prompt, loadingMessage);
+        
+        let synthesisData = null;
+        const synthesisReportTypes = ['MoatAnalysis', 'CapitalAllocators', 'QarpAnalysis'];
+        if (synthesisReportTypes.includes(reportType)) {
+            synthesisData = await extractSynthesisData(finalReportContent, reportType);
+        }
 
         contentContainer.dataset.rawMarkdown = finalReportContent;
-        await autoSaveReport(symbol, reportType, finalReportContent, prompt);
+        await autoSaveReport(symbol, reportType, finalReportContent, prompt, null, synthesisData);
         const refreshedReports = await getSavedReports(symbol, reportType);
         
         displayReport(contentContainer, finalReportContent, prompt);
@@ -987,8 +994,9 @@ export async function handleGarpMemoRequest(symbol, forceNew = false) {
             .replace('{garpCandidacyReport}', candidacyReportContent);
 
         const memoContent = await generateRefinedArticle(prompt, loadingMessage);
+        const synthesisData = await extractSynthesisData(memoContent, reportType);
         
-        await autoSaveReport(symbol, reportType, memoContent, prompt);
+        await autoSaveReport(symbol, reportType, memoContent, prompt, null, synthesisData);
         const refreshedReports = await getSavedReports(symbol, reportType);
         const latestReport = refreshedReports[0];
 
@@ -1048,7 +1056,8 @@ export async function handleCompounderMemoRequest(symbol, forceNew = false) {
             .replace('{capitalAllocatorsReport}', capitalReports[0].content);
 
         const memoContent = await generateRefinedArticle(prompt, loadingMessage);
-        await autoSaveReport(symbol, reportType, memoContent, prompt);
+        const synthesisData = await extractSynthesisData(memoContent, reportType);
+        await autoSaveReport(symbol, reportType, memoContent, prompt, null, synthesisData);
 
         const refreshedReports = await getSavedReports(symbol, reportType);
         displayReport(contentContainer, memoContent, prompt);
@@ -1102,7 +1111,8 @@ export async function handleBmqvMemoRequest(symbol, forceNew = false) {
             .replace('{capitalAllocatorsReport}', capitalReports[0].content);
 
         const memoContent = await generateRefinedArticle(prompt, loadingMessage);
-        await autoSaveReport(symbol, reportType, memoContent, prompt);
+        const synthesisData = await extractSynthesisData(memoContent, reportType);
+        await autoSaveReport(symbol, reportType, memoContent, prompt, null, synthesisData);
 
         const refreshedReports = await getSavedReports(symbol, reportType);
         displayReport(contentContainer, memoContent, prompt);
@@ -1137,9 +1147,13 @@ export async function handleFinalThesisRequest(symbol, forceNew = false) {
 
         openModal(CONSTANTS.MODAL_LOADING);
         const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
-        loadingMessage.textContent = "Gathering all memos for final synthesis...";
+        
+        // --- ITERATIVE WORKFLOW ---
 
+        // 1. Gather Synthesis Data
+        loadingMessage.textContent = "Gathering prerequisite analyst summaries...";
         const requiredReportTypes = ['InvestmentMemo', 'QarpAnalysis', 'LongTermCompounder', 'BmqvMemo'];
+        const analystSummaries = {};
         const requiredReports = {};
 
         const reportPromises = requiredReportTypes.map(async (type) => {
@@ -1147,29 +1161,41 @@ export async function handleFinalThesisRequest(symbol, forceNew = false) {
             if (reports.length === 0) {
                 throw new Error(`The prerequisite '${ANALYSIS_NAMES[type]}' has not been generated yet.`);
             }
-            requiredReports[type] = reports[0];
+            const reportData = reports[0];
+            if (!reportData.synthesis_data) {
+                throw new Error(`The '${ANALYSIS_NAMES[type]}' report is outdated and missing synthesis data. Please regenerate it first.`);
+            }
+            analystSummaries[type] = reportData.synthesis_data;
+            requiredReports[type] = reportData;
         });
-
         await Promise.all(reportPromises);
 
+        // 2. Identify Core Conflict
+        loadingMessage.textContent = "AI is identifying the core conflict...";
+        const conflictPromptConfig = promptMap['FinalThesis_ConflictID'];
+        const conflictPrompt = conflictPromptConfig.prompt.replace('{jsonData}', JSON.stringify(analystSummaries, null, 2));
+        const coreConflict = await callGeminiApi(conflictPrompt);
+
+        // 3. Generate Final Thesis
         loadingMessage.textContent = "Synthesizing final thesis...";
-        
         const profile = state.portfolioCache.find(s => s.ticker === symbol);
         const companyName = profile ? profile.companyName : symbol;
 
-        const prompt = promptConfig.prompt
+        const finalPrompt = promptConfig.prompt
             .replace(/{companyName}/g, companyName)
             .replace(/{tickerSymbol}/g, symbol)
+            .replace('{coreConflict}', coreConflict)
+            .replace('{analystSummaries}', JSON.stringify(analystSummaries, null, 2))
             .replace('{garpMemo}', requiredReports.InvestmentMemo.content)
             .replace('{qarpAnalysisReport}', requiredReports.QarpAnalysis.content)
             .replace('{longTermCompounderMemo}', requiredReports.LongTermCompounder.content)
             .replace('{bmqvMemo}', requiredReports.BmqvMemo.content);
 
-        const memoContent = await generateRefinedArticle(prompt, loadingMessage);
-        await autoSaveReport(symbol, reportType, memoContent, prompt);
+        const memoContent = await generateRefinedArticle(finalPrompt, loadingMessage);
+        await autoSaveReport(symbol, reportType, memoContent, finalPrompt);
 
         const refreshedReports = await getSavedReports(symbol, reportType);
-        displayReport(contentContainer, memoContent, prompt);
+        displayReport(contentContainer, memoContent, finalPrompt);
         updateReportStatus(statusContainer, refreshedReports, refreshedReports[0].id, { symbol, reportType, promptConfig });
 
     } catch (error) {
@@ -1230,13 +1256,15 @@ export async function handleGeneratePrereqsRequest(symbol) {
                 .replace('{jsonData}', JSON.stringify(payloadData, null, 2));
 
             const reportContent = await generateRefinedArticle(prompt, loadingMessage);
+            const synthesisData = await extractSynthesisData(reportContent, reportType);
 
             const reportData = {
                 ticker: symbol,
                 reportType: reportType,
                 content: reportContent,
                 savedAt: firebase.firestore.Timestamp.now(),
-                prompt: prompt
+                prompt: prompt,
+                synthesis_data: synthesisData
             };
             await state.db.collection(CONSTANTS.DB_COLLECTION_AI_REPORTS).add(reportData);
 
