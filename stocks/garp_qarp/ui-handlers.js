@@ -35,13 +35,35 @@ function buildAnalysisPayload(fullData, requiredEndpoints) {
 
 async function autoSaveReport(ticker, reportType, content, prompt, diligenceQuestions = null) {
     try {
+        const reportTypesToPreserve = [
+            'DiligenceInvestigation',
+            'FilingDiligence',
+            'EightKAnalysis'
+        ];
+
+        if (!reportTypesToPreserve.includes(reportType)) {
+            const reportsRef = state.db.collection(CONSTANTS.DB_COLLECTION_AI_REPORTS);
+            const q = reportsRef.where("ticker", "==", ticker).where("reportType", "==", reportType);
+            const querySnapshot = await q.get();
+
+            const deletePromises = [];
+            querySnapshot.forEach(doc => {
+                deletePromises.push(doc.ref.delete());
+            });
+            
+            if (deletePromises.length > 0) {
+                await Promise.all(deletePromises);
+                console.log(`Deleted ${deletePromises.length} old report(s) of type ${reportType} for ${ticker}.`);
+            }
+        }
+
         const reportData = {
             ticker,
             reportType,
             content,
             prompt: prompt || '',
             savedAt: firebase.firestore.Timestamp.now(),
-            diligenceQuestions: diligenceQuestions // Save the questions with the report
+            diligenceQuestions: diligenceQuestions
         };
         await state.db.collection(CONSTANTS.DB_COLLECTION_AI_REPORTS).add(reportData);
         console.log(`${reportType} for ${ticker} was auto-saved successfully.`);
@@ -580,12 +602,11 @@ export async function handlePositionAnalysisRequest(ticker, forceNew = false) {
 
         const analysisResult = await callGeminiApi(prompt);
         
-        const finalHtml = marked.parse(analysisResult);
-        await autoSaveReport(ticker, reportType, finalHtml, prompt);
+        await autoSaveReport(ticker, reportType, analysisResult, prompt);
         
         const refreshedReports = await getSavedReports(ticker, reportType);
 
-        displayReport(container, finalHtml, prompt);
+        displayReport(container, analysisResult, prompt);
         updateReportStatus(statusContainer, refreshedReports, refreshedReports[0].id, { reportType, symbol: ticker });
 
     } catch (error) {
@@ -686,14 +707,7 @@ export async function handleSaveReportToDb() {
     document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Saving ${reportType} report to database...`;
 
     try {
-        const reportData = {
-            ticker: symbol,
-            reportType: reportType,
-            content: contentToSave,
-            savedAt: firebase.firestore.Timestamp.now(),
-            prompt: promptToSave || ''
-        };
-        await state.db.collection(CONSTANTS.DB_COLLECTION_AI_REPORTS).add(reportData);
+        await autoSaveReport(symbol, reportType, contentToSave, promptToSave);
         displayMessageInModal("Report saved successfully!", "info");
         
         const analysisContentContainer = document.getElementById('analysis-content-container');
