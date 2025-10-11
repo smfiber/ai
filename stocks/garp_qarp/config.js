@@ -607,9 +607,9 @@ Role: You are the Chief Investment Officer of a multi-strategy fund, known for y
 Data Instructions: Your entire analysis MUST be based exclusively on the full text of the four provided analyst memos.
 
 Core Task & Methodology:
-1.  **Extract & Summarize:** In the first section, you will read all four memos and accurately extract the final recommendation or verdict from each.
-2.  **Synthesize & Resolve Conflict:** In the subsequent sections, you will synthesize the full text of the reports to identify the core areas of agreement and disagreement. You must then resolve any conflicts by adhering to a strict hierarchy: the conclusion from the **BMQV Memo** regarding overall business quality is the most heavily weighted factor.
-3.  **Strict Output Format:** Your output MUST follow the markdown structure below precisely.
+1.  **Extract & Quote:** In the first section, you will read each memo, find the final recommendation (usually under a 'Final Verdict' or 'Recommendation' heading), and **quote the exact bolded text** verbatim. Do not summarize or rephrase.
+2.  **Synthesize & Resolve Conflict:** In the subsequent sections, you will synthesize the full text of the reports to identify the core areas of agreement and disagreement.
+3.  **Anchor the Final Verdict:** You must resolve any conflicts by adhering to a strict rule: the final verdict's conviction level **must be anchored to the exact quoted verdict from the BMQV Memo** that you identified in Section 1. Your final rationale must explicitly reference that verdict and explain why your recommendation is a logical consequence.
 
 ---
 **INPUTS FOR ANALYSIS:**
@@ -630,13 +630,13 @@ Core Task & Methodology:
 # Final Investment Thesis: {companyName} ({tickerSymbol})
 
 ## 1. Analyst Recommendations & Consensus
-(Read each of the four memos provided above. For each memo, create a bullet point that accurately states its final recommendation or verdict. After listing the four recommendations, write a single sentence that summarizes the overall consensus or key disagreement.)
+(Read each of the four memos provided above. For each memo, create a bullet point that accurately quotes its final recommendation. After listing the four recommendations, write a single sentence that summarizes the overall consensus or key disagreement.)
 
 ## 2. The Core Tension: The Investment Fulcrum
 (In one paragraph, synthesize the full text of the reports to identify the fundamental disagreement or trade-off the analysts are grappling with. For example: "The central conflict is valuation versus quality. The GARP and QARP memos view the high valuation as a deal-breaker, while the Compounder and BMQV memos argue that the exceptional business quality and durable moat justify the premium price.")
 
 ## 3. Final Verdict & Rationale
-(Provide a final, one-paragraph recommendation. You must resolve the tension identified above. **Your final verdict's conviction level must be anchored to the BMQV Memo's assessment of business quality.** For example, if the BMQV memo calls it "A Wonderful Business," a "Pass" recommendation is not appropriate. If it calls it "Not a Wonderful Business," a "High Conviction Buy" is inappropriate. Your rationale must explain how you weighed the other reports' findings against this anchor. Conclude with a clear, final recommendation: **"Initiate a Full Position," "Initiate a Half Position," "Add to Watchlist,"** or **"Pass."**)
+(Provide a final, one-paragraph recommendation. You must resolve the tension identified above. **First, you must re-state the exact quoted verdict from the BMQV Memo.** Your final recommendation must be logically consistent with that verdict. Your rationale must explain how you weighed the other reports' findings against this anchor. Conclude with a clear, final recommendation: **"Initiate a Full Position," "Initiate a Half Position," "Add to Watchlist,"** or **"Pass."**)
 `.trim();
 
 export const promptMap = {
