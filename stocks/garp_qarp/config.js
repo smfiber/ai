@@ -685,6 +685,25 @@ JSON Output Format:
 }
 `.trim();
 
+const COMPOUNDER_BMQV_EXTRACT_PROMPT = `
+Role: You are a data extraction AI.
+Task: Your only job is to read the provided 'Compounder' or 'BMQV' memo and extract two specific pieces of information.
+CRITICAL INSTRUCTIONS:
+- You MUST return ONLY a valid JSON object.
+- Do not add any text, explanations, or markdown formatting before or after the JSON.
+- For 'verdict', extract the final, one-sentence classification (e.g., "High-Conviction Compounder", "Not a Compounder", "A Wonderful Business", "Not a Wonderful Business").
+- For 'coreTension', summarize the "Core Investment Question" or "Core Tension" identified in the report in a single sentence.
+
+Report Text:
+{reportContent}
+
+JSON Output Format:
+{
+  "verdict": "...",
+  "coreTension": "..."
+}
+`.trim();
+
 const FINAL_THESIS_CONFLICT_ID_PROMPT = `
 Role: You are a conflict identification AI.
 Task: Based ONLY on the following JSON of analyst summaries, what is the core disagreement between these reports? Explain the conflict in one concise paragraph. Do not use markdown or headings.
@@ -797,6 +816,8 @@ export const promptMap = {
     'CapitalAllocators_Extract': { prompt: CAPITAL_ALLOCATORS_EXTRACT_PROMPT },
     'InvestmentMemo_Extract': { prompt: GARP_MEMO_EXTRACT_PROMPT },
     'QarpAnalysis_Extract': { prompt: QARP_ANALYSIS_EXTRACT_PROMPT },
+    'LongTermCompounder_Extract': { prompt: COMPOUNDER_BMQV_EXTRACT_PROMPT },
+    'BmqvMemo_Extract': { prompt: COMPOUNDER_BMQV_EXTRACT_PROMPT },
     'FinalThesis_ConflictID': { prompt: FINAL_THESIS_CONFLICT_ID_PROMPT },
     'FinalInvestmentThesis': {
         prompt: FINAL_INVESTMENT_THESIS_PROMPT,
