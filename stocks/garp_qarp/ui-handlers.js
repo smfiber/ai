@@ -3,7 +3,7 @@ import { CONSTANTS, state, promptMap, ANALYSIS_REQUIREMENTS, ANALYSIS_NAMES, SEC
 import { callApi, callGeminiApi, generateRefinedArticle, generatePolishedArticleForSynthesis, getFmpStockData } from './api.js';
 import { openModal, closeModal, displayMessageInModal, openConfirmationModal, openManageStockModal, STRUCTURED_DILIGENCE_QUESTIONS, QUALITATIVE_DILIGENCE_QUESTIONS, QUARTERLY_REVIEW_QUESTIONS, ANNUAL_REVIEW_QUESTIONS, addKpiRow } from './ui-modals.js';
 import { renderPortfolioManagerList, displayReport, updateReportStatus, fetchAndCachePortfolioData, updateGarpCandidacyStatus, renderCandidacyAnalysis, renderGarpAnalysisSummary, renderDiligenceLog, renderPeerComparisonTable, renderSectorMomentumHeatMap, renderOngoingReviewLog } from './ui-render.js';
-import { _calculateMoatAnalysisMetrics, _calculateCapitalAllocatorsMetrics, _calculateGarpScorecardMetrics, CALCULATION_SUMMARIES, _extractMemoConclusions } from './analysis-helpers.js';
+import { _calculateMoatAnalysisMetrics, _calculateCapitalAllocatorsMetrics, _calculateGarpScorecardMetrics, CALCULATION_SUMMARIES } from './analysis-helpers.js';
 
 // --- UTILITY HELPERS ---
 export async function getSavedReports(ticker, reportType) {
@@ -1156,23 +1156,12 @@ export async function handleFinalThesisRequest(symbol, forceNew = false) {
 
         await Promise.all(reportPromises);
 
-        const conclusions = {
-            garpMemo: _extractMemoConclusions(requiredReports.InvestmentMemo.content, 'InvestmentMemo'),
-            qarpAnalysis: _extractMemoConclusions(requiredReports.QarpAnalysis.content, 'QarpAnalysis'),
-            longTermCompounderMemo: _extractMemoConclusions(requiredReports.LongTermCompounder.content, 'LongTermCompounder'),
-            bmqvMemo: _extractMemoConclusions(requiredReports.BmqvMemo.content, 'BmqvMemo'),
-        };
-        
-        // --- DEBUGGING ---
-        console.log("Structured Conclusions JSON for Thesis Prompt:", JSON.stringify(conclusions, null, 2));
-
         const profile = state.portfolioCache.find(s => s.ticker === symbol);
         const companyName = profile ? profile.companyName : symbol;
 
         const prompt = promptConfig.prompt
             .replace(/{companyName}/g, companyName)
             .replace(/{tickerSymbol}/g, symbol)
-            .replace('{conclusionsJson}', JSON.stringify(conclusions, null, 2))
             .replace('{garpMemo}', requiredReports.InvestmentMemo.content)
             .replace('{qarpAnalysisReport}', requiredReports.QarpAnalysis.content)
             .replace('{longTermCompounderMemo}', requiredReports.LongTermCompounder.content)
