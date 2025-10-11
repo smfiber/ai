@@ -714,15 +714,15 @@ JSON Data:
 
 const FINAL_INVESTMENT_THESIS_PROMPT = `
 Role: You are the Chief Investment Officer of a multi-strategy fund. Your task is to synthesize four separate analyst reports on {companyName} into a final, decisive investment thesis.
-CRITICAL INSTRUCTION: Your analysis MUST be based exclusively on the provided Analyst Summaries and the Core Conflict. Use the Full Memo Text only for deeper context if needed.
+CRITICAL INSTRUCTION: Your analysis must be based exclusively on the provided inputs. You must consider the arguments from all four memos equally to form an objective, evidence-based conclusion.
 
 ---
 **INPUTS FOR ANALYSIS:**
 
-**1. The Core Conflict (Your primary focus):**
+**1. The Core Conflict (The central disagreement you must resolve):**
 {coreConflict}
 
-**2. Analyst Summaries (Key arguments):**
+**2. Analyst Summaries (The key arguments):**
 \`\`\`json
 {analystSummaries}
 \`\`\`
@@ -738,8 +738,14 @@ CRITICAL INSTRUCTION: Your analysis MUST be based exclusively on the provided An
 
 # Final Investment Thesis: {companyName} ({tickerSymbol})
 
-## 1. Final Verdict & Rationale
-(Provide a final, one-paragraph recommendation. You must resolve the tension identified in "The Core Conflict." Per our fund's mandate, give the highest weight to the **BMQV Memo's** verdict on overall business quality. Your recommendation must align with this quality-first approach unless you provide a powerful, data-driven reason from the other memos to override it. Conclude with a clear, final recommendation: **"Initiate a Full Position," "Initiate a Half Position," "Add to Watchlist,"** or **"Pass."**)
+## 1. The Core Disagreement
+(In one paragraph, restate the core conflict identified in your inputs. This sets the stage for your analysis.)
+
+## 2. Resolving the Conflict: The Weight of the Evidence
+(In one or two paragraphs, resolve the core conflict. Objectively weigh the evidence from all four memos. For example, analyze whether the bullish "turnaround" and "valuation" arguments from the GARP/QARP memos are more compelling than the bearish "historical quality" and "management" concerns from the BMQV/Compounder memos, or vice versa. Your reasoning here must directly lead to your final recommendation.)
+
+## 3. Final Recommendation & Rationale
+(First, provide a single, bolded recommendation: **"Initiate a Full Position," "Initiate a Half Position," "Add to Watchlist,"** or **"Pass."** Then, in one concluding paragraph, provide a concise justification for your decision, summarizing the most critical factors from your analysis in Section 2.)
 `.trim();
 
 
