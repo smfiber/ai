@@ -742,5 +742,3 @@ export const ANALYSIS_NAMES = {
     'BmqvMemo': 'Buffett-Munger Q&V Memo',
     'FinalInvestmentThesis': 'Final Investment Thesis'
 };
-
-}
