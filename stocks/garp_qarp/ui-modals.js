@@ -454,7 +454,7 @@ export async function openRawDataViewer(ticker) {
         const garpMemoBtn = `<button data-symbol="${ticker}" id="garp-memo-button" data-report-type="InvestmentMemo" class="ai-analysis-button bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg text-base">GARP Memo</button>`;
         const compounderBtn = `<button data-symbol="${ticker}" id="long-term-compounder-button" data-report-type="LongTermCompounder" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg text-base">Compounder Memo</button>`;
         const bmqvBtn = `<button data-symbol="${ticker}" id="bmqv-memo-button" data-report-type="BmqvMemo" class="ai-analysis-button bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg text-base">BMQV Memo</button>`;
-        const qarpBtn = `<button data-symbol="${ticker}" id="qarp-analysis-button" data-report-type="QarpAnalysis" class="ai-analysis-button bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg text-base">QARP Analysis</button>`;
+        const qarpBtn = `<button data-symbol="${ticker}" id="qarp-analysis-button" data-report-type="QarpAnalysis" class="ai-analysis-button bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg text-base">QARP Memo</button>`;
         const finalThesisBtn = `<button data-symbol="${ticker}" id="final-thesis-button" data-report-type="FinalInvestmentThesis" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg text-base">Final Thesis</button>`;
         
         aiAnalysisContainer.innerHTML = `
