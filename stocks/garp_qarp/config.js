@@ -123,93 +123,6 @@ Example Output:
 ["TICKER1", "TICKER2", "TICKER3"]
 `.trim();
 
-const FINANCIAL_ANALYSIS_PROMPT = `
-Role: You are a financial analyst AI who excels at explaining complex topics to everyday investors. Your purpose is to generate a rigorous, data-driven financial analysis that is also educational, objective, and easy to understand. Use relatable analogies to clarify financial concepts.
-Data Instructions: Your analysis MUST be based *exclusively* on the pre-calculated metrics and summaries provided in the JSON data below. Do NOT attempt to recalculate any values. If a specific data point is "N/A" or missing, state that clearly in your analysis.
-Output Format: The final report must be in professional markdown format. Use # for the main title, ## for major sections, ### for sub-sections, and bullet points for key data points.
-IMPORTANT: Do not include any HTML tags in your output. Generate pure markdown only.
-Based on the provided data for {companyName} (Ticker: {tickerSymbol}), generate a multi-faceted financial report. Follow the structure below, replacing all instructions with your analysis derived from the JSON data.
-
-JSON Data with Pre-Calculated Metrics:
-{jsonData}
-
-# Comprehensive Financial Analysis: {companyName} ({tickerSymbol})
-## 1. Executive Summary
-Write a concise, one-paragraph summary synthesizing the most important takeaways about this company's financial health, performance, and overall story as a potential investment.
-## 2. Company Profile & Market Context
-### Business Description
-In simple terms, describe the company's business using the 'description', 'sector', and 'industry' from the JSON. Avoid jargon.
-### Market Snapshot
-- **Market Capitalization:** State the value from \`summary.marketCap\`.
-- **Latest Price:** State the value from \`summary.price\`.
-- **52-Week Price Range:** State the value from \`summary.priceRange\`.
-- **Analyst Consensus:** Report the analyst consensus from \`summary.analystConsensus\`.
-- **Insider Ownership:** Report the insider ownership from \`summary.insiderOwnership\`, stating if it's N/A.
-## 3. Annual Performance & Profitability (The Long-Term View)
-### 3.1. Annual Revenue & Earnings Trend
-- **Revenue Trend:** Describe the company's long-term top-line performance using the text from \`performance.revenueTrend\`.
-- **Net Income Trend:** Describe the company's long-term bottom-line performance using the text from \`performance.netIncomeTrend\`.
-### 3.2. Annual Margin Analysis (The Quality of Sales)
-- **Gross & Operating Margins:** Explain what these margins represent. Describe the trend in the company's core profitability by using the 'status' from \`performance.grossProfitMargin\` and \`performance.operatingProfitMargin\`.
-### 3.3. Annual Net Profitability & Returns
-- **Net Profit Margin:** Explain what this means. What is the trend according to the 'status' in \`performance.netProfitMargin\`?
-- **Return on Equity (ROE):** Explain ROE as a "report card" for how well management uses shareholder money. How effective is the company based on the 'quality' from \`performance.returnOnEquity\`?
-## 4. Recent Quarterly Performance (The Latest Snapshot)
-This section provides a look at the company's most recent performance, which can indicate current momentum.
-- **Most Recent Quarter (MRQ):** State the quarter ending date from \`recentPerformance.mrqDate\`.
-- **MRQ Revenue & YoY Growth:** Report the revenue for the latest quarter from \`recentPerformance.mrqRevenue\` and its year-over-year growth from \`recentPerformance.revenueYoyGrowth\`. Explain what this growth rate signifies about the company's current sales trajectory.
-- **MRQ Net Income & YoY Growth:** Report the net income for the latest quarter from \`recentPerformance.mrqNetIncome\` and its year-over-year growth from \`recentPerformance.netIncomeYoyGrowth\`. Comment on the current profitability trend.
-- **Trailing Twelve Months (TTM) Net Income:** State the TTM Net Income from \`recentPerformance.ttmNetIncome\` and explain that this gives a better picture of recent full-year profitability than a single quarter alone.
-## 5. Financial Health & Risk (Is the Company on Solid Ground?)
-### 5.1. Liquidity Analysis
-- **Current Ratio:** Explain this as the ability to pay short-term bills. Using the 'status' from \`health.currentRatio\`, comment on the company's short-term financial position.
-### 5.2. Solvency and Debt Structure
-- **Debt-to-Equity:** Explain this like a personal debt-to-income ratio. Based on the 'status' from \`health.debtToEquity\`, is the company conservatively or aggressively financed?
-- **Interest Coverage:** Explain this as the ability to pay interest on its debt. Using the 'status' from \`health.interestCoverage\`, comment on its ability to handle its debt payments.
-## 6. Cash Flow Analysis (Following the Actual Cash)
-### 6.1. Operating Cash Flow (OCF) & Quality of Earnings
-- Based on \`cashFlow.qualityOfEarnings\`, are the company's reported profits being converted into real cash?
-### 6.2. Capital Allocation Story
-- Based on \`cashFlow.capitalAllocationStory\`, what is the company primarily doing with its cash? Is it in growth mode, return mode, or deleveraging mode?
-## 7. Valuation Analysis (Is the Stock Price Fair?)
-For each valuation multiple below, report its status relative to its own historical trend.
-- **P/E Ratio:** Use the 'status' from the object in the \`valuation\` array where 'metric' is 'peRatio'.
-- **Price-to-Sales Ratio:** Use the 'status' from the object where 'metric' is 'priceToSalesRatio'.
-- **Price-to-Book Ratio:** Use the 'status' from the object where 'metric' is 'pbRatio'.
-- **Enterprise Value to EBITDA:** Use the 'status' from the object where 'metric' is 'enterpriseValueToEBITDA'.
-After listing the statuses, briefly discuss what these comparisons imply. Is the stock trading at a premium or a discount to its own history overall?
-## 8. The Long-Term Investment Thesis: Bull vs. Bear
-### The Bull Case (Key Strengths)
-- Create a bulleted list using the points provided in \`thesis.bullCasePoints\`.
-### The Bear Case (Potential Risks)
-- Create a bulleted list using the points provided in \`thesis.bearCasePoints\`.
-### Final Verdict: The "Moat"
-Based purely on this quantitative analysis, what is the primary story? Does the \`thesis.moatIndicator\` suggest the company has a strong competitive advantage (a "moat")? Conclude with a final statement on its profile as a potential long-term holding.
-`.trim();
-
-const GARP_ANALYSIS_PROMPT = `
-Role: You are a senior investment analyst at a GARP-focused ('Growth at a Reasonable Price') fund. Your task is to provide a balanced, data-driven synthesis of a company's complete GARP scorecard.
-Data Instructions: Your analysis MUST be based *exclusively* on the provided GARP Scorecard JSON. Your primary goal is to interpret the qualitative \`interpretation.text\` provided for each metric to build a narrative. Refer to the quantitative \`value\` to add specific data points to your analysis.
-Output Format: The final report must be in professional markdown format. Use # for the main title, ## for major sections, and bullet points.
-
-JSON Data with Pre-Calculated GARP Scorecard:
-{jsonData}
-
-# GARP Scorecard Synthesis: {companyName} ({tickerSymbol})
-
-## 1. Executive Summary & Verdict
-(Start with a concise, one-paragraph summary. What is the overall story told by the scorecard? Conclude with a clear verdict based on the data: "This company appears to be a **strong GARP candidate**," "a **borderline GARP candidate**," or "**does not meet the criteria** for a GARP investment at this time." Reference the \`garpConvictionScore\` to support your verdict.)
-
-## 2. The Bull Case (Key Strengths)
-(Synthesize the strongest points from the scorecard. Create a bulleted list. For each point, identify a key strength (e.g., 'Exceptional Profitability') and explain it using the \`interpretation.text\` from the relevant metric(s) (e.g., Return on Equity, ROIC). Quantify your points with the metric's \`value\`.)
-
-## 3. The Bear Case (Key Risks & Concerns)
-(Synthesize the weakest points or biggest risks revealed by the scorecard. Create a bulleted list. For each point, identify a key concern (e.g., 'High Leverage') and explain it using the \`interpretation.text\` from the relevant metric(s) (e.g., Debt-to-Equity). Quantify your points with the metric's \`value\`.)
-
-## 4. Final Synthesis: The GARP Tension
-(In a final paragraph, identify the core 'GARP tension' for this stock. What is the central trade-off an investor must accept? For example: "The central question is whether the company's exceptional growth and quality justify its premium valuation," or "Is the extremely low valuation enough to compensate for the inconsistent profitability and high leverage?")
-`.trim();
-
 const MOAT_ANALYSIS_PROMPT = `
 Role: You are a business strategist AI who excels at explaining complex business concepts in simple, relatable terms. Your task is to analyze {companyName}'s competitive advantages.
 Concept: An "economic moat" is a company's ability to maintain its competitive advantages and defend its long-term profits from competitors.
@@ -234,31 +147,6 @@ Based on all the evidence, provide a concluding assessment. Classify the moat as
 - **Wide Moat:** The company has strong, sustainable advantages (like consistently high ROIC and clear pricing power) that are very difficult to replicate, **leading to highly predictable long-term profits.**
 - **Narrow Moat:** The company has some advantages, but they could be overcome by competitors over time, **making future profits less certain.**
 - **No Moat:** The company has no clear, sustainable competitive advantage, **making it vulnerable to competition and price wars.**
-`.trim();
-
-const RISK_ASSESSMENT_PROMPT = `
-Role: You are a risk analyst AI. Your job is to act like a cautious inspector, identifying the most significant potential problems or "red flags" for {companyName} and explaining them simply.
-Data Instructions: Your analysis must be derived exclusively from the provided JSON data. For each potential risk listed below, evaluate the data. **Only include the bullet point in your final output if the data indicates a risk is present.**
-Output Format: You MUST return a prioritized, bulleted list in markdown, categorized by risk type. Do NOT use prose or paragraph format for the main analysis. Explain each risk in simple terms within the bullet points.
-
-JSON Data:
-{jsonData}
-
-# Uncovering the Risks: {companyName} ({tickerSymbol})
-## 1. Financial Risks (Is the Foundation Solid?)
-- **Debt Load (Leverage):** Evaluate \`financialRisks.debtToEquity\`. If the ratio is high (e.g., > 1.0), state the value and explain the risk.
-- **Liquidity:** Evaluate \`financialRisks.currentRatio\`. If the ratio is low (e.g., < 1.5), state the value and explain the risk of paying short-term bills.
-- **Earnings Quality:** Compare \`financialRisks.earningsQuality.operating_cash_flow\` to \`financialRisks.earningsQuality.net_income\`. If operating cash flow is significantly lower, flag this as a potential red flag.
-- **Dividend Sustainability:** Compare the \`financialRisks.dividends_paid\` amount to \`financialRisks.net_income\`. If dividends paid are greater than net income, flag this as a major risk to the dividend.
-## 2. Market & Stock Price Risks (Is the Stock Itself Risky?)
-- **Volatility:** Evaluate \`marketRisks.beta\`. If it is > 1.2, state the value and explain that the stock is more volatile than the market.
-- **Valuation Risk:** Evaluate \`marketRisks.valuation.peRatio\` and \`psRatio\`. If either is high for its industry, note this as a risk that the stock may be "priced for perfection."
-- **Analyst Pessimism:** Check the \`marketRisks.analystPessimism\` list. If it is not empty, list the pessimistic ratings as a risk.
-## 3. Business Risks (Are There Cracks in the Operations?)
-- **Recession Sensitivity:** Based on \`businessRisks.recession_sensitivity_sector\`, explain the risk if it's a cyclical sector like 'Industrials' or 'Consumer Discretionary'.
-- **Margin Compression:** Analyze the \`businessRisks.marginTrend\`. If the net profit margin shows a clear downward trend over the last few years, identify this as a risk.
-## 4. The Bottom Line: What Are the Biggest Worries?
-Based on the risks you identified above, provide a brief, 1-2 sentence summary highlighting the top 2-3 risks an investor should be most aware of.
 `.trim();
 
 const CAPITAL_ALLOCATORS_PROMPT = `
@@ -682,9 +570,40 @@ Output Format: The final report must be in professional markdown format.
 (Provide a final, one-paragraph verdict. Based *only* on the synthesis of these two reports, does the company have the key ingredients of a long-term compounder: a durable moat and exceptional management? Conclude with one of the following classifications: **"High-Conviction Compounder," "Potential Compounder with Reservations,"** or **"Not a Compounder."** Justify your choice.)
 `.trim();
 
+const BMQV_MEMO_PROMPT = `
+Role: You are a long-term, business-focused investment analyst, embodying the principles of Warren Buffett and Charlie Munger. Your task is to determine if {companyName} is a "wonderful business" that can be held for a decade or more. Your analysis should be skeptical, focused on durable competitive advantages and rational management.
+Data Instructions: Your analysis must be a synthesis of the two reports provided below: the 'Moat Analysis' and the 'Capital Allocators' report. Do not use any other data. Your job is to connect the findings from these two reports into a single, cohesive narrative.
+Output Format: The final report must be in professional markdown format.
+
+**Input Report 1: Moat Analysis**
+{moatAnalysisReport}
+
+**Input Report 2: Capital Allocators Analysis**
+{capitalAllocatorsReport}
+
+# Buffett-Munger Quality & Value (BMQV) Memo: {companyName} ({tickerSymbol})
+
+## 1. Executive Summary: Is This a "Wonderful Business"?
+(In one paragraph, provide a direct answer to the core question. Synthesize the verdicts from the Moat and Capital Allocators reports. Is this a high-quality business with a durable competitive advantage run by skilled and honest managers? Or does it fail these critical tests?)
+
+## 2. The Three Pillars of a "Wonderful Business"
+(Synthesize the findings from both reports into a bulleted list, addressing each pillar.)
+- **A Durable Moat:** What was the final verdict from the Moat Analysis (Wide, Narrow, or None)? Based on the report, what is the single most important source of this moat (e.g., brand, network effects, low-cost production)?
+- **Skilled & Trustworthy Management:** What grade did the Capital Allocators report assign to the management team? What is the single most compelling piece of evidence (positive or negative) from their capital allocation track record (e.g., opportunistic buybacks, high-ROIC reinvestment, or value-destructive acquisitions)?
+- **A Resilient Profitability Engine:** Connect the two reports. How does management's capital allocation skill (from the Capital Allocators report) directly impact the durability of the competitive moat (from the Moat Analysis)? For example, "Management's consistent high-ROIC reinvestment directly strengthens the company's low-cost production moat."
+
+## 3. Potential Impairments to Long-Term Value
+(Synthesize the primary risks and concerns identified in both reports into a bulleted list.)
+- **Moat Erosion Risks:** What are the biggest long-term threats to the company's competitive advantage as identified in the Moat Analysis?
+- **Capital Allocation Red Flags:** What were the most significant weaknesses identified in the Capital Allocators report (e.g., overpaying for deals, buying back stock at high valuations)?
+
+## 4. Final Verdict
+(Provide a final, one-paragraph verdict. Based on your synthesis, does the company meet the high bar of a "wonderful business" in the Buffett-Munger sense? Conclude with one of the following classifications: **"A Wonderful Business," "A Good Business with Flaws,"** or **"Not a Wonderful Business."** Justify your choice by referencing the trade-offs between the moat and management's skill.)
+`.trim();
+
 const FINAL_INVESTMENT_THESIS_PROMPT = `
-Role: You are the Chief Investment Officer of a multi-strategy fund. Your task is to synthesize three analyst reports on {companyName} into a final, decisive investment thesis.
-Data Instructions: Your analysis MUST be based exclusively on the content of the three reports provided. Your primary role is to identify areas of agreement and disagreement, weigh the evidence, and resolve them into a single, actionable conclusion.
+Role: You are the Chief Investment Officer of a multi-strategy fund. Your task is to synthesize four analyst reports on {companyName} into a final, decisive investment thesis.
+Data Instructions: Your analysis MUST be based exclusively on the content of the four reports provided. Your primary role is to identify areas of agreement and disagreement, weigh the evidence, and resolve them into a single, actionable conclusion. When resolving conflicts, the conclusion from the **BMQV Memo** on overall business quality should be given the highest weight.
 Output Format: The final report must be in professional markdown format and follow the structure below precisely.
 
 **Input Report 1: GARP Memo (Growth at a Reasonable Price)**
@@ -696,16 +615,19 @@ Output Format: The final report must be in professional markdown format and foll
 **Input Report 3: Long-Term Compounder Memo**
 {longTermCompounderMemo}
 
+**Input Report 4: Buffett-Munger Q&V Memo**
+{bmqvMemo}
+
 # Final Investment Thesis: {companyName} ({tickerSymbol})
 
 ## 1. Analyst Recommendations & Consensus
-(First, explicitly state the final recommendation from each of the three reports. Then, state the majority consensus. For example: "The GARP Memo recommends 'Pass / Sell', the QARP analysis concludes 'Does not meet criteria', and the Compounder memo offers a 'Potential Compounder with Reservations'. The majority consensus, with two of three reports being negative, is against an investment at this time.")
+(First, explicitly state the final recommendation from each of the four reports. Then, state the majority consensus. For example: "The GARP Memo recommends 'Pass', the QARP analysis is negative, the Compounder memo has reservations, but the BMQV Memo identifies it as 'A Wonderful Business'. The consensus is mixed, but the primary quality assessment is positive.")
 
 ## 2. The Core Disagreement (The Fulcrum)
-(In one paragraph, identify and explain the fundamental disagreement between the reports. Do not focus on price. Focus on the core business characteristic they disagree on. For example: "The central conflict is the assessment of business quality. The GARP and QARP memos view the negative profitability and high debt as signs of a broken, low-quality business, making the low valuation a 'value trap'. In contrast, the Compounder memo views these as temporary issues, overshadowed by a durable moat and long-term potential.")
+(In one paragraph, identify and explain the fundamental disagreement between the reports. Focus on the core business characteristic they disagree on. For example: "The central conflict is valuation vs. quality. The GARP and QARP memos view the high valuation as a deal-breaker, while the Compounder and BMQV memos argue that the exceptional business quality and durable moat justify the premium price.")
 
 ## 3. Final Verdict & Rationale
-(Provide a final, one-paragraph recommendation. You must resolve the tension identified above and justify your decision. Your recommendation must align with the majority consensus unless you provide a powerful, data-driven reason to override it. Conclude with a clear, final recommendation: **"Initiate a Full Position," "Initiate a Half Position," "Add to Watchlist,"** or **"Pass."**)
+(Provide a final, one-paragraph recommendation. You must resolve the tension identified above, giving primary weight to the BMQV Memo's verdict on business quality. Your recommendation must align with this quality-first approach unless you provide a powerful, data-driven reason to override it. Conclude with a clear, final recommendation: **"Initiate a Full Position," "Initiate a Half Position," "Add to Watchlist,"** or **"Pass."**)
 `.trim();
 
 export const promptMap = {
@@ -720,14 +642,6 @@ export const promptMap = {
     'PeerComparison': {
         prompt: 'N/A' // Placeholder to satisfy help handler check
     },
-    'FinancialAnalysis': {
-        prompt: FINANCIAL_ANALYSIS_PROMPT,
-        requires: ['profile', 'key_metrics_annual', 'stock_grade_news', 'income_statement_annual', 'cash_flow_statement_annual', 'income_statement_quarterly']
-    },
-    'GarpAnalysis': {
-        prompt: GARP_ANALYSIS_PROMPT,
-        requires: []
-    },
     'QarpAnalysis': {
         prompt: QARP_ANALYSIS_PROMPT,
         requires: [] // Uses the same scorecard data as GARP Candidacy
@@ -739,10 +653,6 @@ export const promptMap = {
     'MoatAnalysis': {
         prompt: MOAT_ANALYSIS_PROMPT,
         requires: ['profile', 'key_metrics_annual', 'income_statement_annual', 'cash_flow_statement_annual', 'ratios_annual']
-    },
-    'RiskAssessment': {
-        prompt: RISK_ASSESSMENT_PROMPT,
-        requires: ['profile', 'key_metrics_annual', 'cash_flow_statement_annual', 'income_statement_annual', 'stock_grade_news', 'ratios_annual']
     },
     'CapitalAllocators': {
         prompt: CAPITAL_ALLOCATORS_PROMPT,
@@ -784,6 +694,10 @@ export const promptMap = {
         prompt: LONG_TERM_COMPOUNDER_PROMPT,
         requires: [] // Synthesis report, no direct FMP data
     },
+    'BmqvMemo': {
+        prompt: BMQV_MEMO_PROMPT,
+        requires: [] // Synthesis report, no direct FMP data
+    },
     'FinalInvestmentThesis': {
         prompt: FINAL_INVESTMENT_THESIS_PROMPT,
         requires: [] // Synthesis report, no direct FMP data
@@ -791,23 +705,18 @@ export const promptMap = {
 };
 
 export const ANALYSIS_ICONS = {
-    'FinancialAnalysis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6a7.5 7.5 0 100 15 7.5 7.5 0 000-15z" /><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.2-5.2" /><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 10.5H10.5v.008H10.5V10.5zm.008 0h.008v4.502h-.008V10.5z" /></svg>`,
-    'GarpAnalysis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18L9 11.25l1.5 1.5L13.5 6l3 3 4.5-4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`,
     'QarpAnalysis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`,
     'MoatAnalysis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.286zm0 13.036h.008v.008h-.008v-.008z" /></svg>`,
-    'RiskAssessment': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" /></svg>`,
     'CapitalAllocators': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15.91 15.91a2.25 2.25 0 01-3.182 0l-3.03-3.03a.75.75 0 011.06-1.061l2.47 2.47 2.47-2.47a.75.75 0 011.06 1.06l-3.03 3.03z" /></svg>`,
     'InvestmentMemo': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>`,
     'EightKAnalysis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" /></svg>`,
+    'BmqvMemo': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v17.25m0 0c-1.472 0-2.882.265-4.185.75M12 20.25c1.472 0 2.882.265 4.185.75M18.75 4.97A48.416 48.416 0 0012 4.5c-2.291 0-4.545.16-6.75.47m13.5 0c1.01.143 2.01.317 3 .52m-3-.52l2.62 10.726c.122.499-.106 1.028-.589 1.202a5.988 5.988 0 01-6.861 0c-.483-.174-.711-.703-.59-1.202L18.75 4.971zm-16.5.52c.99-.203 1.99-.377 3-.52m0 0l2.62 10.726c.122.499-.106 1.028-.589 1.202a5.988 5.988 0 01-6.861 0c-.483-.174-.711-.703-.59-1.202L5.25 4.971z" /></svg>`
 };
 
 export const ANALYSIS_NAMES = {
-    'FinancialAnalysis': 'Financial Analysis',
-    'GarpAnalysis': 'GARP Analysis',
     'QarpAnalysis': 'QARP Analysis',
     'UpdatedQarpMemo': 'Updated QARP Memo',
     'MoatAnalysis': 'Moat Analysis',
-    'RiskAssessment': 'Risk Assessment',
     'CapitalAllocators': 'Capital Allocators',
     'InvestmentMemo': 'Investment Memo',
     'GarpCandidacy': 'GARP Candidacy Report',
@@ -823,5 +732,6 @@ export const ANALYSIS_NAMES = {
     'QuarterlyReview': 'Quarterly Review',
     'AnnualReview': 'Annual Review',
     'LongTermCompounder': 'Long-Term Compounder Memo',
+    'BmqvMemo': 'Buffett-Munger Q&V Memo',
     'FinalInvestmentThesis': 'Final Investment Thesis'
 };
