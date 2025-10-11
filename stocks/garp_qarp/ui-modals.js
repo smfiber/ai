@@ -451,39 +451,46 @@ export async function openRawDataViewer(ticker) {
         }).join('');
         
         const deepDiveHtml = buildButtonHtml(deepDiveButtons);
-        const prereqsBtn = `<button data-symbol="${ticker}" id="generate-prereqs-button" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg">Generate Memo Prerequisites</button>`;
-        const garpMemoBtn = `<button data-symbol="${ticker}" id="garp-memo-button" data-report-type="InvestmentMemo" class="ai-analysis-button bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg text-base">Generate GARP Memo</button>`;
-
-        const compounderBtn = `<button data-symbol="${ticker}" id="long-term-compounder-button" data-report-type="LongTermCompounder" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg text-base">Generate Compounder Memo</button>`;
-        const bmqvBtn = `<button data-symbol="${ticker}" id="bmqv-memo-button" data-report-type="BmqvMemo" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg text-base">Generate BMQV Memo</button>`;
-        const qarpBtn = `<button data-symbol="${ticker}" id="qarp-analysis-button" data-report-type="QarpAnalysis" class="ai-analysis-button bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 px-6 rounded-lg text-base">Generate QARP Analysis</button>`;
-        const finalThesisBtn = `<button data-symbol="${ticker}" id="final-thesis-button" data-report-type="FinalInvestmentThesis" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-6 rounded-lg text-base">Generate Final Thesis</button>`;
+        const garpMemoBtn = `<button data-symbol="${ticker}" id="garp-memo-button" data-report-type="InvestmentMemo" class="ai-analysis-button bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg text-base">Generate GARP Memo</button>`;
+        const compounderBtn = `<button data-symbol="${ticker}" id="long-term-compounder-button" data-report-type="LongTermCompounder" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg text-base">Generate Compounder Memo</button>`;
+        const bmqvBtn = `<button data-symbol="${ticker}" id="bmqv-memo-button" data-report-type="BmqvMemo" class="ai-analysis-button bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg text-base">Generate BMQV Memo</button>`;
+        const qarpBtn = `<button data-symbol="${ticker}" id="qarp-analysis-button" data-report-type="QarpAnalysis" class="ai-analysis-button bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg text-base">Generate QARP Analysis</button>`;
+        const finalThesisBtn = `<button data-symbol="${ticker}" id="final-thesis-button" data-report-type="FinalInvestmentThesis" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg text-base">Generate Final Thesis</button>`;
         
         aiAnalysisContainer.innerHTML = `
             <div id="analysis-content-container" class="space-y-8 text-center bg-gray-50 p-4 rounded-lg border-b pb-4 mb-4">
+
                 <div class="p-4 bg-white rounded-lg border shadow-sm">
-                    <h3 class="text-lg font-bold text-gray-800 mb-4">Deep Dive Analysis</h3>
-                    <p class="text-sm text-gray-500 mb-4">Generate these reports for more detail after a promising candidacy assessment.</p>
+                    <h3 class="text-lg font-bold text-gray-800 mb-4">Step 1: Foundational Analysis</h3>
+                    <p class="text-sm text-gray-500 mb-4">Generate these core reports first. They are the building blocks for the synthesis memos.</p>
                     <div class="flex flex-wrap gap-4 justify-center">
                         ${deepDiveHtml}
-                    </div>
-                    <div class="text-center mt-6 flex flex-wrap gap-4 justify-center">
-                        ${garpMemoBtn}
-                        ${prereqsBtn}
                     </div>
                 </div>
 
                 <div class="p-4 bg-white rounded-lg border shadow-sm">
                     <div class="flex justify-center items-center gap-2 mb-4">
-                        <h3 class="text-lg font-bold text-gray-800">Final Analysis & Memo</h3>
+                        <h3 class="text-lg font-bold text-gray-800">Step 2: Synthesis Memos</h3>
                     </div>
+                     <p class="text-sm text-gray-500 mb-4">Synthesize the foundational reports into different analytical frameworks.</p>
                     <div class="flex justify-center flex-wrap gap-4">
                         ${compounderBtn}
                         ${bmqvBtn}
+                        ${garpMemoBtn}
                         ${qarpBtn}
+                    </div>
+                </div>
+
+                <div class="p-4 bg-white rounded-lg border shadow-sm">
+                    <div class="flex justify-center items-center gap-2 mb-4">
+                        <h3 class="text-lg font-bold text-gray-800">Step 3: The Final Verdict</h3>
+                    </div>
+                     <p class="text-sm text-gray-500 mb-4">Combine all synthesis memos into a single, definitive investment thesis.</p>
+                    <div class="flex justify-center flex-wrap gap-4">
                         ${finalThesisBtn}
                     </div>
                 </div>
+
             </div>
             <div id="report-status-container-analysis" class="hidden p-3 mb-4 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between gap-4"></div>
             <div id="ai-article-container-analysis" class="prose max-w-none"></div>
