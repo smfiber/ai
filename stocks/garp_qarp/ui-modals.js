@@ -495,28 +495,27 @@ export async function openRawDataViewer(ticker) {
         
         diligenceHubContainer.innerHTML = `
             <div class="space-y-6">
+                <div id="manual-diligence-forms-container"></div>
                 <div id="qualitative-diligence-forms-container"></div>
                 <div id="structured-diligence-forms-container"></div>
-                <div id="manual-diligence-forms-container"></div>
                 <div id="diligence-log-display-container">
                     <div id="diligence-log-container" class="mb-6 text-left"></div>
                 </div>
             </div>
         `;
 
+        // Populate Manual Diligence
+        const manualContainer = diligenceHubContainer.querySelector('#manual-diligence-forms-container');
+        manualContainer.innerHTML = `<div class="p-6 bg-white rounded-lg border shadow-sm text-left"><div class="flex justify-between items-center mb-4"><div><h4 class="text-base font-semibold text-gray-800">Manual Diligence Entry</h4><p class="text-sm text-gray-500">Add custom questions and answers to the log.</p></div><button id="add-diligence-entry-button" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg text-sm">Add New Q&A</button></div><div id="manual-diligence-entries-container" class="space-y-4"></div><div class="text-right mt-4"><button id="save-manual-diligence-button" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg">Save Manual Entries</button></div></div>`;
+
         // Populate Qualitative Diligence
         const qualitativeContainer = diligenceHubContainer.querySelector('#qualitative-diligence-forms-container');
         let qualitativeHtml = `<div class="text-left border rounded-lg p-4 bg-gray-50"><h4 class="text-base font-semibold text-gray-800 mb-1">Qualitative Diligence</h4><p class="text-sm text-gray-500 mb-4">Answer high-level questions about the business itself.</p><div class="space-y-4">`;
         for (const [category, question] of Object.entries(QUALITATIVE_DILIGENCE_QUESTIONS)) {
-            qualitativeHtml += `<div class="diligence-card p-3 bg-white rounded-lg border border-gray-200"><h5 class="font-semibold text-sm text-indigo-700 mb-2">${category}</h5><div class="flex items-start gap-2 mb-2"><p class="text-xs text-gray-600 flex-grow" data-question-text>${question}</p><button type="button" class="copy-icon-btn structured-diligence-copy-btn" title="Copy Question">${copyIcon}</button></div><textarea class="structured-diligence-answer w-full border border-gray-300 rounded-lg p-2 text-sm" rows="4" data-category="${category}" placeholder="Your analysis and findings here..."></textarea></div>`;
+            qualitativeHtml += `<div class="diligence-card p-3 bg-white rounded-lg border border-gray-200"><h5 class="font-semibold text-sm text-indigo-700 mb-2">${category}</h5><div class="flex items-start gap-2 mb-2"><p class="text-xs text-gray-600 flex-grow" data-question-text>${question}</p><button type="button" class="copy-icon-btn structured-diligence-copy-btn" title="Copy Question">${copyIcon}</button></div><textarea class="qualitative-diligence-answer w-full border border-gray-300 rounded-lg p-2 text-sm" rows="4" data-category="${category}" placeholder="Your analysis and findings here..."></textarea></div>`;
         }
-        qualitativeHtml += `</div></div>`; // Removed the save button, will reuse the structured one
+        qualitativeHtml += `</div><div class="text-right mt-4"><button id="save-qualitative-diligence-button" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg">Save Qualitative Answers</button></div></div>`;
         qualitativeContainer.innerHTML = qualitativeHtml;
-
-
-        // Populate Manual Diligence
-        const manualContainer = diligenceHubContainer.querySelector('#manual-diligence-forms-container');
-        manualContainer.innerHTML = `<div class="p-6 bg-white rounded-lg border shadow-sm text-left"><div class="flex justify-between items-center mb-4"><div><h4 class="text-base font-semibold text-gray-800">Manual Diligence Entry</h4><p class="text-sm text-gray-500">Add custom questions and answers to the log.</p></div><button id="add-diligence-entry-button" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg text-sm">Add New Q&A</button></div><div id="manual-diligence-entries-container" class="space-y-4"></div><div class="text-right mt-4"><button id="save-manual-diligence-button" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg">Save Manual Entries</button></div></div>`;
         
         // Populate Structured Diligence
         const structuredContainer = diligenceHubContainer.querySelector('#structured-diligence-forms-container');
@@ -524,7 +523,7 @@ export async function openRawDataViewer(ticker) {
         for (const [category, question] of Object.entries(STRUCTURED_DILIGENCE_QUESTIONS)) {
             structuredHtml += `<div class="diligence-card p-3 bg-white rounded-lg border border-gray-200"><h5 class="font-semibold text-sm text-indigo-700 mb-2">${category}</h5><div class="flex items-start gap-2 mb-2"><p class="text-xs text-gray-600 flex-grow" data-question-text>${question}</p><button type="button" class="copy-icon-btn structured-diligence-copy-btn" title="Copy Question">${copyIcon}</button></div><textarea class="structured-diligence-answer w-full border border-gray-300 rounded-lg p-2 text-sm" rows="4" data-category="${category}" placeholder="Your analysis and findings here..."></textarea></div>`;
         }
-        structuredHtml += `</div><div class="text-right mt-4"><button id="save-structured-diligence-button" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg">Save Diligence Answers</button></div></div>`;
+        structuredHtml += `</div><div class="text-right mt-4"><button id="save-structured-diligence-button" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg">Save Structured Answers</button></div></div>`;
         structuredContainer.innerHTML = structuredHtml;
         
         // Populate Diligence Log
