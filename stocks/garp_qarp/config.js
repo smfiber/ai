@@ -601,24 +601,6 @@ Output Format: The final report must be in professional markdown format.
 (Provide a final, one-paragraph verdict. Based on your synthesis, does the company meet the high bar of a "wonderful business" in the Buffett-Munger sense? Conclude with one of the following classifications: **"A Wonderful Business," "A Good Business with Flaws,"** or **"Not a Wonderful Business."** Justify your choice by referencing the trade-offs between the moat and management's skill.)
 `.trim();
 
-const MEMO_CONCLUSIONS_EXTRACTOR_PROMPT = `
-Role: You are a highly precise data extraction bot.
-Task: Your only job is to read the provided investment memo and extract the final, exact recommendation or verdict.
-Instructions:
-1.  Look for a final section, typically titled "Final Verdict," "Recommendation," or a similar concluding heading.
-2.  Find the specific, often bolded, recommendation phrase.
-3.  You MUST return ONLY a valid JSON object containing a single key, "recommendation", with the exact extracted text as the value.
-4.  Do NOT add any explanatory text, markdown, or any other content. Do not summarize or rephrase the conclusion.
-
-Memo Text:
----
-{memoContent}
----
-
-Example Output:
-{"recommendation": "A Good Business with Flaws"}
-`.trim();
-
 const FINAL_INVESTMENT_THESIS_PROMPT = `
 Role: You are the Chief Investment Officer of a multi-strategy fund. Your task is to synthesize four analyst reports on {companyName} into a final, decisive investment thesis.
 
@@ -726,10 +708,6 @@ export const promptMap = {
     'FinalInvestmentThesis': {
         prompt: FINAL_INVESTMENT_THESIS_PROMPT,
         requires: [] // Synthesis report, no direct FMP data
-    },
-    'MemoConclusionsExtractor': {
-        prompt: MEMO_CONCLUSIONS_EXTRACTOR_PROMPT,
-        requires: []
     }
 };
 
