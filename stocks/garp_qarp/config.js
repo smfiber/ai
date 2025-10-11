@@ -602,35 +602,30 @@ Output Format: The final report must be in professional markdown format.
 `.trim();
 
 const FINAL_INVESTMENT_THESIS_PROMPT = `
-Role: You are the Chief Investment Officer of a multi-strategy fund. Your task is to synthesize four analyst reports on {companyName} into a final, decisive investment thesis.
+Role: You are the Chief Investment Officer of a multi-strategy fund. Your task is to synthesize four separate analyst reports on {companyName} into a final, decisive investment thesis.
 
-Data Instructions: Your analysis MUST be based exclusively on the content of the four reports and the structured JSON data provided.
+Data Instructions: Your analysis MUST be based exclusively on the full text of the four reports provided below.
 
 Core Task & Methodology:
-1.  **Summarize Analyst Recommendations:** In the first section, you MUST use the provided 'conclusionsJson' data to accurately state the final recommendation from each of the four reports.
-2.  **Synthesize and Conclude:** For the remaining sections, synthesize the full text of the four reports to identify areas of agreement/disagreement and form a final, actionable conclusion. You must resolve any conflicts, giving the highest weight to the conclusion from the **BMQV Memo** on overall business quality.
-3.  **Strict Output Format:** Your output MUST follow the markdown structure precisely.
+1.  **Read and Synthesize:** Read the full text of the four memos (GARP, QARP, Compounder, BMQV).
+2.  **Identify Conflicts:** Your primary goal is to identify the core tension or disagreement between the reports. For example, do the GARP/QARP memos focus on a high valuation as a deal-breaker, while the Compounder/BMQV memos argue the business quality justifies the price?
+3.  **Resolve and Recommend:** As CIO, you must resolve this conflict. Give the highest weight to the conclusion from the **BMQV Memo** on overall business quality. Form a final verdict and provide a clear, actionable recommendation.
+4.  **Strict Output Format:** Your output MUST follow the markdown structure precisely.
 
 ---
 
 # Final Investment Thesis: {companyName} ({tickerSymbol})
 
-## 1. Analyst Recommendations & Consensus
-(First, explicitly and accurately state the final recommendation from each of the four reports, using the data provided in 'conclusionsJson'. Then, summarize the consensus based on that data.)
-
-## 2. The Core Disagreement (The Fulcrum)
+## 1. The Core Disagreement (The Fulcrum)
 (In one paragraph, identify and explain the fundamental disagreement between the reports by synthesizing their full text. Focus on the core business characteristic they disagree on. For example: "The central conflict is valuation vs. quality. The GARP and QARP memos view the high valuation as a deal-breaker, while the Compounder and BMQV memos argue that the exceptional business quality and durable moat justify the premium price.")
 
-## 3. Final Verdict & Rationale
-(Provide a final, one-paragraph recommendation. You must resolve the tension identified above, giving primary weight to the **BMQV Memo's** verdict on business quality (as stated in the JSON data). Your recommendation must align with this quality-first approach unless you provide a powerful, data-driven reason from the other memos to override it. Conclude with a clear, final recommendation: **"Initiate a Full Position," "Initiate a Half Position," "Add to Watchlist,"** or **"Pass."**)
+## 2. Final Verdict & Rationale
+(Provide a final, one-paragraph recommendation. You must resolve the tension identified above, giving primary weight to the **BMQV Memo's** verdict on business quality. Your recommendation must align with this quality-first approach unless you provide a powerful, data-driven reason from the other memos to override it. Conclude with a clear, final recommendation: **"Initiate a Full Position," "Initiate a Half Position," "Add to Watchlist,"** or **"Pass."**)
 
 ---
 **INPUTS FOR ANALYSIS:**
 
-**1. Structured Conclusions from Prerequisite Memos (JSON):**
-{conclusionsJson}
-
-**2. Full Memo Text (for Qualitative Synthesis):**
+**Full Memo Text (for Qualitative Synthesis):**
 - **GARP Memo:** {garpMemo}
 - **QARP Analysis:** {qarpAnalysisReport}
 - **Long-Term Compounder Memo:** {longTermCompounderMemo}
