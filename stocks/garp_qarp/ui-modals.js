@@ -451,11 +451,22 @@ export async function openRawDataViewer(ticker) {
         }).join('');
         
         const deepDiveHtml = buildButtonHtml(deepDiveButtons);
-        const garpMemoBtn = `<button data-symbol="${ticker}" id="garp-memo-button" data-report-type="InvestmentMemo" class="ai-analysis-button bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg text-base">GARP Memo</button>`;
-        const compounderBtn = `<button data-symbol="${ticker}" id="long-term-compounder-button" data-report-type="LongTermCompounder" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg text-base">Compounder Memo</button>`;
-        const bmqvBtn = `<button data-symbol="${ticker}" id="bmqv-memo-button" data-report-type="BmqvMemo" class="ai-analysis-button bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg text-base">BMQV Memo</button>`;
-        const qarpBtn = `<button data-symbol="${ticker}" id="qarp-analysis-button" data-report-type="QarpAnalysis" class="ai-analysis-button bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg text-base">QARP Memo</button>`;
-        const finalThesisBtn = `<button data-symbol="${ticker}" id="final-thesis-button" data-report-type="FinalInvestmentThesis" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg text-base">Final Thesis</button>`;
+        const copyIconSvg = `<svg class="w-5 h-5 text-gray-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125H4.875A1.125 1.125 0 013.75 20.625V7.875c0-.621.504-1.125 1.125-1.125H6.75m9 9.375h3.375c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125h-9.75A1.125 1.125 0 006 9.375v9.75c0 .621.504 1.125 1.125 1.125h3.375m-3.75-9.375V6.125c0-.621.504-1.125 1.125-1.125h9.75c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-3.375" /></svg>`;
+
+        const buildSynthesisButton = (reportType, buttonId, text) => `
+            <div class="relative flex items-center gap-2">
+                <button data-symbol="${ticker}" id="${buttonId}" data-report-type="${reportType}" class="ai-analysis-button bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg text-sm flex-grow">${text}</button>
+                <button type="button" class="copy-report-btn p-2 rounded-full bg-gray-200 hover:bg-gray-300" data-report-type="${reportType}" title="Copy Latest Report to Clipboard">
+                    ${copyIconSvg}
+                </button>
+            </div>
+        `;
+        
+        const compounderBtn = buildSynthesisButton('LongTermCompounder', 'long-term-compounder-button', 'Compounder Memo');
+        const bmqvBtn = buildSynthesisButton('BmqvMemo', 'bmqv-memo-button', 'BMQV Memo');
+        const garpMemoBtn = buildSynthesisButton('InvestmentMemo', 'garp-memo-button', 'GARP Memo');
+        const qarpBtn = buildSynthesisButton('QarpAnalysis', 'qarp-analysis-button', 'QARP Memo');
+        const finalThesisBtn = buildSynthesisButton('FinalInvestmentThesis', 'final-thesis-button', 'Final Thesis');
         
         aiAnalysisContainer.innerHTML = `
             <div id="analysis-content-container" class="space-y-8 text-center bg-gray-50 p-4 rounded-lg border-b pb-4 mb-4">
@@ -473,7 +484,7 @@ export async function openRawDataViewer(ticker) {
                         <h3 class="text-lg font-bold text-gray-800">Step 2: Synthesis Memos</h3>
                     </div>
                      <p class="text-sm text-gray-500 mb-4">Synthesize the foundational reports into different analytical frameworks.</p>
-                    <div class="flex justify-center flex-wrap gap-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         ${compounderBtn}
                         ${bmqvBtn}
                         ${garpMemoBtn}
