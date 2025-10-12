@@ -13,7 +13,8 @@ export const state = {
     geminiApiKey: "",
     googleClientId: "",
     portfolioCache: [],
-    sessionLog: []
+    sessionLog: [],
+    isAnalysisRunning: false
 };
 
 // Map specific AI analysis types to the FMP endpoints they require.
