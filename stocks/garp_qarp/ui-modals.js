@@ -450,7 +450,6 @@ export async function openRawDataViewer(ticker) {
                      </div>`;
         }).join('');
         
-        const deepDiveHtml = buildButtonHtml(deepDiveButtons);
         const copyIconSvg = `<svg class="w-5 h-5 text-gray-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125H4.875A1.125 1.125 0 013.75 20.625V7.875c0-.621.504-1.125 1.125-1.125H6.75m9 9.375h3.375c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125h-9.75A1.125 1.125 0 006 9.375v9.75c0 .621.504 1.125 1.125 1.125h3.375m-3.75-9.375V6.125c0-.621.504-1.125 1.125-1.125h9.75c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-3.375" /></svg>`;
 
         const buildSynthesisButton = (reportType, buttonId, text) => `
@@ -470,13 +469,25 @@ export async function openRawDataViewer(ticker) {
         
         aiAnalysisContainer.innerHTML = `
             <div id="analysis-content-container" class="space-y-8 text-center bg-gray-50 p-4 rounded-lg border-b pb-4 mb-4">
+                <div class="p-4 bg-white rounded-lg border shadow-sm">
+                    <h3 class="text-lg font-bold text-gray-800 mb-4">Full Analysis Workflow</h3>
+                    <p class="text-sm text-gray-500 mb-4">Run the entire analysis workflow sequentially. This may take several minutes.</p>
+                    <button id="run-full-workflow-button" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg text-base shadow-md transition-transform hover:scale-105 inline-flex items-center gap-2">
+                        <svg id="run-full-workflow-spinner" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Run Full Analysis
+                    </button>
+                </div>
 
                 <div class="p-4 bg-white rounded-lg border shadow-sm">
                     <h3 class="text-lg font-bold text-gray-800 mb-4">Step 1: Foundational Analysis</h3>
                     <p class="text-sm text-gray-500 mb-4">Generate these core reports first. They are the building blocks for the synthesis memos.</p>
-                    <div class="flex flex-wrap gap-4 justify-center">
+                     <div class="flex flex-wrap gap-4 justify-center">
                         ${deepDiveHtml}
                     </div>
+                     <button id="generate-prereqs-button" class="mt-4 bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-1 px-3 rounded-lg text-xs">Generate Both</button>
                 </div>
 
                 <div class="p-4 bg-white rounded-lg border shadow-sm">
