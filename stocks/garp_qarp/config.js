@@ -549,6 +549,13 @@ Output Format: The final report must be in professional markdown format.
 **Input Report 2: Capital Allocators Analysis**
 {capitalAllocatorsReport}
 
+---
+**CRITICAL INSTRUCTION: Before generating the memo, you must first state the key verdicts from the input reports below. Use these stated facts as the single source of truth for your analysis.**
+
+-   **Moat Analysis Verdict:** [State the verdict from the Moat Analysis: "Wide," "Narrow," or "None"]
+-   **Capital Allocators Grade:** [State the final letter grade from the Capital Allocators report]
+---
+
 # Long-Term Compounder Memo: {companyName} ({tickerSymbol})
 
 ## 1. The Core Investment Question
@@ -580,6 +587,13 @@ Output Format: The final report must be in professional markdown format.
 
 **Input Report 2: Capital Allocators Analysis**
 {capitalAllocatorsReport}
+
+---
+**CRITICAL INSTRUCTION: Before generating the memo, you must first state the key verdicts from the input reports below. Use these stated facts as the single source of truth for your analysis.**
+
+-   **Moat Analysis Verdict:** [State the verdict from the Moat Analysis: "Wide," "Narrow," or "None"]
+-   **Capital Allocators Grade:** [State the final letter grade from the Capital Allocators report]
+---
 
 # Buffett-Munger Quality & Value (BMQV) Memo: {companyName} ({tickerSymbol})
 
@@ -713,39 +727,39 @@ JSON Data:
 `.trim();
 
 const FINAL_INVESTMENT_THESIS_PROMPT = `
-Role: You are the Chief Investment Officer of a multi-strategy fund. Your task is to synthesize four separate analyst reports on {companyName} into a final, decisive investment thesis.
-CRITICAL INSTRUCTION: Your analysis must be based exclusively on the provided inputs. You must consider the arguments from all four memos equally to form an objective, evidence-based conclusion.
+Role: You are the Chief Investment Officer of a multi-strategy fund. Your task is to synthesize four separate analyst reports on {companyName} into a final, decisive investment thesis. Your analysis must be objective and based exclusively on the provided inputs.
 
 ---
 **INPUTS FOR ANALYSIS:**
 
-**1. The Core Conflict (The central disagreement you must resolve):**
-{coreConflict}
-
-**2. Analyst Summaries (The key arguments):**
-\`\`\`json
-{analystSummaries}
-\`\`\`
-
-**3. Full Memo Text (For contextual background):**
-- **GARP Memo:** {garpMemo}
-- **QARP Analysis:** {qarpAnalysisReport}
-- **Long-Term Compounder Memo:** {longTermCompounderMemo}
-- **BMQV Memo:** {bmqvMemo}
+**1. GARP Memo:** {garpMemo}
+**2. QARP Analysis:** {qarpAnalysisReport}
+**3. Long-Term Compounder Memo:** {longTermCompounderMemo}
+**4. BMQV Memo:** {bmqvMemo}
 
 ---
 **YOUR TASK (Strict Output Format):**
 
 # Final Investment Thesis: {companyName} ({tickerSymbol})
 
-## 1. The Core Disagreement
-(In one paragraph, restate the core conflict identified in your inputs. This sets the stage for your analysis.)
+## 1. Summary of Analyst Verdicts
+(First, you MUST complete this summary table by extracting the final verdict from each of the four input memos. This establishes the factual foundation for your analysis.)
 
-## 2. Resolving the Conflict: The Weight of the Evidence
-(In one or two paragraphs, resolve the core conflict. Objectively weigh the evidence from all four memos. For example, analyze whether the bullish "turnaround" and "valuation" arguments from the GARP/QARP memos are more compelling than the bearish "historical quality" and "management" concerns from the BMQV/Compounder memos, or vice versa. Your reasoning here must directly lead to your final recommendation.)
+| Analyst Memo            | Final Verdict                                 |
+| ----------------------- | --------------------------------------------- |
+| **GARP Memo** | [Extract the "Recommendation" field]          |
+| **QARP Analysis** | [Extract the final "verdict" field]           |
+| **Long-Term Compounder**| [Extract the final "Verdict" classification]  |
+| **BMQV Memo** | [Extract the final "Verdict" classification]  |
 
-## 3. Final Recommendation & Rationale
-(First, provide a single, bolded recommendation: **"Initiate a Full Position," "Initiate a Half Position," "Add to Watchlist,"** or **"Pass."** Then, in one concluding paragraph, provide a concise justification for your decision, summarizing the most critical factors from your analysis in Section 2.)
+## 2. The Core Debate: Identifying the Conflict
+(In one paragraph, analyze the completed table above to identify the central point of agreement or disagreement. Do the GARP/QARP frameworks, which focus on current valuation and growth, conflict with the long-term quality assessments of the Compounder/BMQV frameworks? State the conflict clearly and accurately based *only* on the verdicts you extracted.)
+
+## 3. Weighing the Evidence & Final Recommendation
+(In one or two paragraphs, resolve the conflict you identified in the previous section. Weigh the evidence from the different perspectives. For example, you might conclude that the near-term valuation opportunity identified in the GARP/QARP reports is compelling enough to outweigh the long-term structural risks highlighted by the BMQV/Compounder reports, or vice-versa. Your reasoning here must be logical and lead directly to your final recommendation.)
+
+### Recommendation
+**[Provide one of the following recommendations, bolded: "Initiate a Full Position," "Initiate a Half Position," "Add to Watchlist," or "Pass." Justify your choice in one final sentence summarizing your conclusion from the "Weighing the Evidence" section.]**
 `.trim();
 
 
