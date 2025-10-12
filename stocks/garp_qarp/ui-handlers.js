@@ -1922,3 +1922,36 @@ export async function handleManualPeerAnalysisRequest(ticker) {
         genericLoader.classList.remove('hidden');
     }
 }
+
+export async function handleCopyReportRequest(symbol, reportType, buttonElement) {
+    if (!buttonElement) return;
+
+    try {
+        const reports = await getSavedReports(symbol, reportType);
+        if (reports.length === 0) {
+            displayMessageInModal(`No saved '${ANALYSIS_NAMES[reportType]}' report found to copy.`, 'warning');
+            return;
+        }
+
+        const latestReport = reports[0];
+        // Strip markdown for cleaner pasting into other applications
+        const plainText = latestReport.content.replace(/##+\s/g, '').replace(/#\s/g, '').replace(/\*\*/g, '').replace(/-\s/g, '');
+        
+        await navigator.clipboard.writeText(plainText);
+
+        // Visual feedback
+        const originalIcon = buttonElement.innerHTML;
+        const checkIcon = `<svg class="w-5 h-5 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>`;
+        buttonElement.innerHTML = checkIcon;
+        buttonElement.disabled = true;
+
+        setTimeout(() => {
+            buttonElement.innerHTML = originalIcon;
+            buttonElement.disabled = false;
+        }, 2000);
+
+    } catch (error) {
+        console.error("Error copying report:", error);
+        displayMessageInModal(`Could not copy report: ${error.message}`, 'error');
+    }
+}
