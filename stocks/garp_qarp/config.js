@@ -232,9 +232,11 @@ You are a Senior Investment Analyst at a GARP-focused ("Growth at a Reasonable P
 * **Synthesize the 'PEG Ratio', 'Forward P/E', and 'Price to FCF' from the Scorecard.** Use these relative metrics to confirm or challenge the valuation assessments in the diligence memos. Answer the ultimate question: Based on all available evidence, does {companyName} represent a high-quality growth business trading at a price that offers a reasonable margin of safety?
 
 ## 5. Recommendation & Justification
-**[Provide one of the following recommendations: "High Conviction Buy," "Initiate Position (Standard)," "Add to Watchlist," or "Pass / Sell".]**
+(Provide the recommendation and justification. Your response for this section MUST follow the format below exactly, including the bolding.)
 
-**[Provide a 4-5 sentence justification for your recommendation, explicitly referencing the trade-offs and tensions revealed by synthesizing the three specialized memos and the quantitative scorecard.]**
+**Add to Watchlist**
+
+(Provide a 4-5 sentence justification for your recommendation here, explicitly referencing the trade-offs and tensions revealed by synthesizing the three specialized memos and the quantitative scorecard.)
 
 ---
 **INPUTS:**
@@ -463,7 +465,7 @@ JSON Data with Pre-Calculated Metrics:
 - **Cash Flow Valuation:** Analyze the **Price to FCF** ratio. How does the valuation look when measured against the actual cash the business generates?
 
 ## 4. Final Synthesis: The QARP Verdict
-(Synthesize the findings from the two pillars into a final conclusion. Explain the trade-offs. For example, is this a very high-quality company trading at a slight premium, or a medium-quality company at a very cheap price? Based on this balance, reiterate and justify your final verdict.)
+(Synthesize the findings from the two pillars into a final conclusion, explaining the trade-offs. Your final sentence MUST be one of the following bolded phrases, followed by a brief justification. For example: "**This company does not meet the criteria** for a QARP investment at this time because its high valuation does not offer a margin of safety for its quality issues.")
 `.trim();
 
 const UPDATED_QARP_MEMO_PROMPT = `
@@ -574,7 +576,7 @@ Output Format: The final report must be in professional markdown format.
 - **The Core Tension:** How do the risks from one report potentially impact the strengths of the other? (e.g., "While the company currently enjoys a wide moat, management's recent low-ROIC acquisitions could signal a deterioration of that advantage over time.")
 
 ## 4. Final Verdict: A True Compounder?
-(Provide a final, one-paragraph verdict. Based *only* on the synthesis of these two reports, does the company have the key ingredients of a long-term compounder: a durable moat and exceptional management? Conclude with one of the following classifications: **"High-Conviction Compounder," "Potential Compounder with Reservations,"** or **"Not a Compounder."** Justify your choice.)
+(Provide a final, one-paragraph verdict. Based *only* on the synthesis of these two reports, does the company have the key ingredients of a long-term compounder? Conclude with a single sentence using one of the following bolded phrases, followed by a brief justification. For example: "**Potential Compounder with Reservations** because its narrow moat is not yet supported by a management team that can consistently reinvest capital at high rates of return.")
 `.trim();
 
 const BMQV_MEMO_PROMPT = `
@@ -612,7 +614,7 @@ Output Format: The final report must be in professional markdown format.
 - **Capital Allocation Red Flags:** What were the most significant weaknesses identified in the most significant weaknesses identified in the Capital Allocators report (e.g., overpaying for deals, buying back stock at high valuations)?
 
 ## 4. Final Verdict
-(Provide a final, one-paragraph verdict. Based on your synthesis, does the company meet the high bar of a "wonderful business" in the Buffett-Munger sense? Conclude with one of the following classifications: **"A Wonderful Business," "A Good Business with Flaws,"** or **"Not a Wonderful Business."** Justify your choice by referencing the trade-offs between the moat and management's skill.)
+(Provide a final, one-paragraph verdict. Based on your synthesis, does the company meet the high bar of a "wonderful business"? Conclude with a single sentence using one of the following bolded phrases, followed by a brief justification. For example: "**A Good Business with Flaws** because its narrow moat and management's inconsistent M&A record do not meet the high standard of a 'wonderful business.'")
 `.trim();
 
 // --- NEW EXTRACTION & SYNTHESIS PROMPTS (VERSION 2.0) ---
@@ -727,9 +729,12 @@ JSON Data:
 `.trim();
 
 const FINAL_INVESTMENT_THESIS_PROMPT = `
-Role: You are the Chief Investment Officer of a multi-strategy fund. Your task is to synthesize four separate analyst reports on {companyName} into a final, decisive investment thesis. Your analysis must be objective and based exclusively on the provided inputs.
+Role: You are the Chief Investment Officer of a multi-strategy fund. Your task is to synthesize five separate analyst reports on {companyName} into a final, decisive investment thesis. Your analysis must be objective and based exclusively on the provided inputs.
 
 ---
+**CRITICAL INSTRUCTION: Your final output MUST use the exact markdown structure, headings, and table format provided below. Do not deviate.**
+---
+
 **INPUTS FOR ANALYSIS:**
 
 **1. GARP Memo:** {garpMemo}
@@ -744,25 +749,28 @@ Role: You are the Chief Investment Officer of a multi-strategy fund. Your task i
 # Final Investment Thesis: {companyName} ({tickerSymbol})
 
 ## 1. Summary of Analyst Verdicts
-(First, you MUST complete this summary table by extracting the final verdict from each of the five input memos. This establishes the factual foundation for your analysis.)
+(First, you MUST complete this summary table by extracting the final verdict from each of the five input memos. Do NOT alter the structure of this table.)
 
-| Analyst Memo            | Final Verdict                                 |
-| ----------------------- | --------------------------------------------- |
-| **GARP Memo** | [Extract the "Recommendation" field]          |
-| **QARP Analysis** | [Extract the final "verdict" field]           |
-| **Long-Term Compounder**| [Extract the final "Verdict" classification]  |
-| **BMQV Memo** | [Extract the final "Verdict" classification]  |
-| **Market Sentiment** | [Extract the final "Verdict" classification]  |
-
+| Analyst Memo | Final Verdict |
+| :--- | :--- |
+| **GARP Memo** | [Extract the "Recommendation" field] |
+| **QARP Analysis** | [Extract the final "verdict" field] |
+| **Long-Term Compounder**| [Extract the final "Verdict" classification] |
+| **BMQV Memo** | [Extract the final "Verdict" classification] |
+| **Market Sentiment** | [Extract the final "Verdict" classification] |
 
 ## 2. The Core Debate: Identifying the Conflict
-(In one paragraph, analyze the completed table above to identify the central point of agreement or disagreement. Do the GARP/QARP frameworks, which focus on current valuation and growth, conflict with the long-term quality assessments of the Compounder/BMQV frameworks? How does the Market Sentiment verdict align with or contradict the fundamental views? State the conflict clearly.)
+(In one paragraph, analyze the completed table above to identify the central point of agreement or disagreement. State the conflict clearly.)
 
 ## 3. Weighing the Evidence & Final Recommendation
-(In one or two paragraphs, resolve the conflict you identified in the previous section. Weigh the evidence from the different perspectives. For example, you might conclude that the near-term valuation opportunity identified in the GARP/QARP reports is compelling enough to outweigh the long-term structural risks highlighted by the BMQV/Compounder reports, or vice-versa. Your reasoning here must be logical and lead directly to your final recommendation.)
+(In one or two paragraphs, resolve the conflict you identified in the previous section. Weigh the evidence from the different perspectives. Your reasoning here must be logical and lead directly to your final recommendation.)
 
 ### Recommendation
-**[Provide one of the following recommendations, bolded: "Initiate a Full Position," "Initiate a Half Position," "Add to Watchlist," or "Pass." Justify your choice in one final sentence summarizing your conclusion from the "Weighing the Evidence" section.]**
+(Provide the recommendation and justification. Your response for this section MUST follow the format below exactly, including the bolding.)
+
+**Add to Watchlist**
+
+(Your one-sentence justification summarizing your conclusion goes here.)
 `.trim();
 
 // --- NEW DILIGENCE MEMO PROMPTS ---
