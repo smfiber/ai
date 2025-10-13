@@ -1375,6 +1375,65 @@ export async function handleDiligenceMemoRequest(symbol, reportType) {
     }
 }
 
+export async function handleInvestigationSummaryRequest(symbol, forceNew = false) {
+    const contentContainer = document.getElementById('ai-article-container-analysis');
+    const statusContainer = document.getElementById('report-status-container-analysis');
+    contentContainer.innerHTML = '';
+    statusContainer.classList.add('hidden');
+
+    try {
+        const reportType = 'InvestigationSummaryMemo';
+        const promptConfig = promptMap[reportType];
+        const savedReports = await getSavedReports(symbol, reportType);
+
+        if (savedReports.length > 0 && !forceNew) {
+            const latestReport = savedReports[0];
+            displayReport(contentContainer, latestReport.content, latestReport.prompt);
+            updateReportStatus(statusContainer, savedReports, latestReport.id, { symbol, reportType, promptConfig });
+            return;
+        }
+
+        openModal(CONSTANTS.MODAL_LOADING);
+        const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+        loadingMessage.textContent = "Gathering your manual diligence entries...";
+
+        const diligenceReports = await getSavedReports(symbol, 'DiligenceInvestigation');
+        if (diligenceReports.length === 0) {
+            throw new Error("No manual diligence entries found. Please add at least one Q&A entry in the 'Diligence Hub' tab before generating this summary.");
+        }
+
+        const qaData = diligenceReports.map(report => {
+            const question = report.prompt.split('Diligence Question from User:')[1]?.trim() || 'Question not found.';
+            const answer = report.content;
+            return `**Question:** ${question}\n\n**Answer:**\n${answer}`;
+        }).join('\n\n---\n\n');
+
+        const profile = state.portfolioCache.find(s => s.ticker === symbol) || {};
+        const companyName = profile.companyName || symbol;
+        
+        const prompt = promptConfig.prompt
+            .replace(/{companyName}/g, companyName)
+            .replace(/{tickerSymbol}/g, symbol)
+            .replace('{qaData}', qaData);
+        
+        const memoContent = await generateRefinedArticle(prompt, loadingMessage);
+        
+        await autoSaveReport(symbol, reportType, memoContent, prompt);
+
+        const refreshedReports = await getSavedReports(symbol, reportType);
+        displayReport(contentContainer, memoContent, prompt);
+        updateReportStatus(statusContainer, refreshedReports, refreshedReports[0].id, { symbol, reportType, promptConfig });
+
+    } catch (error) {
+        console.error("Error generating Investigation Summary Memo:", error);
+        displayMessageInModal(`Could not generate summary: ${error.message}`, 'error');
+        contentContainer.innerHTML = `<p class="text-red-500">${error.message}</p>`;
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
+
 export async function handleSaveDiligenceAnswers(symbol, diligenceType) {
     const config = {
         'Qualitative': {
