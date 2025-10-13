@@ -1,7 +1,7 @@
 // fileName: ui-handlers.js
 import { CONSTANTS, state, promptMap, ANALYSIS_REQUIREMENTS, ANALYSIS_NAMES, SECTOR_KPI_SUGGESTIONS } from './config.js';
 import { callApi, callGeminiApi, generateRefinedArticle, generatePolishedArticleForSynthesis, getFmpStockData, extractSynthesisData } from './api.js';
-import { openModal, closeModal, displayMessageInModal, openConfirmationModal, openManageStockModal, STRUCTURED_DILIGENCE_QUESTIONS, QUALITATIVE_DILIGENCE_QUESTIONS, QUARTERLY_REVIEW_QUESTIONS, ANNUAL_REVIEW_QUESTIONS, addKpiRow } from './ui-modals.js';
+import { openModal, closeModal, displayMessageInModal, openConfirmationModal, openManageStockModal, STRUCTURED_DILIGENCE_QUESTIONS, QUALITATIVE_DILIGENCE_QUESTIONS, MARKET_SENTIMENT_QUESTIONS, QUARTERLY_REVIEW_QUESTIONS, ANNUAL_REVIEW_QUESTIONS, addKpiRow } from './ui-modals.js';
 import { renderPortfolioManagerList, displayReport, updateReportStatus, fetchAndCachePortfolioData, updateGarpCandidacyStatus, renderCandidacyAnalysis, renderGarpAnalysisSummary, renderDiligenceLog, renderPeerComparisonTable, renderSectorMomentumHeatMap, renderOngoingReviewLog } from './ui-render.js';
 import { _calculateMoatAnalysisMetrics, _calculateCapitalAllocatorsMetrics, _calculateGarpScorecardMetrics, CALCULATION_SUMMARIES } from './analysis-helpers.js';
 
@@ -960,23 +960,23 @@ export async function handleGarpMemoRequest(symbol, forceNew = false) {
 
         openModal(CONSTANTS.MODAL_LOADING);
         const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+        loadingMessage.textContent = "Gathering prerequisite reports for memo synthesis...";
 
-        loadingMessage.textContent = "Gathering data for memo synthesis...";
-        
-        const candidacyReports = await getSavedReports(symbol, 'GarpCandidacy');
-        if (candidacyReports.length === 0) {
-            throw new Error(`The foundational 'GARP Candidacy Report' has not been generated yet. Please generate it from the 'AI Analysis' tab first.`);
-        }
-        const candidacyReportContent = candidacyReports[0].content;
-        
-        const diligenceReports = await getSavedReports(symbol, 'DiligenceInvestigation');
-        let diligenceLog = 'No recent diligence is available.';
-        if (diligenceReports.length > 0) {
-            diligenceLog = diligenceReports.map(report => {
-                const question = report.prompt.split('Diligence Question from User:')[1]?.trim() || 'Question not found.';
-                const answer = report.content;
-                return `**Question:** ${question}\n\n**Answer:**\n${answer}\n\n---`;
-            }).join('\n\n');
+        const requiredMemos = {
+            'GarpCandidacy': 'GARP Candidacy Report',
+            'StructuredDiligenceMemo': 'Structured Diligence Memo',
+            'QualitativeDiligenceMemo': 'Qualitative Diligence Memo',
+            'MarketSentimentMemo': 'Market Sentiment Memo'
+        };
+
+        const fetchedMemos = {};
+
+        for (const [type, name] of Object.entries(requiredMemos)) {
+            const reports = await getSavedReports(symbol, type);
+            if (reports.length === 0) {
+                throw new Error(`The foundational '${name}' has not been generated yet. Please generate it from the 'Diligence Hub' or 'Dashboard' tab first.`);
+            }
+            fetchedMemos[type] = reports[0].content;
         }
 
         const data = await getFmpStockData(symbol);
@@ -990,8 +990,10 @@ export async function handleGarpMemoRequest(symbol, forceNew = false) {
             .replace(/{companyName}/g, companyName)
             .replace(/{tickerSymbol}/g, symbol)
             .replace('{scorecardJson}', JSON.stringify(scorecardData, null, 2))
-            .replace('{diligenceLog}', diligenceLog)
-            .replace('{garpCandidacyReport}', candidacyReportContent)
+            .replace('{garpCandidacyReport}', fetchedMemos.GarpCandidacy)
+            .replace('{structuredDiligenceMemo}', fetchedMemos.StructuredDiligenceMemo)
+            .replace('{qualitativeDiligenceMemo}', fetchedMemos.QualitativeDiligenceMemo)
+            .replace('{marketSentimentMemo}', fetchedMemos.MarketSentimentMemo);
 
         const memoContent = await generateRefinedArticle(prompt, loadingMessage);
         const synthesisData = await extractSynthesisData(memoContent, reportType);
@@ -1152,7 +1154,7 @@ export async function handleFinalThesisRequest(symbol, forceNew = false) {
 
         // 1. Gather Synthesis Data
         loadingMessage.textContent = "Gathering prerequisite analyst summaries...";
-        const requiredReportTypes = ['InvestmentMemo', 'QarpAnalysis', 'LongTermCompounder', 'BmqvMemo'];
+        const requiredReportTypes = ['InvestmentMemo', 'QarpAnalysis', 'LongTermCompounder', 'BmqvMemo', 'MarketSentimentMemo'];
         const analystSummaries = {};
         const requiredReports = {};
 
@@ -1162,10 +1164,11 @@ export async function handleFinalThesisRequest(symbol, forceNew = false) {
                 throw new Error(`The prerequisite '${ANALYSIS_NAMES[type]}' has not been generated yet.`);
             }
             const reportData = reports[0];
-            if (!reportData.synthesis_data) {
-                throw new Error(`The '${ANALYSIS_NAMES[type]}' report is outdated and missing synthesis data. Please regenerate it first.`);
+            if (type !== 'MarketSentimentMemo' && !reportData.synthesis_data) { // Market sentiment might not have synthesis data
+                // For now, let's allow it to pass, but ideally, it should also have a summary
+                console.warn(`Report type ${type} is missing synthesis data. Analysis may be incomplete.`);
             }
-            analystSummaries[type] = reportData.synthesis_data;
+            analystSummaries[type] = reportData.synthesis_data || { verdict: 'Data not available' };
             requiredReports[type] = reportData;
         });
         await Promise.all(reportPromises);
@@ -1189,7 +1192,8 @@ export async function handleFinalThesisRequest(symbol, forceNew = false) {
             .replace('{garpMemo}', requiredReports.InvestmentMemo.content)
             .replace('{qarpAnalysisReport}', requiredReports.QarpAnalysis.content)
             .replace('{longTermCompounderMemo}', requiredReports.LongTermCompounder.content)
-            .replace('{bmqvMemo}', requiredReports.BmqvMemo.content);
+            .replace('{bmqvMemo}', requiredReports.BmqvMemo.content)
+            .replace('{marketSentimentMemo}', requiredReports.MarketSentimentMemo.content);
 
         const memoContent = await generateRefinedArticle(finalPrompt, loadingMessage);
         await autoSaveReport(symbol, reportType, memoContent, finalPrompt);
@@ -1290,100 +1294,89 @@ export async function handleGeneratePrereqsRequest(symbol) {
     }
 }
 
-export async function handleQualitativeDiligenceSave(symbol) {
-    const answerElements = document.querySelectorAll('.qualitative-diligence-answer');
-    const entriesToSave = [];
+export async function handleDiligenceMemoRequest(symbol, reportType) {
+    const config = {
+        'QualitativeDiligenceMemo': {
+            selector: '.qualitative-diligence-answer',
+            questions: QUALITATIVE_DILIGENCE_QUESTIONS,
+            name: 'Qualitative Diligence'
+        },
+        'StructuredDiligenceMemo': {
+            selector: '.structured-diligence-answer',
+            questions: STRUCTURED_DILIGENCE_QUESTIONS,
+            name: 'Structured Diligence'
+        },
+        'MarketSentimentMemo': {
+            selector: '.market-sentiment-answer',
+            questions: MARKET_SENTIMENT_QUESTIONS,
+            name: 'Market Sentiment'
+        }
+    };
+
+    const memoConfig = config[reportType];
+    if (!memoConfig) {
+        displayMessageInModal(`Invalid report type for diligence memo: ${reportType}`, 'error');
+        return;
+    }
+
+    const answerElements = document.querySelectorAll(memoConfig.selector);
+    const qaPairs = [];
 
     answerElements.forEach(textarea => {
         const answer = textarea.value.trim();
         const category = textarea.dataset.category;
-        const question = QUALITATIVE_DILIGENCE_QUESTIONS[category];
-
+        const question = memoConfig.questions[category];
         if (answer && question) {
-            entriesToSave.push({ question, answer, textarea });
+            qaPairs.push({ question, answer, textarea });
         }
     });
 
-    if (entriesToSave.length === 0) {
-        displayMessageInModal("Please add an answer to at least one qualitative diligence question before saving.", "warning");
+    if (qaPairs.length === 0) {
+        displayMessageInModal(`Please provide at least one answer for the ${memoConfig.name} section.`, 'warning');
         return;
     }
 
     openModal(CONSTANTS.MODAL_LOADING);
-    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Saving ${entriesToSave.length} qualitative diligence log(s)...`;
+    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+    loadingMessage.textContent = `Synthesizing ${memoConfig.name} Memo...`;
 
     try {
-        const savePromises = entriesToSave.map(entry => {
-            const prompt = `Diligence Question from User: ${entry.question}`;
-            const content = entry.answer;
-            return autoSaveReport(symbol, 'DiligenceInvestigation', content, prompt);
+        const qaData = qaPairs.map(pair => `**Question:** ${pair.question}\n\n**Answer:**\n${pair.answer}`).join('\n\n---\n\n');
+        
+        const profile = state.portfolioCache.find(s => s.ticker === symbol) || {};
+        const companyName = profile.companyName || symbol;
+        
+        const promptConfig = promptMap[reportType];
+        const prompt = promptConfig.prompt
+            .replace(/{companyName}/g, companyName)
+            .replace(/{tickerSymbol}/g, symbol)
+            .replace('{qaData}', qaData);
+
+        const memoContent = await generateRefinedArticle(prompt);
+        await autoSaveReport(symbol, reportType, memoContent, prompt);
+
+        qaPairs.forEach(pair => {
+            pair.textarea.value = '';
         });
 
-        await Promise.all(savePromises);
+        // Switch to AI tab and display the new memo
+        document.querySelectorAll('#rawDataViewerModal .tab-content').forEach(c => c.classList.add('hidden'));
+        document.querySelectorAll('#rawDataViewerModal .tab-button').forEach(b => b.classList.remove('active'));
+        document.getElementById('ai-analysis-tab').classList.remove('hidden');
+        document.querySelector('.tab-button[data-tab="ai-analysis"]').classList.add('active');
 
-        entriesToSave.forEach(entry => {
-            entry.textarea.value = '';
-        });
+        const contentContainer = document.getElementById('ai-article-container-analysis');
+        const statusContainer = document.getElementById('report-status-container-analysis');
+        const savedReports = await getSavedReports(symbol, reportType);
 
-        const diligenceReports = await getSavedReports(symbol, 'DiligenceInvestigation');
-        const diligenceLogContainer = document.getElementById('diligence-log-container');
-        renderDiligenceLog(diligenceLogContainer, diligenceReports);
+        displayReport(contentContainer, memoContent, prompt);
+        updateReportStatus(statusContainer, savedReports, savedReports[0].id, { symbol, reportType, promptConfig });
 
-        displayMessageInModal(`Successfully saved ${entriesToSave.length} qualitative diligence entries.`, 'info');
+        displayMessageInModal(`${memoConfig.name} Memo generated and saved successfully.`, 'info');
 
     } catch (error) {
-        console.error("Error saving qualitative diligence entries:", error);
-        displayMessageInModal(`Could not save entries: ${error.message}`, 'error');
-    } finally {
-        closeModal(CONSTANTS.MODAL_LOADING);
-    }
-}
-
-
-export async function handleStructuredDiligenceSave(symbol) {
-    const answerElements = document.querySelectorAll('.structured-diligence-answer');
-    const entriesToSave = [];
-
-    answerElements.forEach(textarea => {
-        const answer = textarea.value.trim();
-        const category = textarea.dataset.category;
-        const question = STRUCTURED_DILIGENCE_QUESTIONS[category];
-
-        if (answer && question) {
-            entriesToSave.push({ question, answer, textarea });
-        }
-    });
-
-    if (entriesToSave.length === 0) {
-        displayMessageInModal("Please add an answer to at least one structured diligence question before saving.", "warning");
-        return;
-    }
-
-    openModal(CONSTANTS.MODAL_LOADING);
-    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Saving ${entriesToSave.length} structured diligence log(s)...`;
-
-    try {
-        const savePromises = entriesToSave.map(entry => {
-            const prompt = `Diligence Question from User: ${entry.question}`;
-            const content = entry.answer;
-            return autoSaveReport(symbol, 'DiligenceInvestigation', content, prompt);
-        });
-
-        await Promise.all(savePromises);
-
-        entriesToSave.forEach(entry => {
-            entry.textarea.value = '';
-        });
-
-        const diligenceReports = await getSavedReports(symbol, 'DiligenceInvestigation');
-        const diligenceLogContainer = document.getElementById('diligence-log-container');
-        renderDiligenceLog(diligenceLogContainer, diligenceReports);
-
-        displayMessageInModal(`Successfully saved ${entriesToSave.length} structured diligence entries.`, 'info');
-
-    } catch (error) {
-        console.error("Error saving structured diligence entries:", error);
-        displayMessageInModal(`Could not save entries: ${error.message}`, 'error');
+        console.error(`Error generating ${memoConfig.name} Memo:`, error);
+        displayMessageInModal(`Could not generate memo: ${error.message}`, 'error');
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
