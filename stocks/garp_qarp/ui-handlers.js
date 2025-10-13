@@ -1490,6 +1490,46 @@ export async function handleManualDiligenceSave(symbol) {
     }
 }
 
+export async function handleDeleteAllDiligenceAnswers(symbol) {
+    openConfirmationModal(
+        'Delete All Saved Answers?',
+        `Are you sure you want to permanently delete all saved diligence answers (Qualitative, Structured, Market Sentiment) for ${symbol}? This action cannot be undone.`,
+        async () => {
+            openModal(CONSTANTS.MODAL_LOADING);
+            document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Deleting all saved answers for ${symbol}...`;
+            try {
+                const collectionRef = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(symbol).collection('diligence_answers');
+                const snapshot = await collectionRef.get();
+
+                if (snapshot.empty) {
+                    displayMessageInModal('No saved diligence answers to delete.', 'info');
+                    closeModal(CONSTANTS.MODAL_LOADING);
+                    return;
+                }
+
+                const deletePromises = [];
+                snapshot.forEach(doc => {
+                    deletePromises.push(doc.ref.delete());
+                });
+
+                await Promise.all(deletePromises);
+
+                // Clear the text areas in the UI
+                document.querySelectorAll('.qualitative-diligence-answer, .structured-diligence-answer, .market-sentiment-answer').forEach(textarea => {
+                    textarea.value = '';
+                });
+
+                displayMessageInModal(`Successfully deleted all saved diligence answers for ${symbol}.`, 'info');
+            } catch (error) {
+                console.error("Error deleting all diligence answers:", error);
+                displayMessageInModal(`Could not delete answers: ${error.message}`, 'error');
+            } finally {
+                closeModal(CONSTANTS.MODAL_LOADING);
+            }
+        }
+    );
+}
+
 export async function handleSaveFilingDiligenceRequest(symbol) {
     const formContainer = document.getElementById('filing-diligence-form-container');
     const qaPairs = formContainer.querySelectorAll('.filing-qa-pair');
