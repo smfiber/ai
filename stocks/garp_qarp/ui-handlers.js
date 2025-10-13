@@ -7,13 +7,23 @@ import { _calculateMoatAnalysisMetrics, _calculateCapitalAllocatorsMetrics, _cal
 
 // --- UTILITY HELPERS ---
 function getReportsFromCache(ticker, reportType) {
-    const reports = state.reportCache.filter(r => r.ticker === ticker && r.reportType === reportType);
+    if (!Array.isArray(state.reportCache)) return [];
+    
+    const filterFn = (r) => {
+        if (r.ticker !== ticker) return false;
+        if (Array.isArray(reportType)) {
+            return reportType.includes(r.reportType);
+        }
+        return r.reportType === reportType;
+    };
+    
+    const reports = state.reportCache.filter(filterFn);
+    
     return reports.sort((a, b) => b.savedAt.toMillis() - a.savedAt.toMillis());
 }
 
 export async function getSavedReports(ticker, reportType) {
-    // This function is now primarily for fetching reports when the cache might not be populated.
-    // Most in-modal operations should use getReportsFromCache.
+    // This function is now primarily for fetching reports when the cache might not be populated, like on initial load.
     try {
         const reportsRef = state.db.collection(CONSTANTS.DB_COLLECTION_AI_REPORTS);
         let q;
@@ -124,10 +134,8 @@ export async function handleRefreshFmpData(symbol) {
             const version = endpoint.version || 'v3';
 
             if (version === 'stable') {
-                // Special URL builder for /stable endpoints
                 url = `https://financialmodelingprep.com/stable/${endpoint.path}?symbol=${symbol}&${endpoint.params ? endpoint.params + '&' : ''}apikey=${state.fmpApiKey}`;
             } else {
-                // Standard URL for /api/v3 and other versioned endpoints
                 url = `https://financialmodelingprep.com/api/${version}/${endpoint.path}/${symbol}?${endpoint.params ? endpoint.params + '&' : ''}apikey=${state.fmpApiKey}`;
             }
 
@@ -745,7 +753,7 @@ export async function handleSaveReportToDb() {
     }
 }
 
-export async function handleGarpCandidacyRequest(ticker) {
+export async function handleGarpCandidacyRequest(ticker, forceNew = false) {
     const resultContainer = document.getElementById('garp-analysis-container');
     const statusContainer = document.getElementById('garp-candidacy-status-container');
     if (!resultContainer) return;
@@ -1294,7 +1302,12 @@ export async function handleGeneratePrereqsRequest(symbol) {
     }
 }
 
-export async function handleDiligenceMemoRequest(symbol, reportType) {
+export async function handleDiligenceMemoRequest(symbol, reportType, forceNew = false) {
+    const contentContainer = document.getElementById('ai-article-container-analysis');
+    const statusContainer = document.getElementById('report-status-container-analysis');
+    contentContainer.innerHTML = '';
+    statusContainer.classList.add('hidden');
+
     const config = {
         'QualitativeDiligenceMemo': {
             diligenceType: 'Qualitative',
@@ -1312,18 +1325,23 @@ export async function handleDiligenceMemoRequest(symbol, reportType) {
             name: 'Market Sentiment'
         }
     };
-
     const memoConfig = config[reportType];
-    if (!memoConfig) {
-        displayMessageInModal(`Invalid report type for diligence memo: ${reportType}`, 'error');
-        return;
-    }
-
-    openModal(CONSTANTS.MODAL_LOADING);
-    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
-    loadingMessage.textContent = `Gathering saved answers for ${memoConfig.name} Memo...`;
+    const promptConfig = promptMap[reportType];
 
     try {
+        const savedReports = getReportsFromCache(symbol, reportType);
+
+        if (savedReports.length > 0 && !forceNew) {
+            const latestReport = savedReports[0];
+            displayReport(contentContainer, latestReport.content, latestReport.prompt);
+            updateReportStatus(statusContainer, savedReports, latestReport.id, { symbol, reportType, promptConfig });
+            return;
+        }
+
+        openModal(CONSTANTS.MODAL_LOADING);
+        const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+        loadingMessage.textContent = `Gathering saved answers for ${memoConfig.name} Memo...`;
+
         const docRef = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(symbol).collection('diligence_answers').doc(memoConfig.diligenceType);
         const docSnap = await docRef.get();
 
@@ -1343,7 +1361,6 @@ export async function handleDiligenceMemoRequest(symbol, reportType) {
         const profile = state.portfolioCache.find(s => s.ticker === symbol) || {};
         const companyName = profile.companyName || symbol;
         
-        const promptConfig = promptMap[reportType];
         const prompt = promptConfig.prompt
             .replace(/{companyName}/g, companyName)
             .replace(/{tickerSymbol}/g, symbol)
@@ -1357,12 +1374,10 @@ export async function handleDiligenceMemoRequest(symbol, reportType) {
         document.getElementById('ai-analysis-tab').classList.remove('hidden');
         document.querySelector('.tab-button[data-tab="ai-analysis"]').classList.add('active');
 
-        const contentContainer = document.getElementById('ai-article-container-analysis');
-        const statusContainer = document.getElementById('report-status-container-analysis');
-        const savedReports = getReportsFromCache(symbol, reportType);
+        const refreshedReports = getReportsFromCache(symbol, reportType);
 
         displayReport(contentContainer, memoContent, prompt);
-        updateReportStatus(statusContainer, savedReports, savedReports[0].id, { symbol, reportType, promptConfig });
+        updateReportStatus(statusContainer, refreshedReports, refreshedReports[0].id, { symbol, reportType, promptConfig });
 
         displayMessageInModal(`${memoConfig.name} Memo generated and saved successfully.`, 'info');
 
