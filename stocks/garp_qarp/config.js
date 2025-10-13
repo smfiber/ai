@@ -837,6 +837,12 @@ const INVESTIGATION_SUMMARY_MEMO_PROMPT = `
 Role: You are an investment analyst AI specializing in synthesizing research notes.
 Task: Your sole job is to read the unstructured, manually-entered Question & Answer pairs from the diligence log and synthesize them into a professional "Investigation Summary Memo." Your goal is to identify the most critical findings and present them clearly.
 
+---
+**CRITICAL INSTRUCTIONS:**
+1.  **Source Limitation:** Your entire analysis MUST be derived *exclusively* from the provided 'Diligence Log (Q&A Data)'.
+2.  **No External Data:** Do NOT add any facts, figures, names, or details that are not explicitly mentioned in the source Q&A. Your task is to synthesize, not to augment with outside knowledge.
+---
+
 **Diligence Log (Q&A Data):**
 {qaData}
 
