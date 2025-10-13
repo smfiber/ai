@@ -130,6 +130,10 @@ Concept: An "economic moat" is a company's ability to maintain its competitive a
 Data Instructions: Your analysis must be derived exclusively from the provided JSON data, which contains pre-calculated trends and metrics.
 Output Format: Provide a brief report in markdown. Explain each point simply and conclude with a clear verdict on the moat's strength.
 
+---
+**CRITICAL INSTRUCTION: Your final output MUST use the exact markdown structure and headings provided below. Do not add any introductory or concluding paragraphs outside of this structure.**
+---
+
 JSON Data:
 {jsonData}
 
@@ -138,7 +142,7 @@ JSON Data:
 Analyze the data for signs of a durable competitive advantage. Discuss:
 - **Return on Invested Capital (ROIC):** Analyze the 'roicTrend' data. Explain this as the "gold standard" for moat analysis. A consistently high **and stable/rising** ROIC (>15%) is a strong sign of a moat.
 - **Pricing Power & Profitability:** Are the trends in 'profitabilityTrends' (net profit margin, operating income, gross profit margin) consistently high **and stable** over time? Explain this as a sign that the company can reliably charge more.
-- **Qualitative Clues (from Description):** Based on the 'qualitativeClues.description', what themes suggest a moat? Look for mentions of a "platform," "network," "marketplace," or "mission-critical" systems.
+- **Qualitative Clues (from Description):** Based on the 'qual-itativeClues.description', what themes suggest a moat? Look for mentions of a "platform," "network," "marketplace," or "mission-critical" systems.
 ## 2. How Strong is the Castle Wall? (Moat Sustainability)
 Assess how sustainable this advantage might be by looking at:
 - **Reinvesting in the Defenses:** Are 'capex' and 'rdExpenses' significant in the 'reinvestmentTrends' data? Explain this as the company spending money to strengthen its moat.
