@@ -192,58 +192,40 @@ JSON Data:
 
 const UPDATED_GARP_MEMO_PROMPT = `
 **Persona & Goal:**
-You are a Senior Investment Analyst at a GARP-focused ("Growth at a Reasonable Price") fund. Your task is to synthesize a quantitative scorecard, an initial candidacy report, and a detailed diligence log for {companyName} into a definitive and convincing investment memo. Your final output must determine if this is a quality growth company trading at a fair price.
+You are a Senior Investment Analyst at a GARP-focused ("Growth at a Reasonable Price") fund. Your task is to synthesize a quantitative scorecard, an initial candidacy report, and three specialized diligence memos for {companyName} into a definitive and convincing final investment memo.
 
 **Core Philosophy (How to Think):**
-1.  **Thesis Evolution:** Use the 'GARP Candidacy Report' as the starting point. Your main goal is to determine if the findings in the 'Diligence Log' confirm, challenge, or alter that initial thesis. Frame your analysis around this evolution.
-2.  **Data-Driven Narrative:** The heart of this memo is a compelling narrative built from the quantitative 'Scorecard JSON'. Every key assertion MUST be backed by a specific, quantifiable data point from the scorecard.
-3.  **Synthesize, Don't Summarize:** Do not merely restate findings. Your primary task is to integrate the quantitative data (the "what") with the qualitative findings from the diligence log (the "so what") to form a cohesive bull case, bear case, and final recommendation.
-4.  **Address Contradictions:** If the initial Candidacy Report, the Scorecard, and the Diligence Log present conflicting information (e.g., on valuation), you must address this tension directly. Explain which source carries more weight in your final analysis and why.
+1.  **Synthesize, Don't Summarize:** Do not merely restate findings from the diligence memos. Your primary task is to integrate the findings from the **Qualitative Memo** (the "what"), the **Structured Memo** (the "how"), and the **Market Sentiment Memo** (the "who thinks what") to form a cohesive bull case, bear case, and final recommendation.
+2.  **Address Contradictions:** If the specialized memos present conflicting information (e.g., the Structured Memo shows strong quantitative health, but the Market Sentiment Memo shows bearish analyst ratings), you must address this tension directly. Explain which source carries more weight in your final analysis and why.
+3.  **Data-Driven Narrative:** Ground your narrative in the **Quantitative GARP Scorecard**. Every key assertion MUST be backed by a specific, quantifiable data point from the scorecard to validate or challenge the conclusions of the diligence memos.
 
 ---
 
 # Investment Memo: {companyName} ({tickerSymbol})
 
 ## 1. Executive Summary & Investment Thesis
-*(Begin with a 3-4 sentence paragraph that concisely summarizes the investment thesis. State the initial thesis from the Candidacy Report and then explain how the diligence findings have either reinforced or fundamentally changed that view. It should cover the core bull case, the primary risks, and the final recommendation.)*
+*(Begin with a 3-4 sentence paragraph that concisely summarizes the investment thesis. State the initial thesis from the Candidacy Report and then explain how the diligence findings from the three specialized memos have either reinforced or fundamentally changed that view. It should cover the core bull case, the primary risks, and the final recommendation.)*
 
 ## 2. The Bull Case: Why We Could Be Right
-*(This section should be a compelling narrative about the investment's upside potential, built by interpreting the strengths shown in the scorecard data and confirmed by the diligence log.)*
-* **Business Quality & Growth:** What is the story behind the company's growth based on the scorecard data? Substantiate claims with metrics like 'EPS Growth (Next 1Y)' and 'Return on Equity' from the JSON. Use findings from the diligence log to add color and conviction.
-* **Financial Strength:** Does the data suggest a strong business? Prove it. Cite the 'Debt-to-Equity' ratio from the JSON, and use the diligence log's analysis of the balance sheet to confirm or deny this.
+*(This section should be a compelling narrative about the investment's upside potential, built by integrating the strengths identified in the specialized memos and validating them with hard data from the Scorecard.)*
+* **Business Quality & Moat (from Qualitative Memo):** What is the core conclusion about the company's competitive advantage?
+* **Financial Strength & Growth (from Structured Memo):** What is the verdict on the company's quantitative health?
+* **Market Confirmation (from Market Sentiment Memo):** Does the current market view (analysts, technicals) support the bull case?
+* **Scorecard Validation:** Prove the bull case with key metrics from the Scorecard (e.g., 'Return on Equity', 'EPS Growth (Next 1Y)').
 
 ## 3. The Bear Case: What Could Go Wrong
-*(This section critically examines the primary risks, using the quantitative data from the scorecard and the qualitative risks uncovered in the diligence log.)*
-* **Key Risks & Concerns:** What are the top 2-3 risks identified? Quantify these risks using the weakest data points from the JSON, and use the diligence log to explain why these issues are significant.
+*(This section critically examines the primary risks, synthesizing the weaknesses identified in the specialized memos and quantifying them with data from the Scorecard.)*
+* **Key Risks (from all Memos):** What are the top 2-3 risks identified?
+* **Scorecard Validation:** Quantify these risks using the weakest data points from the Scorecard (e.g., 'Debt-to-Equity', 'PEG Ratio').
 
 ## 4. Valuation: The GARP Fulcrum
-*(This is the deciding section. Analyze whether the current price is reasonable given the quality and growth. Use relative valuation metrics to make your case.)*
-* **Synthesize the 'PEG Ratio', 'Forward P/E', and 'Price to FCF' from the JSON. Use these relative metrics to determine if a margin of safety exists.** Answer the ultimate question: Based on all available evidence, does {companyName} represent a high-quality growth business trading at a price that offers a reasonable margin of safety for future returns?
+*(This is the deciding section. Synthesize the valuation discussion from the memos with the hard data from the Scorecard to determine if a margin of safety exists.)*
+* **Synthesize the 'PEG Ratio', 'Forward P/E', and 'Price to FCF' from the Scorecard.** Use these relative metrics to confirm or challenge the valuation assessments in the diligence memos. Answer the ultimate question: Based on all available evidence, does {companyName} represent a high-quality growth business trading at a price that offers a reasonable margin of safety?
 
-## 5. Foundational Q&A and Final Verdict
-(First, provide a direct answer to the following five foundational questions. Synthesize the answers from the 'Diligence Log' to inform your verdict. The quality of the diligence answers should directly influence your confidence and recommendation. A strong GARP candidate must have convincing, data-backed answers to these questions.)
+## 5. Recommendation & Justification
+**[Provide one of the following recommendations: "High Conviction Buy," "Initiate Position (Standard)," "Add to Watchlist," or "Pass / Sell".]**
 
-1.  **Financial Analysis:** Does the diligence show a story of high-quality, durable growth, or are there signs of weakening fundamentals?
-    * [Your Answer Here]
-2.  **Balance Sheet:** Does the diligence confirm the balance sheet is a fortress capable of funding future growth?
-    * [Your Answer Here]
-3.  **Income Statement:** Does the diligence show signs of improving operational efficiency and operating leverage?
-    * [Your Answer Here]
-4.  **Cash Flow & Capital Allocation:** Does the diligence reveal effective capital allocation, evidenced by a strong and stable ROIC?
-    * [Your Answer Here]
-5.  **Valuation:** Does the diligence and relative valuation analysis support the view that the valuation is reasonable and provides a margin of safety?
-    * [Your Answer Here]
-
-(Now, synthesize your answers above into a final verdict.)
-
-### Recommendation
-**[Provide one of the following recommendations: "High Conviction Buy" (suggests a full-sized position); "Initiate Position (Standard)" (suggests a standard starter position); "Initiate Position (Pilot)" (suggests a small tracking position); "Add to Watchlist"; or "Pass / Sell".]**
-
-### Confidence Score
-**[Assign a confidence score based on the following rules for high-quality (GARP Score > 75) companies: Very High (4.5-5.0) when the bull case, data, and diligence log are in strong alignment; High (3.8-4.4) for a strong thesis with minor contradictions or a fair valuation; Moderate (3.0-3.7) when the thesis is weakened by a significant valuation premium or unresolved diligence questions.]**
-
-### Justification
-[Provide a 4-5 sentence justification for your recommendation, explicitly referencing the trade-offs revealed in the Q&A above.]
+**[Provide a 4-5 sentence justification for your recommendation, explicitly referencing the trade-offs and tensions revealed by synthesizing the three specialized memos and the quantitative scorecard.]**
 
 ---
 **INPUTS:**
@@ -253,14 +235,24 @@ You are a Senior Investment Analyst at a GARP-focused ("Growth at a Reasonable P
 {scorecardJson}
 \`\`\`
 
-**2. Recent Diligence Log (Q&A):**
-\`\`\`markdown
-{diligenceLog}
-\`\`\`
-
-**3. Initial GARP Candidacy Report (Starting Thesis):**
+**2. Initial GARP Candidacy Report (Starting Thesis):**
 \`\`\`markdown
 {garpCandidacyReport}
+\`\`\`
+
+**3. Structured (Quantitative) Diligence Memo:**
+\`\`\`markdown
+{structuredDiligenceMemo}
+\`\`\`
+
+**4. Qualitative Diligence Memo:**
+\`\`\`markdown
+{qualitativeDiligenceMemo}
+\`\`\`
+
+**5. Market Sentiment Memo:**
+\`\`\`markdown
+{marketSentimentMemo}
 \`\`\`
 `.trim();
 
@@ -735,6 +727,7 @@ Role: You are the Chief Investment Officer of a multi-strategy fund. Your task i
 **2. QARP Analysis:** {qarpAnalysisReport}
 **3. Long-Term Compounder Memo:** {longTermCompounderMemo}
 **4. BMQV Memo:** {bmqvMemo}
+**5. Market Sentiment Memo:** {marketSentimentMemo}
 
 ---
 **YOUR TASK (Strict Output Format):**
@@ -742,7 +735,7 @@ Role: You are the Chief Investment Officer of a multi-strategy fund. Your task i
 # Final Investment Thesis: {companyName} ({tickerSymbol})
 
 ## 1. Summary of Analyst Verdicts
-(First, you MUST complete this summary table by extracting the final verdict from each of the four input memos. This establishes the factual foundation for your analysis.)
+(First, you MUST complete this summary table by extracting the final verdict from each of the five input memos. This establishes the factual foundation for your analysis.)
 
 | Analyst Memo            | Final Verdict                                 |
 | ----------------------- | --------------------------------------------- |
@@ -750,15 +743,88 @@ Role: You are the Chief Investment Officer of a multi-strategy fund. Your task i
 | **QARP Analysis** | [Extract the final "verdict" field]           |
 | **Long-Term Compounder**| [Extract the final "Verdict" classification]  |
 | **BMQV Memo** | [Extract the final "Verdict" classification]  |
+| **Market Sentiment** | [Extract the final "Verdict" classification]  |
+
 
 ## 2. The Core Debate: Identifying the Conflict
-(In one paragraph, analyze the completed table above to identify the central point of agreement or disagreement. Do the GARP/QARP frameworks, which focus on current valuation and growth, conflict with the long-term quality assessments of the Compounder/BMQV frameworks? State the conflict clearly and accurately based *only* on the verdicts you extracted.)
+(In one paragraph, analyze the completed table above to identify the central point of agreement or disagreement. Do the GARP/QARP frameworks, which focus on current valuation and growth, conflict with the long-term quality assessments of the Compounder/BMQV frameworks? How does the Market Sentiment verdict align with or contradict the fundamental views? State the conflict clearly.)
 
 ## 3. Weighing the Evidence & Final Recommendation
 (In one or two paragraphs, resolve the conflict you identified in the previous section. Weigh the evidence from the different perspectives. For example, you might conclude that the near-term valuation opportunity identified in the GARP/QARP reports is compelling enough to outweigh the long-term structural risks highlighted by the BMQV/Compounder reports, or vice-versa. Your reasoning here must be logical and lead directly to your final recommendation.)
 
 ### Recommendation
 **[Provide one of the following recommendations, bolded: "Initiate a Full Position," "Initiate a Half Position," "Add to Watchlist," or "Pass." Justify your choice in one final sentence summarizing your conclusion from the "Weighing the Evidence" section.]**
+`.trim();
+
+// --- NEW DILIGENCE MEMO PROMPTS ---
+
+const QUALITATIVE_DILIGENCE_MEMO_PROMPT = `
+Role: You are an investment analyst AI specializing in summarizing qualitative business factors.
+Task: Based ONLY on the provided Question & Answer pairs, create a "Qualitative Business Memo." Synthesize the answers into a cohesive narrative for each section. Conclude with an overall verdict on the company's business quality.
+
+**Q&A Data:**
+{qaData}
+
+# Qualitative Business Memo: {companyName} ({tickerSymbol})
+
+## 1. Competitive Moat Analysis
+(Synthesize the user's answer regarding the company's competitive moat here.)
+
+## 2. Management Quality & Strategy
+(Synthesize the user's answer regarding management's quality and strategy here.)
+
+## 3. "Scuttlebutt" & Brand Perception
+(Synthesize the user's answer from their independent "scuttlebutt" research here.)
+
+## 4. Synthesis & Verdict
+(In one paragraph, synthesize all the points. Conclude with a clear verdict: **"Business quality appears High," "Moderate," or "Low."** Justify your choice.)
+`.trim();
+
+const STRUCTURED_DILIGENCE_MEMO_PROMPT = `
+Role: You are an investment analyst AI specializing in summarizing quantitative financial data.
+Task: Based ONLY on the provided Question & Answer pairs, create a "Quantitative Health Memo." Synthesize the answers into a cohesive summary for each section. Conclude with an overall verdict on the company's quantitative health.
+
+**Q&A Data:**
+{qaData}
+
+# Quantitative Health Memo: {companyName} ({tickerSymbol})
+
+## 1. Financial & Fundamental Analysis
+(Synthesize the user's answer regarding the company's financial analysis here.)
+
+## 2. Balance Sheet Strength
+(Synthesize the user's answer regarding the balance sheet here.)
+
+## 3. Income Statement & Cash Flow
+(Synthesize the user's answers regarding the income statement and cash flow here.)
+
+## 4. Valuation Assessment
+(Synthesize the user's answer regarding valuation here.)
+
+## 5. Synthesis & Verdict
+(In one paragraph, synthesize all the points. Conclude with a clear verdict: **"Quantitative health appears Strong," "Average," or "Weak."** Justify your choice.)
+`.trim();
+
+const MARKET_SENTIMENT_MEMO_PROMPT = `
+Role: You are a market analyst AI specializing in synthesizing sentiment data into a clear narrative.
+Task: Based ONLY on the provided Question & Answer pairs, create a "Market Sentiment Memo." Summarize the findings for each section and conclude with an overall verdict on market sentiment.
+
+**Q&A Data:**
+{qaData}
+
+# Market Sentiment Memo: {companyName} ({tickerSymbol})
+
+## 1. Analyst Consensus
+(Summarize the findings from the 'Analyst Consensus' Q&A here.)
+
+## 2. Fundamental Factor Scores
+(Summarize the S&P factor scores from the Q&A here.)
+
+## 3. Technical & Price Momentum
+(Summarize the technical sentiment and short interest data from the Q&A here.)
+
+## 4. Synthesis & Verdict
+(In one paragraph, synthesize all the points. Conclude with a clear verdict: **"Overall market sentiment appears Bullish," "Bearish," or "Neutral."** Justify your choice.)
 `.trim();
 
 
@@ -830,6 +896,19 @@ export const promptMap = {
         prompt: BMQV_MEMO_PROMPT,
         requires: [] // Synthesis report, no direct FMP data
     },
+    // --- NEW DILIGENCE MEMOS ---
+    'QualitativeDiligenceMemo': {
+        prompt: QUALITATIVE_DILIGENCE_MEMO_PROMPT,
+        requires: []
+    },
+    'StructuredDiligenceMemo': {
+        prompt: STRUCTURED_DILIGENCE_MEMO_PROMPT,
+        requires: []
+    },
+    'MarketSentimentMemo': {
+        prompt: MARKET_SENTIMENT_MEMO_PROMPT,
+        requires: []
+    },
     // --- V2 EXTRACTION & SYNTHESIS PROMPTS ---
     'MoatAnalysis_Extract': { prompt: MOAT_ANALYSIS_EXTRACT_PROMPT },
     'CapitalAllocators_Extract': { prompt: CAPITAL_ALLOCATORS_EXTRACT_PROMPT },
@@ -850,7 +929,8 @@ export const ANALYSIS_ICONS = {
     'CapitalAllocators': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15.91 15.91a2.25 2.25 0 01-3.182 0l-3.03-3.03a.75.75 0 011.06-1.061l2.47 2.47 2.47-2.47a.75.75 0 011.06 1.06l-3.03 3.03z" /></svg>`,
     'InvestmentMemo': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>`,
     'EightKAnalysis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" /></svg>`,
-    'BmqvMemo': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v17.25m0 0c-1.472 0-2.882.265-4.185.75M12 20.25c1.472 0 2.882.265 4.185.75M18.75 4.97A48.416 48.416 0 0012 4.5c-2.291 0-4.545.16-6.75.47m13.5 0c1.01.143 2.01.317 3 .52m-3-.52l2.62 10.726c.122.499-.106 1.028-.589 1.202a5.988 5.988 0 01-6.861 0c-.483-.174-.711-.703-.59-1.202L18.75 4.971zm-16.5.52c.99-.203 1.99-.377 3-.52m0 0l2.62 10.726c.122.499-.106 1.028-.589 1.202a5.988 5.988 0 01-6.861 0c-.483-.174-.711-.703-.59-1.202L5.25 4.971z" /></svg>`
+    'BmqvMemo': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v17.25m0 0c-1.472 0-2.882.265-4.185.75M12 20.25c1.472 0 2.882.265 4.185.75M18.75 4.97A48.416 48.416 0 0012 4.5c-2.291 0-4.545.16-6.75.47m13.5 0c1.01.143 2.01.317 3 .52m-3-.52l2.62 10.726c.122.499-.106 1.028-.589 1.202a5.988 5.988 0 01-6.861 0c-.483-.174-.711-.703-.59-1.202L18.75 4.971zm-16.5.52c.99-.203 1.99-.377 3-.52m0 0l2.62 10.726c.122.499-.106 1.028-.589 1.202a5.988 5.988 0 01-6.861 0c-.483-.174-.711-.703-.59-1.202L5.25 4.971z" /></svg>`,
+    'MarketSentimentMemo': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 00-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 01-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 003 15h-.75M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" /></svg>`
 };
 
 export const ANALYSIS_NAMES = {
@@ -873,5 +953,8 @@ export const ANALYSIS_NAMES = {
     'AnnualReview': 'Annual Review',
     'LongTermCompounder': 'Long-Term Compounder Memo',
     'BmqvMemo': 'Buffett-Munger Q&V Memo',
-    'FinalInvestmentThesis': 'Final Investment Thesis'
+    'FinalInvestmentThesis': 'Final Investment Thesis',
+    'QualitativeDiligenceMemo': 'Qualitative Diligence Memo',
+    'StructuredDiligenceMemo': 'Structured Diligence Memo',
+    'MarketSentimentMemo': 'Market Sentiment Memo'
 };
