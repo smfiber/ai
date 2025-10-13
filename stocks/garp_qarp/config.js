@@ -191,6 +191,36 @@ JSON Data:
 {jsonData}
 `.trim();
 
+const DCF_ANALYSIS_PROMPT = `
+Role: You are a meticulous financial analyst AI specializing in valuation. Your task is to perform a simplified 5-year, two-stage Discounted Cash Flow (DCF) analysis for {companyName} ({tickerSymbol}) based ONLY on the provided financial data.
+Output Format: Provide a detailed report in professional markdown format, clearly showing your calculations and assumptions.
+
+JSON Data:
+{jsonData}
+
+# Discounted Cash Flow (DCF) Analysis: {companyName} ({tickerSymbol})
+
+## 1. Executive Summary
+(Start with a 2-3 sentence paragraph that states the final estimated fair value per share and the implied margin of safety or premium compared to the current stock price.)
+
+## 2. Key Assumptions
+(Clearly list and justify the key assumptions used in the model. This is the most critical part of the analysis.)
+* **Revenue Growth Rate (Years 1-5):** (Use the 'analystEstimates' revenue growth forecast for the first year, then linearly ramp down to a more conservative rate for the remaining years of the forecast period. Justify this rate.)
+* **Terminal Growth Rate:** (State a reasonable perpetual growth rate, typically between 2.0% and 3.0%, and justify it.)
+* **Discount Rate (WACC):** (Calculate the Weighted Average Cost of Capital. Show the calculation for the Cost of Equity using CAPM and the Cost of Debt. State your assumptions for the Risk-Free Rate, Equity Risk Premium, and Beta.)
+* **Tax Rate:** (Use the company's effective tax rate from the most recent income statement.)
+
+## 3. Free Cash Flow Projection
+(Provide a table showing the 5-year projection for Unlevered Free Cash Flow. Include rows for Revenue, EBIT, Taxes on EBIT (NOPAT), D&A, CapEx, and Change in NWC.)
+
+## 4. Fair Value Calculation
+(Show the step-by-step calculation to arrive at the fair value per share.)
+1.  **Calculate Terminal Value:** (Show the formula and the result.)
+2.  **Calculate Present Value of Cash Flows:** (Sum the discounted values of the 5-year projected UFCF and the discounted Terminal Value to get the Enterprise Value.)
+3.  **Calculate Equity Value:** (Start with Enterprise Value, add cash, and subtract total debt.)
+4.  **Calculate Fair Value Per Share:** (Divide the Equity Value by the shares outstanding.)
+`.trim();
+
 export const INVESTMENT_MEMO_PROMPT = `
 **Persona & Goal:**
 You are a Senior Investment Analyst at a GARP-focused ("Growth at a Reasonable Price") fund. Your task is to synthesize a quantitative scorecard, an initial candidacy report, and a detailed diligence log for {companyName} into a definitive and convincing investment memo. Your final output must determine if this is a quality growth company trading at a fair price.
@@ -792,6 +822,10 @@ export const promptMap = {
         prompt: CAPITAL_ALLOCATORS_PROMPT,
         requires: ['cash_flow_statement_annual', 'key_metrics_annual', 'income_statement_annual', 'balance_sheet_statement_annual', 'ratios_annual']
     },
+    'DcfAnalysis': {
+        prompt: DCF_ANALYSIS_PROMPT,
+        requires: ['profile', 'income_statement_annual', 'cash_flow_statement_annual', 'balance_sheet_statement_annual', 'analyst_estimates']
+    },
     'InvestmentMemo': {
         prompt: INVESTMENT_MEMO_PROMPT,
         requires: []
@@ -850,6 +884,7 @@ export const ANALYSIS_ICONS = {
     'QarpAnalysis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`,
     'MoatAnalysis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.286zm0 13.036h.008v.008h-.008v-.008z" /></svg>`,
     'CapitalAllocators': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15.91 15.91a2.25 2.25 0 01-3.182 0l-3.03-3.03a.75.75 0 011.06-1.061l2.47 2.47 2.47-2.47a.75.75 0 011.06 1.06l-3.03 3.03z" /></svg>`,
+    'DcfAnalysis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 15.75V18m-7.5-6.75h10.5a2.25 2.25 0 012.25 2.25v3.75a2.25 2.25 0 01-2.25 2.25H12v-1.5M3.75 15.75H12v-1.5M12 12.75v-1.5M15 9.75l-3-3m0 0l-3 3m3-3v12" /></svg>`,
     'InvestmentMemo': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>`,
     'EightKAnalysis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" /></svg>`,
     'BmqvMemo': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v17.25m0 0c-1.472 0-2.882.265-4.185.75M12 20.25c1.472 0 2.882.265 4.185.75M18.75 4.97A48.416 48.416 0 0012 4.5c-2.291 0-4.545.16-6.75.47m13.5 0c1.01.143 2.01.317 3 .52m-3-.52l2.62 10.726c.122.499-.106 1.028-.589 1.202a5.988 5.988 0 01-6.861 0c-.483-.174-.711-.703-.59-1.202L18.75 4.971zm-16.5.52c.99-.203 1.99-.377 3-.52m0 0l2.62 10.726c.122.499-.106 1.028-.589 1.202a5.988 5.988 0 01-6.861 0c-.483-.174-.711-.703-.59-1.202L5.25 4.971z" /></svg>`
@@ -860,6 +895,7 @@ export const ANALYSIS_NAMES = {
     'UpdatedQarpMemo': 'Updated QARP Memo',
     'MoatAnalysis': 'Moat Analysis',
     'CapitalAllocators': 'Capital Allocators',
+    'DcfAnalysis': 'DCF Analysis',
     'InvestmentMemo': 'Investment Memo',
     'GarpCandidacy': 'GARP Candidacy Report',
     'PositionAnalysis': 'Position Analysis',
