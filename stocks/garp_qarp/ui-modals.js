@@ -653,6 +653,12 @@ export async function openRawDataViewer(ticker) {
                 </div>
             </div>
         `;
+        
+        if (peerDocSnap.exists) {
+            const peerData = peerDocSnap.data();
+            const peerContentContainer = document.getElementById('peer-analysis-content-container');
+            renderPeerComparisonTable(peerContentContainer, ticker, metrics, peerData);
+        }
 
 
         if (savedCandidacyReports.length > 0) {
