@@ -533,7 +533,8 @@ export async function openRawDataViewer(ticker) {
         
         diligenceHubContainer.innerHTML = `
             <div class="space-y-6">
-                 <div class="mb-4 text-right p-4 bg-gray-100 rounded-lg border">
+                 <div class="mb-4 text-right p-4 bg-gray-100 rounded-lg border flex justify-end gap-4">
+                    <button id="delete-old-diligence-logs-button" data-symbol="${ticker}" class="bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-2 px-4 rounded-lg text-sm">Delete Old Log Entries</button>
                     <button id="delete-all-diligence-button" class="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg text-sm">Delete All Saved Answers</button>
                 </div>
                 <div id="manual-diligence-forms-container"></div>
