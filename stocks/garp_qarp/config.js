@@ -830,7 +830,7 @@ Task: Based ONLY on the provided Question & Answer pairs, create a "Market Senti
 (Summarize the technical sentiment and short interest data from the Q&A here.)
 
 ## 4. Synthesis & Verdict
-(In one paragraph, synthesize all the points. Conclude with a clear verdict: **"Overall market sentiment appears Bullish," "Bearish," or "Neutral."** Justify your choice.)
+(In one paragraph, synthesize all the points. Conclude with a single sentence using one of the following bolded phrases, followed by a brief justification. For example: "**Overall market sentiment appears Bullish** due to the stock's powerful price momentum, which outweighs the valuation concerns.")
 `.trim();
 
 const INVESTIGATION_SUMMARY_MEMO_PROMPT = `
