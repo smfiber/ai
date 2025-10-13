@@ -931,6 +931,7 @@ export async function handleAnalysisRequest(symbol, reportType, promptConfig, fo
     } catch (error) {
         displayMessageInModal(`Could not generate or load analysis: ${error.message}`, 'error');
         contentContainer.innerHTML = `<p class="text-red-500">Failed to generate report: ${error.message}</p>`;
+        throw error;
     } finally {
         if (document.getElementById(CONSTANTS.MODAL_LOADING).classList.contains('is-open')) {
             closeModal(CONSTANTS.MODAL_LOADING);
@@ -966,8 +967,7 @@ export async function handleGarpMemoRequest(symbol, forceNew = false) {
             'GarpCandidacy': 'GARP Candidacy Report',
             'StructuredDiligenceMemo': 'Structured Diligence Memo',
             'QualitativeDiligenceMemo': 'Qualitative Diligence Memo',
-            'MarketSentimentMemo': 'Market Sentiment Memo',
-            'InvestigationSummaryMemo': 'Investigation Summary Memo'
+            'MarketSentimentMemo': 'Market Sentiment Memo'
         };
 
         const fetchedMemos = {};
@@ -975,12 +975,7 @@ export async function handleGarpMemoRequest(symbol, forceNew = false) {
         for (const [type, name] of Object.entries(requiredMemos)) {
             const reports = await getSavedReports(symbol, type);
             if (reports.length === 0) {
-                // Make the investigation summary optional
-                if (type === 'InvestigationSummaryMemo') {
-                    fetchedMemos[type] = 'No investigation summary was generated.';
-                    continue;
-                }
-                throw new Error(`The foundational '${name}' has not been generated yet. Please generate it from the 'Diligence Hub' or 'AI Analysis' tab first.`);
+                throw new Error(`The foundational '${name}' has not been generated yet. Please generate it from the 'Diligence Hub' or 'Dashboard' tab first.`);
             }
             fetchedMemos[type] = reports[0].content;
         }
@@ -999,8 +994,7 @@ export async function handleGarpMemoRequest(symbol, forceNew = false) {
             .replace('{garpCandidacyReport}', fetchedMemos.GarpCandidacy)
             .replace('{structuredDiligenceMemo}', fetchedMemos.StructuredDiligenceMemo)
             .replace('{qualitativeDiligenceMemo}', fetchedMemos.QualitativeDiligenceMemo)
-            .replace('{marketSentimentMemo}', fetchedMemos.MarketSentimentMemo)
-            .replace('{investigationSummaryMemo}', fetchedMemos.InvestigationSummaryMemo);
+            .replace('{marketSentimentMemo}', fetchedMemos.MarketSentimentMemo);
 
         const memoContent = await generateRefinedArticle(prompt, loadingMessage);
         const synthesisData = await extractSynthesisData(memoContent, reportType);
@@ -1019,6 +1013,7 @@ export async function handleGarpMemoRequest(symbol, forceNew = false) {
         console.error("Error generating investment memo:", error);
         displayMessageInModal(`Could not generate memo: ${error.message}`, 'error');
         contentContainer.innerHTML = `<p class="text-red-500">Failed to generate memo: ${error.message}</p>`;
+        throw error;
     } finally {
         if (document.getElementById(CONSTANTS.MODAL_LOADING).classList.contains('is-open')) {
             closeModal(CONSTANTS.MODAL_LOADING);
@@ -1048,25 +1043,11 @@ export async function handleCompounderMemoRequest(symbol, forceNew = false) {
         const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
         loadingMessage.textContent = "Gathering prerequisite reports for Compounder Memo...";
 
-        const requiredReports = {
-            'MoatAnalysis': 'Moat Analysis',
-            'CapitalAllocators': 'Capital Allocators',
-            'InvestigationSummaryMemo': 'Investigation Summary Memo'
-        };
+        const moatReports = await getSavedReports(symbol, 'MoatAnalysis');
+        const capitalReports = await getSavedReports(symbol, 'CapitalAllocators');
 
-        const fetchedMemos = {};
-
-        for (const [type, name] of Object.entries(requiredReports)) {
-            const reports = await getSavedReports(symbol, type);
-             if (reports.length === 0) {
-                // Make the investigation summary optional
-                if (type === 'InvestigationSummaryMemo') {
-                    fetchedMemos[type] = 'No investigation summary was generated.';
-                    continue;
-                }
-                throw new Error(`The foundational '${name}' report must be generated first.`);
-            }
-            fetchedMemos[type] = reports[0].content;
+        if (moatReports.length === 0 || capitalReports.length === 0) {
+            throw new Error("The 'Moat Analysis' and 'Capital Allocators' reports must be generated first.");
         }
 
         const profile = state.portfolioCache.find(s => s.ticker === symbol);
@@ -1075,9 +1056,8 @@ export async function handleCompounderMemoRequest(symbol, forceNew = false) {
         const prompt = promptConfig.prompt
             .replace(/{companyName}/g, companyName)
             .replace(/{tickerSymbol}/g, symbol)
-            .replace('{moatAnalysisReport}', fetchedMemos.MoatAnalysis)
-            .replace('{capitalAllocatorsReport}', fetchedMemos.CapitalAllocators)
-            .replace('{investigationSummaryMemo}', fetchedMemos.InvestigationSummaryMemo);
+            .replace('{moatAnalysisReport}', moatReports[0].content)
+            .replace('{capitalAllocatorsReport}', capitalReports[0].content);
 
         const memoContent = await generateRefinedArticle(prompt, loadingMessage);
         const synthesisData = await extractSynthesisData(memoContent, reportType);
@@ -1091,6 +1071,7 @@ export async function handleCompounderMemoRequest(symbol, forceNew = false) {
         console.error("Error generating Long-Term Compounder memo:", error);
         displayMessageInModal(`Could not generate memo: ${error.message}`, 'error');
         contentContainer.innerHTML = `<p class="text-red-500">${error.message}</p>`;
+        throw error;
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
@@ -1118,27 +1099,12 @@ export async function handleBmqvMemoRequest(symbol, forceNew = false) {
         const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
         loadingMessage.textContent = "Gathering prerequisite reports for BMQV Memo...";
 
-        const requiredReports = {
-            'MoatAnalysis': 'Moat Analysis',
-            'CapitalAllocators': 'Capital Allocators',
-            'InvestigationSummaryMemo': 'Investigation Summary Memo'
-        };
-        
-        const fetchedMemos = {};
+        const moatReports = await getSavedReports(symbol, 'MoatAnalysis');
+        const capitalReports = await getSavedReports(symbol, 'CapitalAllocators');
 
-        for (const [type, name] of Object.entries(requiredReports)) {
-            const reports = await getSavedReports(symbol, type);
-             if (reports.length === 0) {
-                // Make the investigation summary optional
-                if (type === 'InvestigationSummaryMemo') {
-                    fetchedMemos[type] = 'No investigation summary was generated.';
-                    continue;
-                }
-                throw new Error(`The foundational '${name}' report must be generated first.`);
-            }
-            fetchedMemos[type] = reports[0].content;
+        if (moatReports.length === 0 || capitalReports.length === 0) {
+            throw new Error("The 'Moat Analysis' and 'Capital Allocators' reports must be generated first.");
         }
-
 
         const profile = state.portfolioCache.find(s => s.ticker === symbol);
         const companyName = profile ? profile.companyName : symbol;
@@ -1146,9 +1112,8 @@ export async function handleBmqvMemoRequest(symbol, forceNew = false) {
         const prompt = promptConfig.prompt
             .replace(/{companyName}/g, companyName)
             .replace(/{tickerSymbol}/g, symbol)
-            .replace('{moatAnalysisReport}', fetchedMemos.MoatAnalysis)
-            .replace('{capitalAllocatorsReport}', fetchedMemos.CapitalAllocators)
-            .replace('{investigationSummaryMemo}', fetchedMemos.InvestigationSummaryMemo);
+            .replace('{moatAnalysisReport}', moatReports[0].content)
+            .replace('{capitalAllocatorsReport}', capitalReports[0].content);
 
         const memoContent = await generateRefinedArticle(prompt, loadingMessage);
         const synthesisData = await extractSynthesisData(memoContent, reportType);
@@ -1162,6 +1127,7 @@ export async function handleBmqvMemoRequest(symbol, forceNew = false) {
         console.error("Error generating Buffett-Munger Q&V memo:", error);
         displayMessageInModal(`Could not generate memo: ${error.message}`, 'error');
         contentContainer.innerHTML = `<p class="text-red-500">${error.message}</p>`;
+        throw error;
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
@@ -1244,6 +1210,7 @@ export async function handleFinalThesisRequest(symbol, forceNew = false) {
         console.error("Error generating Final Investment Thesis:", error);
         displayMessageInModal(`Could not generate final thesis: ${error.message}`, 'error');
         contentContainer.innerHTML = `<p class="text-red-500">${error.message}</p>`;
+        throw error;
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
@@ -1408,6 +1375,7 @@ export async function handleDiligenceMemoRequest(symbol, reportType) {
     } catch (error) {
         console.error(`Error generating ${memoConfig.name} Memo:`, error);
         displayMessageInModal(`Could not generate memo: ${error.message}`, 'error');
+        throw error;
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
@@ -1467,10 +1435,12 @@ export async function handleInvestigationSummaryRequest(symbol, forceNew = false
         console.error("Error generating Investigation Summary Memo:", error);
         displayMessageInModal(`Could not generate summary: ${error.message}`, 'error');
         contentContainer.innerHTML = `<p class="text-red-500">${error.message}</p>`;
+        throw error;
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
 }
+
 
 export async function handleSaveDiligenceAnswers(symbol, diligenceType) {
     const config = {
@@ -2190,14 +2160,35 @@ export async function handleCopyReportRequest(symbol, reportType, buttonElement)
 }
 
 export async function handleFullAnalysisWorkflow(symbol) {
-    const workflow = [
+    const preliminaryStage = [
+        { reportType: 'GarpCandidacy', handler: handleGarpCandidacyRequest, isSilent: true },
+    ];
+    
+    const foundationalStage = [
         { reportType: 'MoatAnalysis', handler: handleAnalysisRequest },
         { reportType: 'CapitalAllocators', handler: handleAnalysisRequest },
+        { reportType: 'QualitativeDiligenceMemo', handler: handleDiligenceMemoRequest },
+        { reportType: 'StructuredDiligenceMemo', handler: handleDiligenceMemoRequest },
+        { reportType: 'MarketSentimentMemo', handler: handleDiligenceMemoRequest },
+        { reportType: 'InvestigationSummaryMemo', handler: handleInvestigationSummaryRequest }
+    ];
+
+    const synthesisStage = [
         { reportType: 'LongTermCompounder', handler: handleCompounderMemoRequest },
         { reportType: 'BmqvMemo', handler: handleBmqvMemoRequest },
         { reportType: 'InvestmentMemo', handler: handleGarpMemoRequest },
-        { reportType: 'QarpAnalysis', handler: handleAnalysisRequest },
+        { reportType: 'QarpAnalysis', handler: handleAnalysisRequest }
+    ];
+    
+    const finalStage = [
         { reportType: 'FinalInvestmentThesis', handler: handleFinalThesisRequest }
+    ];
+    
+    const allStages = [
+        { name: 'Preliminary Analysis', reports: preliminaryStage },
+        { name: 'Foundational Analysis', reports: foundationalStage },
+        { name: 'Synthesis Memos', reports: synthesisStage },
+        { name: 'Final Thesis', reports: finalStage }
     ];
 
     openModal(CONSTANTS.MODAL_LOADING);
@@ -2210,38 +2201,46 @@ export async function handleFullAnalysisWorkflow(symbol) {
     progressContainer.classList.remove('hidden');
     progressBarFill.style.width = '0%';
     
+    let totalReports = 0;
+    allStages.forEach(stage => totalReports += stage.reports.filter(r => !r.isSilent).length);
+    let completedReports = 0;
+
     try {
-        // Silent, preliminary step
-        currentReportName.textContent = `Running prerequisite: GARP Candidacy...`;
-        await handleGarpCandidacyRequest(symbol);
-        
-        for (let i = 0; i < workflow.length; i++) {
-            const step = workflow[i];
-            const reportName = ANALYSIS_NAMES[step.reportType];
-            
-            progressStatus.textContent = `Generating Reports (${i + 1}/${workflow.length})`;
-            currentReportName.textContent = `Running: ${reportName}...`;
+        for (const stage of allStages) {
+            if (stage.reports.filter(r => !r.isSilent).length > 0) {
+                 progressStatus.textContent = `Running Stage: ${stage.name}...`;
+            }
+           
+            for (const step of stage.reports) {
+                if (!step.isSilent) {
+                    currentReportName.textContent = `Generating: ${ANALYSIS_NAMES[step.reportType]}...`;
+                }
 
-            const promptConfig = promptMap[step.reportType];
-            await step.handler(symbol, step.reportType, promptConfig, true);
+                const promptConfig = promptMap[step.reportType];
+                await step.handler(symbol, step.reportType, promptConfig, true);
 
-            const analysisContentContainer = document.getElementById('analysis-content-container');
-            if (analysisContentContainer) {
-                const button = analysisContentContainer.querySelector(`button[data-report-type="${step.reportType}"]`);
-                if (button) {
-                    button.classList.add('has-saved-report');
+                const analysisContentContainer = document.getElementById('analysis-content-container');
+                if (analysisContentContainer) {
+                    const button = analysisContentContainer.querySelector(`button[data-report-type="${step.reportType}"]`);
+                    if (button) {
+                        button.classList.add('has-saved-report');
+                    }
+                }
+                
+                if (!step.isSilent) {
+                    completedReports++;
+                    const progress = (completedReports / totalReports) * 100;
+                    progressBarFill.style.width = `${progress}%`;
                 }
             }
-
-            const progress = ((i + 1) / workflow.length) * 100;
-            progressBarFill.style.width = `${progress}%`;
         }
 
         displayMessageInModal(`Full analysis workflow for ${symbol} completed successfully.`, 'info');
 
     } catch (error) {
         console.error("Error during full analysis workflow:", error);
-        displayMessageInModal(`Workflow failed: ${error.message}`, 'error');
+        const failedReportName = currentReportName.textContent.replace('Generating: ', '');
+        displayMessageInModal(`Workflow failed during "${failedReportName}". Reason: ${error.message}`, 'error');
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
         progressContainer.classList.add('hidden');
