@@ -251,6 +251,13 @@ export const QUALITATIVE_DILIGENCE_QUESTIONS = {
     'Scuttlebutt': "What are the most common praises or complaints about the company's products or services found in independent reviews, forums, or other non-company sources?"
 };
 
+export const MARKET_SENTIMENT_QUESTIONS = {
+    'Analyst Consensus': "Based on the LSEG and other analyst reports, what is the overall analyst rating (e.g., Bullish 8.6/10), and what is the breakdown of Buy/Neutral/Sell opinions?",
+    'Fundamental Factors': "Summarize the S&P Global Market Intelligence factor scores. What are the scores for Valuation, Quality, Growth Stability, and Financial Health, and how do they compare to the sector median?",
+    'Technical Sentiment': "According to the Trading Central report, what is the technical sentiment for the short-term (2-6 weeks), mid-term (6 weeks-9 months), and long-term (9 months-2 years)?",
+    'Short Interest': "What is the current Short % of Float, and has the number of shares short increased or decreased recently? What is the 'days to cover' ratio?"
+};
+
 
 export const QUARTERLY_REVIEW_QUESTIONS = {
     'Results vs. Expectations': "Did the company meet, beat, or miss revenue and EPS expectations? Analyze the key drivers behind the results and any significant one-time items.",
@@ -432,6 +439,7 @@ export async function openRawDataViewer(ticker) {
         const deepDiveButtons = [
             { reportType: 'MoatAnalysis', text: 'Moat Analysis', tooltip: 'Evaluates the company\'s competitive advantages.' },
             { reportType: 'CapitalAllocators', text: 'Capital Allocators', tooltip: 'Assesses management\'s skill in deploying capital.' },
+            { reportType: 'MarketSentimentMemo', text: 'Market Sentiment', tooltip: 'Synthesizes analyst ratings, technicals, and factor scores.' },
         ];
         
         const buildButtonHtml = (buttons) => buttons.map((btn) => {
@@ -527,6 +535,7 @@ export async function openRawDataViewer(ticker) {
                 <div id="manual-diligence-forms-container"></div>
                 <div id="qualitative-diligence-forms-container"></div>
                 <div id="structured-diligence-forms-container"></div>
+                <div id="market-sentiment-forms-container"></div>
                 <div id="diligence-log-display-container">
                     <div id="diligence-log-container" class="mb-6 text-left"></div>
                 </div>
@@ -543,7 +552,7 @@ export async function openRawDataViewer(ticker) {
         for (const [category, question] of Object.entries(QUALITATIVE_DILIGENCE_QUESTIONS)) {
             qualitativeHtml += `<div class="diligence-card p-3 bg-white rounded-lg border border-gray-200"><h5 class="font-semibold text-sm text-indigo-700 mb-2">${category}</h5><div class="flex items-start gap-2 mb-2"><p class="text-xs text-gray-600 flex-grow" data-question-text>${question}</p><button type="button" class="copy-icon-btn structured-diligence-copy-btn" title="Copy Question">${copyIcon}</button></div><textarea class="qualitative-diligence-answer w-full border border-gray-300 rounded-lg p-2 text-sm" rows="4" data-category="${category}" placeholder="Your analysis and findings here..."></textarea></div>`;
         }
-        qualitativeHtml += `</div><div class="text-right mt-4"><button id="save-qualitative-diligence-button" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg">Save Qualitative Answers</button></div></div>`;
+        qualitativeHtml += `</div><div class="text-right mt-4"><button data-report-type="QualitativeDiligenceMemo" class="generate-diligence-memo-button bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg">Generate Qualitative Memo</button></div></div>`;
         qualitativeContainer.innerHTML = qualitativeHtml;
         
         // Populate Structured Diligence
@@ -552,8 +561,17 @@ export async function openRawDataViewer(ticker) {
         for (const [category, question] of Object.entries(STRUCTURED_DILIGENCE_QUESTIONS)) {
             structuredHtml += `<div class="diligence-card p-3 bg-white rounded-lg border border-gray-200"><h5 class="font-semibold text-sm text-indigo-700 mb-2">${category}</h5><div class="flex items-start gap-2 mb-2"><p class="text-xs text-gray-600 flex-grow" data-question-text>${question}</p><button type="button" class="copy-icon-btn structured-diligence-copy-btn" title="Copy Question">${copyIcon}</button></div><textarea class="structured-diligence-answer w-full border border-gray-300 rounded-lg p-2 text-sm" rows="4" data-category="${category}" placeholder="Your analysis and findings here..."></textarea></div>`;
         }
-        structuredHtml += `</div><div class="text-right mt-4"><button id="save-structured-diligence-button" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg">Save Structured Answers</button></div></div>`;
+        structuredHtml += `</div><div class="text-right mt-4"><button data-report-type="StructuredDiligenceMemo" class="generate-diligence-memo-button bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg">Generate Structured Memo</button></div></div>`;
         structuredContainer.innerHTML = structuredHtml;
+        
+        // --- NEW: Populate Market Sentiment Diligence ---
+        const marketSentimentContainer = diligenceHubContainer.querySelector('#market-sentiment-forms-container');
+        let marketSentimentHtml = `<div class="text-left border rounded-lg p-4 bg-gray-50"><h4 class="text-base font-semibold text-gray-800 mb-1">Market Sentiment Diligence</h4><p class="text-sm text-gray-500 mb-4">Answer these questions using external market data sources.</p><div class="space-y-4">`;
+        for (const [category, question] of Object.entries(MARKET_SENTIMENT_QUESTIONS)) {
+            marketSentimentHtml += `<div class="diligence-card p-3 bg-white rounded-lg border border-gray-200"><h5 class="font-semibold text-sm text-indigo-700 mb-2">${category}</h5><div class="flex items-start gap-2 mb-2"><p class="text-xs text-gray-600 flex-grow" data-question-text>${question}</p><button type="button" class="copy-icon-btn structured-diligence-copy-btn" title="Copy Question">${copyIcon}</button></div><textarea class="market-sentiment-answer w-full border border-gray-300 rounded-lg p-2 text-sm" rows="4" data-category="${category}" placeholder="Your findings from external charts/data here..."></textarea></div>`;
+        }
+        marketSentimentHtml += `</div><div class="text-right mt-4"><button data-report-type="MarketSentimentMemo" class="generate-diligence-memo-button bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg">Generate Market Sentiment Memo</button></div></div>`;
+        marketSentimentContainer.innerHTML = marketSentimentHtml;
         
         // Populate Diligence Log
         const diligenceReports = allSavedReports.filter(r => r.reportType === 'DiligenceInvestigation');
