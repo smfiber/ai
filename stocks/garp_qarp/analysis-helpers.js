@@ -478,7 +478,27 @@ export function _calculateMoatAnalysisMetrics(data) {
 }
 
 /**
- * NEW: Calculates metrics for the "Capital Allocators" prompt.
+ * NEW: Helper to parse financial strings like "-2.49B" or "-813.01M" into numbers.
+ * @param {string} str The financial string to parse.
+ * @returns {number} The parsed number.
+ */
+function parseFinancialString(str) {
+    if (typeof str !== 'string' || !str) return 0;
+    const num = parseFloat(str);
+    if (isNaN(num)) return 0;
+    
+    if (str.endsWith('B')) {
+        return num * 1e9;
+    }
+    if (str.endsWith('M')) {
+        return num * 1e6;
+    }
+    return num;
+}
+
+/**
+ * UPDATED: Calculates metrics for the "Capital Allocators" prompt.
+ * Now includes pre-calculated 10-year summary totals to ensure accuracy.
  */
 export function _calculateCapitalAllocatorsMetrics(data) {
     const cashFlow = (data.cash_flow_statement_annual || []).slice(0, 10);
@@ -489,6 +509,27 @@ export function _calculateCapitalAllocatorsMetrics(data) {
 
     const ratiosMap = new Map(ratios.map(r => [r.calendarYear, r]));
     const metricsMap = new Map(metrics.map(m => [m.calendarYear, m]));
+
+    // --- NEW: Calculate 10-Year Summary Totals ---
+    const cashFlowPrioritiesData = cashFlow.map(cf => ({
+        year: cf.calendarYear,
+        capex: formatLargeNumber(cf.capitalExpenditure),
+        acquisitions: formatLargeNumber(cf.acquisitionsNet),
+        dividends: formatLargeNumber(cf.dividendsPaid),
+        buybacks: formatLargeNumber(cf.commonStockRepurchased)
+    }));
+
+    const totals = cashFlowPrioritiesData.reduce((acc, item) => {
+        acc.capex += parseFinancialString(item.capex);
+        acc.acquisitions += parseFinancialString(item.acquisitions);
+        acc.dividends += parseFinancialString(item.dividends);
+        acc.buybacks += parseFinancialString(item.buybacks);
+        return acc;
+    }, { capex: 0, acquisitions: 0, dividends: 0, buybacks: 0 });
+
+    const totalReinvestment = totals.capex + totals.acquisitions;
+    const totalShareholderReturns = totals.dividends + totals.buybacks;
+    // --- End of New Calculation Logic ---
 
     const metricsWithNormalizedKeys = metrics.map(m => ({
         ...m,
@@ -510,13 +551,17 @@ export function _calculateCapitalAllocatorsMetrics(data) {
     const formatPercentTrend = (arr, key) => arr.map(item => ({ year: item.calendarYear, value: item[key] ? `${(item[key] * 100).toFixed(2)}%` : 'N/A' }));
 
     return {
-        cashFlowPriorities: cashFlow.map(cf => ({
-            year: cf.calendarYear,
-            capex: formatLargeNumber(cf.capitalExpenditure),
-            acquisitions: formatLargeNumber(cf.acquisitionsNet),
-            dividends: formatLargeNumber(cf.dividendsPaid),
-            buybacks: formatLargeNumber(cf.commonStockRepurchased)
-        })),
+        // --- NEW: Add the calculated totals to the return object ---
+        summaryTotals: {
+            acquisitions: formatLargeNumber(totals.acquisitions),
+            capex: formatLargeNumber(totals.capex),
+            buybacks: formatLargeNumber(totals.buybacks),
+            dividends: formatLargeNumber(totals.dividends),
+            totalReinvestment: formatLargeNumber(totalReinvestment),
+            totalShareholderReturns: formatLargeNumber(totalShareholderReturns)
+        },
+        // --- Existing data structures ---
+        cashFlowPriorities: cashFlowPrioritiesData,
         reinvestmentEffectiveness: {
             roicTrend: formatPercentTrend(metricsWithNormalizedKeys, 'returnOnInvestedCapital'),
             roeTrend: formatPercentTrend(metricsWithNormalizedKeys, 'returnOnEquity'),
@@ -541,6 +586,7 @@ export function _calculateCapitalAllocatorsMetrics(data) {
         }
     };
 }
+
 
 export const CALCULATION_SUMMARIES = {
     'QarpAnalysis': 'Performs a "Quality at a Reasonable Price" (QARP) analysis. This report uses the same underlying data as the GARP Scorecard but instructs the AI to synthesize it through a different lens, focusing on the critical balance between business quality (measured by ROE, ROIC, D/E) and valuation (measured by P/E, PEG, P/FCF).',
