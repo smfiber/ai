@@ -773,10 +773,7 @@ Task: Based ONLY on the provided Question & Answer pairs, create a "Qualitative 
 ## 2. Management Quality & Strategy
 (Synthesize the user's answer regarding management's quality and strategy here.)
 
-## 3. "Scuttlebutt" & Brand Perception
-(Synthesize the user's answer from their independent "scuttlebutt" research here.)
-
-## 4. Synthesis & Verdict
+## 3. Synthesis & Verdict
 (In one paragraph, synthesize all the points. Conclude with a clear verdict: **"Business quality appears High," "Moderate," or "Low."** Justify your choice.)
 `.trim();
 
@@ -825,6 +822,69 @@ Task: Based ONLY on the provided Question & Answer pairs, create a "Market Senti
 
 ## 4. Synthesis & Verdict
 (In one paragraph, synthesize all the points. Conclude with a clear verdict: **"Overall market sentiment appears Bullish," "Bearish," or "Neutral."** Justify your choice.)
+`.trim();
+
+// --- NEW ONGOING REVIEW PROMPTS ---
+
+const QUARTERLY_REVIEW_MEMO_PROMPT = `
+Role: You are a portfolio manager conducting a quarterly review of an existing holding.
+Task: Your task is to analyze the user's new quarterly findings in the context of the original investment thesis provided. Synthesize this information into a formal, professional Quarterly Review Memo. Your analysis must be objective and directly reference the provided data.
+
+**Original Investment Thesis (Most Recent Investment Memo):**
+---
+{originalInvestmentMemo}
+---
+
+**User's New Quarterly Findings (Q&A):**
+---
+{qaData}
+---
+
+# Quarterly Review Memo: {companyName} ({tickerSymbol})
+
+## 1. Thesis Confirmation or Challenge
+(In one paragraph, synthesize the new findings. Does the quarter's performance and management commentary strengthen, weaken, or not materially change the original investment thesis? Be specific.)
+
+## 2. Key Performance Indicators vs. Expectations
+(Summarize the user's answer regarding the company's performance against revenue and EPS expectations. Detail the key drivers.)
+
+## 3. Management Outlook & Guidance
+(Summarize the user's answer regarding management's forward-looking guidance and commentary from the earnings call.)
+
+## 4. Final Verdict & Action Plan
+(Synthesize the user's proposed action plan. Conclude with a clear, single-word verdict based on the user's input: **Hold, Add, Trim, or Sell**. Provide a concise, 1-2 sentence justification for this action.)
+`.trim();
+
+const ANNUAL_REVIEW_MEMO_PROMPT = `
+Role: You are a portfolio manager conducting an annual review of an existing holding.
+Task: Your task is to analyze the user's new annual findings in the context of the original investment thesis provided. Synthesize this information into a formal, professional Annual Review Memo. Your analysis must be objective and directly reference the provided data.
+
+**Original Investment Thesis (Most Recent Investment Memo):**
+---
+{originalInvestmentMemo}
+---
+
+**User's New Annual Findings (Q&A):**
+---
+{qaData}
+---
+
+# Annual Review Memo: {companyName} ({tickerSymbol})
+
+## 1. Long-Term Thesis Validation
+(In one paragraph, synthesize the full-year findings. Does the year's performance, strategic progress, and updated outlook strengthen or fundamentally weaken the original long-term investment thesis? Be specific.)
+
+## 2. Full-Year Performance vs. Guidance
+(Summarize the user's answer regarding the company's full-year performance against its own guidance.)
+
+## 3. Strategic Progress & Capital Allocation
+(Summarize the user's answer regarding the company's strategic initiatives and the effectiveness of its capital allocation over the full year. Reference ROIC if available.)
+
+## 4. Updated Competitive Landscape & Risks
+(Summarize the user's answer regarding any material changes to the competitive environment or long-term business risks.)
+
+## 5. Final Verdict & Forward-Looking Action Plan
+(Synthesize the user's proposed forward-looking action plan. Conclude with a clear, single-word verdict based on the user's input: **Hold, Add on Weakness, Trim on Strength, or Exit Position**. Provide a concise, 1-2 sentence justification for this plan.)
 `.trim();
 
 
@@ -907,6 +967,15 @@ export const promptMap = {
     },
     'MarketSentimentMemo': {
         prompt: MARKET_SENTIMENT_MEMO_PROMPT,
+        requires: []
+    },
+    // --- NEW ONGOING REVIEW MEMOS ---
+    'QuarterlyReview': {
+        prompt: QUARTERLY_REVIEW_MEMO_PROMPT,
+        requires: []
+    },
+    'AnnualReview': {
+        prompt: ANNUAL_REVIEW_MEMO_PROMPT,
         requires: []
     },
     // --- V2 EXTRACTION & SYNTHESIS PROMPTS ---
