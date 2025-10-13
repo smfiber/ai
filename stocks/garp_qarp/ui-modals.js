@@ -242,13 +242,13 @@ export const STRUCTURED_DILIGENCE_QUESTIONS = {
     'Balance Sheet': "Does the balance sheet represent a fortress capable of funding future growth, or a potential risk? Evaluate its debt-to-equity ratio and current ratio against its peers to determine if its financial health is a competitive advantage or a liability.",
     'Income Statement': "Analyze the income statement for signs of improving operational efficiency. Is the company demonstrating operating leverage (i.e., are earnings growing faster than revenue)? Compare its net profit margin trend to its competitors.",
     'Cash Flow': "Evaluate management's effectiveness as capital allocators. Based on the cash flow statement, are they reinvesting capital effectively to drive growth, or are they returning it to shareholders? Crucially, compare the Return on Invested Capital (ROIC) to its historical trend and its peers to judge their skill.",
-    'Valuation': "Is the company's current valuation reasonable relative to its growth prospects? Analyze its PEG ratio and compare its current P/E ratio to both its own 5-year historical average and the industry average to determine if we have a margin of safety.",
-    'Absolute Valuation (DCF)': "Perform a 5-year, two-stage Discounted Cash Flow (DCF) analysis. What are your key assumptions for the revenue growth rate, a reasonable terminal growth rate, and the discount rate (WACC)? Based on these assumptions, what is the estimated fair value per share, and what is the resulting margin of safety compared to the current stock price?"
+    'Valuation': "Is the company's current valuation reasonable relative to its growth prospects? Analyze its PEG ratio and compare its current P/E ratio to both its own 5-year historical average and the industry average to determine if we have a margin of safety."
 };
 
 export const QUALITATIVE_DILIGENCE_QUESTIONS = {
     'Competitive Moat': "What is the source and durability of the company's competitive moat (e.g., brand, network effects, high switching costs, low-cost production), and is there evidence that this advantage is strengthening or weakening over time?",
-    'Management Quality': "After reviewing recent earnings call transcripts or shareholder letters, what is your assessment of management's transparency, operational focus, and long-term strategy? Do they demonstrate a rational and shareholder-aligned approach?"
+    'Management Quality': "After reviewing recent earnings call transcripts or shareholder letters, what is your assessment of management's transparency, operational focus, and long-term strategy? Do they demonstrate a rational and shareholder-aligned approach?",
+    'Scuttlebutt': "What are the most common praises or complaints about the company's products or services found in independent reviews, forums, or other non-company sources?"
 };
 
 
@@ -432,7 +432,7 @@ export async function openRawDataViewer(ticker) {
         const deepDiveButtons = [
             { reportType: 'MoatAnalysis', text: 'Moat Analysis', tooltip: 'Evaluates the company\'s competitive advantages.' },
             { reportType: 'CapitalAllocators', text: 'Capital Allocators', tooltip: 'Assesses management\'s skill in deploying capital.' },
-            { reportType: 'DcfAnalysis', text: 'DCF Analysis', tooltip: 'Performs a Discounted Cash Flow valuation.' }
+            { reportType: 'DcfAnalysis', text: 'DCF Analysis', tooltip: 'Estimates the company\'s intrinsic value using a Discounted Cash Flow model.' },
         ];
         
         const buildButtonHtml = (buttons) => buttons.map((btn) => {
@@ -471,25 +471,13 @@ export async function openRawDataViewer(ticker) {
         
         aiAnalysisContainer.innerHTML = `
             <div id="analysis-content-container" class="space-y-8 text-center bg-gray-50 p-4 rounded-lg border-b pb-4 mb-4">
-                <div class="p-4 bg-white rounded-lg border shadow-sm">
-                    <h3 class="text-lg font-bold text-gray-800 mb-4">Full Analysis Workflow</h3>
-                    <p class="text-sm text-gray-500 mb-4">Run the entire analysis workflow sequentially. This may take several minutes.</p>
-                    <button id="run-full-workflow-button" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg text-base shadow-md transition-transform hover:scale-105 inline-flex items-center gap-2">
-                        <svg id="run-full-workflow-spinner" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        Run Full Analysis
-                    </button>
-                </div>
 
                 <div class="p-4 bg-white rounded-lg border shadow-sm">
                     <h3 class="text-lg font-bold text-gray-800 mb-4">Step 1: Foundational Analysis</h3>
                     <p class="text-sm text-gray-500 mb-4">Generate these core reports first. They are the building blocks for the synthesis memos.</p>
-                     <div class="flex flex-wrap gap-4 justify-center">
+                    <div class="flex flex-wrap gap-4 justify-center">
                         ${deepDiveHtml}
                     </div>
-                     <button id="generate-prereqs-button" class="mt-4 bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-1 px-3 rounded-lg text-xs">Generate All</button>
                 </div>
 
                 <div class="p-4 bg-white rounded-lg border shadow-sm">
