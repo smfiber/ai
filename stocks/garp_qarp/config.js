@@ -176,7 +176,7 @@ Based on the **pre-calculated 'summaryTotals'**, what have been the company's pr
 - **Revenue & Profit Growth:** How has the reinvestment translated into top-line and bottom-line growth? Analyze the trends in 'reinvestmentEffectiveness.revenueGrowth' and 'reinvestmentEffectiveness.grossProfitGrowth'. Is growth accelerating or decelerating?
 
 ## 3. Acquisition Track Record (M&A)
-- Analyze the 'acquisitionHistory' data. Correlate periods of significant acquisition spending ('acquisitions') with the 'reinvestmentEffectiveness.roicTrend'. Did ROIC improve or decline after major acquisitions?
+- Analyze the 'acquisitionHistory' data. Analyze the 'acquisitionHistory' data. For periods of significant spending, **cite the acquisition amount for each individual year** and correlate it with the corresponding 'reinvestmentEffectiveness.roicTrend'. Did ROIC improve or decline after major acquisitions?
 - Look at the 'goodwill' trend. A large increase in goodwill followed by stagnant or declining ROIC is a major red flag for overpaying for deals.
 
 ## 4. Shareholder Returns
