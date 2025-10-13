@@ -966,7 +966,8 @@ export async function handleGarpMemoRequest(symbol, forceNew = false) {
             'GarpCandidacy': 'GARP Candidacy Report',
             'StructuredDiligenceMemo': 'Structured Diligence Memo',
             'QualitativeDiligenceMemo': 'Qualitative Diligence Memo',
-            'MarketSentimentMemo': 'Market Sentiment Memo'
+            'MarketSentimentMemo': 'Market Sentiment Memo',
+            'InvestigationSummaryMemo': 'Investigation Summary Memo'
         };
 
         const fetchedMemos = {};
@@ -974,7 +975,12 @@ export async function handleGarpMemoRequest(symbol, forceNew = false) {
         for (const [type, name] of Object.entries(requiredMemos)) {
             const reports = await getSavedReports(symbol, type);
             if (reports.length === 0) {
-                throw new Error(`The foundational '${name}' has not been generated yet. Please generate it from the 'Diligence Hub' or 'Dashboard' tab first.`);
+                // Make the investigation summary optional
+                if (type === 'InvestigationSummaryMemo') {
+                    fetchedMemos[type] = 'No investigation summary was generated.';
+                    continue;
+                }
+                throw new Error(`The foundational '${name}' has not been generated yet. Please generate it from the 'Diligence Hub' or 'AI Analysis' tab first.`);
             }
             fetchedMemos[type] = reports[0].content;
         }
@@ -993,7 +999,8 @@ export async function handleGarpMemoRequest(symbol, forceNew = false) {
             .replace('{garpCandidacyReport}', fetchedMemos.GarpCandidacy)
             .replace('{structuredDiligenceMemo}', fetchedMemos.StructuredDiligenceMemo)
             .replace('{qualitativeDiligenceMemo}', fetchedMemos.QualitativeDiligenceMemo)
-            .replace('{marketSentimentMemo}', fetchedMemos.MarketSentimentMemo);
+            .replace('{marketSentimentMemo}', fetchedMemos.MarketSentimentMemo)
+            .replace('{investigationSummaryMemo}', fetchedMemos.InvestigationSummaryMemo);
 
         const memoContent = await generateRefinedArticle(prompt, loadingMessage);
         const synthesisData = await extractSynthesisData(memoContent, reportType);
@@ -1041,11 +1048,25 @@ export async function handleCompounderMemoRequest(symbol, forceNew = false) {
         const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
         loadingMessage.textContent = "Gathering prerequisite reports for Compounder Memo...";
 
-        const moatReports = await getSavedReports(symbol, 'MoatAnalysis');
-        const capitalReports = await getSavedReports(symbol, 'CapitalAllocators');
+        const requiredReports = {
+            'MoatAnalysis': 'Moat Analysis',
+            'CapitalAllocators': 'Capital Allocators',
+            'InvestigationSummaryMemo': 'Investigation Summary Memo'
+        };
 
-        if (moatReports.length === 0 || capitalReports.length === 0) {
-            throw new Error("The 'Moat Analysis' and 'Capital Allocators' reports must be generated first.");
+        const fetchedMemos = {};
+
+        for (const [type, name] of Object.entries(requiredReports)) {
+            const reports = await getSavedReports(symbol, type);
+             if (reports.length === 0) {
+                // Make the investigation summary optional
+                if (type === 'InvestigationSummaryMemo') {
+                    fetchedMemos[type] = 'No investigation summary was generated.';
+                    continue;
+                }
+                throw new Error(`The foundational '${name}' report must be generated first.`);
+            }
+            fetchedMemos[type] = reports[0].content;
         }
 
         const profile = state.portfolioCache.find(s => s.ticker === symbol);
@@ -1054,8 +1075,9 @@ export async function handleCompounderMemoRequest(symbol, forceNew = false) {
         const prompt = promptConfig.prompt
             .replace(/{companyName}/g, companyName)
             .replace(/{tickerSymbol}/g, symbol)
-            .replace('{moatAnalysisReport}', moatReports[0].content)
-            .replace('{capitalAllocatorsReport}', capitalReports[0].content);
+            .replace('{moatAnalysisReport}', fetchedMemos.MoatAnalysis)
+            .replace('{capitalAllocatorsReport}', fetchedMemos.CapitalAllocators)
+            .replace('{investigationSummaryMemo}', fetchedMemos.InvestigationSummaryMemo);
 
         const memoContent = await generateRefinedArticle(prompt, loadingMessage);
         const synthesisData = await extractSynthesisData(memoContent, reportType);
@@ -1096,12 +1118,27 @@ export async function handleBmqvMemoRequest(symbol, forceNew = false) {
         const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
         loadingMessage.textContent = "Gathering prerequisite reports for BMQV Memo...";
 
-        const moatReports = await getSavedReports(symbol, 'MoatAnalysis');
-        const capitalReports = await getSavedReports(symbol, 'CapitalAllocators');
+        const requiredReports = {
+            'MoatAnalysis': 'Moat Analysis',
+            'CapitalAllocators': 'Capital Allocators',
+            'InvestigationSummaryMemo': 'Investigation Summary Memo'
+        };
+        
+        const fetchedMemos = {};
 
-        if (moatReports.length === 0 || capitalReports.length === 0) {
-            throw new Error("The 'Moat Analysis' and 'Capital Allocators' reports must be generated first.");
+        for (const [type, name] of Object.entries(requiredReports)) {
+            const reports = await getSavedReports(symbol, type);
+             if (reports.length === 0) {
+                // Make the investigation summary optional
+                if (type === 'InvestigationSummaryMemo') {
+                    fetchedMemos[type] = 'No investigation summary was generated.';
+                    continue;
+                }
+                throw new Error(`The foundational '${name}' report must be generated first.`);
+            }
+            fetchedMemos[type] = reports[0].content;
         }
+
 
         const profile = state.portfolioCache.find(s => s.ticker === symbol);
         const companyName = profile ? profile.companyName : symbol;
@@ -1109,8 +1146,9 @@ export async function handleBmqvMemoRequest(symbol, forceNew = false) {
         const prompt = promptConfig.prompt
             .replace(/{companyName}/g, companyName)
             .replace(/{tickerSymbol}/g, symbol)
-            .replace('{moatAnalysisReport}', moatReports[0].content)
-            .replace('{capitalAllocatorsReport}', capitalReports[0].content);
+            .replace('{moatAnalysisReport}', fetchedMemos.MoatAnalysis)
+            .replace('{capitalAllocatorsReport}', fetchedMemos.CapitalAllocators)
+            .replace('{investigationSummaryMemo}', fetchedMemos.InvestigationSummaryMemo);
 
         const memoContent = await generateRefinedArticle(prompt, loadingMessage);
         const synthesisData = await extractSynthesisData(memoContent, reportType);
@@ -1416,6 +1454,7 @@ export async function handleInvestigationSummaryRequest(symbol, forceNew = false
             .replace(/{tickerSymbol}/g, symbol)
             .replace('{qaData}', qaData);
         
+        loadingMessage.textContent = 'AI is synthesizing your investigation notes...';
         const memoContent = await generateRefinedArticle(prompt, loadingMessage);
         
         await autoSaveReport(symbol, reportType, memoContent, prompt);
@@ -1432,7 +1471,6 @@ export async function handleInvestigationSummaryRequest(symbol, forceNew = false
         closeModal(CONSTANTS.MODAL_LOADING);
     }
 }
-
 
 export async function handleSaveDiligenceAnswers(symbol, diligenceType) {
     const config = {
