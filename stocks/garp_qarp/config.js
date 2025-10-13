@@ -13,8 +13,7 @@ export const state = {
     geminiApiKey: "",
     googleClientId: "",
     portfolioCache: [],
-    sessionLog: [],
-    isAnalysisRunning: false
+    sessionLog: []
 };
 
 // Map specific AI analysis types to the FMP endpoints they require.
@@ -191,52 +190,22 @@ JSON Data:
 {jsonData}
 `.trim();
 
-const DCF_ANALYSIS_PROMPT = `
-Role: You are a meticulous financial analyst AI specializing in valuation. Your task is to perform a simplified 5-year, two-stage Discounted Cash Flow (DCF) analysis for {companyName} ({tickerSymbol}) based ONLY on the provided financial data.
-Output Format: Provide a detailed report in professional markdown format, clearly showing your calculations and assumptions.
-
-JSON Data:
-{jsonData}
-
-# Discounted Cash Flow (DCF) Analysis: {companyName} ({tickerSymbol})
-
-## 1. Executive Summary
-(Start with a 2-3 sentence paragraph that states the final estimated fair value per share and the implied margin of safety or premium compared to the current stock price.)
-
-## 2. Key Assumptions
-(Clearly list and justify the key assumptions used in the model. This is the most critical part of the analysis.)
-* **Revenue Growth Rate (Years 1-5):** (Use the 'analystEstimates' revenue growth forecast for the first year, then linearly ramp down to a more conservative rate for the remaining years of the forecast period. Justify this rate.)
-* **Terminal Growth Rate:** (State a reasonable perpetual growth rate, typically between 2.0% and 3.0%, and justify it.)
-* **Discount Rate (WACC):** (Calculate the Weighted Average Cost of Capital. Show the calculation for the Cost of Equity using CAPM and the Cost of Debt. State your assumptions for the Risk-Free Rate, Equity Risk Premium, and Beta.)
-* **Tax Rate:** (Use the company's effective tax rate from the most recent income statement.)
-
-## 3. Free Cash Flow Projection
-(Provide a table showing the 5-year projection for Unlevered Free Cash Flow. Include rows for Revenue, EBIT, Taxes on EBIT (NOPAT), D&A, CapEx, and Change in NWC.)
-
-## 4. Fair Value Calculation
-(Show the step-by-step calculation to arrive at the fair value per share.)
-1.  **Calculate Terminal Value:** (Show the formula and the result.)
-2.  **Calculate Present Value of Cash Flows:** (Sum the discounted values of the 5-year projected UFCF and the discounted Terminal Value to get the Enterprise Value.)
-3.  **Calculate Equity Value:** (Start with Enterprise Value, add cash, and subtract total debt.)
-4.  **Calculate Fair Value Per Share:** (Divide the Equity Value by the shares outstanding.)
-`.trim();
-
-export const INVESTMENT_MEMO_PROMPT = `
+const UPDATED_GARP_MEMO_PROMPT = `
 **Persona & Goal:**
-You are a Senior Investment Analyst at a GARP-focused ("Growth at a Reasonable Price") fund. Your task is to synthesize a quantitative scorecard, an initial candidacy report, and a detailed diligence log for {companyName} into a definitive and convincing investment memo. Your final output must determine if this is a quality growth company trading at a fair price.
+You are a Senior Investment Analyst at a GARP-focused ("Growth at a Reasonable Price") fund. Your task is to synthesize a quantitative scorecard, an initial candidacy report, a detailed diligence log, and a DCF analysis for {companyName} into a definitive and convincing investment memo. Your final output must determine if this is a quality growth company trading at a fair price.
 
 **Core Philosophy (How to Think):**
-1.  **Thesis Evolution:** Use the 'GARP Candidacy Report' as the starting point. Your main goal is to determine if the findings in the 'Diligence Log' confirm, challenge, or alter that initial thesis. Frame your analysis around this evolution.
+1.  **Thesis Evolution:** Use the 'GARP Candidacy Report' as the starting point. Your main goal is to determine if the findings in the 'Diligence Log' and 'DCF Analysis' confirm, challenge, or alter that initial thesis. Frame your analysis around this evolution.
 2.  **Data-Driven Narrative:** The heart of this memo is a compelling narrative built from the quantitative 'Scorecard JSON'. Every key assertion MUST be backed by a specific, quantifiable data point from the scorecard.
-3.  **Synthesize, Don't Summarize:** Do not merely restate findings. Your primary task is to integrate the quantitative data (the "what") with the qualitative findings from the diligence log (the "so what") to form a cohesive bull case, bear case, and final recommendation.
-4.  **Address Contradictions:** If the initial Candidacy Report, the Scorecard, and the Diligence Log present conflicting information (e.g., on valuation), you must address this tension directly. Explain which source carries more weight in your final analysis and why (typically, the detailed diligence log is most important).
+3.  **Synthesize, Don't Summarize:** Do not merely restate findings. Your primary task is to integrate the quantitative data (the "what") with the qualitative findings from the diligence log and DCF (the "so what") to form a cohesive bull case, bear case, and final recommendation.
+4.  **Address Contradictions:** If the initial Candidacy Report, the Scorecard, the DCF, and the Diligence Log present conflicting information (e.g., on valuation), you must address this tension directly. Explain which source carries more weight in your final analysis and why.
 
 ---
 
 # Investment Memo: {companyName} ({tickerSymbol})
 
 ## 1. Executive Summary & Investment Thesis
-*(Begin with a 3-4 sentence paragraph that concisely summarizes the investment thesis. State the initial thesis from the Candidacy Report and then explain how the diligence findings have either reinforced or fundamentally changed that view. It should cover the core bull case, the primary risks, and the final recommendation.)*
+*(Begin with a 3-4 sentence paragraph that concisely summarizes the investment thesis. State the initial thesis from the Candidacy Report and then explain how the diligence and DCF findings have either reinforced or fundamentally changed that view. It should cover the core bull case, the primary risks, and the final recommendation.)*
 
 ## 2. The Bull Case: Why We Could Be Right
 *(This section should be a compelling narrative about the investment's upside potential, built by interpreting the strengths shown in the scorecard data and confirmed by the diligence log.)*
@@ -248,8 +217,8 @@ You are a Senior Investment Analyst at a GARP-focused ("Growth at a Reasonable P
 * **Key Risks & Concerns:** What are the top 2-3 risks identified? Quantify these risks using the weakest data points from the JSON, and use the diligence log to explain why these issues are significant.
 
 ## 4. Valuation: The GARP Fulcrum
-*(This is the deciding section. Analyze whether the current price is reasonable given the quality and growth. Explicitly address any discrepancies between the initial scorecard's valuation metrics and the deeper analysis in the diligence log.)*
-* **Synthesize the 'PEG Ratio', 'Forward P/E', and 'Price to FCF' from the JSON. Use the detailed valuation analysis from the diligence log to arrive at a final verdict. Answer the ultimate question: Based on all available evidence, does {companyName} represent a high-quality growth business trading at a price that offers a reasonable margin of safety for future returns?
+*(This is the deciding section. Analyze whether the current price is reasonable given the quality and growth. Explicitly address any discrepancies between the initial scorecard's valuation metrics and the deeper analysis in the DCF and diligence log.)*
+* **Synthesize the 'PEG Ratio', 'Forward P/E', and 'Price to FCF' from the JSON. Incorporate the absolute valuation from the 'DCF Analysis' with these relative metrics to determine if a margin of safety exists.** Answer the ultimate question: Based on all available evidence, does {companyName} represent a high-quality growth business trading at a price that offers a reasonable margin of safety for future returns?
 
 ## 5. Foundational Q&A and Final Verdict
 (First, provide a direct answer to the following five foundational questions. Synthesize the answers from the 'Diligence Log' to inform your verdict. The quality of the diligence answers should directly influence your confidence and recommendation. A strong GARP candidate must have convincing, data-backed answers to these questions.)
@@ -262,7 +231,7 @@ You are a Senior Investment Analyst at a GARP-focused ("Growth at a Reasonable P
     * [Your Answer Here]
 4.  **Cash Flow & Capital Allocation:** Does the diligence reveal effective capital allocation, evidenced by a strong and stable ROIC?
     * [Your Answer Here]
-5.  **Valuation:** Does the diligence support the view that the valuation is reasonable and provides a margin of safety?
+5.  **Valuation:** Does the diligence and DCF analysis support the view that the valuation is reasonable and provides a margin of safety?
     * [Your Answer Here]
 
 (Now, synthesize your answers above into a final verdict.)
@@ -292,6 +261,11 @@ You are a Senior Investment Analyst at a GARP-focused ("Growth at a Reasonable P
 **3. Initial GARP Candidacy Report (Starting Thesis):**
 \`\`\`markdown
 {garpCandidacyReport}
+\`\`\`
+
+**4. DCF Analysis Report:**
+\`\`\`markdown
+{dcfAnalysisReport}
 \`\`\`
 `.trim();
 
@@ -497,9 +471,9 @@ JSON Data with Pre-Calculated Metrics:
 `.trim();
 
 const UPDATED_QARP_MEMO_PROMPT = `
-Role: You are a Senior Investment Analyst specializing in the "Quality at a Reasonable Price" (QARP) philosophy. Your task is to provide an updated, rigorous, data-driven analysis that synthesizes a quantitative scorecard with a qualitative diligence log.
-Data Instructions: Your analysis MUST be based *exclusively* on the two data sources provided below: the scorecard metrics and the diligence log.
-Output Format: The final report must be in professional markdown format. Use # for the main title, ## for major sections, and bullet points. Your analysis in each section should now integrate relevant findings from the diligence log to add context to the quantitative data.
+Role: You are a Senior Investment Analyst specializing in the "Quality at a Reasonable Price" (QARP) philosophy. Your task is to provide an updated, rigorous, data-driven analysis that synthesizes a quantitative scorecard, a qualitative diligence log, and a DCF analysis.
+Data Instructions: Your analysis MUST be based *exclusively* on the data sources provided below.
+Output Format: The final report must be in professional markdown format. Use # for the main title, ## for major sections, and bullet points. Your analysis in each section should now integrate relevant findings from the diligence log and DCF to add context to the quantitative data.
 
 **1. Quantitative Scorecard (JSON):**
 {jsonData}
@@ -507,10 +481,13 @@ Output Format: The final report must be in professional markdown format. Use # f
 **2. Recent Diligence Log (Q&A):**
 {diligenceLog}
 
+**3. DCF Analysis Report:**
+{dcfAnalysisReport}
+
 # Updated QARP Memo: {companyName} ({tickerSymbol})
 
 ## 1. Executive Summary & Verdict
-(Provide a concise, one-paragraph summary. Your verdict must now consider both the quantitative score and the qualitative findings from the diligence log. Conclude with a clear verdict: "This company appears to be a **strong QARP candidate**," "a **borderline QARP candidate**," or "**does not meet the criteria** for a QARP investment at this time.")
+(Provide a concise, one-paragraph summary. Your verdict must now consider the quantitative score, the qualitative findings from the diligence log, and the intrinsic value from the DCF. Conclude with a clear verdict: "This company appears to be a **strong QARP candidate**," "a **borderline QARP candidate**," or "**does not meet the criteria** for a QARP investment at this time.")
 
 ## 2. The "Quality" Pillar: Is This a Superior Business?
 (Analyze the company's quality using the scorecard data, now contextualized by the diligence log. For example, if ROE is high, check the log for management's discussion on what drives it.)
@@ -519,13 +496,13 @@ Output Format: The final report must be in professional markdown format. Use # f
 - **Growth Stability:** Evaluate the **EPS Growth (5Y)** and **Revenue Growth (5Y)**. Do these figures suggest a history of durable, consistent growth?
 
 ## 3. The "Reasonable Price" Pillar: Are We Overpaying?
-(Analyze the company's valuation, using the diligence log to add nuance. For example, if the P/E seems high, does the log explain why this might be temporary or justified?)
-- **Core Valuation:** Based on the **P/E (TTM)** and **Forward P/E** ratios, does the stock appear cheap or expensive on an earnings basis?
-- **Growth-Adjusted Valuation:** Use the **PEG Ratio** to determine if the price is justified by its forward growth estimates.
+(Analyze the company's valuation, using the diligence log and DCF to add nuance. For example, if the P/E seems high, does the DCF suggest the stock is still undervalued on an absolute basis?)
+- **Relative Valuation:** Based on the **P/E (TTM)**, **Forward P/E**, and **PEG Ratio**, does the stock appear cheap or expensive relative to its earnings and growth?
 - **Cash Flow Valuation:** Analyze the **Price to FCF** ratio. How does the valuation look when measured against the actual cash the business generates?
+- **Absolute Valuation (DCF):** According to the **DCF Analysis**, what is the estimated intrinsic value per share? Does this valuation confirm or contradict the story told by the relative metrics?
 
 ## 4. Final Synthesis: The QARP Verdict
-(Synthesize all findings into a final conclusion. The diligence log is critical here. Does it confirm the quantitative story, or does it reveal risks that make the numbers less reliable? Explain the trade-offs and justify your final verdict.)
+(Synthesize all findings into a final conclusion. The diligence log and DCF are critical here. Does the DCF's intrinsic value estimate provide a sufficient margin of safety? Does the diligence log reveal risks that make the numbers less reliable? Explain the trade-offs and justify your final verdict.)
 `.trim();
 
 const EIGHT_K_ANALYSIS_PROMPT = `
@@ -749,6 +726,38 @@ JSON Output Format:
 }
 `.trim();
 
+const DCF_ANALYSIS_PROMPT = `
+Role: You are a meticulous financial analyst AI specializing in intrinsic value calculation.
+Task: Your sole purpose is to perform a simplified Discounted Cash Flow (DCF) analysis for {companyName} based *only* on the provided JSON data.
+Output Format: The final report must be in professional markdown format. Follow the structure precisely.
+
+JSON Data with Pre-Calculated Inputs:
+{jsonData}
+
+# Discounted Cash Flow (DCF) Analysis: {companyName} ({tickerSymbol})
+
+## 1. DCF Assumptions
+(Based on the provided data, you must clearly state the key assumptions you are using for this analysis. Be explicit.)
+- **Forecast Period:** 5 Years
+- **Risk-Free Rate:** [State the rate you are assuming, e.g., 4.5%. This should be a reasonable long-term government bond yield.]
+- **Equity Risk Premium:** [State the premium you are assuming, e.g., 5.5%.]
+- **Weighted Average Cost of Capital (WACC / Discount Rate):** [Use the 'wacc' provided in the JSON data and state it here.]
+- **High-Growth Period (Years 1-5) FCF Growth Rate:** [Use the 'analystGrowthRate5Y' from the JSON data. This is the most critical growth assumption.]
+- **Terminal Growth Rate (Perpetuity):** [State a reasonable, conservative long-term growth rate, typically between 2% and 3%, representing long-term inflation or economic growth.]
+
+## 2. Fair Value Calculation
+(Provide a summary of the calculation steps. Do not show every single year's calculation in a table, but summarize the result.)
+- **Current Free Cash Flow per Share (FCF_0):** [State the 'latestFcfPerShare' from the JSON data.]
+- **Sum of Discounted Future Cash Flows:** [State the calculated present value of the cash flows from the 5-year forecast period.]
+- **Terminal Value:** [State the calculated present value of the terminal value.]
+- **Estimated Intrinsic Value per Share:** **[State the final calculated fair value per share. This is the most important output.]**
+
+## 3. Sensitivity & Conclusion
+- **Current Share Price:** [State the 'currentPrice' from the JSON data.]
+- **Upside/Downside:** [Calculate and state the percentage difference between your intrinsic value estimate and the current share price.]
+- **Conclusion:** Based on this DCF analysis, does the stock appear to be **undervalued, fairly valued, or overvalued** at the current price? Briefly explain your reasoning by comparing your intrinsic value to the current market price.
+`.trim();
+
 const FINAL_THESIS_CONFLICT_ID_PROMPT = `
 Role: You are a conflict identification AI.
 Task: Based ONLY on the following JSON of analyst summaries, what is the core disagreement between these reports? Explain the conflict in one concise paragraph. Do not use markdown or headings.
@@ -824,10 +833,10 @@ export const promptMap = {
     },
     'DcfAnalysis': {
         prompt: DCF_ANALYSIS_PROMPT,
-        requires: ['profile', 'income_statement_annual', 'cash_flow_statement_annual', 'balance_sheet_statement_annual', 'analyst_estimates']
+        requires: ['profile', 'cash_flow_statement_annual', 'analyst_estimates', 'key_metrics_annual', 'balance_sheet_statement_annual']
     },
     'InvestmentMemo': {
-        prompt: INVESTMENT_MEMO_PROMPT,
+        prompt: UPDATED_GARP_MEMO_PROMPT,
         requires: []
     },
     'PortfolioGarpAnalysis': {
@@ -884,7 +893,7 @@ export const ANALYSIS_ICONS = {
     'QarpAnalysis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`,
     'MoatAnalysis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.286zm0 13.036h.008v.008h-.008v-.008z" /></svg>`,
     'CapitalAllocators': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15.91 15.91a2.25 2.25 0 01-3.182 0l-3.03-3.03a.75.75 0 011.06-1.061l2.47 2.47 2.47-2.47a.75.75 0 011.06 1.06l-3.03 3.03z" /></svg>`,
-    'DcfAnalysis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 15.75V18m-7.5-6.75h10.5a2.25 2.25 0 012.25 2.25v3.75a2.25 2.25 0 01-2.25 2.25H12v-1.5M3.75 15.75H12v-1.5M12 12.75v-1.5M15 9.75l-3-3m0 0l-3 3m3-3v12" /></svg>`,
+    'DcfAnalysis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 15.75V18m-7.5-6.75h.008v.008H8.25v-.008zm0 2.25h.008v.008H8.25V11.25zm0 2.25h.008v.008H8.25V13.5zm0 2.25h.008v.008H8.25V15.75zM21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`,
     'InvestmentMemo': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>`,
     'EightKAnalysis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" /></svg>`,
     'BmqvMemo': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v17.25m0 0c-1.472 0-2.882.265-4.185.75M12 20.25c1.472 0 2.882.265 4.185.75M18.75 4.97A48.416 48.416 0 0012 4.5c-2.291 0-4.545.16-6.75.47m13.5 0c1.01.143 2.01.317 3 .52m-3-.52l2.62 10.726c.122.499-.106 1.028-.589 1.202a5.988 5.988 0 01-6.861 0c-.483-.174-.711-.703-.59-1.202L18.75 4.971zm-16.5.52c.99-.203 1.99-.377 3-.52m0 0l2.62 10.726c.122.499-.106 1.028-.589 1.202a5.988 5.988 0 01-6.861 0c-.483-.174-.711-.703-.59-1.202L5.25 4.971z" /></svg>`
