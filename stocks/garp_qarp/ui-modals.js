@@ -471,6 +471,18 @@ export async function openRawDataViewer(ticker) {
         
         aiAnalysisContainer.innerHTML = `
             <div id="analysis-content-container" class="space-y-8 text-center bg-gray-50 p-4 rounded-lg border-b pb-4 mb-4">
+                
+                <div class="p-4 bg-white rounded-lg border shadow-sm">
+                    <div class="flex justify-center items-center gap-2 mb-4">
+                        <h3 class="text-lg font-bold text-gray-800">Automated Workflow</h3>
+                    </div>
+                    <p class="text-sm text-gray-500 mb-4">Run the entire sequence of reports, from foundational analysis to the final thesis, in one click.</p>
+                    <div class="flex justify-center">
+                        <button id="run-full-workflow-button" data-symbol="${ticker}" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg text-base shadow-md transition-transform hover:scale-105">
+                            Run Full Analysis Workflow
+                        </button>
+                    </div>
+                </div>
 
                 <div class="p-4 bg-white rounded-lg border shadow-sm">
                     <h3 class="text-lg font-bold text-gray-800 mb-4">Step 1: Foundational Analysis</h3>
@@ -675,7 +687,7 @@ export async function openRawDataViewer(ticker) {
 
             resultContainer.innerHTML = `
                 <details class="border rounded-md bg-gray-50/50">
-                    <summary class="p-3 font-semibold text-gray-700 cursor-pointer hover:bg-gray-100">
+                    <summary class="p-3 font-semibold text-gray-700 cursor-pointer hover:bg-gray-50">
                         View Latest Saved Report (from ${savedDate})
                     </summary>
                     <div class="p-4 border-t bg-white">
