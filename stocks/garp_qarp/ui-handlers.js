@@ -1530,6 +1530,49 @@ export async function handleDeleteAllDiligenceAnswers(symbol) {
     );
 }
 
+export async function handleDeleteOldDiligenceLogs(symbol) {
+    openConfirmationModal(
+        'Delete Old Diligence Logs?',
+        `Are you sure you want to permanently delete all old-format, individual diligence log entries for ${symbol}? This will clean up the "Diligence Log" list but cannot be undone.`,
+        async () => {
+            openModal(CONSTANTS.MODAL_LOADING);
+            document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Deleting old diligence logs for ${symbol}...`;
+            try {
+                const reportsRef = state.db.collection(CONSTANTS.DB_COLLECTION_AI_REPORTS);
+                const q = reportsRef.where("ticker", "==", symbol).where("reportType", "==", "DiligenceInvestigation");
+                const querySnapshot = await q.get();
+
+                if (querySnapshot.empty) {
+                    displayMessageInModal('No old diligence logs found to delete.', 'info');
+                    closeModal(CONSTANTS.MODAL_LOADING);
+                    return;
+                }
+
+                const deletePromises = [];
+                querySnapshot.forEach(doc => {
+                    deletePromises.push(doc.ref.delete());
+                });
+
+                await Promise.all(deletePromises);
+                
+                // Refresh the diligence log view to show it's empty
+                const diligenceLogContainer = document.getElementById('diligence-log-container');
+                if (diligenceLogContainer) {
+                    renderDiligenceLog(diligenceLogContainer, []);
+                }
+
+                displayMessageInModal(`Successfully deleted ${deletePromises.length} old diligence log entries for ${symbol}.`, 'info');
+            } catch (error) {
+                console.error("Error deleting old diligence logs:", error);
+                displayMessageInModal(`Could not delete old logs: ${error.message}`, 'error');
+            } finally {
+                closeModal(CONSTANTS.MODAL_LOADING);
+            }
+        }
+    );
+}
+
+
 export async function handleSaveFilingDiligenceRequest(symbol) {
     const formContainer = document.getElementById('filing-diligence-form-container');
     const qaPairs = formContainer.querySelectorAll('.filing-qa-pair');
