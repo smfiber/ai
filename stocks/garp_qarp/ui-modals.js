@@ -360,6 +360,13 @@ export async function openRawDataViewer(ticker) {
     const titleEl = document.getElementById('raw-data-viewer-modal-title');
     titleEl.textContent = `Analyzing ${ticker}...`;
 
+    const sanitizeText = (text) => {
+        if (typeof text !== 'string') return '';
+        const tempDiv = document.createElement('div');
+        tempDiv.textContent = text;
+        return tempDiv.innerHTML;
+    };
+
     try {
         // Re-acquire handles to containers now that they are clean
         const rawDataContainer = document.getElementById('raw-data-accordion-container');
@@ -378,9 +385,29 @@ export async function openRawDataViewer(ticker) {
         const savedReportsPromise = state.db.collection(CONSTANTS.DB_COLLECTION_AI_REPORTS).where("ticker", "==", ticker).get();
         const candidacyReportType = 'GarpCandidacy';
         const savedCandidacyReportsPromise = getSavedReports(ticker, candidacyReportType);
+        
+        // --- NEW: Fetch saved diligence answers ---
+        const qualitativeAnswersPromise = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(ticker).collection('diligence_answers').doc('Qualitative').get();
+        const structuredAnswersPromise = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(ticker).collection('diligence_answers').doc('Structured').get();
+        const marketSentimentAnswersPromise = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(ticker).collection('diligence_answers').doc('MarketSentiment').get();
 
-
-        const [fmpData, groupedFmpData, savedReportsSnapshot, savedCandidacyReports] = await Promise.all([fmpDataPromise, groupedDataPromise, savedReportsPromise, savedCandidacyReportsPromise]);
+        const [
+            fmpData, 
+            groupedFmpData, 
+            savedReportsSnapshot, 
+            savedCandidacyReports,
+            qualitativeSnap,
+            structuredSnap,
+            marketSentimentSnap
+        ] = await Promise.all([
+            fmpDataPromise, 
+            groupedDataPromise, 
+            savedReportsPromise, 
+            savedCandidacyReportsPromise,
+            qualitativeAnswersPromise,
+            structuredAnswersPromise,
+            marketSentimentAnswersPromise
+        ]);
 
         if (!fmpData || !fmpData.profile || fmpData.profile.length === 0) {
             closeModal(modalId);
@@ -395,6 +422,12 @@ export async function openRawDataViewer(ticker) {
         const allSavedReports = savedReportsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         const profile = fmpData.profile[0];
         
+        // --- NEW: Process saved diligence answers into maps ---
+        const getAnswersMap = (snap) => snap.exists ? new Map(snap.data().answers.map(item => [item.question, item.answer])) : new Map();
+        const savedQualitativeAnswers = getAnswersMap(qualitativeSnap);
+        const savedStructuredAnswers = getAnswersMap(structuredSnap);
+        const savedMarketSentimentAnswers = getAnswersMap(marketSentimentSnap);
+
         // 4. POPULATE THE CLEAN STATE
         titleEl.textContent = `Analysis for ${ticker}`;
         const helpIconHtml = `<button data-report-type="PositionAnalysis" class="ai-help-button p-1 rounded-full hover:bg-indigo-100" title="What is this?"><svg class="w-5 h-5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" /></svg></button>`;
@@ -557,7 +590,8 @@ export async function openRawDataViewer(ticker) {
         const qualitativeContainer = diligenceHubContainer.querySelector('#qualitative-diligence-forms-container');
         let qualitativeHtml = `<div class="text-left border rounded-lg p-4 bg-gray-50"><h4 class="text-base font-semibold text-gray-800 mb-1">Qualitative Diligence</h4><p class="text-sm text-gray-500 mb-4">Answer high-level questions about the business itself.</p><div class="space-y-4">`;
         for (const [category, question] of Object.entries(QUALITATIVE_DILIGENCE_QUESTIONS)) {
-            qualitativeHtml += `<div class="diligence-card p-3 bg-white rounded-lg border border-gray-200"><h5 class="font-semibold text-sm text-indigo-700 mb-2">${category}</h5><div class="flex items-start gap-2 mb-2"><p class="text-xs text-gray-600 flex-grow" data-question-text>${question}</p><button type="button" class="copy-icon-btn structured-diligence-copy-btn" title="Copy Question">${copyIcon}</button></div><textarea class="qualitative-diligence-answer w-full border border-gray-300 rounded-lg p-2 text-sm" rows="4" data-category="${category}" placeholder="Your analysis and findings here..."></textarea></div>`;
+            const savedAnswer = sanitizeText(savedQualitativeAnswers.get(question) || '');
+            qualitativeHtml += `<div class="diligence-card p-3 bg-white rounded-lg border border-gray-200"><h5 class="font-semibold text-sm text-indigo-700 mb-2">${category}</h5><div class="flex items-start gap-2 mb-2"><p class="text-xs text-gray-600 flex-grow" data-question-text>${question}</p><button type="button" class="copy-icon-btn structured-diligence-copy-btn" title="Copy Question">${copyIcon}</button></div><textarea class="qualitative-diligence-answer w-full border border-gray-300 rounded-lg p-2 text-sm" rows="4" data-category="${category}" placeholder="Your analysis and findings here...">${savedAnswer}</textarea></div>`;
         }
         qualitativeHtml += `</div><div class="text-right mt-4"><button data-diligence-type="Qualitative" class="save-diligence-answers-button bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg">Save Qualitative Answers</button></div></div>`;
         qualitativeContainer.innerHTML = qualitativeHtml;
@@ -566,7 +600,8 @@ export async function openRawDataViewer(ticker) {
         const structuredContainer = diligenceHubContainer.querySelector('#structured-diligence-forms-container');
         let structuredHtml = `<div class="text-left border rounded-lg p-4 bg-gray-50"><h4 class="text-base font-semibold text-gray-800 mb-1">Structured (Quantitative) Diligence</h4><p class="text-sm text-gray-500 mb-4">Answer these core questions to build a foundational thesis.</p><div class="space-y-4">`;
         for (const [category, question] of Object.entries(STRUCTURED_DILIGENCE_QUESTIONS)) {
-            structuredHtml += `<div class="diligence-card p-3 bg-white rounded-lg border border-gray-200"><h5 class="font-semibold text-sm text-indigo-700 mb-2">${category}</h5><div class="flex items-start gap-2 mb-2"><p class="text-xs text-gray-600 flex-grow" data-question-text>${question}</p><button type="button" class="copy-icon-btn structured-diligence-copy-btn" title="Copy Question">${copyIcon}</button></div><textarea class="structured-diligence-answer w-full border border-gray-300 rounded-lg p-2 text-sm" rows="4" data-category="${category}" placeholder="Your analysis and findings here..."></textarea></div>`;
+            const savedAnswer = sanitizeText(savedStructuredAnswers.get(question) || '');
+            structuredHtml += `<div class="diligence-card p-3 bg-white rounded-lg border border-gray-200"><h5 class="font-semibold text-sm text-indigo-700 mb-2">${category}</h5><div class="flex items-start gap-2 mb-2"><p class="text-xs text-gray-600 flex-grow" data-question-text>${question}</p><button type="button" class="copy-icon-btn structured-diligence-copy-btn" title="Copy Question">${copyIcon}</button></div><textarea class="structured-diligence-answer w-full border border-gray-300 rounded-lg p-2 text-sm" rows="4" data-category="${category}" placeholder="Your analysis and findings here...">${savedAnswer}</textarea></div>`;
         }
         structuredHtml += `</div><div class="text-right mt-4"><button data-diligence-type="Structured" class="save-diligence-answers-button bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg">Save Structured Answers</button></div></div>`;
         structuredContainer.innerHTML = structuredHtml;
@@ -575,7 +610,8 @@ export async function openRawDataViewer(ticker) {
         const marketSentimentContainer = diligenceHubContainer.querySelector('#market-sentiment-forms-container');
         let marketSentimentHtml = `<div class="text-left border rounded-lg p-4 bg-gray-50"><h4 class="text-base font-semibold text-gray-800 mb-1">Market Sentiment Diligence</h4><p class="text-sm text-gray-500 mb-4">Answer these questions using external market data sources.</p><div class="space-y-4">`;
         for (const [category, question] of Object.entries(MARKET_SENTIMENT_QUESTIONS)) {
-            marketSentimentHtml += `<div class="diligence-card p-3 bg-white rounded-lg border border-gray-200"><h5 class="font-semibold text-sm text-indigo-700 mb-2">${category}</h5><div class="flex items-start gap-2 mb-2"><p class="text-xs text-gray-600 flex-grow" data-question-text>${question}</p><button type="button" class="copy-icon-btn structured-diligence-copy-btn" title="Copy Question">${copyIcon}</button></div><textarea class="market-sentiment-answer w-full border border-gray-300 rounded-lg p-2 text-sm" rows="4" data-category="${category}" placeholder="Your findings from external charts/data here..."></textarea></div>`;
+            const savedAnswer = sanitizeText(savedMarketSentimentAnswers.get(question) || '');
+            marketSentimentHtml += `<div class="diligence-card p-3 bg-white rounded-lg border border-gray-200"><h5 class="font-semibold text-sm text-indigo-700 mb-2">${category}</h5><div class="flex items-start gap-2 mb-2"><p class="text-xs text-gray-600 flex-grow" data-question-text>${question}</p><button type="button" class="copy-icon-btn structured-diligence-copy-btn" title="Copy Question">${copyIcon}</button></div><textarea class="market-sentiment-answer w-full border border-gray-300 rounded-lg p-2 text-sm" rows="4" data-category="${category}" placeholder="Your findings from external charts/data here...">${savedAnswer}</textarea></div>`;
         }
         marketSentimentHtml += `</div><div class="text-right mt-4"><button data-diligence-type="MarketSentiment" class="save-diligence-answers-button bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg">Save Market Sentiment Answers</button></div></div>`;
         marketSentimentContainer.innerHTML = marketSentimentHtml;
