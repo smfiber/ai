@@ -6,7 +6,14 @@ import { renderPortfolioManagerList, displayReport, updateReportStatus, fetchAnd
 import { _calculateMoatAnalysisMetrics, _calculateCapitalAllocatorsMetrics, _calculateGarpScorecardMetrics, CALCULATION_SUMMARIES } from './analysis-helpers.js';
 
 // --- UTILITY HELPERS ---
+function getReportsFromCache(ticker, reportType) {
+    const reports = state.reportCache.filter(r => r.ticker === ticker && r.reportType === reportType);
+    return reports.sort((a, b) => b.savedAt.toMillis() - a.savedAt.toMillis());
+}
+
 export async function getSavedReports(ticker, reportType) {
+    // This function is now primarily for fetching reports when the cache might not be populated.
+    // Most in-modal operations should use getReportsFromCache.
     try {
         const reportsRef = state.db.collection(CONSTANTS.DB_COLLECTION_AI_REPORTS);
         let q;
@@ -42,6 +49,9 @@ async function autoSaveReport(ticker, reportType, content, prompt, diligenceQues
         ];
 
         if (!reportTypesToPreserve.includes(reportType)) {
+            // Remove existing reports of the same type from the local cache first
+            state.reportCache = state.reportCache.filter(r => r.reportType !== reportType || r.ticker !== ticker);
+            
             const reportsRef = state.db.collection(CONSTANTS.DB_COLLECTION_AI_REPORTS);
             const q = reportsRef.where("ticker", "==", ticker).where("reportType", "==", reportType);
             const querySnapshot = await q.get();
@@ -66,7 +76,11 @@ async function autoSaveReport(ticker, reportType, content, prompt, diligenceQues
             diligenceQuestions: diligenceQuestions,
             ...(synthesisData && { synthesis_data: synthesisData })
         };
-        await state.db.collection(CONSTANTS.DB_COLLECTION_AI_REPORTS).add(reportData);
+        const docRef = await state.db.collection(CONSTANTS.DB_COLLECTION_AI_REPORTS).add(reportData);
+        
+        // Add the newly saved report to the front of the local cache
+        state.reportCache.unshift({ id: docRef.id, ...reportData });
+
         console.log(`${reportType} for ${ticker} was auto-saved successfully.`);
     } catch (error) {
         console.error(`Auto-save for ${reportType} failed:`, error);
@@ -506,7 +520,7 @@ export async function handlePositionAnalysisRequest(ticker, forceNew = false) {
     if (!container || !statusContainer) return;
 
     try {
-        const savedReports = await getSavedReports(ticker, reportType);
+        const savedReports = getReportsFromCache(ticker, reportType);
 
         if (savedReports.length > 0 && !forceNew) {
             const latestReport = savedReports[0];
@@ -524,16 +538,13 @@ export async function handlePositionAnalysisRequest(ticker, forceNew = false) {
         const portfolioData = state.portfolioCache.find(s => s.ticker === ticker);
         const fmpData = await getFmpStockData(ticker);
         
-        // --- MODIFIED LOGIC ---
-        const memoReports = await getSavedReports(ticker, 'InvestmentMemo');
+        const memoReports = getReportsFromCache(ticker, 'InvestmentMemo');
         let sourceReportContent;
         
         if (memoReports.length > 0) {
-            // Prioritize the InvestmentMemo
             sourceReportContent = memoReports[0].content;
         } else {
-            // Fallback to GarpCandidacy report
-            const candidacyReports = await getSavedReports(ticker, 'GarpCandidacy');
+            const candidacyReports = getReportsFromCache(ticker, 'GarpCandidacy');
             if (candidacyReports.length === 0) {
                 throw new Error(`The foundational 'GARP Candidacy Report' or 'Investment Memo' has not been generated yet. Please generate one from the 'Dashboard' or 'AI Analysis' tab first.`);
             }
@@ -547,7 +558,6 @@ export async function handlePositionAnalysisRequest(ticker, forceNew = false) {
         const currentPrice = fmpData.profile[0].price;
         const { companyName, transactions } = portfolioData;
 
-        // --- Calculate position details from transactions ---
         let totalShares = 0;
         let totalCost = 0;
         let earliestDate = null;
@@ -605,7 +615,7 @@ export async function handlePositionAnalysisRequest(ticker, forceNew = false) {
         
         await autoSaveReport(ticker, reportType, analysisResult, prompt);
         
-        const refreshedReports = await getSavedReports(ticker, reportType);
+        const refreshedReports = getReportsFromCache(ticker, reportType);
 
         displayReport(container, analysisResult, prompt);
         updateReportStatus(statusContainer, refreshedReports, refreshedReports[0].id, { reportType, symbol: ticker });
@@ -620,6 +630,7 @@ export async function handlePositionAnalysisRequest(ticker, forceNew = false) {
             statusContainer.innerHTML = '';
         }
         container.innerHTML = containerHtml;
+        throw error;
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
@@ -719,7 +730,7 @@ export async function handleSaveReportToDb() {
             }
         }
 
-        const savedReports = await getSavedReports(symbol, reportType);
+        const savedReports = getReportsFromCache(symbol, reportType);
         const latestReport = savedReports[0];
         const statusContainer = document.getElementById('report-status-container-analysis');
         const promptConfig = promptMap[reportType];
@@ -749,11 +760,9 @@ export async function handleGarpCandidacyRequest(ticker) {
         const scorecardData = _calculateGarpScorecardMetrics(fmpData);
         const newScore = scorecardData.garpConvictionScore;
 
-        // Save the new score to the database
         const stockDocRef = state.db.collection(CONSTANTS.DB_COLLECTION_PORTFOLIO).doc(ticker);
         await stockDocRef.update({ garpConvictionScore: newScore });
         
-        // Refresh local cache to reflect the change immediately
         await fetchAndCachePortfolioData();
 
         const profile = fmpData.profile?.[0] || {};
@@ -766,7 +775,6 @@ export async function handleGarpCandidacyRequest(ticker) {
         const peerDataChanges = peerDocSnap.exists ? peerDocSnap.data().changes : null;
 
 
-        // Check for hyper-growth to generate diligence questions
         const epsNext1yValue = scorecardData['EPS Growth (Next 1Y)'].value;
         const diligenceQuestions = [];
 
@@ -807,7 +815,6 @@ export async function handleGarpCandidacyRequest(ticker) {
             .replace(/{sector}/g, sector)
             .replace('{jsonData}', JSON.stringify(payload, null, 2));
             
-        // Manually handle the diligence questions section
         if (diligenceQuestions.length > 0) {
             let questionsHtml = `
 (1 paragraph)
@@ -832,7 +839,7 @@ Format each item precisely like this:
         const reportType = 'GarpCandidacy';
         await autoSaveReport(ticker, reportType, analysisResult, prompt, diligenceQuestions);
         
-        const reports = await getSavedReports(ticker, reportType);
+        const reports = getReportsFromCache(ticker, reportType);
         if (reports.length > 0) {
             updateGarpCandidacyStatus(statusContainer, reports, reports[0].id, ticker);
         }
@@ -840,6 +847,7 @@ Format each item precisely like this:
     } catch (error) {
         console.error("Error in GARP Candidacy Request:", error);
         resultContainer.innerHTML = `<p class="text-center text-red-500 p-4">${error.message}</p>`;
+        throw error;
     }
 }
 
@@ -851,7 +859,7 @@ export async function handleAnalysisRequest(symbol, reportType, promptConfig, fo
     statusContainer.classList.add('hidden');
 
     try {
-        const savedReports = await getSavedReports(symbol, reportType);
+        const savedReports = getReportsFromCache(symbol, reportType);
 
         if (savedReports.length > 0 && !forceNew) {
             const latestReport = savedReports[0];
@@ -922,7 +930,8 @@ export async function handleAnalysisRequest(symbol, reportType, promptConfig, fo
 
         contentContainer.dataset.rawMarkdown = finalReportContent;
         await autoSaveReport(symbol, reportType, finalReportContent, prompt, null, synthesisData);
-        const refreshedReports = await getSavedReports(symbol, reportType);
+        
+        const refreshedReports = getReportsFromCache(symbol, reportType);
         
         displayReport(contentContainer, finalReportContent, prompt);
         
@@ -947,8 +956,8 @@ export async function handleGarpMemoRequest(symbol, forceNew = false) {
 
     try {
         const reportType = 'InvestmentMemo';
-        const savedReports = await getSavedReports(symbol, reportType);
         const promptConfig = promptMap[reportType];
+        const savedReports = getReportsFromCache(symbol, reportType);
 
         if (savedReports.length > 0 && !forceNew) {
             const latestReport = savedReports[0];
@@ -973,7 +982,7 @@ export async function handleGarpMemoRequest(symbol, forceNew = false) {
         const fetchedMemos = {};
 
         for (const [type, name] of Object.entries(requiredMemos)) {
-            const reports = await getSavedReports(symbol, type);
+            const reports = getReportsFromCache(symbol, type);
             if (reports.length === 0) {
                 throw new Error(`The foundational '${name}' has not been generated yet. Please generate it from the 'Diligence Hub' or 'Dashboard' tab first.`);
             }
@@ -1000,7 +1009,7 @@ export async function handleGarpMemoRequest(symbol, forceNew = false) {
         const synthesisData = await extractSynthesisData(memoContent, reportType);
         
         await autoSaveReport(symbol, reportType, memoContent, prompt, null, synthesisData);
-        const refreshedReports = await getSavedReports(symbol, reportType);
+        const refreshedReports = getReportsFromCache(symbol, reportType);
         const latestReport = refreshedReports[0];
 
         contentContainer.dataset.currentPrompt = prompt;
@@ -1030,7 +1039,7 @@ export async function handleCompounderMemoRequest(symbol, forceNew = false) {
     try {
         const reportType = 'LongTermCompounder';
         const promptConfig = promptMap[reportType];
-        const savedReports = await getSavedReports(symbol, reportType);
+        const savedReports = getReportsFromCache(symbol, reportType);
 
         if (savedReports.length > 0 && !forceNew) {
             const latestReport = savedReports[0];
@@ -1043,8 +1052,8 @@ export async function handleCompounderMemoRequest(symbol, forceNew = false) {
         const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
         loadingMessage.textContent = "Gathering prerequisite reports for Compounder Memo...";
 
-        const moatReports = await getSavedReports(symbol, 'MoatAnalysis');
-        const capitalReports = await getSavedReports(symbol, 'CapitalAllocators');
+        const moatReports = getReportsFromCache(symbol, 'MoatAnalysis');
+        const capitalReports = getReportsFromCache(symbol, 'CapitalAllocators');
 
         if (moatReports.length === 0 || capitalReports.length === 0) {
             throw new Error("The 'Moat Analysis' and 'Capital Allocators' reports must be generated first.");
@@ -1063,7 +1072,7 @@ export async function handleCompounderMemoRequest(symbol, forceNew = false) {
         const synthesisData = await extractSynthesisData(memoContent, reportType);
         await autoSaveReport(symbol, reportType, memoContent, prompt, null, synthesisData);
 
-        const refreshedReports = await getSavedReports(symbol, reportType);
+        const refreshedReports = getReportsFromCache(symbol, reportType);
         displayReport(contentContainer, memoContent, prompt);
         updateReportStatus(statusContainer, refreshedReports, refreshedReports[0].id, { symbol, reportType, promptConfig });
 
@@ -1086,7 +1095,7 @@ export async function handleBmqvMemoRequest(symbol, forceNew = false) {
     try {
         const reportType = 'BmqvMemo';
         const promptConfig = promptMap[reportType];
-        const savedReports = await getSavedReports(symbol, reportType);
+        const savedReports = getReportsFromCache(symbol, reportType);
 
         if (savedReports.length > 0 && !forceNew) {
             const latestReport = savedReports[0];
@@ -1099,8 +1108,8 @@ export async function handleBmqvMemoRequest(symbol, forceNew = false) {
         const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
         loadingMessage.textContent = "Gathering prerequisite reports for BMQV Memo...";
 
-        const moatReports = await getSavedReports(symbol, 'MoatAnalysis');
-        const capitalReports = await getSavedReports(symbol, 'CapitalAllocators');
+        const moatReports = getReportsFromCache(symbol, 'MoatAnalysis');
+        const capitalReports = getReportsFromCache(symbol, 'CapitalAllocators');
 
         if (moatReports.length === 0 || capitalReports.length === 0) {
             throw new Error("The 'Moat Analysis' and 'Capital Allocators' reports must be generated first.");
@@ -1119,7 +1128,7 @@ export async function handleBmqvMemoRequest(symbol, forceNew = false) {
         const synthesisData = await extractSynthesisData(memoContent, reportType);
         await autoSaveReport(symbol, reportType, memoContent, prompt, null, synthesisData);
 
-        const refreshedReports = await getSavedReports(symbol, reportType);
+        const refreshedReports = getReportsFromCache(symbol, reportType);
         displayReport(contentContainer, memoContent, prompt);
         updateReportStatus(statusContainer, refreshedReports, refreshedReports[0].id, { symbol, reportType, promptConfig });
 
@@ -1142,7 +1151,7 @@ export async function handleFinalThesisRequest(symbol, forceNew = false) {
     try {
         const reportType = 'FinalInvestmentThesis';
         const promptConfig = promptMap[reportType];
-        const savedReports = await getSavedReports(symbol, reportType);
+        const savedReports = getReportsFromCache(symbol, reportType);
 
         if (savedReports.length > 0 && !forceNew) {
             const latestReport = savedReports[0];
@@ -1154,36 +1163,29 @@ export async function handleFinalThesisRequest(symbol, forceNew = false) {
         openModal(CONSTANTS.MODAL_LOADING);
         const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
         
-        // --- ITERATIVE WORKFLOW ---
-
-        // 1. Gather Synthesis Data
         loadingMessage.textContent = "Gathering prerequisite analyst summaries...";
         const requiredReportTypes = ['InvestmentMemo', 'QarpAnalysis', 'LongTermCompounder', 'BmqvMemo', 'MarketSentimentMemo'];
         const analystSummaries = {};
         const requiredReports = {};
 
-        const reportPromises = requiredReportTypes.map(async (type) => {
-            const reports = await getSavedReports(symbol, type);
+        for (const type of requiredReportTypes) {
+            const reports = getReportsFromCache(symbol, type);
             if (reports.length === 0) {
                 throw new Error(`The prerequisite '${ANALYSIS_NAMES[type]}' has not been generated yet.`);
             }
             const reportData = reports[0];
-            if (type !== 'MarketSentimentMemo' && !reportData.synthesis_data) { // Market sentiment might not have synthesis data
-                // For now, let's allow it to pass, but ideally, it should also have a summary
+            if (type !== 'MarketSentimentMemo' && !reportData.synthesis_data) {
                 console.warn(`Report type ${type} is missing synthesis data. Analysis may be incomplete.`);
             }
             analystSummaries[type] = reportData.synthesis_data || { verdict: 'Data not available' };
             requiredReports[type] = reportData;
-        });
-        await Promise.all(reportPromises);
+        }
 
-        // 2. Identify Core Conflict
         loadingMessage.textContent = "AI is identifying the core conflict...";
         const conflictPromptConfig = promptMap['FinalThesis_ConflictID'];
         const conflictPrompt = conflictPromptConfig.prompt.replace('{jsonData}', JSON.stringify(analystSummaries, null, 2));
         const coreConflict = await callGeminiApi(conflictPrompt);
 
-        // 3. Generate Final Thesis
         loadingMessage.textContent = "Synthesizing final thesis...";
         const profile = state.portfolioCache.find(s => s.ticker === symbol);
         const companyName = profile ? profile.companyName : symbol;
@@ -1202,7 +1204,7 @@ export async function handleFinalThesisRequest(symbol, forceNew = false) {
         const memoContent = await generateRefinedArticle(finalPrompt, loadingMessage);
         await autoSaveReport(symbol, reportType, memoContent, finalPrompt);
 
-        const refreshedReports = await getSavedReports(symbol, reportType);
+        const refreshedReports = getReportsFromCache(symbol, reportType);
         displayReport(contentContainer, memoContent, finalPrompt);
         updateReportStatus(statusContainer, refreshedReports, refreshedReports[0].id, { symbol, reportType, promptConfig });
 
@@ -1267,15 +1269,7 @@ export async function handleGeneratePrereqsRequest(symbol) {
             const reportContent = await generateRefinedArticle(prompt, loadingMessage);
             const synthesisData = await extractSynthesisData(reportContent, reportType);
 
-            const reportData = {
-                ticker: symbol,
-                reportType: reportType,
-                content: reportContent,
-                savedAt: firebase.firestore.Timestamp.now(),
-                prompt: prompt,
-                synthesis_data: synthesisData
-            };
-            await state.db.collection(CONSTANTS.DB_COLLECTION_AI_REPORTS).add(reportData);
+            await autoSaveReport(symbol, reportType, reportContent, prompt, null, synthesisData);
 
             const analysisContentContainer = document.getElementById('analysis-content-container');
             if (analysisContentContainer) {
@@ -1293,6 +1287,7 @@ export async function handleGeneratePrereqsRequest(symbol) {
     } catch (error) {
         console.error("Error generating all reports:", error);
         displayMessageInModal(`Could not complete batch generation: ${error.message}`, 'error');
+        throw error;
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
         progressContainer.classList.add('hidden');
@@ -1357,7 +1352,6 @@ export async function handleDiligenceMemoRequest(symbol, reportType) {
         const memoContent = await generateRefinedArticle(prompt);
         await autoSaveReport(symbol, reportType, memoContent, prompt);
 
-        // Switch to AI tab and display the new memo
         document.querySelectorAll('#rawDataViewerModal .tab-content').forEach(c => c.classList.add('hidden'));
         document.querySelectorAll('#rawDataViewerModal .tab-button').forEach(b => b.classList.remove('active'));
         document.getElementById('ai-analysis-tab').classList.remove('hidden');
@@ -1365,7 +1359,7 @@ export async function handleDiligenceMemoRequest(symbol, reportType) {
 
         const contentContainer = document.getElementById('ai-article-container-analysis');
         const statusContainer = document.getElementById('report-status-container-analysis');
-        const savedReports = await getSavedReports(symbol, reportType);
+        const savedReports = getReportsFromCache(symbol, reportType);
 
         displayReport(contentContainer, memoContent, prompt);
         updateReportStatus(statusContainer, savedReports, savedReports[0].id, { symbol, reportType, promptConfig });
@@ -1390,7 +1384,7 @@ export async function handleInvestigationSummaryRequest(symbol, forceNew = false
     try {
         const reportType = 'InvestigationSummaryMemo';
         const promptConfig = promptMap[reportType];
-        const savedReports = await getSavedReports(symbol, reportType);
+        const savedReports = getReportsFromCache(symbol, reportType);
 
         if (savedReports.length > 0 && !forceNew) {
             const latestReport = savedReports[0];
@@ -1403,7 +1397,7 @@ export async function handleInvestigationSummaryRequest(symbol, forceNew = false
         const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
         loadingMessage.textContent = "Gathering your manual diligence entries...";
 
-        const diligenceReports = await getSavedReports(symbol, 'DiligenceInvestigation');
+        const diligenceReports = getReportsFromCache(symbol, 'DiligenceInvestigation');
         if (diligenceReports.length === 0) {
             throw new Error("No manual diligence entries found. Please add at least one Q&A entry in the 'Diligence Hub' tab before generating this summary.");
         }
@@ -1427,7 +1421,7 @@ export async function handleInvestigationSummaryRequest(symbol, forceNew = false
         
         await autoSaveReport(symbol, reportType, memoContent, prompt);
 
-        const refreshedReports = await getSavedReports(symbol, reportType);
+        const refreshedReports = getReportsFromCache(symbol, reportType);
         displayReport(contentContainer, memoContent, prompt);
         updateReportStatus(statusContainer, refreshedReports, refreshedReports[0].id, { symbol, reportType, promptConfig });
 
@@ -1543,7 +1537,7 @@ export async function handleManualDiligenceSave(symbol) {
         await Promise.all(savePromises);
 
         entriesContainer.innerHTML = '';
-        const diligenceReports = await getSavedReports(symbol, 'DiligenceInvestigation');
+        const diligenceReports = getReportsFromCache(symbol, 'DiligenceInvestigation');
         const diligenceLogContainer = document.getElementById('diligence-log-container');
         renderDiligenceLog(diligenceLogContainer, diligenceReports);
 
@@ -1581,7 +1575,6 @@ export async function handleDeleteAllDiligenceAnswers(symbol) {
 
                 await Promise.all(deletePromises);
 
-                // Clear the text areas in the UI
                 document.querySelectorAll('.qualitative-diligence-answer, .structured-diligence-answer, .market-sentiment-answer').forEach(textarea => {
                     textarea.value = '';
                 });
@@ -1622,7 +1615,8 @@ export async function handleDeleteOldDiligenceLogs(symbol) {
 
                 await Promise.all(deletePromises);
                 
-                // Refresh the diligence log view to show it's empty
+                state.reportCache = state.reportCache.filter(r => r.reportType !== 'DiligenceInvestigation' || r.ticker !== symbol);
+                
                 const diligenceLogContainer = document.getElementById('diligence-log-container');
                 if (diligenceLogContainer) {
                     renderDiligenceLog(diligenceLogContainer, []);
@@ -1667,19 +1661,16 @@ export async function handleSaveFilingDiligenceRequest(symbol) {
         const prompt = `User-answered diligence questions from SEC filing for ${symbol} saved on ${new Date().toLocaleDateString()}`;
         await autoSaveReport(symbol, reportType, reportContent, prompt);
         
-        // Reset UI
         formContainer.innerHTML = '';
         formContainer.classList.add('hidden');
         document.getElementById('filing-diligence-input-container').classList.remove('hidden');
         document.getElementById('filing-diligence-textarea').value = '';
 
-        // Refresh log
         const logContainer = document.getElementById('ongoing-review-log-container');
         const reportTypes = ['FilingDiligence', 'EightKAnalysis', 'UpdatedGarpMemo', 'UpdatedQarpMemo'];
-        const savedReports = await getSavedReports(symbol, reportTypes);
+        const savedReports = getReportsFromCache(symbol, reportTypes);
         renderOngoingReviewLog(logContainer, savedReports);
         
-        // Show the updated memo section
         document.getElementById('updated-memo-section').classList.remove('hidden');
 
         displayMessageInModal('Your filing diligence has been saved successfully.', 'info');
@@ -1716,7 +1707,6 @@ export async function handleGenerateFilingQuestionsRequest(symbol) {
 
         const aiResponse = await callGeminiApi(prompt);
         
-        // Clean the response to ensure it's valid JSON
         const cleanedResponse = aiResponse.trim().replace(/^```json\s*|```\s*$/g, '');
         const questions = JSON.parse(cleanedResponse);
 
@@ -1789,8 +1779,7 @@ export async function handleAnalyzeEightKRequest(symbol) {
         filingTextarea.value = '';
 
         const logContainer = document.getElementById('ongoing-review-log-container');
-        const reportTypes = ['FilingDiligence', 'EightKAnalysis', 'UpdatedGarpMemo', 'UpdatedQarpMemo'];
-        const savedReports = await getSavedReports(symbol, reportTypes);
+        const savedReports = getReportsFromCache(symbol, ['FilingDiligence', 'EightKAnalysis', 'UpdatedGarpMemo', 'UpdatedQarpMemo']);
         renderOngoingReviewLog(logContainer, savedReports);
 
         const displayContainer = document.getElementById('ongoing-review-display-container');
@@ -1818,11 +1807,13 @@ export async function handleDeleteFilingDiligenceLog(reportId, ticker) {
             document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Deleting entry...`;
             try {
                 await state.db.collection(CONSTANTS.DB_COLLECTION_AI_REPORTS).doc(reportId).delete();
+                
+                state.reportCache = state.reportCache.filter(r => r.id !== reportId);
 
                 const logContainer = document.getElementById('ongoing-review-log-container');
                 const displayContainer = document.getElementById('ongoing-review-display-container');
                 const reportTypes = ['FilingDiligence', 'EightKAnalysis', 'UpdatedGarpMemo', 'UpdatedQarpMemo'];
-                const savedReports = await getSavedReports(ticker, reportTypes);
+                const savedReports = getReportsFromCache(ticker, reportTypes);
                 renderOngoingReviewLog(logContainer, savedReports);
                 
                 if (displayContainer) {
@@ -1857,10 +1848,9 @@ async function generateUpdatedMemo(symbol, memoType) {
     }
 
     try {
-        // Step 1: Gather all diligence logs
-        const diligenceInvestigationReports = await getSavedReports(symbol, 'DiligenceInvestigation');
-        const filingDiligenceReports = await getSavedReports(symbol, 'FilingDiligence');
-        const eightKReports = await getSavedReports(symbol, 'EightKAnalysis');
+        const diligenceInvestigationReports = getReportsFromCache(symbol, 'DiligenceInvestigation');
+        const filingDiligenceReports = getReportsFromCache(symbol, 'FilingDiligence');
+        const eightKReports = getReportsFromCache(symbol, 'EightKAnalysis');
         
         let combinedDiligenceLog = '';
         const logs = [];
@@ -1868,7 +1858,7 @@ async function generateUpdatedMemo(symbol, memoType) {
         if (diligenceInvestigationReports.length > 0) {
             const investigationLog = diligenceInvestigationReports.map(report => {
                 const question = report.prompt.split('Diligence Question from User:')[1]?.trim() || 'Question not found.';
-                const answer = report.content; // Assumes raw markdown
+                const answer = report.content;
                 return `**Question:** ${question}\n\n**Answer:**\n${answer}`;
             }).join('\n\n---\n\n');
             logs.push(investigationLog);
@@ -1886,7 +1876,6 @@ async function generateUpdatedMemo(symbol, memoType) {
 
         combinedDiligenceLog = logs.length > 0 ? logs.join('\n\n---\n\n') : 'No diligence logs available.';
 
-        // Step 2: Gather other required data (candidacy report, scorecard)
         const data = await getFmpStockData(symbol);
         if (!data) throw new Error(`Could not retrieve financial data for ${symbol}.`);
         const scorecardData = _calculateGarpScorecardMetrics(data);
@@ -1894,7 +1883,6 @@ async function generateUpdatedMemo(symbol, memoType) {
         const profile = data.profile?.[0] || {};
         const companyName = profile.companyName || 'the company';
         
-        // Step 3: Build and call the prompt
         let prompt;
         if (memoType === 'QARP') {
              prompt = promptTemplate
@@ -1903,7 +1891,7 @@ async function generateUpdatedMemo(symbol, memoType) {
                 .replace('{jsonData}', JSON.stringify(scorecardData, null, 2))
                 .replace('{diligenceLog}', combinedDiligenceLog);
         } else { // GARP
-            const candidacyReports = await getSavedReports(symbol, 'GarpCandidacy');
+            const candidacyReports = getReportsFromCache(symbol, 'GarpCandidacy');
             if (candidacyReports.length === 0) {
                 throw new Error(`The foundational 'GARP Candidacy Report' must be generated first.`);
             }
@@ -1919,16 +1907,14 @@ async function generateUpdatedMemo(symbol, memoType) {
 
         const memoContent = await generateRefinedArticle(prompt);
 
-        // Step 4: Save and Display
         await autoSaveReport(symbol, reportType, memoContent, prompt);
         
         updatedMemoContainer.innerHTML = `<div class="prose max-w-none">${marked.parse(memoContent)}</div>`;
         displayMessageInModal(`Updated ${memoType} Memo generated and saved.`, 'info');
 
-        // Refresh log
         const logContainer = document.getElementById('ongoing-review-log-container');
         const reportTypes = ['FilingDiligence', 'EightKAnalysis', 'UpdatedGarpMemo', 'UpdatedQarpMemo'];
-        const savedReports = await getSavedReports(symbol, reportTypes);
+        const savedReports = getReportsFromCache(symbol, reportTypes);
         renderOngoingReviewLog(logContainer, savedReports);
 
     } catch(error) {
@@ -1956,7 +1942,9 @@ export async function handleDeleteDiligenceLog(reportId, ticker) {
             try {
                 await state.db.collection(CONSTANTS.DB_COLLECTION_AI_REPORTS).doc(reportId).delete();
 
-                const diligenceReports = await getSavedReports(ticker, 'DiligenceInvestigation');
+                state.reportCache = state.reportCache.filter(r => r.id !== reportId);
+
+                const diligenceReports = getReportsFromCache(ticker, 'DiligenceInvestigation');
                 const diligenceLogContainer = document.getElementById('diligence-log-container');
                 renderDiligenceLog(diligenceLogContainer, diligenceReports);
 
@@ -2000,7 +1988,6 @@ async function _fetchAndCachePeerData(tickers) {
     for (const ticker of tickers) {
         let allEndpointsFetched = true;
         try {
-            // Check if the peer data is already cached
             const docRef = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(ticker).collection('endpoints').doc('income_statement_annual');
             const docSnap = await docRef.get();
 
@@ -2130,19 +2117,17 @@ export async function handleCopyReportRequest(symbol, reportType, buttonElement)
     if (!buttonElement) return;
 
     try {
-        const reports = await getSavedReports(symbol, reportType);
+        const reports = getReportsFromCache(symbol, reportType);
         if (reports.length === 0) {
             displayMessageInModal(`No saved '${ANALYSIS_NAMES[reportType]}' report found to copy.`, 'warning');
             return;
         }
 
         const latestReport = reports[0];
-        // Strip markdown for cleaner pasting into other applications
         const plainText = latestReport.content.replace(/##+\s/g, '').replace(/#\s/g, '').replace(/\*\*/g, '').replace(/-\s/g, '');
         
         await navigator.clipboard.writeText(plainText);
 
-        // Visual feedback
         const originalIcon = buttonElement.innerHTML;
         const checkIcon = `<svg class="w-5 h-5 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>`;
         buttonElement.innerHTML = checkIcon;
