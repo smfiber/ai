@@ -808,7 +808,7 @@ Task: Based ONLY on the provided Question & Answer pairs, create a "Quantitative
 (Synthesize the user's answer regarding valuation here.)
 
 ## 5. Synthesis & Verdict
-(In one paragraph, synthesize all the points. Conclude with a clear verdict: **"Quantitative health appears Strong," "Average," or "Weak."** Justify your choice.)
+(In one paragraph, synthesize all the points. Conclude with a single sentence using one of the following bolded phrases, followed by a brief justification. For example: "**Quantitative health appears Average** because its durable scale is offset by high leverage and a bloated cost structure.")
 `.trim();
 
 const MARKET_SENTIMENT_MEMO_PROMPT = `
