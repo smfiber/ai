@@ -590,46 +590,31 @@ export async function openRawDataViewer(ticker) {
             if (futureEarnings.length > 0) { nextEarningsDate = futureEarnings[0].date; }
         }
         
-        const reportTypesForLog = ['FilingDiligence', 'UpdatedGarpMemo', 'UpdatedQarpMemo'];
+        const reportTypesForLog = ['FilingDiligence', 'UpdatedGarpMemo', 'UpdatedQarpMemo', 'QuarterlyReview', 'AnnualReview'];
         const filingDiligenceReports = allSavedReports.filter(r => reportTypesForLog.includes(r.reportType));
-        const hasFilingDiligence = filingDiligenceReports.some(r => r.reportType === 'FilingDiligence');
 
         ongoingDiligenceContainer.innerHTML = `
             <div class="bg-white p-6 rounded-2xl shadow-lg border border-gray-200">
-                <div class="flex justify-between items-center mb-4 border-b pb-2">
-                    <h3 class="text-xl font-bold text-gray-800">Filing Diligence Workflow</h3>
+                <div class="flex justify-between items-center mb-6 border-b pb-4">
+                    <div>
+                        <h3 class="text-xl font-bold text-gray-800">Ongoing Review Hub</h3>
+                        <p class="text-sm text-gray-500">Periodically re-evaluate your investment thesis.</p>
+                    </div>
                     <div class="text-right">
                         <p class="text-sm font-semibold text-gray-600">Next Earnings Date</p>
                         <p class="text-lg font-bold text-indigo-700">${nextEarningsDate}</p>
                     </div>
                 </div>
-                
-                <div id="filing-diligence-input-container">
-                    <label for="filing-diligence-textarea" class="block text-sm font-medium text-gray-700 mb-2">Paste 10-Q, 10-K, or 8-K Filing Text</label>
-                    <textarea id="filing-diligence-textarea" class="w-full border border-gray-300 rounded-lg p-2 text-sm" rows="10" placeholder="Paste the full text from the company's latest SEC filing (10-Q, 10-K, 8-K) here..."></textarea>
-                    <div class="text-center mt-4 flex justify-center gap-4">
-                        <button id="generate-filing-questions-button" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-5 rounded-lg">
-                            Generate Diligence Questions
-                        </button>
-                        <button id="analyze-eight-k-button" class="bg-sky-600 hover:bg-sky-700 text-white font-bold py-2 px-5 rounded-lg">
-                            Analyze 8-K Filing
-                        </button>
-                    </div>
+
+                <div id="ongoing-review-actions" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <button data-review-type="Quarterly" class="start-review-button bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-5 rounded-lg">Start Quarterly Review</button>
+                    <button data-review-type="Annual" class="start-review-button bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-5 rounded-lg">Start Annual Review</button>
+                    <button id="analyze-eight-k-button" class="bg-sky-600 hover:bg-sky-700 text-white font-bold py-3 px-5 rounded-lg">Analyze 8-K Filing</button>
                 </div>
 
-                <div id="filing-diligence-form-container" class="hidden mt-4"></div>
+                <div id="review-form-container" class="hidden mb-6"></div>
                 
-                <div id="ongoing-review-log-container" class="mt-6"></div>
-
-                <div id="updated-memo-section" class="${hasFilingDiligence ? '' : 'hidden'} mt-6 pt-6 border-t">
-                     <h3 class="text-xl font-bold text-gray-800 mb-4">Generate Updated Memo</h3>
-                     <p class="text-sm text-gray-500 mb-4">Generate a new GARP or QARP memo that incorporates the Filing Diligence Q&A you saved above.</p>
-                     <div class="flex justify-center gap-4">
-                        <button id="generate-updated-garp-memo-button" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-5 rounded-lg">Generate Updated GARP Memo</button>
-                        <button id="generate-updated-qarp-memo-button" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-5 rounded-lg">Generate Updated QARP Memo</button>
-                     </div>
-                     <div id="updated-memo-container" class="mt-6"></div>
-                </div>
+                <div id="ongoing-review-log-container"></div>
             </div>
         `;
         renderOngoingReviewLog(ongoingDiligenceContainer.querySelector('#ongoing-review-log-container'), filingDiligenceReports);
