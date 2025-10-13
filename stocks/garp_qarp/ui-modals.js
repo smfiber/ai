@@ -432,6 +432,7 @@ export async function openRawDataViewer(ticker) {
         const deepDiveButtons = [
             { reportType: 'MoatAnalysis', text: 'Moat Analysis', tooltip: 'Evaluates the company\'s competitive advantages.' },
             { reportType: 'CapitalAllocators', text: 'Capital Allocators', tooltip: 'Assesses management\'s skill in deploying capital.' },
+            { reportType: 'DcfAnalysis', text: 'DCF Analysis', tooltip: 'Performs a Discounted Cash Flow valuation.' }
         ];
         
         const buildButtonHtml = (buttons) => buttons.map((btn) => {
@@ -488,7 +489,7 @@ export async function openRawDataViewer(ticker) {
                      <div class="flex flex-wrap gap-4 justify-center">
                         ${deepDiveHtml}
                     </div>
-                     <button id="generate-prereqs-button" class="mt-4 bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-1 px-3 rounded-lg text-xs">Generate Both</button>
+                     <button id="generate-prereqs-button" class="mt-4 bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-1 px-3 rounded-lg text-xs">Generate All</button>
                 </div>
 
                 <div class="p-4 bg-white rounded-lg border shadow-sm">
