@@ -247,8 +247,7 @@ export const STRUCTURED_DILIGENCE_QUESTIONS = {
 
 export const QUALITATIVE_DILIGENCE_QUESTIONS = {
     'Competitive Moat': "What is the source and durability of the company's competitive moat (e.g., brand, network effects, high switching costs, low-cost production), and is there evidence that this advantage is strengthening or weakening over time?",
-    'Management Quality': "After reviewing recent earnings call transcripts or shareholder letters, what is your assessment of management's transparency, operational focus, and long-term strategy? Do they demonstrate a rational and shareholder-aligned approach?",
-    'Scuttlebutt': "What are the most common praises or complaints about the company's products or services found in independent reviews, forums, or other non-company sources?"
+    'Management Quality': "After reviewing recent earnings call transcripts or shareholder letters, what is your assessment of management's transparency, operational focus, and long-term strategy? Do they demonstrate a rational and shareholder-aligned approach?"
 };
 
 export const MARKET_SENTIMENT_QUESTIONS = {
