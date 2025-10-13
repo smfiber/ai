@@ -542,43 +542,10 @@ export function _calculateCapitalAllocatorsMetrics(data) {
     };
 }
 
-/**
- * NEW: Calculates metrics for the "DCF Analysis" prompt.
- */
-export function _calculateDcfAnalysisMetrics(data) {
-    const profile = data.profile?.[0] || {};
-    const keyMetricsAnnual = (data.key_metrics_annual || []).slice().reverse();
-    const latestAnnualMetrics = keyMetricsAnnual[keyMetricsAnnual.length - 1] || {};
-    const metricsTtm = data.key_metrics_ttm?.[0] || {};
-    const estimates = (data.analyst_estimates || []).filter(e => e.epsAvg > 0).slice(0, 5);
-
-    const getCagr = (startValue, endValue, periods) => {
-        if (typeof startValue !== 'number' || typeof endValue !== 'number' || startValue <= 0 || periods <= 1) return null;
-        return Math.pow(endValue / startValue, 1 / (periods - 1)) - 1;
-    };
-
-    let analystGrowthRate5Y = null;
-    if (estimates.length > 1) {
-        const startEstimate = estimates[0];
-        const endEstimate = estimates[estimates.length - 1];
-        const periods = new Date(endEstimate.date).getFullYear() - new Date(startEstimate.date).getFullYear() + 1;
-        analystGrowthRate5Y = getCagr(startEstimate.epsAvg, endEstimate.epsAvg, periods);
-    }
-    
-    return {
-        wacc: latestAnnualMetrics.wacc,
-        analystGrowthRate5Y: analystGrowthRate5Y,
-        latestFcfPerShare: metricsTtm.freeCashFlowPerShareTTM,
-        currentPrice: profile.price
-    };
-}
-
-
 export const CALCULATION_SUMMARIES = {
     'QarpAnalysis': 'Performs a "Quality at a Reasonable Price" (QARP) analysis. This report uses the same underlying data as the GARP Scorecard but instructs the AI to synthesize it through a different lens, focusing on the critical balance between business quality (measured by ROE, ROIC, D/E) and valuation (measured by P/E, PEG, P/FCF).',
     'MoatAnalysis': 'Assesses a company\'s competitive advantage ("moat") by calculating 10-year historical trends for key quality metrics like Return on Invested Capital (ROIC), profitability margins (net, operating, gross), and reinvestment rates (e.g., CapEx, R&D expenses).',
     'CapitalAllocators': 'Evaluates management\'s effectiveness by analyzing historical data on how they prioritize cash flow (e.g., CapEx vs. buybacks), the effectiveness of their investments (ROIC trends), their acquisition history (goodwill), and how they return capital to shareholders (dividends and buybacks).',
-    'DcfAnalysis': 'Performs a simplified Discounted Cash Flow (DCF) analysis to estimate a company\'s intrinsic value. It calculates the necessary inputs—such as Free Cash Flow per Share, a 5-year growth rate from analyst estimates, and a discount rate (WACC)—from the cached FMP data. The AI is then instructed to project future cash flows, discount them back to the present, and arrive at a fair value per share estimate.',
     'InvestmentMemo': 'This report does not perform new calculations. Instead, it synthesizes the existing "GARP Candidacy Report" and the "GARP Scorecard" data into a formal, thesis-driven investment memo.',
     'GarpCandidacy': 'Calculates a 10-point GARP scorecard, checking key metrics like EPS & Revenue Growth, Profitability (ROE, ROIC), and Valuation (P/E, PEG, P/S, D/E) against predefined thresholds to determine if a stock qualifies as a GARP candidate.',
     'PositionAnalysis': 'This report does not perform new calculations. It uses the previously generated "GARP Candidacy Report" as the original investment thesis and compares it against the user\'s specific position details (cost basis, shares) and the current market price.',
