@@ -13,7 +13,8 @@ export const state = {
     geminiApiKey: "",
     googleClientId: "",
     portfolioCache: [],
-    sessionLog: []
+    sessionLog: [],
+    reportCache: []
 };
 
 // Map specific AI analysis types to the FMP endpoints they require.
@@ -892,7 +893,7 @@ Task: Your task is to analyze the user's new annual findings in the context of t
 # Annual Review Memo: {companyName} ({tickerSymbol})
 
 ## 1. Long-Term Thesis Validation
-(In one paragraph, synthesize the full-year findings. Does the year's performance, strategic progress, and updated outlook strengthen or fundamentally weaken the original long-term investment thesis? Be specific.)
+(In one paragraph, synthesize the full-year findings. Does the year's performance, strategic progress, and updated outlook strengthen or weaken the original long-term investment thesis? Be specific.)
 
 ## 2. Full-Year Performance vs. Guidance
 (Summarize the user's answer regarding the company's full-year performance against its own guidance.)
