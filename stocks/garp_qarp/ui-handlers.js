@@ -1297,17 +1297,17 @@ export async function handleGeneratePrereqsRequest(symbol) {
 export async function handleDiligenceMemoRequest(symbol, reportType) {
     const config = {
         'QualitativeDiligenceMemo': {
-            selector: '.qualitative-diligence-answer',
+            diligenceType: 'Qualitative',
             questions: QUALITATIVE_DILIGENCE_QUESTIONS,
             name: 'Qualitative Diligence'
         },
         'StructuredDiligenceMemo': {
-            selector: '.structured-diligence-answer',
+            diligenceType: 'Structured',
             questions: STRUCTURED_DILIGENCE_QUESTIONS,
             name: 'Structured Diligence'
         },
         'MarketSentimentMemo': {
-            selector: '.market-sentiment-answer',
+            diligenceType: 'MarketSentiment',
             questions: MARKET_SENTIMENT_QUESTIONS,
             name: 'Market Sentiment'
         }
@@ -1319,29 +1319,26 @@ export async function handleDiligenceMemoRequest(symbol, reportType) {
         return;
     }
 
-    const answerElements = document.querySelectorAll(memoConfig.selector);
-    const qaPairs = [];
-
-    answerElements.forEach(textarea => {
-        const answer = textarea.value.trim();
-        const category = textarea.dataset.category;
-        const question = memoConfig.questions[category];
-        if (answer && question) {
-            qaPairs.push({ question, answer, textarea });
-        }
-    });
-
-    if (qaPairs.length === 0) {
-        displayMessageInModal(`Please provide at least one answer for the ${memoConfig.name} section.`, 'warning');
-        return;
-    }
-
     openModal(CONSTANTS.MODAL_LOADING);
     const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
-    loadingMessage.textContent = `Synthesizing ${memoConfig.name} Memo...`;
+    loadingMessage.textContent = `Gathering saved answers for ${memoConfig.name} Memo...`;
 
     try {
-        const qaData = qaPairs.map(pair => `**Question:** ${pair.question}\n\n**Answer:**\n${pair.answer}`).join('\n\n---\n\n');
+        const docRef = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(symbol).collection('diligence_answers').doc(memoConfig.diligenceType);
+        const docSnap = await docRef.get();
+
+        if (!docSnap.exists) {
+            throw new Error(`You must first save your answers for the '${memoConfig.name}' section in the 'Diligence Hub' tab.`);
+        }
+        
+        const savedData = docSnap.data().answers || [];
+        if (savedData.length === 0) {
+            throw new Error(`No saved answers found for the '${memoConfig.name}' section.`);
+        }
+
+        loadingMessage.textContent = `Synthesizing ${memoConfig.name} Memo...`;
+
+        const qaData = savedData.map(pair => `**Question:** ${pair.question}\n\n**Answer:**\n${pair.answer}`).join('\n\n---\n\n');
         
         const profile = state.portfolioCache.find(s => s.ticker === symbol) || {};
         const companyName = profile.companyName || symbol;
@@ -1354,10 +1351,6 @@ export async function handleDiligenceMemoRequest(symbol, reportType) {
 
         const memoContent = await generateRefinedArticle(prompt);
         await autoSaveReport(symbol, reportType, memoContent, prompt);
-
-        qaPairs.forEach(pair => {
-            pair.textarea.value = '';
-        });
 
         // Switch to AI tab and display the new memo
         document.querySelectorAll('#rawDataViewerModal .tab-content').forEach(c => c.classList.add('hidden'));
@@ -1381,6 +1374,73 @@ export async function handleDiligenceMemoRequest(symbol, reportType) {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
 }
+
+export async function handleSaveDiligenceAnswers(symbol, diligenceType) {
+    const config = {
+        'Qualitative': {
+            selector: '.qualitative-diligence-answer',
+            questions: QUALITATIVE_DILIGENCE_QUESTIONS,
+            name: 'Qualitative Diligence'
+        },
+        'Structured': {
+            selector: '.structured-diligence-answer',
+            questions: STRUCTURED_DILIGENCE_QUESTIONS,
+            name: 'Structured Diligence'
+        },
+        'MarketSentiment': {
+            selector: '.market-sentiment-answer',
+            questions: MARKET_SENTIMENT_QUESTIONS,
+            name: 'Market Sentiment'
+        }
+    };
+
+    const sectionConfig = config[diligenceType];
+    if (!sectionConfig) {
+        displayMessageInModal(`Invalid diligence type for saving: ${diligenceType}`, 'error');
+        return;
+    }
+
+    const answerElements = document.querySelectorAll(sectionConfig.selector);
+    const qaPairs = [];
+    let hasAnswers = false;
+
+    answerElements.forEach(textarea => {
+        const answer = textarea.value.trim();
+        const category = textarea.dataset.category;
+        const question = sectionConfig.questions[category];
+        if (question) {
+            qaPairs.push({ question, answer });
+            if (answer) {
+                hasAnswers = true;
+            }
+        }
+    });
+
+    if (!hasAnswers) {
+        displayMessageInModal(`Please provide at least one answer for the ${sectionConfig.name} section before saving.`, 'warning');
+        return;
+    }
+
+    openModal(CONSTANTS.MODAL_LOADING);
+    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Saving ${sectionConfig.name} answers...`;
+
+    try {
+        const docRef = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(symbol).collection('diligence_answers').doc(diligenceType);
+        await docRef.set({
+            savedAt: firebase.firestore.Timestamp.now(),
+            answers: qaPairs
+        });
+
+        displayMessageInModal(`${sectionConfig.name} answers have been saved. You can now generate the memo from the 'AI Analysis' tab.`, 'info');
+
+    } catch (error) {
+        console.error(`Error saving ${sectionConfig.name} answers:`, error);
+        displayMessageInModal(`Could not save answers: ${error.message}`, 'error');
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
 
 export async function handleManualDiligenceSave(symbol) {
     const entriesContainer = document.getElementById('manual-diligence-entries-container');
