@@ -412,7 +412,7 @@ export async function openRawDataViewer(ticker) {
             marketSentimentAnswersPromise
         ]);
 
-        if (!fmpData || !fmpData.profile || fmpData.profile.length === 0) {
+        if (!fmpData || !fmpData.profile || !fmpData.profile.length === 0) {
             closeModal(modalId);
             displayMessageInModal(
                 `Crucial data is missing for ${ticker}. Please use the "Refresh FMP" button for this stock, then try again.`,
