@@ -439,6 +439,7 @@ export async function openRawDataViewer(ticker) {
         const deepDiveButtons = [
             { reportType: 'MoatAnalysis', text: 'Moat Analysis', tooltip: 'Evaluates the company\'s competitive advantages.' },
             { reportType: 'CapitalAllocators', text: 'Capital Allocators', tooltip: 'Assesses management\'s skill in deploying capital.' },
+            { reportType: 'InvestigationSummaryMemo', text: 'Investigation Summary', tooltip: 'Synthesizes your manual Q&A from the Diligence Hub into a summary memo.' },
             { reportType: 'QualitativeDiligenceMemo', text: 'Qualitative Memo', tooltip: 'Synthesizes your answers on moat and management.' },
             { reportType: 'StructuredDiligenceMemo', text: 'Structured Memo', tooltip: 'Synthesizes your answers on financial health.' },
             { reportType: 'MarketSentimentMemo', text: 'Market Sentiment', tooltip: 'Synthesizes analyst ratings, technicals, and factor scores.' },
