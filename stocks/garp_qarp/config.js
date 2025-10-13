@@ -753,7 +753,7 @@ Role: You are the Chief Investment Officer of a multi-strategy fund. Your task i
 (In one or two paragraphs, resolve the conflict you identified in the previous section. Weigh the evidence from the different perspectives. For example, you might conclude that the near-term valuation opportunity identified in the GARP/QARP reports is compelling enough to outweigh the long-term structural risks highlighted by the BMQV/Compounder reports, or vice-versa. Your reasoning here must be logical and lead directly to your final recommendation.)
 
 ### Recommendation
-**[Provide one of the following recommendations, bolded: "Initiate a Full Position," "Initiate a Half Position," "Add to Watchlist," or "Pass." Justify your choice in one final sentence summarizing your conclusion from the "Weighing the Evidence" section.]**
+**[Provide one of the following recommendations, bolded: "Initiate a Full Position," "Initiate a Half Position," "Add to Watchlist," or "Pass." Justify your choice in one final sentence summarizing your conclusion from the "Weing the Evidence" section.]**
 `.trim();
 
 // --- NEW DILIGENCE MEMO PROMPTS ---
@@ -823,6 +823,26 @@ Task: Based ONLY on the provided Question & Answer pairs, create a "Market Senti
 ## 4. Synthesis & Verdict
 (In one paragraph, synthesize all the points. Conclude with a clear verdict: **"Overall market sentiment appears Bullish," "Bearish," or "Neutral."** Justify your choice.)
 `.trim();
+
+const INVESTIGATION_SUMMARY_MEMO_PROMPT = `
+Role: You are an investment analyst AI specializing in synthesizing research notes.
+Task: Your sole job is to read the unstructured, manually-entered Question & Answer pairs from the diligence log and synthesize them into a professional "Investigation Summary Memo." Your goal is to identify the most critical findings and present them clearly.
+
+**Diligence Log (Q&A Data):**
+{qaData}
+
+# Investigation Summary Memo: {companyName} ({tickerSymbol})
+
+## 1. Executive Summary of Findings
+(In one concise paragraph, summarize the most important theme or conclusion that emerges from the Q&A log. What is the single most critical insight an investor would gain from this manual research?)
+
+## 2. Key Bullish Findings
+(Create a bulleted list summarizing the key positive points, discoveries, or confirmations from the Q&A log.)
+
+## 3. Key Bearish Findings & Unanswered Questions
+(Create a bulleted list summarizing the most significant risks, negative findings, or remaining unanswered questions identified in the Q&A log.)
+`.trim();
+
 
 // --- NEW ONGOING REVIEW PROMPTS ---
 
@@ -969,6 +989,10 @@ export const promptMap = {
         prompt: MARKET_SENTIMENT_MEMO_PROMPT,
         requires: []
     },
+    'InvestigationSummaryMemo': {
+        prompt: INVESTIGATION_SUMMARY_MEMO_PROMPT,
+        requires: []
+    },
     // --- NEW ONGOING REVIEW MEMOS ---
     'QuarterlyReview': {
         prompt: QUARTERLY_REVIEW_MEMO_PROMPT,
@@ -996,6 +1020,7 @@ export const ANALYSIS_ICONS = {
     'QarpAnalysis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`,
     'MoatAnalysis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.286zm0 13.036h.008v.008h-.008v-.008z" /></svg>`,
     'CapitalAllocators': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15.91 15.91a2.25 2.25 0 01-3.182 0l-3.03-3.03a.75.75 0 011.06-1.061l2.47 2.47 2.47-2.47a.75.75 0 011.06 1.06l-3.03 3.03z" /></svg>`,
+    'InvestigationSummaryMemo': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75" /></svg>`,
     'InvestmentMemo': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>`,
     'EightKAnalysis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" /></svg>`,
     'BmqvMemo': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v17.25m0 0c-1.472 0-2.882.265-4.185.75M12 20.25c1.472 0 2.882.265 4.185.75M18.75 4.97A48.416 48.416 0 0012 4.5c-2.291 0-4.545.16-6.75.47m13.5 0c1.01.143 2.01.317 3 .52m-3-.52l2.62 10.726c.122.499-.106 1.028-.589 1.202a5.988 5.988 0 01-6.861 0c-.483-.174-.711-.703-.59-1.202L18.75 4.971zm-16.5.52c.99-.203 1.99-.377 3-.52m0 0l2.62 10.726c.122.499-.106 1.028-.589 1.202a5.988 5.988 0 01-6.861 0c-.483-.174-.711-.703-.59-1.202L5.25 4.971z" /></svg>`,
@@ -1025,5 +1050,6 @@ export const ANALYSIS_NAMES = {
     'FinalInvestmentThesis': 'Final Investment Thesis',
     'QualitativeDiligenceMemo': 'Qualitative Diligence Memo',
     'StructuredDiligenceMemo': 'Structured Diligence Memo',
-    'MarketSentimentMemo': 'Market Sentiment Memo'
+    'MarketSentimentMemo': 'Market Sentiment Memo',
+    'InvestigationSummaryMemo': 'Investigation Summary'
 };
