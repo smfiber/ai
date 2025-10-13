@@ -3,7 +3,7 @@ import { CONSTANTS, state, promptMap, ANALYSIS_REQUIREMENTS, ANALYSIS_NAMES, SEC
 import { callApi, callGeminiApi, generateRefinedArticle, generatePolishedArticleForSynthesis, getFmpStockData, extractSynthesisData } from './api.js';
 import { openModal, closeModal, displayMessageInModal, openConfirmationModal, openManageStockModal, STRUCTURED_DILIGENCE_QUESTIONS, QUALITATIVE_DILIGENCE_QUESTIONS, QUARTERLY_REVIEW_QUESTIONS, ANNUAL_REVIEW_QUESTIONS, addKpiRow } from './ui-modals.js';
 import { renderPortfolioManagerList, displayReport, updateReportStatus, fetchAndCachePortfolioData, updateGarpCandidacyStatus, renderCandidacyAnalysis, renderGarpAnalysisSummary, renderDiligenceLog, renderPeerComparisonTable, renderSectorMomentumHeatMap, renderOngoingReviewLog } from './ui-render.js';
-import { _calculateMoatAnalysisMetrics, _calculateCapitalAllocatorsMetrics, _calculateGarpScorecardMetrics, CALCULATION_SUMMARIES, _calculateDcfAnalysisMetrics } from './analysis-helpers.js';
+import { _calculateMoatAnalysisMetrics, _calculateCapitalAllocatorsMetrics, _calculateGarpScorecardMetrics, CALCULATION_SUMMARIES } from './analysis-helpers.js';
 
 // --- UTILITY HELPERS ---
 export async function getSavedReports(ticker, reportType) {
@@ -894,8 +894,6 @@ export async function handleAnalysisRequest(symbol, reportType, promptConfig, fo
             payloadData = _calculateMoatAnalysisMetrics(data);
         } else if (reportType === 'CapitalAllocators') {
             payloadData = _calculateCapitalAllocatorsMetrics(data);
-        } else if (reportType === 'DcfAnalysis') {
-            payloadData = _calculateDcfAnalysisMetrics(data);
         } else if (reportType === 'QarpAnalysis') {
             payloadData = _calculateGarpScorecardMetrics(data);
         } else {
@@ -965,9 +963,6 @@ export async function handleGarpMemoRequest(symbol, forceNew = false) {
 
         loadingMessage.textContent = "Gathering data for memo synthesis...";
         
-        const dcfReports = await getSavedReports(symbol, 'DcfAnalysis');
-        const dcfAnalysisReport = dcfReports.length > 0 ? dcfReports[0].content : 'DCF Analysis has not been run.';
-
         const candidacyReports = await getSavedReports(symbol, 'GarpCandidacy');
         if (candidacyReports.length === 0) {
             throw new Error(`The foundational 'GARP Candidacy Report' has not been generated yet. Please generate it from the 'AI Analysis' tab first.`);
@@ -997,7 +992,6 @@ export async function handleGarpMemoRequest(symbol, forceNew = false) {
             .replace('{scorecardJson}', JSON.stringify(scorecardData, null, 2))
             .replace('{diligenceLog}', diligenceLog)
             .replace('{garpCandidacyReport}', candidacyReportContent)
-            .replace('{dcfAnalysisReport}', dcfAnalysisReport);
 
         const memoContent = await generateRefinedArticle(prompt, loadingMessage);
         const synthesisData = await extractSynthesisData(memoContent, reportType);
@@ -1215,16 +1209,14 @@ export async function handleFinalThesisRequest(symbol, forceNew = false) {
 
 
 export async function handleGeneratePrereqsRequest(symbol) {
-    const reportTypes = ['MoatAnalysis', 'CapitalAllocators', 'DcfAnalysis'];
+    const reportTypes = ['MoatAnalysis', 'CapitalAllocators'];
     const reportDisplayNames = {
         'MoatAnalysis': 'Moat Analysis',
         'CapitalAllocators': 'Capital Allocators',
-        'DcfAnalysis': 'DCF Analysis',
     };
     const metricCalculators = {
         'MoatAnalysis': _calculateMoatAnalysisMetrics,
         'CapitalAllocators': _calculateCapitalAllocatorsMetrics,
-        'DcfAnalysis': _calculateDcfAnalysisMetrics,
     };
 
     openModal(CONSTANTS.MODAL_LOADING);
@@ -1663,8 +1655,6 @@ async function generateUpdatedMemo(symbol, memoType) {
 
     try {
         // Step 1: Gather all diligence logs
-        const dcfReports = await getSavedReports(symbol, 'DcfAnalysis');
-        const dcfAnalysisReport = dcfReports.length > 0 ? dcfReports[0].content : 'DCF Analysis has not been run.';
         const diligenceInvestigationReports = await getSavedReports(symbol, 'DiligenceInvestigation');
         const filingDiligenceReports = await getSavedReports(symbol, 'FilingDiligence');
         const eightKReports = await getSavedReports(symbol, 'EightKAnalysis');
@@ -1708,8 +1698,7 @@ async function generateUpdatedMemo(symbol, memoType) {
                 .replace(/{companyName}/g, companyName)
                 .replace(/{tickerSymbol}/g, symbol)
                 .replace('{jsonData}', JSON.stringify(scorecardData, null, 2))
-                .replace('{diligenceLog}', combinedDiligenceLog)
-                .replace('{dcfAnalysisReport}', dcfAnalysisReport);
+                .replace('{diligenceLog}', combinedDiligenceLog);
         } else { // GARP
             const candidacyReports = await getSavedReports(symbol, 'GarpCandidacy');
             if (candidacyReports.length === 0) {
@@ -1722,8 +1711,7 @@ async function generateUpdatedMemo(symbol, memoType) {
                 .replace(/{tickerSymbol}/g, symbol)
                 .replace('{scorecardJson}', JSON.stringify(scorecardData, null, 2))
                 .replace('{diligenceLog}', combinedDiligenceLog)
-                .replace('{garpCandidacyReport}', candidacyReportContent)
-                .replace('{dcfAnalysisReport}', dcfAnalysisReport);
+                .replace('{garpCandidacyReport}', candidacyReportContent);
         }
 
         const memoContent = await generateRefinedArticle(prompt);
@@ -1972,7 +1960,6 @@ export async function handleFullAnalysisWorkflow(symbol) {
     const workflow = [
         { reportType: 'MoatAnalysis', handler: handleAnalysisRequest },
         { reportType: 'CapitalAllocators', handler: handleAnalysisRequest },
-        { reportType: 'DcfAnalysis', handler: handleAnalysisRequest },
         { reportType: 'LongTermCompounder', handler: handleCompounderMemoRequest },
         { reportType: 'BmqvMemo', handler: handleBmqvMemoRequest },
         { reportType: 'InvestmentMemo', handler: handleGarpMemoRequest },
