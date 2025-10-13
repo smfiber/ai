@@ -1967,3 +1967,63 @@ export async function handleCopyReportRequest(symbol, reportType, buttonElement)
         displayMessageInModal(`Could not copy report: ${error.message}`, 'error');
     }
 }
+
+export async function handleFullAnalysisWorkflow(symbol) {
+    const workflow = [
+        { reportType: 'MoatAnalysis', handler: handleAnalysisRequest },
+        { reportType: 'CapitalAllocators', handler: handleAnalysisRequest },
+        { reportType: 'DcfAnalysis', handler: handleAnalysisRequest },
+        { reportType: 'LongTermCompounder', handler: handleCompounderMemoRequest },
+        { reportType: 'BmqvMemo', handler: handleBmqvMemoRequest },
+        { reportType: 'InvestmentMemo', handler: handleGarpMemoRequest },
+        { reportType: 'QarpAnalysis', handler: handleAnalysisRequest },
+        { reportType: 'FinalInvestmentThesis', handler: handleFinalThesisRequest }
+    ];
+
+    openModal(CONSTANTS.MODAL_LOADING);
+    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+    const progressContainer = document.getElementById('progress-container');
+    const progressStatus = document.getElementById('progress-status');
+    const currentReportName = document.getElementById('current-report-name');
+    const progressBarFill = document.getElementById('progress-bar-fill');
+    
+    progressContainer.classList.remove('hidden');
+    progressBarFill.style.width = '0%';
+    
+    try {
+        // Silent, preliminary step
+        currentReportName.textContent = `Running prerequisite: GARP Candidacy...`;
+        await handleGarpCandidacyRequest(symbol);
+        
+        for (let i = 0; i < workflow.length; i++) {
+            const step = workflow[i];
+            const reportName = ANALYSIS_NAMES[step.reportType];
+            
+            progressStatus.textContent = `Generating Reports (${i + 1}/${workflow.length})`;
+            currentReportName.textContent = `Running: ${reportName}...`;
+
+            const promptConfig = promptMap[step.reportType];
+            await step.handler(symbol, step.reportType, promptConfig, true);
+
+            const analysisContentContainer = document.getElementById('analysis-content-container');
+            if (analysisContentContainer) {
+                const button = analysisContentContainer.querySelector(`button[data-report-type="${step.reportType}"]`);
+                if (button) {
+                    button.classList.add('has-saved-report');
+                }
+            }
+
+            const progress = ((i + 1) / workflow.length) * 100;
+            progressBarFill.style.width = `${progress}%`;
+        }
+
+        displayMessageInModal(`Full analysis workflow for ${symbol} completed successfully.`, 'info');
+
+    } catch (error) {
+        console.error("Error during full analysis workflow:", error);
+        displayMessageInModal(`Workflow failed: ${error.message}`, 'error');
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+        progressContainer.classList.add('hidden');
+    }
+}
