@@ -432,7 +432,6 @@ export async function openRawDataViewer(ticker) {
         const deepDiveButtons = [
             { reportType: 'MoatAnalysis', text: 'Moat Analysis', tooltip: 'Evaluates the company\'s competitive advantages.' },
             { reportType: 'CapitalAllocators', text: 'Capital Allocators', tooltip: 'Assesses management\'s skill in deploying capital.' },
-            { reportType: 'DcfAnalysis', text: 'DCF Analysis', tooltip: 'Estimates the company\'s intrinsic value using a Discounted Cash Flow model.' },
         ];
         
         const buildButtonHtml = (buttons) => buttons.map((btn) => {
