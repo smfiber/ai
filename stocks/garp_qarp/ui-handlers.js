@@ -3,7 +3,7 @@ import { CONSTANTS, state, promptMap, ANALYSIS_REQUIREMENTS, ANALYSIS_NAMES, SEC
 import { callApi, callGeminiApi, generateRefinedArticle, generatePolishedArticleForSynthesis, getFmpStockData, extractSynthesisData } from './api.js';
 import { openModal, closeModal, displayMessageInModal, openConfirmationModal, openManageStockModal, STRUCTURED_DILIGENCE_QUESTIONS, QUALITATIVE_DILIGENCE_QUESTIONS, QUARTERLY_REVIEW_QUESTIONS, ANNUAL_REVIEW_QUESTIONS, addKpiRow } from './ui-modals.js';
 import { renderPortfolioManagerList, displayReport, updateReportStatus, fetchAndCachePortfolioData, updateGarpCandidacyStatus, renderCandidacyAnalysis, renderGarpAnalysisSummary, renderDiligenceLog, renderPeerComparisonTable, renderSectorMomentumHeatMap, renderOngoingReviewLog } from './ui-render.js';
-import { _calculateMoatAnalysisMetrics, _calculateCapitalAllocatorsMetrics, _calculateGarpScorecardMetrics, CALCULATION_SUMMARIES } from './analysis-helpers.js';
+import { _calculateMoatAnalysisMetrics, _calculateCapitalAllocatorsMetrics, _calculateGarpScorecardMetrics, CALCULATION_SUMMARIES, _calculateDcfAnalysisMetrics } from './analysis-helpers.js';
 
 // --- UTILITY HELPERS ---
 export async function getSavedReports(ticker, reportType) {
@@ -500,19 +500,10 @@ export async function handleReportHelpRequest(reportType) {
 }
 
 export async function handlePositionAnalysisRequest(ticker, forceNew = false) {
-    if (state.isAnalysisRunning) {
-        displayMessageInModal("An analysis is already in progress. Please wait for it to complete.", "warning");
-        return;
-    }
-    state.isAnalysisRunning = true;
-
     const container = document.getElementById('position-analysis-content-container');
     const statusContainer = document.getElementById('report-status-container-position');
     const reportType = 'PositionAnalysis';
-    if (!container || !statusContainer) {
-        state.isAnalysisRunning = false;
-        return;
-    }
+    if (!container || !statusContainer) return;
 
     try {
         const savedReports = await getSavedReports(ticker, reportType);
@@ -631,22 +622,12 @@ export async function handlePositionAnalysisRequest(ticker, forceNew = false) {
         container.innerHTML = containerHtml;
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
-        state.isAnalysisRunning = false;
     }
 }
 
 export async function handlePortfolioGarpAnalysisRequest() {
-    if (state.isAnalysisRunning) {
-        displayMessageInModal("An analysis is already in progress. Please wait for it to complete.", "warning");
-        return;
-    }
-    state.isAnalysisRunning = true;
-
     const container = document.getElementById('portfolio-garp-ai-summary-container');
-    if (!container) {
-        state.isAnalysisRunning = false;
-        return;
-    }
+    if (!container) return;
 
     container.innerHTML = `<div class="flex items-center justify-center p-4"><div class="loader"></div><p class="ml-4 text-gray-600 font-semibold">AI is analyzing portfolio...</p></div>`;
 
@@ -701,8 +682,6 @@ export async function handlePortfolioGarpAnalysisRequest() {
     } catch (error) {
         console.error("Error during portfolio GARP analysis:", error);
         container.innerHTML = `<p class="text-red-500">Could not complete analysis: ${error.message}</p>`;
-    } finally {
-        state.isAnalysisRunning = false;
     }
 }
 
@@ -756,18 +735,9 @@ export async function handleSaveReportToDb() {
 }
 
 export async function handleGarpCandidacyRequest(ticker) {
-    if (state.isAnalysisRunning) {
-        displayMessageInModal("An analysis is already in progress. Please wait for it to complete.", "warning");
-        return;
-    }
-    state.isAnalysisRunning = true;
-
     const resultContainer = document.getElementById('garp-analysis-container');
     const statusContainer = document.getElementById('garp-candidacy-status-container');
-    if (!resultContainer) {
-        state.isAnalysisRunning = false;
-        return;
-    }
+    if (!resultContainer) return;
 
     resultContainer.innerHTML = `<div class="flex items-center justify-center p-4"><div class="loader"></div><p class="ml-4 text-gray-600 font-semibold">AI is analyzing...</p></div>`;
     statusContainer.classList.add('hidden');
@@ -870,18 +840,10 @@ Format each item precisely like this:
     } catch (error) {
         console.error("Error in GARP Candidacy Request:", error);
         resultContainer.innerHTML = `<p class="text-center text-red-500 p-4">${error.message}</p>`;
-    } finally {
-        state.isAnalysisRunning = false;
     }
 }
 
 export async function handleAnalysisRequest(symbol, reportType, promptConfig, forceNew = false) {
-    if (state.isAnalysisRunning && !forceNew) {
-        displayMessageInModal("An analysis is already in progress. Please wait for it to complete.", "warning");
-        return;
-    }
-    state.isAnalysisRunning = true;
-    
     const contentContainer = document.getElementById('ai-article-container-analysis');
     const statusContainer = document.getElementById('report-status-container-analysis');
     
@@ -932,6 +894,8 @@ export async function handleAnalysisRequest(symbol, reportType, promptConfig, fo
             payloadData = _calculateMoatAnalysisMetrics(data);
         } else if (reportType === 'CapitalAllocators') {
             payloadData = _calculateCapitalAllocatorsMetrics(data);
+        } else if (reportType === 'DcfAnalysis') {
+            payloadData = _calculateDcfAnalysisMetrics(data);
         } else if (reportType === 'QarpAnalysis') {
             payloadData = _calculateGarpScorecardMetrics(data);
         } else {
@@ -973,17 +937,10 @@ export async function handleAnalysisRequest(symbol, reportType, promptConfig, fo
         if (document.getElementById(CONSTANTS.MODAL_LOADING).classList.contains('is-open')) {
             closeModal(CONSTANTS.MODAL_LOADING);
         }
-        state.isAnalysisRunning = false;
     }
 }
 
 export async function handleGarpMemoRequest(symbol, forceNew = false) {
-    if (state.isAnalysisRunning && !forceNew) {
-        displayMessageInModal("An analysis is already in progress. Please wait for it to complete.", "warning");
-        return;
-    }
-    state.isAnalysisRunning = true;
-
     const contentContainer = document.getElementById('ai-article-container-analysis');
     const statusContainer = document.getElementById('report-status-container-analysis');
     contentContainer.innerHTML = '';
@@ -1008,6 +965,9 @@ export async function handleGarpMemoRequest(symbol, forceNew = false) {
 
         loadingMessage.textContent = "Gathering data for memo synthesis...";
         
+        const dcfReports = await getSavedReports(symbol, 'DcfAnalysis');
+        const dcfAnalysisReport = dcfReports.length > 0 ? dcfReports[0].content : 'DCF Analysis has not been run.';
+
         const candidacyReports = await getSavedReports(symbol, 'GarpCandidacy');
         if (candidacyReports.length === 0) {
             throw new Error(`The foundational 'GARP Candidacy Report' has not been generated yet. Please generate it from the 'AI Analysis' tab first.`);
@@ -1036,7 +996,8 @@ export async function handleGarpMemoRequest(symbol, forceNew = false) {
             .replace(/{tickerSymbol}/g, symbol)
             .replace('{scorecardJson}', JSON.stringify(scorecardData, null, 2))
             .replace('{diligenceLog}', diligenceLog)
-            .replace('{garpCandidacyReport}', candidacyReportContent);
+            .replace('{garpCandidacyReport}', candidacyReportContent)
+            .replace('{dcfAnalysisReport}', dcfAnalysisReport);
 
         const memoContent = await generateRefinedArticle(prompt, loadingMessage);
         const synthesisData = await extractSynthesisData(memoContent, reportType);
@@ -1059,17 +1020,10 @@ export async function handleGarpMemoRequest(symbol, forceNew = false) {
         if (document.getElementById(CONSTANTS.MODAL_LOADING).classList.contains('is-open')) {
             closeModal(CONSTANTS.MODAL_LOADING);
         }
-        state.isAnalysisRunning = false;
     }
 }
 
 export async function handleCompounderMemoRequest(symbol, forceNew = false) {
-    if (state.isAnalysisRunning && !forceNew) {
-        displayMessageInModal("An analysis is already in progress. Please wait for it to complete.", "warning");
-        return;
-    }
-    state.isAnalysisRunning = true;
-
     const contentContainer = document.getElementById('ai-article-container-analysis');
     const statusContainer = document.getElementById('report-status-container-analysis');
     contentContainer.innerHTML = '';
@@ -1121,17 +1075,10 @@ export async function handleCompounderMemoRequest(symbol, forceNew = false) {
         contentContainer.innerHTML = `<p class="text-red-500">${error.message}</p>`;
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
-        state.isAnalysisRunning = false;
     }
 }
 
 export async function handleBmqvMemoRequest(symbol, forceNew = false) {
-    if (state.isAnalysisRunning && !forceNew) {
-        displayMessageInModal("An analysis is already in progress. Please wait for it to complete.", "warning");
-        return;
-    }
-    state.isAnalysisRunning = true;
-
     const contentContainer = document.getElementById('ai-article-container-analysis');
     const statusContainer = document.getElementById('report-status-container-analysis');
     contentContainer.innerHTML = '';
@@ -1183,17 +1130,10 @@ export async function handleBmqvMemoRequest(symbol, forceNew = false) {
         contentContainer.innerHTML = `<p class="text-red-500">${error.message}</p>`;
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
-        state.isAnalysisRunning = false;
     }
 }
 
 export async function handleFinalThesisRequest(symbol, forceNew = false) {
-    if (state.isAnalysisRunning && !forceNew) {
-        displayMessageInModal("An analysis is already in progress. Please wait for it to complete.", "warning");
-        return;
-    }
-    state.isAnalysisRunning = true;
-
     const contentContainer = document.getElementById('ai-article-container-analysis');
     const statusContainer = document.getElementById('report-status-container-analysis');
     contentContainer.innerHTML = '';
@@ -1270,26 +1210,21 @@ export async function handleFinalThesisRequest(symbol, forceNew = false) {
         contentContainer.innerHTML = `<p class="text-red-500">${error.message}</p>`;
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
-        state.isAnalysisRunning = false;
     }
 }
 
 
 export async function handleGeneratePrereqsRequest(symbol) {
-    if (state.isAnalysisRunning) {
-        displayMessageInModal("An analysis is already in progress. Please wait for it to complete.", "warning");
-        return;
-    }
-    state.isAnalysisRunning = true;
-
-    const reportTypes = ['MoatAnalysis', 'CapitalAllocators'];
+    const reportTypes = ['MoatAnalysis', 'CapitalAllocators', 'DcfAnalysis'];
     const reportDisplayNames = {
         'MoatAnalysis': 'Moat Analysis',
         'CapitalAllocators': 'Capital Allocators',
+        'DcfAnalysis': 'DCF Analysis',
     };
     const metricCalculators = {
         'MoatAnalysis': _calculateMoatAnalysisMetrics,
         'CapitalAllocators': _calculateCapitalAllocatorsMetrics,
+        'DcfAnalysis': _calculateDcfAnalysisMetrics,
     };
 
     openModal(CONSTANTS.MODAL_LOADING);
@@ -1360,7 +1295,6 @@ export async function handleGeneratePrereqsRequest(symbol) {
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
         progressContainer.classList.add('hidden');
-        state.isAnalysisRunning = false;
     }
 }
 
@@ -1563,19 +1497,12 @@ export async function handleSaveFilingDiligenceRequest(symbol) {
 }
 
 export async function handleGenerateFilingQuestionsRequest(symbol) {
-    if (state.isAnalysisRunning) {
-        displayMessageInModal("An analysis is already in progress. Please wait for it to complete.", "warning");
-        return;
-    }
-    state.isAnalysisRunning = true;
-
     const filingTextarea = document.getElementById('filing-diligence-textarea');
     const formContainer = document.getElementById('filing-diligence-form-container');
     
     const filingText = filingTextarea.value.trim();
     if (!filingText) {
         displayMessageInModal("Please paste the filing text into the text area first.", "warning");
-        state.isAnalysisRunning = false;
         return;
     }
 
@@ -1635,22 +1562,14 @@ export async function handleGenerateFilingQuestionsRequest(symbol) {
         displayMessageInModal(`Could not generate questions. The AI may have returned an invalid format. Error: ${error.message}`, 'error');
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
-        state.isAnalysisRunning = false;
     }
 }
 
 export async function handleAnalyzeEightKRequest(symbol) {
-    if (state.isAnalysisRunning) {
-        displayMessageInModal("An analysis is already in progress. Please wait for it to complete.", "warning");
-        return;
-    }
-    state.isAnalysisRunning = true;
-
     const filingTextarea = document.getElementById('filing-diligence-textarea');
     const filingText = filingTextarea.value.trim();
     if (!filingText) {
         displayMessageInModal("Please paste the 8-K filing text into the text area first.", "warning");
-        state.isAnalysisRunning = false;
         return;
     }
 
@@ -1691,7 +1610,6 @@ export async function handleAnalyzeEightKRequest(symbol) {
         displayMessageInModal(`Could not complete 8-K analysis: ${error.message}`, 'error');
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
-        state.isAnalysisRunning = false;
     }
 }
 
@@ -1728,17 +1646,8 @@ export async function handleDeleteFilingDiligenceLog(reportId, ticker) {
 }
 
 async function generateUpdatedMemo(symbol, memoType) {
-    if (state.isAnalysisRunning) {
-        displayMessageInModal("An analysis is already in progress. Please wait for it to complete.", "warning");
-        return;
-    }
-    state.isAnalysisRunning = true;
-
     const updatedMemoContainer = document.getElementById('updated-memo-container');
-    if (!updatedMemoContainer) {
-        state.isAnalysisRunning = false;
-        return;
-    }
+    if (!updatedMemoContainer) return;
     updatedMemoContainer.innerHTML = `<div class="p-4 text-center">Generating updated ${memoType} memo... <div class="loader mx-auto mt-2"></div></div>`;
     
     let reportType;
@@ -1754,6 +1663,8 @@ async function generateUpdatedMemo(symbol, memoType) {
 
     try {
         // Step 1: Gather all diligence logs
+        const dcfReports = await getSavedReports(symbol, 'DcfAnalysis');
+        const dcfAnalysisReport = dcfReports.length > 0 ? dcfReports[0].content : 'DCF Analysis has not been run.';
         const diligenceInvestigationReports = await getSavedReports(symbol, 'DiligenceInvestigation');
         const filingDiligenceReports = await getSavedReports(symbol, 'FilingDiligence');
         const eightKReports = await getSavedReports(symbol, 'EightKAnalysis');
@@ -1797,7 +1708,8 @@ async function generateUpdatedMemo(symbol, memoType) {
                 .replace(/{companyName}/g, companyName)
                 .replace(/{tickerSymbol}/g, symbol)
                 .replace('{jsonData}', JSON.stringify(scorecardData, null, 2))
-                .replace('{diligenceLog}', combinedDiligenceLog);
+                .replace('{diligenceLog}', combinedDiligenceLog)
+                .replace('{dcfAnalysisReport}', dcfAnalysisReport);
         } else { // GARP
             const candidacyReports = await getSavedReports(symbol, 'GarpCandidacy');
             if (candidacyReports.length === 0) {
@@ -1810,7 +1722,8 @@ async function generateUpdatedMemo(symbol, memoType) {
                 .replace(/{tickerSymbol}/g, symbol)
                 .replace('{scorecardJson}', JSON.stringify(scorecardData, null, 2))
                 .replace('{diligenceLog}', combinedDiligenceLog)
-                .replace('{garpCandidacyReport}', candidacyReportContent);
+                .replace('{garpCandidacyReport}', candidacyReportContent)
+                .replace('{dcfAnalysisReport}', dcfAnalysisReport);
         }
 
         const memoContent = await generateRefinedArticle(prompt);
@@ -1830,8 +1743,6 @@ async function generateUpdatedMemo(symbol, memoType) {
     } catch(error) {
         console.error(`Error generating updated ${memoType} memo:`, error);
         updatedMemoContainer.innerHTML = `<p class="text-red-500">${error.message}</p>`;
-    } finally {
-        state.isAnalysisRunning = false;
     }
 }
 
@@ -1996,22 +1907,12 @@ async function runPeerAnalysis(primaryTicker, peerTickers) {
 }
 
 export async function handleManualPeerAnalysisRequest(ticker) {
-    if (state.isAnalysisRunning) {
-        displayMessageInModal("An analysis is already in progress. Please wait for it to complete.", "warning");
-        return;
-    }
-    state.isAnalysisRunning = true;
-
     const input = document.getElementById('manual-peer-input');
-    if (!input) {
-        state.isAnalysisRunning = false;
-        return;
-    }
+    if (!input) return;
 
     const tickersStr = input.value.trim();
     if (!tickersStr) {
         displayMessageInModal("Please enter at least one peer ticker.", "warning");
-        state.isAnalysisRunning = false;
         return;
     }
 
@@ -2031,7 +1932,6 @@ export async function handleManualPeerAnalysisRequest(ticker) {
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
         genericLoader.classList.remove('hidden');
-        state.isAnalysisRunning = false;
     }
 }
 
@@ -2065,56 +1965,5 @@ export async function handleCopyReportRequest(symbol, reportType, buttonElement)
     } catch (error) {
         console.error("Error copying report:", error);
         displayMessageInModal(`Could not copy report: ${error.message}`, 'error');
-    }
-}
-
-export async function handleFullAnalysisWorkflow(symbol) {
-    if (state.isAnalysisRunning) {
-        displayMessageInModal("An analysis is already in progress. Please wait for it to complete.", "warning");
-        return;
-    }
-
-    state.isAnalysisRunning = true;
-    const workflowButton = document.getElementById('run-full-workflow-button');
-    const spinner = document.getElementById('run-full-workflow-spinner');
-
-    if (workflowButton) {
-        workflowButton.disabled = true;
-        if (spinner) spinner.classList.remove('hidden');
-    }
-
-    try {
-        const workflow = [
-            { type: 'MoatAnalysis', handler: () => handleAnalysisRequest(symbol, 'MoatAnalysis', promptMap['MoatAnalysis'], true) },
-            { type: 'CapitalAllocators', handler: () => handleAnalysisRequest(symbol, 'CapitalAllocators', promptMap['CapitalAllocators'], true) },
-            { type: 'InvestmentMemo', handler: () => handleGarpMemoRequest(symbol, true) },
-            { type: 'QarpAnalysis', handler: () => handleAnalysisRequest(symbol, 'QarpAnalysis', promptMap['QarpAnalysis'], true) },
-            { type: 'LongTermCompounder', handler: () => handleCompounderMemoRequest(symbol, true) },
-            { type: 'BmqvMemo', handler: () => handleBmqvMemoRequest(symbol, true) },
-            { type: 'FinalInvestmentThesis', handler: () => handleFinalThesisRequest(symbol, true) }
-        ];
-
-        for (const step of workflow) {
-            await step.handler();
-            // Update UI for the completed step's button
-            const button = document.querySelector(`#ai-analysis-tab button[data-report-type="${step.type}"]`);
-            if (button) {
-                // For deep dive tiles
-                if (button.classList.contains('analysis-tile')) {
-                    button.classList.add('has-saved-report');
-                }
-            }
-        }
-        displayMessageInModal("Full analysis workflow completed successfully!", "info");
-
-    } catch (error) {
-        console.error("Full analysis workflow failed:", error);
-        displayMessageInModal(`Workflow failed: ${error.message}`, 'error');
-    } finally {
-        if (workflowButton) {
-            workflowButton.disabled = false;
-            if (spinner) spinner.classList.add('hidden');
-        }
-        state.isAnalysisRunning = false;
     }
 }
