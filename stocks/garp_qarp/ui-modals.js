@@ -304,6 +304,8 @@ function _resetAnalysisModal() {
             el.innerHTML = content;
         }
     };
+    
+    state.reportCache = []; // Clear the local report cache
 
     // Clear all content areas to their initial state
     safeClear('raw-data-accordion-container', '<div class="loader mx-auto"></div>');
@@ -382,11 +384,14 @@ export async function openRawDataViewer(ticker) {
         // 3. THEN, FETCH THE NEW DATA
         const fmpDataPromise = getFmpStockData(ticker);
         const groupedDataPromise = getGroupedFmpData(ticker);
-        const savedReportsPromise = state.db.collection(CONSTANTS.DB_COLLECTION_AI_REPORTS).where("ticker", "==", ticker).get();
-        const candidacyReportType = 'GarpCandidacy';
-        const savedCandidacyReportsPromise = getSavedReports(ticker, candidacyReportType);
         
-        // --- NEW: Fetch saved diligence answers ---
+        // --- NEW: Pre-fetch all reports for the ticker and populate the cache ---
+        const reportsRef = state.db.collection(CONSTANTS.DB_COLLECTION_AI_REPORTS).where("ticker", "==", ticker);
+        const savedReportsPromise = reportsRef.get().then(snapshot => {
+            state.reportCache = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            return state.reportCache;
+        });
+
         const qualitativeAnswersPromise = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(ticker).collection('diligence_answers').doc('Qualitative').get();
         const structuredAnswersPromise = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(ticker).collection('diligence_answers').doc('Structured').get();
         const marketSentimentAnswersPromise = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(ticker).collection('diligence_answers').doc('MarketSentiment').get();
@@ -394,16 +399,14 @@ export async function openRawDataViewer(ticker) {
         const [
             fmpData, 
             groupedFmpData, 
-            savedReportsSnapshot, 
-            savedCandidacyReports,
+            allSavedReports,
             qualitativeSnap,
             structuredSnap,
             marketSentimentSnap
         ] = await Promise.all([
             fmpDataPromise, 
             groupedDataPromise, 
-            savedReportsPromise, 
-            savedCandidacyReportsPromise,
+            savedReportsPromise,
             qualitativeAnswersPromise,
             structuredAnswersPromise,
             marketSentimentAnswersPromise
@@ -417,12 +420,15 @@ export async function openRawDataViewer(ticker) {
             );
             return;
         }
+        
+        // Filter reports from the now-populated local cache
+        const savedReportTypes = new Set(allSavedReports.map(report => report.reportType));
+        const savedCandidacyReports = allSavedReports
+            .filter(r => r.reportType === 'GarpCandidacy')
+            .sort((a, b) => b.savedAt.toMillis() - a.savedAt.toMillis());
 
-        const savedReportTypes = new Set(savedReportsSnapshot.docs.map(doc => doc.data().reportType));
-        const allSavedReports = savedReportsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         const profile = fmpData.profile[0];
         
-        // --- NEW: Process saved diligence answers into maps ---
         const getAnswersMap = (snap) => snap.exists ? new Map(snap.data().answers.map(item => [item.question, item.answer])) : new Map();
         const savedQualitativeAnswers = getAnswersMap(qualitativeSnap);
         const savedStructuredAnswers = getAnswersMap(structuredSnap);
