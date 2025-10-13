@@ -783,7 +783,7 @@ Task: Based ONLY on the provided Question & Answer pairs, create a "Qualitative 
 (Synthesize the user's answer regarding management's quality and strategy here.)
 
 ## 3. Synthesis & Verdict
-(In one paragraph, synthesize all the points. Conclude with a clear verdict: **"Business quality appears High," "Moderate," or "Low."** Justify your choice.)
+(In one paragraph, synthesize all the points. Conclude with a single sentence using one of the following bolded phrases, followed by a brief justification. For example: "**Business quality appears High** due to the company's durable moat and shareholder-aligned management team.")
 `.trim();
 
 const STRUCTURED_DILIGENCE_MEMO_PROMPT = `
