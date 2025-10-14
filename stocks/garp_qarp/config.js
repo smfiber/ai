@@ -278,22 +278,30 @@ JSON Data for the Entire Portfolio:
 
 const POSITION_ANALYSIS_PROMPT = `
 Role: You are a pragmatic Portfolio Manager reviewing a position for a GARP (Growth at a Reasonable Price) fund.
-
-Objective: Re-evaluate the attached investment memo's conclusion based on the current reality of our position. Your job is to act as a critical second opinion.
+Objective: Re-evaluate the investment thesis based on the current reality of our position. Your job is to act as a critical second opinion and identify crucial next steps before deploying more capital.
 
 **Core Data for Evaluation:**
-- **Original Investment Memo:**
+1. **Original Moat Analysis:**
+---
+{moatAnalysisReport}
+---
+2. **Original Capital Allocators Report:**
+---
+{capitalAllocatorsReport}
+---
+3. **Original Investment Memo (Synthesis):**
 ---
 {investmentMemoContent}
 ---
-- **Our Current Position:** {positionDetails}
-- **Current Market Price:** {currentPrice}
+4. **Our Current Position:** {positionDetails}
+5. **Current Market Price:** {currentPrice}
 
 **Task:**
-Synthesize the Core Data above into a professional Position Review Memo.
-1.  **Thesis Re-evaluation:** Briefly summarize the original memo's thesis. Then, analyze whether our current position (e.g., a significant gain/loss, a short holding period) strengthens, weakens, or does not materially change the original recommendation. For example, does a small gain in a short period confirm the thesis, or is it just market noise? Does a small loss invalidate the thesis, or does it present an opportunity to acquire more at a better price?
+Synthesize all the Core Data above into a professional Position Review Memo.
+1.  **Thesis Re-evaluation:** Briefly summarize the memo's thesis. Now, critically re-evaluate it. Does the recent price action challenge the core assumptions about the company's Moat or Management Quality? Or does it confirm the original risks (like market sentiment)?
 2.  **Quantitative Snapshot:** List the metrics from "Our Current Position."
-3.  **Recommendation & Justification:** Based on your re-evaluation, provide a clear, single-word recommendation (Hold, Acquire More, Trim Position, or Sell). Justify your decision in 2-3 sentences, directly referencing the original memo's logic and our current position's status.
+3.  **Recommendation & Justification:** Provide a clear, single-word recommendation (Hold, Acquire More, Trim Position, or Sell). Justify it by directly referencing the original reports and our current position's status.
+4.  **Critical Follow-Up Questions:** Based on your re-evaluation, what are the 1-2 most critical questions an analyst MUST answer *before* acting on your recommendation? Frame these as actionable diligence items.
 
 **CRITICAL INSTRUCTION: Your final output MUST use the exact markdown structure shown in the example below. Do NOT deviate.**
 
@@ -313,6 +321,10 @@ Synthesize the Core Data above into a professional Position Review Memo.
 **Acquire More**
 
 (Your 2-3 sentence justification goes here...)
+
+## 4. Critical Follow-Up Questions
+- (Your first critical question goes here...)
+- (Your second critical question goes here...)
 ---
 `.trim();
 
