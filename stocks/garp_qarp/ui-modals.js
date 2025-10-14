@@ -634,7 +634,7 @@ export async function openRawDataViewer(ticker) {
             if (futureEarnings.length > 0) { nextEarningsDate = futureEarnings[0].date; }
         }
         
-        const reportTypesForLog = ['FilingDiligence', 'UpdatedGarpMemo', 'UpdatedQarpMemo', 'QuarterlyReview', 'AnnualReview'];
+        const reportTypesForLog = ['FilingDiligence', 'EightKAnalysis', 'UpdatedGarpMemo', 'UpdatedQarpMemo', 'QuarterlyReview', 'AnnualReview'];
         const filingDiligenceReports = allSavedReports.filter(r => reportTypesForLog.includes(r.reportType));
 
         ongoingDiligenceContainer.innerHTML = `
@@ -653,10 +653,30 @@ export async function openRawDataViewer(ticker) {
                 <div id="ongoing-review-actions" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                     <button data-review-type="Quarterly" class="start-review-button bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-5 rounded-lg">Start Quarterly Review</button>
                     <button data-review-type="Annual" class="start-review-button bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-5 rounded-lg">Start Annual Review</button>
-                    <button id="analyze-eight-k-button" class="bg-sky-600 hover:bg-sky-700 text-white font-bold py-3 px-5 rounded-lg">Analyze 8-K Filing</button>
+                    <button id="show-filing-input-button" class="bg-sky-600 hover:bg-sky-700 text-white font-bold py-3 px-5 rounded-lg">Analyze Filing</button>
                 </div>
 
                 <div id="review-form-container" class="hidden mb-6"></div>
+
+                <div id="filing-diligence-input-container" class="hidden mb-6 text-center p-4 border rounded-lg bg-gray-50">
+                    <label for="filing-diligence-textarea" class="block text-sm font-medium text-gray-700 mb-2">Paste 10-K, 10-Q, or 8-K Filing Text Below</label>
+                    <textarea id="filing-diligence-textarea" class="w-full border border-gray-300 rounded-lg p-2 text-sm" rows="10" placeholder="Paste the full text of the filing here..."></textarea>
+                    <div class="mt-4 flex justify-center gap-4">
+                        <button id="generate-filing-questions-button" data-symbol="${ticker}" class="bg-teal-600 hover:bg-teal-700 text-white font-semibold py-2 px-5 rounded-lg">Generate Q&A Form</button>
+                        <button id="analyze-eight-k-button-new" data-symbol="${ticker}" class="bg-sky-600 hover:bg-sky-700 text-white font-semibold py-2 px-5 rounded-lg">Analyze as 8-K</button>
+                    </div>
+                </div>
+
+                <div id="filing-diligence-form-container" class="hidden mb-6"></div>
+                
+                <div id="updated-memo-section" class="hidden mb-6">
+                     <h4 class="text-lg font-semibold text-gray-800 mb-2">Updated AI-Generated Memo</h4>
+                     <div class="flex items-center gap-4 mb-2">
+                        <button id="generate-updated-garp-memo-button" data-symbol="${ticker}" class="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded-lg text-sm">Update GARP Memo</button>
+                        <button id="generate-updated-qarp-memo-button" data-symbol="${ticker}" class="bg-orange-600 hover:bg-orange-700 text-white font-semibold py-2 px-4 rounded-lg text-sm">Update QARP Memo</button>
+                     </div>
+                     <div id="updated-memo-container" class="prose max-w-none p-4 border rounded-lg bg-gray-50"></div>
+                </div>
                 
                 <div id="ongoing-review-log-container"></div>
             </div>
