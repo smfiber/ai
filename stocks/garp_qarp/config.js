@@ -715,7 +715,7 @@ JSON Data:
 `.trim();
 
 const FINAL_INVESTMENT_THESIS_PROMPT = `
-Role: You are the Chief Investment Officer of a multi-strategy fund. Your task is to synthesize five separate analyst reports on {companyName} into a final, decisive investment thesis. Your analysis must be objective and based exclusively on the provided inputs.
+Role: You are the Chief Investment Officer of a multi-strategy fund. Your task is to synthesize four separate analyst reports on {companyName} into a final, decisive investment thesis. Your analysis must be objective and based exclusively on the provided inputs.
 
 ---
 **CRITICAL INSTRUCTION: Your final output MUST use the exact markdown structure, headings, and table format provided below. Do not deviate.**
@@ -727,7 +727,6 @@ Role: You are the Chief Investment Officer of a multi-strategy fund. Your task i
 **2. QARP Analysis:** {qarpAnalysisReport}
 **3. Long-Term Compounder Memo:** {longTermCompounderMemo}
 **4. BMQV Memo:** {bmqvMemo}
-**5. Market Sentiment Memo:** {marketSentimentMemo}
 
 ---
 **YOUR TASK (Strict Output Format):**
@@ -735,7 +734,7 @@ Role: You are the Chief Investment Officer of a multi-strategy fund. Your task i
 # Final Investment Thesis: {companyName} ({tickerSymbol})
 
 ## 1. Summary of Analyst Verdicts
-(First, you MUST complete this summary table by extracting the final verdict from each of the five input memos. Do NOT alter the structure of this table.)
+(First, you MUST complete this summary table by extracting the final verdict from each of the four input memos. Do NOT alter the structure of this table.)
 
 | Analyst Memo | Final Verdict |
 | :--- | :--- |
@@ -743,7 +742,6 @@ Role: You are the Chief Investment Officer of a multi-strategy fund. Your task i
 | **QARP Analysis** | [Extract the final "verdict" field] |
 | **Long-Term Compounder**| [Extract the final "Verdict" classification] |
 | **BMQV Memo** | [Extract the final "Verdict" classification] |
-| **Market Sentiment** | [Extract the final "Verdict" classification] |
 
 ## 2. The Core Debate: Identifying the Conflict
 (In one paragraph, analyze the completed table above to identify the central point of agreement or disagreement. State the conflict clearly.)
