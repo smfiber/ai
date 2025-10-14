@@ -375,11 +375,36 @@ export function renderGarpScorecardDashboard(container, ticker, fmpData) {
     if (!container) return;
 
     const metrics = _calculateGarpScorecardMetrics(fmpData);
+    const overrides = fmpData.manualOverrides || {};
+
+    // Map display names to the snake_case keys used for overrides
+    const metricToOverrideKeyMap = {
+        'EPS Growth (Next 1Y)': 'eps_growth_next_1y',
+        'EPS Growth (5Y)': 'eps_growth_5y',
+        'Revenue Growth (5Y)': 'rev_growth_5y',
+        'Return on Invested Capital': 'roic',
+        'Return on Equity': 'roe',
+        'Debt-to-Equity': 'de',
+        'Interest Coverage': 'interest_coverage',
+        'Profitable Yrs (5Y)': 'profitable_yrs',
+        'PEG Ratio': 'peg',
+        'Forward P/E': 'forward_pe',
+        'Price to FCF': 'pfcf',
+        'P/S Ratio': 'ps_ratio',
+        'P/E (TTM)': 'pe_ttm'
+    };
     
     const tilesHtml = Object.entries(metrics).map(([name, data]) => {
         if (name === 'garpConvictionScore') return '';
         let valueDisplay = 'N/A';
         let colorClass = 'text-gray-500 italic';
+        
+        const overrideKey = metricToOverrideKeyMap[name];
+        const isOverridden = overrideKey && overrides.hasOwnProperty(overrideKey);
+        
+        const overrideIndicatorHtml = isOverridden 
+            ? `<span class="override-indicator" title="Manual Override Active">&#9998;</span>` 
+            : '';
 
         if (typeof data.value === 'number' && isFinite(data.value)) {
             // Use multiplier for color: >1 is great, 1 is good, <1 is bad
@@ -399,9 +424,15 @@ export function renderGarpScorecardDashboard(container, ticker, fmpData) {
         }
         
         return `
-            <div class="metric-tile p-4">
+            <div class="metric-tile p-4 relative">
+                ${overrideIndicatorHtml}
                 <p class="metric-title text-sm">${name}</p>
-                <p class="metric-value text-2xl ${colorClass}">${valueDisplay}</p>
+                <p class="metric-value text-2xl ${colorClass} cursor-pointer hover:bg-gray-100 rounded-md" 
+                   data-metric-key="${overrideKey || ''}" 
+                   data-ticker="${ticker}"
+                   data-format="${data.format || 'decimal'}">
+                   ${valueDisplay}
+                </p>
             </div>
         `;
     }).join('');
