@@ -356,7 +356,7 @@ Generate a comprehensive GARP assessment using precise markdown formatting. Your
 
 ## EXECUTIVE SUMMARY
 
-(Your output for this section MUST follow this markdown structure exactly. Replace the bracketed text with your analysis.)
+(Your output for this section MUST follow this markdown structure exactly. For the Verdict, use one of the three specified bolded phrases.)
 
 **Verdict:** [Insert bolded verdict: Strong GARP Candidate, Borderline GARP Candidate, or Not a GARP Candidate]
 **GARP Conviction Score:** [Insert the score]
@@ -377,7 +377,7 @@ Identify the critical risks and weaknesses revealed by the failing metrics. Dire
 (1 paragraph)
 Investment Profile & The Deciding Factor: Classify the stock's profile (e.g., 'Best-in-Class Compounder trading at a premium,' 'Undervalued Turnaround Story'). Then, state the single most critical GARP tension an investor must resolve, explicitly referencing the peer comparison (e.g., 'The core question is whether the company's superior ROE and forward growth justify its valuation premium to its peers.').
 
-**Strategic Recommendation:** [Insert a single bolded recommendation based on the following criteria: "Pursue Diligence (High Priority)" for GARP Scores > 75 with clear peer superiority; "Pursue Diligence" for solid candidates; "Add to Watchlist" for borderline cases or good companies at unreasonable prices; "Pass" for clear non-candidates.]
+(Your final output for the recommendation MUST be one of the specified bolded phrases. For example: **Add to Watchlist**)
 
 ## Confidence Score
 **Confidence Score:** [Assign a score from 1.0 to 5.0 based on these rules: High (4.0-5.0) for GARP score > 75 AND superior peer metrics; Moderate (2.5-3.9) for GARP score > 60 OR strong metrics but at a premium valuation; Low (1.0-2.4) for GARP score < 60 OR major data contradictions.]
