@@ -2,7 +2,7 @@
 import { CONSTANTS, state, promptMap } from './config.js';
 import { openModal, closeModal, openStockListModal, openManageStockModal, openPortfolioManagerModal, openRawDataViewer, QUARTERLY_REVIEW_QUESTIONS, ANNUAL_REVIEW_QUESTIONS, addDiligenceEntryRow, addKpiRow } from './ui-modals.js';
 import { fetchAndCachePortfolioData, renderPortfolioManagerList, renderGarpScorecardDashboard, renderGarpInterpretationAnalysis } from './ui-render.js';
-import { handleResearchSubmit, handleSaveStock, handleDeleteStock, handleRefreshFmpData, handleAnalysisRequest, handleGarpMemoRequest, handleSaveReportToDb, handleGeneratePrereqsRequest, handleGarpCandidacyRequest, handlePortfolioGarpAnalysisRequest, handlePositionAnalysisRequest, handleReportHelpRequest, handleManualDiligenceSave, handleDeleteDiligenceLog, handleWorkflowHelpRequest, handleManualPeerAnalysisRequest, handleGenerateFilingQuestionsRequest, handleSaveFilingDiligenceRequest, handleDeleteFilingDiligenceLog, handleGenerateUpdatedGarpMemoRequest, handleGenerateUpdatedQarpMemoRequest, handleAnalyzeEightKRequest, handleCompounderMemoRequest, handleBmqvMemoRequest, handleFinalThesisRequest, handleKpiSuggestionRequest, handleCopyReportRequest, handleFullAnalysisWorkflow, handleDiligenceMemoRequest, handleSaveDiligenceAnswers, handleDeleteAllDiligenceAnswers, handleDeleteOldDiligenceLogs, handleInvestigationSummaryRequest } from './ui-handlers.js';
+import { handleResearchSubmit, handleSaveStock, handleDeleteStock, handleRefreshFmpData, handleAnalysisRequest, handleGarpMemoRequest, handleSaveReportToDb, handleGeneratePrereqsRequest, handleGarpCandidacyRequest, handlePortfolioGarpAnalysisRequest, handlePositionAnalysisRequest, handleReportHelpRequest, handleManualDiligenceSave, handleDeleteDiligenceLog, handleWorkflowHelpRequest, handleManualPeerAnalysisRequest, handleGenerateFilingQuestionsRequest, handleSaveFilingDiligenceRequest, handleDeleteFilingDiligenceLog, handleGenerateUpdatedGarpMemoRequest, handleGenerateUpdatedQarpMemoRequest, handleAnalyzeEightKRequest, handleCompounderMemoRequest, handleBmqvMemoRequest, handleFinalThesisRequest, handleKpiSuggestionRequest, handleCopyReportRequest, handleFullAnalysisWorkflow, handleDiligenceMemoRequest, handleSaveDiligenceAnswers, handleDeleteAllDiligenceAnswers, handleDeleteOldDiligenceLogs, handleInvestigationSummaryRequest, handleQuarterlyReviewRequest, handleAnnualReviewRequest } from './ui-handlers.js';
 import { getFmpStockData } from './api.js';
 import { _calculateGarpScorecardMetrics } from './analysis-helpers.js';
 
@@ -365,12 +365,64 @@ export function setupEventListeners() {
         }
         
         // --- ONGOING DILIGENCE HANDLERS ---
+        if (target.matches('.start-review-button')) {
+            const reviewType = target.dataset.reviewType; // 'Quarterly' or 'Annual'
+            const formContainer = document.getElementById('review-form-container');
+            const questions = reviewType === 'Quarterly' ? QUARTERLY_REVIEW_QUESTIONS : ANNUAL_REVIEW_QUESTIONS;
+            
+            let formHtml = `<div class="p-4 border rounded-lg bg-gray-50"><h4 class="text-base font-semibold text-gray-800 mb-4">${reviewType} Review Checklist</h4><div class="space-y-4">`;
+            for(const [key, question] of Object.entries(questions)) {
+                formHtml += `
+                    <div class="review-qa-pair p-3 bg-white rounded-lg border">
+                        <label class="font-semibold text-sm text-indigo-700 block mb-2">${key}</label>
+                        <p class="text-xs text-gray-600 mb-2">${question}</p>
+                        <textarea class="review-answer-textarea w-full border border-gray-300 rounded-lg p-2 text-sm" rows="4" data-question-key="${key}" placeholder="Your findings and analysis..."></textarea>
+                    </div>
+                `;
+            }
+            formHtml += `</div><div class="text-right mt-4 flex justify-end gap-2">
+                            <button type="button" class="cancel-review-button bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg">Cancel</button>
+                            <button type="button" data-review-type="${reviewType}" data-symbol="${symbol}" class="submit-review-button bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg">Synthesize ${reviewType} Memo</button>
+                        </div></div>`;
+
+            formContainer.innerHTML = formHtml;
+            formContainer.classList.remove('hidden');
+            document.getElementById('ongoing-review-actions').classList.add('hidden');
+            document.getElementById('filing-diligence-input-container').classList.add('hidden');
+            return;
+        }
+
+        if (target.matches('.submit-review-button')) {
+            const reviewType = target.dataset.reviewType;
+            if (reviewType === 'Quarterly') {
+                handleQuarterlyReviewRequest(symbol);
+            } else if (reviewType === 'Annual') {
+                handleAnnualReviewRequest(symbol);
+            }
+            return;
+        }
+        
+        if (target.matches('.cancel-review-button')) {
+            const formContainer = document.getElementById('review-form-container');
+            formContainer.innerHTML = '';
+            formContainer.classList.add('hidden');
+            document.getElementById('ongoing-review-actions').classList.remove('hidden');
+            return;
+        }
+
+        if (target.id === 'show-filing-input-button') {
+            document.getElementById('filing-diligence-input-container').classList.remove('hidden');
+            document.getElementById('ongoing-review-actions').classList.add('hidden');
+            document.getElementById('review-form-container').classList.add('hidden');
+            return;
+        }
+        
         if (target.id === 'generate-filing-questions-button') {
             handleGenerateFilingQuestionsRequest(symbol);
             return;
         }
         
-        if (target.id === 'analyze-eight-k-button') {
+        if (target.id === 'analyze-eight-k-button-new') {
             handleAnalyzeEightKRequest(symbol);
             return;
         }
