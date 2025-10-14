@@ -277,6 +277,14 @@ body.modal-open {
 .gauge-fill.bad { background-color: #ef4444; }
 .sparkline.bad { stroke: #ef4444; }
 
+.override-indicator {
+    position: absolute;
+    top: 0.25rem;
+    right: 0.25rem;
+    font-size: 0.75rem;
+    color: #4f46e5;
+    cursor: help;
+}
 
 /*
  * =================================================================
