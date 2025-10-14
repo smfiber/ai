@@ -548,18 +548,29 @@ export async function handlePositionAnalysisRequest(ticker, forceNew = false) {
         const portfolioData = state.portfolioCache.find(s => s.ticker === ticker);
         const fmpData = await getFmpStockData(ticker);
         
+        // --- UPDATED LOGIC TO FETCH ALL PREREQUISITE REPORTS ---
         const memoReports = getReportsFromCache(ticker, 'InvestmentMemo');
+        const moatReports = getReportsFromCache(ticker, 'MoatAnalysis');
+        const capitalReports = getReportsFromCache(ticker, 'CapitalAllocators');
+
         let sourceReportContent;
-        
         if (memoReports.length > 0) {
             sourceReportContent = memoReports[0].content;
         } else {
             const candidacyReports = getReportsFromCache(ticker, 'GarpCandidacy');
             if (candidacyReports.length === 0) {
-                throw new Error(`The foundational 'GARP Candidacy Report' or 'Investment Memo' has not been generated yet. Please generate one from the 'Dashboard' or 'AI Analysis' tab first.`);
+                throw new Error(`The foundational 'GARP Candidacy Report' or 'Investment Memo' must be generated first.`);
             }
             sourceReportContent = candidacyReports[0].content;
         }
+
+        if (moatReports.length === 0) {
+            throw new Error("The 'Moat Analysis' report must be generated first to re-evaluate the thesis.");
+        }
+        if (capitalReports.length === 0) {
+            throw new Error("The 'Capital Allocators' report must be generated first to re-evaluate the thesis.");
+        }
+        // --- END OF UPDATED LOGIC ---
         
         if (!fmpData || !fmpData.profile || !fmpData.profile.length === 0) {
             throw new Error(`Could not retrieve the latest price data for ${ticker}.`);
@@ -617,6 +628,8 @@ export async function handlePositionAnalysisRequest(ticker, forceNew = false) {
         const prompt = promptConfig.prompt
             .replace('{companyName}', companyName)
             .replace('{tickerSymbol}', ticker)
+            .replace('{moatAnalysisReport}', moatReports[0].content) // New
+            .replace('{capitalAllocatorsReport}', capitalReports[0].content) // New
             .replace('{investmentMemoContent}', sourceReportContent)
             .replace('{positionDetails}', JSON.stringify(positionDetails, null, 2))
             .replace('{currentPrice}', `$${currentPrice.toFixed(2)}`);
