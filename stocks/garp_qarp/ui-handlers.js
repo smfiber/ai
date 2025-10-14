@@ -1172,7 +1172,7 @@ export async function handleFinalThesisRequest(symbol, forceNew = false) {
         const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
         
         loadingMessage.textContent = "Gathering prerequisite analyst summaries...";
-        const requiredReportTypes = ['InvestmentMemo', 'QarpAnalysis', 'LongTermCompounder', 'BmqvMemo', 'MarketSentimentMemo'];
+        const requiredReportTypes = ['InvestmentMemo', 'QarpAnalysis', 'LongTermCompounder', 'BmqvMemo'];
         const analystSummaries = {};
         const requiredReports = {};
 
@@ -1206,8 +1206,7 @@ export async function handleFinalThesisRequest(symbol, forceNew = false) {
             .replace('{garpMemo}', requiredReports.InvestmentMemo.content)
             .replace('{qarpAnalysisReport}', requiredReports.QarpAnalysis.content)
             .replace('{longTermCompounderMemo}', requiredReports.LongTermCompounder.content)
-            .replace('{bmqvMemo}', requiredReports.BmqvMemo.content)
-            .replace('{marketSentimentMemo}', requiredReports.MarketSentimentMemo.content);
+            .replace('{bmqvMemo}', requiredReports.BmqvMemo.content);
 
         const memoContent = await generateRefinedArticle(finalPrompt, loadingMessage);
         await autoSaveReport(symbol, reportType, memoContent, finalPrompt);
@@ -2160,9 +2159,8 @@ export async function handleCopyReportRequest(symbol, reportType, buttonElement)
 }
 
 export async function handleFullAnalysisWorkflow(symbol) {
-    const preliminaryStage = [
-        { reportType: 'GarpCandidacy', handler: handleGarpCandidacyRequest, isSilent: true },
-    ];
+    // Preliminary Stage is now empty to preserve the original candidacy report
+    const preliminaryStage = []; 
     
     const foundationalStage = [
         { reportType: 'MoatAnalysis', handler: handleAnalysisRequest },
