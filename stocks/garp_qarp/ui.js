@@ -1,9 +1,10 @@
 // fileName: ui.js
 import { CONSTANTS, state, promptMap } from './config.js';
 import { openModal, closeModal, openStockListModal, openManageStockModal, openPortfolioManagerModal, openRawDataViewer, QUARTERLY_REVIEW_QUESTIONS, ANNUAL_REVIEW_QUESTIONS, addDiligenceEntryRow, addKpiRow } from './ui-modals.js';
-import { fetchAndCachePortfolioData, renderPortfolioManagerList } from './ui-render.js';
+import { fetchAndCachePortfolioData, renderPortfolioManagerList, renderGarpScorecardDashboard, renderGarpInterpretationAnalysis } from './ui-render.js';
 import { handleResearchSubmit, handleSaveStock, handleDeleteStock, handleRefreshFmpData, handleAnalysisRequest, handleGarpMemoRequest, handleSaveReportToDb, handleGeneratePrereqsRequest, handleGarpCandidacyRequest, handlePortfolioGarpAnalysisRequest, handlePositionAnalysisRequest, handleReportHelpRequest, handleManualDiligenceSave, handleDeleteDiligenceLog, handleWorkflowHelpRequest, handleManualPeerAnalysisRequest, handleGenerateFilingQuestionsRequest, handleSaveFilingDiligenceRequest, handleDeleteFilingDiligenceLog, handleGenerateUpdatedGarpMemoRequest, handleGenerateUpdatedQarpMemoRequest, handleAnalyzeEightKRequest, handleCompounderMemoRequest, handleBmqvMemoRequest, handleFinalThesisRequest, handleKpiSuggestionRequest, handleCopyReportRequest, handleFullAnalysisWorkflow, handleDiligenceMemoRequest, handleSaveDiligenceAnswers, handleDeleteAllDiligenceAnswers, handleDeleteOldDiligenceLogs, handleInvestigationSummaryRequest } from './ui-handlers.js';
 import { getFmpStockData } from './api.js';
+import { _calculateGarpScorecardMetrics } from './analysis-helpers.js';
 
 // --- DYNAMIC TOOLTIPS ---
 function initializeTooltips() {
@@ -60,6 +61,69 @@ function initializeTooltips() {
 }
 
 // --- EVENT LISTENER SETUP ---
+
+async function handleScorecardEdit(target) {
+    const metricKey = target.dataset.metricKey;
+    const ticker = target.dataset.ticker;
+    const format = target.dataset.format;
+
+    if (!metricKey || !ticker) return;
+
+    const originalValueText = target.textContent.replace(/%|\s|x|\/|5/g, '').trim();
+    const originalValue = parseFloat(originalValueText);
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = isNaN(originalValue) ? '' : originalValue;
+    input.className = 'w-full text-center text-2xl font-bold bg-gray-200 rounded-md';
+
+    target.style.display = 'none';
+    target.parentNode.appendChild(input);
+    input.focus();
+    input.select();
+
+    const saveAndClose = async () => {
+        let newValue = parseFloat(input.value);
+        
+        if (isNaN(newValue)) {
+            // If input is blank, we remove the override
+            const docRef = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(ticker).collection('analysis').doc('manual_overrides');
+            await docRef.update({
+                [metricKey]: firebase.firestore.FieldValue.delete()
+            });
+        } else {
+             // If it's a percentage, divide by 100 before saving
+            if (format === 'percent') {
+                newValue = newValue / 100;
+            }
+            const docRef = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(ticker).collection('analysis').doc('manual_overrides');
+            await docRef.set({ [metricKey]: newValue }, { merge: true });
+        }
+        
+        // Re-render the dashboard to show the updated score and indicator
+        const garpScorecardContainer = document.getElementById('garp-scorecard-container');
+        const fmpData = await getFmpStockData(ticker);
+        renderGarpScorecardDashboard(garpScorecardContainer, ticker, fmpData);
+        renderGarpInterpretationAnalysis(garpScorecardContainer, _calculateGarpScorecardMetrics(fmpData));
+        
+        // Also regenerate the AI candidacy report to reflect the new numbers
+        handleGarpCandidacyRequest(ticker, true);
+
+        // Cleanup
+        input.remove();
+        target.style.display = 'block';
+    };
+
+    input.addEventListener('blur', saveAndClose);
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            input.blur(); // Trigger the save and close
+        } else if (e.key === 'Escape') {
+            input.remove();
+            target.style.display = 'block';
+        }
+    });
+}
 
 function setupGlobalEventListeners() {
     document.getElementById('dashboard-section').addEventListener('click', (e) => {
@@ -215,6 +279,11 @@ export function setupEventListeners() {
     });
 
     analysisModal.addEventListener('click', async (e) => {
+        if (e.target.matches('.metric-value')) {
+            handleScorecardEdit(e.target);
+            return;
+        }
+    
         const target = e.target.closest('button');
         if (!target) return;
 
