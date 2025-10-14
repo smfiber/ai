@@ -125,66 +125,65 @@ Example Output:
 `.trim();
 
 const MOAT_ANALYSIS_PROMPT = `
-Role: You are a business strategist AI who excels at explaining complex business concepts in simple, relatable terms. Your task is to analyze {companyName}'s competitive advantages.
-Concept: An "economic moat" is a company's ability to maintain its competitive advantages and defend its long-term profits from competitors.
-Data Instructions: Your analysis must be derived exclusively from the provided JSON data, which contains pre-calculated trends and metrics.
-Output Format: Provide a brief report in markdown. Explain each point simply and conclude with a clear verdict on the moat's strength.
+Role: You are a business strategist AI. Your task is to analyze {companyName}'s competitive advantages based *only* on the provided JSON data.
 
 ---
-**CRITICAL INSTRUCTION: Your final output MUST use the exact markdown structure and headings provided below. Do not add any introductory or concluding paragraphs outside of this structure.**
+**CRITICAL INSTRUCTION: Your final output MUST use the exact markdown structure, headings, and bullet points provided in the template below. Fill in the [Your analysis here] sections based on the JSON data.**
 ---
 
 JSON Data:
 {jsonData}
 
 # Economic Moat Analysis: {companyName} ({tickerSymbol})
+
 ## 1. What Gives This Company Its Edge? (Sources of the Moat)
-Analyze the data for signs of a durable competitive advantage. Discuss:
-- **Return on Invested Capital (ROIC):** Analyze the 'roicTrend' data. Explain this as the "gold standard" for moat analysis. A consistently high **and stable/rising** ROIC (>15%) is a strong sign of a moat.
-- **Pricing Power & Profitability:** Are the trends in 'profitabilityTrends' (net profit margin, operating income, gross profit margin) consistently high **and stable** over time? Explain this as a sign that the company can reliably charge more.
-- **Qualitative Clues (from Description):** Based on the 'qual-itativeClues.description', what themes suggest a moat? Look for mentions of a "platform," "network," "marketplace," or "mission-critical" systems.
+- **Return on Invested Capital (ROIC):** [Your analysis here, explaining that a consistently high and stable/rising ROIC >15% is a strong sign of a moat. Analyze the 'roicTrend' data against this benchmark.]
+- **Pricing Power & Profitability:** [Your analysis here, discussing whether the trends in 'profitabilityTrends' are consistently high and stable over time, which would be a sign of pricing power.]
+- **Qualitative Clues (from Description):** [Your analysis here, looking for themes like "platform," "network," "marketplace," or "mission-critical" systems in the 'qualitativeClues.description' that suggest a moat.]
+
 ## 2. How Strong is the Castle Wall? (Moat Sustainability)
-Assess how sustainable this advantage might be by looking at:
-- **Reinvesting in the Defenses:** Are 'capex' and 'rdExpenses' significant in the 'reinvestmentTrends' data? Explain this as the company spending money to strengthen its moat.
-- **Financial Fortress:** Is the balance sheet strong (low 'debtToEquity' in 'balanceSheetHealth')? A company with low debt is better equipped to survive tough times.
+- **Reinvesting in the Defenses:** [Your analysis here, discussing whether 'capex' and 'rdExpenses' from the 'reinvestmentTrends' data are significant, which would show the company is strengthening its moat.]
+- **Financial Fortress:** [Your analysis here, assessing if the balance sheet is strong based on a low 'debtToEquity' from the 'balanceSheetHealth' data.]
+
 ## 3. The Verdict: How Wide is the Moat?
-Based on all the evidence, provide a concluding assessment. Classify the moat as **"Wide," "Narrow," or "None,"** and explain what this means for a long-term investor.
-- **Wide Moat:** The company has strong, sustainable advantages (like consistently high ROIC and clear pricing power) that are very difficult to replicate, **leading to highly predictable long-term profits.**
-- **Narrow Moat:** The company has some advantages, but they could be overcome by competitors over time, **making future profits less certain.**
-- **No Moat:** The company has no clear, sustainable competitive advantage, **making it vulnerable to competition and price wars.**
+(First, provide a one-sentence classification using one of the three bolded options below. Then, in a new paragraph, provide a concluding assessment justifying your choice based on the evidence from the previous sections.)
+
+- **"Wide Moat"**
+- **"Narrow Moat"**
+- **"No Moat"**
 `.trim();
 
 const CAPITAL_ALLOCATORS_PROMPT = `
 Role: You are a critical, business-focused investment analyst. Your task is to evaluate the skill of {companyName}'s management team as capital allocators, based *only* on the provided financial data.
-Data Instructions: Your analysis must be derived exclusively from the provided JSON data. Be objective; praise should be reserved for exceptional, data-backed performance.
-Output Format: Provide a detailed report in professional markdown format.
+
+---
+**CRITICAL INSTRUCTIONS:**
+1.  Your final output MUST use the exact markdown structure, headings, and bullet points provided in the template below.
+2.  For Section 1, you MUST use the pre-calculated 'summaryTotals' from the JSON data as the source of truth for your analysis.
+---
 
 JSON Data:
 {jsonData}
 
----
-**CRITICAL INSTRUCTION: For Section 1, you MUST use the pre-calculated 'summaryTotals' from the JSON data as the source of truth for your analysis. Do not calculate these totals yourself.**
----
-
 # Capital Allocation Report: {companyName} ({tickerSymbol})
 
 ## 1. Deduced Capital Allocation Philosophy
-Based on the **pre-calculated 'summaryTotals'**, what have been the company's primary uses of cash over the last decade? State the total amounts for Acquisitions, CapEx, Buybacks, and Dividends. Is the philosophy geared towards aggressive growth (reinvestment) or shareholder returns?
+[Your analysis here. Based on the **pre-calculated 'summaryTotals'**, state the total amounts for Acquisitions, CapEx, Buybacks, and Dividends, and determine if the philosophy is geared towards reinvestment or shareholder returns.]
 
 ## 2. Reinvestment Effectiveness
-- **Return on Invested Capital (ROIC):** This is the key measure of management's skill. Analyze the 'reinvestmentEffectiveness.roicTrend'. Is it consistently high (e.g., >15%), stable, rising, or volatile/declining? A strong ROIC trend is the clearest sign of effective capital deployment.
-- **Revenue & Profit Growth:** How has the reinvestment translated into top-line and bottom-line growth? Analyze the trends in 'reinvestmentEffectiveness.revenueGrowth' and 'reinvestmentEffectiveness.grossProfitGrowth'. Is growth accelerating or decelerating?
+- **Return on Invested Capital (ROIC):** [Your analysis here. Analyze the 'reinvestmentEffectiveness.roicTrend' to determine if it is high, stable, rising, or volatile.]
+- **Revenue & Profit Growth:** [Your analysis here. Analyze the 'reinvestmentEffectiveness.revenueGrowth' and 'reinvestmentEffectiveness.grossProfitGrowth' trends to see if reinvestment has translated into growth.]
 
 ## 3. Acquisition Track Record (M&A)
-- Analyze the 'acquisitionHistory' data. Analyze the 'acquisitionHistory' data. For periods of significant spending, **cite the acquisition amount for each individual year** and correlate it with the corresponding 'reinvestmentEffectiveness.roicTrend'. Did ROIC improve or decline after major acquisitions?
-- Look at the 'goodwill' trend. A large increase in goodwill followed by stagnant or declining ROIC is a major red flag for overpaying for deals.
+- [Your analysis here. For periods of significant spending in 'acquisitionHistory', **cite the acquisition amount for each individual year** and correlate it with the corresponding 'roicTrend'. Analyze the 'goodwill' trend for signs of overpayment.]
 
 ## 4. Shareholder Returns
-- **Stock Buybacks:** Analyze the 'shareholderReturns.buybacksWithValuation' data. Did management opportunistically repurchase shares when valuation multiples (P/E, P/B) were low, or did they buy back stock at high valuations? Be critical here.
-- **Dividends:** Analyze the 'shareholderReturns.fcfPayoutRatioTrend'. Is the dividend safely covered by free cash flow, and is its growth rational and sustainable?
+- **Stock Buybacks:** [Your analysis here. Critically analyze the 'shareholderReturns.buybacksWithValuation' data to determine if management repurchased shares at opportunistic (low) or poor (high) valuations.]
+- **Dividends:** [Your analysis here. Analyze the 'shareholderReturns.fcfPayoutRatioTrend' to determine if the dividend is safely covered and sustainable.]
 
 ## 5. Final Grade & Justification
-- **Provide a final letter grade (A through F) for the management team's overall skill as capital allocators.** Justify this grade by summarizing the strongest and weakest points from your quantitative analysis above. Conclude with a bottom-line assessment for a long-term investor.
+- **Final Grade:** [Provide a single letter grade from A through F.]
+- **Justification:** [Your analysis here. Justify the grade by summarizing the strongest and weakest points from your quantitative analysis above and provide a bottom-line assessment.]
 `.trim();
 
 const SECTOR_MOMENTUM_PROMPT = `
@@ -201,70 +200,55 @@ JSON Data:
 
 const UPDATED_GARP_MEMO_PROMPT = `
 **Persona & Goal:**
-You are a Senior Investment Analyst at a GARP-focused ("Growth at a Reasonable Price") fund. Your task is to synthesize a quantitative scorecard, an initial candidacy report, and three specialized diligence memos for {companyName} into a definitive and convincing final investment memo.
+You are a Senior Investment Analyst at a GARP-focused fund. Your task is to synthesize the provided reports into the template below.
 
-**Core Philosophy (How to Think):**
-1.  **Synthesize, Don't Summarize:** Do not merely restate findings from the diligence memos. Your primary task is to integrate the findings from the **Qualitative Memo** (the "what"), the **Structured Memo** (the "how"), and the **Market Sentiment Memo** (the "who thinks what") to form a cohesive bull case, bear case, and final recommendation.
-2.  **Address Contradictions:** If the specialized memos present conflicting information (e.g., the Structured Memo shows strong quantitative health, but the Market Sentiment Memo shows bearish analyst ratings), you must address this tension directly. Explain which source carries more weight in your final analysis and why.
-3.  **Data-Driven Narrative:** Ground your narrative in the **Quantitative GARP Scorecard**. Every key assertion MUST be backed by a specific, quantifiable data point from the scorecard to validate or challenge the conclusions of the diligence memos.
+---
+**CRITICAL INSTRUCTIONS:**
+1.  Your final output MUST use the exact markdown structure, headings, and bullet points provided in the template.
+2.  Fill in the [Your analysis here] sections based ONLY on the provided input reports, following the core philosophy of synthesizing, addressing contradictions, and using data-driven narratives.
+---
 
+**INPUTS:**
+**1. Quantitative GARP Scorecard (JSON):**
+{scorecardJson}
+
+**2. Initial GARP Candidacy Report (Starting Thesis):**
+{garpCandidacyReport}
+
+**3. Structured (Quantitative) Diligence Memo:**
+{structuredDiligenceMemo}
+
+**4. Qualitative Diligence Memo:**
+{qualitativeDiligenceMemo}
+
+**5. Market Sentiment Memo:**
+{marketSentimentMemo}
 ---
 
 # Investment Memo: {companyName} ({tickerSymbol})
 
 ## 1. Executive Summary & Investment Thesis
-*(Begin with a 3-4 sentence paragraph that concisely summarizes the investment thesis. State the initial thesis from the Candidacy Report and then explain how the diligence findings from the three specialized memos have either reinforced or fundamentally changed that view. It should cover the core bull case, the primary risks, and the final recommendation.)*
+[Your 3-4 sentence paragraph here, summarizing the investment thesis by synthesizing the initial candidacy report with the findings from the diligence memos.]
 
 ## 2. The Bull Case: Why We Could Be Right
-*(This section should be a compelling narrative about the investment's upside potential, built by integrating the strengths identified in the specialized memos and validating them with hard data from the Scorecard.)*
-* **Business Quality & Moat (from Qualitative Memo):** What is the core conclusion about the company's competitive advantage?
-* **Financial Strength & Growth (from Structured Memo):** What is the verdict on the company's quantitative health?
-* **Market Confirmation (from Market Sentiment Memo):** Does the current market view (analysts, technicals) support the bull case?
-* **Scorecard Validation:** Prove the bull case with key metrics from the Scorecard (e.g., 'Return on Equity', 'EPS Growth (Next 1Y)').
+- **Business Quality & Moat (from Qualitative Memo):** [Your analysis here.]
+- **Financial Strength & Growth (from Structured Memo):** [Your analysis here.]
+- **Market Confirmation (from Market Sentiment Memo):** [Your analysis here.]
+- **Scorecard Validation:** [Your analysis here, proving the bull case with specific, quantifiable data points from the scorecard.]
 
 ## 3. The Bear Case: What Could Go Wrong
-*(This section critically examines the primary risks, synthesizing the weaknesses identified in the specialized memos and quantifying them with data from the Scorecard.)*
-* **Key Risks (from all Memos):** What are the top 2-3 risks identified?
-* **Scorecard Validation:** Quantify these risks using the weakest data points from the Scorecard (e.g., 'Debt-to-Equity', 'PEG Ratio').
+- **Key Risks (from all Memos):** [Your analysis here, synthesizing the top 2-3 risks.]
+- **Scorecard Validation:** [Your analysis here, quantifying the risks with the weakest data points from the scorecard.]
 
 ## 4. Valuation: The GARP Fulcrum
-*(This is the deciding section. Synthesize the valuation discussion from the memos with the hard data from the Scorecard to determine if a margin of safety exists.)*
-* **Synthesize the 'PEG Ratio', 'Forward P/E', and 'Price to FCF' from the Scorecard.** Use these relative metrics to confirm or challenge the valuation assessments in the diligence memos. Answer the ultimate question: Based on all available evidence, does {companyName} represent a high-quality growth business trading at a price that offers a reasonable margin of safety?
+[Your analysis here, synthesizing the 'PEG Ratio', 'Forward P/E', and 'Price to FCF' from the scorecard to answer the ultimate question of whether the company is trading at a price that offers a reasonable margin of safety.]
 
 ## 5. Recommendation & Justification
-(Provide the recommendation and justification. Your response for this section MUST follow the format below exactly, including the bolding.)
+(Your response for this section MUST follow the format below exactly, including the bolding.)
 
 **Add to Watchlist**
 
-(Provide a 4-5 sentence justification for your recommendation here, explicitly referencing the trade-offs and tensions revealed by synthesizing the three specialized memos and the quantitative scorecard.)
-
----
-**INPUTS:**
-
-**1. Quantitative GARP Scorecard (JSON):**
-\`\`\`json
-{scorecardJson}
-\`\`\`
-
-**2. Initial GARP Candidacy Report (Starting Thesis):**
-\`\`\`markdown
-{garpCandidacyReport}
-\`\`\`
-
-**3. Structured (Quantitative) Diligence Memo:**
-\`\`\`markdown
-{structuredDiligenceMemo}
-\`\`\`
-
-**4. Qualitative Diligence Memo:**
-\`\`\`markdown
-{qualitativeDiligenceMemo}
-\`\`\`
-
-**5. Market Sentiment Memo:**
-\`\`\`markdown
-{marketSentimentMemo}
-\`\`\`
+(Your 4-5 sentence justification here, explicitly referencing the trade-offs and tensions revealed by synthesizing the reports and the quantitative scorecard.)
 `.trim();
 
 const PORTFOLIO_GARP_ANALYSIS_PROMPT = `
@@ -440,9 +424,12 @@ Your task is to read the provided SEC filing (10-Q or 10-K) for {companyName} an
 `.trim();
 
 const QARP_ANALYSIS_PROMPT = `
-Role: You are a Senior Investment Analyst specializing in the "Quality at a Reasonable Price" (QARP) philosophy. Your task is to provide a rigorous, data-driven analysis that weighs a company's quality against its current valuation.
-Data Instructions: Your analysis MUST be based *exclusively* on the pre-calculated metrics provided in the JSON data below. Do not recalculate any values.
-Output Format: The final report must be in professional markdown format. Use # for the main title, ## for major sections, and bullet points.
+Role: You are a Senior Investment Analyst specializing in the "Quality at a Reasonable Price" (QARP) philosophy.
+Task: Provide a rigorous, data-driven analysis by filling in the template below, based *exclusively* on the provided JSON data.
+
+---
+**CRITICAL INSTRUCTION: Your final output MUST use the exact markdown structure, headings, and bullet points provided in the template below. Fill in the [Your analysis here] sections based on the JSON data.**
+---
 
 JSON Data with Pre-Calculated Metrics:
 {jsonData}
@@ -450,22 +437,20 @@ JSON Data with Pre-Calculated Metrics:
 # QARP Analysis: {companyName} ({tickerSymbol})
 
 ## 1. Executive Summary & Verdict
-(Provide a concise, one-paragraph summary. Conclude with a clear verdict: "This company appears to be a **strong QARP candidate**," "a **borderline QARP candidate**," or "**does not meet the criteria** for a QARP investment at this time.")
+[Your concise, one-paragraph summary here, weighing the company's quality against its valuation.]
 
 ## 2. The "Quality" Pillar: Is This a Superior Business?
-(Analyze the company's quality using the scorecard data. Address the following:)
-- **Profitability & Efficiency:** Based on the **Return on Equity (ROE)** and **Return on Invested Capital (ROIC)**, how effectively does management generate profits?
-- **Financial Strength:** How resilient is the company? Analyze the **Debt-to-Equity** ratio to assess its financial leverage and risk.
-- **Growth Stability:** Evaluate the **EPS Growth (5Y)** and **Revenue Growth (5Y)**. Do these figures suggest a history of durable, consistent growth?
+- **Profitability & Efficiency:** [Your analysis here, based on ROE and ROIC.]
+- **Financial Strength:** [Your analysis here, based on the Debt-to-Equity ratio.]
+- **Growth Stability:** [Your analysis here, based on 5Y EPS and Revenue Growth.]
 
 ## 3. The "Reasonable Price" Pillar: Are We Overpaying?
-(Analyze the company's valuation using the scorecard data. Address the following:)
-- **Core Valuation:** Based on the **P/E (TTM)** and **Forward P/E** ratios, does the stock appear cheap or expensive on an earnings basis?
-- **Growth-Adjusted Valuation:** Use the **PEG Ratio** to determine if the price is justified by its forward growth estimates.
-- **Cash Flow Valuation:** Analyze the **Price to FCF** ratio. How does the valuation look when measured against the actual cash the business generates?
+- **Core Valuation:** [Your analysis here, based on P/E (TTM) and Forward P/E.]
+- **Growth-Adjusted Valuation:** [Your analysis here, based on the PEG Ratio.]
+- **Cash Flow Valuation:** [Your analysis here, based on the Price to FCF ratio.]
 
 ## 4. Final Synthesis: The QARP Verdict
-(Synthesize the findings from the two pillars into a final conclusion, explaining the trade-offs. Your final sentence MUST be one of the following bolded phrases, followed by a brief justification. For example: "**This company does not meet the criteria** for a QARP investment at this time because its high valuation does not offer a margin of safety for its quality issues.")
+[Synthesize your findings in one paragraph, explaining the trade-offs. Your final sentence MUST follow the example format exactly, including bolding. For example: **This company does not meet the criteria** for a QARP investment at this time because its high valuation does not offer a margin of safety for its quality issues.]
 `.trim();
 
 const UPDATED_QARP_MEMO_PROMPT = `
@@ -541,9 +526,13 @@ Read the provided 8-K filing text for {companyName} and generate a structured an
 `.trim();
 
 const LONG_TERM_COMPOUNDER_PROMPT = `
-Role: You are a long-term, business-focused investment analyst, in the style of Warren Buffett or Chuck Akre. Your goal is to determine if {companyName} is a "wonderful business" that can be held for a decade or more, a true "compounder."
-Data Instructions: Your analysis must be a synthesis of the two reports provided below: the 'Moat Analysis' and the 'Capital Allocators' report. Do not use any other data. Your job is to connect the findings from these two reports into a single, cohesive narrative.
-Output Format: The final report must be in professional markdown format.
+Role: You are a long-term, business-focused investment analyst. Your task is to determine if {companyName} is a "compounder" by synthesizing the two provided reports.
+
+---
+**CRITICAL INSTRUCTIONS:**
+1.  Your final output MUST use the exact markdown structure, headings, and bullet points provided in the template below.
+2.  Fill in the [Your analysis here] sections based ONLY on the provided input reports.
+---
 
 **Input Report 1: Moat Analysis**
 {moatAnalysisReport}
@@ -552,8 +541,6 @@ Output Format: The final report must be in professional markdown format.
 {capitalAllocatorsReport}
 
 ---
-**CRITICAL INSTRUCTION: Before generating the memo, you must first state the key verdicts from the input reports below. Use these stated facts as the single source of truth for your analysis.**
-
 -   **Moat Analysis Verdict:** [State the verdict from the Moat Analysis: "Wide," "Narrow," or "None"]
 -   **Capital Allocators Grade:** [State the final letter grade from the Capital Allocators report]
 ---
@@ -561,28 +548,31 @@ Output Format: The final report must be in professional markdown format.
 # Long-Term Compounder Memo: {companyName} ({tickerSymbol})
 
 ## 1. The Core Investment Question
-(Start with a one-paragraph summary. Based on the two reports, what is the single most important question an investor must answer about this company's long-term prospects? For example, "Is management's aggressive acquisition strategy sustainably widening the company's narrow moat, or is it a 'diworsification' that risks eroding shareholder value?")
+[Your one-paragraph summary here. Based on the two reports, what is the single most important question an investor must answer about this company's long-term prospects?]
 
 ## 2. The Makings of a "Wonderful Business"
-(Synthesize the BULL case from both reports into a bulleted list.)
-- **Competitive Advantage (The Moat):** What did the Moat Analysis conclude? Is it Wide, Narrow, or None? What is the primary source of that advantage (e.g., network effects, high switching costs)?
-- **Management Quality (The Jockeys):** What grade did the Capital Allocators report assign to management? What are their greatest strengths as demonstrated by their track record (e.g., shrewd buybacks, high-ROIC internal projects)?
-- **Profitability Engine:** Connect the two reports. Does the company's high ROIC (from the Capital Allocators report) confirm the existence and strength of the moat (from the Moat Analysis)? Explain the connection.
+- **Competitive Advantage (The Moat):** [Your analysis here. State the moat verdict and its primary source from the Moat Analysis report.]
+- **Management Quality (The Jockeys):** [Your analysis here. State the management grade and their greatest strengths from the Capital Allocators report.]
+- **Profitability Engine:** [Your analysis here. Connect the two reports by explaining how the ROIC from the Capital Allocators report confirms or challenges the strength of the moat from the Moat Analysis.]
 
 ## 3. Potential Cracks in the Fortress
-(Synthesize the BEAR case and risks from both reports into a bulleted list.)
-- **Moat Sustainability Risks:** What are the biggest threats to the company's competitive advantage as identified in the Moat Analysis?
-- **Capital Allocation Red Flags:** What were the biggest weaknesses identified in the Capital Allocators report (e.g., overpaying for acquisitions, buying back stock at high valuations)?
-- **The Core Tension:** How do the risks from one report potentially impact the strengths of the other? (e.g., "While the company currently enjoys a wide moat, management's recent low-ROIC acquisitions could signal a deterioration of that advantage over time.")
+- **Moat Sustainability Risks:** [Your analysis here. Summarize the biggest threats to the moat identified in the Moat Analysis.]
+- **Capital Allocation Red Flags:** [Your analysis here. Summarize the biggest weaknesses identified in the Capital Allocators report.]
+- **The Core Tension:** [Your analysis here. Explain how the risks from one report could impact the strengths of the other.]
 
 ## 4. Final Verdict: A True Compounder?
-(Provide a final, one-paragraph verdict. Based *only* on the synthesis of these two reports, does the company have the key ingredients of a long-term compounder? Conclude with a single sentence using one of the following bolded phrases, followed by a brief justification. For example: "**Potential Compounder with Reservations** because its narrow moat is not yet supported by a management team that can consistently reinvest capital at high rates of return.")
+[Your final one-paragraph verdict here. Your final sentence MUST follow the example format exactly, including bolding. For example: **Potential Compounder with Reservations** because its narrow moat is not yet supported by a management team that can consistently reinvest capital at high rates of return.]
 `.trim();
 
 const BMQV_MEMO_PROMPT = `
-Role: You are a long-term, business-focused investment analyst, embodying the principles of Warren Buffett and Charlie Munger. Your task is to determine if {companyName} is a "wonderful business" that can be held for a decade or more. Your analysis should be skeptical, focused on durable competitive advantages and rational management.
-Data Instructions: Your analysis must be a synthesis of the two reports provided below: the 'Moat Analysis' and the 'Capital Allocators' report. Do not use any other data. Your job is to connect the findings from these two reports into a single, cohesive narrative.
-Output Format: The final report must be in professional markdown format.
+Role: You are a long-term, business-focused investment analyst in the style of Buffett and Munger.
+Task: Determine if {companyName} is a "wonderful business" by synthesizing the two provided reports and filling in the template below.
+
+---
+**CRITICAL INSTRUCTIONS:**
+1.  Your final output MUST use the exact markdown structure, headings, and bullet points provided in the template below.
+2.  Fill in the [Your analysis here] sections based ONLY on the provided input reports.
+---
 
 **Input Report 1: Moat Analysis**
 {moatAnalysisReport}
@@ -591,8 +581,6 @@ Output Format: The final report must be in professional markdown format.
 {capitalAllocatorsReport}
 
 ---
-**CRITICAL INSTRUCTION: Before generating the memo, you must first state the key verdicts from the input reports below. Use these stated facts as the single source of truth for your analysis.**
-
 -   **Moat Analysis Verdict:** [State the verdict from the Moat Analysis: "Wide," "Narrow," or "None"]
 -   **Capital Allocators Grade:** [State the final letter grade from the Capital Allocators report]
 ---
@@ -600,21 +588,19 @@ Output Format: The final report must be in professional markdown format.
 # Buffett-Munger Quality & Value (BMQV) Memo: {companyName} ({tickerSymbol})
 
 ## 1. Executive Summary: Is This a "Wonderful Business"?
-(In one paragraph, provide a direct answer to the core question. Synthesize the verdicts from the Moat and Capital Allocators reports. Is this a high-quality business with a durable competitive advantage run by skilled and honest managers? Or does it fail these critical tests?)
+[Your one-paragraph analysis here, synthesizing the verdicts to give a direct answer to the core question.]
 
 ## 2. The Three Pillars of a "Wonderful Business"
-(Synthesize the findings from both reports into a bulleted list, addressing each pillar.)
-- **A Durable Moat:** What was the final verdict from the Moat Analysis (Wide, Narrow, or None)? Based on the report, what is the single most important source of this moat (e.g., brand, network effects, low-cost production)?
-- **Skilled & Trustworthy Management:** What grade did the Capital Allocators report assign to the management team? What is the single most compelling piece of evidence (positive or negative) from their capital allocation track record (e.g., opportunistic buybacks, high-ROIC reinvestment, or value-destructive acquisitions)?
-- **A Resilient Profitability Engine:** Connect the two reports. How does management's capital allocation skill (from the Capital Allocators report) directly impact the durability of the competitive moat (from the Moat Analysis)? For example, "Management's consistent high-ROIC reinvestment directly strengthens the company's low-cost production moat."
+- **A Durable Moat:** [Your analysis here. State the moat verdict and its single most important source from the Moat Analysis report.]
+- **Skilled & Trustworthy Management:** [Your analysis here. State the management grade and the single most compelling piece of evidence (positive or negative) from their capital allocation track record.]
+- **A Resilient Profitability Engine:** [Your analysis here. Connect the two reports by explaining how management's capital allocation skill directly impacts the durability of the competitive moat.]
 
 ## 3. Potential Impairments to Long-Term Value
-(Synthesize the primary risks and concerns identified in both reports into a bulleted list.)
-- **Moat Erosion Risks:** What are the biggest long-term threats to the company's competitive advantage as identified in the Moat Analysis?
-- **Capital Allocation Red Flags:** What were the most significant weaknesses identified in the most significant weaknesses identified in the Capital Allocators report (e.g., overpaying for deals, buying back stock at high valuations)?
+- **Moat Erosion Risks:** [Your analysis here. Summarize the biggest long-term threats to the moat identified in the Moat Analysis.]
+- **Capital Allocation Red Flags:** [Your analysis here. Summarize the most significant weaknesses identified in the Capital Allocators report.]
 
 ## 4. Final Verdict
-(Provide a final, one-paragraph verdict. Based on your synthesis, does the company meet the high bar of a "wonderful business"? Conclude with a single sentence using one of the following bolded phrases, followed by a brief justification. For example: "**A Good Business with Flaws** because its narrow moat and management's inconsistent M&A record do not meet the high standard of a 'wonderful business.'")
+[Your final one-paragraph verdict here. Your final sentence MUST follow the example format exactly, including bolding. For example: **A Good Business with Flaws** because its narrow moat and management's inconsistent M&A record do not meet the high standard of a 'wonderful business.']
 `.trim();
 
 // --- NEW EXTRACTION & SYNTHESIS PROMPTS (VERSION 2.0) ---
@@ -776,8 +762,12 @@ Role: You are the Chief Investment Officer of a multi-strategy fund. Your task i
 // --- NEW DILIGENCE MEMO PROMPTS ---
 
 const QUALITATIVE_DILIGENCE_MEMO_PROMPT = `
-Role: You are an investment analyst AI specializing in summarizing qualitative business factors.
-Task: Based ONLY on the provided Question & Answer pairs, create a "Qualitative Business Memo." Synthesize the answers into a cohesive narrative for each section. Conclude with an overall verdict on the company's business quality.
+Role: You are an investment analyst AI.
+Task: Based ONLY on the provided Question & Answer pairs, fill in the template below to create a "Qualitative Business Memo."
+
+---
+**CRITICAL INSTRUCTION: Your final output MUST use the exact markdown structure, headings, and bullet points provided in the template below. Fill in the [Your analysis here] sections based on the Q&A data.**
+---
 
 **Q&A Data:**
 {qaData}
@@ -785,18 +775,22 @@ Task: Based ONLY on the provided Question & Answer pairs, create a "Qualitative 
 # Qualitative Business Memo: {companyName} ({tickerSymbol})
 
 ## 1. Competitive Moat Analysis
-(Synthesize the user's answer regarding the company's competitive moat here.)
+[Your synthesis of the user's answer regarding the company's competitive moat here.]
 
 ## 2. Management Quality & Strategy
-(Synthesize the user's answer regarding management's quality and strategy here.)
+[Your synthesis of the user's answer regarding management's quality and strategy here.]
 
 ## 3. Synthesis & Verdict
-(In one paragraph, synthesize all the points. Conclude with a single sentence using one of the following bolded phrases, followed by a brief justification. For example: "**Business quality appears High** due to the company's durable moat and shareholder-aligned management team.")
+[Your one-paragraph synthesis of all points here. Your final sentence MUST follow the example format exactly, including bolding. For example: **Business quality appears High** due to the company's durable moat and shareholder-aligned management team.]
 `.trim();
 
 const STRUCTURED_DILIGENCE_MEMO_PROMPT = `
-Role: You are an investment analyst AI specializing in summarizing quantitative financial data.
-Task: Based ONLY on the provided Question & Answer pairs, create a "Quantitative Health Memo." Synthesize the answers into a cohesive summary for each section. Conclude with an overall verdict on the company's quantitative health.
+Role: You are an investment analyst AI.
+Task: Based ONLY on the provided Question & Answer pairs, fill in the template below to create a "Quantitative Health Memo."
+
+---
+**CRITICAL INSTRUCTION: Your final output MUST use the exact markdown structure and headings provided in the template below. Fill in the [Your analysis here] sections based on the Q&A data.**
+---
 
 **Q&A Data:**
 {qaData}
@@ -804,24 +798,28 @@ Task: Based ONLY on the provided Question & Answer pairs, create a "Quantitative
 # Quantitative Health Memo: {companyName} ({tickerSymbol})
 
 ## 1. Financial & Fundamental Analysis
-(Synthesize the user's answer regarding the company's financial analysis here.)
+[Your synthesis of the user's answer regarding the company's financial analysis here.]
 
 ## 2. Balance Sheet Strength
-(Synthesize the user's answer regarding the balance sheet here.)
+[Your synthesis of the user's answer regarding the balance sheet here.]
 
 ## 3. Income Statement & Cash Flow
-(Synthesize the user's answers regarding the income statement and cash flow here.)
+[Your synthesis of the user's answers regarding the income statement and cash flow here.]
 
 ## 4. Valuation Assessment
-(Synthesize the user's answer regarding valuation here.)
+[Your synthesis of the user's answer regarding valuation here.]
 
 ## 5. Synthesis & Verdict
-(In one paragraph, synthesize all the points. Conclude with a single sentence using one of the following bolded phrases, followed by a brief justification. For example: "**Quantitative health appears Average** because its durable scale is offset by high leverage and a bloated cost structure.")
+[Your one-paragraph synthesis of all points here. Your final sentence MUST follow the example format exactly, including bolding. For example: **Quantitative health appears Average** because its durable scale is offset by high leverage and a bloated cost structure.]
 `.trim();
 
 const MARKET_SENTIMENT_MEMO_PROMPT = `
-Role: You are a market analyst AI specializing in synthesizing sentiment data into a clear narrative.
-Task: Based ONLY on the provided Question & Answer pairs, create a "Market Sentiment Memo." Summarize the findings for each section and conclude with an overall verdict on market sentiment.
+Role: You are a market analyst AI.
+Task: Based ONLY on the provided Question & Answer pairs, fill in the template below to create a "Market Sentiment Memo."
+
+---
+**CRITICAL INSTRUCTION: Your final output MUST use the exact markdown structure and headings provided in the template below. Fill in the [Your analysis here] sections based on the Q&A data.**
+---
 
 **Q&A Data:**
 {qaData}
@@ -829,16 +827,16 @@ Task: Based ONLY on the provided Question & Answer pairs, create a "Market Senti
 # Market Sentiment Memo: {companyName} ({tickerSymbol})
 
 ## 1. Analyst Consensus
-(Summarize the findings from the 'Analyst Consensus' Q&A here.)
+[Your summary of the 'Analyst Consensus' Q&A here.]
 
 ## 2. Fundamental Factor Scores
-(Summarize the S&P factor scores from the Q&A here.)
+[Your summary of the S&P factor scores from the Q&A here.]
 
 ## 3. Technical & Price Momentum
-(Summarize the technical sentiment and short interest data from the Q&A here.)
+[Your summary of the technical sentiment and short interest data from the Q&A here.]
 
 ## 4. Synthesis & Verdict
-(In one paragraph, synthesize all the points. Conclude with a single sentence using one of the following bolded phrases, followed by a brief justification. For example: "**Overall market sentiment appears Bullish** due to the stock's powerful price momentum, which outweighs the valuation concerns.")
+[Your one-paragraph synthesis of all points here. Your final sentence MUST follow the example format exactly, including bolding. For example: **Overall market sentiment appears Bullish** due to the stock's powerful price momentum, which outweighs the valuation concerns.]
 `.trim();
 
 const INVESTIGATION_SUMMARY_MEMO_PROMPT = `
