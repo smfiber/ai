@@ -55,7 +55,9 @@ async function autoSaveReport(ticker, reportType, content, prompt, diligenceQues
         const reportTypesToPreserve = [
             'DiligenceInvestigation',
             'FilingDiligence',
-            'EightKAnalysis'
+            'EightKAnalysis',
+            'QuarterlyReview',
+            'AnnualReview'
         ];
 
         if (!reportTypesToPreserve.includes(reportType)) {
@@ -1681,7 +1683,7 @@ export async function handleSaveFilingDiligenceRequest(symbol) {
         document.getElementById('filing-diligence-textarea').value = '';
 
         const logContainer = document.getElementById('ongoing-review-log-container');
-        const reportTypes = ['FilingDiligence', 'EightKAnalysis', 'UpdatedGarpMemo', 'UpdatedQarpMemo'];
+        const reportTypes = ['FilingDiligence', 'EightKAnalysis', 'UpdatedGarpMemo', 'UpdatedQarpMemo', 'QuarterlyReview', 'AnnualReview'];
         const savedReports = getReportsFromCache(symbol, reportTypes);
         renderOngoingReviewLog(logContainer, savedReports);
         
@@ -1793,7 +1795,8 @@ export async function handleAnalyzeEightKRequest(symbol) {
         filingTextarea.value = '';
 
         const logContainer = document.getElementById('ongoing-review-log-container');
-        const savedReports = getReportsFromCache(symbol, ['FilingDiligence', 'EightKAnalysis', 'UpdatedGarpMemo', 'UpdatedQarpMemo']);
+        const reportTypes = ['FilingDiligence', 'EightKAnalysis', 'UpdatedGarpMemo', 'UpdatedQarpMemo', 'QuarterlyReview', 'AnnualReview'];
+        const savedReports = getReportsFromCache(symbol, reportTypes);
         renderOngoingReviewLog(logContainer, savedReports);
 
         const displayContainer = document.getElementById('ongoing-review-display-container');
@@ -1826,7 +1829,7 @@ export async function handleDeleteFilingDiligenceLog(reportId, ticker) {
 
                 const logContainer = document.getElementById('ongoing-review-log-container');
                 const displayContainer = document.getElementById('ongoing-review-display-container');
-                const reportTypes = ['FilingDiligence', 'EightKAnalysis', 'UpdatedGarpMemo', 'UpdatedQarpMemo'];
+                const reportTypes = ['FilingDiligence', 'EightKAnalysis', 'UpdatedGarpMemo', 'UpdatedQarpMemo', 'QuarterlyReview', 'AnnualReview'];
                 const savedReports = getReportsFromCache(ticker, reportTypes);
                 renderOngoingReviewLog(logContainer, savedReports);
                 
@@ -1927,7 +1930,7 @@ async function generateUpdatedMemo(symbol, memoType) {
         displayMessageInModal(`Updated ${memoType} Memo generated and saved.`, 'info');
 
         const logContainer = document.getElementById('ongoing-review-log-container');
-        const reportTypes = ['FilingDiligence', 'EightKAnalysis', 'UpdatedGarpMemo', 'UpdatedQarpMemo'];
+        const reportTypes = ['FilingDiligence', 'EightKAnalysis', 'UpdatedGarpMemo', 'UpdatedQarpMemo', 'QuarterlyReview', 'AnnualReview'];
         const savedReports = getReportsFromCache(symbol, reportTypes);
         renderOngoingReviewLog(logContainer, savedReports);
 
@@ -2243,4 +2246,95 @@ export async function handleFullAnalysisWorkflow(symbol) {
         closeModal(CONSTANTS.MODAL_LOADING);
         progressContainer.classList.add('hidden');
     }
+}
+
+async function _handleReviewRequest(symbol, reviewType) {
+    openModal(CONSTANTS.MODAL_LOADING);
+    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+
+    try {
+        const reportType = reviewType === 'Quarterly' ? 'QuarterlyReview' : 'AnnualReview';
+        const questions = reviewType === 'Quarterly' ? QUARTERLY_REVIEW_QUESTIONS : ANNUAL_REVIEW_QUESTIONS;
+        const promptConfig = promptMap[reportType];
+        
+        loadingMessage.textContent = 'Gathering your findings...';
+        const answerElements = document.querySelectorAll('.review-answer-textarea');
+        const qaPairs = [];
+        let hasAnswers = false;
+
+        answerElements.forEach(textarea => {
+            const answer = textarea.value.trim();
+            const questionKey = textarea.dataset.questionKey;
+            const question = questions[questionKey];
+            if (question) {
+                qaPairs.push({ question: `${questionKey}: ${question}`, answer });
+                if (answer) hasAnswers = true;
+            }
+        });
+        
+        if (!hasAnswers) {
+            throw new Error(`Please provide at least one answer for the ${reviewType} Review before generating the memo.`);
+        }
+
+        loadingMessage.textContent = 'Retrieving original investment thesis...';
+        const memoReports = getReportsFromCache(symbol, ['InvestmentMemo', 'UpdatedGarpMemo']);
+        let originalInvestmentMemo;
+        if (memoReports.length > 0) {
+            originalInvestmentMemo = memoReports[0].content;
+        } else {
+            const candidacyReports = getReportsFromCache(symbol, 'GarpCandidacy');
+            if (candidacyReports.length === 0) {
+                throw new Error("The foundational 'GARP Candidacy' or 'Investment Memo' must be generated first to serve as the baseline thesis.");
+            }
+            originalInvestmentMemo = candidacyReports[0].content;
+        }
+        
+        const qaData = qaPairs.map(pair => `**Question:** ${pair.question}\n\n**Answer:**\n${pair.answer}`).join('\n\n---\n\n');
+        
+        const profile = state.portfolioCache.find(s => s.ticker === symbol) || {};
+        const companyName = profile.companyName || symbol;
+        
+        const prompt = promptConfig.prompt
+            .replace(/{companyName}/g, companyName)
+            .replace(/{tickerSymbol}/g, symbol)
+            .replace('{originalInvestmentMemo}', originalInvestmentMemo)
+            .replace('{qaData}', qaData);
+
+        loadingMessage.textContent = `AI is synthesizing your ${reviewType} Review Memo...`;
+        const memoContent = await generateRefinedArticle(prompt);
+
+        await autoSaveReport(symbol, reportType, memoContent, prompt);
+
+        // Update UI
+        const logContainer = document.getElementById('ongoing-review-log-container');
+        const reportTypes = ['FilingDiligence', 'EightKAnalysis', 'UpdatedGarpMemo', 'UpdatedQarpMemo', 'QuarterlyReview', 'AnnualReview'];
+        const savedReports = getReportsFromCache(symbol, reportTypes);
+        renderOngoingReviewLog(logContainer, savedReports);
+
+        const displayContainer = document.getElementById('ongoing-review-display-container');
+        if (displayContainer) {
+            displayReport(displayContainer, memoContent, prompt);
+        }
+
+        const formContainer = document.getElementById('review-form-container');
+        formContainer.innerHTML = '';
+        formContainer.classList.add('hidden');
+        document.getElementById('ongoing-review-actions').classList.remove('hidden');
+
+        displayMessageInModal(`${reviewType} Review Memo saved to the log.`, 'info');
+
+    } catch (error) {
+        console.error(`Error handling ${reviewType} review request:`, error);
+        displayMessageInModal(`Could not complete ${reviewType} review: ${error.message}`, 'error');
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
+export async function handleQuarterlyReviewRequest(symbol) {
+    await _handleReviewRequest(symbol, 'Quarterly');
+}
+
+export async function handleAnnualReviewRequest(symbol) {
+    await _handleReviewRequest(symbol, 'Annual');
 }
