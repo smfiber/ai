@@ -755,6 +755,11 @@ Role: You are the Chief Investment Officer of a multi-strategy fund. Your task i
 **Add to Watchlist**
 
 (Your one-sentence justification summarizing your conclusion goes here.)
+
+## 4. Implications for Portfolio Management
+(Based on your final recommendation, provide a brief, actionable interpretation for both scenarios below.)
+* **For a New Investment:** [Explain what this recommendation means for an investor considering deploying new capital.]
+* **For an Existing Position:** [Explain what this recommendation means for a current shareholder.]
 `.trim();
 
 // --- NEW DILIGENCE MEMO PROMPTS ---
