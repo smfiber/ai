@@ -597,7 +597,7 @@ Role: You are a long-term, business-focused investment analyst. Your task is to 
 ---
 **CRITICAL INSTRUCTIONS:**
 1.  Your final output MUST use the exact markdown structure, headings, and bullet points provided in the template below.
-2.  Fill in the [Your analysis here] sections based ONLY on the provided input reports.
+2.  Fill in the [Your analysis here] sections based ONLY on the provided input reports. Do NOT introduce any outside information.
 ---
 
 **Input Report 1: Moat Analysis**
@@ -607,9 +607,6 @@ Role: You are a long-term, business-focused investment analyst. Your task is to 
 {capitalAllocatorsReport}
 
 ---
--   **Moat Analysis Verdict:** [State the verdict from the Moat Analysis: "Wide," "Narrow," or "None"]
--   **Capital Allocators Grade:** [State the final letter grade from the Capital Allocators report]
----
 
 # Long-Term Compounder Memo: {companyName} ({tickerSymbol})
 
@@ -617,17 +614,17 @@ Role: You are a long-term, business-focused investment analyst. Your task is to 
 [Your one-paragraph summary here. Based on the two reports, what is the single most important question an investor must answer about this company's long-term prospects?]
 
 ## 2. The Makings of a "Wonderful Business"
-- **Competitive Advantage (The Moat):** [Your analysis here. State the moat verdict and its primary source from the Moat Analysis report.]
-- **Management Quality (The Jockeys):** [Your analysis here. State the management grade and their greatest strengths from the Capital Allocators report.]
-- **Profitability Engine:** [Your analysis here. Connect the two reports by explaining how the ROIC from the Capital Allocators report confirms or challenges the strength of the moat from the Moat Analysis.]
+- **Competitive Advantage (The Moat):** [Your analysis here. State the moat verdict and its primary source directly from the "Moat Analysis" report.]
+- **Management Quality (The Jockeys):** [Your analysis here. State the management grade and their greatest strengths directly from the "Capital Allocators" report.]
+- **Profitability Engine:** [Your analysis here. Connect the two reports by explaining how the ROIC from the "Capital Allocators" report confirms or challenges the strength of the moat from the "Moat Analysis" report.]
 
 ## 3. Potential Cracks in the Fortress
-- **Moat Sustainability Risks:** [Your analysis here. Summarize the biggest threats to the moat identified in the Moat Analysis.]
-- **Capital Allocation Red Flags:** [Your analysis here. Summarize the biggest weaknesses identified in the Capital Allocators report.]
-- **The Core Tension:** [Your analysis here. Explain how the risks from one report could impact the strengths of the other.]
+- **Moat Sustainability Risks:** [Your analysis here. Summarize the biggest threats to the moat identified *only* within the "Moat Analysis" report. If no specific threats are mentioned in the source report, state "The Moat Analysis report did not identify specific sustainability risks."]
+- **Capital Allocation Red Flags:** [Your analysis here. Summarize the biggest weaknesses identified *only* within the "Capital Allocators" report (e.g., undisciplined buybacks, poor M&A).]
+- **The Core Tension:** [Your analysis here. Explain how the risks from one report could impact the strengths of the other. For example, could a capital allocation weakness threaten the moat over time?]
 
 ## 4. Final Verdict: A True Compounder?
-[Your final one-paragraph verdict here. Your final sentence MUST follow the example format exactly, including bolding. For example: **Potential Compounder with Reservations** because its narrow moat is not yet supported by a management team that can consistently reinvest capital at high rates of return.]
+[Your final one-paragraph verdict here. Synthesize the findings from both reports to make a concluding assessment. Your final sentence MUST follow the example format exactly, including bolding. For example: **Potential Compounder with Reservations** because its narrow moat is not yet supported by a management team that can consistently reinvest capital at high rates of return.]
 `.trim();
 
 const BMQV_MEMO_PROMPT = `
