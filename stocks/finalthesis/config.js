@@ -761,30 +761,6 @@ JSON Output Format:
 }
 `.trim();
 
-const BMQV_MEMO_EXTRACT_PROMPT = `
-Role: You are a data extraction AI.
-Task: Your only job is to read the two provided reports ('Moat Analysis' and 'Capital Allocation Report') and extract the specific facts listed below.
-CRITICAL INSTRUCTIONS:
-- You MUST return ONLY a valid JSON object.
-- Do not add any text, explanations, or markdown formatting before or after the JSON.
-- Extract the information exactly as it appears in the source reports.
-
-**Input Report 1: Moat Analysis**
-{moatAnalysisReport}
-
-**Input Report 2: Capital Allocation Report**
-{capitalAllocatorsReport}
-
-JSON Output Format:
-{
-  "moatVerdict": "...",
-  "primaryMoatSource": "...",
-  "capitalAllocatorsGrade": "...",
-  "capitalAllocatorsStrength": "...",
-  "capitalAllocatorsWeakness": "..."
-}
-`.trim();
-
 const FINAL_THESIS_CONFLICT_ID_PROMPT = `
 Role: You are a conflict identification AI.
 Task: Based ONLY on the following JSON of analyst summaries, what is the core disagreement between these reports? Explain the conflict in one concise paragraph. Do not use markdown or headings.
@@ -1111,7 +1087,7 @@ export const promptMap = {
     'InvestmentMemo_Extract': { prompt: GARP_MEMO_EXTRACT_PROMPT },
     'QarpAnalysis_Extract': { prompt: QARP_ANALYSIS_EXTRACT_PROMPT },
     'LongTermCompounder_Extract': { prompt: COMPOUNDER_BMQV_EXTRACT_PROMPT },
-    'BmqvMemo_Extract': { prompt: BMQV_MEMO_EXTRACT_PROMPT },
+    'BmqvMemo_Extract': { prompt: COMPOUNDER_BMQV_EXTRACT_PROMPT },
     'FinalThesis_ConflictID': { prompt: FINAL_THESIS_CONFLICT_ID_PROMPT },
     'FinalInvestmentThesis': {
         prompt: FINAL_INVESTMENT_THESIS_PROMPT,
