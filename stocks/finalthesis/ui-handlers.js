@@ -1118,8 +1118,6 @@ export async function handleBmqvMemoRequest(symbol, forceNew = false) {
     try {
         const reportType = 'BmqvMemo';
         const synthesisPromptConfig = promptMap[reportType];
-        const extractionPromptConfig = promptMap['BmqvMemo_Extract'];
-
         const savedReports = getReportsFromCache(symbol, reportType);
 
         if (savedReports.length > 0 && !forceNew) {
@@ -1140,16 +1138,33 @@ export async function handleBmqvMemoRequest(symbol, forceNew = false) {
             throw new Error("The 'Moat Analysis' and 'Capital Allocators' reports must be generated first.");
         }
         
-        // --- NEW STEP 1: EXTRACTION ---
         loadingMessage.textContent = "Extracting key facts from source reports...";
-        const extractionPrompt = extractionPromptConfig.prompt
-            .replace('{moatAnalysisReport}', moatReports[0].content)
-            .replace('{capitalAllocatorsReport}', capitalReports[0].content);
-            
-        const factsJsonString = await callGeminiApi(extractionPrompt);
-        const facts = JSON.parse(factsJsonString.replace(/^```json\s*|```\s*$/g, '').trim());
 
-        // --- NEW STEP 2: SYNTHESIS ---
+        // --- NEW STEP 1: EXTRACTION (TWO-PART) ---
+        // Part A: Extract from Moat Analysis
+        const moatExtractConfig = promptMap['MoatAnalysis_Extract'];
+        if (!moatExtractConfig) throw new Error("MoatAnalysis_Extract prompt configuration is missing.");
+        const moatExtractPrompt = moatExtractConfig.prompt.replace('{reportContent}', moatReports[0].content);
+        const moatJsonString = await callGeminiApi(moatExtractPrompt);
+        const moatFacts = JSON.parse(moatJsonString.replace(/^```json\s*|```\s*$/g, '').trim());
+
+        // Part B: Extract from Capital Allocators
+        const capExtractConfig = promptMap['CapitalAllocators_Extract'];
+        if (!capExtractConfig) throw new Error("CapitalAllocators_Extract prompt configuration is missing.");
+        const capExtractPrompt = capExtractConfig.prompt.replace('{reportContent}', capitalReports[0].content);
+        const capJsonString = await callGeminiApi(capExtractPrompt);
+        const capFacts = JSON.parse(capJsonString.replace(/^```json\s*|```\s*$/g, '').trim());
+        
+        // Part C: Combine facts
+        const facts = {
+          moatVerdict: moatFacts.verdict,
+          primaryMoatSource: moatFacts.primarySource,
+          capitalAllocatorsGrade: capFacts.verdict,
+          capitalAllocatorsStrength: capFacts.primaryStrength,
+          capitalAllocatorsWeakness: capFacts.primaryWeakness
+        };
+
+        // --- STEP 2: SYNTHESIS ---
         loadingMessage.textContent = "Synthesizing the BMQV Memo from extracted facts...";
         const profile = state.portfolioCache.find(s => s.ticker === symbol);
         const companyName = profile ? profile.companyName : symbol;
