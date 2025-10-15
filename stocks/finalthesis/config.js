@@ -336,9 +336,7 @@ You are a senior investment analyst at "Reasonable Growth Capital," a firm that 
 You are preparing a concise pre-read for the firm's weekly investment committee meeting on Friday, October 10, 2025. Your objective is to deliver a definitive GARP assessment of the provided stock, enabling the committee to make a clear "pursue further diligence" or "pass" decision.
 
 3. Contextual Grounding:
-
 Company & Ticker: {companyName} ({tickerSymbol})
-
 Sector: {sector}
 
 4. Input Data:
@@ -352,28 +350,28 @@ Generate a comprehensive GARP assessment using precise markdown formatting. Your
 
 ## EXECUTIVE SUMMARY
 
-(Your output for this section MUST follow this markdown structure exactly. For the Verdict, use one of the three specified bolded phrases.)
+(Your output for this section MUST follow this markdown structure exactly. Replace the bracketed text with your analysis.)
 
-**Verdict:** [Insert bolded verdict: Strong GARP Candidate, Borderline GARP Candidate, or Not a GARP Candidate]
+**Verdict:** [Insert bolded verdict: Strong GARP Candidate, Borderline GARP Candidate, or Not a GARP Candidate. This verdict must be logically consistent with the GARP Conviction Score and your final synthesis.]
 **GARP Conviction Score:** [Insert the score]
-**Core Thesis:** [Insert the single, concise sentence thesis]
+**Core Thesis:** [Insert a single, concise sentence that acknowledges the primary tension between the company's strengths and weaknesses.]
 
-## THE BULL CASE: The Growth & Value Narrative
-
-(1 paragraph)
-Synthesize the stock's strengths into a compelling narrative. Explain how the passing metrics work together. Focus on the synergy between growth projections and valuation. Critically, compare the company's strongest metrics (e.g., ROE, Growth) to the peer averages to demonstrate its relative strength. Use the peer trend data to highlight any positive momentum.
-
-## THE BEAR CASE: The Risks & Quality Concerns
+## THE BULL CASE: The Growth & Quality Narrative
 
 (1 paragraph)
-Identify the critical risks and weaknesses revealed by the failing metrics. Directly compare the company's weakest metrics to the peer averages. For example, is its P/E ratio just high, or is it significantly higher than its competitors? Use the peer trend data to flag any negative trends, such as its valuation becoming less attractive relative to its peers over time.
+Synthesize the stock's strengths into a compelling narrative. For the company's strongest metrics (e.g., ROE, Growth), you MUST critically compare them to the provided peer averages to demonstrate relative strength or weakness. Explain how the passing metrics work together to define the company's quality.
+
+## THE BEAR CASE: The Risks & Valuation Concerns
+
+(1 paragraph)
+Identify the critical risks and weaknesses revealed by the failing metrics. You MUST directly compare the company's weakest metrics (especially valuation) to the peer averages. For example, is its P/E ratio just high, or is it significantly higher than its competitors? Quantify the premium where possible.
 
 ## FINAL SYNTHESIS & RECOMMENDATION
 
 (1 paragraph)
 Investment Profile & The Deciding Factor: Classify the stock's profile (e.g., 'Best-in-Class Compounder trading at a premium,' 'Undervalued Turnaround Story'). Then, state the single most critical GARP tension an investor must resolve, explicitly referencing the peer comparison (e.g., 'The core question is whether the company's superior ROE and forward growth justify its valuation premium to its peers.').
 
-(Your final output for the recommendation MUST be one of the specified bolded phrases. For example: **Add to Watchlist**)
+**Strategic Recommendation:** [Insert a single bolded recommendation. This recommendation MUST be consistent with the GARP Conviction Score and your final synthesis. Use "Pursue Diligence (High Priority)" for scores > 75; "Pursue Diligence" for scores 60-74; "Add to Watchlist" for scores 50-59; "Pass" for scores < 50.]
 
 ## Confidence Score
 **Confidence Score:** [Assign a score from 1.0 to 5.0 based on these rules: High (4.0-5.0) for GARP score > 75 AND superior peer metrics; Moderate (2.5-3.9) for GARP score > 60 OR strong metrics but at a premium valuation; Low (1.0-2.4) for GARP score < 60 OR major data contradictions.]
@@ -388,7 +386,6 @@ Based on your analysis, propose 2-3 critical diligence questions. For each quest
 Format each item precisely like this:
 - **Human-Led Question:** [Your question here]
 - **Suggested AI Investigation Query:** "[Your search query here]"
-
 `.trim();
 
 const GARP_CONVICTION_SCORE_PROMPT = `
