@@ -594,15 +594,9 @@ Role: You are a long-term, business-focused investment analyst. Your task is to 
 
 const BMQV_MEMO_PROMPT = `
 Role: You are a long-term, business-focused investment analyst in the style of Buffett and Munger.
-Task: Determine if {companyName} is a "wonderful business" by synthesizing the two provided reports and filling in the template below.
+Task: Your task is to determine if {companyName} is a "wonderful business" by synthesizing the two provided reports. You MUST follow a strict three-step process.
 
 ---
-**CRITICAL INSTRUCTIONS:**
-1.  Your final output MUST use the exact markdown structure and headings provided in the template below.
-2.  Fill in the [Your analysis here] sections based ONLY on the provided input reports.
-3.  **CRITICAL BEHAVIORAL RULE: You are forbidden from using any outside information or facts about {companyName} that are not explicitly mentioned in the two input reports. Do not mention specific acquisitions, competitors, or risks unless they are present in the provided text.**
----
-
 **INPUTS:**
 
 **Input Report 1: Moat Analysis**
@@ -613,32 +607,43 @@ Task: Determine if {companyName} is a "wonderful business" by synthesizing the t
 
 ---
 
-**1. Data Grounding & Verification (Your First Step)**
-(Before writing the memo, you must explicitly state the key verdicts from the input reports here.)
+**Step 1: Extract Key Facts**
+(First, you must extract the key facts from the input reports into a simple list. Do not add any analysis yet. This is your source of truth.)
 
--   **Moat Analysis Verdict:** [State the final verdict from the Moat Analysis: "Wide," "Narrow," or "None"]
--   **Capital Allocators Grade:** [State the final letter grade from the Capital Allocators report]
+* **Moat Verdict:** [Extract the final verdict from the Moat Analysis report: "Wide," "Narrow," or "None"]
+* **Primary Moat Source:** [Extract the single most important source of the moat from the Moat Analysis report]
+* **Capital Allocators Grade:** [Extract the final letter grade from the Capital Allocators report]
+* **Capital Allocators Primary Strength:** [Extract the single greatest strength identified in the Capital Allocators report's justification]
+* **Capital Allocators Primary Weakness:** [Extract the single most significant weakness identified in the Capital Allocators report's justification]
+* **Moat Sustainability Risks:** [List any risks to the moat mentioned in the Moat Analysis report]
+* **Capital Allocation Red Flags:** [List the weaknesses from the Capital Allocators report]
 
 ---
 
-**2. BMQV Memo Template (Your Final Output)**
+**Step 2: Draft the BMQV Memo**
+(Second, using ONLY the facts you extracted in Step 1, draft a memo using the exact markdown template below.)
 
 # Buffett-Munger Quality & Value (BMQV) Memo: {companyName} ({tickerSymbol})
 
 ## 1. Executive Summary: Is This a "Wonderful Business"?
-[Your one-paragraph analysis here. Synthesize the verdicts you listed in the 'Data Grounding' step to give a direct answer to the core question.]
+[Draft a one-paragraph analysis here, synthesizing the extracted verdicts to answer the core question.]
 
 ## 2. The Three Pillars of a "Wonderful Business"
-- **A Durable Moat:** [Your analysis here. State the moat verdict and its single most important source as identified in the Moat Analysis report.]
-- **Skilled & Trustworthy Management:** [Your analysis here. State the management grade and the single most compelling piece of evidence (positive or negative) from their capital allocation track record, as detailed in the Capital Allocators report.]
-- **A Resilient Profitability Engine:** [Your analysis here. Connect the two reports by explaining how management's capital allocation skill (from the Capital Allocators report) directly impacts the durability of the competitive moat (from the Moat Analysis report).]
+- **A Durable Moat:** [Draft your analysis here using the extracted 'Moat Verdict' and 'Primary Moat Source'.]
+- **Skilled & Trustworthy Management:** [Draft your analysis here using the extracted 'Capital Allocators Grade', 'Primary Strength', and 'Primary Weakness'.]
+- **A Resilient Profitability Engine:** [Draft your analysis here, explaining how management's 'Primary Strength' in capital allocation reinforces the 'Primary Moat Source'.]
 
 ## 3. Potential Impairments to Long-Term Value
-- **Moat Sustainability Risks:** [Your analysis here. Summarize only the risks or weaknesses identified in the Moat Analysis report.]
-- **Capital Allocation Red Flags:** [Your analysis here. Summarize the most significant weaknesses identified in the Capital Allocators report.]
+- **Moat Sustainability Risks:** [Draft your analysis here using the extracted 'Moat Sustainability Risks'. If none were mentioned, state that.]
+- **Capital Allocation Red Flags:** [Draft your analysis here using the extracted 'Capital Allocation Red Flags'.]
 
 ## 4. Final Verdict
-[Your final one-paragraph verdict here. Your justification MUST be based on the points made in the preceding sections. Your final sentence MUST follow the example format exactly, including bolding. For example: **A Good Business with Flaws** because its narrow moat and management's inconsistent M&A record do not meet the high standard of a 'wonderful business.']
+[Draft your final one-paragraph verdict here. Your justification MUST be based on the points made in the preceding sections. Your final sentence MUST follow the example format exactly, including bolding. For example: **A Good Business with Flaws** because its narrow moat and management's inconsistent M&A record do not meet the high standard of a 'wonderful business.']
+
+---
+
+**Step 3: Self-Correction and Final Output**
+(Finally, review your draft from Step 2. Compare it against your list of extracted facts from Step 1. **Correct any statements in your draft that contradict the extracted facts or introduce outside information.** After making all necessary corrections, provide ONLY the final, fact-checked memo as your response. Do not include the Step 1 or Step 2 sections in your final output.)
 `.trim();
 
 // --- NEW EXTRACTION & SYNTHESIS PROMPTS (VERSION 2.0) ---
