@@ -1,5 +1,5 @@
 // fileName: ui-modals.js
-import { CONSTANTS, state, ANALYSIS_ICONS, SECTOR_KPI_SUGGESTIONS } from './config.js';
+import { CONSTANTS, state, ANALYSIS_ICONS, SECTOR_KPI_SUGGESTIONS, QUALITATIVE_DILIGENCE_QUESTIONS, STRUCTURED_DILIGENCE_QUESTIONS, MARKET_SENTIMENT_QUESTIONS } from './config.js';
 import { getFmpStockData, getGroupedFmpData } from './api.js';
 import { renderValuationHealthDashboard, _renderGroupedStockList, renderPortfolioManagerList, renderGarpScorecardDashboard, renderGarpInterpretationAnalysis, updateGarpCandidacyStatus, renderCandidacyAnalysis, renderGarpAnalysisSummary, renderDiligenceLog, renderPeerComparisonTable, renderOngoingReviewLog } from './ui-render.js'; 
 import { getSavedReports } from './ui-handlers.js';
@@ -556,7 +556,7 @@ export async function openRawDataViewer(ticker) {
         // Populate Qualitative Diligence
         const qualitativeContainer = diligenceHubContainer.querySelector('#qualitative-diligence-forms-container');
         let qualitativeHtml = `<div class="text-left border rounded-lg p-4 bg-gray-50"><h4 class="text-base font-semibold text-gray-800 mb-1">Qualitative Diligence</h4><p class="text-sm text-gray-500 mb-4">Answer high-level questions about the business itself.</p><div class="space-y-4">`;
-        for (const [category, question] of Object.entries(CONSTANTS.QUALITATIVE_DILIGENCE_QUESTIONS)) {
+        for (const [category, question] of Object.entries(QUALITATIVE_DILIGENCE_QUESTIONS)) {
             const savedAnswer = sanitizeText(savedQualitativeAnswers.get(question) || '');
             qualitativeHtml += `<div class="diligence-card p-3 bg-white rounded-lg border border-gray-200"><h5 class="font-semibold text-sm text-indigo-700 mb-2">${category}</h5><div class="flex items-start gap-2 mb-2"><p class="text-xs text-gray-600 flex-grow" data-question-text>${question}</p><button type="button" class="copy-icon-btn structured-diligence-copy-btn" title="Copy Question">${copyIcon}</button></div><textarea class="qualitative-diligence-answer w-full border border-gray-300 rounded-lg p-2 text-sm" rows="4" data-category="${category}" placeholder="Your analysis and findings here...">${savedAnswer}</textarea></div>`;
         }
@@ -566,7 +566,7 @@ export async function openRawDataViewer(ticker) {
         // Populate Structured Diligence
         const structuredContainer = diligenceHubContainer.querySelector('#structured-diligence-forms-container');
         let structuredHtml = `<div class="text-left border rounded-lg p-4 bg-gray-50"><h4 class="text-base font-semibold text-gray-800 mb-1">Structured (Quantitative) Diligence</h4><p class="text-sm text-gray-500 mb-4">Answer these core questions to build a foundational thesis.</p><div class="space-y-4">`;
-        for (const [category, question] of Object.entries(CONSTANTS.STRUCTURED_DILIGENCE_QUESTIONS)) {
+        for (const [category, question] of Object.entries(STRUCTURED_DILIGENCE_QUESTIONS)) {
             const savedAnswer = sanitizeText(savedStructuredAnswers.get(question) || '');
             structuredHtml += `<div class="diligence-card p-3 bg-white rounded-lg border border-gray-200"><h5 class="font-semibold text-sm text-indigo-700 mb-2">${category}</h5><div class="flex items-start gap-2 mb-2"><p class="text-xs text-gray-600 flex-grow" data-question-text>${question}</p><button type="button" class="copy-icon-btn structured-diligence-copy-btn" title="Copy Question">${copyIcon}</button></div><textarea class="structured-diligence-answer w-full border border-gray-300 rounded-lg p-2 text-sm" rows="4" data-category="${category}" placeholder="Your analysis and findings here...">${savedAnswer}</textarea></div>`;
         }
@@ -576,7 +576,7 @@ export async function openRawDataViewer(ticker) {
         // --- NEW: Populate Market Sentiment Diligence ---
         const marketSentimentContainer = diligenceHubContainer.querySelector('#market-sentiment-forms-container');
         let marketSentimentHtml = `<div class="text-left border rounded-lg p-4 bg-gray-50"><h4 class="text-base font-semibold text-gray-800 mb-1">Market Sentiment Diligence</h4><p class="text-sm text-gray-500 mb-4">Answer these questions using external market data sources.</p><div class="space-y-4">`;
-        for (const [category, question] of Object.entries(CONSTANTS.MARKET_SENTIMENT_QUESTIONS)) {
+        for (const [category, question] of Object.entries(MARKET_SENTIMENT_QUESTIONS)) {
             const savedAnswer = sanitizeText(savedMarketSentimentAnswers.get(question) || '');
             marketSentimentHtml += `<div class="diligence-card p-3 bg-white rounded-lg border border-gray-200"><h5 class="font-semibold text-sm text-indigo-700 mb-2">${category}</h5><div class="flex items-start gap-2 mb-2"><p class="text-xs text-gray-600 flex-grow" data-question-text>${question}</p><button type="button" class="copy-icon-btn structured-diligence-copy-btn" title="Copy Question">${copyIcon}</button></div><textarea class="market-sentiment-answer w-full border border-gray-300 rounded-lg p-2 text-sm" rows="4" data-category="${category}" placeholder="Your findings from external charts/data here...">${savedAnswer}</textarea></div>`;
         }
