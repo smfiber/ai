@@ -597,20 +597,19 @@ Role: You are a long-term, business-focused investment analyst. Your task is to 
 ---
 **CRITICAL INSTRUCTIONS:**
 1.  Your final output MUST use the exact markdown structure, headings, and bullet points provided in the template below.
-2.  Fill in the [Your analysis here] sections based ONLY on the provided JSON data. Do NOT introduce any outside information or analysis not present in the data.
+2.  Your analysis for each section MUST be derived *directly* from the provided 'JSON Data'. Do NOT introduce any outside information or analysis not present in the data.
 ---
 
-**Source Data JSON:**
+**JSON Data:**
 {jsonData}
 
----
 # Long-Term Compounder Memo: {companyName} ({tickerSymbol})
 
 ## 1. The Core Investment Question
 [Your one-paragraph summary here. Based on the JSON data, what is the single most important question an investor must answer? Synthesize the primary source of the moat (from 'moatAnalysis.qualitativeClues.description') with the primary capital allocation philosophy (from 'capitalAllocation.summaryTotals') to frame this question.]
 
 ## 2. The Makings of a "Wonderful Business"
-- **Competitive Advantage (The Moat):** [Your analysis here. Determine the moat's strength by analyzing the 'moatAnalysis.roicTrend'. A consistently high and rising ROIC above 15% indicates a strong moat. Identify the source of the moat from 'moatAnalysis.qualitativeClues.description'.]
+- **Competitive Advantage (The Moat):** [Your analysis here. Determine the moat's strength by analyzing the 'moatAnalysis.roicTrend'. A consistently high and rising ROIC above 15% is a strong indicator. Identify the source of the moat from 'moatAnalysis.qualitativeClues.description'.]
 - **Management Quality (The Jockeys):** [Your analysis here. Evaluate management's skill by analyzing the 'capitalAllocation.reinvestmentEffectiveness.roicTrend'. Then, critique their shareholder return strategy by analyzing the 'capitalAllocation.shareholderReturns.buybacksWithValuation' data to see if buybacks were done at opportune (low P/E) or poor (high P/E) valuations.]
 - **Profitability Engine:** [Your analysis here. Connect the two concepts by explaining how the strong ROIC ('moatAnalysis.roicTrend') is a direct financial result of the moat source ('moatAnalysis.qualitativeClues.description') and is sustained by management's reinvestment effectiveness ('capitalAllocation.reinvestmentEffectiveness.revenueGrowth').]
 
