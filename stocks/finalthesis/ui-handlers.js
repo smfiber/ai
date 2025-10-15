@@ -1117,13 +1117,15 @@ export async function handleBmqvMemoRequest(symbol, forceNew = false) {
 
     try {
         const reportType = 'BmqvMemo';
-        const promptConfig = promptMap[reportType];
+        const synthesisPromptConfig = promptMap[reportType];
+        const extractionPromptConfig = promptMap['BmqvMemo_Extract'];
+
         const savedReports = getReportsFromCache(symbol, reportType);
 
         if (savedReports.length > 0 && !forceNew) {
             const latestReport = savedReports[0];
             displayReport(contentContainer, latestReport.content, latestReport.prompt);
-            updateReportStatus(statusContainer, savedReports, latestReport.id, { symbol, reportType, promptConfig });
+            updateReportStatus(statusContainer, savedReports, latestReport.id, { symbol, reportType, promptConfig: synthesisPromptConfig });
             return;
         }
 
@@ -1137,23 +1139,33 @@ export async function handleBmqvMemoRequest(symbol, forceNew = false) {
         if (moatReports.length === 0 || capitalReports.length === 0) {
             throw new Error("The 'Moat Analysis' and 'Capital Allocators' reports must be generated first.");
         }
+        
+        // --- NEW STEP 1: EXTRACTION ---
+        loadingMessage.textContent = "Extracting key facts from source reports...";
+        const extractionPrompt = extractionPromptConfig.prompt
+            .replace('{moatAnalysisReport}', moatReports[0].content)
+            .replace('{capitalAllocatorsReport}', capitalReports[0].content);
+            
+        const factsJsonString = await callGeminiApi(extractionPrompt);
+        const facts = JSON.parse(factsJsonString.replace(/^```json\s*|```\s*$/g, '').trim());
 
+        // --- NEW STEP 2: SYNTHESIS ---
+        loadingMessage.textContent = "Synthesizing the BMQV Memo from extracted facts...";
         const profile = state.portfolioCache.find(s => s.ticker === symbol);
         const companyName = profile ? profile.companyName : symbol;
 
-        const prompt = promptConfig.prompt
+        const synthesisPrompt = synthesisPromptConfig.prompt
             .replace(/{companyName}/g, companyName)
             .replace(/{tickerSymbol}/g, symbol)
-            .replace('{moatAnalysisReport}', moatReports[0].content)
-            .replace('{capitalAllocatorsReport}', capitalReports[0].content);
+            .replace('{jsonData}', JSON.stringify(facts, null, 2));
 
         const memoContent = await generateRefinedArticle(prompt, loadingMessage);
         const synthesisData = await extractSynthesisData(memoContent, reportType);
-        await autoSaveReport(symbol, reportType, memoContent, prompt, null, synthesisData);
+        await autoSaveReport(symbol, reportType, memoContent, synthesisPrompt, null, synthesisData);
 
         const refreshedReports = getReportsFromCache(symbol, reportType);
-        displayReport(contentContainer, memoContent, prompt);
-        updateReportStatus(statusContainer, refreshedReports, refreshedReports[0].id, { symbol, reportType, promptConfig });
+        displayReport(contentContainer, memoContent, synthesisPrompt);
+        updateReportStatus(statusContainer, refreshedReports, refreshedReports[0].id, { symbol, reportType, promptConfig: synthesisPromptConfig });
 
     } catch (error) {
         console.error("Error generating Buffett-Munger Q&V memo:", error);
