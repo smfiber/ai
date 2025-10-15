@@ -1159,7 +1159,7 @@ export async function handleBmqvMemoRequest(symbol, forceNew = false) {
             .replace(/{tickerSymbol}/g, symbol)
             .replace('{jsonData}', JSON.stringify(facts, null, 2));
 
-        const memoContent = await generateRefinedArticle(prompt, loadingMessage);
+        const memoContent = await generateRefinedArticle(synthesisPrompt, loadingMessage);
         const synthesisData = await extractSynthesisData(memoContent, reportType);
         await autoSaveReport(symbol, reportType, memoContent, synthesisPrompt, null, synthesisData);
 
