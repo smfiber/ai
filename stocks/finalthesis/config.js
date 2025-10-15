@@ -632,10 +632,13 @@ Role: You are a long-term, business-focused investment analyst. Your task is to 
 
 const BMQV_MEMO_PROMPT = `
 Role: You are a long-term, business-focused investment analyst in the style of Buffett and Munger.
-Task: Your task is to determine if {companyName} is a "wonderful business" by synthesizing the facts provided in the JSON data below. You MUST base your analysis exclusively on these facts.
+Task: Your task is to determine if {companyName} is a "wonderful business" by synthesizing the facts provided in the JSON data below. You MUST base your analysis exclusively on these facts and not use any outside knowledge.
 
 ---
-**CRITICAL INSTRUCTION: Your final output MUST use the exact markdown structure and headings provided in the template below. Fill in the [Your analysis here] sections.**
+**CRITICAL INSTRUCTIONS:**
+1.  Your final output MUST use the exact markdown structure and headings provided in the template.
+2.  Your analysis for each section MUST be derived *directly* from the provided 'JSON Data (Source of Truth)'. For example, to determine the moat, analyze the 'roicTrend' data. To assess management, analyze the 'summaryTotals' and 'buybacksWithValuation' data.
+3.  Do NOT mention any company names, events (like acquisitions), or data not explicitly present in the JSON data.
 ---
 
 **JSON Data (Source of Truth):**
@@ -644,18 +647,18 @@ Task: Your task is to determine if {companyName} is a "wonderful business" by sy
 # Buffett-Munger Quality & Value (BMQV) Memo: {companyName} ({tickerSymbol})
 
 ## 1. Executive Summary: Is This a "Wonderful Business"?
-[Synthesize the 'moatVerdict' and 'capitalAllocatorsGrade' to provide a top-line summary.]
+[Synthesize your findings from the sections below to provide a top-line summary and verdict.]
 
 ## 2. The Three Pillars of a "Wonderful Business"
-- **A Durable Moat:** [Analyze the 'moatVerdict' and 'primaryMoatSource'.]
-- **Skilled & Trustworthy Management:** [Analyze the 'capitalAllocatorsGrade', 'capitalAllocatorsStrength', and 'capitalAllocatorsWeakness'.]
-- **A Resilient Profitability Engine:** [Explain how management's 'capitalAllocatorsStrength' reinforces the 'primaryMoatSource'.]
+- **A Durable Moat:** [Analyze the 'moatAnalysis.roicTrend'. A consistently high and stable/rising ROIC above 15% indicates a strong moat. Also, use the 'moatAnalysis.qualitativeClues.description' to identify the source of the moat (e.g., network effects, brand).]
+- **Skilled & Trustworthy Management:** [Analyze the 'capitalAllocation.summaryTotals' to determine if management prioritizes shareholder returns or reinvestment. Then, analyze 'capitalAllocation.shareholderReturns.buybacksWithValuation' to assess if buybacks were done at opportune (low P/E) or poor (high P/E) valuations.]
+- **A Resilient Profitability Engine:** [Explain how the high ROIC from the 'moatAnalysis' data is sustained by management's capital allocation philosophy, as seen in the 'capitalAllocation' data.]
 
 ## 3. Potential Impairments to Long-Term Value
-- **Identified Weaknesses:** [Summarize the 'capitalAllocatorsWeakness'. If none, state that.]
+- **Identified Weaknesses:** [Based *only* on your analysis of the 'buybacksWithValuation' data, identify any weaknesses in management's capital allocation. If buybacks were consistently done at high P/E ratios, state that as the primary weakness. If no clear weakness is present in the data, state that.]
 
 ## 4. Final Verdict
-[Provide a final, one-paragraph verdict. Your final sentence MUST follow the example format exactly, including bolding. For example: **A Good Business with Flaws** because its narrow moat and management's inconsistent M&A record do not meet the high standard of a 'wonderful business.']
+[Provide a final, one-paragraph verdict synthesizing your data-driven findings. Your final sentence MUST follow the example format exactly, including bolding. For example: **A Good Business with Flaws** because its strong moat is undermined by management's tendency to repurchase shares at high valuations.]
 `.trim();
 
 // --- NEW EXTRACTION & SYNTHESIS PROMPTS (VERSION 2.0) ---
