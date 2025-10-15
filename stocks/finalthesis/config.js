@@ -592,42 +592,35 @@ Read the provided 8-K filing text for {companyName} and generate a structured an
 `.trim();
 
 const LONG_TERM_COMPOUNDER_PROMPT = `
-Role: You are a long-term, business-focused investment analyst. Your task is to determine if {companyName} is a "compounder" by synthesizing the two provided reports.
+Role: You are a long-term, business-focused investment analyst. Your task is to determine if {companyName} is a "compounder" by synthesizing the provided JSON data, which contains metrics related to its moat and how its management allocates capital.
 
 ---
 **CRITICAL INSTRUCTIONS:**
 1.  Your final output MUST use the exact markdown structure, headings, and bullet points provided in the template below.
-2.  Fill in the [Your analysis here] sections based ONLY on the provided input reports.
+2.  Fill in the [Your analysis here] sections based ONLY on the provided JSON data. Do NOT introduce any outside information or analysis not present in the data.
 ---
 
-**Input Report 1: Moat Analysis**
-{moatAnalysisReport}
-
-**Input Report 2: Capital Allocators Analysis**
-{capitalAllocatorsReport}
+**Source Data JSON:**
+{jsonData}
 
 ---
--   **Moat Analysis Verdict:** [State the verdict from the Moat Analysis: "Wide," "Narrow," or "None"]
--   **Capital Allocators Grade:** [State the final letter grade from the Capital Allocators report]
----
-
 # Long-Term Compounder Memo: {companyName} ({tickerSymbol})
 
 ## 1. The Core Investment Question
-[Your one-paragraph summary here. Based on the two reports, what is the single most important question an investor must answer about this company's long-term prospects?]
+[Your one-paragraph summary here. Based on the JSON data, what is the single most important question an investor must answer? Synthesize the primary source of the moat (from 'moatAnalysis.qualitativeClues.description') with the primary capital allocation philosophy (from 'capitalAllocation.summaryTotals') to frame this question.]
 
 ## 2. The Makings of a "Wonderful Business"
-- **Competitive Advantage (The Moat):** [Your analysis here. State the moat verdict and its primary source from the Moat Analysis report.]
-- **Management Quality (The Jockeys):** [Your analysis here. State the management grade and their greatest strengths from the Capital Allocators report.]
-- **Profitability Engine:** [Your analysis here. Connect the two reports by explaining how the ROIC from the Capital Allocators report confirms or challenges the strength of the moat from the Moat Analysis.]
+- **Competitive Advantage (The Moat):** [Your analysis here. Determine the moat's strength by analyzing the 'moatAnalysis.roicTrend'. A consistently high and rising ROIC above 15% indicates a strong moat. Identify the source of the moat from 'moatAnalysis.qualitativeClues.description'.]
+- **Management Quality (The Jockeys):** [Your analysis here. Evaluate management's skill by analyzing the 'capitalAllocation.reinvestmentEffectiveness.roicTrend'. Then, critique their shareholder return strategy by analyzing the 'capitalAllocation.shareholderReturns.buybacksWithValuation' data to see if buybacks were done at opportune (low P/E) or poor (high P/E) valuations.]
+- **Profitability Engine:** [Your analysis here. Connect the two concepts by explaining how the strong ROIC ('moatAnalysis.roicTrend') is a direct financial result of the moat source ('moatAnalysis.qualitativeClues.description') and is sustained by management's reinvestment effectiveness ('capitalAllocation.reinvestmentEffectiveness.revenueGrowth').]
 
 ## 3. Potential Cracks in the Fortress
-- **Moat Sustainability Risks:** [Your analysis here. Summarize the biggest threats to the moat identified in the Moat Analysis.]
-- **Capital Allocation Red Flags:** [Your analysis here. Summarize the biggest weaknesses identified in the Capital Allocators report.]
-- **The Core Tension:** [Your analysis here. Explain how the risks from one report could impact the strengths of the other.]
+- **Moat Sustainability Risks:** [Your analysis here. Based *only* on the provided data, identify potential risks. For example, if 'moatAnalysis.reinvestmentTrends.capex' is stagnant or declining, it could be a risk. If no clear risks are present in the data, state that "No specific sustainability risks were identified in the provided data."]
+- **Capital Allocation Red Flags:** [Your analysis here. Identify the single biggest weakness based *only* on the 'capitalAllocation.shareholderReturns.buybacksWithValuation' data. State clearly if management tends to buy back shares at high or low valuations.]
+- **The Core Tension:** [Your analysis here. Explain the primary conflict. For example: "The core tension is between the company's powerful moat, which generates immense cash, and management's tendency to return that cash via buybacks at high valuations, which may be a suboptimal use of capital."]
 
 ## 4. Final Verdict: A True Compounder?
-[Your final one-paragraph verdict here. Your final sentence MUST follow the example format exactly, including bolding. For example: **Potential Compounder with Reservations** because its narrow moat is not yet supported by a management team that can consistently reinvest capital at high rates of return.]
+[Your final one-paragraph verdict here. Synthesize all findings from the JSON to make a concluding assessment. Your final sentence MUST follow the example format exactly, including bolding. For example: **Potential Compounder with Reservations** because its wide moat is paired with a management team that has shown weaknesses in its capital return strategy.]
 `.trim();
 
 const BMQV_MEMO_PROMPT = `
