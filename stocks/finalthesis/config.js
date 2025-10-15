@@ -358,13 +358,32 @@ Generate a comprehensive GARP assessment using precise markdown formatting. Your
 
 ## THE BULL CASE: The Growth & Quality Narrative
 
-(1 paragraph)
-Synthesize the stock's strengths into a compelling narrative. For the company's strongest metrics (e.g., ROE, Growth), you MUST critically compare them to the provided peer averages to demonstrate relative strength or weakness. Explain how the passing metrics work together to define the company's quality.
+**(Your response for this section MUST follow this two-step process exactly.)**
+
+**First, create a markdown table comparing the following key quality and growth metrics to their peer averages. Calculate the "Premium/(Discount)" as ((Company Value / Peer Average) - 1).**
+
+| Metric | Company Value | Peer Average | Premium/(Discount) |
+| :--- | :--- | :--- | :--- |
+| **EPS Growth (Next 1Y)** | [Calculate] | [Calculate] | [Calculate] |
+| **Return on Invested Capital** | [Calculate] | [Calculate] | [Calculate] |
+| **Return on Equity** | [Calculate] | [Calculate] | [Calculate] |
+| **Debt-to-Equity** | [Calculate] | [Calculate] | [Calculate] |
+
+**Second, write your one-paragraph narrative synthesis. Your analysis in this paragraph MUST be based on the data in the table you just created. Synthesize the stock's strengths into a compelling narrative.**
 
 ## THE BEAR CASE: The Risks & Valuation Concerns
 
-(1 paragraph)
-Identify the critical risks and weaknesses revealed by the failing metrics. You MUST directly compare the company's weakest metrics (especially valuation) to the peer averages. For example, is its P/E ratio just high, or is it significantly higher than its competitors? Quantify the premium where possible.
+**(Your response for this section MUST follow this two-step process exactly.)**
+
+**First, create a markdown table comparing the following key valuation and risk metrics to their peer averages. Calculate the "Premium/(Discount)" as ((Company Value / Peer Average) - 1).**
+
+| Metric | Company Value | Peer Average | Premium/(Discount) |
+| :--- | :--- | :--- | :--- |
+| **Forward P/E** | [Calculate] | [Calculate] | [Calculate] |
+| **P/S Ratio** | [Calculate] | [Calculate] | [Calculate] |
+| **Quarterly Earnings Progress**| [Calculate] | [Calculate] | [Calculate] |
+
+**Second, write your one-paragraph narrative synthesis. Your analysis in this paragraph MUST be based on the data in the table you just created. Identify the critical risks and weaknesses.**
 
 ## FINAL SYNTHESIS & RECOMMENDATION
 
