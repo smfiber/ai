@@ -1138,41 +1138,28 @@ export async function handleBmqvMemoRequest(symbol, forceNew = false) {
             throw new Error("The 'Moat Analysis' and 'Capital Allocators' reports must be generated first.");
         }
         
-        loadingMessage.textContent = "Extracting key facts from source reports...";
+        loadingMessage.textContent = "Calculating source metrics for synthesis...";
 
-        // --- NEW STEP 1: EXTRACTION (TWO-PART) ---
-        // Part A: Extract from Moat Analysis
-        const moatExtractConfig = promptMap['MoatAnalysis_Extract'];
-        if (!moatExtractConfig) throw new Error("MoatAnalysis_Extract prompt configuration is missing.");
-        const moatExtractPrompt = moatExtractConfig.prompt.replace('{reportContent}', moatReports[0].content);
-        const moatJsonString = await callGeminiApi(moatExtractPrompt);
-        const moatFacts = JSON.parse(moatJsonString.replace(/^```json\s*|```\s*$/g, '').trim());
+        const data = await getFmpStockData(symbol);
+        if (!data) {
+            throw new Error(`Could not retrieve financial data for ${symbol} to generate the memo.`);
+        }
 
-        // Part B: Extract from Capital Allocators
-        const capExtractConfig = promptMap['CapitalAllocators_Extract'];
-        if (!capExtractConfig) throw new Error("CapitalAllocators_Extract prompt configuration is missing.");
-        const capExtractPrompt = capExtractConfig.prompt.replace('{reportContent}', capitalReports[0].content);
-        const capJsonString = await callGeminiApi(capExtractPrompt);
-        const capFacts = JSON.parse(capJsonString.replace(/^```json\s*|```\s*$/g, '').trim());
-        
-        // Part C: Combine facts
-        const facts = {
-          moatVerdict: moatFacts.verdict,
-          primaryMoatSource: moatFacts.primarySource,
-          capitalAllocatorsGrade: capFacts.verdict,
-          capitalAllocatorsStrength: capFacts.primaryStrength,
-          capitalAllocatorsWeakness: capFacts.primaryWeakness
+        const moatData = _calculateMoatAnalysisMetrics(data);
+        const capitalData = _calculateCapitalAllocatorsMetrics(data);
+        const payload = {
+            moatAnalysis: moatData,
+            capitalAllocation: capitalData
         };
 
-        // --- STEP 2: SYNTHESIS ---
-        loadingMessage.textContent = "Synthesizing the BMQV Memo from extracted facts...";
+        loadingMessage.textContent = "Synthesizing the BMQV Memo from source data...";
         const profile = state.portfolioCache.find(s => s.ticker === symbol);
         const companyName = profile ? profile.companyName : symbol;
 
         const synthesisPrompt = synthesisPromptConfig.prompt
             .replace(/{companyName}/g, companyName)
             .replace(/{tickerSymbol}/g, symbol)
-            .replace('{jsonData}', JSON.stringify(facts, null, 2));
+            .replace('{jsonData}', JSON.stringify(payload, null, 2));
 
         const memoContent = await generateRefinedArticle(synthesisPrompt, loadingMessage);
         const synthesisData = await extractSynthesisData(memoContent, reportType);
