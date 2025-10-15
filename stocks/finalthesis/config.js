@@ -598,9 +598,12 @@ Task: Determine if {companyName} is a "wonderful business" by synthesizing the t
 
 ---
 **CRITICAL INSTRUCTIONS:**
-1.  Your final output MUST use the exact markdown structure, headings, and bullet points provided in the template below.
+1.  Your final output MUST use the exact markdown structure and headings provided in the template below.
 2.  Fill in the [Your analysis here] sections based ONLY on the provided input reports.
+3.  **CRITICAL BEHAVIORAL RULE: You are forbidden from using any outside information or facts about {companyName} that are not explicitly mentioned in the two input reports. Do not mention specific acquisitions, competitors, or risks unless they are present in the provided text.**
 ---
+
+**INPUTS:**
 
 **Input Report 1: Moat Analysis**
 {moatAnalysisReport}
@@ -609,26 +612,33 @@ Task: Determine if {companyName} is a "wonderful business" by synthesizing the t
 {capitalAllocatorsReport}
 
 ---
--   **Moat Analysis Verdict:** [State the verdict from the Moat Analysis: "Wide," "Narrow," or "None"]
+
+**1. Data Grounding & Verification (Your First Step)**
+(Before writing the memo, you must explicitly state the key verdicts from the input reports here.)
+
+-   **Moat Analysis Verdict:** [State the final verdict from the Moat Analysis: "Wide," "Narrow," or "None"]
 -   **Capital Allocators Grade:** [State the final letter grade from the Capital Allocators report]
+
 ---
+
+**2. BMQV Memo Template (Your Final Output)**
 
 # Buffett-Munger Quality & Value (BMQV) Memo: {companyName} ({tickerSymbol})
 
 ## 1. Executive Summary: Is This a "Wonderful Business"?
-[Your one-paragraph analysis here, synthesizing the verdicts to give a direct answer to the core question.]
+[Your one-paragraph analysis here. Synthesize the verdicts you listed in the 'Data Grounding' step to give a direct answer to the core question.]
 
 ## 2. The Three Pillars of a "Wonderful Business"
-- **A Durable Moat:** [Your analysis here. State the moat verdict and its single most important source from the Moat Analysis report.]
-- **Skilled & Trustworthy Management:** [Your analysis here. State the management grade and the single most compelling piece of evidence (positive or negative) from their capital allocation track record.]
-- **A Resilient Profitability Engine:** [Your analysis here. Connect the two reports by explaining how management's capital allocation skill directly impacts the durability of the competitive moat.]
+- **A Durable Moat:** [Your analysis here. State the moat verdict and its single most important source as identified in the Moat Analysis report.]
+- **Skilled & Trustworthy Management:** [Your analysis here. State the management grade and the single most compelling piece of evidence (positive or negative) from their capital allocation track record, as detailed in the Capital Allocators report.]
+- **A Resilient Profitability Engine:** [Your analysis here. Connect the two reports by explaining how management's capital allocation skill (from the Capital Allocators report) directly impacts the durability of the competitive moat (from the Moat Analysis report).]
 
 ## 3. Potential Impairments to Long-Term Value
-- **Moat Erosion Risks:** [Your analysis here. Summarize the biggest long-term threats to the moat identified in the Moat Analysis.]
+- **Moat Sustainability Risks:** [Your analysis here. Summarize only the risks or weaknesses identified in the Moat Analysis report.]
 - **Capital Allocation Red Flags:** [Your analysis here. Summarize the most significant weaknesses identified in the Capital Allocators report.]
 
 ## 4. Final Verdict
-[Your final one-paragraph verdict here. Your final sentence MUST follow the example format exactly, including bolding. For example: **A Good Business with Flaws** because its narrow moat and management's inconsistent M&A record do not meet the high standard of a 'wonderful business.']
+[Your final one-paragraph verdict here. Your justification MUST be based on the points made in the preceding sections. Your final sentence MUST follow the example format exactly, including bolding. For example: **A Good Business with Flaws** because its narrow moat and management's inconsistent M&A record do not meet the high standard of a 'wonderful business.']
 `.trim();
 
 // --- NEW EXTRACTION & SYNTHESIS PROMPTS (VERSION 2.0) ---
