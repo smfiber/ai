@@ -1073,28 +1073,21 @@ export async function handleCompounderMemoRequest(symbol, forceNew = false) {
 
         openModal(CONSTANTS.MODAL_LOADING);
         const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
-        loadingMessage.textContent = "Gathering and extracting prerequisite reports...";
+        loadingMessage.textContent = "Calculating source metrics for Compounder Memo...";
 
-        const moatReports = getReportsFromCache(symbol, 'MoatAnalysis');
-        const capitalReports = getReportsFromCache(symbol, 'CapitalAllocators');
-
-        if (moatReports.length === 0 || capitalReports.length === 0) {
-            throw new Error("The 'Moat Analysis' and 'Capital Allocators' reports must be generated first.");
+        const data = await getFmpStockData(symbol);
+        if (!data) {
+            throw new Error(`Could not retrieve financial data for ${symbol} to generate the memo.`);
         }
 
-        const extractedMoatData = await extractSynthesisData(moatReports[0].content, 'MoatAnalysis');
-        const extractedCapitalData = await extractSynthesisData(capitalReports[0].content, 'CapitalAllocators');
-
-        if (!extractedMoatData || !extractedCapitalData) {
-            throw new Error("Failed to extract key data from prerequisite reports. Please try regenerating them.");
-        }
-
+        const moatData = _calculateMoatAnalysisMetrics(data);
+        const capitalData = _calculateCapitalAllocatorsMetrics(data);
         const payload = {
-            moatAnalysis: extractedMoatData,
-            capitalAllocators: extractedCapitalData
+            moatAnalysis: moatData,
+            capitalAllocation: capitalData
         };
 
-        loadingMessage.textContent = "Synthesizing Compounder Memo...";
+        loadingMessage.textContent = "Synthesizing the Long-Term Compounder Memo...";
         const profile = state.portfolioCache.find(s => s.ticker === symbol);
         const companyName = profile ? profile.companyName : symbol;
 
