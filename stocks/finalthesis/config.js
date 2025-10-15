@@ -594,56 +594,30 @@ Role: You are a long-term, business-focused investment analyst. Your task is to 
 
 const BMQV_MEMO_PROMPT = `
 Role: You are a long-term, business-focused investment analyst in the style of Buffett and Munger.
-Task: Your task is to determine if {companyName} is a "wonderful business" by synthesizing the two provided reports. You MUST follow a strict three-step process.
+Task: Your task is to determine if {companyName} is a "wonderful business" by synthesizing the facts provided in the JSON data below. You MUST base your analysis exclusively on these facts.
 
 ---
-**INPUTS:**
-
-**Input Report 1: Moat Analysis**
-{moatAnalysisReport}
-
-**Input Report 2: Capital Allocators Analysis**
-{capitalAllocatorsReport}
-
+**CRITICAL INSTRUCTION: Your final output MUST use the exact markdown structure and headings provided in the template below. Fill in the [Your analysis here] sections.**
 ---
 
-**Step 1: Extract Key Facts**
-(First, you must extract the key facts from the input reports into a simple list. Do not add any analysis yet. This is your source of truth.)
-
-* **Moat Verdict:** [Extract the final verdict from the Moat Analysis report: "Wide," "Narrow," or "None"]
-* **Primary Moat Source:** [Extract the single most important source of the moat from the Moat Analysis report]
-* **Capital Allocators Grade:** [Extract the final letter grade from the Capital Allocators report]
-* **Capital Allocators Primary Strength:** [Extract the single greatest strength identified in the Capital Allocators report's justification]
-* **Capital Allocators Primary Weakness:** [Extract the single most significant weakness identified in the Capital Allocators report's justification]
-* **Moat Sustainability Risks:** [List any risks to the moat mentioned in the Moat Analysis report]
-* **Capital Allocation Red Flags:** [List the weaknesses from the Capital Allocators report]
-
----
-
-**Step 2: Draft the BMQV Memo**
-(Second, using ONLY the facts you extracted in Step 1, draft a memo using the exact markdown template below.)
+**JSON Data (Source of Truth):**
+{jsonData}
 
 # Buffett-Munger Quality & Value (BMQV) Memo: {companyName} ({tickerSymbol})
 
 ## 1. Executive Summary: Is This a "Wonderful Business"?
-[Draft a one-paragraph analysis here, synthesizing the extracted verdicts to answer the core question.]
+[Synthesize the 'moatVerdict' and 'capitalAllocatorsGrade' to provide a top-line summary.]
 
 ## 2. The Three Pillars of a "Wonderful Business"
-- **A Durable Moat:** [Draft your analysis here using the extracted 'Moat Verdict' and 'Primary Moat Source'.]
-- **Skilled & Trustworthy Management:** [Draft your analysis here using the extracted 'Capital Allocators Grade', 'Primary Strength', and 'Primary Weakness'.]
-- **A Resilient Profitability Engine:** [Draft your analysis here, explaining how management's 'Primary Strength' in capital allocation reinforces the 'Primary Moat Source'.]
+- **A Durable Moat:** [Analyze the 'moatVerdict' and 'primaryMoatSource'.]
+- **Skilled & Trustworthy Management:** [Analyze the 'capitalAllocatorsGrade', 'capitalAllocatorsStrength', and 'capitalAllocatorsWeakness'.]
+- **A Resilient Profitability Engine:** [Explain how management's 'capitalAllocatorsStrength' reinforces the 'primaryMoatSource'.]
 
 ## 3. Potential Impairments to Long-Term Value
-- **Moat Sustainability Risks:** [Draft your analysis here using the extracted 'Moat Sustainability Risks'. If none were mentioned, state that.]
-- **Capital Allocation Red Flags:** [Draft your analysis here using the extracted 'Capital Allocation Red Flags'.]
+- **Identified Weaknesses:** [Summarize the 'capitalAllocatorsWeakness'. If none, state that.]
 
 ## 4. Final Verdict
-[Draft your final one-paragraph verdict here. Your justification MUST be based on the points made in the preceding sections. Your final sentence MUST follow the example format exactly, including bolding. For example: **A Good Business with Flaws** because its narrow moat and management's inconsistent M&A record do not meet the high standard of a 'wonderful business.']
-
----
-
-**Step 3: Self-Correction and Final Output**
-(Finally, review your draft from Step 2. Compare it against your list of extracted facts from Step 1. **Correct any statements in your draft that contradict the extracted facts or introduce outside information.** After making all necessary corrections, provide ONLY the final, fact-checked memo as your response. Do not include the Step 1 or Step 2 sections in your final output.)
+[Provide a final, one-paragraph verdict. Your final sentence MUST follow the example format exactly, including bolding. For example: **A Good Business with Flaws** because its narrow moat and management's inconsistent M&A record do not meet the high standard of a 'wonderful business.']
 `.trim();
 
 // --- NEW EXTRACTION & SYNTHESIS PROMPTS (VERSION 2.0) ---
