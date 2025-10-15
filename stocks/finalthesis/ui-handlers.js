@@ -1073,7 +1073,7 @@ export async function handleCompounderMemoRequest(symbol, forceNew = false) {
 
         openModal(CONSTANTS.MODAL_LOADING);
         const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
-        loadingMessage.textContent = "Gathering prerequisite reports for Compounder Memo...";
+        loadingMessage.textContent = "Gathering and extracting prerequisite reports...";
 
         const moatReports = getReportsFromCache(symbol, 'MoatAnalysis');
         const capitalReports = getReportsFromCache(symbol, 'CapitalAllocators');
@@ -1082,14 +1082,26 @@ export async function handleCompounderMemoRequest(symbol, forceNew = false) {
             throw new Error("The 'Moat Analysis' and 'Capital Allocators' reports must be generated first.");
         }
 
+        const extractedMoatData = await extractSynthesisData(moatReports[0].content, 'MoatAnalysis');
+        const extractedCapitalData = await extractSynthesisData(capitalReports[0].content, 'CapitalAllocators');
+
+        if (!extractedMoatData || !extractedCapitalData) {
+            throw new Error("Failed to extract key data from prerequisite reports. Please try regenerating them.");
+        }
+
+        const payload = {
+            moatAnalysis: extractedMoatData,
+            capitalAllocators: extractedCapitalData
+        };
+
+        loadingMessage.textContent = "Synthesizing Compounder Memo...";
         const profile = state.portfolioCache.find(s => s.ticker === symbol);
         const companyName = profile ? profile.companyName : symbol;
 
         const prompt = promptConfig.prompt
             .replace(/{companyName}/g, companyName)
             .replace(/{tickerSymbol}/g, symbol)
-            .replace('{moatAnalysisReport}', moatReports[0].content)
-            .replace('{capitalAllocatorsReport}', capitalReports[0].content);
+            .replace('{jsonData}', JSON.stringify(payload, null, 2));
 
         const memoContent = await generateRefinedArticle(prompt, loadingMessage);
         const synthesisData = await extractSynthesisData(memoContent, reportType);
