@@ -261,25 +261,21 @@ You are a Senior Investment Analyst at a GARP-focused fund. Your task is to synt
 
 **5. Market Sentiment Memo:**
 {marketSentimentMemo}
-
-**6. Investigation Summary (from Manual Diligence):**
-{investigationSummaryMemo}
 ---
 
 # Investment Memo: {companyName} ({tickerSymbol})
 
 ## 1. Executive Summary & Investment Thesis
-[Your 3-4 sentence paragraph here, summarizing the investment thesis by synthesizing the initial candidacy report with the findings from all diligence memos, including the investigation summary.]
+[Your 3-4 sentence paragraph here, summarizing the investment thesis by synthesizing the initial candidacy report with the findings from the diligence memos.]
 
 ## 2. The Bull Case: Why We Could Be Right
 - **Business Quality & Moat (from Qualitative Memo):** [Your analysis here.]
 - **Financial Strength & Growth (from Structured Memo):** [Your analysis here.]
-- **Investigative Findings (from Investigation Summary):** [Your analysis here, incorporating the "Key Bullish Findings" from the summary memo as primary evidence.]
+- **Market Confirmation (from Market Sentiment Memo):** [Your analysis here.]
 - **Scorecard Validation:** [Your analysis here, proving the bull case with specific, quantifiable data points from the scorecard.]
 
 ## 3. The Bear Case: What Could Go Wrong
-- **Key Risks (from Diligence Memos):** [Your analysis here, synthesizing the top 2-3 risks from the Qualitative, Structured, and Market Sentiment memos.]
-- **Investigative Findings (from Investigation Summary):** [Your analysis here, incorporating the "Key Bearish Findings & Unanswered Questions" from the summary memo as primary evidence.]
+- **Key Risks (from all Memos):** [Your analysis here, synthesizing the top 2-3 risks.]
 - **Scorecard Validation:** [Your analysis here, quantifying the risks with the weakest data points from the scorecard.]
 
 ## 4. Valuation: The GARP Fulcrum
@@ -290,7 +286,7 @@ You are a Senior Investment Analyst at a GARP-focused fund. Your task is to synt
 
 **Add to Watchlist**
 
-(Your 4-5 sentence justification here, explicitly referencing the trade-offs and tensions revealed by synthesizing all reports, including the investigation summary, and the quantitative scorecard.)
+(Your 4-5 sentence justification here, explicitly referencing the trade-offs and tensions revealed by synthesizing the reports and the quantitative scorecard.)
 `.trim();
 
 const PORTFOLIO_GARP_ANALYSIS_PROMPT = `
@@ -772,15 +768,24 @@ const FINAL_INVESTMENT_THESIS_PROMPT = `
 Role: You are the Chief Investment Officer of a multi-strategy fund. Your task is to synthesize four separate analyst reports on {companyName} into a final, decisive investment thesis. Your analysis must be objective and based exclusively on the provided inputs.
 
 ---
-**CRITICAL INSTRUCTION: Your final output MUST use the exact markdown structure, headings, and table format provided below. Do not deviate.**
+**CRITICAL INSTRUCTIONS & DEFINITIONS:**
+1.  **Source of Truth:** Your analysis MUST be based on the quantitative **GARP Conviction Score** and the qualitative **Analyst Summaries**. These are your primary inputs.
+2.  **Output Format:** Your final output MUST use the exact markdown structure, headings, and table format provided below. Do not deviate.
+3.  **Grading Scale (for your final recommendation):**
+    * **A (High Conviction Buy):** A top-tier GARP idea. Suggested 4-5% portfolio allocation for a full-size position.
+    * **B (Strong Buy):** A solid idea that merits a starter position. Suggested 2-3% portfolio allocation.
+    * **C (Hold / Add on Weakness):** A good company at a questionable price. Suggested 1% allocation for a small tracking position.
+    * **D (Hold / Monitor):** For existing positions only. No new capital should be allocated.
+    * **F (Sell / Pass):** A clear avoidance. The risk/reward is unfavorable.
 ---
 
 **INPUTS FOR ANALYSIS:**
 
-**1. GARP Memo:** {garpMemo}
-**2. QARP Analysis:** {qarpAnalysisReport}
-**3. Long-Term Compounder Memo:** {longTermCompounderMemo}
-**4. BMQV Memo:** {bmqvMemo}
+**1. Quantitative Anchor:**
+* **GARP Conviction Score:** {garpScore}
+
+**2. Qualitative Analyst Summaries (JSON):**
+{analystSummaries}
 
 ---
 **YOUR TASK (Strict Output Format):**
@@ -788,27 +793,28 @@ Role: You are the Chief Investment Officer of a multi-strategy fund. Your task i
 # Final Investment Thesis: {companyName} ({tickerSymbol})
 
 ## 1. Summary of Analyst Verdicts
-(First, you MUST complete this summary table by extracting the final verdict from each of the four input memos. Do NOT alter the structure of this table.)
+(First, you MUST complete this summary table by extracting the final verdict from the provided JSON data. Do NOT alter the structure of this table.)
 
 | Analyst Memo | Final Verdict |
 | :--- | :--- |
-| **GARP Memo** | [Extract the "Recommendation" field] |
-| **QARP Analysis** | [Extract the final "verdict" field] |
-| **Long-Term Compounder**| [Extract the final "Verdict" classification] |
-| **BMQV Memo** | [Extract the final "Verdict" classification] |
+| **GARP Memo** | [Extract the "verdict" field] |
+| **QARP Analysis** | [Extract the "verdict" field] |
+| **Long-Term Compounder**| [Extract the "verdict" field] |
+| **BMQV Memo** | [Extract the "verdict" field] |
 
-## 2. The Core Debate: Identifying the Conflict
-(In one paragraph, analyze the completed table above to identify the central point of agreement or disagreement. State the conflict clearly.)
+## 2. The Core Narrative: Identifying the Theme
+(In one paragraph, analyze the completed table and the analyst summaries to identify the central, unifying theme. Instead of seeking conflict, find the consensus. What is the consistent story these reports are telling about the business?)
 
 ## 3. Weighing the Evidence & Final Recommendation
-(In one or two paragraphs, resolve the conflict you identified in the previous section. Weigh the evidence from the different perspectives. Your reasoning here must be logical and lead directly to your final recommendation.)
+(In one or two paragraphs, build a case for your final recommendation. Start with the quantitative GARP Score as your anchor. Then, use the qualitative analyst summaries to add color and context to that score, explaining how the qualitative findings either strengthen or temper the quantitative result.)
 
 ### Recommendation
-(Provide the recommendation and justification. Your response for this section MUST follow the format below exactly, including the bolding.)
+(Your response for this section MUST follow the format below exactly, including the bolding.)
 
-**Add to Watchlist**
+**Recommendation Grade:** [Assign a letter grade from the scale defined above.]
+**Suggested Allocation:** [State the corresponding allocation percentage from the scale.]
 
-(Your one-sentence justification summarizing your conclusion goes here.)
+(Your one-sentence justification summarizing your conclusion goes here. It must be consistent with the grade and your analysis.)
 
 ## 4. Implications for Portfolio Management
 (Based on your final recommendation, provide a brief, actionable interpretation for both scenarios below.)
@@ -898,12 +904,12 @@ Task: Based ONLY on the provided Question & Answer pairs, fill in the template b
 
 const INVESTIGATION_SUMMARY_MEMO_PROMPT = `
 Role: You are an investment analyst AI specializing in synthesizing research notes.
-Task: Your sole job is to read the unstructured, manually-entered Question & Answer pairs from the diligence log and synthesize them into a professional "Investigation Summary Memo." This memo is an intermediary document, designed to be read by another AI, so clarity and structure are paramount.
+Task: Your sole job is to read the unstructured, manually-entered Question & Answer pairs from the diligence log and synthesize them into a professional "Investigation Summary Memo." Your goal is to identify the most critical findings and present them clearly.
 
 ---
 **CRITICAL INSTRUCTIONS:**
 1.  **Source Limitation:** Your entire analysis MUST be derived *exclusively* from the provided 'Diligence Log (Q&A Data)'.
-2.  **Strict Output Format:** You MUST use the exact markdown structure below. This is not optional.
+2.  **No External Data:** Do NOT add any facts, figures, names, or details that are not explicitly mentioned in the source Q&A. Your task is to synthesize, not to augment with outside knowledge.
 ---
 
 **Diligence Log (Q&A Data):**
@@ -911,14 +917,14 @@ Task: Your sole job is to read the unstructured, manually-entered Question & Ans
 
 # Investigation Summary Memo: {companyName} ({tickerSymbol})
 
-## Synthesis of Findings
+## 1. Executive Summary of Findings
 (In one concise paragraph, summarize the most important theme or conclusion that emerges from the Q&A log. What is the single most critical insight an investor would gain from this manual research?)
 
-## Key Bullish Findings
-(Create a bulleted list summarizing the key positive points, discoveries, or confirmations from the Q&A log that support an investment thesis.)
+## 2. Key Bullish Findings
+(Create a bulleted list summarizing the key positive points, discoveries, or confirmations from the Q&A log.)
 
-## Key Bearish Findings & Unanswered Questions
-(Create a bulleted list summarizing the most significant risks, negative findings, or remaining unanswered questions identified in the Q&A log that challenge an investment thesis.)
+## 3. Key Bearish Findings & Unanswered Questions
+(Create a bulleted list summarizing the most significant risks, negative findings, or remaining unanswered questions identified in the Q&A log.)
 `.trim();
 
 
