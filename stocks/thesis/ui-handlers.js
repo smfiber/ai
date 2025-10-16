@@ -999,8 +999,7 @@ export async function handleGarpMemoRequest(symbol, forceNew = false) {
             'GarpCandidacy': 'GARP Candidacy Report',
             'StructuredDiligenceMemo': 'Structured Diligence Memo',
             'QualitativeDiligenceMemo': 'Qualitative Diligence Memo',
-            'MarketSentimentMemo': 'Market Sentiment Memo',
-            'InvestigationSummaryMemo': 'Investigation Summary Memo'
+            'MarketSentimentMemo': 'Market Sentiment Memo'
         };
 
         const fetchedMemos = {};
@@ -1008,7 +1007,7 @@ export async function handleGarpMemoRequest(symbol, forceNew = false) {
         for (const [type, name] of Object.entries(requiredMemos)) {
             const reports = getReportsFromCache(symbol, type);
             if (reports.length === 0) {
-                throw new Error(`The foundational '${name}' has not been generated yet. Please generate it from the 'AI Analysis' or 'Diligence Hub' tab first.`);
+                throw new Error(`The foundational '${name}' has not been generated yet. Please generate it from the 'Diligence Hub' or 'Dashboard' tab first.`);
             }
             fetchedMemos[type] = reports[0].content;
         }
@@ -1027,8 +1026,7 @@ export async function handleGarpMemoRequest(symbol, forceNew = false) {
             .replace('{garpCandidacyReport}', fetchedMemos.GarpCandidacy)
             .replace('{structuredDiligenceMemo}', fetchedMemos.StructuredDiligenceMemo)
             .replace('{qualitativeDiligenceMemo}', fetchedMemos.QualitativeDiligenceMemo)
-            .replace('{marketSentimentMemo}', fetchedMemos.MarketSentimentMemo)
-            .replace('{investigationSummaryMemo}', fetchedMemos.InvestigationSummaryMemo);
+            .replace('{marketSentimentMemo}', fetchedMemos.MarketSentimentMemo);
 
         const memoContent = await generateRefinedArticle(prompt, loadingMessage);
         const synthesisData = await extractSynthesisData(memoContent, reportType);
@@ -1208,9 +1206,15 @@ export async function handleFinalThesisRequest(symbol, forceNew = false) {
         const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
         
         loadingMessage.textContent = "Gathering prerequisite analyst summaries...";
+
+        const portfolioStock = state.portfolioCache.find(s => s.ticker === symbol);
+        const garpScore = portfolioStock ? portfolioStock.garpConvictionScore : 'N/A';
+        if (garpScore === 'N/A') {
+            throw new Error("GARP Conviction Score not found. Please generate the GARP Candidacy report first.");
+        }
+
         const requiredReportTypes = ['InvestmentMemo', 'QarpAnalysis', 'LongTermCompounder', 'BmqvMemo'];
         const analystSummaries = {};
-        const requiredReports = {};
 
         for (const type of requiredReportTypes) {
             const reports = getReportsFromCache(symbol, type);
@@ -1218,17 +1222,11 @@ export async function handleFinalThesisRequest(symbol, forceNew = false) {
                 throw new Error(`The prerequisite '${ANALYSIS_NAMES[type]}' has not been generated yet.`);
             }
             const reportData = reports[0];
-            if (type !== 'MarketSentimentMemo' && !reportData.synthesis_data) {
-                console.warn(`Report type ${type} is missing synthesis data. Analysis may be incomplete.`);
+            if (!reportData.synthesis_data) {
+                throw new Error(`Synthesis data is missing for the '${ANALYSIS_NAMES[type]}' report. Please regenerate it.`);
             }
-            analystSummaries[type] = reportData.synthesis_data || { verdict: 'Data not available' };
-            requiredReports[type] = reportData;
+            analystSummaries[type] = reportData.synthesis_data;
         }
-
-        loadingMessage.textContent = "AI is identifying the core conflict...";
-        const conflictPromptConfig = promptMap['FinalThesis_ConflictID'];
-        const conflictPrompt = conflictPromptConfig.prompt.replace('{jsonData}', JSON.stringify(analystSummaries, null, 2));
-        const coreConflict = await callGeminiApi(conflictPrompt);
 
         loadingMessage.textContent = "Synthesizing final thesis...";
         const profile = state.portfolioCache.find(s => s.ticker === symbol);
@@ -1237,12 +1235,8 @@ export async function handleFinalThesisRequest(symbol, forceNew = false) {
         const finalPrompt = promptConfig.prompt
             .replace(/{companyName}/g, companyName)
             .replace(/{tickerSymbol}/g, symbol)
-            .replace('{coreConflict}', coreConflict)
-            .replace('{analystSummaries}', JSON.stringify(analystSummaries, null, 2))
-            .replace('{garpMemo}', requiredReports.InvestmentMemo.content)
-            .replace('{qarpAnalysisReport}', requiredReports.QarpAnalysis.content)
-            .replace('{longTermCompounderMemo}', requiredReports.LongTermCompounder.content)
-            .replace('{bmqvMemo}', requiredReports.BmqvMemo.content);
+            .replace('{garpScore}', garpScore)
+            .replace('{analystSummaries}', JSON.stringify(analystSummaries, null, 2));
 
         const memoContent = await generateRefinedArticle(finalPrompt, loadingMessage);
         await autoSaveReport(symbol, reportType, memoContent, finalPrompt);
