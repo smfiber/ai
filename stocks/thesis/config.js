@@ -1027,7 +1027,7 @@ export const promptMap = {
         requires: []
     },
     'GarpCandidacy': {
-        prompt: GARP_CANDIDacy_PROMPT,
+        prompt: GARP_CANDIDACY_PROMPT,
         requires: [] // This analysis calculates its own data, doesn't need pre-filtered FMP endpoints
     },
     'GarpConvictionScore': {
