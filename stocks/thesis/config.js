@@ -261,21 +261,25 @@ You are a Senior Investment Analyst at a GARP-focused fund. Your task is to synt
 
 **5. Market Sentiment Memo:**
 {marketSentimentMemo}
+
+**6. Investigation Summary (from Manual Diligence):**
+{investigationSummaryMemo}
 ---
 
 # Investment Memo: {companyName} ({tickerSymbol})
 
 ## 1. Executive Summary & Investment Thesis
-[Your 3-4 sentence paragraph here, summarizing the investment thesis by synthesizing the initial candidacy report with the findings from the diligence memos.]
+[Your 3-4 sentence paragraph here, summarizing the investment thesis by synthesizing the initial candidacy report with the findings from all diligence memos, including the investigation summary.]
 
 ## 2. The Bull Case: Why We Could Be Right
 - **Business Quality & Moat (from Qualitative Memo):** [Your analysis here.]
 - **Financial Strength & Growth (from Structured Memo):** [Your analysis here.]
-- **Market Confirmation (from Market Sentiment Memo):** [Your analysis here.]
+- **Investigative Findings (from Investigation Summary):** [Your analysis here, incorporating the "Key Bullish Findings" from the summary memo as primary evidence.]
 - **Scorecard Validation:** [Your analysis here, proving the bull case with specific, quantifiable data points from the scorecard.]
 
 ## 3. The Bear Case: What Could Go Wrong
-- **Key Risks (from all Memos):** [Your analysis here, synthesizing the top 2-3 risks.]
+- **Key Risks (from Diligence Memos):** [Your analysis here, synthesizing the top 2-3 risks from the Qualitative, Structured, and Market Sentiment memos.]
+- **Investigative Findings (from Investigation Summary):** [Your analysis here, incorporating the "Key Bearish Findings & Unanswered Questions" from the summary memo as primary evidence.]
 - **Scorecard Validation:** [Your analysis here, quantifying the risks with the weakest data points from the scorecard.]
 
 ## 4. Valuation: The GARP Fulcrum
@@ -286,7 +290,7 @@ You are a Senior Investment Analyst at a GARP-focused fund. Your task is to synt
 
 **Add to Watchlist**
 
-(Your 4-5 sentence justification here, explicitly referencing the trade-offs and tensions revealed by synthesizing the reports and the quantitative scorecard.)
+(Your 4-5 sentence justification here, explicitly referencing the trade-offs and tensions revealed by synthesizing all reports, including the investigation summary, and the quantitative scorecard.)
 `.trim();
 
 const PORTFOLIO_GARP_ANALYSIS_PROMPT = `
@@ -894,12 +898,12 @@ Task: Based ONLY on the provided Question & Answer pairs, fill in the template b
 
 const INVESTIGATION_SUMMARY_MEMO_PROMPT = `
 Role: You are an investment analyst AI specializing in synthesizing research notes.
-Task: Your sole job is to read the unstructured, manually-entered Question & Answer pairs from the diligence log and synthesize them into a professional "Investigation Summary Memo." Your goal is to identify the most critical findings and present them clearly.
+Task: Your sole job is to read the unstructured, manually-entered Question & Answer pairs from the diligence log and synthesize them into a professional "Investigation Summary Memo." This memo is an intermediary document, designed to be read by another AI, so clarity and structure are paramount.
 
 ---
 **CRITICAL INSTRUCTIONS:**
 1.  **Source Limitation:** Your entire analysis MUST be derived *exclusively* from the provided 'Diligence Log (Q&A Data)'.
-2.  **No External Data:** Do NOT add any facts, figures, names, or details that are not explicitly mentioned in the source Q&A. Your task is to synthesize, not to augment with outside knowledge.
+2.  **Strict Output Format:** You MUST use the exact markdown structure below. This is not optional.
 ---
 
 **Diligence Log (Q&A Data):**
@@ -907,14 +911,14 @@ Task: Your sole job is to read the unstructured, manually-entered Question & Ans
 
 # Investigation Summary Memo: {companyName} ({tickerSymbol})
 
-## 1. Executive Summary of Findings
+## Synthesis of Findings
 (In one concise paragraph, summarize the most important theme or conclusion that emerges from the Q&A log. What is the single most critical insight an investor would gain from this manual research?)
 
-## 2. Key Bullish Findings
-(Create a bulleted list summarizing the key positive points, discoveries, or confirmations from the Q&A log.)
+## Key Bullish Findings
+(Create a bulleted list summarizing the key positive points, discoveries, or confirmations from the Q&A log that support an investment thesis.)
 
-## 3. Key Bearish Findings & Unanswered Questions
-(Create a bulleted list summarizing the most significant risks, negative findings, or remaining unanswered questions identified in the Q&A log.)
+## Key Bearish Findings & Unanswered Questions
+(Create a bulleted list summarizing the most significant risks, negative findings, or remaining unanswered questions identified in the Q&A log that challenge an investment thesis.)
 `.trim();
 
 
@@ -1023,7 +1027,7 @@ export const promptMap = {
         requires: []
     },
     'GarpCandidacy': {
-        prompt: GARP_CANDIDACY_PROMPT,
+        prompt: GARP_CANDIDacy_PROMPT,
         requires: [] // This analysis calculates its own data, doesn't need pre-filtered FMP endpoints
     },
     'GarpConvictionScore': {
