@@ -999,7 +999,8 @@ export async function handleGarpMemoRequest(symbol, forceNew = false) {
             'GarpCandidacy': 'GARP Candidacy Report',
             'StructuredDiligenceMemo': 'Structured Diligence Memo',
             'QualitativeDiligenceMemo': 'Qualitative Diligence Memo',
-            'MarketSentimentMemo': 'Market Sentiment Memo'
+            'MarketSentimentMemo': 'Market Sentiment Memo',
+            'InvestigationSummaryMemo': 'Investigation Summary Memo'
         };
 
         const fetchedMemos = {};
@@ -1007,7 +1008,7 @@ export async function handleGarpMemoRequest(symbol, forceNew = false) {
         for (const [type, name] of Object.entries(requiredMemos)) {
             const reports = getReportsFromCache(symbol, type);
             if (reports.length === 0) {
-                throw new Error(`The foundational '${name}' has not been generated yet. Please generate it from the 'Diligence Hub' or 'Dashboard' tab first.`);
+                throw new Error(`The foundational '${name}' has not been generated yet. Please generate it from the 'AI Analysis' or 'Diligence Hub' tab first.`);
             }
             fetchedMemos[type] = reports[0].content;
         }
@@ -1026,7 +1027,8 @@ export async function handleGarpMemoRequest(symbol, forceNew = false) {
             .replace('{garpCandidacyReport}', fetchedMemos.GarpCandidacy)
             .replace('{structuredDiligenceMemo}', fetchedMemos.StructuredDiligenceMemo)
             .replace('{qualitativeDiligenceMemo}', fetchedMemos.QualitativeDiligenceMemo)
-            .replace('{marketSentimentMemo}', fetchedMemos.MarketSentimentMemo);
+            .replace('{marketSentimentMemo}', fetchedMemos.MarketSentimentMemo)
+            .replace('{investigationSummaryMemo}', fetchedMemos.InvestigationSummaryMemo);
 
         const memoContent = await generateRefinedArticle(prompt, loadingMessage);
         const synthesisData = await extractSynthesisData(memoContent, reportType);
