@@ -107,7 +107,7 @@ async function handleScorecardEdit(target) {
         renderGarpInterpretationAnalysis(garpScorecardContainer, _calculateGarpScorecardMetrics(fmpData));
         
         // Also regenerate the AI candidacy report to reflect the new numbers
-        handleGarpCandidacyRequest(ticker, true);
+        // handleGarpCandidacyRequest(ticker, true);
 
         // Cleanup
         input.remove();
