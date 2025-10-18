@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GARP Research Hub</title>
-    
+
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -17,7 +17,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    
+
     <link rel="stylesheet" href="style.css">
     <link rel="icon" href="data:,">
 </head>
@@ -104,13 +104,13 @@
                                 </svg>
                             </button>
                         </h2>
-                        
+
                         <div class="mb-4">
                             <button id="analyze-portfolio-garp-button" data-report-type="PortfolioGarpAnalysis" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors">
                                 Analyze Portfolio with AI
                             </button>
                         </div>
-                        
+
                         <div id="portfolio-garp-ai-summary-container" class="prose prose-sm max-w-none mb-4"></div>
                         <div id="portfolio-garp-breakdown-container" class="mb-4"></div>
 
@@ -133,7 +133,7 @@
             </div>
 
         </main>
-        
+
         <button id="manage-all-stocks-button" class="fixed w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-transform duration-200 hover:scale-110 bg-indigo-600 hover:bg-indigo-700 text-white z-30" style="bottom: 2rem; right: 2rem;" title="Manage All Stocks">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
@@ -178,7 +178,7 @@
             </form>
         </div>
     </div>
-    
+
     <div id="loadingStateModal" class="fixed inset-0 z-[110] flex-col items-center justify-center p-4 modal">
         <div class="absolute inset-0 bg-gray-900 bg-opacity-75"></div>
         <div class="relative flex flex-col items-center text-center text-white w-full max-w-md">
@@ -197,7 +197,7 @@
     </div>
     <div id="messageModal" class="fixed inset-0 z-[110] items-center justify-center p-4 modal"><div class="absolute inset-0 bg-gray-900 bg-opacity-75"></div><div class="relative modal-content"></div></div>
     <div id="confirmationModal" class="fixed inset-0 z-[110] items-center justify-center p-4 modal"><div class="absolute inset-0 bg-gray-900 bg-opacity-75"></div><div class="relative bg-white rounded-2xl shadow-lg border border-gray-200 p-8 w-full max-w-sm m-4 text-center"><h2 id="confirmation-title" class="text-2xl font-bold mb-4 text-yellow-600">Are you sure?</h2><p id="confirmation-message" class="mb-6 text-gray-500">This action cannot be undone.</p><div class="flex justify-center gap-4"><button id="cancel-button" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-5 rounded-lg w-full">Cancel</button><button id="confirm-button" class="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-5 rounded-lg w-full">Confirm</button></div></div></div>
-    
+
     <div id="portfolioManagerModal" class="fixed inset-0 z-[102] items-center justify-center p-4 modal">
         <div class="absolute inset-0 bg-gray-900 bg-opacity-75" id="close-portfolio-manager-modal-bg"></div>
         <div class="relative bg-white rounded-2xl shadow-lg border border-gray-200 flex flex-col w-full max-w-2xl h-full max-h-[90vh] m-4">
@@ -254,7 +254,7 @@
                             </button>
                         </div>
                     </div>
-                    
+
                     <div class="border-t pt-4">
                         <div class="flex justify-between items-center mb-2">
                              <label class="block text-sm font-medium text-gray-700">Purchase Lots / Dividends</label>
@@ -333,11 +333,62 @@
                 </div>
 
                 <div id="ai-analysis-tab" class="tab-content hidden p-6">
-                    <div id="analysis-content-container" class="border-b pb-4 mb-4"></div>
+                    <div id="analysis-content-container" class="space-y-8 text-center bg-gray-50 p-4 rounded-lg border-b pb-4 mb-4">
+
+                        <div class="p-4 bg-white rounded-lg border shadow-sm">
+                            <div class="flex justify-center items-center gap-2 mb-4">
+                                <h3 class="text-lg font-bold text-gray-800">Automated Workflow</h3>
+                            </div>
+                            <p class="text-sm text-gray-500 mb-4">Run the entire sequence of reports, from foundational analysis to the final thesis, in one click.</p>
+                            <div class="flex justify-center">
+                                <button id="run-full-workflow-button" data-symbol="" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg text-base shadow-md transition-transform hover:scale-105">
+                                    Run Full Analysis Workflow
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="p-4 bg-white rounded-lg border shadow-sm">
+                            <h3 class="text-lg font-bold text-gray-800 mb-4">Step 1: Foundational Analysis</h3>
+                            <p class="text-sm text-gray-500 mb-4">Generate these core reports first. They are the building blocks for the synthesis memos.</p>
+                            <div class="flex flex-wrap gap-4 justify-center">
+                                </div>
+                        </div>
+
+                        <div class="p-4 bg-white rounded-lg border shadow-sm">
+                            <div class="flex justify-center items-center gap-2 mb-4">
+                                <h3 class="text-lg font-bold text-gray-800">Step 2: Synthesis Memos</h3>
+                            </div>
+                             <p class="text-sm text-gray-500 mb-4">Synthesize the foundational reports into different analytical frameworks.</p>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                </div>
+                        </div>
+
+                        <div class="p-4 bg-white rounded-lg border shadow-sm">
+                            <div class="flex justify-center items-center gap-2 mb-4">
+                                <h3 class="text-lg font-bold text-gray-800">Step 3: The Final Verdict</h3>
+                            </div>
+                             <p class="text-sm text-gray-500 mb-4">Combine all synthesis memos into a single, definitive investment thesis. Then, refine it with your latest diligence.</p>
+                            <div class="flex justify-center flex-wrap gap-4">
+                                <div class="relative flex items-center gap-2">
+                                    <button data-symbol="" id="final-thesis-button" data-report-type="FinalInvestmentThesis" class="ai-analysis-button bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg text-sm flex-grow">Final Thesis</button>
+                                    <button type="button" class="copy-report-btn p-2 rounded-full bg-gray-200 hover:bg-gray-300" data-report-type="FinalInvestmentThesis" title="Copy Latest Report to Clipboard">
+                                        <svg class="w-5 h-5 text-gray-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125H4.875A1.125 1.125 0 013.75 20.625V7.875c0-.621.504-1.125 1.125-1.125H6.75m9 9.375h3.375c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125h-9.75A1.125 1.125 0 006 9.375v9.75c0 .621.504 1.125 1.125 1.125h3.375m-3.75-9.375V6.125c0-.621.504-1.125 1.125-1.125h9.75c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-3.375" /></svg>
+                                    </button>
+                                </div>
+                                 <div class="relative flex items-center gap-2">
+                                    <button data-symbol="" id="updated-final-thesis-button" data-report-type="UpdatedFinalThesis" class="ai-analysis-button bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-lg text-sm flex-grow">Update with Diligence</button>
+                                    <button type="button" class="copy-report-btn p-2 rounded-full bg-gray-200 hover:bg-gray-300" data-report-type="UpdatedFinalThesis" title="Copy Latest Updated Report to Clipboard">
+                                        <svg class="w-5 h-5 text-gray-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125H4.875A1.125 1.125 0 013.75 20.625V7.875c0-.621.504-1.125 1.125-1.125H6.75m9 9.375h3.375c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125h-9.75A1.125 1.125 0 006 9.375v9.75c0 .621.504 1.125 1.125 1.125h3.375m-3.75-9.375V6.125c0-.621.504-1.125 1.125-1.125h9.75c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-3.375" /></svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
                     <div id="report-status-container-analysis" class="hidden p-3 mb-4 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between gap-4"></div>
                     <div id="ai-article-container-analysis" class="prose max-w-none"></div>
                 </div>
-                
+
                 <div id="diligence-hub-tab" class="tab-content hidden p-6"></div>
 
                 <div id="ongoing-diligence-tab" class="tab-content hidden p-6 space-y-6"></div>
