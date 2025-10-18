@@ -1,7 +1,7 @@
 // fileName: ui-modals.js
 import { CONSTANTS, state, ANALYSIS_ICONS, SECTOR_KPI_SUGGESTIONS, QUALITATIVE_DILIGENCE_QUESTIONS, STRUCTURED_DILIGENCE_QUESTIONS, MARKET_SENTIMENT_QUESTIONS } from './config.js';
 import { getFmpStockData, getGroupedFmpData } from './api.js';
-import { renderValuationHealthDashboard, _renderGroupedStockList, renderPortfolioManagerList, renderGarpScorecardDashboard, renderGarpInterpretationAnalysis, updateGarpCandidacyStatus, renderCandidacyAnalysis, renderGarpAnalysisSummary, renderDiligenceLog, renderPeerComparisonTable, renderOngoingReviewLog } from './ui-render.js'; 
+import { renderValuationHealthDashboard, _renderGroupedStockList, renderPortfolioManagerList, renderGarpScorecardDashboard, renderGarpInterpretationAnalysis, updateGarpCandidacyStatus, renderCandidacyAnalysis, renderGarpAnalysisSummary, renderDiligenceLog, renderPeerComparisonTable, renderOngoingReviewLog } from './ui-render.js';
 import { getSavedReports } from './ui-handlers.js';
 
 // --- GENERIC MODAL HELPERS ---
@@ -122,7 +122,7 @@ export function openManageStockModal(stockData) {
     document.getElementById('manage-stock-sector').value = stockData.sector || 'N/A';
     document.getElementById('manage-stock-industry').value = stockData.industry || 'N/A';
     document.getElementById('manage-stock-status').value = stockData.status || 'Portfolio';
-    
+
     const deleteButton = document.getElementById('delete-stock-button');
     deleteButton.style.display = stockData.isEditMode ? 'block' : 'none';
 
@@ -164,13 +164,14 @@ export function openManageStockModal(stockData) {
     if (stockData.transactions && stockData.transactions.length > 0) {
         stockData.transactions.forEach(addTransactionRow);
     } else if (stockData.purchaseDate || stockData.shares || stockData.costPerShare) {
-        addTransactionRow({ 
-            date: stockData.purchaseDate, 
-            shares: stockData.shares, 
-            costPerShare: stockData.costPerShare 
+        // Handle legacy single transaction format if present
+        addTransactionRow({
+            date: stockData.purchaseDate,
+            shares: stockData.shares,
+            costPerShare: stockData.costPerShare
         });
     } else {
-        addTransactionRow();
+        addTransactionRow(); // Start with one blank row for new stocks
     }
 
     transactionContainer.addEventListener('click', (e) => {
@@ -178,13 +179,13 @@ export function openManageStockModal(stockData) {
             e.target.closest('.transaction-row').remove();
         }
     });
-    
+
     // Use cloneNode to prevent multiple listeners from being attached
     const addButton = document.getElementById('add-transaction-button');
     const newAddButton = addButton.cloneNode(true);
     addButton.parentNode.replaceChild(newAddButton, addButton);
     newAddButton.addEventListener('click', () => addTransactionRow());
-    
+
     openModal(CONSTANTS.MODAL_MANAGE_STOCK);
 }
 
@@ -224,7 +225,7 @@ export async function openStockListModal(listType) {
                 return { ...stock, fmpData }; // Combine portfolio data with FMP data
             })
         );
-        
+
         // Render the fully populated list
         await _renderGroupedStockList(contentContainer, stocksWithData, listType);
 
@@ -265,7 +266,7 @@ function _resetAnalysisModal() {
             el.innerHTML = content;
         }
     };
-    
+
     state.reportCache = []; // Clear the local report cache
 
     // Clear all content areas to their initial state
@@ -280,13 +281,13 @@ function _resetAnalysisModal() {
     safeClear('peer-analysis-section-container');
     safeClear('valuation-health-container');
     safeClear('ai-garp-summary-container');
-    
+
     const statusContainer = document.getElementById('report-status-container-analysis');
     if (statusContainer) {
         statusContainer.innerHTML = '';
         statusContainer.classList.add('hidden');
     }
-    
+
     // Reset tabs to default view
     document.querySelectorAll('#rawDataViewerModal .tab-content').forEach(c => c.classList.add('hidden'));
     document.querySelectorAll('#rawDataViewerModal .tab-button').forEach(b => {
@@ -298,7 +299,7 @@ function _resetAnalysisModal() {
     if (positionAnalysisTabButton) {
         positionAnalysisTabButton.classList.add('hidden');
     }
-    
+
     const dashboardTab = document.getElementById('dashboard-tab');
     if (dashboardTab) {
         dashboardTab.classList.remove('hidden');
@@ -341,11 +342,12 @@ export async function openRawDataViewer(ticker) {
         const garpScorecardContainer = document.getElementById('garp-scorecard-container');
         const positionAnalysisTabButton = document.querySelector('.tab-button[data-tab="position-analysis"]');
         const peerAnalysisContainer = document.getElementById('peer-analysis-section-container');
+        const analysisContentContainer = document.getElementById('analysis-content-container'); // Need this container
 
         // 3. THEN, FETCH THE NEW DATA
         const fmpDataPromise = getFmpStockData(ticker);
         const groupedDataPromise = getGroupedFmpData(ticker);
-        
+
         // --- NEW: Pre-fetch all reports for the ticker and populate the cache ---
         const reportsRef = state.db.collection(CONSTANTS.DB_COLLECTION_AI_REPORTS).where("ticker", "==", ticker);
         const savedReportsPromise = reportsRef.get().then(snapshot => {
@@ -358,15 +360,15 @@ export async function openRawDataViewer(ticker) {
         const marketSentimentAnswersPromise = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(ticker).collection('diligence_answers').doc('MarketSentiment').get();
 
         const [
-            fmpData, 
-            groupedFmpData, 
+            fmpData,
+            groupedFmpData,
             allSavedReports,
             qualitativeSnap,
             structuredSnap,
             marketSentimentSnap
         ] = await Promise.all([
-            fmpDataPromise, 
-            groupedDataPromise, 
+            fmpDataPromise,
+            groupedDataPromise,
             savedReportsPromise,
             qualitativeAnswersPromise,
             structuredAnswersPromise,
@@ -381,7 +383,7 @@ export async function openRawDataViewer(ticker) {
             );
             return;
         }
-        
+
         // Filter reports from the now-populated local cache
         const savedReportTypes = new Set(allSavedReports.map(report => report.reportType));
         const savedCandidacyReports = allSavedReports
@@ -389,7 +391,7 @@ export async function openRawDataViewer(ticker) {
             .sort((a, b) => b.savedAt.toMillis() - a.savedAt.toMillis());
 
         const profile = fmpData.profile[0];
-        
+
         const getAnswersMap = (snap) => snap.exists ? new Map(snap.data().answers.map(item => [item.question, item.answer])) : new Map();
         const savedQualitativeAnswers = getAnswersMap(qualitativeSnap);
         const savedStructuredAnswers = getAnswersMap(structuredSnap);
@@ -417,7 +419,7 @@ export async function openRawDataViewer(ticker) {
                 <div id="position-analysis-report-container" class="prose max-w-none mt-6"></div>
             `;
         }
-        
+
         // --- RAW DATA TAB ---
         let rawDataAccordionHtml = '';
         if (groupedFmpData) {
@@ -444,12 +446,12 @@ export async function openRawDataViewer(ticker) {
             { reportType: 'StructuredDiligenceMemo', text: 'Structured Memo', tooltip: 'Synthesizes your answers on financial health.' },
             { reportType: 'MarketSentimentMemo', text: 'Market Sentiment', tooltip: 'Synthesizes analyst ratings, technicals, and factor scores.' },
         ];
-        
+
         const buildButtonHtml = (buttons) => buttons.map((btn) => {
              const hasSaved = savedReportTypes.has(btn.reportType) ? 'has-saved-report' : '';
              const icon = ANALYSIS_ICONS[btn.reportType] || '';
              const helpIconSvg = `<svg class="w-5 h-5 text-indigo-500 group-hover:text-indigo-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" /></svg>`;
-             
+
              return `<div class="relative group">
                          <button data-symbol="${ticker}" data-report-type="${btn.reportType}" class="ai-analysis-button analysis-tile ${hasSaved}" data-tooltip="${btn.tooltip}">
                              ${icon}
@@ -460,79 +462,77 @@ export async function openRawDataViewer(ticker) {
                          </button>
                      </div>`;
         }).join('');
-        
+
         const deepDiveHtml = buildButtonHtml(deepDiveButtons);
         const copyIconSvg = `<svg class="w-5 h-5 text-gray-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125H4.875A1.125 1.125 0 013.75 20.625V7.875c0-.621.504-1.125 1.125-1.125H6.75m9 9.375h3.375c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125h-9.75A1.125 1.125 0 006 9.375v9.75c0 .621.504 1.125 1.125 1.125h3.375m-3.75-9.375V6.125c0-.621.504-1.125 1.125-1.125h9.75c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-3.375" /></svg>`;
 
-        const buildSynthesisButton = (reportType, buttonId, text) => `
+        const buildSynthesisButton = (reportType, buttonId, text, bgColor = 'bg-indigo-600', hoverColor = 'hover:bg-indigo-700') => `
             <div class="relative flex items-center gap-2">
-                <button data-symbol="${ticker}" id="${buttonId}" data-report-type="${reportType}" class="ai-analysis-button bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg text-sm flex-grow">${text}</button>
+                <button data-symbol="${ticker}" id="${buttonId}" data-report-type="${reportType}" class="ai-analysis-button ${bgColor} ${hoverColor} text-white font-bold py-3 px-4 rounded-lg text-sm flex-grow">${text}</button>
                 <button type="button" class="copy-report-btn p-2 rounded-full bg-gray-200 hover:bg-gray-300" data-report-type="${reportType}" title="Copy Latest Report to Clipboard">
                     ${copyIconSvg}
                 </button>
             </div>
         `;
-        
+
         const compounderBtn = buildSynthesisButton('LongTermCompounder', 'long-term-compounder-button', 'Compounder Memo');
         const bmqvBtn = buildSynthesisButton('BmqvMemo', 'bmqv-memo-button', 'BMQV Memo');
         const garpMemoBtn = buildSynthesisButton('InvestmentMemo', 'garp-memo-button', 'GARP Memo');
         const qarpBtn = buildSynthesisButton('QarpAnalysis', 'qarp-analysis-button', 'QARP Memo');
         const finalThesisBtn = buildSynthesisButton('FinalInvestmentThesis', 'final-thesis-button', 'Final Thesis');
-        
-        aiAnalysisContainer.innerHTML = `
-            <div id="analysis-content-container" class="space-y-8 text-center bg-gray-50 p-4 rounded-lg border-b pb-4 mb-4">
-                
-                <div class="p-4 bg-white rounded-lg border shadow-sm">
-                    <div class="flex justify-center items-center gap-2 mb-4">
-                        <h3 class="text-lg font-bold text-gray-800">Automated Workflow</h3>
-                    </div>
-                    <p class="text-sm text-gray-500 mb-4">Run the entire sequence of reports, from foundational analysis to the final thesis, in one click.</p>
-                    <div class="flex justify-center">
-                        <button id="run-full-workflow-button" data-symbol="${ticker}" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg text-base shadow-md transition-transform hover:scale-105">
-                            Run Full Analysis Workflow
-                        </button>
-                    </div>
-                </div>
+        // --- NEW: Define Updated Final Thesis button ---
+        const updatedFinalThesisBtn = buildSynthesisButton('UpdatedFinalThesis', 'updated-final-thesis-button', 'Update with Diligence', 'bg-emerald-600', 'hover:bg-emerald-700');
 
-                <div class="p-4 bg-white rounded-lg border shadow-sm">
-                    <h3 class="text-lg font-bold text-gray-800 mb-4">Step 1: Foundational Analysis</h3>
-                    <p class="text-sm text-gray-500 mb-4">Generate these core reports first. They are the building blocks for the synthesis memos.</p>
-                    <div class="flex flex-wrap gap-4 justify-center">
-                        ${deepDiveHtml}
-                    </div>
+        // Populate the AI Analysis Tab container
+        analysisContentContainer.innerHTML = `
+            <div class="p-4 bg-white rounded-lg border shadow-sm">
+                <div class="flex justify-center items-center gap-2 mb-4">
+                    <h3 class="text-lg font-bold text-gray-800">Automated Workflow</h3>
                 </div>
-
-                <div class="p-4 bg-white rounded-lg border shadow-sm">
-                    <div class="flex justify-center items-center gap-2 mb-4">
-                        <h3 class="text-lg font-bold text-gray-800">Step 2: Synthesis Memos</h3>
-                    </div>
-                     <p class="text-sm text-gray-500 mb-4">Synthesize the foundational reports into different analytical frameworks.</p>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        ${compounderBtn}
-                        ${bmqvBtn}
-                        ${garpMemoBtn}
-                        ${qarpBtn}
-                    </div>
+                <p class="text-sm text-gray-500 mb-4">Run the entire sequence of reports, from foundational analysis to the final thesis, in one click.</p>
+                <div class="flex justify-center">
+                    <button id="run-full-workflow-button" data-symbol="${ticker}" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg text-base shadow-md transition-transform hover:scale-105">
+                        Run Full Analysis Workflow
+                    </button>
                 </div>
-
-                <div class="p-4 bg-white rounded-lg border shadow-sm">
-                    <div class="flex justify-center items-center gap-2 mb-4">
-                        <h3 class="text-lg font-bold text-gray-800">Step 3: The Final Verdict</h3>
-                    </div>
-                     <p class="text-sm text-gray-500 mb-4">Combine all synthesis memos into a single, definitive investment thesis.</p>
-                    <div class="flex justify-center flex-wrap gap-4">
-                        ${finalThesisBtn}
-                    </div>
-                </div>
-
             </div>
-            <div id="report-status-container-analysis" class="hidden p-3 mb-4 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between gap-4"></div>
-            <div id="ai-article-container-analysis" class="prose max-w-none"></div>
+
+            <div class="p-4 bg-white rounded-lg border shadow-sm">
+                <h3 class="text-lg font-bold text-gray-800 mb-4">Step 1: Foundational Analysis</h3>
+                <p class="text-sm text-gray-500 mb-4">Generate these core reports first. They are the building blocks for the synthesis memos.</p>
+                <div class="flex flex-wrap gap-4 justify-center">
+                    ${deepDiveHtml}
+                </div>
+            </div>
+
+            <div class="p-4 bg-white rounded-lg border shadow-sm">
+                <div class="flex justify-center items-center gap-2 mb-4">
+                    <h3 class="text-lg font-bold text-gray-800">Step 2: Synthesis Memos</h3>
+                </div>
+                 <p class="text-sm text-gray-500 mb-4">Synthesize the foundational reports into different analytical frameworks.</p>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    ${compounderBtn}
+                    ${bmqvBtn}
+                    ${garpMemoBtn}
+                    ${qarpBtn}
+                </div>
+            </div>
+
+            <div class="p-4 bg-white rounded-lg border shadow-sm">
+                <div class="flex justify-center items-center gap-2 mb-4">
+                    <h3 class="text-lg font-bold text-gray-800">Step 3: The Final Verdict</h3>
+                </div>
+                 <p class="text-sm text-gray-500 mb-4">Combine all synthesis memos into a single, definitive investment thesis. Then, refine it with your latest diligence.</p>
+                <div class="flex justify-center flex-wrap gap-4">
+                    ${finalThesisBtn}
+                    ${updatedFinalThesisBtn} {/* --- NEW: Added the button here --- */}
+                </div>
+            </div>
         `;
-        
+
         // --- DILIGENCE HUB TAB ---
         const copyIcon = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125H4.875A1.125 1.125 0 013.75 20.625V7.875c0-.621.504-1.125 1.125-1.125H6.75m9 9.375h3.375c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125h-9.75A1.125 1.125 0 006 9.375v9.75c0 .621.504 1.125 1.125 1.125h3.375m-3.75-9.375V6.125c0-.621.504-1.125 1.125-1.125h9.75c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-3.375" /></svg>`;
-        
+
         diligenceHubContainer.innerHTML = `
             <div class="space-y-6">
                  <div class="mb-4 text-right p-4 bg-gray-100 rounded-lg border flex justify-end gap-4">
@@ -562,7 +562,7 @@ export async function openRawDataViewer(ticker) {
         }
         qualitativeHtml += `</div><div class="text-right mt-4"><button data-diligence-type="Qualitative" class="save-diligence-answers-button bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg">Save Qualitative Answers</button></div></div>`;
         qualitativeContainer.innerHTML = qualitativeHtml;
-        
+
         // Populate Structured Diligence
         const structuredContainer = diligenceHubContainer.querySelector('#structured-diligence-forms-container');
         let structuredHtml = `<div class="text-left border rounded-lg p-4 bg-gray-50"><h4 class="text-base font-semibold text-gray-800 mb-1">Structured (Quantitative) Diligence</h4><p class="text-sm text-gray-500 mb-4">Answer these core questions to build a foundational thesis.</p><div class="space-y-4">`;
@@ -572,7 +572,7 @@ export async function openRawDataViewer(ticker) {
         }
         structuredHtml += `</div><div class="text-right mt-4"><button data-diligence-type="Structured" class="save-diligence-answers-button bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg">Save Structured Answers</button></div></div>`;
         structuredContainer.innerHTML = structuredHtml;
-        
+
         // --- NEW: Populate Market Sentiment Diligence ---
         const marketSentimentContainer = diligenceHubContainer.querySelector('#market-sentiment-forms-container');
         let marketSentimentHtml = `<div class="text-left border rounded-lg p-4 bg-gray-50"><h4 class="text-base font-semibold text-gray-800 mb-1">Market Sentiment Diligence</h4><p class="text-sm text-gray-500 mb-4">Answer these questions using external market data sources.</p><div class="space-y-4">`;
@@ -582,7 +582,7 @@ export async function openRawDataViewer(ticker) {
         }
         marketSentimentHtml += `</div><div class="text-right mt-4"><button data-diligence-type="MarketSentiment" class="save-diligence-answers-button bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg">Save Market Sentiment Answers</button></div></div>`;
         marketSentimentContainer.innerHTML = marketSentimentHtml;
-        
+
         // Populate Diligence Log
         const diligenceReports = allSavedReports.filter(r => r.reportType === 'DiligenceInvestigation');
         renderDiligenceLog(diligenceHubContainer.querySelector('#diligence-log-container'), diligenceReports);
@@ -594,7 +594,7 @@ export async function openRawDataViewer(ticker) {
             const futureEarnings = fmpData.earning_calendar.map(e => ({ ...e, dateObj: new Date(e.date) })).filter(e => e.dateObj >= today).sort((a, b) => a.dateObj - b.dateObj);
             if (futureEarnings.length > 0) { nextEarningsDate = futureEarnings[0].date; }
         }
-        
+
         const reportTypesForLog = ['FilingDiligence', 'EightKAnalysis', 'UpdatedGarpMemo', 'UpdatedQarpMemo', 'QuarterlyReview', 'AnnualReview'];
         const filingDiligenceReports = allSavedReports.filter(r => reportTypesForLog.includes(r.reportType));
 
@@ -629,7 +629,7 @@ export async function openRawDataViewer(ticker) {
                 </div>
 
                 <div id="filing-diligence-form-container" class="hidden mb-6"></div>
-                
+
                 <div id="updated-memo-section" class="hidden mb-6">
                      <h4 class="text-lg font-semibold text-gray-800 mb-2">Updated AI-Generated Memo</h4>
                      <div class="flex items-center gap-4 mb-2">
@@ -638,12 +638,12 @@ export async function openRawDataViewer(ticker) {
                      </div>
                      <div id="updated-memo-container" class="prose max-w-none p-4 border rounded-lg bg-gray-50"></div>
                 </div>
-                
+
                 <div id="ongoing-review-log-container"></div>
             </div>
         `;
         renderOngoingReviewLog(ongoingDiligenceContainer.querySelector('#ongoing-review-log-container'), filingDiligenceReports);
-        
+
         const checkIcon = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>`;
         diligenceHubContainer.addEventListener('click', (e) => {
             const copyBtn = e.target.closest('.structured-diligence-copy-btn');
@@ -659,22 +659,22 @@ export async function openRawDataViewer(ticker) {
                 });
             }
         });
-        
+
         diligenceHubContainer.addEventListener('click', (e) => {
             if (e.target.closest('.delete-diligence-entry-button')) {
                 e.target.closest('.diligence-entry-row').remove();
             }
         });
-        
+
         // --- DASHBOARD TAB (CONTINUED) ---
         const description = profile.description || 'No description available.';
         profileDisplayContainer.innerHTML = `<h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Company Overview</h3><p class="text-sm text-gray-700">${description}</p>`;
-        
+
         const metrics = renderGarpScorecardDashboard(garpScorecardContainer, ticker, fmpData);
         renderGarpInterpretationAnalysis(garpScorecardContainer, metrics);
         renderValuationHealthDashboard(document.getElementById('valuation-health-container'), ticker, fmpData);
         renderGarpAnalysisSummary(document.getElementById('ai-garp-summary-container'), ticker);
-        
+
         const peerDocRef = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(ticker).collection('analysis').doc('peer_comparison');
         const peerDocSnap = await peerDocRef.get();
         const peerHelpIcon = `<button data-report-type="PeerComparison" class="ai-help-button p-1 rounded-full hover:bg-indigo-100" title="What is this?"><svg class="w-5 h-5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z"></path></svg></button>`;
@@ -697,7 +697,7 @@ export async function openRawDataViewer(ticker) {
                 </div>
             </div>
         `;
-        
+
         if (peerDocSnap.exists) {
             const peerData = peerDocSnap.data();
             const peerContentContainer = document.getElementById('peer-analysis-content-container');
@@ -709,7 +709,7 @@ export async function openRawDataViewer(ticker) {
             const latestReport = savedCandidacyReports[0];
             const resultContainer = document.getElementById('garp-analysis-container');
             const statusContainer = document.getElementById('garp-candidacy-status-container');
-            
+
             updateGarpCandidacyStatus(statusContainer, savedCandidacyReports, latestReport.id, ticker);
 
             const savedDate = latestReport.savedAt.toDate().toLocaleString();
