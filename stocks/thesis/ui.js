@@ -530,5 +530,3 @@ export function setupEventListeners() {
 
     setupGlobalEventListeners();
 }
-
-}
