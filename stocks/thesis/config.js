@@ -282,7 +282,7 @@ You are a Senior Investment Analyst at a GARP-focused fund. Your task is to synt
 - **Scorecard Validation:** [Your analysis here, quantifying the risks with the weakest data points from the scorecard.]
 
 ## 4. Valuation: The GARP Fulcrum
-[Your analysis here, synthesizing the 'PEG Ratio', 'Forward P/E', and 'Price to FCF' from the scorecard to answer the ultimate question of whether the company is trading at a price that offers a reasonable margin of safety.]
+[Your analysis here, synthesizing the 'PEG Ratio', 'Forward P/E', and 'Price to FCF' from the scorecard to answer the ultimate question of whether the company is trading at a reasonable margin of safety.]
 
 ## 5. Recommendation & Justification
 (Your response for this section MUST follow the format below exactly, including the bolding.)
@@ -821,7 +821,7 @@ Role: You are the Chief Investment Officer of a multi-strategy fund. Your task i
 
 const QUALITATIVE_DILIGENCE_MEMO_PROMPT = `
 Role: You are an investment analyst AI.
-Task: Based ONLY on the provided Question & Answer pairs, fill in the template below to create a "Qualitative Business Memo."
+Task: Based ONLY on the provided Question & Answer pairs, fill in the template below to create a "Qualitative Business Memo." Your goal is to accurately synthesize the user's answers into the correct sections.
 
 ---
 **CRITICAL INSTRUCTION: Your final output MUST use the exact markdown structure, headings, and bullet points provided in the template below. Fill in the [Your analysis here] sections based on the Q&A data.**
@@ -833,13 +833,16 @@ Task: Based ONLY on the provided Question & Answer pairs, fill in the template b
 # Qualitative Business Memo: {companyName} ({tickerSymbol})
 
 ## 1. Competitive Moat Analysis
-[Your synthesis of the user's answer regarding the company's competitive moat here.]
+[Your synthesis of the user's answer regarding the company's 'Competitive Moat' here.]
 
-## 2. Management Quality & Strategy
-[Your synthesis of the user's answer regarding management's quality and strategy here.]
+## 2. Management, Strategy, & Alignment
+[Your synthesis of the user's answers regarding 'Management Quality' and 'Incentive Alignment' here.]
 
-## 3. Synthesis & Verdict
-[Your one-paragraph synthesis of all points here. Your final sentence MUST follow the example format exactly, including bolding. For example: **Business quality appears High** due to the company's durable moat and shareholder-aligned management team.]
+## 3. Shareholder Base & Non-Consensus Thesis
+[Your synthesis of the user's answers regarding 'Shareholder Base Quality' and 'The Non-Consensus Thesis (The "Edge")' here.]
+
+## 4. Synthesis & Verdict
+[Your one-paragraph synthesis of all the points above (moat, management, alignment, shareholders, and non-consensus thesis). Your final sentence MUST follow the example format exactly, including bolding. For example: **Business quality appears High** due to the company's durable moat, shareholder-aligned management, and a strong non-consensus thesis.]
 `.trim();
 
 const STRUCTURED_DILIGENCE_MEMO_PROMPT = `
@@ -1134,3 +1137,5 @@ export const ANALYSIS_NAMES = {
     'MarketSentimentMemo': 'Market Sentiment Memo',
     'InvestigationSummaryMemo': 'Investigation Summary'
 };
+
+}
