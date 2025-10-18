@@ -8,7 +8,7 @@ import { _calculateMoatAnalysisMetrics, _calculateCapitalAllocatorsMetrics, _cal
 // --- UTILITY HELPERS ---
 function getReportsFromCache(ticker, reportType) {
     if (!Array.isArray(state.reportCache)) return [];
-    
+
     const filterFn = (r) => {
         if (r.ticker !== ticker) return false;
         if (Array.isArray(reportType)) {
@@ -16,9 +16,9 @@ function getReportsFromCache(ticker, reportType) {
         }
         return r.reportType === reportType;
     };
-    
+
     const reports = state.reportCache.filter(filterFn);
-    
+
     return reports.sort((a, b) => b.savedAt.toMillis() - a.savedAt.toMillis());
 }
 
@@ -63,7 +63,7 @@ async function autoSaveReport(ticker, reportType, content, prompt, diligenceQues
         if (!reportTypesToPreserve.includes(reportType)) {
             // Remove existing reports of the same type from the local cache first
             state.reportCache = state.reportCache.filter(r => r.reportType !== reportType || r.ticker !== ticker);
-            
+
             const reportsRef = state.db.collection(CONSTANTS.DB_COLLECTION_AI_REPORTS);
             const q = reportsRef.where("ticker", "==", ticker).where("reportType", "==", reportType);
             const querySnapshot = await q.get();
@@ -72,7 +72,7 @@ async function autoSaveReport(ticker, reportType, content, prompt, diligenceQues
             querySnapshot.forEach(doc => {
                 deletePromises.push(doc.ref.delete());
             });
-            
+
             if (deletePromises.length > 0) {
                 await Promise.all(deletePromises);
                 console.log(`Deleted ${deletePromises.length} old report(s) of type ${reportType} for ${ticker}.`);
@@ -89,7 +89,7 @@ async function autoSaveReport(ticker, reportType, content, prompt, diligenceQues
             ...(synthesisData && { synthesis_data: synthesisData })
         };
         const docRef = await state.db.collection(CONSTANTS.DB_COLLECTION_AI_REPORTS).add(reportData);
-        
+
         // Add the newly saved report to the front of the local cache
         state.reportCache.unshift({ id: docRef.id, ...reportData });
 
@@ -131,7 +131,7 @@ export async function handleRefreshFmpData(symbol) {
 
         for (const endpoint of coreEndpoints) {
             loadingMessage.textContent = `Fetching FMP Data: ${endpoint.name.replace(/_/g, ' ')}...`;
-            
+
             let url;
             const version = endpoint.version || 'v3';
 
@@ -152,7 +152,7 @@ export async function handleRefreshFmpData(symbol) {
             await docRef.set({ cachedAt: firebase.firestore.Timestamp.now(), data: data });
             successfulFetches++;
         }
-        
+
         displayMessageInModal(`Successfully fetched and updated data for ${successfulFetches} FMP endpoint(s).`, 'info');
         await fetchAndCachePortfolioData();
 
@@ -195,7 +195,7 @@ export async function handleSectorMomentumRequest() {
                 return currDiff < prevDiff ? curr : prev;
             });
         };
-        
+
         const today = new Date();
         const date1M = new Date();
         date1M.setMonth(today.getMonth() - 1);
@@ -207,7 +207,7 @@ export async function handleSectorMomentumRequest() {
 
         const processedData = sectors.map(sector => {
             const latestPerf = latestData[sector];
-            
+
             const calcPerf = (startRecord) => {
                 const startValue = startRecord ? startRecord[sector] : null;
                 if (typeof latestPerf !== 'number' || typeof startValue !== 'number') return null;
@@ -216,10 +216,10 @@ export async function handleSectorMomentumRequest() {
                 const startFactor = 1 + (startValue / 100);
 
                 if (startFactor === 0) return null;
-                
+
                 return ((endFactor / startFactor) - 1) * 100;
             };
-            
+
             return {
                 sector: sector.replace(/([A-Z])/g, ' $1').replace('Changes Percentage','').trim(),
                 perf1M: calcPerf(record1M),
@@ -252,7 +252,7 @@ export function handleKpiSuggestionRequest() {
         return;
     }
 
-    const suggestionHtml = suggestions.map(kpi => 
+    const suggestionHtml = suggestions.map(kpi =>
         `<button type="button" class="kpi-suggestion-chip" data-kpi-name="${kpi.name}" title="${kpi.description}">
             + ${kpi.name}
         </button>`
@@ -266,7 +266,7 @@ export async function handleSaveStock(e) {
     e.preventDefault();
     const originalTicker = document.getElementById('manage-stock-original-ticker').value.trim().toUpperCase();
     const newTicker = document.getElementById('manage-stock-ticker').value.trim().toUpperCase();
-    
+
     if (!/^[A-Z.]{1,10}$/.test(newTicker)) {
         displayMessageInModal("Please enter a valid stock ticker symbol.", "warning");
         return;
@@ -282,7 +282,7 @@ export async function handleSaveStock(e) {
             transactions.push({ date, shares, costPerShare });
         }
     });
-    
+
     const kpiRows = document.querySelectorAll('#kpi-list-container .kpi-row');
     const customKpis = [];
     kpiRows.forEach(row => {
@@ -302,14 +302,14 @@ export async function handleSaveStock(e) {
         industry: document.getElementById('manage-stock-industry').value.trim(),
         transactions: transactions,
         customKpis: customKpis,
-        purchaseDate: null, 
+        purchaseDate: null,
         shares: null,
         costPerShare: null
     };
 
     openModal(CONSTANTS.MODAL_LOADING);
     document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = "Saving to your lists...";
-    
+
     try {
         if (originalTicker && originalTicker !== newTicker) {
             await state.db.collection(CONSTANTS.DB_COLLECTION_PORTFOLIO).doc(originalTicker).delete();
@@ -336,7 +336,7 @@ export async function handleSaveStock(e) {
 
 export async function handleDeleteStock(ticker) {
     openConfirmationModal(
-        `Delete ${ticker}?`, 
+        `Delete ${ticker}?`,
         `Are you sure you want to remove ${ticker} from your lists? This will not delete the cached API data.`,
         async () => {
             openModal(CONSTANTS.MODAL_LOADING);
@@ -367,10 +367,10 @@ export async function handleResearchSubmit(e) {
         displayMessageInModal("Please enter a valid stock ticker symbol.", "warning");
         return;
     }
-    
+
     openModal(CONSTANTS.MODAL_LOADING);
     document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Checking your lists for ${symbol}...`;
-    
+
     try {
         const docRef = state.db.collection(CONSTANTS.DB_COLLECTION_PORTFOLIO).doc(symbol);
         if ((await docRef.get()).exists) {
@@ -379,9 +379,9 @@ export async function handleResearchSubmit(e) {
              closeModal(CONSTANTS.MODAL_LOADING);
              return;
         }
-        
+
         document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Fetching overview for ${symbol}...`;
-        
+
         const profileUrl = `https://financialmodelingprep.com/api/v3/profile/${symbol}?apikey=${state.fmpApiKey}`;
         const profileData = await callApi(profileUrl);
 
@@ -398,7 +398,7 @@ export async function handleResearchSubmit(e) {
             industry: overviewData.industry,
             isEditMode: false
         };
-        
+
         tickerInput.value = '';
         openManageStockModal(newStock);
 
@@ -417,7 +417,7 @@ export function handleWorkflowHelpRequest() {
     const helpContent = helpModal.querySelector('#help-modal-content');
 
     helpTitle.textContent = 'Recommended GARP Analysis Workflow';
-    
+
     helpContent.innerHTML = `
         <div>
             <h3 class="text-lg font-bold text-gray-800 mb-2">Step 1: Add Stock & Initial Data Cache</h3>
@@ -425,24 +425,19 @@ export function handleWorkflowHelpRequest() {
                 Begin by adding a stock using the "Add Stock to Portfolio" form on the main dashboard. This fetches the company's profile and saves it to one of your lists, creating its initial entry in the database.
             </p>
 
-            <h3 class="text-lg font-bold text-gray-800 mb-2">Step 2: Generate the GARP Candidacy Report</h3>
+            <h3 class="text-lg font-bold text-gray-800 mb-2">Step 2: Generate the GARP Analysis Report</h3>
             <p class="text-sm text-gray-600 mb-4">
-                This is the most critical step for an initial assessment. In the stock's analysis panel, go to the "Dashboard" tab and click "Analyze Candidacy". This calculates the stock's key metrics, generates the proprietary <strong>GARP Conviction Score</strong>, and creates an initial bull/bear case. This step answers the question: "Is this stock even a potential GARP candidate?"
+                This is the most critical step for an initial assessment. In the stock's analysis panel, go to the "Dashboard" tab and click "Analyze Candidacy". This calculates the stock's key metrics, generates the proprietary <strong>GARP Conviction Score</strong>, and creates an initial bull/bear case. This step answers the question: "What are the core quantitative strengths and weaknesses of this stock as a potential GARP candidate?"
             </p>
 
-            <h3 class="text-lg font-bold text-gray-800 mb-2">Step 3: Fetch Peer Comparison</h3>
+            <h3 class="text-lg font-bold text-gray-800 mb-2">Step 3: Conduct Deeper Diligence</h3>
             <p class="text-sm text-gray-600 mb-4">
-                To ground the scorecard numbers in reality, click the "Fetch Peer Data" button on the "Dashboard" tab. This uses AI to identify direct competitors and compares key metrics against the peer average. This step provides crucial <strong>context</strong> to the company's valuation and performance.
+                If the stock still looks promising, use the tools in the "AI Analysis" and "Diligence Hub" tabs to build higher conviction. You can run specialized "Deep Dive" reports (like Moat or Risk Assessment) or use the "Diligence Investigation" tool to ask the AI specific questions that arose during your analysis. Fill out the structured Q&A forms in the Diligence Hub.
             </p>
 
-            <h3 class="text-lg font-bold text-gray-800 mb-2">Step 4: Conduct Deeper Diligence (Optional)</h3>
-            <p class="text-sm text-gray-600 mb-4">
-                If the stock still looks promising, use the tools in the "AI Analysis" tab to build higher conviction. You can run specialized "Deep Dive" reports (like Moat or Risk Assessment) or use the "Diligence Investigation" tool to ask the AI specific questions that arose during your analysis.
-            </p>
-
-            <h3 class="text-lg font-bold text-gray-800 mb-2">Step 5: Synthesize the Investment Memo</h3>
+            <h3 class="text-lg font-bold text-gray-800 mb-2">Step 4: Synthesize the Investment Memo</h3>
             <p class="text-sm text-gray-600">
-                This is the final step where all research comes together. Clicking "Generate GARP Memo" synthesizes the Candidacy Report, the quantitative scorecard, your diligence log, and the peer comparison data into a formal investment memo with a clear buy, sell, or hold recommendation.
+                This is the final step where all research comes together. Clicking "Generate GARP Memo" synthesizes the Candidacy Report, the quantitative scorecard, your diligence memos, and market sentiment data into a formal investment memo with a clear buy, sell, or hold recommendation.
             </p>
         </div>
     `;
@@ -498,7 +493,7 @@ export async function handleReportHelpRequest(reportType) {
         `;
 
         const explanation = await callGeminiApi(metaPrompt);
-        
+
         const sanitizeText = (text) => {
             if (typeof text !== 'string') return '';
             const tempDiv = document.createElement('div');
@@ -547,7 +542,7 @@ export async function handlePositionAnalysisRequest(ticker, forceNew = false) {
 
         const portfolioData = state.portfolioCache.find(s => s.ticker === ticker);
         const fmpData = await getFmpStockData(ticker);
-        
+
         // --- UPDATED LOGIC TO FETCH ALL PREREQUISITE REPORTS ---
         const memoReports = getReportsFromCache(ticker, 'InvestmentMemo');
         const moatReports = getReportsFromCache(ticker, 'MoatAnalysis');
@@ -559,9 +554,10 @@ export async function handlePositionAnalysisRequest(ticker, forceNew = false) {
         } else {
             const candidacyReports = getReportsFromCache(ticker, 'GarpCandidacy');
             if (candidacyReports.length === 0) {
-                throw new Error(`The foundational 'GARP Candidacy Report' or 'Investment Memo' must be generated first.`);
+                throw new Error(`The foundational 'GARP Analysis Report' or 'Investment Memo' must be generated first.`);
             }
-            sourceReportContent = candidacyReports[0].content;
+            // --- NEW: Strip Actionable Diligence Questions before using ---
+            sourceReportContent = (candidacyReports[0].content || '').split('## Actionable Diligence Questions')[0].trim();
         }
 
         if (moatReports.length === 0) {
@@ -571,7 +567,7 @@ export async function handlePositionAnalysisRequest(ticker, forceNew = false) {
             throw new Error("The 'Capital Allocators' report must be generated first to re-evaluate the thesis.");
         }
         // --- END OF UPDATED LOGIC ---
-        
+
         if (!fmpData || !fmpData.profile || !fmpData.profile.length === 0) {
             throw new Error(`Could not retrieve the latest price data for ${ticker}.`);
         }
@@ -597,7 +593,7 @@ export async function handlePositionAnalysisRequest(ticker, forceNew = false) {
         const marketValue = totalShares * currentPrice;
         const unrealizedGainLoss = marketValue - totalCost;
         const unrealizedGainLossPct = totalCost > 0 ? (unrealizedGainLoss / totalCost) * 100 : 0;
-        
+
         let holdingPeriod = 'N/A';
         if (earliestDate) {
             const pDate = new Date(earliestDate);
@@ -606,7 +602,7 @@ export async function handlePositionAnalysisRequest(ticker, forceNew = false) {
             const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
             const years = Math.floor(diffDays / 365);
             const months = Math.floor((diffDays % 365) / 30.44);
-            
+
             let periodStr = '';
             if (years > 0) periodStr += `${years} year(s), `;
             if (months > 0) periodStr += `${months} month(s)`;
@@ -622,7 +618,7 @@ export async function handlePositionAnalysisRequest(ticker, forceNew = false) {
             unrealizedGainLoss: `$${unrealizedGainLoss.toFixed(2)} (${unrealizedGainLossPct.toFixed(2)}%)`,
             holdingPeriod
         };
-        
+
         loadingMessage.textContent = "AI is re-evaluating the thesis...";
         const promptConfig = promptMap[reportType];
         const prompt = promptConfig.prompt
@@ -630,14 +626,14 @@ export async function handlePositionAnalysisRequest(ticker, forceNew = false) {
             .replace('{tickerSymbol}', ticker)
             .replace('{moatAnalysisReport}', moatReports[0].content) // New
             .replace('{capitalAllocatorsReport}', capitalReports[0].content) // New
-            .replace('{investmentMemoContent}', sourceReportContent)
+            .replace('{investmentMemoContent}', sourceReportContent) // Now potentially cleaned
             .replace('{positionDetails}', JSON.stringify(positionDetails, null, 2))
             .replace('{currentPrice}', `$${currentPrice.toFixed(2)}`);
 
         const analysisResult = await callGeminiApi(prompt);
-        
+
         await autoSaveReport(ticker, reportType, analysisResult, prompt);
-        
+
         const refreshedReports = getReportsFromCache(ticker, reportType);
 
         displayReport(container, analysisResult, prompt);
@@ -647,7 +643,7 @@ export async function handlePositionAnalysisRequest(ticker, forceNew = false) {
         console.error("Error during Position Analysis:", error);
         displayMessageInModal(`Could not complete analysis: ${error.message}`, 'error');
         const containerHtml = `<p class="text-red-500 p-4">Could not complete analysis: ${error.message}</p>`;
-        
+
         if(statusContainer) {
             statusContainer.classList.add('hidden');
             statusContainer.innerHTML = '';
@@ -680,7 +676,7 @@ export async function handlePortfolioGarpAnalysisRequest() {
                 return { stock, metrics, fmpData };
             })
         );
-        
+
         const validStocks = stocksWithData.filter(Boolean);
 
         const payload = validStocks.map(({ stock, metrics, fmpData }) => {
@@ -706,7 +702,7 @@ export async function handlePortfolioGarpAnalysisRequest() {
                 scorecard: cleanScorecard
             };
         });
-        
+
         const promptConfig = promptMap['PortfolioGarpAnalysis'];
         const prompt = promptConfig.prompt.replace('{jsonData}', JSON.stringify(payload, null, 2));
 
@@ -729,7 +725,7 @@ export async function handleSaveReportToDb() {
         displayMessageInModal("Could not determine which report to save.", "warning");
         return;
     }
-    
+
     const contentToSave = contentContainer.dataset.rawMarkdown;
     const promptToSave = contentContainer.dataset.currentPrompt;
 
@@ -744,7 +740,7 @@ export async function handleSaveReportToDb() {
     try {
         await autoSaveReport(symbol, reportType, contentToSave, promptToSave);
         displayMessageInModal("Report saved successfully!", "info");
-        
+
         const analysisContentContainer = document.getElementById('analysis-content-container');
         if (analysisContentContainer) {
             const button = analysisContentContainer.querySelector(`button[data-report-type="${reportType}"]`);
@@ -757,7 +753,7 @@ export async function handleSaveReportToDb() {
         const latestReport = savedReports[0];
         const statusContainer = document.getElementById('report-status-container-analysis');
         const promptConfig = promptMap[reportType];
-        
+
         updateReportStatus(statusContainer, savedReports, latestReport.id, { symbol, reportType, promptConfig });
 
     } catch (error) {
@@ -775,17 +771,17 @@ export async function handleGarpCandidacyRequest(ticker, forceNew = false) {
 
     resultContainer.innerHTML = `<div class="flex items-center justify-center p-4"><div class="loader"></div><p class="ml-4 text-gray-600 font-semibold">AI is analyzing...</p></div>`;
     statusContainer.classList.add('hidden');
-    
+
     try {
         const fmpData = await getFmpStockData(ticker);
         if (!fmpData) throw new Error("Could not retrieve financial data to perform analysis.");
-        
+
         const scorecardData = _calculateGarpScorecardMetrics(fmpData);
         const newScore = scorecardData.garpConvictionScore;
 
         const stockDocRef = state.db.collection(CONSTANTS.DB_COLLECTION_PORTFOLIO).doc(ticker);
         await stockDocRef.update({ garpConvictionScore: newScore });
-        
+
         await fetchAndCachePortfolioData();
 
         const profile = fmpData.profile?.[0] || {};
@@ -798,20 +794,11 @@ export async function handleGarpCandidacyRequest(ticker, forceNew = false) {
         const peerDataChanges = peerDocSnap.exists ? peerDocSnap.data().changes : null;
 
 
-        const epsNext1yValue = scorecardData['EPS Growth (Next 1Y)'].value;
-        const diligenceQuestions = [];
-
-        if (epsNext1yValue > 0.40) {
-            diligenceQuestions.push({
-                humanQuestion: `What are the key drivers behind the projected near-term hyper-growth (${(epsNext1yValue * 100).toFixed(2)}% EPS Growth), and how sustainable are these factors beyond the next fiscal year?`,
-                aiQuery: `${companyName} (${tickerSymbol}) EPS growth guidance Q3 2024 earnings call transcript revenue backlog contracts 2025 outlook analyst day presentation`
-            });
-        }
-
         const cleanScorecard = {};
         for (const [key, value] of Object.entries(scorecardData)) {
-            if (key === 'garpConvictionScore') continue;
-            
+            // Include score for Confidence calculation in prompt, but not needed in main payload
+            // if (key === 'garpConvictionScore') continue;
+
             const formattedValue = (typeof value.value === 'number' && isFinite(value.value))
                 ? (value.format === 'percent' ? `${(value.value * 100).toFixed(2)}%` : value.value.toFixed(2))
                 : 'N/A';
@@ -819,16 +806,16 @@ export async function handleGarpCandidacyRequest(ticker, forceNew = false) {
             cleanScorecard[key] = {
                 value: formattedValue,
                 isMet: value.isMet,
-                interpretation: value.interpretation 
+                interpretation: value.interpretation
             };
         }
 
         const payload = {
             scorecard: cleanScorecard,
-            garpConvictionScore: scorecardData.garpConvictionScore,
+            garpConvictionScore: scorecardData.garpConvictionScore, // Pass score to prompt
             peerAverages: peerAverages,
             peerDataChanges: peerDataChanges,
-            diligenceQuestions: diligenceQuestions
+            // diligenceQuestions removed - AI generates this now
         };
 
         const promptConfig = promptMap['GarpCandidacy'];
@@ -837,31 +824,15 @@ export async function handleGarpCandidacyRequest(ticker, forceNew = false) {
             .replace(/{tickerSymbol}/g, tickerSymbol)
             .replace(/{sector}/g, sector)
             .replace('{jsonData}', JSON.stringify(payload, null, 2));
-            
-        if (diligenceQuestions.length > 0) {
-            let questionsHtml = `
-(1 paragraph)
-Based on your analysis, propose 2-3 critical diligence questions. For each question, you MUST provide two parts:
-1.  **Human-Led Question:** A high-level, strategic question for an analyst to answer through deeper research and judgment.
-2.  **Suggested AI Investigation Query:** A specific, fact-based query designed to be used with a search-enabled AI (like the 'Diligence Investigation' tool) to find source material. This query should target information from recent earnings calls, SEC filings (10-K, 10-Q), or investor presentations.
 
-Format each item precisely like this:
-`;
-            questionsHtml += diligenceQuestions.map(q => `
-- **Human-Led Question:** ${q.humanQuestion}
-- **Suggested AI Investigation Query:** "${q.aiQuery}"
-`).join('\n');
-            prompt = prompt.replace('{diligenceQuestions}', questionsHtml);
-        } else {
-            prompt = prompt.replace('{diligenceQuestions}', 'No critical diligence questions were identified by the AI in this initial assessment.');
-        }
+        // Removed manual diligence question injection
 
         const analysisResult = await generateRefinedArticle(prompt);
-        renderCandidacyAnalysis(resultContainer, analysisResult, prompt, diligenceQuestions);
-        
+        renderCandidacyAnalysis(resultContainer, analysisResult, prompt); // Removed diligenceQuestions from render call
+
         const reportType = 'GarpCandidacy';
-        await autoSaveReport(ticker, reportType, analysisResult, prompt, diligenceQuestions);
-        
+        await autoSaveReport(ticker, reportType, analysisResult, prompt); // Removed diligenceQuestions from save call
+
         const reports = getReportsFromCache(ticker, reportType);
         if (reports.length > 0) {
             updateGarpCandidacyStatus(statusContainer, reports, reports[0].id, ticker);
@@ -877,7 +848,7 @@ Format each item precisely like this:
 export async function handleAnalysisRequest(symbol, reportType, promptConfig, forceNew = false) {
     const contentContainer = document.getElementById('ai-article-container-analysis');
     const statusContainer = document.getElementById('report-status-container-analysis');
-    
+
     contentContainer.innerHTML = '';
     statusContainer.classList.add('hidden');
 
@@ -890,15 +861,15 @@ export async function handleAnalysisRequest(symbol, reportType, promptConfig, fo
             contentContainer.dataset.currentPrompt = latestReport.prompt || '';
             contentContainer.dataset.rawMarkdown = latestReport.content;
             updateReportStatus(statusContainer, savedReports, latestReport.id, { symbol, reportType, promptConfig });
-            return; 
+            return;
         }
 
         openModal(CONSTANTS.MODAL_LOADING);
         const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
-        
+
         const data = await getFmpStockData(symbol);
         if (!data) throw new Error(`No cached FMP data found for ${symbol}.`);
-        
+
         const requiredEndpoints = promptConfig.requires || [];
         const missingEndpoints = requiredEndpoints.filter(ep => !data[ep]);
 
@@ -919,7 +890,7 @@ export async function handleAnalysisRequest(symbol, reportType, promptConfig, fo
                 return;
             }
         }
-        
+
         let payloadData;
         if (reportType === 'MoatAnalysis') {
             payloadData = _calculateMoatAnalysisMetrics(data);
@@ -944,7 +915,7 @@ export async function handleAnalysisRequest(symbol, reportType, promptConfig, fo
         contentContainer.dataset.currentPrompt = prompt;
 
         const finalReportContent = await generateRefinedArticle(prompt, loadingMessage);
-        
+
         let synthesisData = null;
         const synthesisReportTypes = ['MoatAnalysis', 'CapitalAllocators', 'QarpAnalysis'];
         if (synthesisReportTypes.includes(reportType)) {
@@ -953,11 +924,11 @@ export async function handleAnalysisRequest(symbol, reportType, promptConfig, fo
 
         contentContainer.dataset.rawMarkdown = finalReportContent;
         await autoSaveReport(symbol, reportType, finalReportContent, prompt, null, synthesisData);
-        
+
         const refreshedReports = getReportsFromCache(symbol, reportType);
-        
+
         displayReport(contentContainer, finalReportContent, prompt);
-        
+
         updateReportStatus(statusContainer, refreshedReports, refreshedReports[0]?.id, { symbol, reportType, promptConfig });
 
     } catch (error) {
@@ -996,7 +967,7 @@ export async function handleGarpMemoRequest(symbol, forceNew = false) {
         loadingMessage.textContent = "Gathering prerequisite reports for memo synthesis...";
 
         const requiredMemos = {
-            'GarpCandidacy': 'GARP Candidacy Report',
+            'GarpCandidacy': 'GARP Analysis Report',
             'StructuredDiligenceMemo': 'Structured Diligence Memo',
             'QualitativeDiligenceMemo': 'Qualitative Diligence Memo',
             'MarketSentimentMemo': 'Market Sentiment Memo'
@@ -1009,7 +980,12 @@ export async function handleGarpMemoRequest(symbol, forceNew = false) {
             if (reports.length === 0) {
                 throw new Error(`The foundational '${name}' has not been generated yet. Please generate it from the 'Diligence Hub' or 'Dashboard' tab first.`);
             }
-            fetchedMemos[type] = reports[0].content;
+            // --- NEW: Strip Actionable Diligence Questions before using GarpCandidacy ---
+            if (type === 'GarpCandidacy') {
+                 fetchedMemos[type] = (reports[0].content || '').split('## Actionable Diligence Questions')[0].trim();
+            } else {
+                 fetchedMemos[type] = reports[0].content;
+            }
         }
 
         const data = await getFmpStockData(symbol);
@@ -1023,14 +999,14 @@ export async function handleGarpMemoRequest(symbol, forceNew = false) {
             .replace(/{companyName}/g, companyName)
             .replace(/{tickerSymbol}/g, symbol)
             .replace('{scorecardJson}', JSON.stringify(scorecardData, null, 2))
-            .replace('{garpCandidacyReport}', fetchedMemos.GarpCandidacy)
+            .replace('{garpCandidacyReport}', fetchedMemos.GarpCandidacy) // Now cleaned
             .replace('{structuredDiligenceMemo}', fetchedMemos.StructuredDiligenceMemo)
             .replace('{qualitativeDiligenceMemo}', fetchedMemos.QualitativeDiligenceMemo)
             .replace('{marketSentimentMemo}', fetchedMemos.MarketSentimentMemo);
 
         const memoContent = await generateRefinedArticle(prompt, loadingMessage);
         const synthesisData = await extractSynthesisData(memoContent, reportType);
-        
+
         await autoSaveReport(symbol, reportType, memoContent, prompt, null, synthesisData);
         const refreshedReports = getReportsFromCache(symbol, reportType);
         const latestReport = refreshedReports[0];
@@ -1038,7 +1014,7 @@ export async function handleGarpMemoRequest(symbol, forceNew = false) {
         contentContainer.dataset.currentPrompt = prompt;
         contentContainer.dataset.rawMarkdown = memoContent;
         displayReport(contentContainer, memoContent, prompt);
-        
+
         updateReportStatus(statusContainer, refreshedReports, latestReport.id, { symbol, reportType, promptConfig });
 
     } catch (error) {
@@ -1142,7 +1118,7 @@ export async function handleBmqvMemoRequest(symbol, forceNew = false) {
         if (moatReports.length === 0 || capitalReports.length === 0) {
             throw new Error("The 'Moat Analysis' and 'Capital Allocators' reports must be generated first.");
         }
-        
+
         loadingMessage.textContent = "Calculating source metrics for synthesis...";
 
         const data = await getFmpStockData(symbol);
@@ -1204,7 +1180,7 @@ export async function handleFinalThesisRequest(symbol, forceNew = false) {
 
         openModal(CONSTANTS.MODAL_LOADING);
         const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
-        
+
         loadingMessage.textContent = "Gathering prerequisite analyst summaries...";
 
         const portfolioStock = state.portfolioCache.find(s => s.ticker === symbol);
@@ -1273,21 +1249,21 @@ export async function handleGeneratePrereqsRequest(symbol) {
     const progressStatus = document.getElementById('progress-status');
     const currentReportName = document.getElementById('current-report-name');
     const progressBarFill = document.getElementById('progress-bar-fill');
-    
+
     progressContainer.classList.remove('hidden');
     progressBarFill.style.width = '0%';
-    
+
     try {
         const data = await getFmpStockData(symbol);
         if (!data) throw new Error(`No cached FMP data found for ${symbol}. Please refresh the data first.`);
-        
+
         const profile = data.profile?.[0] || {};
         const companyName = profile.companyName || 'the company';
         const tickerSymbol = profile.symbol || symbol;
 
         for (let i = 0; i < reportTypes.length; i++) {
             const reportType = reportTypes[i];
-            
+
             progressStatus.textContent = `Generating Reports (${i + 1}/${reportTypes.length})`;
             currentReportName.textContent = `Running: ${reportDisplayNames[reportType]}...`;
 
@@ -1377,7 +1353,7 @@ export async function handleDiligenceMemoRequest(symbol, reportType, forceNew = 
         if (!docSnap.exists) {
             throw new Error(`You must first save your answers for the '${memoConfig.name}' section in the 'Diligence Hub' tab.`);
         }
-        
+
         const savedData = docSnap.data().answers || [];
         if (savedData.length === 0) {
             throw new Error(`No saved answers found for the '${memoConfig.name}' section.`);
@@ -1386,10 +1362,10 @@ export async function handleDiligenceMemoRequest(symbol, reportType, forceNew = 
         loadingMessage.textContent = `Synthesizing ${memoConfig.name} Memo...`;
 
         const qaData = savedData.map(pair => `**Question:** ${pair.question}\n\n**Answer:**\n${pair.answer}`).join('\n\n---\n\n');
-        
+
         const profile = state.portfolioCache.find(s => s.ticker === symbol) || {};
         const companyName = profile.companyName || symbol;
-        
+
         const prompt = promptConfig.prompt
             .replace(/{companyName}/g, companyName)
             .replace(/{tickerSymbol}/g, symbol)
@@ -1454,15 +1430,15 @@ export async function handleInvestigationSummaryRequest(symbol, forceNew = false
 
         const profile = state.portfolioCache.find(s => s.ticker === symbol) || {};
         const companyName = profile.companyName || symbol;
-        
+
         const prompt = promptConfig.prompt
             .replace(/{companyName}/g, companyName)
             .replace(/{tickerSymbol}/g, symbol)
             .replace('{qaData}', qaData);
-        
+
         loadingMessage.textContent = 'AI is synthesizing your investigation notes...';
         const memoContent = await generateRefinedArticle(prompt, loadingMessage);
-        
+
         await autoSaveReport(symbol, reportType, memoContent, prompt);
 
         const refreshedReports = getReportsFromCache(symbol, reportType);
@@ -1658,9 +1634,9 @@ export async function handleDeleteOldDiligenceLogs(symbol) {
                 });
 
                 await Promise.all(deletePromises);
-                
+
                 state.reportCache = state.reportCache.filter(r => r.reportType !== 'DiligenceInvestigation' || r.ticker !== symbol);
-                
+
                 const diligenceLogContainer = document.getElementById('diligence-log-container');
                 if (diligenceLogContainer) {
                     renderDiligenceLog(diligenceLogContainer, []);
@@ -1681,7 +1657,7 @@ export async function handleDeleteOldDiligenceLogs(symbol) {
 export async function handleSaveFilingDiligenceRequest(symbol) {
     const formContainer = document.getElementById('filing-diligence-form-container');
     const qaPairs = formContainer.querySelectorAll('.filing-qa-pair');
-    
+
     let reportContent = '';
     qaPairs.forEach(pair => {
         const question = pair.querySelector('.filing-question-text').textContent;
@@ -1699,12 +1675,12 @@ export async function handleSaveFilingDiligenceRequest(symbol) {
 
     openModal(CONSTANTS.MODAL_LOADING);
     document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Saving your diligence answers...`;
-    
+
     try {
         const reportType = 'FilingDiligence';
         const prompt = `User-answered diligence questions from SEC filing for ${symbol} saved on ${new Date().toLocaleDateString()}`;
         await autoSaveReport(symbol, reportType, reportContent, prompt);
-        
+
         formContainer.innerHTML = '';
         formContainer.classList.add('hidden');
         document.getElementById('filing-diligence-input-container').classList.remove('hidden');
@@ -1714,7 +1690,7 @@ export async function handleSaveFilingDiligenceRequest(symbol) {
         const reportTypes = ['FilingDiligence', 'EightKAnalysis', 'UpdatedGarpMemo', 'UpdatedQarpMemo', 'QuarterlyReview', 'AnnualReview'];
         const savedReports = getReportsFromCache(symbol, reportTypes);
         renderOngoingReviewLog(logContainer, savedReports);
-        
+
         document.getElementById('updated-memo-section').classList.remove('hidden');
 
         displayMessageInModal('Your filing diligence has been saved successfully.', 'info');
@@ -1729,7 +1705,7 @@ export async function handleSaveFilingDiligenceRequest(symbol) {
 export async function handleGenerateFilingQuestionsRequest(symbol) {
     const filingTextarea = document.getElementById('filing-diligence-textarea');
     const formContainer = document.getElementById('filing-diligence-form-container');
-    
+
     const filingText = filingTextarea.value.trim();
     if (!filingText) {
         displayMessageInModal("Please paste the filing text into the text area first.", "warning");
@@ -1743,14 +1719,14 @@ export async function handleGenerateFilingQuestionsRequest(symbol) {
     try {
         const profile = state.portfolioCache.find(s => s.ticker === symbol);
         const companyName = profile ? profile.companyName : symbol;
-        
+
         const promptConfig = promptMap['FilingQuestionGeneration'];
         const prompt = promptConfig.prompt
             .replace('{companyName}', companyName)
             .replace('{filingText}', filingText);
 
         const aiResponse = await callGeminiApi(prompt);
-        
+
         const cleanedResponse = aiResponse.trim().replace(/^```json\s*|```\s*$/g, '');
         const questions = JSON.parse(cleanedResponse);
 
@@ -1768,8 +1744,8 @@ export async function handleGenerateFilingQuestionsRequest(symbol) {
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125H4.875A1.125 1.125 0 013.75 20.625V7.875c0-.621.504-1.125 1.125-1.125H6.75m9 9.375h3.375c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125h-9.75A1.125 1.125 0 006 9.375v9.75c0 .621.504 1.125 1.125 1.125h3.375m-3.75-9.375V6.125c0-.621.504-1.125 1.125-1.125h9.75c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-3.375" /></svg>
                         </button>
                     </div>
-                    <textarea class="filing-answer-textarea w-full border border-gray-300 rounded-lg p-2 text-sm" 
-                              rows="5" 
+                    <textarea class="filing-answer-textarea w-full border border-gray-300 rounded-lg p-2 text-sm"
+                              rows="5"
                               data-question-index="${index}"
                               placeholder="Your analysis and findings here..."></textarea>
                 </div>
@@ -1781,7 +1757,7 @@ export async function handleGenerateFilingQuestionsRequest(symbol) {
                 <button id="save-filing-diligence-button" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg">Save Answers</button>
             </div>
         </div>`;
-        
+
         formContainer.innerHTML = formHtml;
         formContainer.classList.remove('hidden');
         document.getElementById('filing-diligence-input-container').classList.add('hidden');
@@ -1809,7 +1785,7 @@ export async function handleAnalyzeEightKRequest(symbol) {
     try {
         const profile = state.portfolioCache.find(s => s.ticker === symbol);
         const companyName = profile ? profile.companyName : symbol;
-        
+
         const reportType = 'EightKAnalysis';
         const promptConfig = promptMap[reportType];
         const prompt = promptConfig.prompt
@@ -1817,9 +1793,9 @@ export async function handleAnalyzeEightKRequest(symbol) {
             .replace('{filingText}', filingText);
 
         const analysisResult = await generateRefinedArticle(prompt);
-        
+
         await autoSaveReport(symbol, reportType, analysisResult, prompt);
-        
+
         filingTextarea.value = '';
 
         const logContainer = document.getElementById('ongoing-review-log-container');
@@ -1852,7 +1828,7 @@ export async function handleDeleteFilingDiligenceLog(reportId, ticker) {
             document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Deleting entry...`;
             try {
                 await state.db.collection(CONSTANTS.DB_COLLECTION_AI_REPORTS).doc(reportId).delete();
-                
+
                 state.reportCache = state.reportCache.filter(r => r.id !== reportId);
 
                 const logContainer = document.getElementById('ongoing-review-log-container');
@@ -1860,7 +1836,7 @@ export async function handleDeleteFilingDiligenceLog(reportId, ticker) {
                 const reportTypes = ['FilingDiligence', 'EightKAnalysis', 'UpdatedGarpMemo', 'UpdatedQarpMemo', 'QuarterlyReview', 'AnnualReview'];
                 const savedReports = getReportsFromCache(ticker, reportTypes);
                 renderOngoingReviewLog(logContainer, savedReports);
-                
+
                 if (displayContainer) {
                     displayContainer.innerHTML = '';
                 }
@@ -1880,7 +1856,7 @@ async function generateUpdatedMemo(symbol, memoType) {
     const updatedMemoContainer = document.getElementById('updated-memo-container');
     if (!updatedMemoContainer) return;
     updatedMemoContainer.innerHTML = `<div class="p-4 text-center">Generating updated ${memoType} memo... <div class="loader mx-auto mt-2"></div></div>`;
-    
+
     let reportType;
     let promptTemplate;
 
@@ -1889,14 +1865,14 @@ async function generateUpdatedMemo(symbol, memoType) {
         promptTemplate = promptMap.UpdatedQarpMemo.prompt;
     } else { // Default to GARP
         reportType = 'UpdatedGarpMemo';
-        promptTemplate = promptMap.InvestmentMemo.prompt;
+        promptTemplate = promptMap.InvestmentMemo.prompt; // Use the standard GARP Memo prompt structure
     }
 
     try {
         const diligenceInvestigationReports = getReportsFromCache(symbol, 'DiligenceInvestigation');
         const filingDiligenceReports = getReportsFromCache(symbol, 'FilingDiligence');
         const eightKReports = getReportsFromCache(symbol, 'EightKAnalysis');
-        
+
         let combinedDiligenceLog = '';
         const logs = [];
 
@@ -1927,7 +1903,7 @@ async function generateUpdatedMemo(symbol, memoType) {
 
         const profile = data.profile?.[0] || {};
         const companyName = profile.companyName || 'the company';
-        
+
         let prompt;
         if (memoType === 'QARP') {
              prompt = promptTemplate
@@ -1938,22 +1914,34 @@ async function generateUpdatedMemo(symbol, memoType) {
         } else { // GARP
             const candidacyReports = getReportsFromCache(symbol, 'GarpCandidacy');
             if (candidacyReports.length === 0) {
-                throw new Error(`The foundational 'GARP Candidacy Report' must be generated first.`);
+                throw new Error(`The foundational 'GARP Analysis Report' must be generated first.`);
             }
-            const candidacyReportContent = candidacyReports[0].content;
+            // --- NEW: Strip Actionable Diligence Questions before using ---
+            const candidacyReportContent = (candidacyReports[0].content || '').split('## Actionable Diligence Questions')[0].trim();
 
-            prompt = promptTemplate
+            // Re-fetch other diligence memos needed by the GARP Memo prompt
+            const structuredMemoReports = getReportsFromCache(symbol, 'StructuredDiligenceMemo');
+            const qualitativeMemoReports = getReportsFromCache(symbol, 'QualitativeDiligenceMemo');
+            const marketSentimentMemoReports = getReportsFromCache(symbol, 'MarketSentimentMemo');
+
+            if (structuredMemoReports.length === 0 || qualitativeMemoReports.length === 0 || marketSentimentMemoReports.length === 0) {
+                throw new Error("Missing prerequisite diligence memos (Structured, Qualitative, or Market Sentiment) required for GARP Memo synthesis.");
+            }
+
+            prompt = promptTemplate // Using UPDATED_GARP_MEMO_PROMPT structure
                 .replace(/{companyName}/g, companyName)
                 .replace(/{tickerSymbol}/g, symbol)
                 .replace('{scorecardJson}', JSON.stringify(scorecardData, null, 2))
-                .replace('{diligenceLog}', combinedDiligenceLog)
-                .replace('{garpCandidacyReport}', candidacyReportContent);
+                .replace('{garpCandidacyReport}', candidacyReportContent) // Now Cleaned
+                .replace('{structuredDiligenceMemo}', structuredMemoReports[0].content)
+                .replace('{qualitativeDiligenceMemo}', qualitativeMemoReports[0].content)
+                .replace('{marketSentimentMemo}', marketSentimentMemoReports[0].content);
         }
 
         const memoContent = await generateRefinedArticle(prompt);
 
         await autoSaveReport(symbol, reportType, memoContent, prompt);
-        
+
         updatedMemoContainer.innerHTML = `<div class="prose max-w-none">${marked.parse(memoContent)}</div>`;
         displayMessageInModal(`Updated ${memoType} Memo generated and saved.`, 'info');
 
@@ -2046,7 +2034,7 @@ async function _fetchAndCachePeerData(tickers) {
                 }
                 continue;
             }
-            
+
             if (currentReportName) {
                 currentReportName.textContent = `Fetching data for ${ticker}...`;
             }
@@ -2102,20 +2090,20 @@ async function runPeerAnalysis(primaryTicker, peerTickers) {
 
     const peerAverages = {};
     const metricKeys = Object.keys(peerMetricsList[0]);
-    
+
     for (const key of metricKeys) {
-        if (key === 'garpConvictionScore') continue; 
+        if (key === 'garpConvictionScore') continue;
         const values = peerMetricsList
             .map(metrics => metrics[key]?.value)
             .filter(v => typeof v === 'number' && isFinite(v));
-        
+
         if (values.length > 0) {
             peerAverages[key] = values.reduce((sum, v) => sum + v, 0) / values.length;
         } else {
              peerAverages[key] = null;
         }
     }
-    
+
     const companyMetrics = _calculateGarpScorecardMetrics(companyFmpData);
     const finalPeerDataObject = {
         peers: peerTickers,
@@ -2125,7 +2113,7 @@ async function runPeerAnalysis(primaryTicker, peerTickers) {
 
     const peerDocRef = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(primaryTicker).collection('analysis').doc('peer_comparison');
     await peerDocRef.set(finalPeerDataObject);
-    
+
     renderPeerComparisonTable(container, primaryTicker, companyMetrics, finalPeerDataObject);
 }
 
@@ -2170,7 +2158,7 @@ export async function handleCopyReportRequest(symbol, reportType, buttonElement)
 
         const latestReport = reports[0];
         const plainText = latestReport.content.replace(/##+\s/g, '').replace(/#\s/g, '').replace(/\*\*/g, '').replace(/-\s/g, '');
-        
+
         await navigator.clipboard.writeText(plainText);
 
         const originalIcon = buttonElement.innerHTML;
@@ -2191,8 +2179,8 @@ export async function handleCopyReportRequest(symbol, reportType, buttonElement)
 
 export async function handleFullAnalysisWorkflow(symbol) {
     // Preliminary Stage is now empty to preserve the original candidacy report
-    const preliminaryStage = []; 
-    
+    const preliminaryStage = [];
+
     const foundationalStage = [
         { reportType: 'MoatAnalysis', handler: handleAnalysisRequest },
         { reportType: 'CapitalAllocators', handler: handleAnalysisRequest },
@@ -2208,11 +2196,11 @@ export async function handleFullAnalysisWorkflow(symbol) {
         { reportType: 'InvestmentMemo', handler: handleGarpMemoRequest },
         { reportType: 'QarpAnalysis', handler: handleAnalysisRequest }
     ];
-    
+
     const finalStage = [
         { reportType: 'FinalInvestmentThesis', handler: handleFinalThesisRequest }
     ];
-    
+
     const allStages = [
         { name: 'Preliminary Analysis', reports: preliminaryStage },
         { name: 'Foundational Analysis', reports: foundationalStage },
@@ -2226,10 +2214,10 @@ export async function handleFullAnalysisWorkflow(symbol) {
     const progressStatus = document.getElementById('progress-status');
     const currentReportName = document.getElementById('current-report-name');
     const progressBarFill = document.getElementById('progress-bar-fill');
-    
+
     progressContainer.classList.remove('hidden');
     progressBarFill.style.width = '0%';
-    
+
     let totalReports = 0;
     allStages.forEach(stage => totalReports += stage.reports.filter(r => !r.isSilent).length);
     let completedReports = 0;
@@ -2239,7 +2227,7 @@ export async function handleFullAnalysisWorkflow(symbol) {
             if (stage.reports.filter(r => !r.isSilent).length > 0) {
                  progressStatus.textContent = `Running Stage: ${stage.name}...`;
             }
-           
+
             for (const step of stage.reports) {
                 if (!step.isSilent) {
                     currentReportName.textContent = `Generating: ${ANALYSIS_NAMES[step.reportType]}...`;
@@ -2255,7 +2243,7 @@ export async function handleFullAnalysisWorkflow(symbol) {
                         button.classList.add('has-saved-report');
                     }
                 }
-                
+
                 if (!step.isSilent) {
                     completedReports++;
                     const progress = (completedReports / totalReports) * 100;
@@ -2284,7 +2272,7 @@ async function _handleReviewRequest(symbol, reviewType) {
         const reportType = reviewType === 'Quarterly' ? 'QuarterlyReview' : 'AnnualReview';
         const questions = reviewType === 'Quarterly' ? QUARTERLY_REVIEW_QUESTIONS : ANNUAL_REVIEW_QUESTIONS;
         const promptConfig = promptMap[reportType];
-        
+
         loadingMessage.textContent = 'Gathering your findings...';
         const answerElements = document.querySelectorAll('.review-answer-textarea');
         const qaPairs = [];
@@ -2299,7 +2287,7 @@ async function _handleReviewRequest(symbol, reviewType) {
                 if (answer) hasAnswers = true;
             }
         });
-        
+
         if (!hasAnswers) {
             throw new Error(`Please provide at least one answer for the ${reviewType} Review before generating the memo.`);
         }
@@ -2312,20 +2300,21 @@ async function _handleReviewRequest(symbol, reviewType) {
         } else {
             const candidacyReports = getReportsFromCache(symbol, 'GarpCandidacy');
             if (candidacyReports.length === 0) {
-                throw new Error("The foundational 'GARP Candidacy' or 'Investment Memo' must be generated first to serve as the baseline thesis.");
+                throw new Error("The foundational 'GARP Analysis Report' or 'Investment Memo' must be generated first to serve as the baseline thesis.");
             }
-            originalInvestmentMemo = candidacyReports[0].content;
+            // --- NEW: Strip Actionable Diligence Questions before using ---
+            originalInvestmentMemo = (candidacyReports[0].content || '').split('## Actionable Diligence Questions')[0].trim();
         }
-        
+
         const qaData = qaPairs.map(pair => `**Question:** ${pair.question}\n\n**Answer:**\n${pair.answer}`).join('\n\n---\n\n');
-        
+
         const profile = state.portfolioCache.find(s => s.ticker === symbol) || {};
         const companyName = profile.companyName || symbol;
-        
+
         const prompt = promptConfig.prompt
             .replace(/{companyName}/g, companyName)
             .replace(/{tickerSymbol}/g, symbol)
-            .replace('{originalInvestmentMemo}', originalInvestmentMemo)
+            .replace('{originalInvestmentMemo}', originalInvestmentMemo) // Now potentially cleaned
             .replace('{qaData}', qaData);
 
         loadingMessage.textContent = `AI is synthesizing your ${reviewType} Review Memo...`;
