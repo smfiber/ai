@@ -751,6 +751,86 @@ JSON Output Format:
 }
 `.trim();
 
+// --- NEW DILIGENCE MEMO EXTRACTORS ---
+const QUALITATIVE_DILIGENCE_MEMO_EXTRACT_PROMPT = `
+Role: You are a data extraction AI.
+Task: Your only job is to read the provided 'Qualitative Business Memo' and extract three specific pieces of information.
+CRITICAL INSTRUCTIONS:
+- You MUST return ONLY a valid JSON object.
+- Do not add any text, explanations, or markdown formatting before or after the JSON.
+- For 'verdict', extract the final verdict (e.g., "High", "Average", "Low").
+- For 'nonConsensusThesis', extract the core non-consensus thesis summary from Section 3.
+- For 'shareholderBaseQuality', extract the summary of the shareholder base quality from Section 3.
+
+Report Text:
+{reportContent}
+
+JSON Output Format:
+{
+  "verdict": "...",
+  "nonConsensusThesis": "...",
+  "shareholderBaseQuality": "..."
+}
+`.trim();
+
+const STRUCTURED_DILIGENCE_MEMO_EXTRACT_PROMPT = `
+Role: You are a data extraction AI.
+Task: Your only job is to read the provided 'Quantitative Health Memo' and extract two specific pieces of information.
+CRITICAL INSTRUCTIONS:
+- You MUST return ONLY a valid JSON object.
+- Do not add any text, explanations, or markdown formatting before or after the JSON.
+- For 'verdict', extract the final verdict (e.g., "Strong", "Average", "Weak").
+- For 'keyWeakness', summarize the primary weakness identified in the final synthesis.
+
+Report Text:
+{reportContent}
+
+JSON Output Format:
+{
+  "verdict": "...",
+  "keyWeakness": "..."
+}
+`.trim();
+
+const MARKET_SENTIMENT_MEMO_EXTRACT_PROMPT = `
+Role: You are a data extraction AI.
+Task: Your only job is to read the provided 'Market Sentiment Memo' and extract two specific pieces of information.
+CRITICAL INSTRUCTIONS:
+- You MUST return ONLY a valid JSON object.
+- Do not add any text, explanations, or markdown formatting before or after the JSON.
+- For 'verdict', extract the final verdict (e.g., "Bullish", "Neutral", "Bearish").
+- For 'strongestSignal', identify the strongest sentiment signal (positive or negative) mentioned in the synthesis.
+
+Report Text:
+{reportContent}
+
+JSON Output Format:
+{
+  "verdict": "...",
+  "strongestSignal": "..."
+}
+`.trim();
+
+const INVESTIGATION_SUMMARY_MEMO_EXTRACT_PROMPT = `
+Role: You are a data extraction AI.
+Task: Your only job is to read the provided 'Investigation Summary Memo' and extract two specific pieces of information.
+CRITICAL INSTRUCTIONS:
+- You MUST return ONLY a valid JSON object.
+- Do not add any text, explanations, or markdown formatting before or after the JSON.
+- For 'keyBullishFinding', extract the single most important positive finding.
+- For 'keyBearishFinding', extract the single most important negative finding or unanswered question.
+
+Report Text:
+{reportContent}
+
+JSON Output Format:
+{
+  "keyBullishFinding": "...",
+  "keyBearishFinding": "..."
+}
+`.trim();
+// --- END NEW DILIGENCE MEMO EXTRACTORS ---
+
 const FINAL_THESIS_CONFLICT_ID_PROMPT = `
 Role: You are a conflict identification AI.
 Task: Based ONLY on the following JSON of analyst summaries, what is the core disagreement between these reports? Explain the conflict in one concise paragraph. Do not use markdown or headings.
@@ -816,6 +896,67 @@ Role: You are the Chief Investment Officer of a multi-strategy fund. Your task i
 * **For a New Investment:** [Explain what this recommendation means for an investor considering deploying new capital.]
 * **For an Existing Position:** [Explain what this recommendation means for a current shareholder.]
 `.trim();
+
+// --- NEW UPDATED FINAL THESIS PROMPT ---
+const UPDATED_FINAL_THESIS_PROMPT = `
+Role: You are the Chief Investment Officer, reviewing a previously generated "Final Investment Thesis" in light of new, direct diligence findings provided by your analyst.
+Task: Your task is to update the original thesis, recommendation, and rationale based *primarily* on the **new Diligence Memo Summaries**. Resolve any conflicts between the original thesis and the new diligence.
+
+---
+**CRITICAL INSTRUCTIONS & DEFINITIONS:**
+1.  **Prioritize New Diligence:** The **Diligence Memo Summaries** represent the analyst's latest findings and should be given the *most weight*. Use them to validate, challenge, or refine the conclusions of the **Original Final Thesis**.
+2.  **Explicitly Address Conflicts:** If the new diligence contradicts the original thesis (e.g., original thesis worried about valuation, but new diligence suggests market sentiment is overly bearish), you MUST explicitly state this contradiction and explain how the new information changes the conclusion.
+3.  **Focus on "The Edge":** Pay special attention to the 'nonConsensusThesis' from the Qualitative Diligence Memo. Does this unique insight strengthen the bull case enough to potentially override concerns raised in the original thesis?
+4.  **Output Format:** Your final output MUST use the exact markdown structure, headings, and table format provided below. Do not deviate.
+5.  **Grading Scale (Same as original):** A (High Conviction Buy, 4-5%), B (Strong Buy, 2-3%), C (Hold/Add Weakness, 1%), D (Hold/Monitor), F (Sell/Pass).
+---
+
+**INPUTS FOR ANALYSIS:**
+
+**1. Original Final Investment Thesis:**
+\`\`\`markdown
+{originalFinalThesisContent}
+\`\`\`
+
+**2. NEW Diligence Memo Summaries (JSON):**
+{diligenceSummaries}
+
+---
+**YOUR TASK (Strict Output Format):**
+
+# Updated Final Thesis: {companyName} ({tickerSymbol})
+
+## 1. Summary of Diligence Findings
+(Complete this summary table by extracting the key findings from the provided JSON data.)
+
+| Diligence Memo | Key Finding / Verdict |
+| :--- | :--- |
+| **Qualitative Memo** | [Extract 'verdict', 'nonConsensusThesis'] |
+| **Structured Memo** | [Extract 'verdict', 'keyWeakness'] |
+| **Market Sentiment** | [Extract 'verdict', 'strongestSignal'] |
+| **Investigation Summary** | [Extract 'keyBullishFinding', 'keyBearishFinding'] |
+
+## 2. Re-evaluating the Core Narrative & Conflicts
+(In one paragraph, compare the **Original Final Thesis Core Narrative** with the **new Diligence Findings**. Identify the main points of agreement or disagreement. Explicitly state any conflicts and explain which information source (original synthesis vs. new diligence) you find more compelling and why, referencing specific diligence findings like the 'nonConsensusThesis' or 'market sentiment verdict'.)
+
+## 3. Updated Recommendation & Rationale
+(In one or two paragraphs, revise the recommendation and justification from the **Original Final Thesis**. Base your updated reasoning primarily on the **Diligence Memo Summaries**, explaining how they modify the initial quantitative score and synthesis memo conclusions. Directly reference the 'nonConsensusThesis' and 'shareholderBaseQuality' if they significantly impact your view.)
+
+### Updated Recommendation
+(Your response for this section MUST follow the format below exactly, including the bolding.)
+
+**Recommendation Grade:** [Assign an updated letter grade based on the *new* synthesis.]
+**Suggested Allocation:** [State the corresponding allocation percentage.]
+
+(Your updated one-sentence justification summarizing your *new* conclusion goes here.)
+
+## 4. Updated Implications for Portfolio Management
+(Based on your *updated* recommendation, provide revised, actionable interpretations.)
+* **For a New Investment:** [Explain the updated meaning.]
+* **For an Existing Position:** [Explain the updated meaning.]
+`.trim();
+// --- END NEW UPDATED FINAL THESIS PROMPT ---
+
 
 // --- NEW DILIGENCE MEMO PROMPTS ---
 
@@ -1091,10 +1232,21 @@ export const promptMap = {
     'QarpAnalysis_Extract': { prompt: QARP_ANALYSIS_EXTRACT_PROMPT },
     'LongTermCompounder_Extract': { prompt: COMPOUNDER_BMQV_EXTRACT_PROMPT },
     'BmqvMemo_Extract': { prompt: COMPOUNDER_BMQV_EXTRACT_PROMPT },
+    // --- NEW DILIGENCE EXTRACTORS ---
+    'QualitativeDiligenceMemo_Extract': { prompt: QUALITATIVE_DILIGENCE_MEMO_EXTRACT_PROMPT },
+    'StructuredDiligenceMemo_Extract': { prompt: STRUCTURED_DILIGENCE_MEMO_EXTRACT_PROMPT },
+    'MarketSentimentMemo_Extract': { prompt: MARKET_SENTIMENT_MEMO_EXTRACT_PROMPT },
+    'InvestigationSummaryMemo_Extract': { prompt: INVESTIGATION_SUMMARY_MEMO_EXTRACT_PROMPT },
+    // --- END DILIGENCE EXTRACTORS ---
     'FinalThesis_ConflictID': { prompt: FINAL_THESIS_CONFLICT_ID_PROMPT },
     'FinalInvestmentThesis': {
         prompt: FINAL_INVESTMENT_THESIS_PROMPT,
         requires: [] // Synthesis report, no direct FMP data
+    },
+    // --- NEW UPDATED THESIS ---
+    'UpdatedFinalThesis': {
+        prompt: UPDATED_FINAL_THESIS_PROMPT,
+        requires: [] // Synthesis report, requires original thesis + diligence summaries
     }
 };
 
@@ -1108,7 +1260,9 @@ export const ANALYSIS_ICONS = {
     'InvestmentMemo': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>`,
     'EightKAnalysis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" /></svg>`,
     'BmqvMemo': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v17.25m0 0c-1.472 0-2.882.265-4.185.75M12 20.25c1.472 0 2.882.265 4.185.75M18.75 4.97A48.416 48.416 0 0012 4.5c-2.291 0-4.545.16-6.75.47m13.5 0c1.01.143 2.01.317 3 .52m-3-.52l2.62 10.726c.122.499-.106 1.028-.589 1.202a5.988 5.988 0 01-6.861 0c-.483-.174-.711-.703-.59-1.202L18.75 4.971zm-16.5.52c.99-.203 1.99-.377 3-.52m0 0l2.62 10.726c.122.499-.106 1.028-.589 1.202a5.988 5.988 0 01-6.861 0c-.483-.174-.711-.703-.59-1.202L5.25 4.971z" /></svg>`,
-    'MarketSentimentMemo': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 00-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 01-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 003 15h-.75M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" /></svg>`
+    'MarketSentimentMemo': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 00-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 01-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 003 15h-.75M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" /></svg>`,
+    'FinalInvestmentThesis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 18.75h-9m9 0a3 3 0 013 3h-15a3 3 0 013-3m9 0v-4.5m-9 4.5v-4.5m0 0h9.75M5.25 14.25h13.5M5.25 14.25a3 3 0 00-3 3h19.5a3 3 0 00-3-3M5.25 14.25v-4.5m13.5 4.5v-4.5m0 0h-12a3 3 0 00-3 3v.75" /></svg>`,
+    'UpdatedFinalThesis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.34 15.84c-.688-.06-1.386-.09-2.09-.09H7.5a4.5 4.5 0 01-4.5-4.5V4.5a4.5 4.5 0 014.5-4.5h7.5a4.5 4.5 0 014.5 4.5v1.25m-18 0A2.625 2.625 0 115.25 2.625M10.34 15.84a4.491 4.491 0 00-1.443-1.443 4.49 4.49 0 00-2.093-1.096m1.443 1.443s-.103-.017-.327-.052m2.093 1.096s-.103.017-.327.052m1.327 0c-.688-.06-1.386-.09-2.09-.09h-.094m2.183 0h-.094m2.183 0c.688.06 1.386.09 2.09.09h.094m-2.183 0h.094m0 0c.688.06 1.386.09 2.09.09h.094m-2.183 0h.094m2.183 0c.688.06 1.386.09 2.09.09h.094m-2.183 0h.094m0 0c.688.06 1.386.09 2.09.09h.094m-2.183 0h.094M10.34 15.84l-1.443-1.443M1.927 10.34l-1.443-1.443M14.25 10.34l1.443-1.443M14.25 10.34l-1.443 1.443M14.25 10.34l1.443 1.443M10.34 15.84l1.443 1.443m-1.443-1.443l-1.443 1.443m1.443-1.443l1.443 1.443M10.34 15.84l1.443 1.443m-4.49-4.49l-1.443-1.443m1.443 1.443l-1.443 1.443m1.443-1.443l1.443 1.443M10.34 15.84l1.443 1.443" /></svg>`
 };
 
 export const ANALYSIS_NAMES = {
@@ -1135,5 +1289,8 @@ export const ANALYSIS_NAMES = {
     'QualitativeDiligenceMemo': 'Qualitative Diligence Memo',
     'StructuredDiligenceMemo': 'Structured Diligence Memo',
     'MarketSentimentMemo': 'Market Sentiment Memo',
-    'InvestigationSummaryMemo': 'Investigation Summary'
+    'InvestigationSummaryMemo': 'Investigation Summary',
+    'UpdatedFinalThesis': 'Updated Final Thesis' // New entry
 };
+
+}
