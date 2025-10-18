@@ -2,7 +2,7 @@
 import { CONSTANTS, state, promptMap, QUARTERLY_REVIEW_QUESTIONS, ANNUAL_REVIEW_QUESTIONS } from './config.js';
 import { openModal, closeModal, openStockListModal, openManageStockModal, openPortfolioManagerModal, openRawDataViewer, addDiligenceEntryRow, addKpiRow } from './ui-modals.js';
 import { fetchAndCachePortfolioData, renderPortfolioManagerList, renderGarpScorecardDashboard, renderGarpInterpretationAnalysis } from './ui-render.js';
-import { handleResearchSubmit, handleSaveStock, handleDeleteStock, handleRefreshFmpData, handleAnalysisRequest, handleGarpMemoRequest, handleSaveReportToDb, handleGeneratePrereqsRequest, handleGarpCandidacyRequest, handlePortfolioGarpAnalysisRequest, handlePositionAnalysisRequest, handleReportHelpRequest, handleManualDiligenceSave, handleDeleteDiligenceLog, handleWorkflowHelpRequest, handleManualPeerAnalysisRequest, handleGenerateFilingQuestionsRequest, handleSaveFilingDiligenceRequest, handleDeleteFilingDiligenceLog, handleGenerateUpdatedGarpMemoRequest, handleGenerateUpdatedQarpMemoRequest, handleAnalyzeEightKRequest, handleCompounderMemoRequest, handleBmqvMemoRequest, handleFinalThesisRequest, handleKpiSuggestionRequest, handleCopyReportRequest, handleFullAnalysisWorkflow, handleDiligenceMemoRequest, handleSaveDiligenceAnswers, handleDeleteAllDiligenceAnswers, handleDeleteOldDiligenceLogs, handleInvestigationSummaryRequest, handleQuarterlyReviewRequest, handleAnnualReviewRequest } from './ui-handlers.js';
+import { handleResearchSubmit, handleSaveStock, handleDeleteStock, handleRefreshFmpData, handleAnalysisRequest, handleGarpMemoRequest, handleSaveReportToDb, handleGeneratePrereqsRequest, handleGarpCandidacyRequest, handlePortfolioGarpAnalysisRequest, handlePositionAnalysisRequest, handleReportHelpRequest, handleManualDiligenceSave, handleDeleteDiligenceLog, handleWorkflowHelpRequest, handleManualPeerAnalysisRequest, handleGenerateFilingQuestionsRequest, handleSaveFilingDiligenceRequest, handleDeleteFilingDiligenceLog, handleGenerateUpdatedGarpMemoRequest, handleGenerateUpdatedQarpMemoRequest, handleAnalyzeEightKRequest, handleCompounderMemoRequest, handleBmqvMemoRequest, handleFinalThesisRequest, handleKpiSuggestionRequest, handleCopyReportRequest, handleFullAnalysisWorkflow, handleDiligenceMemoRequest, handleSaveDiligenceAnswers, handleDeleteAllDiligenceAnswers, handleDeleteOldDiligenceLogs, handleInvestigationSummaryRequest, handleQuarterlyReviewRequest, handleAnnualReviewRequest, handleUpdatedFinalThesisRequest } from './ui-handlers.js'; // Added handleUpdatedFinalThesisRequest
 import { getFmpStockData } from './api.js';
 import { _calculateGarpScorecardMetrics } from './analysis-helpers.js';
 
@@ -20,7 +20,7 @@ function initializeTooltips() {
         tooltipElement.className = 'custom-tooltip';
         tooltipElement.textContent = tooltipText;
         document.body.appendChild(tooltipElement);
-        
+
         positionTooltip(target, tooltipElement);
 
         requestAnimationFrame(() => {
@@ -37,21 +37,22 @@ function initializeTooltips() {
             tooltipElement = null;
         }
     });
-    
+
     function positionTooltip(target, tooltip) {
         const targetRect = target.getBoundingClientRect();
-        const tooltipRect = tooltip.getBoundingClientRect(); 
+        const tooltipRect = tooltip.getBoundingClientRect();
         const margin = 8;
 
         let top = targetRect.top - tooltipRect.height - margin;
         let left = targetRect.left + (targetRect.width / 2) - (tooltipRect.width / 2);
 
-        if (top < 0) {
+        // Adjust if tooltip goes off-screen
+        if (top < 0) { // If above screen
             top = targetRect.bottom + margin;
         }
-        if (left < 0) {
+        if (left < 0) { // If left of screen
             left = margin;
-        } else if (left + tooltipRect.width > window.innerWidth) {
+        } else if (left + tooltipRect.width > window.innerWidth) { // If right of screen
             left = window.innerWidth - tooltipRect.width - margin;
         }
 
@@ -84,7 +85,7 @@ async function handleScorecardEdit(target) {
 
     const saveAndClose = async () => {
         let newValue = parseFloat(input.value);
-        
+
         if (isNaN(newValue)) {
             // If input is blank, we remove the override
             const docRef = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(ticker).collection('analysis').doc('manual_overrides');
@@ -99,13 +100,13 @@ async function handleScorecardEdit(target) {
             const docRef = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(ticker).collection('analysis').doc('manual_overrides');
             await docRef.set({ [metricKey]: newValue }, { merge: true });
         }
-        
+
         // Re-render the dashboard to show the updated score and indicator
         const garpScorecardContainer = document.getElementById('garp-scorecard-container');
         const fmpData = await getFmpStockData(ticker);
         renderGarpScorecardDashboard(garpScorecardContainer, ticker, fmpData);
         renderGarpInterpretationAnalysis(garpScorecardContainer, _calculateGarpScorecardMetrics(fmpData));
-        
+
         // Also regenerate the AI candidacy report to reflect the new numbers
         // handleGarpCandidacyRequest(ticker, true);
 
@@ -132,7 +133,7 @@ function setupGlobalEventListeners() {
             fetchAndCachePortfolioData();
             return;
         }
-        
+
         const listButton = e.target.closest('.dashboard-list-button');
         if (listButton) {
             const status = listButton.dataset.status;
@@ -164,7 +165,7 @@ function setupGlobalEventListeners() {
             document.querySelectorAll('#stock-list-modal-content details').forEach(d => d.open = false);
             return;
         }
-        
+
         const ticker = target.dataset.ticker;
         if (ticker) {
             if (target.classList.contains('dashboard-item-edit')) {
@@ -201,7 +202,7 @@ function setupGlobalEventListeners() {
 export function setupEventListeners() {
     initializeTooltips();
     document.getElementById(CONSTANTS.FORM_STOCK_RESEARCH)?.addEventListener('submit', handleResearchSubmit);
-    
+
     document.getElementById('manage-stock-form')?.addEventListener('submit', handleSaveStock);
     document.getElementById('cancel-manage-stock-button')?.addEventListener('click', () => closeModal(CONSTANTS.MODAL_MANAGE_STOCK));
     document.getElementById('delete-stock-button')?.addEventListener('click', (e) => {
@@ -229,7 +230,7 @@ export function setupEventListeners() {
             addKpiRow({ name: kpiName });
             return;
         }
-        
+
         const removeKpiButton = e.target.closest('.remove-kpi-button');
         if (removeKpiButton) {
             removeKpiButton.closest('.kpi-row').remove();
@@ -244,7 +245,7 @@ export function setupEventListeners() {
 
     document.getElementById('manage-all-stocks-button')?.addEventListener('click', openPortfolioManagerModal);
     document.getElementById('workflow-guide-button')?.addEventListener('click', handleWorkflowHelpRequest);
-    
+
     // NEW event listener for the portfolio analysis button
     document.getElementById('analyze-portfolio-garp-button')?.addEventListener('click', handlePortfolioGarpAnalysisRequest);
 
@@ -273,7 +274,7 @@ export function setupEventListeners() {
             e.preventDefault();
             const symbol = analysisModal.dataset.activeTicker;
             if (symbol) {
-                handleTranscriptSearch(symbol);
+                // handleTranscriptSearch(symbol); // Assuming this exists elsewhere
             }
         }
     });
@@ -283,7 +284,7 @@ export function setupEventListeners() {
             handleScorecardEdit(e.target);
             return;
         }
-    
+
         const target = e.target.closest('button');
         if (!target) return;
 
@@ -294,7 +295,7 @@ export function setupEventListeners() {
             }
             return;
         }
-        
+
         if (target.id === 'analyze-manual-peers-button') {
             const ticker = target.dataset.ticker;
             if (ticker) {
@@ -310,26 +311,26 @@ export function setupEventListeners() {
             }
             return;
         }
-		
+
 		if (target.matches('.tab-button')) {
 		    const tabId = target.dataset.tab;
-		    
+
 		    const scrollContainer = analysisModal.querySelector('.flex-grow.overflow-y-auto');
 		    if (scrollContainer) {
 		        scrollContainer.scrollTop = 0;
 		    }
-		
+
 		    document.querySelectorAll('#rawDataViewerModal .tab-content').forEach(c => c.classList.add('hidden'));
 		    document.querySelectorAll('#rawDataViewerModal .tab-button').forEach(b => b.classList.remove('active'));
 		    document.getElementById(`${tabId}-tab`).classList.remove('hidden');
 		    target.classList.add('active');
-		
+
 		    return;
 		}
-        
+
         const symbol = target.dataset.symbol || analysisModal.dataset.activeTicker;
         if (!symbol) return;
-        
+
         const copyReportBtn = e.target.closest('.copy-report-btn');
         if (copyReportBtn) {
             const reportType = copyReportBtn.dataset.reportType;
@@ -343,12 +344,12 @@ export function setupEventListeners() {
             addDiligenceEntryRow();
             return;
         }
-        
+
         if (target.id === 'delete-all-diligence-button') {
             handleDeleteAllDiligenceAnswers(symbol);
             return;
         }
-        
+
         if (target.id === 'delete-old-diligence-logs-button') {
             handleDeleteOldDiligenceLogs(symbol);
             return;
@@ -363,13 +364,13 @@ export function setupEventListeners() {
             }
             return;
         }
-        
+
         // --- ONGOING DILIGENCE HANDLERS ---
         if (target.matches('.start-review-button')) {
             const reviewType = target.dataset.reviewType; // 'Quarterly' or 'Annual'
             const formContainer = document.getElementById('review-form-container');
             const questions = reviewType === 'Quarterly' ? QUARTERLY_REVIEW_QUESTIONS : ANNUAL_REVIEW_QUESTIONS;
-            
+
             let formHtml = `<div class="p-4 border rounded-lg bg-gray-50"><h4 class="text-base font-semibold text-gray-800 mb-4">${reviewType} Review Checklist</h4><div class="space-y-4">`;
             for(const [key, question] of Object.entries(questions)) {
                 formHtml += `
@@ -401,7 +402,7 @@ export function setupEventListeners() {
             }
             return;
         }
-        
+
         if (target.matches('.cancel-review-button')) {
             const formContainer = document.getElementById('review-form-container');
             formContainer.innerHTML = '';
@@ -416,17 +417,17 @@ export function setupEventListeners() {
             document.getElementById('review-form-container').classList.add('hidden');
             return;
         }
-        
+
         if (target.id === 'generate-filing-questions-button') {
             handleGenerateFilingQuestionsRequest(symbol);
             return;
         }
-        
+
         if (target.id === 'analyze-eight-k-button-new') {
             handleAnalyzeEightKRequest(symbol);
             return;
         }
-        
+
         if (target.id === 'save-filing-diligence-button') {
             handleSaveFilingDiligenceRequest(symbol);
             return;
@@ -473,7 +474,7 @@ export function setupEventListeners() {
             handleGenerateUpdatedQarpMemoRequest(symbol);
             return;
         }
-        
+
         const saveDiligenceBtn = e.target.closest('.save-diligence-answers-button');
         if (saveDiligenceBtn) {
             const diligenceType = saveDiligenceBtn.dataset.diligenceType;
@@ -492,7 +493,7 @@ export function setupEventListeners() {
             handlePositionAnalysisRequest(symbol);
             return;
         }
-        
+
         if (target.id === 'run-full-workflow-button') {
              handleFullAnalysisWorkflow(symbol);
              return;
@@ -516,13 +517,18 @@ export function setupEventListeners() {
                 handleAnalysisRequest(symbol, reportType, promptConfig);
             }
         }
-        
+
         if (target.id === 'garp-memo-button') handleGarpMemoRequest(symbol);
         if (target.id === 'long-term-compounder-button') handleCompounderMemoRequest(symbol);
         if (target.id === 'bmqv-memo-button') handleBmqvMemoRequest(symbol);
         if (target.id === 'final-thesis-button') handleFinalThesisRequest(symbol);
+        // --- NEW LISTENER ---
+        if (target.id === 'updated-final-thesis-button') handleUpdatedFinalThesisRequest(symbol);
+        // --- END NEW LISTENER ---
         if (target.id === 'generate-prereqs-button') handleGeneratePrereqsRequest(symbol);
     });
-    
+
     setupGlobalEventListeners();
+}
+
 }
