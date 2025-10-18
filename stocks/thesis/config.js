@@ -366,6 +366,8 @@ Synthesize all the Core Data above into a professional Position Review Memo.
 ---
 `.trim();
 
+// In config.js, replace the GARP_CANDIDACY_PROMPT constant with this corrected version:
+
 const GARP_CANDIDACY_PROMPT = `
 1. Persona & Role:
 You are a senior investment analyst at "Reasonable Growth Capital," a firm that strictly adheres to the Growth at a Rasonable Price (GARP) philosophy. Your role is not to make a final decision, but to act as an objective journalist. Your analysis is respected for its clarity, data-driven conviction, and ability to distill complex financial data into a balanced, unbiased assessment.
@@ -406,7 +408,7 @@ Generate a comprehensive GARP assessment using precise markdown formatting. Your
 | **[Selected Metric 2]** | [Value] | [Value] | [Value] |
 | **[Selected Metric 3]** | [Value] | [Value] | [Value] |
 
-**Second, write your one-paragraph qualitative synthesis. This narrative MUST be based on the data in the table you just created AND the `interpretation.text` and `interpretation.category` fields from the JSON. Focus on the *implications* of the data (the "so what") rather than just repeating the raw numbers. Synthesize the stock's strengths into a compelling narrative.**
+**Second, write your one-paragraph qualitative synthesis. This narrative MUST be based on the data in the table you just created AND the \\\`interpretation.text\\\` and \\\`interpretation.category\\\` fields from the JSON. Focus on the *implications* of the data (the "so what") rather than just repeating the raw numbers. Synthesize the stock's strengths into a compelling narrative.**
 
 [Your qualitative narrative for the Bull Case goes here.]
 
@@ -423,7 +425,7 @@ Generate a comprehensive GARP assessment using precise markdown formatting. Your
 | **[Selected Metric 2]** | [Value] | [Value] | [Value] |
 | **[Selected Metric 3]** | [Value] | [Value] | [Value] |
 
-**Second, write your one-paragraph qualitative synthesis. This narrative MUST be based on the data in the table you just created AND the `interpretation.text` and `interpretation.category` fields from the JSON. Focus on the *implications* of the data (the "so what") rather than just repeating the raw numbers. Identify the critical risks and weaknesses.**
+**Second, write your one-paragraph qualitative synthesis. This narrative MUST be based on the data in the table you just created AND the \\\`interpretation.text\\\` and \\\`interpretation.category\\\` fields from the JSON. Focus on the *implications* of the data (the "so what") rather than just repeating the raw numbers. Identify the critical risks and weaknesses.**
 
 [Your qualitative narrative for the Bear Case goes here.]
 
