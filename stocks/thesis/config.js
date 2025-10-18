@@ -1292,5 +1292,3 @@ export const ANALYSIS_NAMES = {
     'InvestigationSummaryMemo': 'Investigation Summary',
     'UpdatedFinalThesis': 'Updated Final Thesis' // New entry
 };
-
-}
