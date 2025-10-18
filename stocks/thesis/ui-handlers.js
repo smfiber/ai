@@ -917,9 +917,9 @@ export async function handleAnalysisRequest(symbol, reportType, promptConfig, fo
         const finalReportContent = await generateRefinedArticle(prompt, loadingMessage);
 
         let synthesisData = null;
-        const synthesisReportTypes = ['MoatAnalysis', 'CapitalAllocators', 'QarpAnalysis'];
-        if (synthesisReportTypes.includes(reportType)) {
-            synthesisData = await extractSynthesisData(finalReportContent, reportType);
+        // Check if an extractor prompt exists for this report type
+        if (promptMap[`${reportType}_Extract`]) {
+             synthesisData = await extractSynthesisData(finalReportContent, reportType);
         }
 
         contentContainer.dataset.rawMarkdown = finalReportContent;
@@ -1199,9 +1199,17 @@ export async function handleFinalThesisRequest(symbol, forceNew = false) {
             }
             const reportData = reports[0];
             if (!reportData.synthesis_data) {
-                throw new Error(`Synthesis data is missing for the '${ANALYSIS_NAMES[type]}' report. Please regenerate it.`);
+                // Try to extract data on the fly if missing
+                console.warn(`Synthesis data missing for ${type}, attempting extraction...`);
+                const extractedData = await extractSynthesisData(reportData.content, type);
+                if (!extractedData) {
+                    throw new Error(`Synthesis data is missing and could not be extracted for the '${ANALYSIS_NAMES[type]}' report. Please regenerate it.`);
+                }
+                analystSummaries[type] = extractedData;
+                // Optionally save the extracted data back to the report in Firestore (consider performance)
+            } else {
+                analystSummaries[type] = reportData.synthesis_data;
             }
-            analystSummaries[type] = reportData.synthesis_data;
         }
 
         loadingMessage.textContent = "Synthesizing final thesis...";
@@ -1230,6 +1238,109 @@ export async function handleFinalThesisRequest(symbol, forceNew = false) {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
 }
+
+// --- NEW HANDLER FOR UPDATED FINAL THESIS ---
+export async function handleUpdatedFinalThesisRequest(symbol, forceNew = false) {
+    const contentContainer = document.getElementById('ai-article-container-analysis');
+    const statusContainer = document.getElementById('report-status-container-analysis');
+    contentContainer.innerHTML = '';
+    statusContainer.classList.add('hidden');
+
+    try {
+        const reportType = 'UpdatedFinalThesis';
+        const promptConfig = promptMap[reportType];
+        const savedReports = getReportsFromCache(symbol, reportType);
+
+        if (savedReports.length > 0 && !forceNew) {
+            const latestReport = savedReports[0];
+            displayReport(contentContainer, latestReport.content, latestReport.prompt);
+            updateReportStatus(statusContainer, savedReports, latestReport.id, { symbol, reportType, promptConfig });
+            return;
+        }
+
+        openModal(CONSTANTS.MODAL_LOADING);
+        const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+        loadingMessage.textContent = "Gathering original thesis and new diligence summaries...";
+
+        // 1. Get the original FinalInvestmentThesis content
+        const originalThesisReports = getReportsFromCache(symbol, 'FinalInvestmentThesis');
+        if (originalThesisReports.length === 0) {
+            throw new Error(`The original 'Final Investment Thesis' must be generated first.`);
+        }
+        const originalFinalThesisContent = originalThesisReports[0].content;
+
+        // 2. Get the summaries from the four diligence memos
+        const requiredDiligenceTypes = [
+            'QualitativeDiligenceMemo',
+            'StructuredDiligenceMemo',
+            'MarketSentimentMemo',
+            'InvestigationSummaryMemo'
+        ];
+        const diligenceSummaries = {};
+        let missingExtraction = [];
+
+        for (const type of requiredDiligenceTypes) {
+            const reports = getReportsFromCache(symbol, type);
+            if (reports.length === 0) {
+                throw new Error(`The prerequisite diligence memo '${ANALYSIS_NAMES[type]}' has not been generated yet.`);
+            }
+            const reportData = reports[0];
+            if (!reportData.synthesis_data) {
+                console.warn(`Synthesis data missing for ${type}, attempting extraction...`);
+                const extractedData = await extractSynthesisData(reportData.content, type);
+                if (!extractedData) {
+                    missingExtraction.push(ANALYSIS_NAMES[type]);
+                    // Store null or an empty object to indicate missing data
+                    diligenceSummaries[type] = null;
+                } else {
+                    diligenceSummaries[type] = extractedData;
+                    // Optionally save back to Firestore
+                     await state.db.collection(CONSTANTS.DB_COLLECTION_AI_REPORTS).doc(reportData.id).update({ synthesis_data: extractedData });
+                     // Update local cache as well
+                     const cacheIndex = state.reportCache.findIndex(r => r.id === reportData.id);
+                     if (cacheIndex !== -1) {
+                         state.reportCache[cacheIndex].synthesis_data = extractedData;
+                     }
+                }
+            } else {
+                diligenceSummaries[type] = reportData.synthesis_data;
+            }
+        }
+
+         if (missingExtraction.length > 0) {
+            throw new Error(`Synthesis data is missing and could not be extracted for the following diligence memos: ${missingExtraction.join(', ')}. Please regenerate them.`);
+        }
+
+
+        loadingMessage.textContent = "Synthesizing updated final thesis...";
+        const profile = state.portfolioCache.find(s => s.ticker === symbol);
+        const companyName = profile ? profile.companyName : symbol;
+
+        const finalPrompt = promptConfig.prompt
+            .replace(/{companyName}/g, companyName)
+            .replace(/{tickerSymbol}/g, symbol)
+            .replace('{originalFinalThesisContent}', originalFinalThesisContent)
+            .replace('{diligenceSummaries}', JSON.stringify(diligenceSummaries, null, 2));
+
+        const memoContent = await generateRefinedArticle(finalPrompt, loadingMessage);
+
+        // Auto-save the new UpdatedFinalThesis report (no synthesis data needed for this one)
+        await autoSaveReport(symbol, reportType, memoContent, finalPrompt);
+
+        const refreshedReports = getReportsFromCache(symbol, reportType);
+        displayReport(contentContainer, memoContent, finalPrompt);
+        updateReportStatus(statusContainer, refreshedReports, refreshedReports[0].id, { symbol, reportType, promptConfig });
+
+    } catch (error) {
+        console.error("Error generating Updated Final Thesis:", error);
+        displayMessageInModal(`Could not generate updated thesis: ${error.message}`, 'error');
+        contentContainer.innerHTML = `<p class="text-red-500">${error.message}</p>`;
+        throw error;
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+// --- END NEW HANDLER ---
 
 
 export async function handleGeneratePrereqsRequest(symbol) {
@@ -1339,7 +1450,7 @@ export async function handleDiligenceMemoRequest(symbol, reportType, forceNew = 
         if (savedReports.length > 0 && !forceNew) {
             const latestReport = savedReports[0];
             displayReport(contentContainer, latestReport.content, latestReport.prompt);
-            updateReportStatus(statusContainer, savedReports, latestReport.id, { symbol, reportType, promptConfig });
+             updateReportStatus(statusContainer, savedReports, latestReport.id, { symbol, reportType, promptConfig }); // Added updateReportStatus
             return;
         }
 
@@ -1372,7 +1483,9 @@ export async function handleDiligenceMemoRequest(symbol, reportType, forceNew = 
             .replace('{qaData}', qaData);
 
         const memoContent = await generateRefinedArticle(prompt);
-        await autoSaveReport(symbol, reportType, memoContent, prompt);
+         // --- NEW: Extract synthesis data after generation ---
+        const synthesisData = await extractSynthesisData(memoContent, reportType);
+        await autoSaveReport(symbol, reportType, memoContent, prompt, null, synthesisData);
 
         document.querySelectorAll('#rawDataViewerModal .tab-content').forEach(c => c.classList.add('hidden'));
         document.querySelectorAll('#rawDataViewerModal .tab-button').forEach(b => b.classList.remove('active'));
@@ -1439,7 +1552,10 @@ export async function handleInvestigationSummaryRequest(symbol, forceNew = false
         loadingMessage.textContent = 'AI is synthesizing your investigation notes...';
         const memoContent = await generateRefinedArticle(prompt, loadingMessage);
 
-        await autoSaveReport(symbol, reportType, memoContent, prompt);
+        // --- NEW: Extract synthesis data after generation ---
+        const synthesisData = await extractSynthesisData(memoContent, reportType);
+        await autoSaveReport(symbol, reportType, memoContent, prompt, null, synthesisData);
+
 
         const refreshedReports = getReportsFromCache(symbol, reportType);
         displayReport(contentContainer, memoContent, prompt);
@@ -2200,12 +2316,17 @@ export async function handleFullAnalysisWorkflow(symbol) {
     const finalStage = [
         { reportType: 'FinalInvestmentThesis', handler: handleFinalThesisRequest }
     ];
+    // --- NEW: Add the UpdatedFinalThesis to the workflow ---
+    const updatedFinalStage = [
+        { reportType: 'UpdatedFinalThesis', handler: handleUpdatedFinalThesisRequest }
+    ];
 
     const allStages = [
         { name: 'Preliminary Analysis', reports: preliminaryStage },
         { name: 'Foundational Analysis', reports: foundationalStage },
         { name: 'Synthesis Memos', reports: synthesisStage },
-        { name: 'Final Thesis', reports: finalStage }
+        { name: 'Final Thesis', reports: finalStage },
+        { name: 'Updated Final Thesis', reports: updatedFinalStage } // New Stage
     ];
 
     openModal(CONSTANTS.MODAL_LOADING);
@@ -2234,7 +2355,16 @@ export async function handleFullAnalysisWorkflow(symbol) {
                 }
 
                 const promptConfig = promptMap[step.reportType];
-                await step.handler(symbol, step.reportType, promptConfig, true);
+                // Ensure handler is called with correct parameters for its type
+                 if (['QualitativeDiligenceMemo', 'StructuredDiligenceMemo', 'MarketSentimentMemo', 'InvestigationSummaryMemo'].includes(step.reportType)) {
+                    await step.handler(symbol, step.reportType, true); // Pass true for forceNew
+                } else if (step.reportType === 'UpdatedFinalThesis'){
+                    await step.handler(symbol, true); // Pass true for forceNew
+                }
+                 else {
+                     await step.handler(symbol, step.reportType, promptConfig, true); // Pass true for forceNew
+                 }
+
 
                 const analysisContentContainer = document.getElementById('analysis-content-container');
                 if (analysisContentContainer) {
@@ -2354,4 +2484,6 @@ export async function handleQuarterlyReviewRequest(symbol) {
 
 export async function handleAnnualReviewRequest(symbol) {
     await _handleReviewRequest(symbol, 'Annual');
+}
+
 }
