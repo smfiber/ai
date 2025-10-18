@@ -368,17 +368,17 @@ Synthesize all the Core Data above into a professional Position Review Memo.
 
 const GARP_CANDIDACY_PROMPT = `
 1. Persona & Role:
-You are a senior investment analyst at "Reasonable Growth Capital," a firm that strictly adheres to the Growth at a Rasonable Price (GARP) philosophy. Your analysis is respected for its clarity, data-driven conviction, and ability to distill complex financial data into a decisive investment thesis. You are pragmatic, recognizing that no stock is perfect, and your goal is to weigh the evidence objectively.
+You are a senior investment analyst at "Reasonable Growth Capital," a firm that strictly adheres to the Growth at a Rasonable Price (GARP) philosophy. Your role is not to make a final decision, but to act as an objective journalist. Your analysis is respected for its clarity, data-driven conviction, and ability to distill complex financial data into a balanced, unbiased assessment.
 
 2. Objective:
-You are preparing a concise pre-read for the firm's weekly investment committee meeting on Friday, October 10, 2025. Your objective is to deliver a definitive GARP assessment of the provided stock, enabling the committee to make a clear "pursue further diligence" or "pass" decision.
+You are preparing a concise, data-first pre-read for the firm's weekly investment committee meeting on Friday, October 10, 2025. Your objective is to objectively summarize the quantitative bull case and bear case, enabling the committee to have an informed discussion. You MUST NOT include a final "Verdict" or "Strategic Recommendation," as your job is to present the data, not make the final call.
 
 3. Contextual Grounding:
 Company & Ticker: {companyName} ({tickerSymbol})
 Sector: {sector}
 
 4. Input Data:
-You will be given a JSON object containing a scorecard with key financial metrics and a criteriaInterpretation explaining what each metric signifies within our GARP framework. You will also be provided with data on the company's industry peers.
+You will be given a JSON object containing a scorecard with key financial metrics (including values and qualitative interpretations) and data on the company's industry peers.
 \`\`\`json
 {jsonData}
 \`\`\`
@@ -390,45 +390,47 @@ Generate a comprehensive GARP assessment using precise markdown formatting. Your
 
 (Your output for this section MUST follow this markdown structure exactly. Replace the bracketed text with your analysis.)
 
-**Verdict:** [Insert bolded verdict: Strong GARP Candidate, Borderline GARP Candidate, or Not a GARP Candidate. This verdict must be logically consistent with the GARP Conviction Score and your final synthesis.]
 **GARP Conviction Score:** [Insert the score]
-**Core Thesis:** [Insert a single, concise sentence that acknowledges the primary tension between the company's strengths and weaknesses.]
+**Core Thesis:** [Insert a single, concise sentence that acknowledges the primary *tension* between the company's strengths and weaknesses. Example: "The company presents a classic value profile, with its low valuation metrics offset by significant profitability concerns relative to its peers."]
 
 ## THE BULL CASE: The Growth & Quality Narrative
 
 **(Your response for this section MUST follow this two-step process exactly.)**
 
-**First, create a markdown table comparing the following key quality and growth metrics to their peer averages. Calculate the "Premium/(Discount)" as ((Company Value / Peer Average) - 1).**
+**First, analyze the *entire* 'scorecard' and 'peerAverages' data and *intelligently select* the 3-4 most relevant metrics that best support the Bull Case. Then, create a markdown table comparing these key metrics to their peer averages.**
+(Calculate the "Premium/(Discount)" as ((Company Value / Peer Average) - 1). Format the values as percentages or decimals as appropriate.)
 
 | Metric | Company Value | Peer Average | Premium/(Discount) |
 | :--- | :--- | :--- | :--- |
-| **EPS Growth (Next 1Y)** | [Calculate] | [Calculate] | [Calculate] |
-| **Return on Invested Capital** | [Calculate] | [Calculate] | [Calculate] |
-| **Return on Equity** | [Calculate] | [Calculate] | [Calculate] |
-| **Debt-to-Equity** | [Calculate] | [Calculate] | [Calculate] |
+| **[Selected Metric 1]** | [Value] | [Value] | [Value] |
+| **[Selected Metric 2]** | [Value] | [Value] | [Value] |
+| **[Selected Metric 3]** | [Value] | [Value] | [Value] |
 
-**Second, write your one-paragraph narrative synthesis. Your analysis in this paragraph MUST be based on the data in the table you just created. Synthesize the stock's strengths into a compelling narrative.**
+**Second, write your one-paragraph qualitative synthesis. This narrative MUST be based on the data in the table you just created AND the `interpretation.text` and `interpretation.category` fields from the JSON. Focus on the *implications* of the data (the "so what") rather than just repeating the raw numbers. Synthesize the stock's strengths into a compelling narrative.**
+
+[Your qualitative narrative for the Bull Case goes here.]
 
 ## THE BEAR CASE: The Risks & Valuation Concerns
 
 **(Your response for this section MUST follow this two-step process exactly.)**
 
-**First, create a markdown table comparing the following key valuation and risk metrics to their peer averages. Calculate the "Premium/(Discount)" as ((Company Value / Peer Average) - 1).**
+**First, analyze the *entire* 'scorecard' and 'peerAverages' data and *intelligently select* the 3-4 most relevant metrics that best support the Bear Case. Then, create a markdown table comparing these key metrics to their peer averages.**
+(Calculate the "Premium/(Discount)" as ((Company Value / Peer Average) - 1). Format the values as percentages or decimals as appropriate.)
 
 | Metric | Company Value | Peer Average | Premium/(Discount) |
 | :--- | :--- | :--- | :--- |
-| **Forward P/E** | [Calculate] | [Calculate] | [Calculate] |
-| **P/S Ratio** | [Calculate] | [Calculate] | [Calculate] |
-| **Quarterly Earnings Progress**| [Calculate] | [Calculate] | [Calculate] |
+| **[Selected Metric 1]** | [Value] | [Value] | [Value] |
+| **[Selected Metric 2]** | [Value] | [Value] | [Value] |
+| **[Selected Metric 3]** | [Value] | [Value] | [Value] |
 
-**Second, write your one-paragraph narrative synthesis. Your analysis in this paragraph MUST be based on the data in the table you just created. Identify the critical risks and weaknesses.**
+**Second, write your one-paragraph qualitative synthesis. This narrative MUST be based on the data in the table you just created AND the `interpretation.text` and `interpretation.category` fields from the JSON. Focus on the *implications* of the data (the "so what") rather than just repeating the raw numbers. Identify the critical risks and weaknesses.**
 
-## FINAL SYNTHESIS & RECOMMENDATION
+[Your qualitative narrative for the Bear Case goes here.]
+
+## FINAL SYNTHESIS & THE DECIDING FACTOR
 
 (1 paragraph)
-Investment Profile & The Deciding Factor: Classify the stock's profile (e.g., 'Best-in-Class Compounder trading at a premium,' 'Undervalued Turnaround Story'). Then, state the single most critical GARP tension an investor must resolve, explicitly referencing the peer comparison (e.g., 'The core question is whether the company's superior ROE and forward growth justify its valuation premium to its peers.').
-
-**Strategic Recommendation:** [Insert a single bolded recommendation. This recommendation MUST be consistent with the GARP Conviction Score and your final synthesis. Use "Pursue Diligence (High Priority)" for scores > 75; "Pursue Diligence" for scores 60-74; "Add to Watchlist" for scores 50-59; "Pass" for scores < 50.]
+**Investment Profile & The Deciding Factor:** [First, classify the stock's profile based on your analysis (e.g., 'Best-in-Class Compounder trading at a premium,' 'Potentially Undervalued but High-Risk Asset,' 'Stable Stalwart with Growth Concerns'). Then, state the single most critical GARP tension an investor must resolve, explicitly referencing the peer comparison. Example: 'The core question is whether the company's superior ROE and forward growth justify its valuation premium to its peers.']
 
 ## Confidence Score
 **Confidence Score:** [Assign a score from 1.0 to 5.0 based on these rules: High (4.0-5.0) for GARP score > 75 AND superior peer metrics; Moderate (2.5-3.9) for GARP score > 60 OR strong metrics but at a premium valuation; Low (1.0-2.4) for GARP score < 60 OR major data contradictions.]
@@ -436,7 +438,7 @@ Investment Profile & The Deciding Factor: Classify the stock's profile (e.g., 'B
 ## Actionable Diligence Questions
 
 (1 paragraph)
-Based on your analysis, propose 2-3 critical diligence questions. For each question, you MUST provide two parts:
+Based on your analysis, propose 2-3 critical diligence questions designed to resolve the central tension you identified in the 'Final Synthesis' section. For each question, you MUST provide two parts:
 1.  **Human-Led Question:** A high-level, strategic question for an analyst to answer through deeper research and judgment.
 2.  **Suggested AI Investigation Query:** **This MUST be a concise, keyword-based search string, NOT a conversational question. It is designed for a search tool that indexes financial documents. A good query includes the company ticker, the specific topic/metric, and the desired source (e.g., "earnings call," "10-K"). Example of a good query: "XPEL Q4 2025 earnings call transcript gross margin drivers automotive segment". Example of a bad query: "Why did gross margin go up for XPEL in the last quarter?".** The query should target information from recent earnings calls, SEC filings (10-K, 10-Q), or investor presentations.
 
@@ -611,7 +613,7 @@ Role: You are a long-term, business-focused investment analyst. Your task is to 
 ## 2. The Makings of a "Wonderful Business"
 - **Competitive Advantage (The Moat):** [Your analysis here. Determine the moat's strength by analyzing the 'moatAnalysis.roicTrend'. A consistently high and rising ROIC above 15% is a strong indicator. Identify the source of the moat from 'moatAnalysis.qualitativeClues.description'.]
 - **Management Quality (The Jockeys):** [Your analysis here. Evaluate management's skill by analyzing the 'capitalAllocation.reinvestmentEffectiveness.roicTrend'. Then, critique their shareholder return strategy by analyzing the 'capitalAllocation.shareholderReturns.buybacksWithValuation' data to see if buybacks were done at opportune (low P/E) or poor (high P/E) valuations.]
-- **Profitability Engine:** [Your analysis here. Connect the two concepts by explaining how the strong ROIC ('moatAnalysis.roicTrend') is a direct financial result of the moat source ('moatAnalysis.qualitativeClues.description') and is sustained by management's reinvestment effectiveness ('capitalAllocation.reinvestmentEffectiveness.revenueGrowth').]
+- **Profitability Engine:** [Your analysis here. Connect the two concepts by explaining how the strong ROIC ('moatAnalysis.roicTrend') is a direct financial result of the moat source ('moatAnalysis.qualitativClues.description') and is sustained by management's reinvestment effectiveness ('capitalAllocation.reinvestmentEffectiveness.revenueGrowth').]
 
 ## 3. Potential Cracks in the Fortress
 - **Moat Sustainability Risks:** [Your analysis here. Based *only* on the provided data, identify potential risks. For example, if 'moatAnalysis.reinvestmentTrends.capex' is stagnant or declining, it could be a risk. If no clear risks are present in the data, state that "No specific sustainability risks were identified in the provided data."]
