@@ -269,11 +269,31 @@ function _resetAnalysisModal() {
 
     state.reportCache = []; // Clear the local report cache
 
-    // Clear all content areas to their initial state
-    safeClear('raw-data-accordion-container', '<div class="loader mx-auto"></div>');
+    // Clear main tab containers first
+    safeClear('dashboard-tab', '<div class="loader mx-auto my-8"></div>'); // Show loading state for dashboard initially
     safeClear('ai-analysis-tab');
     safeClear('diligence-hub-tab');
     safeClear('ongoing-diligence-tab');
+    safeClear('position-analysis-tab'); // Clear this as well
+    safeClear('raw-data-tab', '<div id="raw-data-accordion-container"><div class="loader mx-auto my-8"></div></div>'); // Keep container
+
+    // Reset tabs to default view (Dashboard active)
+    document.querySelectorAll('#rawDataViewerModal .tab-content').forEach(c => c.classList.add('hidden'));
+    document.querySelectorAll('#rawDataViewerModal .tab-button').forEach(b => {
+        b.classList.remove('active');
+        b.removeAttribute('data-loaded'); // Remove any loaded indicators if used
+    });
+    document.getElementById('dashboard-tab')?.classList.remove('hidden');
+    document.querySelector('.tab-button[data-tab="dashboard"]')?.classList.add('active');
+
+    // Hide position analysis tab button by default
+    const positionAnalysisTabButton = document.querySelector('.tab-button[data-tab="position-analysis"]');
+    if (positionAnalysisTabButton) {
+        positionAnalysisTabButton.classList.add('hidden');
+    }
+
+    // Clear specific elements inside tabs (redundant now but safe)
+    safeClear('raw-data-accordion-container', '<div class="loader mx-auto my-8"></div>');
     safeClear('position-analysis-content-container');
     safeClear('ai-article-container-analysis');
     safeClear('company-profile-display-container');
@@ -281,34 +301,20 @@ function _resetAnalysisModal() {
     safeClear('peer-analysis-section-container');
     safeClear('valuation-health-container');
     safeClear('ai-garp-summary-container');
+    safeClear('analysis-content-container'); // Clear the button container too
 
-    const statusContainer = document.getElementById('report-status-container-analysis');
-    if (statusContainer) {
-        statusContainer.innerHTML = '';
-        statusContainer.classList.add('hidden');
+    const statusContainerAnalysis = document.getElementById('report-status-container-analysis');
+    if (statusContainerAnalysis) {
+        statusContainerAnalysis.innerHTML = '';
+        statusContainerAnalysis.classList.add('hidden');
+        delete statusContainerAnalysis.dataset.activeReportType; // Clear active report type
+    }
+    const statusContainerPosition = document.getElementById('report-status-container-position');
+     if (statusContainerPosition) {
+        statusContainerPosition.innerHTML = '';
+        statusContainerPosition.classList.add('hidden');
     }
 
-    // Reset tabs to default view
-    document.querySelectorAll('#rawDataViewerModal .tab-content').forEach(c => c.classList.add('hidden'));
-    document.querySelectorAll('#rawDataViewerModal .tab-button').forEach(b => {
-        b.classList.remove('active');
-        b.removeAttribute('data-loaded');
-    });
-
-    const positionAnalysisTabButton = document.querySelector('.tab-button[data-tab="position-analysis"]');
-    if (positionAnalysisTabButton) {
-        positionAnalysisTabButton.classList.add('hidden');
-    }
-
-    const dashboardTab = document.getElementById('dashboard-tab');
-    if (dashboardTab) {
-        dashboardTab.classList.remove('hidden');
-    }
-
-    const dashboardButton = document.querySelector('.tab-button[data-tab="dashboard"]');
-    if (dashboardButton) {
-        dashboardButton.classList.add('active');
-    }
 }
 
 export async function openRawDataViewer(ticker) {
@@ -331,24 +337,23 @@ export async function openRawDataViewer(ticker) {
         return tempDiv.innerHTML;
     };
 
+    // --- Declare container variables here ---
+    let rawDataContainer, aiAnalysisContainer, diligenceHubContainer, ongoingDiligenceContainer, positionAnalysisContainer, profileDisplayContainer, garpScorecardContainer, positionAnalysisTabButton, peerAnalysisContainer, analysisContentContainer, valuationHealthContainer, aiGarpSummaryContainer;
+
+
     try {
-        // Re-acquire handles to containers now that they are clean
-        const rawDataContainer = document.getElementById('raw-data-accordion-container');
-        const aiAnalysisContainer = document.getElementById('ai-analysis-tab');
-        const diligenceHubContainer = document.getElementById('diligence-hub-tab');
-        const ongoingDiligenceContainer = document.getElementById('ongoing-diligence-tab');
-        const positionAnalysisContainer = document.getElementById('position-analysis-content-container');
-        const profileDisplayContainer = document.getElementById('company-profile-display-container');
-        const garpScorecardContainer = document.getElementById('garp-scorecard-container');
-        const positionAnalysisTabButton = document.querySelector('.tab-button[data-tab="position-analysis"]');
-        const peerAnalysisContainer = document.getElementById('peer-analysis-section-container');
-        const analysisContentContainer = document.getElementById('analysis-content-container'); // Need this container
+        // --- Get main tab containers ---
+        aiAnalysisContainer = document.getElementById('ai-analysis-tab');
+        diligenceHubContainer = document.getElementById('diligence-hub-tab');
+        ongoingDiligenceContainer = document.getElementById('ongoing-diligence-tab');
+        const dashboardTab = document.getElementById('dashboard-tab');
+        const rawDataTab = document.getElementById('raw-data-tab');
+        const positionAnalysisTab = document.getElementById('position-analysis-tab');
 
         // 3. THEN, FETCH THE NEW DATA
         const fmpDataPromise = getFmpStockData(ticker);
         const groupedDataPromise = getGroupedFmpData(ticker);
 
-        // --- NEW: Pre-fetch all reports for the ticker and populate the cache ---
         const reportsRef = state.db.collection(CONSTANTS.DB_COLLECTION_AI_REPORTS).where("ticker", "==", ticker);
         const savedReportsPromise = reportsRef.get().then(snapshot => {
             state.reportCache = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -399,340 +404,381 @@ export async function openRawDataViewer(ticker) {
 
         // 4. POPULATE THE CLEAN STATE
         titleEl.textContent = `Analysis for ${ticker}`;
-        const helpIconHtml = `<button data-report-type="PositionAnalysis" class="ai-help-button p-1 rounded-full hover:bg-indigo-100" title="What is this?"><svg class="w-5 h-5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" /></svg></button>`;
+
+        // --- DASHBOARD TAB ---
+        // Ensure dashboard tab container exists before populating
+        if (dashboardTab) {
+            // Add skeleton/placeholders first
+            dashboardTab.innerHTML = `
+                <div class="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-8">
+                    <div id="company-profile-display-container" class="bg-white p-6 rounded-2xl shadow-lg border border-gray-200"></div>
+                    <div id="peer-analysis-section-container" class="bg-white p-6 rounded-2xl shadow-lg border border-gray-200"></div>
+                </div>
+                <div id="ai-garp-summary-container" class="bg-white p-6 rounded-2xl shadow-lg border border-gray-200"></div>
+                <div id="garp-scorecard-container" class="bg-white p-6 rounded-2xl shadow-lg border border-gray-200"></div>
+                <div id="garp-interpretation-container" class="bg-white p-6 rounded-2xl shadow-lg border border-gray-200"></div>
+                <div id="valuation-health-container" class="bg-white p-6 rounded-2xl shadow-lg border border-gray-200"></div>
+            `;
+            // NOW get handles to elements inside the dashboard
+            profileDisplayContainer = document.getElementById('company-profile-display-container');
+            peerAnalysisContainer = document.getElementById('peer-analysis-section-container');
+            aiGarpSummaryContainer = document.getElementById('ai-garp-summary-container');
+            garpScorecardContainer = document.getElementById('garp-scorecard-container');
+            valuationHealthContainer = document.getElementById('valuation-health-container');
+
+            const description = profile.description || 'No description available.';
+            if (profileDisplayContainer) profileDisplayContainer.innerHTML = `<h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Company Overview</h3><p class="text-sm text-gray-700">${description}</p>`;
+
+            const metrics = renderGarpScorecardDashboard(garpScorecardContainer, ticker, fmpData);
+            renderGarpInterpretationAnalysis(garpScorecardContainer, metrics); // Uses garpScorecardContainer
+            renderValuationHealthDashboard(valuationHealthContainer, ticker, fmpData);
+            renderGarpAnalysisSummary(aiGarpSummaryContainer, ticker);
+
+            const peerDocRef = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(ticker).collection('analysis').doc('peer_comparison');
+            const peerDocSnap = await peerDocRef.get();
+            const peerHelpIcon = `<button data-report-type="PeerComparison" class="ai-help-button p-1 rounded-full hover:bg-indigo-100" title="What is this?"><svg class="w-5 h-5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z"></path></svg></button>`;
+
+            if (peerAnalysisContainer) {
+                peerAnalysisContainer.innerHTML = `
+                    <div class="flex justify-between items-center mb-4 border-b pb-2">
+                        <div class="flex items-center gap-2">
+                            <h3 class="text-xl font-bold text-gray-800">Peer Comparison</h3>
+                            ${peerHelpIcon}
+                        </div>
+                    </div>
+                    <div id="peer-analysis-content-container">
+                        <p class="text-gray-500 italic">Enter comma-separated tickers below and click "Analyze Peers" to build a comparison table.</p>
+                    </div>
+                    <div id="manual-peer-entry-container" class="mt-4 pt-4 border-t">
+                        <label for="manual-peer-input" class="block text-sm font-medium text-gray-700">Enter Comma-Separated Peer Tickers:</label>
+                        <textarea id="manual-peer-input" rows="2" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 uppercase" placeholder="e.g., PEP, KOF, CCEP"></textarea>
+                        <div class="mt-2 text-right">
+                            <button id="analyze-manual-peers-button" data-ticker="${ticker}" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-1 px-4 rounded-lg text-sm">Analyze Peers</button>
+                        </div>
+                    </div>
+                `;
+            }
+
+            if (peerDocSnap.exists && peerAnalysisContainer) {
+                const peerData = peerDocSnap.data();
+                const peerContentContainer = peerAnalysisContainer.querySelector('#peer-analysis-content-container'); // Find child element
+                if (peerContentContainer) renderPeerComparisonTable(peerContentContainer, ticker, metrics, peerData);
+            }
+
+            if (savedCandidacyReports.length > 0 && aiGarpSummaryContainer) {
+                 const latestReport = savedCandidacyReports[0];
+                 const resultContainer = aiGarpSummaryContainer.querySelector('#garp-analysis-container'); // Get child element
+                 const statusContainer = aiGarpSummaryContainer.querySelector('#garp-candidacy-status-container'); // Get child element
+
+                 if (resultContainer && statusContainer) {
+                     updateGarpCandidacyStatus(statusContainer, savedCandidacyReports, latestReport.id, ticker);
+                     const savedDate = latestReport.savedAt.toDate().toLocaleString();
+                     const tempContainer = document.createElement('div');
+                     renderCandidacyAnalysis(tempContainer, latestReport.content, latestReport.prompt, latestReport.diligenceQuestions);
+                     const accordionContent = tempContainer.innerHTML;
+
+                     resultContainer.innerHTML = `
+                         <details class="border rounded-md bg-gray-50/50">
+                             <summary class="p-3 font-semibold text-gray-700 cursor-pointer hover:bg-gray-50">
+                                 View Latest Saved Report (from ${savedDate})
+                             </summary>
+                             <div class="p-4 border-t bg-white">
+                                 ${accordionContent}
+                             </div>
+                         </details>
+                     `;
+                 }
+            }
+        }
+
 
         // --- POSITION ANALYSIS TAB ---
+        positionAnalysisTabButton = document.querySelector('.tab-button[data-tab="position-analysis"]');
         const portfolioData = state.portfolioCache.find(s => s.ticker === ticker);
-        if (portfolioData && (portfolioData.transactions?.length > 0 || portfolioData.shares > 0)) {
-            positionAnalysisTabButton.classList.remove('hidden');
-            positionAnalysisContainer.innerHTML = `
-                <div class="text-center p-8 bg-gray-50 rounded-lg">
-                    <div class="flex justify-center items-center gap-2 mb-2">
-                        <h3 class="text-xl font-bold text-gray-800">Position Review</h3>
-                        ${helpIconHtml}
+        if (positionAnalysisTab && portfolioData && (portfolioData.transactions?.length > 0 || portfolioData.shares > 0)) {
+            positionAnalysisTabButton?.classList.remove('hidden');
+            const helpIconHtmlPos = `<button data-report-type="PositionAnalysis" class="ai-help-button p-1 rounded-full hover:bg-indigo-100" title="What is this?"><svg class="w-5 h-5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" /></svg></button>`;
+            positionAnalysisTab.innerHTML = `
+                <div id="report-status-container-position" class="hidden p-3 mb-4 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between gap-4"></div>
+                <div id="position-analysis-content-container">
+                    <div class="text-center p-8 bg-gray-50 rounded-lg">
+                        <div class="flex justify-center items-center gap-2 mb-2">
+                            <h3 class="text-xl font-bold text-gray-800">Position Review</h3>
+                            ${helpIconHtmlPos}
+                        </div>
+                        <p class="text-gray-600 mb-6 max-w-2xl mx-auto">Re-evaluate the original GARP thesis for this holding based on your actual cost basis and the current market price.</p>
+                        <button id="generate-position-analysis-button" data-symbol="${ticker}" data-report-type="PositionAnalysis" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg text-base shadow-md transition-transform hover:scale-105">
+                            Generate Position Analysis
+                        </button>
                     </div>
-                    <p class="text-gray-600 mb-6 max-w-2xl mx-auto">Re-evaluate the original GARP thesis for this holding based on your actual cost basis and the current market price.</p>
-                    <button id="generate-position-analysis-button" data-symbol="${ticker}" data-report-type="PositionAnalysis" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg text-base shadow-md transition-transform hover:scale-105">
-                        Generate Position Analysis
-                    </button>
-                </div>
-                <div id="position-analysis-report-container" class="prose max-w-none mt-6"></div>
-            `;
+                    <div id="position-analysis-report-container" class="prose max-w-none mt-6"></div>
+                </div>`;
+            positionAnalysisContainer = document.getElementById('position-analysis-content-container'); // Now get handle
         }
 
         // --- RAW DATA TAB ---
-        let rawDataAccordionHtml = '';
-        if (groupedFmpData) {
-            const sortedKeys = Object.keys(groupedFmpData).sort();
-            for (const key of sortedKeys) {
-                rawDataAccordionHtml += `
-                    <details class="mb-2 bg-white rounded-lg border">
-                        <summary class="p-3 font-semibold text-gray-700 cursor-pointer hover:bg-gray-50">${key.replace(/_/g, ' ')}</summary>
-                        <pre class="text-xs whitespace-pre-wrap break-all bg-gray-900 text-white p-3 rounded-b-lg">${JSON.stringify(groupedFmpData[key], null, 2)}</pre>
-                    </details>
-                `;
+        if (rawDataTab) {
+            rawDataTab.innerHTML = `<div id="raw-data-accordion-container"></div>`; // Set innerHTML first
+            rawDataContainer = document.getElementById('raw-data-accordion-container'); // Then get handle
+            let rawDataAccordionHtml = '';
+            if (groupedFmpData) {
+                const sortedKeys = Object.keys(groupedFmpData).sort();
+                for (const key of sortedKeys) {
+                    rawDataAccordionHtml += `
+                        <details class="mb-2 bg-white rounded-lg border">
+                            <summary class="p-3 font-semibold text-gray-700 cursor-pointer hover:bg-gray-50">${key.replace(/_/g, ' ')}</summary>
+                            <pre class="text-xs whitespace-pre-wrap break-all bg-gray-900 text-white p-3 rounded-b-lg">${JSON.stringify(groupedFmpData[key], null, 2)}</pre>
+                        </details>
+                    `;
+                }
+                if (rawDataContainer) rawDataContainer.innerHTML = rawDataAccordionHtml;
+            } else if (rawDataContainer) {
+                 rawDataContainer.innerHTML = '<p class="text-center text-gray-500 py-8">Could not load grouped raw data.</p>';
             }
-            rawDataContainer.innerHTML = rawDataAccordionHtml;
-        } else {
-             rawDataContainer.innerHTML = '<p class="text-center text-gray-500 py-8">Could not load grouped raw data.</p>';
         }
 
         // --- AI ANALYSIS TAB ---
-        const deepDiveButtons = [
-            { reportType: 'MoatAnalysis', text: 'Moat Analysis', tooltip: 'Evaluates the company\'s competitive advantages.' },
-            { reportType: 'CapitalAllocators', text: 'Capital Allocators', tooltip: 'Assesses management\'s skill in deploying capital.' },
-            { reportType: 'InvestigationSummaryMemo', text: 'Investigation Summary', tooltip: 'Synthesizes your manual Q&A from the Diligence Hub into a summary memo.' },
-            { reportType: 'QualitativeDiligenceMemo', text: 'Qualitative Memo', tooltip: 'Synthesizes your answers on moat and management.' },
-            { reportType: 'StructuredDiligenceMemo', text: 'Structured Memo', tooltip: 'Synthesizes your answers on financial health.' },
-            { reportType: 'MarketSentimentMemo', text: 'Market Sentiment', tooltip: 'Synthesizes analyst ratings, technicals, and factor scores.' },
-        ];
+        if (aiAnalysisContainer) {
+            const deepDiveButtons = [
+                { reportType: 'MoatAnalysis', text: 'Moat Analysis', tooltip: 'Evaluates the company\'s competitive advantages.' },
+                { reportType: 'CapitalAllocators', text: 'Capital Allocators', tooltip: 'Assesses management\'s skill in deploying capital.' },
+                { reportType: 'InvestigationSummaryMemo', text: 'Investigation Summary', tooltip: 'Synthesizes your manual Q&A from the Diligence Hub into a summary memo.' },
+                { reportType: 'QualitativeDiligenceMemo', text: 'Qualitative Memo', tooltip: 'Synthesizes your answers on moat and management.' },
+                { reportType: 'StructuredDiligenceMemo', text: 'Structured Memo', tooltip: 'Synthesizes your answers on financial health.' },
+                { reportType: 'MarketSentimentMemo', text: 'Market Sentiment', tooltip: 'Synthesizes analyst ratings, technicals, and factor scores.' },
+            ];
 
-        const buildButtonHtml = (buttons) => buttons.map((btn) => {
-             const hasSaved = savedReportTypes.has(btn.reportType) ? 'has-saved-report' : '';
-             const icon = ANALYSIS_ICONS[btn.reportType] || '';
-             const helpIconSvg = `<svg class="w-5 h-5 text-indigo-500 group-hover:text-indigo-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" /></svg>`;
+            const buildButtonHtml = (buttons) => buttons.map((btn) => {
+                const hasSaved = savedReportTypes.has(btn.reportType) ? 'has-saved-report' : '';
+                const icon = ANALYSIS_ICONS[btn.reportType] || '';
+                const helpIconSvg = `<svg class="w-5 h-5 text-indigo-500 group-hover:text-indigo-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" /></svg>`;
 
-             return `<div class="relative group">
-                         <button data-symbol="${ticker}" data-report-type="${btn.reportType}" class="ai-analysis-button analysis-tile ${hasSaved}" data-tooltip="${btn.tooltip}">
-                             ${icon}
-                             <span class="tile-name">${btn.text}</span>
-                         </button>
-                         <button data-report-type="${btn.reportType}" class="ai-help-button absolute -top-2 -right-2 bg-white p-1 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity" title="What is this report?">
-                             ${helpIconSvg}
-                         </button>
-                     </div>`;
-        }).join('');
+                return `<div class="relative group">
+                            <button data-symbol="${ticker}" data-report-type="${btn.reportType}" class="ai-analysis-button analysis-tile ${hasSaved}" data-tooltip="${btn.tooltip}">
+                                ${icon}
+                                <span class="tile-name">${btn.text}</span>
+                            </button>
+                            <button data-report-type="${btn.reportType}" class="ai-help-button absolute -top-2 -right-2 bg-white p-1 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity" title="What is this report?">
+                                ${helpIconSvg}
+                            </button>
+                        </div>`;
+            }).join('');
 
-        const deepDiveHtml = buildButtonHtml(deepDiveButtons);
-        const copyIconSvg = `<svg class="w-5 h-5 text-gray-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125H4.875A1.125 1.125 0 013.75 20.625V7.875c0-.621.504-1.125 1.125-1.125H6.75m9 9.375h3.375c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125h-9.75A1.125 1.125 0 006 9.375v9.75c0 .621.504 1.125 1.125 1.125h3.375m-3.75-9.375V6.125c0-.621.504-1.125 1.125-1.125h9.75c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-3.375" /></svg>`;
+            const deepDiveHtml = buildButtonHtml(deepDiveButtons);
+            const copyIconSvg = `<svg class="w-5 h-5 text-gray-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125H4.875A1.125 1.125 0 013.75 20.625V7.875c0-.621.504-1.125 1.125-1.125H6.75m9 9.375h3.375c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125h-9.75A1.125 1.125 0 006 9.375v9.75c0 .621.504 1.125 1.125 1.125h3.375m-3.75-9.375V6.125c0-.621.504-1.125 1.125-1.125h9.75c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-3.375" /></svg>`;
 
-        const buildSynthesisButton = (reportType, buttonId, text, bgColor = 'bg-indigo-600', hoverColor = 'hover:bg-indigo-700') => `
-            <div class="relative flex items-center gap-2">
-                <button data-symbol="${ticker}" id="${buttonId}" data-report-type="${reportType}" class="ai-analysis-button ${bgColor} ${hoverColor} text-white font-bold py-3 px-4 rounded-lg text-sm flex-grow">${text}</button>
-                <button type="button" class="copy-report-btn p-2 rounded-full bg-gray-200 hover:bg-gray-300" data-report-type="${reportType}" title="Copy Latest Report to Clipboard">
-                    ${copyIconSvg}
-                </button>
-            </div>
-        `;
-
-        const compounderBtn = buildSynthesisButton('LongTermCompounder', 'long-term-compounder-button', 'Compounder Memo');
-        const bmqvBtn = buildSynthesisButton('BmqvMemo', 'bmqv-memo-button', 'BMQV Memo');
-        const garpMemoBtn = buildSynthesisButton('InvestmentMemo', 'garp-memo-button', 'GARP Memo');
-        const qarpBtn = buildSynthesisButton('QarpAnalysis', 'qarp-analysis-button', 'QARP Memo');
-        const finalThesisBtn = buildSynthesisButton('FinalInvestmentThesis', 'final-thesis-button', 'Final Thesis');
-        // --- NEW: Define Updated Final Thesis button ---
-        const updatedFinalThesisBtn = buildSynthesisButton('UpdatedFinalThesis', 'updated-final-thesis-button', 'Update with Diligence', 'bg-emerald-600', 'hover:bg-emerald-700');
-
-        // Populate the AI Analysis Tab container
-        analysisContentContainer.innerHTML = `
-            <div class="p-4 bg-white rounded-lg border shadow-sm">
-                <div class="flex justify-center items-center gap-2 mb-4">
-                    <h3 class="text-lg font-bold text-gray-800">Automated Workflow</h3>
-                </div>
-                <p class="text-sm text-gray-500 mb-4">Run the entire sequence of reports, from foundational analysis to the final thesis, in one click.</p>
-                <div class="flex justify-center">
-                    <button id="run-full-workflow-button" data-symbol="${ticker}" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg text-base shadow-md transition-transform hover:scale-105">
-                        Run Full Analysis Workflow
+            const buildSynthesisButton = (reportType, buttonId, text, bgColor = 'bg-indigo-600', hoverColor = 'hover:bg-indigo-700') => `
+                <div class="relative flex items-center gap-2">
+                    <button data-symbol="${ticker}" id="${buttonId}" data-report-type="${reportType}" class="ai-analysis-button ${bgColor} ${hoverColor} text-white font-bold py-3 px-4 rounded-lg text-sm flex-grow">${text}</button>
+                    <button type="button" class="copy-report-btn p-2 rounded-full bg-gray-200 hover:bg-gray-300" data-report-type="${reportType}" title="Copy Latest Report to Clipboard">
+                        ${copyIconSvg}
                     </button>
                 </div>
-            </div>
+            `;
 
-            <div class="p-4 bg-white rounded-lg border shadow-sm">
-                <h3 class="text-lg font-bold text-gray-800 mb-4">Step 1: Foundational Analysis</h3>
-                <p class="text-sm text-gray-500 mb-4">Generate these core reports first. They are the building blocks for the synthesis memos.</p>
-                <div class="flex flex-wrap gap-4 justify-center">
-                    ${deepDiveHtml}
-                </div>
-            </div>
+            const compounderBtn = buildSynthesisButton('LongTermCompounder', 'long-term-compounder-button', 'Compounder Memo');
+            const bmqvBtn = buildSynthesisButton('BmqvMemo', 'bmqv-memo-button', 'BMQV Memo');
+            const garpMemoBtn = buildSynthesisButton('InvestmentMemo', 'garp-memo-button', 'GARP Memo');
+            const qarpBtn = buildSynthesisButton('QarpAnalysis', 'qarp-analysis-button', 'QARP Memo');
+            const finalThesisBtn = buildSynthesisButton('FinalInvestmentThesis', 'final-thesis-button', 'Final Thesis');
+            const updatedFinalThesisBtn = buildSynthesisButton('UpdatedFinalThesis', 'updated-final-thesis-button', 'Update with Diligence', 'bg-emerald-600', 'hover:bg-emerald-700');
 
-            <div class="p-4 bg-white rounded-lg border shadow-sm">
-                <div class="flex justify-center items-center gap-2 mb-4">
-                    <h3 class="text-lg font-bold text-gray-800">Step 2: Synthesis Memos</h3>
+            aiAnalysisContainer.innerHTML = `
+                <div id="analysis-content-container" class="space-y-8 text-center bg-gray-50 p-4 rounded-lg border-b pb-4 mb-4">
+                    <div class="p-4 bg-white rounded-lg border shadow-sm">
+                        <div class="flex justify-center items-center gap-2 mb-4">
+                            <h3 class="text-lg font-bold text-gray-800">Automated Workflow</h3>
+                        </div>
+                        <p class="text-sm text-gray-500 mb-4">Run the entire sequence of reports, from foundational analysis to the final thesis, in one click.</p>
+                        <div class="flex justify-center">
+                            <button id="run-full-workflow-button" data-symbol="${ticker}" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg text-base shadow-md transition-transform hover:scale-105">
+                                Run Full Analysis Workflow
+                            </button>
+                        </div>
+                    </div>
+                    <div class="p-4 bg-white rounded-lg border shadow-sm">
+                        <h3 class="text-lg font-bold text-gray-800 mb-4">Step 1: Foundational Analysis</h3>
+                        <p class="text-sm text-gray-500 mb-4">Generate these core reports first. They are the building blocks for the synthesis memos.</p>
+                        <div class="flex flex-wrap gap-4 justify-center">
+                            ${deepDiveHtml}
+                        </div>
+                    </div>
+                    <div class="p-4 bg-white rounded-lg border shadow-sm">
+                        <div class="flex justify-center items-center gap-2 mb-4">
+                            <h3 class="text-lg font-bold text-gray-800">Step 2: Synthesis Memos</h3>
+                        </div>
+                         <p class="text-sm text-gray-500 mb-4">Synthesize the foundational reports into different analytical frameworks.</p>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            ${compounderBtn}
+                            ${bmqvBtn}
+                            ${garpMemoBtn}
+                            ${qarpBtn}
+                        </div>
+                    </div>
+                    <div class="p-4 bg-white rounded-lg border shadow-sm">
+                        <div class="flex justify-center items-center gap-2 mb-4">
+                            <h3 class="text-lg font-bold text-gray-800">Step 3: The Final Verdict</h3>
+                        </div>
+                         <p class="text-sm text-gray-500 mb-4">Combine all synthesis memos into a single, definitive investment thesis. Then, refine it with your latest diligence.</p>
+                        <div class="flex justify-center flex-wrap gap-4">
+                            ${finalThesisBtn}
+                            ${updatedFinalThesisBtn}
+                        </div>
+                    </div>
                 </div>
-                 <p class="text-sm text-gray-500 mb-4">Synthesize the foundational reports into different analytical frameworks.</p>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    ${compounderBtn}
-                    ${bmqvBtn}
-                    ${garpMemoBtn}
-                    ${qarpBtn}
-                </div>
-            </div>
+                <div id="report-status-container-analysis" class="hidden p-3 mb-4 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between gap-4"></div>
+                <div id="ai-article-container-analysis" class="prose max-w-none"></div>
+            `;
+            analysisContentContainer = document.getElementById('analysis-content-container'); // Get handle now
+        }
 
-            <div class="p-4 bg-white rounded-lg border shadow-sm">
-                <div class="flex justify-center items-center gap-2 mb-4">
-                    <h3 class="text-lg font-bold text-gray-800">Step 3: The Final Verdict</h3>
-                </div>
-                 <p class="text-sm text-gray-500 mb-4">Combine all synthesis memos into a single, definitive investment thesis. Then, refine it with your latest diligence.</p>
-                <div class="flex justify-center flex-wrap gap-4">
-                    ${finalThesisBtn}
-                    ${updatedFinalThesisBtn} {/* --- NEW: Added the button here --- */}
-                </div>
-            </div>
-        `;
 
         // --- DILIGENCE HUB TAB ---
-        const copyIcon = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125H4.875A1.125 1.125 0 013.75 20.625V7.875c0-.621.504-1.125 1.125-1.125H6.75m9 9.375h3.375c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125h-9.75A1.125 1.125 0 006 9.375v9.75c0 .621.504 1.125 1.125 1.125h3.375m-3.75-9.375V6.125c0-.621.504-1.125 1.125-1.125h9.75c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-3.375" /></svg>`;
-
-        diligenceHubContainer.innerHTML = `
-            <div class="space-y-6">
-                 <div class="mb-4 text-right p-4 bg-gray-100 rounded-lg border flex justify-end gap-4">
-                    <button id="delete-old-diligence-logs-button" data-symbol="${ticker}" class="bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-2 px-4 rounded-lg text-sm">Delete Old Log Entries</button>
-                    <button id="delete-all-diligence-button" class="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg text-sm">Delete All Saved Answers</button>
+        if (diligenceHubContainer) {
+            const copyIcon = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125H4.875A1.125 1.125 0 013.75 20.625V7.875c0-.621.504-1.125 1.125-1.125H6.75m9 9.375h3.375c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125h-9.75A1.125 1.125 0 006 9.375v9.75c0 .621.504 1.125 1.125 1.125h3.375m-3.75-9.375V6.125c0-.621.504-1.125 1.125-1.125h9.75c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-3.375" /></svg>`;
+            diligenceHubContainer.innerHTML = `
+                <div class="space-y-6">
+                     <div class="mb-4 text-right p-4 bg-gray-100 rounded-lg border flex justify-end gap-4">
+                        <button id="delete-old-diligence-logs-button" data-symbol="${ticker}" class="bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-2 px-4 rounded-lg text-sm">Delete Old Log Entries</button>
+                        <button id="delete-all-diligence-button" class="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg text-sm">Delete All Saved Answers</button>
+                    </div>
+                    <div id="manual-diligence-forms-container"></div>
+                    <div id="qualitative-diligence-forms-container"></div>
+                    <div id="structured-diligence-forms-container"></div>
+                    <div id="market-sentiment-forms-container"></div>
+                    <div id="diligence-log-display-container">
+                        <div id="diligence-log-container" class="mb-6 text-left"></div>
+                    </div>
                 </div>
-                <div id="manual-diligence-forms-container"></div>
-                <div id="qualitative-diligence-forms-container"></div>
-                <div id="structured-diligence-forms-container"></div>
-                <div id="market-sentiment-forms-container"></div>
-                <div id="diligence-log-display-container">
-                    <div id="diligence-log-container" class="mb-6 text-left"></div>
-                </div>
-            </div>
-        `;
+            `;
 
-        // Populate Manual Diligence
-        const manualContainer = diligenceHubContainer.querySelector('#manual-diligence-forms-container');
-        manualContainer.innerHTML = `<div class="p-6 bg-white rounded-lg border shadow-sm text-left"><div class="flex justify-between items-center mb-4"><div><h4 class="text-base font-semibold text-gray-800">Manual Diligence Entry</h4><p class="text-sm text-gray-500">Add custom questions and answers to the log.</p></div><button id="add-diligence-entry-button" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg text-sm">Add New Q&A</button></div><div id="manual-diligence-entries-container" class="space-y-4"></div><div class="text-right mt-4"><button id="save-manual-diligence-button" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg">Save Manual Entries</button></div></div>`;
+            // Populate Manual Diligence
+            const manualContainer = diligenceHubContainer.querySelector('#manual-diligence-forms-container');
+            if(manualContainer) manualContainer.innerHTML = `<div class="p-6 bg-white rounded-lg border shadow-sm text-left"><div class="flex justify-between items-center mb-4"><div><h4 class="text-base font-semibold text-gray-800">Manual Diligence Entry</h4><p class="text-sm text-gray-500">Add custom questions and answers to the log.</p></div><button id="add-diligence-entry-button" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg text-sm">Add New Q&A</button></div><div id="manual-diligence-entries-container" class="space-y-4"></div><div class="text-right mt-4"><button id="save-manual-diligence-button" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg">Save Manual Entries</button></div></div>`;
 
-        // Populate Qualitative Diligence
-        const qualitativeContainer = diligenceHubContainer.querySelector('#qualitative-diligence-forms-container');
-        let qualitativeHtml = `<div class="text-left border rounded-lg p-4 bg-gray-50"><h4 class="text-base font-semibold text-gray-800 mb-1">Qualitative Diligence</h4><p class="text-sm text-gray-500 mb-4">Answer high-level questions about the business itself.</p><div class="space-y-4">`;
-        for (const [category, question] of Object.entries(QUALITATIVE_DILIGENCE_QUESTIONS)) {
-            const savedAnswer = sanitizeText(savedQualitativeAnswers.get(question) || '');
-            qualitativeHtml += `<div class="diligence-card p-3 bg-white rounded-lg border border-gray-200"><h5 class="font-semibold text-sm text-indigo-700 mb-2">${category}</h5><div class="flex items-start gap-2 mb-2"><p class="text-xs text-gray-600 flex-grow" data-question-text>${question}</p><button type="button" class="copy-icon-btn structured-diligence-copy-btn" title="Copy Question">${copyIcon}</button></div><textarea class="qualitative-diligence-answer w-full border border-gray-300 rounded-lg p-2 text-sm" rows="4" data-category="${category}" placeholder="Your analysis and findings here...">${savedAnswer}</textarea></div>`;
+            // Populate Qualitative Diligence
+            const qualitativeContainer = diligenceHubContainer.querySelector('#qualitative-diligence-forms-container');
+            let qualitativeHtml = `<div class="text-left border rounded-lg p-4 bg-gray-50"><h4 class="text-base font-semibold text-gray-800 mb-1">Qualitative Diligence</h4><p class="text-sm text-gray-500 mb-4">Answer high-level questions about the business itself.</p><div class="space-y-4">`;
+            for (const [category, question] of Object.entries(QUALITATIVE_DILIGENCE_QUESTIONS)) {
+                const savedAnswer = sanitizeText(savedQualitativeAnswers.get(question) || '');
+                qualitativeHtml += `<div class="diligence-card p-3 bg-white rounded-lg border border-gray-200"><h5 class="font-semibold text-sm text-indigo-700 mb-2">${category}</h5><div class="flex items-start gap-2 mb-2"><p class="text-xs text-gray-600 flex-grow" data-question-text>${question}</p><button type="button" class="copy-icon-btn structured-diligence-copy-btn" title="Copy Question">${copyIcon}</button></div><textarea class="qualitative-diligence-answer w-full border border-gray-300 rounded-lg p-2 text-sm" rows="4" data-category="${category}" placeholder="Your analysis and findings here...">${savedAnswer}</textarea></div>`;
+            }
+            qualitativeHtml += `</div><div class="text-right mt-4"><button data-diligence-type="Qualitative" class="save-diligence-answers-button bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg">Save Qualitative Answers</button></div></div>`;
+            if(qualitativeContainer) qualitativeContainer.innerHTML = qualitativeHtml;
+
+            // Populate Structured Diligence
+            const structuredContainer = diligenceHubContainer.querySelector('#structured-diligence-forms-container');
+            let structuredHtml = `<div class="text-left border rounded-lg p-4 bg-gray-50"><h4 class="text-base font-semibold text-gray-800 mb-1">Structured (Quantitative) Diligence</h4><p class="text-sm text-gray-500 mb-4">Answer these core questions to build a foundational thesis.</p><div class="space-y-4">`;
+            for (const [category, question] of Object.entries(STRUCTURED_DILIGENCE_QUESTIONS)) {
+                const savedAnswer = sanitizeText(savedStructuredAnswers.get(question) || '');
+                structuredHtml += `<div class="diligence-card p-3 bg-white rounded-lg border border-gray-200"><h5 class="font-semibold text-sm text-indigo-700 mb-2">${category}</h5><div class="flex items-start gap-2 mb-2"><p class="text-xs text-gray-600 flex-grow" data-question-text>${question}</p><button type="button" class="copy-icon-btn structured-diligence-copy-btn" title="Copy Question">${copyIcon}</button></div><textarea class="structured-diligence-answer w-full border border-gray-300 rounded-lg p-2 text-sm" rows="4" data-category="${category}" placeholder="Your analysis and findings here...">${savedAnswer}</textarea></div>`;
+            }
+            structuredHtml += `</div><div class="text-right mt-4"><button data-diligence-type="Structured" class="save-diligence-answers-button bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg">Save Structured Answers</button></div></div>`;
+            if(structuredContainer) structuredContainer.innerHTML = structuredHtml;
+
+            // Populate Market Sentiment Diligence
+            const marketSentimentContainer = diligenceHubContainer.querySelector('#market-sentiment-forms-container');
+            let marketSentimentHtml = `<div class="text-left border rounded-lg p-4 bg-gray-50"><h4 class="text-base font-semibold text-gray-800 mb-1">Market Sentiment Diligence</h4><p class="text-sm text-gray-500 mb-4">Answer these questions using external market data sources.</p><div class="space-y-4">`;
+            for (const [category, question] of Object.entries(MARKET_SENTIMENT_QUESTIONS)) {
+                const savedAnswer = sanitizeText(savedMarketSentimentAnswers.get(question) || '');
+                marketSentimentHtml += `<div class="diligence-card p-3 bg-white rounded-lg border border-gray-200"><h5 class="font-semibold text-sm text-indigo-700 mb-2">${category}</h5><div class="flex items-start gap-2 mb-2"><p class="text-xs text-gray-600 flex-grow" data-question-text>${question}</p><button type="button" class="copy-icon-btn structured-diligence-copy-btn" title="Copy Question">${copyIcon}</button></div><textarea class="market-sentiment-answer w-full border border-gray-300 rounded-lg p-2 text-sm" rows="4" data-category="${category}" placeholder="Your findings from external charts/data here...">${savedAnswer}</textarea></div>`;
+            }
+            marketSentimentHtml += `</div><div class="text-right mt-4"><button data-diligence-type="MarketSentiment" class="save-diligence-answers-button bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg">Save Market Sentiment Answers</button></div></div>`;
+            if(marketSentimentContainer) marketSentimentContainer.innerHTML = marketSentimentHtml;
+
+            // Populate Diligence Log
+            const diligenceReports = allSavedReports.filter(r => r.reportType === 'DiligenceInvestigation');
+            const diligenceLogContainer = diligenceHubContainer.querySelector('#diligence-log-container');
+            if (diligenceLogContainer) renderDiligenceLog(diligenceLogContainer, diligenceReports);
+
+            const checkIcon = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>`;
+            diligenceHubContainer.addEventListener('click', (e) => {
+                const copyBtn = e.target.closest('.structured-diligence-copy-btn');
+                if (copyBtn) {
+                    const textToCopy = copyBtn.previousElementSibling.textContent;
+                    navigator.clipboard.writeText(textToCopy).then(() => {
+                        copyBtn.classList.add('copied');
+                        copyBtn.innerHTML = checkIcon;
+                        setTimeout(() => {
+                            copyBtn.classList.remove('copied');
+                            copyBtn.innerHTML = copyIcon;
+                        }, 2000);
+                    });
+                }
+            });
+
+            diligenceHubContainer.addEventListener('click', (e) => {
+                if (e.target.closest('.delete-diligence-entry-button')) {
+                    e.target.closest('.diligence-entry-row').remove();
+                }
+            });
         }
-        qualitativeHtml += `</div><div class="text-right mt-4"><button data-diligence-type="Qualitative" class="save-diligence-answers-button bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg">Save Qualitative Answers</button></div></div>`;
-        qualitativeContainer.innerHTML = qualitativeHtml;
 
-        // Populate Structured Diligence
-        const structuredContainer = diligenceHubContainer.querySelector('#structured-diligence-forms-container');
-        let structuredHtml = `<div class="text-left border rounded-lg p-4 bg-gray-50"><h4 class="text-base font-semibold text-gray-800 mb-1">Structured (Quantitative) Diligence</h4><p class="text-sm text-gray-500 mb-4">Answer these core questions to build a foundational thesis.</p><div class="space-y-4">`;
-        for (const [category, question] of Object.entries(STRUCTURED_DILIGENCE_QUESTIONS)) {
-            const savedAnswer = sanitizeText(savedStructuredAnswers.get(question) || '');
-            structuredHtml += `<div class="diligence-card p-3 bg-white rounded-lg border border-gray-200"><h5 class="font-semibold text-sm text-indigo-700 mb-2">${category}</h5><div class="flex items-start gap-2 mb-2"><p class="text-xs text-gray-600 flex-grow" data-question-text>${question}</p><button type="button" class="copy-icon-btn structured-diligence-copy-btn" title="Copy Question">${copyIcon}</button></div><textarea class="structured-diligence-answer w-full border border-gray-300 rounded-lg p-2 text-sm" rows="4" data-category="${category}" placeholder="Your analysis and findings here...">${savedAnswer}</textarea></div>`;
-        }
-        structuredHtml += `</div><div class="text-right mt-4"><button data-diligence-type="Structured" class="save-diligence-answers-button bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg">Save Structured Answers</button></div></div>`;
-        structuredContainer.innerHTML = structuredHtml;
-
-        // --- NEW: Populate Market Sentiment Diligence ---
-        const marketSentimentContainer = diligenceHubContainer.querySelector('#market-sentiment-forms-container');
-        let marketSentimentHtml = `<div class="text-left border rounded-lg p-4 bg-gray-50"><h4 class="text-base font-semibold text-gray-800 mb-1">Market Sentiment Diligence</h4><p class="text-sm text-gray-500 mb-4">Answer these questions using external market data sources.</p><div class="space-y-4">`;
-        for (const [category, question] of Object.entries(MARKET_SENTIMENT_QUESTIONS)) {
-            const savedAnswer = sanitizeText(savedMarketSentimentAnswers.get(question) || '');
-            marketSentimentHtml += `<div class="diligence-card p-3 bg-white rounded-lg border border-gray-200"><h5 class="font-semibold text-sm text-indigo-700 mb-2">${category}</h5><div class="flex items-start gap-2 mb-2"><p class="text-xs text-gray-600 flex-grow" data-question-text>${question}</p><button type="button" class="copy-icon-btn structured-diligence-copy-btn" title="Copy Question">${copyIcon}</button></div><textarea class="market-sentiment-answer w-full border border-gray-300 rounded-lg p-2 text-sm" rows="4" data-category="${category}" placeholder="Your findings from external charts/data here...">${savedAnswer}</textarea></div>`;
-        }
-        marketSentimentHtml += `</div><div class="text-right mt-4"><button data-diligence-type="MarketSentiment" class="save-diligence-answers-button bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg">Save Market Sentiment Answers</button></div></div>`;
-        marketSentimentContainer.innerHTML = marketSentimentHtml;
-
-        // Populate Diligence Log
-        const diligenceReports = allSavedReports.filter(r => r.reportType === 'DiligenceInvestigation');
-        renderDiligenceLog(diligenceHubContainer.querySelector('#diligence-log-container'), diligenceReports);
 
         // --- ONGOING DILIGENCE TAB ---
-        let nextEarningsDate = 'N/A';
-        if (fmpData.earning_calendar && fmpData.earning_calendar.length > 0) {
-            const today = new Date(); today.setHours(0, 0, 0, 0);
-            const futureEarnings = fmpData.earning_calendar.map(e => ({ ...e, dateObj: new Date(e.date) })).filter(e => e.dateObj >= today).sort((a, b) => a.dateObj - b.dateObj);
-            if (futureEarnings.length > 0) { nextEarningsDate = futureEarnings[0].date; }
-        }
-
-        const reportTypesForLog = ['FilingDiligence', 'EightKAnalysis', 'UpdatedGarpMemo', 'UpdatedQarpMemo', 'QuarterlyReview', 'AnnualReview'];
-        const filingDiligenceReports = allSavedReports.filter(r => reportTypesForLog.includes(r.reportType));
-
-        ongoingDiligenceContainer.innerHTML = `
-            <div class="bg-white p-6 rounded-2xl shadow-lg border border-gray-200">
-                <div class="flex justify-between items-center mb-6 border-b pb-4">
-                    <div>
-                        <h3 class="text-xl font-bold text-gray-800">Ongoing Review Hub</h3>
-                        <p class="text-sm text-gray-500">Periodically re-evaluate your investment thesis.</p>
-                    </div>
-                    <div class="text-right">
-                        <p class="text-sm font-semibold text-gray-600">Next Earnings Date</p>
-                        <p class="text-lg font-bold text-indigo-700">${nextEarningsDate}</p>
-                    </div>
-                </div>
-
-                <div id="ongoing-review-actions" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                    <button data-review-type="Quarterly" class="start-review-button bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-5 rounded-lg">Start Quarterly Review</button>
-                    <button data-review-type="Annual" class="start-review-button bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-5 rounded-lg">Start Annual Review</button>
-                    <button id="show-filing-input-button" class="bg-sky-600 hover:bg-sky-700 text-white font-bold py-3 px-5 rounded-lg">Analyze Filing</button>
-                </div>
-
-                <div id="review-form-container" class="hidden mb-6"></div>
-
-                <div id="filing-diligence-input-container" class="hidden mb-6 text-center p-4 border rounded-lg bg-gray-50">
-                    <label for="filing-diligence-textarea" class="block text-sm font-medium text-gray-700 mb-2">Paste 10-K, 10-Q, or 8-K Filing Text Below</label>
-                    <textarea id="filing-diligence-textarea" class="w-full border border-gray-300 rounded-lg p-2 text-sm" rows="10" placeholder="Paste the full text of the filing here..."></textarea>
-                    <div class="mt-4 flex justify-center gap-4">
-                        <button id="generate-filing-questions-button" data-symbol="${ticker}" class="bg-teal-600 hover:bg-teal-700 text-white font-semibold py-2 px-5 rounded-lg">Generate Q&A Form</button>
-                        <button id="analyze-eight-k-button-new" data-symbol="${ticker}" class="bg-sky-600 hover:bg-sky-700 text-white font-semibold py-2 px-5 rounded-lg">Analyze as 8-K</button>
-                    </div>
-                </div>
-
-                <div id="filing-diligence-form-container" class="hidden mb-6"></div>
-
-                <div id="updated-memo-section" class="hidden mb-6">
-                     <h4 class="text-lg font-semibold text-gray-800 mb-2">Updated AI-Generated Memo</h4>
-                     <div class="flex items-center gap-4 mb-2">
-                        <button id="generate-updated-garp-memo-button" data-symbol="${ticker}" class="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded-lg text-sm">Update GARP Memo</button>
-                        <button id="generate-updated-qarp-memo-button" data-symbol="${ticker}" class="bg-orange-600 hover:bg-orange-700 text-white font-semibold py-2 px-4 rounded-lg text-sm">Update QARP Memo</button>
-                     </div>
-                     <div id="updated-memo-container" class="prose max-w-none p-4 border rounded-lg bg-gray-50"></div>
-                </div>
-
-                <div id="ongoing-review-log-container"></div>
-            </div>
-        `;
-        renderOngoingReviewLog(ongoingDiligenceContainer.querySelector('#ongoing-review-log-container'), filingDiligenceReports);
-
-        const checkIcon = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>`;
-        diligenceHubContainer.addEventListener('click', (e) => {
-            const copyBtn = e.target.closest('.structured-diligence-copy-btn');
-            if (copyBtn) {
-                const textToCopy = copyBtn.previousElementSibling.textContent;
-                navigator.clipboard.writeText(textToCopy).then(() => {
-                    copyBtn.classList.add('copied');
-                    copyBtn.innerHTML = checkIcon;
-                    setTimeout(() => {
-                        copyBtn.classList.remove('copied');
-                        copyBtn.innerHTML = copyIcon;
-                    }, 2000);
-                });
+        if (ongoingDiligenceContainer) {
+            let nextEarningsDate = 'N/A';
+            if (fmpData.earning_calendar && fmpData.earning_calendar.length > 0) {
+                const today = new Date(); today.setHours(0, 0, 0, 0);
+                const futureEarnings = fmpData.earning_calendar.map(e => ({ ...e, dateObj: new Date(e.date) })).filter(e => e.dateObj >= today).sort((a, b) => a.dateObj - b.dateObj);
+                if (futureEarnings.length > 0) { nextEarningsDate = futureEarnings[0].date; }
             }
-        });
 
-        diligenceHubContainer.addEventListener('click', (e) => {
-            if (e.target.closest('.delete-diligence-entry-button')) {
-                e.target.closest('.diligence-entry-row').remove();
-            }
-        });
+            const reportTypesForLog = ['FilingDiligence', 'EightKAnalysis', 'UpdatedGarpMemo', 'UpdatedQarpMemo', 'QuarterlyReview', 'AnnualReview'];
+            const filingDiligenceReports = allSavedReports.filter(r => reportTypesForLog.includes(r.reportType));
 
-        // --- DASHBOARD TAB (CONTINUED) ---
-        const description = profile.description || 'No description available.';
-        profileDisplayContainer.innerHTML = `<h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Company Overview</h3><p class="text-sm text-gray-700">${description}</p>`;
-
-        const metrics = renderGarpScorecardDashboard(garpScorecardContainer, ticker, fmpData);
-        renderGarpInterpretationAnalysis(garpScorecardContainer, metrics);
-        renderValuationHealthDashboard(document.getElementById('valuation-health-container'), ticker, fmpData);
-        renderGarpAnalysisSummary(document.getElementById('ai-garp-summary-container'), ticker);
-
-        const peerDocRef = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(ticker).collection('analysis').doc('peer_comparison');
-        const peerDocSnap = await peerDocRef.get();
-        const peerHelpIcon = `<button data-report-type="PeerComparison" class="ai-help-button p-1 rounded-full hover:bg-indigo-100" title="What is this?"><svg class="w-5 h-5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z"></path></svg></button>`;
-
-        peerAnalysisContainer.innerHTML = `
-            <div class="flex justify-between items-center mb-4 border-b pb-2">
-                <div class="flex items-center gap-2">
-                    <h3 class="text-xl font-bold text-gray-800">Peer Comparison</h3>
-                    ${peerHelpIcon}
-                </div>
-            </div>
-            <div id="peer-analysis-content-container">
-                <p class="text-gray-500 italic">Enter comma-separated tickers below and click "Analyze Peers" to build a comparison table.</p>
-            </div>
-            <div id="manual-peer-entry-container" class="mt-4 pt-4 border-t">
-                <label for="manual-peer-input" class="block text-sm font-medium text-gray-700">Enter Comma-Separated Peer Tickers:</label>
-                <textarea id="manual-peer-input" rows="2" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 uppercase" placeholder="e.g., PEP, KOF, CCEP"></textarea>
-                <div class="mt-2 text-right">
-                    <button id="analyze-manual-peers-button" data-ticker="${ticker}" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-1 px-4 rounded-lg text-sm">Analyze Peers</button>
-                </div>
-            </div>
-        `;
-
-        if (peerDocSnap.exists) {
-            const peerData = peerDocSnap.data();
-            const peerContentContainer = document.getElementById('peer-analysis-content-container');
-            renderPeerComparisonTable(peerContentContainer, ticker, metrics, peerData);
-        }
-
-
-        if (savedCandidacyReports.length > 0) {
-            const latestReport = savedCandidacyReports[0];
-            const resultContainer = document.getElementById('garp-analysis-container');
-            const statusContainer = document.getElementById('garp-candidacy-status-container');
-
-            updateGarpCandidacyStatus(statusContainer, savedCandidacyReports, latestReport.id, ticker);
-
-            const savedDate = latestReport.savedAt.toDate().toLocaleString();
-            const tempContainer = document.createElement('div');
-            renderCandidacyAnalysis(tempContainer, latestReport.content, latestReport.prompt, latestReport.diligenceQuestions);
-            const accordionContent = tempContainer.innerHTML;
-
-            resultContainer.innerHTML = `
-                <details class="border rounded-md bg-gray-50/50">
-                    <summary class="p-3 font-semibold text-gray-700 cursor-pointer hover:bg-gray-50">
-                        View Latest Saved Report (from ${savedDate})
-                    </summary>
-                    <div class="p-4 border-t bg-white">
-                        ${accordionContent}
+            ongoingDiligenceContainer.innerHTML = `
+                <div class="bg-white p-6 rounded-2xl shadow-lg border border-gray-200">
+                    <div class="flex justify-between items-center mb-6 border-b pb-4">
+                        <div>
+                            <h3 class="text-xl font-bold text-gray-800">Ongoing Review Hub</h3>
+                            <p class="text-sm text-gray-500">Periodically re-evaluate your investment thesis.</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-sm font-semibold text-gray-600">Next Earnings Date</p>
+                            <p class="text-lg font-bold text-indigo-700">${nextEarningsDate}</p>
+                        </div>
                     </div>
-                </details>
+                    <div id="ongoing-review-actions" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                        <button data-review-type="Quarterly" class="start-review-button bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-5 rounded-lg">Start Quarterly Review</button>
+                        <button data-review-type="Annual" class="start-review-button bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-5 rounded-lg">Start Annual Review</button>
+                        <button id="show-filing-input-button" class="bg-sky-600 hover:bg-sky-700 text-white font-bold py-3 px-5 rounded-lg">Analyze Filing</button>
+                    </div>
+                    <div id="review-form-container" class="hidden mb-6"></div>
+                    <div id="filing-diligence-input-container" class="hidden mb-6 text-center p-4 border rounded-lg bg-gray-50">
+                        <label for="filing-diligence-textarea" class="block text-sm font-medium text-gray-700 mb-2">Paste 10-K, 10-Q, or 8-K Filing Text Below</label>
+                        <textarea id="filing-diligence-textarea" class="w-full border border-gray-300 rounded-lg p-2 text-sm" rows="10" placeholder="Paste the full text of the filing here..."></textarea>
+                        <div class="mt-4 flex justify-center gap-4">
+                            <button id="generate-filing-questions-button" data-symbol="${ticker}" class="bg-teal-600 hover:bg-teal-700 text-white font-semibold py-2 px-5 rounded-lg">Generate Q&A Form</button>
+                            <button id="analyze-eight-k-button-new" data-symbol="${ticker}" class="bg-sky-600 hover:bg-sky-700 text-white font-semibold py-2 px-5 rounded-lg">Analyze as 8-K</button>
+                        </div>
+                    </div>
+                    <div id="filing-diligence-form-container" class="hidden mb-6"></div>
+                    <div id="updated-memo-section" class="hidden mb-6">
+                         <h4 class="text-lg font-semibold text-gray-800 mb-2">Updated AI-Generated Memo</h4>
+                         <div class="flex items-center gap-4 mb-2">
+                            <button id="generate-updated-garp-memo-button" data-symbol="${ticker}" class="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded-lg text-sm">Update GARP Memo</button>
+                            <button id="generate-updated-qarp-memo-button" data-symbol="${ticker}" class="bg-orange-600 hover:bg-orange-700 text-white font-semibold py-2 px-4 rounded-lg text-sm">Update QARP Memo</button>
+                         </div>
+                         <div id="updated-memo-container" class="prose max-w-none p-4 border rounded-lg bg-gray-50"></div>
+                    </div>
+                    <div id="ongoing-review-log-container"></div>
+                </div>
             `;
+            const logContainer = ongoingDiligenceContainer.querySelector('#ongoing-review-log-container');
+            if (logContainer) renderOngoingReviewLog(logContainer, filingDiligenceReports);
         }
 
     } catch (error) {
         console.error('Error opening raw data viewer:', error);
         titleEl.textContent = `Error Loading Data for ${ticker}`;
-        document.getElementById('ai-article-container-analysis').innerHTML = `<p class="text-red-500 text-center">${error.message}</p>`;
-        document.getElementById('company-profile-display-container').innerHTML = `<p class="text-red-500 text-center">${error.message}</p>`;
+        // Add checks before setting innerHTML in catch block
+        const errorDisplayTargets = ['ai-article-container-analysis', 'company-profile-display-container', 'analysis-content-container'];
+        errorDisplayTargets.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.innerHTML = `<p class="text-red-500 text-center">${error.message}</p>`;
+            }
+        });
     }
 }
