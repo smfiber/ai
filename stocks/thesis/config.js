@@ -1137,5 +1137,3 @@ export const ANALYSIS_NAMES = {
     'MarketSentimentMemo': 'Market Sentiment Memo',
     'InvestigationSummaryMemo': 'Investigation Summary'
 };
-
-}
