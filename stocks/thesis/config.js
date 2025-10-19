@@ -66,7 +66,7 @@ export const QUALITATIVE_DILIGENCE_QUESTIONS = {
     'Management Quality': "After reviewing recent earnings call transcripts or shareholder letters, what is your assessment of management's transparency, operational focus, and long-term strategy? Do they demonstrate a rational and shareholder-aligned approach?",
     'Incentive Alignment (The \"Why\")': "Review the latest Proxy Statement (DEF 14A). How is the executive team compensated? Is their pay tied to long-term value drivers (e.g., ROIC, 3-year TSR, FCF per share) or short-term, gameable metrics (e.g., non-GAAP EPS, annual revenue)?",
     'Shareholder Base Quality (The \"Who\")': "Review the institutional ownership (13F filings). Who are the top 5-10 owners? Are they 'sticky money' (e.g., founders, long-term focused funds, index funds) or 'fast money' (e.g., high-turnover hedge funds)? A committed, long-term shareholder base is a significant asset.",
-    'The Non-Consensus Thesis (The \"Edge\")': "What is your core, non-consensus belief about this company that the average investor (or the 'Market Sentiment' report) is missing? This is the specific reason you believe it will be a 'great' company when others only see it as 'good'."
+    'The Non-Consensus Thesis (The \"Edge\")': "What is your core, non-consensus belief about this company that the average investor (or the 'Market Sentiment' report) is missing? Explain why this makes the company 'great' when others only see it as 'good'. Finally, **estimate the timeframe (e.g., 1-3 years, 5+ years) over which you expect this edge to materially impact the investment thesis.**" // Updated wording
 };
 
 export const MARKET_SENTIMENT_QUESTIONS = {
@@ -977,7 +977,7 @@ Task: Synthesize the provided Question & Answer pairs into a professional "Quali
 1.  Read through all the Q&A pairs provided in {qaData}.
 2.  For Section 1 of the template ("Competitive Moat Analysis"), synthesize the user's answer specifically for the 'Competitive Moat' question.
 3.  For Section 2 ("Management, Strategy, & Alignment"), synthesize the user's answers for the 'Management Quality' and 'Incentive Alignment' questions.
-4.  For Section 3 ("Shareholder Base & Non-Consensus Thesis"), synthesize the user's answers for the 'Shareholder Base Quality' and 'The Non-Consensus Thesis (The "Edge")' questions. If answers for these are missing in {qaData}, explicitly state that information was not provided for that specific part.
+4.  For Section 3 ("Shareholder Base & Non-Consensus Thesis"), synthesize the user's answers for the 'Shareholder Base Quality' and 'The Non-Consensus Thesis (The "Edge")' questions. If answers for these are missing in {qaData}, explicitly state that information was not provided for that specific part (e.g., "Information regarding the Shareholder Base Quality was not provided in the Q&A data.").
 5.  For Section 4 ("Synthesis & Verdict"), write a concise one-paragraph summary combining the key findings from the previous three sections. Conclude this paragraph with a final sentence using the exact bolded format: "**Business quality appears [High/Average/Low]** because..." replacing the bracketed word based on your overall synthesis and providing a brief justification.
 
 **OUTPUT TEMPLATE (Use this exact structure):**
