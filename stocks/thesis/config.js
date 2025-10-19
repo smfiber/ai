@@ -75,7 +75,10 @@ export const MARKET_SENTIMENT_QUESTIONS = {
     'Fundamental Factors': "Summarize the S&P Global Market Intelligence factor scores. What are the scores for Valuation, Quality, Growth Stability, and Financial Health, and how do they compare to the sector median?",
     'Technical Sentiment': "According to the Trading Central report, what is the technical sentiment for the short-term (2-6 weeks), mid-term (6 weeks-9 months), and long-term (9 months-2 years)?",
     'Price Performance': "Summarize the stock's price performance over key timeframes (e.g., 1-month, 3-month, YTD, 1-year, 5-year). Is the stock showing short-term weakness but long-term strength, or vice versa?",
-    'Short Interest': "What is the current Short % of Float, and has the number of shares short increased or decreased recently? What is the 'days to cover' ratio?"
+    'Short Interest': "What is the current Short % of Float, and has the number of shares short increased or decreased recently? What is the 'days to cover' ratio?",
+    'Recent Narrative Analysis': "Summarize the dominant narrative (positive, negative, neutral) and key themes discussed in major financial news outlets regarding {companyName} ({tickerSymbol}) over the past 30 days. Cite specific examples or publications if possible.",
+    'Competitive/Industry Buzz': "Analyze recent financial news concerning {companyName}'s primary industry or key competitors. Are there emerging trends, competitive threats, or regulatory concerns frequently discussed that could impact {tickerSymbol}?",
+    'Key Event Reaction (Use as needed)': "Synthesize the media reaction (analyst commentary, news headlines) to {companyName}'s recent [Specific Event like earnings release, product launch, acquisition]. Was the reaction generally seen as positive, negative, or muted?"
 };
 
 
@@ -797,12 +800,13 @@ JSON Output Format:
 
 const MARKET_SENTIMENT_MEMO_EXTRACT_PROMPT = `
 Role: You are a data extraction AI.
-Task: Your only job is to read the provided 'Market Sentiment Memo' and extract two specific pieces of information.
+Task: Your only job is to read the provided 'Market Sentiment Memo' and extract three specific pieces of information.
 CRITICAL INSTRUCTIONS:
 - You MUST return ONLY a valid JSON object.
 - Do not add any text, explanations, or markdown formatting before or after the JSON.
-- For 'verdict', extract the final verdict word (e.g., "Bullish", "Neutral", "Bearish") from the final sentence of Section 4.
-- For 'strongestSignal', identify the strongest sentiment signal (positive or negative) mentioned in the synthesis (Section 4). If no single strongest signal is clear, summarize the overall sentiment drivers.
+- For 'verdict', extract the final verdict word (e.g., "Bullish", "Neutral", "Bearish") from the final sentence of Section 5.
+- For 'strongestSignal', identify the strongest sentiment signal (positive or negative) mentioned in the synthesis (Section 5). If no single strongest signal is clear, summarize the overall sentiment drivers.
+- For 'dominantNarrative', summarize the key finding from the 'Recent Narrative Analysis' section (Section 4). If not present, return "No recent narrative analysis provided.".
 
 Report Text:
 {reportContent}
@@ -810,7 +814,8 @@ Report Text:
 JSON Output Format:
 {
   "verdict": "...",
-  "strongestSignal": "..."
+  "strongestSignal": "...",
+  "dominantNarrative": "..."
 }
 `.trim();
 
@@ -1057,8 +1062,13 @@ Task: Based ONLY on the provided Question & Answer pairs, fill in the template b
 ## 3. Technical & Price Momentum
 [Your summary of the technical sentiment and short interest data from the Q&A here.]
 
-## 4. Synthesis & Verdict
-[Your one-paragraph synthesis of all points here. Your final sentence MUST follow the example format exactly, including bolding. For example: **Overall market sentiment appears Bullish** due to the stock's powerful price momentum, which outweighs the valuation concerns.]
+## 4. Media & Narrative Analysis
+- **Recent Narrative:** [Your summary of the 'Recent Narrative Analysis' Q&A here.]
+- **Competitive/Industry Buzz:** [Your summary of the 'Competitive/Industry Buzz' Q&A here.]
+- **Key Event Reaction:** [Your summary of the 'Key Event Reaction' Q&A here. State "Not applicable" if no specific event was analyzed.]
+
+## 5. Synthesis & Verdict
+[Your one-paragraph synthesis of all points here, now incorporating the media/narrative analysis. Your final sentence MUST follow the example format exactly, including bolding. For example: **Overall market sentiment appears Bullish** due to the stock's powerful price momentum and positive recent narrative, which outweighs the valuation concerns.]
 `.trim();
 
 const INVESTIGATION_SUMMARY_MEMO_PROMPT = `
