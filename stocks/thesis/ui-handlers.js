@@ -1553,8 +1553,17 @@ export async function handleSaveDiligenceAnswers(symbol, diligenceType) {
 
     answerElements.forEach(textarea => {
         const answer = textarea.value.trim();
-        const category = textarea.dataset.category;
-        const question = sectionConfig.questions[category];
+        
+        // Find the corresponding question text element in the parent hierarchy
+        const questionElement = textarea.closest('.diligence-card').querySelector('[data-question-text]');
+        if (!questionElement) {
+             console.warn('Could not find question element for textarea.');
+             return;
+        }
+        
+        // Use the actual text from the DOM, which is guaranteed to match the UI
+        const question = questionElement.textContent.trim();
+
         if (question) {
             qaPairs.push({ question, answer });
             if (answer) {
