@@ -66,7 +66,8 @@ export const QUALITATIVE_DILIGENCE_QUESTIONS = {
     'Management Quality': "After reviewing recent earnings call transcripts or shareholder letters, what is your assessment of management's transparency, operational focus, and long-term strategy? Do they demonstrate a rational and shareholder-aligned approach?",
     'Incentive Alignment (The \"Why\")': "Review the latest Proxy Statement (DEF 14A). How is the executive team compensated? Is their pay tied to long-term value drivers (e.g., ROIC, 3-year TSR, FCF per share) or short-term, gameable metrics (e.g., non-GAAP EPS, annual revenue)?",
     'Shareholder Base Quality (The \"Who\")': "Review the institutional ownership (13F filings). Who are the top 5-10 owners? Are they 'sticky money' (e.g., founders, long-term focused funds, index funds) or 'fast money' (e.g., high-turnover hedge funds)? A committed, long-term shareholder base is a significant asset.",
-    'The Non-Consensus Thesis (The \"Edge\")': "What is your core, non-consensus belief about this company that the average investor (or the 'Market Sentiment' report) is missing? Explain why this makes the company 'great' when others only see it as 'good'. Finally, **estimate the timeframe (e.g., 1-3 years, 5+ years) over which you expect this edge to materially impact the investment thesis.**" // Updated wording
+    'The Non-Consensus Thesis (The "Edge")': "What is your core, non-consensus belief about this company that the average investor (or the 'Market Sentiment' report) is missing? Explain why this makes the company 'great' when others only see it as 'good'. Finally, **estimate the timeframe (e.g., 1-3 years, 5+ years) over which you expect this edge to materially impact the investment thesis.**",
+    'Core Thesis & Linchpin Risk (The "Linchpin")': "First, clearly state your single, most important investment thesis in one sentence (The 'Edge'). Second, identify the single most critical 'linchpin' risk or assumption that, if proven wrong, would invalidate this entire thesis. Finally, describe the specific evidence or data (e..g, a specific metric, a competitor's action) you will monitor to track this risk."
 };
 
 export const MARKET_SENTIMENT_QUESTIONS = {
@@ -449,7 +450,7 @@ Data Summary:
 
 const FILING_QUESTION_GENERATION_PROMPT = `
 **Persona & Role:**
-You are a financial data extraction assistant AI, specializing in summarizing key facts from SEC documents for investors who follow GARP (Growth at a Reasonable Price) and QARP (Quality at a Reasonable Price) principles.
+You are a financial data extraction assistant AI, specializing in summarizing key facts from SEC documents for investors who follow GARP (Growth at a Reasonable Price) and QARP (Quality at aReasonable Price) principles.
 
 **Core Task:**
 Your task is to read the provided SEC filing (10-Q or 10-K) for {companyName} and generate 5 to 7 questions that extract key data points relevant to GARP and QARP analysis.
@@ -754,13 +755,14 @@ JSON Output Format:
 // --- NEW DILIGENCE MEMO EXTRACTORS ---
 const QUALITATIVE_DILIGENCE_MEMO_EXTRACT_PROMPT = `
 Role: You are a data extraction AI.
-Task: Your only job is to read the provided 'Qualitative Business Memo' and extract three specific pieces of information.
+Task: Your only job is to read the provided 'Qualitative Business Memo' and extract four specific pieces of information.
 CRITICAL INSTRUCTIONS:
 - You MUST return ONLY a valid JSON object.
 - Do not add any text, explanations, or markdown formatting before or after the JSON.
-- For 'verdict', extract the final verdict word (e.g., "High", "Average", "Low") from the final sentence of Section 4.
+- For 'verdict', extract the final verdict word (e.g., "High", "Average", "Low") from the final sentence of Section 5.
 - For 'nonConsensusThesis', extract the core non-consensus thesis summary from Section 3. If Section 3 states no thesis was provided or is empty, return "No non-consensus thesis provided.".
 - For 'shareholderBaseQuality', extract the summary of the shareholder base quality from Section 3. If Section 3 states no information was provided or is empty, return "No shareholder base analysis provided.".
+- For 'linchpinThesisAndRisk', extract the synthesized answer for the 'Core Thesis & Linchpin Risk' from Section 4. If Section 4 is empty or does not contain this, return "No linchpin thesis provided.".
 
 Report Text:
 {reportContent}
@@ -769,7 +771,8 @@ JSON Output Format:
 {
   "verdict": "...",
   "nonConsensusThesis": "...",
-  "shareholderBaseQuality": "..."
+  "shareholderBaseQuality": "...",
+  "linchpinThesisAndRisk": "..."
 }
 `.trim();
 
@@ -906,7 +909,7 @@ Task: Your task is to update the original thesis, recommendation, and rationale 
 **CRITICAL INSTRUCTIONS & DEFINITIONS:**
 1.  **Prioritize New Diligence:** The **Diligence Memo Summaries** represent the analyst's latest findings and should be given the *most weight*. Use them to validate, challenge, or refine the conclusions of the **Original Final Thesis**.
 2.  **Explicitly Address Conflicts:** If the new diligence contradicts the original thesis (e.g., original thesis worried about valuation, but new diligence suggests market sentiment is overly bearish), you MUST explicitly state this contradiction and explain how the new information changes the conclusion.
-3.  **Focus on "The Edge":** Pay special attention to the 'nonConsensusThesis' from the Qualitative Diligence Memo. Does this unique insight strengthen the bull case enough to potentially override concerns raised in the original thesis?
+3.  **Focus on "The Linchpin":** Pay special attention to the 'linchpinThesisAndRisk' from the Qualitative Diligence Memo. This is the most important input and should be the primary driver of your updated recommendation.
 4.  **Output Format:** Your final output MUST use the exact markdown structure, headings, and table format provided below. Do not deviate.
 5.  **Grading Scale (Same as original):** A (High Conviction Buy, 4-5%), B (Strong Buy, 2-3%), C (Hold/Add Weakness, 1%), D (Hold/Monitor), F (Sell/Pass).
 ---
@@ -931,16 +934,16 @@ Task: Your task is to update the original thesis, recommendation, and rationale 
 
 | Diligence Memo | Key Finding / Verdict |
 | :--- | :--- |
-| **Qualitative Memo** | [Extract 'verdict', 'nonConsensusThesis'] |
+| **Qualitative Memo** | [Extract 'verdict', 'linchpinThesisAndRisk'] |
 | **Structured Memo** | [Extract 'verdict', 'keyWeakness'] |
 | **Market Sentiment** | [Extract 'verdict', 'strongestSignal'] |
 | **Investigation Summary** | [Extract 'keyBullishFinding', 'keyBearishFinding'] |
 
 ## 2. Re-evaluating the Core Narrative & Conflicts
-(In one paragraph, compare the **Original Final Thesis Core Narrative** with the **new Diligence Findings**. Identify the main points of agreement or disagreement. Explicitly state any conflicts and explain which information source (original synthesis vs. new diligence) you find more compelling and why, referencing specific diligence findings like the 'nonConsensusThesis' or 'market sentiment verdict'.)
+(In one paragraph, compare the **Original Final Thesis Core Narrative** with the **new Diligence Findings**. Identify the main points of agreement or disagreement. Explicitly state any conflicts and explain which information source (original synthesis vs. new diligence) you find more compelling and why, referencing specific diligence findings like the 'linchpinThesisAndRisk' or 'market sentiment verdict'.)
 
 ## 3. Updated Recommendation & Rationale
-(In one or two paragraphs, revise the recommendation and justification from the **Original Final Thesis**. Base your updated reasoning primarily on the **Diligence Memo Summaries**, explaining how they modify the initial quantitative score and synthesis memo conclusions. Directly reference the 'nonConsensusThesis' and 'shareholderBaseQuality' if they significantly impact your view.)
+(In one or two paragraphs, revise the recommendation and justification from the **Original Final Thesis**. Base your updated reasoning primarily on the **Diligence Memo Summaries**, especially the 'linchpinThesisAndRisk' finding. Explain how this core thesis and its associated risk, now that it has been explicitly stated, modifies the initial quantitative score and synthesis memo conclusions.)
 
 ### Updated Recommendation
 (Your response for this section MUST follow the format below exactly, including the bolding.)
@@ -978,7 +981,8 @@ Task: Synthesize the provided Question & Answer pairs into a professional "Quali
 2.  For Section 1 of the template ("Competitive Moat Analysis"), synthesize the user's answer specifically for the 'Competitive Moat' question.
 3.  For Section 2 ("Management, Strategy, & Alignment"), synthesize the user's answers for the 'Management Quality' and 'Incentive Alignment' questions.
 4.  For Section 3 ("Shareholder Base & Non-Consensus Thesis"), synthesize the user's answers for the 'Shareholder Base Quality' and 'The Non-Consensus Thesis (The "Edge")' questions. If answers for these are missing in {qaData}, explicitly state that information was not provided for that specific part (e.g., "Information regarding the Shareholder Base Quality was not provided in the Q&A data.").
-5.  For Section 4 ("Synthesis & Verdict"), write a concise one-paragraph summary combining the key findings from the previous three sections. Conclude this paragraph with a final sentence using the exact bolded format: "**Business quality appears [High/Average/Low]** because..." replacing the bracketed word based on your overall synthesis and providing a brief justification.
+5.  For Section 4 ("Core Thesis & Linchpin Risk"), synthesize the user's answer for the 'Core Thesis & Linchpin Risk (The "Linchpin")' question. If this answer is missing, state that "No linchpin thesis or risk was provided."
+6.  For Section 5 ("Synthesis & Verdict"), write a concise one-paragraph summary combining the key findings from the previous sections, with special emphasis on the 'Core Thesis & Linchpin Risk' if provided. Conclude this paragraph with a final sentence using the exact bolded format: "**Business quality appears [High/Average/Low]** because..." replacing the bracketed word based on your overall synthesis and providing a brief justification.
 
 **OUTPUT TEMPLATE (Use this exact structure):**
 
@@ -993,8 +997,11 @@ Task: Synthesize the provided Question & Answer pairs into a professional "Quali
 ## 3. Shareholder Base & Non-Consensus Thesis
 [Your synthesis for Section 3 goes here based on Instruction 4]
 
-## 4. Synthesis & Verdict
-[Your synthesis paragraph and final bolded verdict sentence go here based on Instruction 5]
+## 4. Core Thesis & Linchpin Risk
+[Your synthesis for Section 4 goes here based on Instruction 5]
+
+## 5. Synthesis & Verdict
+[Your synthesis paragraph and final bolded verdict sentence go here based on Instruction 6]
 `.trim();
 // --- END REVISED PROMPT ---
 
@@ -1275,7 +1282,7 @@ export const ANALYSIS_ICONS = {
     'BmqvMemo': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v17.25m0 0c-1.472 0-2.882.265-4.185.75M12 20.25c1.472 0 2.882.265 4.185.75M18.75 4.97A48.416 48.416 0 0012 4.5c-2.291 0-4.545.16-6.75.47m13.5 0c1.01.143 2.01.317 3 .52m-3-.52l2.62 10.726c.122.499-.106 1.028-.589 1.202a5.988 5.988 0 01-6.861 0c-.483-.174-.711-.703-.59-1.202L18.75 4.971zm-16.5.52c.99-.203 1.99-.377 3-.52m0 0l2.62 10.726c.122.499-.106 1.028-.589 1.202a5.988 5.988 0 01-6.861 0c-.483-.174-.711-.703-.59-1.202L5.25 4.971z" /></svg>`,
     'MarketSentimentMemo': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 00-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 01-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 003 15h-.75M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" /></svg>`,
     'FinalInvestmentThesis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 18.75h-9m9 0a3 3 0 013 3h-15a3 3 0 013-3m9 0v-4.5m-9 4.5v-4.5m0 0h9.75M5.25 14.25h13.5M5.25 14.25a3 3 0 00-3 3h19.5a3 3 0 00-3-3M5.25 14.25v-4.5m13.5 4.5v-4.5m0 0h-12a3 3 0 00-3 3v.75" /></svg>`,
-    'UpdatedFinalThesis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.34 15.84c-.688-.06-1.386-.09-2.09-.09H7.5a4.5 4.5 0 01-4.5-4.5V4.5a4.5 4.5 0 014.5-4.5h7.5a4.5 4.5 0 014.5 4.5v1.25m-18 0A2.625 2.625 0 115.25 2.625M10.34 15.84a4.491 4.491 0 00-1.443-1.443 4.49 4.49 0 00-2.093-1.096m1.443 1.443s-.103-.017-.327-.052m2.093 1.096s-.103.017-.327.052m1.327 0c-.688-.06-1.386-.09-2.09-.09h-.094m2.183 0h-.094m2.183 0c.688.06 1.386.09 2.09.09h.094m-2.183 0h.094m2.183 0c.688.06 1.386.09 2.09.09h.094m-2.183 0h.094m0 0c.688.06 1.386.09 2.09.09h.094m-2.183 0h.094m2.183 0c.688.06 1.386.09 2.09.09h.094m-2.183 0h.094M10.34 15.84l-1.443-1.443M1.927 10.34l-1.443-1.443M14.25 10.34l1.443-1.443M14.25 10.34l-1.443 1.443M14.25 10.34l1.443 1.443M10.34 15.84l1.443 1.443m-1.443-1.443l-1.443 1.443m1.443-1.443l1.443 1.443M10.34 15.84l1.443 1.443m-4.49-4.49l-1.443-1.443m1.443 1.443l-1.443 1.443m1.443-1.443l1.443 1.443M10.34 15.84l1.443 1.443" /></svg>`
+    'UpdatedFinalThesis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.34 15.84c-.688-.06-1.386-.09-2.09-.09H7.5a4.5 4.5 0 01-4.5-4.5V4.5a4.5 4.5 0 014.5-4.5h7.5a4.5 4.5 0 014.5 4.5v1.25m-18 0A2.625 2.625 0 115.25 2.625M10.34 15.84a4.491 4.491 0 00-1.443-1.443 4.49 4.49 0 00-2.093-1.096m1.443 1.443s-.103-.017-.327-.052m2.093 1.096s-.103.017-.327.052m1.327 0c-.688-.06-1.386-.09-2.09-.09h-.094m2.183 0h-.094m2.183 0c.688.06 1.386.09 2.09.09h.094m-2.183 0h.094m2.183 0c.688.06 1.386.09 2.09.09h.094m-2.183 0h.094m2.183 0c.688.06 1.386.09 2.09.09h.094m-2.183 0h.094M10.34 15.84l-1.443-1.443M1.927 10.34l-1.443-1.443M14.25 10.34l1.443-1.443M14.25 10.34l-1.443 1.443M14.25 10.34l1.443 1.443M10.34 15.84l1.443 1.443m-1.443-1.443l-1.443 1.443m1.443-1.443l1.443 1.443M10.34 15.84l1.443 1.443m-4.49-4.49l-1.443-1.443m1.443 1.443l-1.443 1.443m1.443-1.443l1.443 1.443M10.34 15.84l1.443 1.443" /></svg>`
 };
 
 export const ANALYSIS_NAMES = {
