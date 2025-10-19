@@ -76,9 +76,9 @@ export const MARKET_SENTIMENT_QUESTIONS = {
     'Technical Sentiment': "According to the Trading Central report, what is the technical sentiment for the short-term (2-6 weeks), mid-term (6 weeks-9 months), and long-term (9 months-2 years)?",
     'Price Performance': "Summarize the stock's price performance over key timeframes (e.g., 1-month, 3-month, YTD, 1-year, 5-year). Is the stock showing short-term weakness but long-term strength, or vice versa?",
     'Short Interest': "What is the current Short % of Float, and has the number of shares short increased or decreased recently? What is the 'days to cover' ratio?",
-    'Recent Narrative Analysis': "Summarize the dominant narrative (positive, negative, neutral) and key themes discussed in major financial news outlets regarding {companyName} ({tickerSymbol}) over the past 30 days. Cite specific examples or publications if possible.",
-    'Competitive/Industry Buzz': "Analyze recent financial news concerning {companyName}'s primary industry or key competitors. Are there emerging trends, competitive threats, or regulatory concerns frequently discussed that could impact {tickerSymbol}?",
-    'Key Event Reaction (Use as needed)': "Synthesize the media reaction (analyst commentary, news headlines) to {companyName}'s recent [Specific Event like earnings release, product launch, acquisition]. Was the reaction generally seen as positive, negative, or muted?"
+    'Recent Narrative Analysis': "Summarize the dominant narrative (positive, negative, neutral) and key themes discussed in major financial news outlets regarding this company over the past 30 days. Cite specific examples or publications if possible.",
+    'Competitive/Industry Buzz': "Analyze recent financial news concerning companies primary industry or key competitors. Are there emerging trends, competitive threats, or regulatory concerns frequently discussed that could impact company?",
+    'Key Event Reaction (Use as needed)': "Synthesize the media reaction (analyst commentary, news headlines) to company's recent [Specific Event like earnings release, product launch, acquisition]. Was the reaction generally seen as positive, negative, or muted?"
 };
 
 
