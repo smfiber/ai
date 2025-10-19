@@ -2490,5 +2490,3 @@ export async function handleQuarterlyReviewRequest(symbol) {
 export async function handleAnnualReviewRequest(symbol) {
     await _handleReviewRequest(symbol, 'Annual');
 }
-
-}
