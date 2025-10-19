@@ -302,7 +302,7 @@ export async function handleSaveStock(e) {
         industry: document.getElementById('manage-stock-industry').value.trim(),
         transactions: transactions,
         customKpis: customKpis,
-        purchaseDate: null,
+        purchaseDate: null, // Clear legacy fields
         shares: null,
         costPerShare: null
     };
@@ -312,11 +312,14 @@ export async function handleSaveStock(e) {
 
     try {
         if (originalTicker && originalTicker !== newTicker) {
+            // If ticker changed, delete the old document
             await state.db.collection(CONSTANTS.DB_COLLECTION_PORTFOLIO).doc(originalTicker).delete();
         }
 
+        // Set (overwrite or create) the document with the new ticker
         await state.db.collection(CONSTANTS.DB_COLLECTION_PORTFOLIO).doc(newTicker).set(stockData, { merge: true });
 
+        // Check if FMP data needs to be cached for the new ticker
         const fmpCacheRef = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(newTicker).collection('endpoints');
         const fmpSnapshot = await fmpCacheRef.limit(1).get();
         if (fmpSnapshot.empty) {
@@ -325,7 +328,7 @@ export async function handleSaveStock(e) {
         }
 
         closeModal(CONSTANTS.MODAL_MANAGE_STOCK);
-        await fetchAndCachePortfolioData();
+        await fetchAndCachePortfolioData(); // Refresh portfolio cache and UI
     } catch(error) {
         console.error("Error saving stock:", error);
         displayMessageInModal(`Could not save stock: ${error.message}`, 'error');
@@ -343,9 +346,9 @@ export async function handleDeleteStock(ticker) {
             document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Deleting ${ticker}...`;
             try {
                 await state.db.collection(CONSTANTS.DB_COLLECTION_PORTFOLIO).doc(ticker).delete();
-                await fetchAndCachePortfolioData();
+                await fetchAndCachePortfolioData(); // Refresh cache and UI
                 if(document.getElementById(CONSTANTS.MODAL_PORTFOLIO_MANAGER).classList.contains(CONSTANTS.CLASS_MODAL_OPEN)) {
-                    renderPortfolioManagerList();
+                    renderPortfolioManagerList(); // Re-render manager list if open
                 }
             } catch (error) {
                 console.error("Error deleting stock:", error);
@@ -372,6 +375,7 @@ export async function handleResearchSubmit(e) {
     document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Checking your lists for ${symbol}...`;
 
     try {
+        // Check if stock already exists in portfolio
         const docRef = state.db.collection(CONSTANTS.DB_COLLECTION_PORTFOLIO).doc(symbol);
         if ((await docRef.get()).exists) {
              displayMessageInModal(`${symbol} is already in your lists. You can edit it from the dashboard.`, 'info');
@@ -380,8 +384,8 @@ export async function handleResearchSubmit(e) {
              return;
         }
 
+        // Fetch profile data from FMP
         document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Fetching overview for ${symbol}...`;
-
         const profileUrl = `https://financialmodelingprep.com/api/v3/profile/${symbol}?apikey=${state.fmpApiKey}`;
         const profileData = await callApi(profileUrl);
 
@@ -390,17 +394,18 @@ export async function handleResearchSubmit(e) {
         }
         const overviewData = profileData[0];
 
+        // Prepare data for the Manage Stock modal
         const newStock = {
             ticker: overviewData.symbol,
             companyName: overviewData.companyName,
             exchange: overviewData.exchange,
             sector: overviewData.sector,
             industry: overviewData.industry,
-            isEditMode: false
+            isEditMode: false // Indicate this is a new stock
         };
 
-        tickerInput.value = '';
-        openManageStockModal(newStock);
+        tickerInput.value = ''; // Clear input
+        openManageStockModal(newStock); // Open modal to add details
 
     } catch (error) {
         console.error("Error during stock research:", error);
@@ -543,7 +548,6 @@ export async function handlePositionAnalysisRequest(ticker, forceNew = false) {
         const portfolioData = state.portfolioCache.find(s => s.ticker === ticker);
         const fmpData = await getFmpStockData(ticker);
 
-        // --- UPDATED LOGIC TO FETCH ALL PREREQUISITE REPORTS ---
         const memoReports = getReportsFromCache(ticker, 'InvestmentMemo');
         const moatReports = getReportsFromCache(ticker, 'MoatAnalysis');
         const capitalReports = getReportsFromCache(ticker, 'CapitalAllocators');
@@ -556,7 +560,6 @@ export async function handlePositionAnalysisRequest(ticker, forceNew = false) {
             if (candidacyReports.length === 0) {
                 throw new Error(`The foundational 'GARP Analysis Report' or 'Investment Memo' must be generated first.`);
             }
-            // --- NEW: Strip Actionable Diligence Questions before using ---
             sourceReportContent = (candidacyReports[0].content || '').split('## Actionable Diligence Questions')[0].trim();
         }
 
@@ -566,7 +569,6 @@ export async function handlePositionAnalysisRequest(ticker, forceNew = false) {
         if (capitalReports.length === 0) {
             throw new Error("The 'Capital Allocators' report must be generated first to re-evaluate the thesis.");
         }
-        // --- END OF UPDATED LOGIC ---
 
         if (!fmpData || !fmpData.profile || !fmpData.profile.length === 0) {
             throw new Error(`Could not retrieve the latest price data for ${ticker}.`);
@@ -624,9 +626,9 @@ export async function handlePositionAnalysisRequest(ticker, forceNew = false) {
         const prompt = promptConfig.prompt
             .replace('{companyName}', companyName)
             .replace('{tickerSymbol}', ticker)
-            .replace('{moatAnalysisReport}', moatReports[0].content) // New
-            .replace('{capitalAllocatorsReport}', capitalReports[0].content) // New
-            .replace('{investmentMemoContent}', sourceReportContent) // Now potentially cleaned
+            .replace('{moatAnalysisReport}', moatReports[0].content)
+            .replace('{capitalAllocatorsReport}', capitalReports[0].content)
+            .replace('{investmentMemoContent}', sourceReportContent)
             .replace('{positionDetails}', JSON.stringify(positionDetails, null, 2))
             .replace('{currentPrice}', `$${currentPrice.toFixed(2)}`);
 
@@ -649,7 +651,7 @@ export async function handlePositionAnalysisRequest(ticker, forceNew = false) {
             statusContainer.innerHTML = '';
         }
         container.innerHTML = containerHtml;
-        throw error;
+        throw error; // Re-throw to signal failure
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
@@ -718,11 +720,12 @@ export async function handlePortfolioGarpAnalysisRequest() {
 export async function handleSaveReportToDb() {
     const modal = document.getElementById('rawDataViewerModal');
     const symbol = modal.dataset.activeTicker;
-    const reportType = document.getElementById('report-status-container-analysis').dataset.activeReportType;
+    const statusContainer = document.getElementById('report-status-container-analysis'); // Get status container
+    const reportType = statusContainer?.dataset.activeReportType; // Get active report type from dataset
     const contentContainer = document.getElementById('ai-article-container-analysis');
 
     if (!symbol || !reportType || !contentContainer) {
-        displayMessageInModal("Could not determine which report to save.", "warning");
+        displayMessageInModal("Could not determine which report to save. Please generate or select a report first.", "warning");
         return;
     }
 
@@ -730,7 +733,7 @@ export async function handleSaveReportToDb() {
     const promptToSave = contentContainer.dataset.currentPrompt;
 
     if (!contentToSave) {
-        displayMessageInModal("Please generate an analysis before saving.", "warning");
+        displayMessageInModal("Report content is missing. Please generate the report again.", "warning");
         return;
     }
 
@@ -738,23 +741,27 @@ export async function handleSaveReportToDb() {
     document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Saving ${reportType} report to database...`;
 
     try {
+        // Assume autoSaveReport handles adding to DB and updating local cache
         await autoSaveReport(symbol, reportType, contentToSave, promptToSave);
         displayMessageInModal("Report saved successfully!", "info");
 
-        const analysisContentContainer = document.getElementById('analysis-content-container');
-        if (analysisContentContainer) {
-            const button = analysisContentContainer.querySelector(`button[data-report-type="${reportType}"]`);
+        // Mark button as having saved report
+        const analysisButtonContainer = document.getElementById('analysis-content-container');
+        if (analysisButtonContainer) {
+            const button = analysisButtonContainer.querySelector(`button[data-report-type="${reportType}"]`);
             if (button) {
                 button.classList.add('has-saved-report');
             }
         }
 
+        // Refresh status display with potentially updated list of saved reports
         const savedReports = getReportsFromCache(symbol, reportType);
-        const latestReport = savedReports[0];
-        const statusContainer = document.getElementById('report-status-container-analysis');
-        const promptConfig = promptMap[reportType];
+        const latestReport = savedReports[0]; // Should be the one just saved
+        const promptConfig = promptMap[reportType]; // Needed for updateReportStatus
 
-        updateReportStatus(statusContainer, savedReports, latestReport.id, { symbol, reportType, promptConfig });
+        if (statusContainer && latestReport) {
+            updateReportStatus(statusContainer, savedReports, latestReport.id, { symbol, reportType, promptConfig });
+        }
 
     } catch (error) {
         console.error("Error saving report to DB:", error);
@@ -767,7 +774,7 @@ export async function handleSaveReportToDb() {
 export async function handleGarpCandidacyRequest(ticker, forceNew = false) {
     const resultContainer = document.getElementById('garp-analysis-container');
     const statusContainer = document.getElementById('garp-candidacy-status-container');
-    if (!resultContainer) return;
+    if (!resultContainer || !statusContainer) return; // Added check for status container
 
     resultContainer.innerHTML = `<div class="flex items-center justify-center p-4"><div class="loader"></div><p class="ml-4 text-gray-600 font-semibold">AI is analyzing...</p></div>`;
     statusContainer.classList.add('hidden');
@@ -779,10 +786,10 @@ export async function handleGarpCandidacyRequest(ticker, forceNew = false) {
         const scorecardData = _calculateGarpScorecardMetrics(fmpData);
         const newScore = scorecardData.garpConvictionScore;
 
+        // Update score in portfolio cache
         const stockDocRef = state.db.collection(CONSTANTS.DB_COLLECTION_PORTFOLIO).doc(ticker);
         await stockDocRef.update({ garpConvictionScore: newScore });
-
-        await fetchAndCachePortfolioData();
+        await fetchAndCachePortfolioData(); // Refresh UI counts etc.
 
         const profile = fmpData.profile?.[0] || {};
         const companyName = profile.companyName || ticker;
@@ -791,13 +798,12 @@ export async function handleGarpCandidacyRequest(ticker, forceNew = false) {
         const peerDocRef = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(ticker).collection('analysis').doc('peer_comparison');
         const peerDocSnap = await peerDocRef.get();
         const peerAverages = peerDocSnap.exists ? peerDocSnap.data().averages : null;
-        const peerDataChanges = peerDocSnap.exists ? peerDocSnap.data().changes : null;
-
+        const peerDataChanges = peerDocSnap.exists ? peerDocSnap.data().changes : null; // Added peer changes
 
         const cleanScorecard = {};
         for (const [key, value] of Object.entries(scorecardData)) {
-            // Include score for Confidence calculation in prompt, but not needed in main payload
-            // if (key === 'garpConvictionScore') continue;
+            // Include score for Confidence calculation in prompt
+            // if (key === 'garpConvictionScore') continue; // Keep score for prompt
 
             const formattedValue = (typeof value.value === 'number' && isFinite(value.value))
                 ? (value.format === 'percent' ? `${(value.value * 100).toFixed(2)}%` : value.value.toFixed(2))
@@ -812,10 +818,9 @@ export async function handleGarpCandidacyRequest(ticker, forceNew = false) {
 
         const payload = {
             scorecard: cleanScorecard,
-            garpConvictionScore: scorecardData.garpConvictionScore, // Pass score to prompt
+            garpConvictionScore: scorecardData.garpConvictionScore, // Ensure score is passed
             peerAverages: peerAverages,
-            peerDataChanges: peerDataChanges,
-            // diligenceQuestions removed - AI generates this now
+            peerDataChanges: peerDataChanges, // Pass changes data
         };
 
         const promptConfig = promptMap['GarpCandidacy'];
@@ -825,23 +830,36 @@ export async function handleGarpCandidacyRequest(ticker, forceNew = false) {
             .replace(/{sector}/g, sector)
             .replace('{jsonData}', JSON.stringify(payload, null, 2));
 
-        // Removed manual diligence question injection
-
         const analysisResult = await generateRefinedArticle(prompt);
-        renderCandidacyAnalysis(resultContainer, analysisResult, prompt); // Removed diligenceQuestions from render call
+
+        // Extract diligence questions generated by the AI
+        // This is a basic example; might need more robust parsing
+        let diligenceQuestions = null;
+        const dqSection = analysisResult.split('## Actionable Diligence Questions')[1];
+        if (dqSection) {
+            // Basic parsing assumes format "- Human-Led Question: ... \n- Suggested AI Investigation Query: ..."
+             const questionRegex = /- \*\*Human-Led Question:\*\* (.*?)\n- \*\*Suggested AI Investigation Query:\*\* "(.*?)"/g;
+             diligenceQuestions = [];
+             let match;
+             while ((match = questionRegex.exec(dqSection)) !== null) {
+                 diligenceQuestions.push({ human: match[1].trim(), ai: match[2].trim() });
+             }
+        }
+
 
         const reportType = 'GarpCandidacy';
-        await autoSaveReport(ticker, reportType, analysisResult, prompt); // Removed diligenceQuestions from save call
+        await autoSaveReport(ticker, reportType, analysisResult, prompt, diligenceQuestions); // Save extracted questions
 
         const reports = getReportsFromCache(ticker, reportType);
         if (reports.length > 0) {
+            renderCandidacyAnalysis(resultContainer, reports[0].content, reports[0].prompt, reports[0].diligenceQuestions); // Pass questions to render
             updateGarpCandidacyStatus(statusContainer, reports, reports[0].id, ticker);
         }
 
     } catch (error) {
         console.error("Error in GARP Candidacy Request:", error);
         resultContainer.innerHTML = `<p class="text-center text-red-500 p-4">${error.message}</p>`;
-        throw error;
+        throw error; // Re-throw to signal failure
     }
 }
 
@@ -884,11 +902,13 @@ export async function handleAnalysisRequest(symbol, reportType, promptConfig, fo
                     `This analysis requires specific data that is not yet cached for ${symbol} (${missingEndpoints.join(', ')}). Would you like to refresh all FMP data now? This may take a moment.`,
                     async () => {
                         await handleRefreshFmpData(symbol);
-                        await handleAnalysisRequest(symbol, reportType, promptConfig, true);
+                        await handleAnalysisRequest(symbol, reportType, promptConfig, true); // Retry after refresh
                     }
                 );
                 return;
             }
+            // If missing non-critical data, log warning but continue? Or throw error?
+            console.warn(`Missing non-critical FMP data for ${reportType}: ${missingEndpoints.join(', ')}`);
         }
 
         let payloadData;
@@ -897,7 +917,7 @@ export async function handleAnalysisRequest(symbol, reportType, promptConfig, fo
         } else if (reportType === 'CapitalAllocators') {
             payloadData = _calculateCapitalAllocatorsMetrics(data);
         } else if (reportType === 'QarpAnalysis') {
-            payloadData = _calculateGarpScorecardMetrics(data);
+            payloadData = _calculateGarpScorecardMetrics(data); // Use scorecard data
         } else {
             payloadData = buildAnalysisPayload(data, requiredEndpoints);
         }
@@ -912,30 +932,35 @@ export async function handleAnalysisRequest(symbol, reportType, promptConfig, fo
             .replace(/{tickerSymbol}/g, tickerSymbol)
             .replace('{jsonData}', JSON.stringify(payloadData, null, 2));
 
-        contentContainer.dataset.currentPrompt = prompt;
+        contentContainer.dataset.currentPrompt = prompt; // Store prompt before AI call
 
         const finalReportContent = await generateRefinedArticle(prompt, loadingMessage);
+        contentContainer.dataset.rawMarkdown = finalReportContent; // Store raw markdown
 
         let synthesisData = null;
-        // Check if an extractor prompt exists for this report type
         if (promptMap[`${reportType}_Extract`]) {
              synthesisData = await extractSynthesisData(finalReportContent, reportType);
         }
 
-        contentContainer.dataset.rawMarkdown = finalReportContent;
         await autoSaveReport(symbol, reportType, finalReportContent, prompt, null, synthesisData);
 
         const refreshedReports = getReportsFromCache(symbol, reportType);
+        const latestReport = refreshedReports[0]; // Should be the one just generated
 
-        displayReport(contentContainer, finalReportContent, prompt);
+        displayReport(contentContainer, finalReportContent, prompt); // Display the new report
 
-        updateReportStatus(statusContainer, refreshedReports, refreshedReports[0]?.id, { symbol, reportType, promptConfig });
+        // Update status only if the container exists and we have reports
+        if (statusContainer && latestReport) {
+             updateReportStatus(statusContainer, refreshedReports, latestReport.id, { symbol, reportType, promptConfig });
+        }
+
 
     } catch (error) {
         displayMessageInModal(`Could not generate or load analysis: ${error.message}`, 'error');
         contentContainer.innerHTML = `<p class="text-red-500">Failed to generate report: ${error.message}</p>`;
-        throw error;
+        throw error; // Re-throw to signal failure
     } finally {
+        // Ensure loading modal is always closed
         if (document.getElementById(CONSTANTS.MODAL_LOADING).classList.contains('is-open')) {
             closeModal(CONSTANTS.MODAL_LOADING);
         }
@@ -980,7 +1005,6 @@ export async function handleGarpMemoRequest(symbol, forceNew = false) {
             if (reports.length === 0) {
                 throw new Error(`The foundational '${name}' has not been generated yet. Please generate it from the 'Diligence Hub' or 'Dashboard' tab first.`);
             }
-            // --- NEW: Strip Actionable Diligence Questions before using GarpCandidacy ---
             if (type === 'GarpCandidacy') {
                  fetchedMemos[type] = (reports[0].content || '').split('## Actionable Diligence Questions')[0].trim();
             } else {
@@ -999,7 +1023,7 @@ export async function handleGarpMemoRequest(symbol, forceNew = false) {
             .replace(/{companyName}/g, companyName)
             .replace(/{tickerSymbol}/g, symbol)
             .replace('{scorecardJson}', JSON.stringify(scorecardData, null, 2))
-            .replace('{garpCandidacyReport}', fetchedMemos.GarpCandidacy) // Now cleaned
+            .replace('{garpCandidacyReport}', fetchedMemos.GarpCandidacy)
             .replace('{structuredDiligenceMemo}', fetchedMemos.StructuredDiligenceMemo)
             .replace('{qualitativeDiligenceMemo}', fetchedMemos.QualitativeDiligenceMemo)
             .replace('{marketSentimentMemo}', fetchedMemos.MarketSentimentMemo);
@@ -1021,7 +1045,7 @@ export async function handleGarpMemoRequest(symbol, forceNew = false) {
         console.error("Error generating investment memo:", error);
         displayMessageInModal(`Could not generate memo: ${error.message}`, 'error');
         contentContainer.innerHTML = `<p class="text-red-500">Failed to generate memo: ${error.message}</p>`;
-        throw error;
+        throw error; // Re-throw to signal failure
     } finally {
         if (document.getElementById(CONSTANTS.MODAL_LOADING).classList.contains('is-open')) {
             closeModal(CONSTANTS.MODAL_LOADING);
@@ -1084,7 +1108,7 @@ export async function handleCompounderMemoRequest(symbol, forceNew = false) {
         console.error("Error generating Long-Term Compounder memo:", error);
         displayMessageInModal(`Could not generate memo: ${error.message}`, 'error');
         contentContainer.innerHTML = `<p class="text-red-500">${error.message}</p>`;
-        throw error;
+        throw error; // Re-throw to signal failure
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
@@ -1110,16 +1134,7 @@ export async function handleBmqvMemoRequest(symbol, forceNew = false) {
 
         openModal(CONSTANTS.MODAL_LOADING);
         const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
-        loadingMessage.textContent = "Gathering prerequisite reports for BMQV Memo...";
-
-        const moatReports = getReportsFromCache(symbol, 'MoatAnalysis');
-        const capitalReports = getReportsFromCache(symbol, 'CapitalAllocators');
-
-        if (moatReports.length === 0 || capitalReports.length === 0) {
-            throw new Error("The 'Moat Analysis' and 'Capital Allocators' reports must be generated first.");
-        }
-
-        loadingMessage.textContent = "Calculating source metrics for synthesis...";
+        loadingMessage.textContent = "Calculating source metrics for BMQV Memo...";
 
         const data = await getFmpStockData(symbol);
         if (!data) {
@@ -1154,7 +1169,7 @@ export async function handleBmqvMemoRequest(symbol, forceNew = false) {
         console.error("Error generating Buffett-Munger Q&V memo:", error);
         displayMessageInModal(`Could not generate memo: ${error.message}`, 'error');
         contentContainer.innerHTML = `<p class="text-red-500">${error.message}</p>`;
-        throw error;
+        throw error; // Re-throw to signal failure
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
@@ -1191,6 +1206,7 @@ export async function handleFinalThesisRequest(symbol, forceNew = false) {
 
         const requiredReportTypes = ['InvestmentMemo', 'QarpAnalysis', 'LongTermCompounder', 'BmqvMemo'];
         const analystSummaries = {};
+        let missingExtraction = [];
 
         for (const type of requiredReportTypes) {
             const reports = getReportsFromCache(symbol, type);
@@ -1199,18 +1215,27 @@ export async function handleFinalThesisRequest(symbol, forceNew = false) {
             }
             const reportData = reports[0];
             if (!reportData.synthesis_data) {
-                // Try to extract data on the fly if missing
                 console.warn(`Synthesis data missing for ${type}, attempting extraction...`);
                 const extractedData = await extractSynthesisData(reportData.content, type);
                 if (!extractedData) {
-                    throw new Error(`Synthesis data is missing and could not be extracted for the '${ANALYSIS_NAMES[type]}' report. Please regenerate it.`);
+                    missingExtraction.push(ANALYSIS_NAMES[type]);
+                    analystSummaries[type] = null; // Mark as missing
+                } else {
+                    analystSummaries[type] = extractedData;
+                    // Optionally save back
+                     await state.db.collection(CONSTANTS.DB_COLLECTION_AI_REPORTS).doc(reportData.id).update({ synthesis_data: extractedData });
+                     const cacheIndex = state.reportCache.findIndex(r => r.id === reportData.id);
+                     if (cacheIndex !== -1) state.reportCache[cacheIndex].synthesis_data = extractedData;
                 }
-                analystSummaries[type] = extractedData;
-                // Optionally save the extracted data back to the report in Firestore (consider performance)
             } else {
                 analystSummaries[type] = reportData.synthesis_data;
             }
         }
+
+        if (missingExtraction.length > 0) {
+            throw new Error(`Synthesis data is missing and could not be extracted for: ${missingExtraction.join(', ')}. Please regenerate them.`);
+        }
+
 
         loadingMessage.textContent = "Synthesizing final thesis...";
         const profile = state.portfolioCache.find(s => s.ticker === symbol);
@@ -1233,7 +1258,7 @@ export async function handleFinalThesisRequest(symbol, forceNew = false) {
         console.error("Error generating Final Investment Thesis:", error);
         displayMessageInModal(`Could not generate final thesis: ${error.message}`, 'error');
         contentContainer.innerHTML = `<p class="text-red-500">${error.message}</p>`;
-        throw error;
+        throw error; // Re-throw to signal failure
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
@@ -1290,17 +1315,13 @@ export async function handleUpdatedFinalThesisRequest(symbol, forceNew = false) 
                 const extractedData = await extractSynthesisData(reportData.content, type);
                 if (!extractedData) {
                     missingExtraction.push(ANALYSIS_NAMES[type]);
-                    // Store null or an empty object to indicate missing data
-                    diligenceSummaries[type] = null;
+                    diligenceSummaries[type] = null; // Indicate missing
                 } else {
                     diligenceSummaries[type] = extractedData;
-                    // Optionally save back to Firestore
+                    // Save back extracted data
                      await state.db.collection(CONSTANTS.DB_COLLECTION_AI_REPORTS).doc(reportData.id).update({ synthesis_data: extractedData });
-                     // Update local cache as well
                      const cacheIndex = state.reportCache.findIndex(r => r.id === reportData.id);
-                     if (cacheIndex !== -1) {
-                         state.reportCache[cacheIndex].synthesis_data = extractedData;
-                     }
+                     if (cacheIndex !== -1) state.reportCache[cacheIndex].synthesis_data = extractedData;
                 }
             } else {
                 diligenceSummaries[type] = reportData.synthesis_data;
@@ -1308,7 +1329,7 @@ export async function handleUpdatedFinalThesisRequest(symbol, forceNew = false) 
         }
 
          if (missingExtraction.length > 0) {
-            throw new Error(`Synthesis data is missing and could not be extracted for the following diligence memos: ${missingExtraction.join(', ')}. Please regenerate them.`);
+            throw new Error(`Synthesis data is missing and could not be extracted for: ${missingExtraction.join(', ')}. Please regenerate them.`);
         }
 
 
@@ -1324,7 +1345,6 @@ export async function handleUpdatedFinalThesisRequest(symbol, forceNew = false) 
 
         const memoContent = await generateRefinedArticle(finalPrompt, loadingMessage);
 
-        // Auto-save the new UpdatedFinalThesis report (no synthesis data needed for this one)
         await autoSaveReport(symbol, reportType, memoContent, finalPrompt);
 
         const refreshedReports = getReportsFromCache(symbol, reportType);
@@ -1335,7 +1355,7 @@ export async function handleUpdatedFinalThesisRequest(symbol, forceNew = false) 
         console.error("Error generating Updated Final Thesis:", error);
         displayMessageInModal(`Could not generate updated thesis: ${error.message}`, 'error');
         contentContainer.innerHTML = `<p class="text-red-500">${error.message}</p>`;
-        throw error;
+        throw error; // Re-throw to signal failure
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
@@ -1344,78 +1364,10 @@ export async function handleUpdatedFinalThesisRequest(symbol, forceNew = false) 
 
 
 export async function handleGeneratePrereqsRequest(symbol) {
-    const reportTypes = ['MoatAnalysis', 'CapitalAllocators'];
-    const reportDisplayNames = {
-        'MoatAnalysis': 'Moat Analysis',
-        'CapitalAllocators': 'Capital Allocators',
-    };
-    const metricCalculators = {
-        'MoatAnalysis': _calculateMoatAnalysisMetrics,
-        'CapitalAllocators': _calculateCapitalAllocatorsMetrics,
-    };
-
-    openModal(CONSTANTS.MODAL_LOADING);
-    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
-    const progressContainer = document.getElementById('progress-container');
-    const progressStatus = document.getElementById('progress-status');
-    const currentReportName = document.getElementById('current-report-name');
-    const progressBarFill = document.getElementById('progress-bar-fill');
-
-    progressContainer.classList.remove('hidden');
-    progressBarFill.style.width = '0%';
-
-    try {
-        const data = await getFmpStockData(symbol);
-        if (!data) throw new Error(`No cached FMP data found for ${symbol}. Please refresh the data first.`);
-
-        const profile = data.profile?.[0] || {};
-        const companyName = profile.companyName || 'the company';
-        const tickerSymbol = profile.symbol || symbol;
-
-        for (let i = 0; i < reportTypes.length; i++) {
-            const reportType = reportTypes[i];
-
-            progressStatus.textContent = `Generating Reports (${i + 1}/${reportTypes.length})`;
-            currentReportName.textContent = `Running: ${reportDisplayNames[reportType]}...`;
-
-            const promptConfig = promptMap[reportType];
-            const calculateMetrics = metricCalculators[reportType];
-            if (!promptConfig || !calculateMetrics) {
-                console.warn(`Skipping report: No config for ${reportType}`);
-                continue;
-            }
-            const payloadData = calculateMetrics(data);
-            const prompt = promptConfig.prompt
-                .replace(/{companyName}/g, companyName)
-                .replace(/{tickerSymbol}/g, tickerSymbol)
-                .replace('{jsonData}', JSON.stringify(payloadData, null, 2));
-
-            const reportContent = await generateRefinedArticle(prompt, loadingMessage);
-            const synthesisData = await extractSynthesisData(reportContent, reportType);
-
-            await autoSaveReport(symbol, reportType, reportContent, prompt, null, synthesisData);
-
-            const analysisContentContainer = document.getElementById('analysis-content-container');
-            if (analysisContentContainer) {
-                const button = analysisContentContainer.querySelector(`button[data-report-type="${reportType}"]`);
-                if (button) {
-                    button.classList.add('has-saved-report');
-                }
-            }
-            const progress = ((i + 1) / reportTypes.length) * 100;
-            progressBarFill.style.width = `${progress}%`;
-        }
-
-        displayMessageInModal(`Successfully generated prerequisites for ${symbol}. You can now generate the synthesis memos.`, 'info');
-
-    } catch (error) {
-        console.error("Error generating all reports:", error);
-        displayMessageInModal(`Could not complete batch generation: ${error.message}`, 'error');
-        throw error;
-    } finally {
-        closeModal(CONSTANTS.MODAL_LOADING);
-        progressContainer.classList.add('hidden');
-    }
+    // Deprecated or replace with individual calls if needed
+     console.warn("handleGeneratePrereqsRequest is likely deprecated.");
+     displayMessageInModal("Batch prerequisite generation is currently disabled.", "info");
+     return;
 }
 
 export async function handleDiligenceMemoRequest(symbol, reportType, forceNew = false) {
@@ -1450,7 +1402,7 @@ export async function handleDiligenceMemoRequest(symbol, reportType, forceNew = 
         if (savedReports.length > 0 && !forceNew) {
             const latestReport = savedReports[0];
             displayReport(contentContainer, latestReport.content, latestReport.prompt);
-             updateReportStatus(statusContainer, savedReports, latestReport.id, { symbol, reportType, promptConfig }); // Added updateReportStatus
+             updateReportStatus(statusContainer, savedReports, latestReport.id, { symbol, reportType, promptConfig });
             return;
         }
 
@@ -1483,7 +1435,6 @@ export async function handleDiligenceMemoRequest(symbol, reportType, forceNew = 
             .replace('{qaData}', qaData);
 
         const memoContent = await generateRefinedArticle(prompt);
-         // --- NEW: Extract synthesis data after generation ---
         const synthesisData = await extractSynthesisData(memoContent, reportType);
         await autoSaveReport(symbol, reportType, memoContent, prompt, null, synthesisData);
 
@@ -1502,7 +1453,7 @@ export async function handleDiligenceMemoRequest(symbol, reportType, forceNew = 
     } catch (error) {
         console.error(`Error generating ${memoConfig.name} Memo:`, error);
         displayMessageInModal(`Could not generate memo: ${error.message}`, 'error');
-        throw error;
+        throw error; // Re-throw to signal failure
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
@@ -1552,7 +1503,6 @@ export async function handleInvestigationSummaryRequest(symbol, forceNew = false
         loadingMessage.textContent = 'AI is synthesizing your investigation notes...';
         const memoContent = await generateRefinedArticle(prompt, loadingMessage);
 
-        // --- NEW: Extract synthesis data after generation ---
         const synthesisData = await extractSynthesisData(memoContent, reportType);
         await autoSaveReport(symbol, reportType, memoContent, prompt, null, synthesisData);
 
@@ -1565,7 +1515,7 @@ export async function handleInvestigationSummaryRequest(symbol, forceNew = false
         console.error("Error generating Investigation Summary Memo:", error);
         displayMessageInModal(`Could not generate summary: ${error.message}`, 'error');
         contentContainer.innerHTML = `<p class="text-red-500">${error.message}</p>`;
-        throw error;
+        throw error; // Re-throw to signal failure
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
@@ -1672,7 +1622,9 @@ export async function handleManualDiligenceSave(symbol) {
 
         await Promise.all(savePromises);
 
-        entriesContainer.innerHTML = '';
+        entriesContainer.innerHTML = ''; // Clear the input fields
+        addDiligenceEntryRow(); // Add back one empty row
+
         const diligenceReports = getReportsFromCache(symbol, 'DiligenceInvestigation');
         const diligenceLogContainer = document.getElementById('diligence-log-container');
         renderDiligenceLog(diligenceLogContainer, diligenceReports);
@@ -1711,6 +1663,7 @@ export async function handleDeleteAllDiligenceAnswers(symbol) {
 
                 await Promise.all(deletePromises);
 
+                // Clear text areas in the UI
                 document.querySelectorAll('.qualitative-diligence-answer, .structured-diligence-answer, .market-sentiment-answer').forEach(textarea => {
                     textarea.value = '';
                 });
@@ -1729,7 +1682,7 @@ export async function handleDeleteAllDiligenceAnswers(symbol) {
 export async function handleDeleteOldDiligenceLogs(symbol) {
     openConfirmationModal(
         'Delete Old Diligence Logs?',
-        `Are you sure you want to permanently delete all old-format, individual diligence log entries for ${symbol}? This will clean up the "Diligence Log" list but cannot be undone.`,
+        `Are you sure you want to permanently delete all old-format, individual diligence log entries ('DiligenceInvestigation') for ${symbol}? This will clean up the "Diligence Log" list but cannot be undone.`,
         async () => {
             openModal(CONSTANTS.MODAL_LOADING);
             document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Deleting old diligence logs for ${symbol}...`;
@@ -1751,11 +1704,13 @@ export async function handleDeleteOldDiligenceLogs(symbol) {
 
                 await Promise.all(deletePromises);
 
+                // Update local cache
                 state.reportCache = state.reportCache.filter(r => r.reportType !== 'DiligenceInvestigation' || r.ticker !== symbol);
 
+                // Re-render the log container
                 const diligenceLogContainer = document.getElementById('diligence-log-container');
                 if (diligenceLogContainer) {
-                    renderDiligenceLog(diligenceLogContainer, []);
+                    renderDiligenceLog(diligenceLogContainer, []); // Render empty log
                 }
 
                 displayMessageInModal(`Successfully deleted ${deletePromises.length} old diligence log entries for ${symbol}.`, 'info');
@@ -1797,16 +1752,19 @@ export async function handleSaveFilingDiligenceRequest(symbol) {
         const prompt = `User-answered diligence questions from SEC filing for ${symbol} saved on ${new Date().toLocaleDateString()}`;
         await autoSaveReport(symbol, reportType, reportContent, prompt);
 
+        // Reset UI
         formContainer.innerHTML = '';
         formContainer.classList.add('hidden');
         document.getElementById('filing-diligence-input-container').classList.remove('hidden');
         document.getElementById('filing-diligence-textarea').value = '';
 
+        // Refresh log
         const logContainer = document.getElementById('ongoing-review-log-container');
         const reportTypes = ['FilingDiligence', 'EightKAnalysis', 'UpdatedGarpMemo', 'UpdatedQarpMemo', 'QuarterlyReview', 'AnnualReview'];
         const savedReports = getReportsFromCache(symbol, reportTypes);
         renderOngoingReviewLog(logContainer, savedReports);
 
+        // Show update memo section
         document.getElementById('updated-memo-section').classList.remove('hidden');
 
         displayMessageInModal('Your filing diligence has been saved successfully.', 'info');
@@ -1869,7 +1827,7 @@ export async function handleGenerateFilingQuestionsRequest(symbol) {
         });
         formHtml += `
             <div class="text-right mt-4 flex justify-end gap-2">
-                <button id="cancel-filing-diligence-button" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg">Cancel</button>
+                <button type="button" id="cancel-filing-diligence-button" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg">Cancel</button>
                 <button id="save-filing-diligence-button" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg">Save Answers</button>
             </div>
         </div>`;
@@ -1912,13 +1870,15 @@ export async function handleAnalyzeEightKRequest(symbol) {
 
         await autoSaveReport(symbol, reportType, analysisResult, prompt);
 
-        filingTextarea.value = '';
+        filingTextarea.value = ''; // Clear textarea after successful analysis
 
+        // Refresh the log
         const logContainer = document.getElementById('ongoing-review-log-container');
         const reportTypes = ['FilingDiligence', 'EightKAnalysis', 'UpdatedGarpMemo', 'UpdatedQarpMemo', 'QuarterlyReview', 'AnnualReview'];
         const savedReports = getReportsFromCache(symbol, reportTypes);
         renderOngoingReviewLog(logContainer, savedReports);
 
+        // Optionally display the generated report
         const displayContainer = document.getElementById('ongoing-review-display-container');
         if (displayContainer) {
             displayReport(displayContainer, analysisResult, prompt);
@@ -1937,29 +1897,33 @@ export async function handleAnalyzeEightKRequest(symbol) {
 
 export async function handleDeleteFilingDiligenceLog(reportId, ticker) {
     openConfirmationModal(
-        'Delete Filing Log?',
-        'Are you sure you want to permanently delete this Q&A entry? This action cannot be undone.',
+        'Delete Log Entry?',
+        'Are you sure you want to permanently delete this entry from the Ongoing Diligence Log? This action cannot be undone.',
         async () => {
             openModal(CONSTANTS.MODAL_LOADING);
             document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Deleting entry...`;
             try {
                 await state.db.collection(CONSTANTS.DB_COLLECTION_AI_REPORTS).doc(reportId).delete();
 
+                // Update local cache
                 state.reportCache = state.reportCache.filter(r => r.id !== reportId);
 
+                // Re-render the log
                 const logContainer = document.getElementById('ongoing-review-log-container');
                 const displayContainer = document.getElementById('ongoing-review-display-container');
                 const reportTypes = ['FilingDiligence', 'EightKAnalysis', 'UpdatedGarpMemo', 'UpdatedQarpMemo', 'QuarterlyReview', 'AnnualReview'];
                 const savedReports = getReportsFromCache(ticker, reportTypes);
                 renderOngoingReviewLog(logContainer, savedReports);
 
-                if (displayContainer) {
+                // Clear display if the deleted report was showing
+                if (displayContainer && displayContainer.dataset.displayingReportId === reportId) {
                     displayContainer.innerHTML = '';
+                    delete displayContainer.dataset.displayingReportId;
                 }
 
-                displayMessageInModal('Filing log entry deleted.', 'info');
+                displayMessageInModal('Log entry deleted.', 'info');
             } catch (error) {
-                console.error("Error deleting filing log:", error);
+                console.error("Error deleting log entry:", error);
                 displayMessageInModal(`Could not delete entry: ${error.message}`, 'error');
             } finally {
                 closeModal(CONSTANTS.MODAL_LOADING);
@@ -1981,38 +1945,37 @@ async function generateUpdatedMemo(symbol, memoType) {
         promptTemplate = promptMap.UpdatedQarpMemo.prompt;
     } else { // Default to GARP
         reportType = 'UpdatedGarpMemo';
-        promptTemplate = promptMap.InvestmentMemo.prompt; // Use the standard GARP Memo prompt structure
+        promptTemplate = promptMap.InvestmentMemo.prompt; // Use standard GARP structure
     }
 
     try {
-        const diligenceInvestigationReports = getReportsFromCache(symbol, 'DiligenceInvestigation');
+        // Gather logs - Prioritize FilingDiligence, then Investigations, then 8-Ks
         const filingDiligenceReports = getReportsFromCache(symbol, 'FilingDiligence');
+        const diligenceInvestigationReports = getReportsFromCache(symbol, 'DiligenceInvestigation');
         const eightKReports = getReportsFromCache(symbol, 'EightKAnalysis');
 
         let combinedDiligenceLog = '';
         const logs = [];
 
+        if (filingDiligenceReports.length > 0) {
+            logs.push(`**Recent Filing Q&A (from ${filingDiligenceReports[0].savedAt.toDate().toLocaleDateString()}):**\n${filingDiligenceReports[0].content}`);
+        }
         if (diligenceInvestigationReports.length > 0) {
-            const investigationLog = diligenceInvestigationReports.map(report => {
+             const investigationLog = diligenceInvestigationReports.map(report => {
                 const question = report.prompt.split('Diligence Question from User:')[1]?.trim() || 'Question not found.';
                 const answer = report.content;
-                return `**Question:** ${question}\n\n**Answer:**\n${answer}`;
+                return `**Manual Q&A (${report.savedAt.toDate().toLocaleDateString()}):**\n*Question:* ${question}\n*Answer:* ${answer}`;
             }).join('\n\n---\n\n');
-            logs.push(investigationLog);
+             logs.push(investigationLog);
         }
-
-        if (filingDiligenceReports.length > 0) {
-            const filingLog = filingDiligenceReports.map(report => report.content).join('\n\n');
-            logs.push(filingLog);
-        }
-
         if (eightKReports.length > 0) {
-            const eightKLog = eightKReports.map(report => `**8-K Analysis Summary (from ${report.savedAt.toDate().toLocaleDateString()}):**\n${report.content}`).join('\n\n---\n\n');
+            const eightKLog = eightKReports.map(report => `**8-K Analysis Summary (${report.savedAt.toDate().toLocaleDateString()}):**\n${report.content}`).join('\n\n---\n\n');
             logs.push(eightKLog);
         }
 
-        combinedDiligenceLog = logs.length > 0 ? logs.join('\n\n---\n\n') : 'No diligence logs available.';
+        combinedDiligenceLog = logs.length > 0 ? logs.join('\n\n---\n\n') : 'No recent diligence logs available.';
 
+        // Fetch current scorecard data
         const data = await getFmpStockData(symbol);
         if (!data) throw new Error(`Could not retrieve financial data for ${symbol}.`);
         const scorecardData = _calculateGarpScorecardMetrics(data);
@@ -2028,27 +1991,24 @@ async function generateUpdatedMemo(symbol, memoType) {
                 .replace('{jsonData}', JSON.stringify(scorecardData, null, 2))
                 .replace('{diligenceLog}', combinedDiligenceLog);
         } else { // GARP
+            // Needs original candidacy + structured/qual/sentiment memos
             const candidacyReports = getReportsFromCache(symbol, 'GarpCandidacy');
-            if (candidacyReports.length === 0) {
-                throw new Error(`The foundational 'GARP Analysis Report' must be generated first.`);
-            }
-            // --- NEW: Strip Actionable Diligence Questions before using ---
-            const candidacyReportContent = (candidacyReports[0].content || '').split('## Actionable Diligence Questions')[0].trim();
-
-            // Re-fetch other diligence memos needed by the GARP Memo prompt
             const structuredMemoReports = getReportsFromCache(symbol, 'StructuredDiligenceMemo');
             const qualitativeMemoReports = getReportsFromCache(symbol, 'QualitativeDiligenceMemo');
             const marketSentimentMemoReports = getReportsFromCache(symbol, 'MarketSentimentMemo');
 
+            if (candidacyReports.length === 0) throw new Error(`The foundational 'GARP Analysis Report' must be generated first.`);
             if (structuredMemoReports.length === 0 || qualitativeMemoReports.length === 0 || marketSentimentMemoReports.length === 0) {
                 throw new Error("Missing prerequisite diligence memos (Structured, Qualitative, or Market Sentiment) required for GARP Memo synthesis.");
             }
+
+            const candidacyReportContent = (candidacyReports[0].content || '').split('## Actionable Diligence Questions')[0].trim();
 
             prompt = promptTemplate // Using UPDATED_GARP_MEMO_PROMPT structure
                 .replace(/{companyName}/g, companyName)
                 .replace(/{tickerSymbol}/g, symbol)
                 .replace('{scorecardJson}', JSON.stringify(scorecardData, null, 2))
-                .replace('{garpCandidacyReport}', candidacyReportContent) // Now Cleaned
+                .replace('{garpCandidacyReport}', candidacyReportContent)
                 .replace('{structuredDiligenceMemo}', structuredMemoReports[0].content)
                 .replace('{qualitativeDiligenceMemo}', qualitativeMemoReports[0].content)
                 .replace('{marketSentimentMemo}', marketSentimentMemoReports[0].content);
@@ -2061,6 +2021,7 @@ async function generateUpdatedMemo(symbol, memoType) {
         updatedMemoContainer.innerHTML = `<div class="prose max-w-none">${marked.parse(memoContent)}</div>`;
         displayMessageInModal(`Updated ${memoType} Memo generated and saved.`, 'info');
 
+        // Refresh log
         const logContainer = document.getElementById('ongoing-review-log-container');
         const reportTypes = ['FilingDiligence', 'EightKAnalysis', 'UpdatedGarpMemo', 'UpdatedQarpMemo', 'QuarterlyReview', 'AnnualReview'];
         const savedReports = getReportsFromCache(symbol, reportTypes);
@@ -2097,10 +2058,16 @@ export async function handleDeleteDiligenceLog(reportId, ticker) {
                 const diligenceLogContainer = document.getElementById('diligence-log-container');
                 renderDiligenceLog(diligenceLogContainer, diligenceReports);
 
+                // Clear display if showing deleted report
                 const articleContainer = document.getElementById('ai-article-container-analysis');
                 const statusContainer = document.getElementById('report-status-container-analysis');
-                articleContainer.innerHTML = '';
-                statusContainer.classList.add('hidden');
+                 // Check if the currently displayed report is the one being deleted
+                if (statusContainer && statusContainer.dataset.activeReportId === reportId) {
+                    articleContainer.innerHTML = '';
+                    statusContainer.classList.add('hidden');
+                    delete statusContainer.dataset.activeReportId;
+                }
+
 
                 displayMessageInModal('Diligence log entry deleted.', 'info');
             } catch (error) {
@@ -2137,15 +2104,16 @@ async function _fetchAndCachePeerData(tickers) {
     for (const ticker of tickers) {
         let allEndpointsFetched = true;
         try {
-            const docRef = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(ticker).collection('endpoints').doc('income_statement_annual');
-            const docSnap = await docRef.get();
+            // Check cache more comprehensively - look for profile data?
+            const profileDocRef = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(ticker).collection('endpoints').doc('profile');
+            const profileDocSnap = await profileDocRef.get();
 
-            if (docSnap.exists) {
-                console.log(`Peer data for ${ticker} already in cache. Skipping fetch.`);
+            if (profileDocSnap.exists) {
+                console.log(`Peer data for ${ticker} likely in cache. Skipping fetch.`);
                 successfullyFetchedTickers.push(ticker);
-                fetchedCount += endpointsToFetch.length;
+                fetchedCount += endpointsToFetch.length; // Assume all are cached if profile is
                 if (progressBarFill) {
-                    const progress = (fetchedCount / totalEndpoints) * 100;
+                    const progress = Math.min(100, (fetchedCount / totalEndpoints) * 100);
                     progressBarFill.style.width = `${progress}%`;
                 }
                 continue;
@@ -2168,7 +2136,7 @@ async function _fetchAndCachePeerData(tickers) {
                 }
                 fetchedCount++;
                 if (progressBarFill) {
-                    const progress = (fetchedCount / totalEndpoints) * 100;
+                    const progress = Math.min(100, (fetchedCount / totalEndpoints) * 100);
                     progressBarFill.style.width = `${progress}%`;
                 }
             }
@@ -2205,18 +2173,24 @@ async function runPeerAnalysis(primaryTicker, peerTickers) {
     }
 
     const peerAverages = {};
-    const metricKeys = Object.keys(peerMetricsList[0]);
+    const metricKeys = Object.keys(peerMetricsList[0]); // Use keys from the first peer's metrics
 
     for (const key of metricKeys) {
-        if (key === 'garpConvictionScore') continue;
+        if (key === 'garpConvictionScore') continue; // Exclude score from average
+
+        // Check if the key exists in the first peer's metrics (should exist in all if calculated)
+        const sampleMetric = peerMetricsList[0][key];
+        if (!sampleMetric || typeof sampleMetric.value === 'undefined') continue; // Skip if metric structure is unexpected
+
+
         const values = peerMetricsList
-            .map(metrics => metrics[key]?.value)
+            .map(metrics => metrics[key]?.value) // Safely access value
             .filter(v => typeof v === 'number' && isFinite(v));
 
         if (values.length > 0) {
             peerAverages[key] = values.reduce((sum, v) => sum + v, 0) / values.length;
         } else {
-             peerAverages[key] = null;
+             peerAverages[key] = null; // Indicate no valid data for averaging
         }
     }
 
@@ -2227,10 +2201,16 @@ async function runPeerAnalysis(primaryTicker, peerTickers) {
         cachedAt: firebase.firestore.Timestamp.now()
     };
 
+    // Save to Firestore
     const peerDocRef = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(primaryTicker).collection('analysis').doc('peer_comparison');
     await peerDocRef.set(finalPeerDataObject);
 
-    renderPeerComparisonTable(container, primaryTicker, companyMetrics, finalPeerDataObject);
+    // Render the table
+    if (container) { // Check if container exists before rendering
+        renderPeerComparisonTable(container, primaryTicker, companyMetrics, finalPeerDataObject);
+    } else {
+        console.error("Peer analysis content container not found for rendering.");
+    }
 }
 
 export async function handleManualPeerAnalysisRequest(ticker) {
@@ -2245,20 +2225,35 @@ export async function handleManualPeerAnalysisRequest(ticker) {
 
     const peerTickers = tickersStr.split(',').map(t => t.trim().toUpperCase()).filter(Boolean);
     const genericLoader = document.getElementById('generic-loader-container');
+    const progressContainer = document.getElementById('progress-container'); // Get progress container
 
     try {
         openModal(CONSTANTS.MODAL_LOADING);
-        genericLoader.classList.add('hidden');
-        const fetchedPeers = await _fetchAndCachePeerData(peerTickers);
-        await runPeerAnalysis(ticker, fetchedPeers);
+        genericLoader?.classList.add('hidden'); // Hide generic loader if exists
+        progressContainer?.classList.remove('hidden'); // Show progress bar container
+
+        const fetchedPeers = await _fetchAndCachePeerData(peerTickers); // Fetch/cache data with progress
+        await runPeerAnalysis(ticker, fetchedPeers); // Run analysis using cached data
+
+         // Hide manual entry after successful analysis
+        const manualEntryContainer = document.getElementById('manual-peer-entry-container');
+        if (manualEntryContainer) manualEntryContainer.classList.add('hidden');
+
+
     } catch (error) {
         console.error("Error handling manual peer analysis:", error);
         const container = document.getElementById('peer-analysis-content-container');
-        container.innerHTML = `<p class="text-red-500 p-4">Could not complete manual peer analysis: ${error.message}</p>`;
-        document.getElementById('manual-peer-entry-container').classList.remove('hidden');
+        if (container) { // Check if container exists
+             container.innerHTML = `<p class="text-red-500 p-4">Could not complete manual peer analysis: ${error.message}</p>`;
+        }
+        // Keep manual entry visible on error
+        const manualEntryContainer = document.getElementById('manual-peer-entry-container');
+        if (manualEntryContainer) manualEntryContainer.classList.remove('hidden');
+
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
-        genericLoader.classList.remove('hidden');
+        genericLoader?.classList.remove('hidden'); // Show generic loader again
+        progressContainer?.classList.add('hidden'); // Hide progress bar
     }
 }
 
@@ -2273,7 +2268,13 @@ export async function handleCopyReportRequest(symbol, reportType, buttonElement)
         }
 
         const latestReport = reports[0];
-        const plainText = latestReport.content.replace(/##+\s/g, '').replace(/#\s/g, '').replace(/\*\*/g, '').replace(/-\s/g, '');
+        // Basic conversion: remove markdown headers, bolding, list markers
+        const plainText = latestReport.content
+            .replace(/^(#+)\s/gm, '') // Remove headers
+            .replace(/\*\*(.*?)\*\*/g, '$1') // Remove bold
+            .replace(/^- /gm, '') // Remove list markers
+            .replace(/---/g,'') // Remove horizontal rules
+            .trim();
 
         await navigator.clipboard.writeText(plainText);
 
@@ -2294,8 +2295,7 @@ export async function handleCopyReportRequest(symbol, reportType, buttonElement)
 }
 
 export async function handleFullAnalysisWorkflow(symbol) {
-    // Preliminary Stage is now empty to preserve the original candidacy report
-    const preliminaryStage = [];
+    const preliminaryStage = []; // Still empty
 
     const foundationalStage = [
         { reportType: 'MoatAnalysis', handler: handleAnalysisRequest },
@@ -2316,7 +2316,6 @@ export async function handleFullAnalysisWorkflow(symbol) {
     const finalStage = [
         { reportType: 'FinalInvestmentThesis', handler: handleFinalThesisRequest }
     ];
-    // --- NEW: Add the UpdatedFinalThesis to the workflow ---
     const updatedFinalStage = [
         { reportType: 'UpdatedFinalThesis', handler: handleUpdatedFinalThesisRequest }
     ];
@@ -2326,7 +2325,7 @@ export async function handleFullAnalysisWorkflow(symbol) {
         { name: 'Foundational Analysis', reports: foundationalStage },
         { name: 'Synthesis Memos', reports: synthesisStage },
         { name: 'Final Thesis', reports: finalStage },
-        { name: 'Updated Final Thesis', reports: updatedFinalStage } // New Stage
+        { name: 'Updated Final Thesis', reports: updatedFinalStage }
     ];
 
     openModal(CONSTANTS.MODAL_LOADING);
@@ -2350,25 +2349,30 @@ export async function handleFullAnalysisWorkflow(symbol) {
             }
 
             for (const step of stage.reports) {
+                const reportType = step.reportType;
+                const handler = step.handler;
+                const promptConfig = promptMap[reportType]; // Get prompt config here
+
                 if (!step.isSilent) {
-                    currentReportName.textContent = `Generating: ${ANALYSIS_NAMES[step.reportType]}...`;
+                    currentReportName.textContent = `Generating: ${ANALYSIS_NAMES[reportType]}...`;
                 }
 
-                const promptConfig = promptMap[step.reportType];
-                // Ensure handler is called with correct parameters for its type
-                 if (['QualitativeDiligenceMemo', 'StructuredDiligenceMemo', 'MarketSentimentMemo', 'InvestigationSummaryMemo'].includes(step.reportType)) {
-                    await step.handler(symbol, step.reportType, true); // Pass true for forceNew
-                } else if (step.reportType === 'UpdatedFinalThesis'){
-                    await step.handler(symbol, true); // Pass true for forceNew
+                // --- CORRECTED LOGIC ---
+                if (reportType === 'InvestigationSummaryMemo') {
+                    await handler(symbol, true); // forceNew = true
+                } else if (['QualitativeDiligenceMemo', 'StructuredDiligenceMemo', 'MarketSentimentMemo'].includes(reportType)) {
+                    await handler(symbol, reportType, true); // Pass reportType and forceNew = true
+                } else if (reportType === 'UpdatedFinalThesis') {
+                    await handler(symbol, true); // forceNew = true
+                } else {
+                    // Default case for handleAnalysisRequest, handleGarpMemoRequest, etc.
+                    await handler(symbol, reportType, promptConfig, true); // Pass all expected args + forceNew = true
                 }
-                 else {
-                     await step.handler(symbol, step.reportType, promptConfig, true); // Pass true for forceNew
-                 }
-
+                // --- END CORRECTION ---
 
                 const analysisContentContainer = document.getElementById('analysis-content-container');
                 if (analysisContentContainer) {
-                    const button = analysisContentContainer.querySelector(`button[data-report-type="${step.reportType}"]`);
+                    const button = analysisContentContainer.querySelector(`button[data-report-type="${reportType}"]`);
                     if (button) {
                         button.classList.add('has-saved-report');
                     }
@@ -2432,7 +2436,6 @@ async function _handleReviewRequest(symbol, reviewType) {
             if (candidacyReports.length === 0) {
                 throw new Error("The foundational 'GARP Analysis Report' or 'Investment Memo' must be generated first to serve as the baseline thesis.");
             }
-            // --- NEW: Strip Actionable Diligence Questions before using ---
             originalInvestmentMemo = (candidacyReports[0].content || '').split('## Actionable Diligence Questions')[0].trim();
         }
 
@@ -2444,7 +2447,7 @@ async function _handleReviewRequest(symbol, reviewType) {
         const prompt = promptConfig.prompt
             .replace(/{companyName}/g, companyName)
             .replace(/{tickerSymbol}/g, symbol)
-            .replace('{originalInvestmentMemo}', originalInvestmentMemo) // Now potentially cleaned
+            .replace('{originalInvestmentMemo}', originalInvestmentMemo)
             .replace('{qaData}', qaData);
 
         loadingMessage.textContent = `AI is synthesizing your ${reviewType} Review Memo...`;
@@ -2461,7 +2464,9 @@ async function _handleReviewRequest(symbol, reviewType) {
         const displayContainer = document.getElementById('ongoing-review-display-container');
         if (displayContainer) {
             displayReport(displayContainer, memoContent, prompt);
+             displayContainer.dataset.displayingReportId = savedReports.find(r => r.reportType === reportType)?.id; // Set ID for potential deletion check
         }
+
 
         const formContainer = document.getElementById('review-form-container');
         formContainer.innerHTML = '';
@@ -2484,4 +2489,6 @@ export async function handleQuarterlyReviewRequest(symbol) {
 
 export async function handleAnnualReviewRequest(symbol) {
     await _handleReviewRequest(symbol, 'Annual');
+}
+
 }
