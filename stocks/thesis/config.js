@@ -758,9 +758,9 @@ Task: Your only job is to read the provided 'Qualitative Business Memo' and extr
 CRITICAL INSTRUCTIONS:
 - You MUST return ONLY a valid JSON object.
 - Do not add any text, explanations, or markdown formatting before or after the JSON.
-- For 'verdict', extract the final verdict (e.g., "High", "Average", "Low").
-- For 'nonConsensusThesis', extract the core non-consensus thesis summary from Section 3.
-- For 'shareholderBaseQuality', extract the summary of the shareholder base quality from Section 3.
+- For 'verdict', extract the final verdict word (e.g., "High", "Average", "Low") from the final sentence of Section 4.
+- For 'nonConsensusThesis', extract the core non-consensus thesis summary from Section 3. If Section 3 states no thesis was provided or is empty, return "No non-consensus thesis provided.".
+- For 'shareholderBaseQuality', extract the summary of the shareholder base quality from Section 3. If Section 3 states no information was provided or is empty, return "No shareholder base analysis provided.".
 
 Report Text:
 {reportContent}
@@ -779,8 +779,8 @@ Task: Your only job is to read the provided 'Quantitative Health Memo' and extra
 CRITICAL INSTRUCTIONS:
 - You MUST return ONLY a valid JSON object.
 - Do not add any text, explanations, or markdown formatting before or after the JSON.
-- For 'verdict', extract the final verdict (e.g., "Strong", "Average", "Weak").
-- For 'keyWeakness', summarize the primary weakness identified in the final synthesis.
+- For 'verdict', extract the final verdict word (e.g., "Strong", "Average", "Weak") from the final sentence of Section 5.
+- For 'keyWeakness', summarize the primary weakness identified in the final synthesis (Section 5). If no specific weakness is mentioned, return "No specific key weakness identified.".
 
 Report Text:
 {reportContent}
@@ -798,8 +798,8 @@ Task: Your only job is to read the provided 'Market Sentiment Memo' and extract 
 CRITICAL INSTRUCTIONS:
 - You MUST return ONLY a valid JSON object.
 - Do not add any text, explanations, or markdown formatting before or after the JSON.
-- For 'verdict', extract the final verdict (e.g., "Bullish", "Neutral", "Bearish").
-- For 'strongestSignal', identify the strongest sentiment signal (positive or negative) mentioned in the synthesis.
+- For 'verdict', extract the final verdict word (e.g., "Bullish", "Neutral", "Bearish") from the final sentence of Section 4.
+- For 'strongestSignal', identify the strongest sentiment signal (positive or negative) mentioned in the synthesis (Section 4). If no single strongest signal is clear, summarize the overall sentiment drivers.
 
 Report Text:
 {reportContent}
@@ -817,8 +817,8 @@ Task: Your only job is to read the provided 'Investigation Summary Memo' and ext
 CRITICAL INSTRUCTIONS:
 - You MUST return ONLY a valid JSON object.
 - Do not add any text, explanations, or markdown formatting before or after the JSON.
-- For 'keyBullishFinding', extract the single most important positive finding.
-- For 'keyBearishFinding', extract the single most important negative finding or unanswered question.
+- For 'keyBullishFinding', extract the single most important positive finding summarized in Section 2. If Section 2 is empty or contains no clear positive findings, return "No key bullish finding identified.".
+- For 'keyBearishFinding', extract the single most important negative finding or unanswered question summarized in Section 3. If Section 3 is empty or contains no clear negative findings, return "No key bearish finding identified.".
 
 Report Text:
 {reportContent}
@@ -958,33 +958,46 @@ Task: Your task is to update the original thesis, recommendation, and rationale 
 // --- END NEW UPDATED FINAL THESIS PROMPT ---
 
 
-// --- NEW DILIGENCE MEMO PROMPTS ---
-
+// --- REVISED QUALITATIVE DILIGENCE MEMO PROMPT ---
 const QUALITATIVE_DILIGENCE_MEMO_PROMPT = `
 Role: You are an investment analyst AI.
-Task: Based ONLY on the provided Question & Answer pairs, fill in the template below to create a "Qualitative Business Memo." Your goal is to accurately synthesize the user's answers into the correct sections.
+Task: Synthesize the provided Question & Answer pairs into a professional "Qualitative Business Memo" using the specified markdown template.
 
----
-**CRITICAL INSTRUCTION: Your final output MUST use the exact markdown structure, headings, and bullet points provided in the template below. Fill in the [Your analysis here] sections based on the Q&A data.**
----
+**INPUTS:**
 
-**Q&A Data:**
+**1. Company & Ticker:** {companyName} ({tickerSymbol})
+
+**2. Question & Answer Data:**
+\`\`\`
 {qaData}
+\`\`\`
+
+**INSTRUCTIONS:**
+
+1.  Read through all the Q&A pairs provided in {qaData}.
+2.  For Section 1 of the template ("Competitive Moat Analysis"), synthesize the user's answer specifically for the 'Competitive Moat' question.
+3.  For Section 2 ("Management, Strategy, & Alignment"), synthesize the user's answers for the 'Management Quality' and 'Incentive Alignment' questions.
+4.  For Section 3 ("Shareholder Base & Non-Consensus Thesis"), synthesize the user's answers for the 'Shareholder Base Quality' and 'The Non-Consensus Thesis (The "Edge")' questions. If answers for these are missing in {qaData}, explicitly state that information was not provided for that specific part.
+5.  For Section 4 ("Synthesis & Verdict"), write a concise one-paragraph summary combining the key findings from the previous three sections. Conclude this paragraph with a final sentence using the exact bolded format: "**Business quality appears [High/Average/Low]** because..." replacing the bracketed word based on your overall synthesis and providing a brief justification.
+
+**OUTPUT TEMPLATE (Use this exact structure):**
 
 # Qualitative Business Memo: {companyName} ({tickerSymbol})
 
 ## 1. Competitive Moat Analysis
-[Your synthesis of the user's answer regarding the company's 'Competitive Moat' here.]
+[Your synthesis for Section 1 goes here based on Instruction 2]
 
 ## 2. Management, Strategy, & Alignment
-[Your synthesis of the user's answers regarding 'Management Quality' and 'Incentive Alignment' here.]
+[Your synthesis for Section 2 goes here based on Instruction 3]
 
 ## 3. Shareholder Base & Non-Consensus Thesis
-[Your synthesis of the user's answers regarding 'Shareholder Base Quality' and 'The Non-Consensus Thesis (The "Edge")' here.]
+[Your synthesis for Section 3 goes here based on Instruction 4]
 
 ## 4. Synthesis & Verdict
-[Your one-paragraph synthesis of all the points above (moat, management, alignment, shareholders, and non-consensus thesis). Your final sentence MUST follow the example format exactly, including bolding. For example: **Business quality appears High** due to the company's durable moat, shareholder-aligned management, and a strong non-consensus thesis.]
+[Your synthesis paragraph and final bolded verdict sentence go here based on Instruction 5]
 `.trim();
+// --- END REVISED PROMPT ---
+
 
 const STRUCTURED_DILIGENCE_MEMO_PROMPT = `
 Role: You are an investment analyst AI.
@@ -1262,7 +1275,7 @@ export const ANALYSIS_ICONS = {
     'BmqvMemo': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v17.25m0 0c-1.472 0-2.882.265-4.185.75M12 20.25c1.472 0 2.882.265 4.185.75M18.75 4.97A48.416 48.416 0 0012 4.5c-2.291 0-4.545.16-6.75.47m13.5 0c1.01.143 2.01.317 3 .52m-3-.52l2.62 10.726c.122.499-.106 1.028-.589 1.202a5.988 5.988 0 01-6.861 0c-.483-.174-.711-.703-.59-1.202L18.75 4.971zm-16.5.52c.99-.203 1.99-.377 3-.52m0 0l2.62 10.726c.122.499-.106 1.028-.589 1.202a5.988 5.988 0 01-6.861 0c-.483-.174-.711-.703-.59-1.202L5.25 4.971z" /></svg>`,
     'MarketSentimentMemo': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 00-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 01-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 003 15h-.75M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" /></svg>`,
     'FinalInvestmentThesis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 18.75h-9m9 0a3 3 0 013 3h-15a3 3 0 013-3m9 0v-4.5m-9 4.5v-4.5m0 0h9.75M5.25 14.25h13.5M5.25 14.25a3 3 0 00-3 3h19.5a3 3 0 00-3-3M5.25 14.25v-4.5m13.5 4.5v-4.5m0 0h-12a3 3 0 00-3 3v.75" /></svg>`,
-    'UpdatedFinalThesis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.34 15.84c-.688-.06-1.386-.09-2.09-.09H7.5a4.5 4.5 0 01-4.5-4.5V4.5a4.5 4.5 0 014.5-4.5h7.5a4.5 4.5 0 014.5 4.5v1.25m-18 0A2.625 2.625 0 115.25 2.625M10.34 15.84a4.491 4.491 0 00-1.443-1.443 4.49 4.49 0 00-2.093-1.096m1.443 1.443s-.103-.017-.327-.052m2.093 1.096s-.103.017-.327.052m1.327 0c-.688-.06-1.386-.09-2.09-.09h-.094m2.183 0h-.094m2.183 0c.688.06 1.386.09 2.09.09h.094m-2.183 0h.094m0 0c.688.06 1.386.09 2.09.09h.094m-2.183 0h.094m2.183 0c.688.06 1.386.09 2.09.09h.094m-2.183 0h.094m0 0c.688.06 1.386.09 2.09.09h.094m-2.183 0h.094M10.34 15.84l-1.443-1.443M1.927 10.34l-1.443-1.443M14.25 10.34l1.443-1.443M14.25 10.34l-1.443 1.443M14.25 10.34l1.443 1.443M10.34 15.84l1.443 1.443m-1.443-1.443l-1.443 1.443m1.443-1.443l1.443 1.443M10.34 15.84l1.443 1.443m-4.49-4.49l-1.443-1.443m1.443 1.443l-1.443 1.443m1.443-1.443l1.443 1.443M10.34 15.84l1.443 1.443" /></svg>`
+    'UpdatedFinalThesis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.34 15.84c-.688-.06-1.386-.09-2.09-.09H7.5a4.5 4.5 0 01-4.5-4.5V4.5a4.5 4.5 0 014.5-4.5h7.5a4.5 4.5 0 014.5 4.5v1.25m-18 0A2.625 2.625 0 115.25 2.625M10.34 15.84a4.491 4.491 0 00-1.443-1.443 4.49 4.49 0 00-2.093-1.096m1.443 1.443s-.103-.017-.327-.052m2.093 1.096s-.103.017-.327.052m1.327 0c-.688-.06-1.386-.09-2.09-.09h-.094m2.183 0h-.094m2.183 0c.688.06 1.386.09 2.09.09h.094m-2.183 0h.094m2.183 0c.688.06 1.386.09 2.09.09h.094m-2.183 0h.094m0 0c.688.06 1.386.09 2.09.09h.094m-2.183 0h.094m2.183 0c.688.06 1.386.09 2.09.09h.094m-2.183 0h.094M10.34 15.84l-1.443-1.443M1.927 10.34l-1.443-1.443M14.25 10.34l1.443-1.443M14.25 10.34l-1.443 1.443M14.25 10.34l1.443 1.443M10.34 15.84l1.443 1.443m-1.443-1.443l-1.443 1.443m1.443-1.443l1.443 1.443M10.34 15.84l1.443 1.443m-4.49-4.49l-1.443-1.443m1.443 1.443l-1.443 1.443m1.443-1.443l1.443 1.443M10.34 15.84l1.443 1.443" /></svg>`
 };
 
 export const ANALYSIS_NAMES = {
@@ -1292,3 +1305,5 @@ export const ANALYSIS_NAMES = {
     'InvestigationSummaryMemo': 'Investigation Summary',
     'UpdatedFinalThesis': 'Updated Final Thesis' // New entry
 };
+
+}
