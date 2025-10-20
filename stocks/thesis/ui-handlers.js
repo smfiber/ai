@@ -1553,14 +1553,14 @@ export async function handleSaveDiligenceAnswers(symbol, diligenceType) {
 
     answerElements.forEach(textarea => {
         const answer = textarea.value.trim();
-        
+
         // Find the corresponding question text element in the parent hierarchy
         const questionElement = textarea.closest('.diligence-card').querySelector('[data-question-text]');
         if (!questionElement) {
              console.warn('Could not find question element for textarea.');
              return;
         }
-        
+
         // Use the actual text from the DOM, which is guaranteed to match the UI
         const question = questionElement.textContent.trim();
 
@@ -1634,7 +1634,7 @@ export async function handleManualDiligenceSave(symbol) {
         entriesContainer.innerHTML = ''; // Clear the input fields
         addDiligenceEntryRow(); // Add back one empty row
 
-        const diligenceReports = getReportsFromCache(symbol, 'DiliglenceInvestigation');
+        const diligenceReports = getReportsFromCache(symbol, 'DiligenceInvestigation'); // Corrected typo here
         const diligenceLogContainer = document.getElementById('diligence-log-container');
         renderDiligenceLog(diligenceLogContainer, diligenceReports);
 
