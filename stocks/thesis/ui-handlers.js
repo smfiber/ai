@@ -2063,7 +2063,7 @@ export async function handleDeleteDiligenceLog(reportId, ticker) {
 
                 state.reportCache = state.reportCache.filter(r => r.id !== reportId);
 
-                const diligenceReports = getReportsFromCache(ticker, 'DiligenceInvestigation');
+                const diligenceReports = getReportsFromCache(ticker, 'DiliglenceInvestigation');
                 const diligenceLogContainer = document.getElementById('diligence-log-container');
                 renderDiligenceLog(diligenceLogContainer, diligenceReports);
 
@@ -2094,8 +2094,26 @@ async function _fetchAndCachePeerData(tickers) {
         throw new Error("FMP API key is required to fetch peer data.");
     }
     const successfullyFetchedTickers = [];
-    const endpointsToFetch = ['profile', 'key_metrics_ttm', 'ratios_ttm', 'key_metrics_annual', 'ratios_annual'];
-    const totalEndpoints = tickers.length * endpointsToFetch.length;
+    
+    // --- START MODIFICATION ---
+    // Use the full list of endpoints required for the scorecard
+    const coreEndpoints = [
+        { name: 'profile', path: 'profile', version: 'v3' },
+        { name: 'income_statement_annual', path: 'income-statement', params: 'period=annual&limit=10', version: 'v3' },
+        { name: 'balance_sheet_statement_annual', path: 'balance-sheet-statement', params: 'period=annual&limit=10', version: 'v3' },
+        { name: 'cash_flow_statement_annual', path: 'cash-flow-statement', params: 'period=annual&limit=10', version: 'v3' },
+        { name: 'key_metrics_annual', path: 'key-metrics', params: 'period=annual&limit=10', version: 'v3' },
+        { name: 'ratios_annual', path: 'ratios', params: 'period=annual&limit=10', version: 'v3' },
+        { name: 'key_metrics_ttm', path: 'key-metrics-ttm', version: 'v3' },
+        { name: 'ratios_ttm', path: 'ratios-ttm', version: 'v3' },
+        { name: 'income_statement_quarterly', path: 'income-statement', params: 'period=quarter&limit=12', version: 'v3' },
+        { name: 'stock_grade_news', path: 'grade', version: 'v3' },
+        { name: 'analyst_estimates', path: 'analyst-estimates', params: 'period=annual', version: 'stable'},
+        { name: 'earning_calendar', path: 'earnings', version: 'stable' },
+    ];
+    const totalEndpoints = tickers.length * coreEndpoints.length;
+    // --- END MODIFICATION ---
+
     let fetchedCount = 0;
 
     const progressBarFill = document.getElementById('progress-bar-fill');
@@ -2113,14 +2131,16 @@ async function _fetchAndCachePeerData(tickers) {
     for (const ticker of tickers) {
         let allEndpointsFetched = true;
         try {
-            // Check cache more comprehensively - look for profile data?
-            const profileDocRef = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(ticker).collection('endpoints').doc('profile');
-            const profileDocSnap = await profileDocRef.get();
+            // --- START MODIFICATION ---
+            // Check for a more critical endpoint to see if cache is complete
+            const checkDocRef = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(ticker).collection('endpoints').doc('income_statement_annual');
+            const checkDocSnap = await checkDocRef.get();
 
-            if (profileDocSnap.exists) {
+            if (checkDocSnap.exists) {
+            // --- END MODIFICATION ---
                 console.log(`Peer data for ${ticker} likely in cache. Skipping fetch.`);
                 successfullyFetchedTickers.push(ticker);
-                fetchedCount += endpointsToFetch.length; // Assume all are cached if profile is
+                fetchedCount += coreEndpoints.length; // Assume all are cached if profile is
                 if (progressBarFill) {
                     const progress = Math.min(100, (fetchedCount / totalEndpoints) * 100);
                     progressBarFill.style.width = `${progress}%`;
@@ -2131,16 +2151,27 @@ async function _fetchAndCachePeerData(tickers) {
             if (currentReportName) {
                 currentReportName.textContent = `Fetching data for ${ticker}...`;
             }
+            
+            // --- START MODIFICATION ---
+            // Use the more robust loop from handleRefreshFmpData
+            for (const endpoint of coreEndpoints) {
+                let url;
+                const version = endpoint.version || 'v3';
 
-            for (const endpoint of endpointsToFetch) {
-                const url = `https://financialmodelingprep.com/api/v3/${endpoint}/${ticker}?apikey=${state.fmpApiKey}`;
+                if (version === 'stable') {
+                    url = `https://financialmodelingprep.com/stable/${endpoint.path}?symbol=${ticker}&${endpoint.params ? endpoint.params + '&' : ''}apikey=${state.fmpApiKey}`;
+                } else {
+                    url = `https://financialmodelingprep.com/api/${version}/${endpoint.path}/${ticker}?${endpoint.params ? endpoint.params + '&' : ''}apikey=${state.fmpApiKey}`;
+                }
+            // --- END MODIFICATION ---
+
                 const data = await callApi(url);
 
                 if (data && (!Array.isArray(data) || data.length > 0)) {
-                    const endpointDocRef = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(ticker).collection('endpoints').doc(endpoint);
+                    const endpointDocRef = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(ticker).collection('endpoints').doc(endpoint.name);
                     await endpointDocRef.set({ cachedAt: firebase.firestore.Timestamp.now(), data: data });
                 } else {
-                    console.warn(`No data returned from FMP for peer endpoint: ${endpoint} for ticker ${ticker}.`);
+                    console.warn(`No data returned from FMP for peer endpoint: ${endpoint.name} for ticker ${ticker}.`);
                     allEndpointsFetched = false;
                 }
                 fetchedCount++;
