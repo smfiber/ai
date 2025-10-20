@@ -386,7 +386,7 @@ export async function openRawDataViewer(ticker) {
 
         const profile = fmpData.profile[0];
 
-        const getAnswersMap = (snap) => snap.exists ? new Map(snap.data().answers.map(item => [item.question, item.answer])) : new Map();
+        const getAnswersMap = (snap) => snap.exists ? new Map(snap.data().answers.map(item => [item.question, item.answer, item.filingDate])) : new Map(); // Adjusted to include filingDate
         const savedQualitativeAnswers = getAnswersMap(qualitativeSnap);
         const savedStructuredAnswers = getAnswersMap(structuredSnap);
         const savedMarketSentimentAnswers = getAnswersMap(marketSentimentSnap);
@@ -492,12 +492,45 @@ export async function openRawDataViewer(ticker) {
             // Populate Structured Diligence
             const structuredContainer = diligenceHubContainer.querySelector('#structured-diligence-forms-container');
             let structuredHtml = `<div class="text-left border rounded-lg p-4 bg-gray-50"><h4 class="text-base font-semibold text-gray-800 mb-1">Structured (Quantitative) Diligence</h4><p class="text-sm text-gray-500 mb-4">Answer these core questions to build a foundational thesis.</p><div class="space-y-4">`;
-            for (const [category, question] of Object.entries(STRUCTURED_DILIGENCE_QUESTIONS)) {
-                const savedAnswer = sanitizeText(savedStructuredAnswers.get(question) || '');
-                structuredHtml += `<div class="diligence-card p-3 bg-white rounded-lg border border-gray-200"><h5 class="font-semibold text-sm text-indigo-700 mb-2">${category}</h5><div class="flex items-start gap-2 mb-2"><p class="text-xs text-gray-600 flex-grow" data-question-text>${question}</p><button type="button" class="copy-icon-btn structured-diligence-copy-btn" title="Copy Question">${copyIcon}</button></div><textarea class="structured-diligence-answer w-full border border-gray-300 rounded-lg p-2 text-sm" rows="4" data-category="${category}" placeholder="Your analysis and findings here...">${savedAnswer}</textarea></div>`;
+            for (const [category, questionData] of Object.entries(STRUCTURED_DILIGENCE_QUESTIONS)) {
+                let questionText = '';
+                let hasDateField = false;
+                if (typeof questionData === 'string') {
+                    questionText = questionData;
+                } else if (typeof questionData === 'object' && questionData.question) {
+                    questionText = questionData.question;
+                    hasDateField = questionData.hasDateField; // Check the flag
+                } else {
+                    continue; // Skip if format is unexpected
+                }
+
+                const savedAnswerData = savedStructuredAnswers.get(questionText);
+                const savedAnswer = sanitizeText(savedAnswerData?.answer || '');
+                const savedDate = sanitizeText(savedAnswerData?.filingDate || ''); // Get saved date
+
+                let dateInputHtml = '';
+                if (hasDateField) {
+                    dateInputHtml = `
+                        <div class="mt-2">
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Filing Date:</label>
+                            <input type="date" class="structured-diligence-date border border-gray-300 rounded-lg p-1 text-sm" value="${savedDate}">
+                        </div>`;
+                }
+
+                structuredHtml += `
+                    <div class="diligence-card p-3 bg-white rounded-lg border border-gray-200">
+                        <h5 class="font-semibold text-sm text-indigo-700 mb-2">${category}</h5>
+                        <div class="flex items-start gap-2 mb-2">
+                            <p class="text-xs text-gray-600 flex-grow" data-question-text>${questionText}</p>
+                            <button type="button" class="copy-icon-btn structured-diligence-copy-btn" title="Copy Question">${copyIcon}</button>
+                        </div>
+                        <textarea class="structured-diligence-answer w-full border border-gray-300 rounded-lg p-2 text-sm" rows="4" data-category="${category}" placeholder="Your analysis and findings here...">${savedAnswer}</textarea>
+                        ${dateInputHtml}
+                    </div>`;
             }
             structuredHtml += `</div><div class="text-right mt-4"><button data-diligence-type="Structured" class="save-diligence-answers-button bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg">Save Structured Answers</button></div></div>`;
             if(structuredContainer) structuredContainer.innerHTML = structuredHtml;
+
 
             // Populate Market Sentiment Diligence
             const marketSentimentContainer = diligenceHubContainer.querySelector('#market-sentiment-forms-container');
