@@ -19,7 +19,7 @@ export const state = {
 
 // Map specific AI analysis types to the FMP endpoints they require.
 export const ANALYSIS_REQUIREMENTS = {
-    'ManagementScorecard': ['executive_compensation']
+    'ManagementScorecard': ['executive_compensation'] // Example, assuming this might still be needed indirectly or planned
 };
 
 // --- Constants ---
@@ -50,7 +50,7 @@ export const CONSTANTS = {
     // Database Collections
     DB_COLLECTION_PORTFOLIO: 'portfolio_stocks',
     DB_COLLECTION_FMP_CACHE: 'fmp_cached_data_v2',
-    DB_COLLECTION_AI_REPORTS: 'ai_analysis_reports',
+    DB_COLLECTION_AI_REPORTS: 'ai_analysis_reports_v2',
 };
 
 export const STRUCTURED_DILIGENCE_QUESTIONS = {
@@ -115,6 +115,8 @@ export const SECTOR_KPI_SUGGESTIONS = {
     ]
 };
 
+// --- Prompts Still In Use ---
+
 const PEER_IDENTIFICATION_PROMPT = `
 Role: You are a highly specialized financial analyst AI with deep knowledge of corporate structures and competitive landscapes.
 Task: Your sole purpose is to identify the top 3-5 most direct, publicly traded competitors for the given company.
@@ -150,68 +152,6 @@ Company Information:
 
 Example Output:
 ["TICKER1", "TICKER2", "TICKER3"]
-`.trim();
-
-const MOAT_ANALYSIS_PROMPT = `
-Role: You are a business strategist AI. Your task is to analyze {companyName}'s competitive advantages based *only* on the provided JSON data.
-
----
-**CRITICAL INSTRUCTION: Your final output MUST use the exact markdown structure, headings, and bullet points provided in the template below. Fill in the [Your analysis here] sections based on the JSON data.**
----
-
-JSON Data:
-{jsonData}
-
-# Economic Moat Analysis: {companyName} ({tickerSymbol})
-
-## 1. What Gives This Company Its Edge? (Sources of the Moat)
-- **Return on Invested Capital (ROIC):** [Your analysis here, explaining that a consistently high and stable/rising ROIC >15% is a strong sign of a moat. Analyze the 'roicTrend' data against this benchmark.]
-- **Pricing Power & Profitability:** [Your analysis here, discussing whether the trends in 'profitabilityTrends' are consistently high and stable over time, which would be a sign of pricing power.]
-- **Qualitative Clues (from Description):** [Your analysis here, looking for themes like "platform," "network," "marketplace," or "mission-critical" systems in the 'qualitativeClues.description' that suggest a moat.]
-
-## 2. How Strong is the Castle Wall? (Moat Sustainability)
-- **Reinvesting in the Defenses:** [Your analysis here, discussing whether 'capex' and 'rdExpenses' from the 'reinvestmentTrends' data are significant, which would show the company is strengthening its moat.]
-- **Financial Fortress:** [Your analysis here, assessing if the balance sheet is strong based on a low 'debtToEquity' from the 'balanceSheetHealth' data.]
-
-## 3. The Verdict: How Wide is the Moat?
-(First, provide a one-sentence classification using one of the three bolded options below. Then, in a new paragraph, provide a concluding assessment justifying your choice based on the evidence from the previous sections.)
-
-- **"Wide Moat"**
-- **"Narrow Moat"**
-- **"No Moat"**
-`.trim();
-
-const CAPITAL_ALLOCATORS_PROMPT = `
-Role: You are a critical, business-focused investment analyst. Your task is to evaluate the skill of {companyName}'s management team as capital allocators, based *only* on the provided financial data.
-
----
-**CRITICAL INSTRUCTIONS:**
-1.  Your final output MUST use the exact markdown structure, headings, and bullet points provided in the template below.
-2.  For Section 1, you MUST use the pre-calculated 'summaryTotals' from the JSON data as the source of truth for your analysis.
----
-
-JSON Data:
-{jsonData}
-
-# Capital Allocation Report: {companyName} ({tickerSymbol})
-
-## 1. Deduced Capital Allocation Philosophy
-[Your analysis here. Based on the **pre-calculated 'summaryTotals'**, state the total amounts for Acquisitions, CapEx, Buybacks, and Dividends, and determine if the philosophy is geared towards reinvestment or shareholder returns.]
-
-## 2. Reinvestment Effectiveness
-- **Return on Invested Capital (ROIC):** [Your analysis here. Analyze the 'reinvestmentEffectiveness.roicTrend' to determine if it is high, stable, rising, or volatile.]
-- **Revenue & Profit Growth:** [Your analysis here. Analyze the 'reinvestmentEffectiveness.revenueGrowth' and 'reinvestmentEffectiveness.grossProfitGrowth' trends to see if reinvestment has translated into growth.]
-
-## 3. Acquisition Track Record (M&A)
-- [Your analysis here. For periods of significant spending in 'acquisitionHistory', **cite the acquisition amount for each individual year** and correlate it with the corresponding 'roicTrend'. Analyze the 'goodwill' trend for signs of overpayment.]
-
-## 4. Shareholder Returns
-- **Stock Buybacks:** [Your analysis here. Critically analyze the 'shareholderReturns.buybacksWithValuation' data to determine if management repurchased shares at opportunistic (low) or poor (high) valuations.]
-- **Dividends:** [Your analysis here. Analyze the 'shareholderReturns.fcfPayoutRatioTrend' to determine if the dividend is safely covered and sustainable.]
-
-## 5. Final Grade & Justification
-- **Final Grade:** [Provide a single letter grade from A through F.]
-- **Justification:** [Your analysis here. Justify the grade by summarizing the strongest and weakest points from your quantitative analysis above and provide a bottom-line assessment.]
 `.trim();
 
 const SECTOR_MOMENTUM_PROMPT = `
@@ -277,7 +217,7 @@ You are a Senior Investment Analyst at a GARP-focused fund. Your task is to synt
 **Add to Watchlist**
 
 (Your 4-5 sentence justification here, explicitly referencing the trade-offs and tensions revealed by synthesizing the reports and the quantitative scorecard.)
-`.trim();
+`.trim(); // Kept as it's used for the 'Updated GARP Memo' in ongoing diligence
 
 const PORTFOLIO_GARP_ANALYSIS_PROMPT = `
 Role: You are a sharp and insightful portfolio analyst specializing in GARP (Growth at a Reasonable Price) investing.
@@ -356,7 +296,6 @@ Synthesize all the Core Data above into a professional Position Review Memo.
 ---
 `.trim();
 
-// --- FINAL GARP CANDIDACY PROMPT (Version 6 - Incorporating Sector Context, Contradiction Acknowledgment, and Neutral Tone) ---
 const GARP_CANDIDACY_PROMPT = `
 1. Persona & Role:
 You are a senior investment analyst at "Reasonable Growth Capital," a firm that strictly adheres to the Growth at a Rasonable Price (GARP) philosophy. Your role is not to make a final decision, but to act as an objective journalist. Your analysis is respected for its clarity, data-driven conviction, and ability to distill complex financial data into a balanced, unbiased assessment. Your tone MUST remain strictly neutral and factual throughout. Avoid judgmental or emotionally charged language (e.g., "alarming," "flawless," "pristine," "red flag").
@@ -426,7 +365,6 @@ Format each item precisely like this:
 - **Suggested AI Investigation Query:** "[Your search query here]"
 `.trim();
 
-
 const GARP_CONVICTION_SCORE_PROMPT = `
 Role: You are an AI assistant skilled at explaining financial metrics.
 Task: Explain the GARP Conviction Score based on the provided data summary.
@@ -469,36 +407,6 @@ Your task is to read the provided SEC filing (10-Q or 10-K) for {companyName} an
     "What was the total amount of inventory on the balance sheet as of August 2, 2025, and how does this compare to the balance on February 1, 2025?",
     "How much cash was used to pay dividends during the twenty-six weeks ended August 2, 2025?"
 ]
-`.trim();
-
-const QARP_ANALYSIS_PROMPT = `
-Role: You are a Senior Investment Analyst specializing in the "Quality at a Reasonable Price" (QARP) philosophy.
-Task: Provide a rigorous, data-driven analysis by filling in the template below, based *exclusively* on the provided JSON data.
-
----
-**CRITICAL INSTRUCTION: Your final output MUST use the exact markdown structure, headings, and bullet points provided in the template below. Fill in the [Your analysis here] sections based on the JSON data.**
----
-
-JSON Data with Pre-Calculated Metrics:
-{jsonData}
-
-# QARP Analysis: {companyName} ({tickerSymbol})
-
-## 1. Executive Summary & Verdict
-[Your concise, one-paragraph summary here, weighing the company's quality against its valuation.]
-
-## 2. The "Quality" Pillar: Is This a Superior Business?
-- **Profitability & Efficiency:** [Your analysis here, based on ROE and ROIC.]
-- **Financial Strength:** [Your analysis here, based on the Debt-to-Equity ratio.]
-- **Growth Stability:** [Your analysis here, based on 5Y EPS and Revenue Growth.]
-
-## 3. The "Reasonable Price" Pillar: Are We Overpaying?
-- **Core Valuation:** [Your analysis here, based on P/E (TTM) and Forward P/E.]
-- **Growth-Adjusted Valuation:** [Your analysis here, based on the PEG Ratio.]
-- **Cash Flow Valuation:** [Your analysis here, based on the Price to FCF ratio.]
-
-## 4. Final Synthesis: The QARP Verdict
-[Synthesize your findings in one paragraph, explaining the trade-offs. Your final sentence MUST follow the example format exactly, including bolding. For example: **This company does not meet the criteria** for a QARP investment at this time because its high valuation does not offer a margin of safety for its quality issues.]
 `.trim();
 
 const UPDATED_QARP_MEMO_PROMPT = `
@@ -573,381 +481,6 @@ Read the provided 8-K filing text for {companyName} and generate a structured an
 * **Minor / Informational:**
 `.trim();
 
-const LONG_TERM_COMPOUNDER_PROMPT = `
-Role: You are a long-term, business-focused investment analyst. Your task is to determine if {companyName} is a "compounder" by synthesizing the provided JSON data, which contains metrics related to its moat and how its management allocates capital.
-
----
-**CRITICAL INSTRUCTIONS:**
-1.  Your final output MUST use the exact markdown structure, headings, and bullet points provided in the template below.
-2.  Your analysis for each section MUST be derived *directly* from the provided 'JSON Data'. Do NOT introduce any outside information or analysis not present in the data.
----
-
-**JSON Data:**
-{jsonData}
-
-# Long-Term Compounder Memo: {companyName} ({tickerSymbol})
-
-## 1. The Core Investment Question
-[Your one-paragraph summary here. Based on the JSON data, what is the single most important question an investor must answer? Synthesize the primary source of the moat (from 'moatAnalysis.qualitativeClues.description') with the primary capital allocation philosophy (from 'capitalAllocation.summaryTotals') to frame this question.]
-
-## 2. The Makings of a "Wonderful Business"
-- **Competitive Advantage (The Moat):** [Your analysis here. Determine the moat's strength by analyzing the 'moatAnalysis.roicTrend'. A consistently high and rising ROIC above 15% is a strong indicator. Identify the source of the moat from 'moatAnalysis.qualitativeClues.description'.]
-- **Management Quality (The Jockeys):** [Your analysis here. Evaluate management's skill by analyzing the 'capitalAllocation.reinvestmentEffectiveness.roicTrend'. Then, critique their shareholder return strategy by analyzing the 'capitalAllocation.shareholderReturns.buybacksWithValuation' data to see if buybacks were done at opportune (low P/E) or poor (high P/E) valuations.]
-- **Profitability Engine:** [Your analysis here. Connect the two concepts by explaining how the strong ROIC ('moatAnalysis.roicTrend') is a direct financial result of the moat source ('moatAnalysis.qualitativClues.description') and is sustained by management's reinvestment effectiveness ('capitalAllocation.reinvestmentEffectiveness.revenueGrowth').]
-
-## 3. Potential Cracks in the Fortress
-- **Moat Sustainability Risks:** [Your analysis here. Based *only* on the provided data, identify potential risks. For example, if 'moatAnalysis.reinvestmentTrends.capex' is stagnant or declining, it could be a risk. If no clear risks are present in the data, state that "No specific sustainability risks were identified in the provided data."]
-- **Capital Allocation Red Flags:** [Your analysis here. Identify the single biggest weakness based *only* on the 'capitalAllocation.shareholderReturns.buybacksWithValuation' data. State clearly if management tends to buy back shares at high or low valuations.]
-- **The Core Tension:** [Your analysis here. Explain the primary conflict. For example: "The core tension is between the company's powerful moat, which generates immense cash, and management's tendency to return that cash via buybacks at high valuations, which may be a suboptimal use of capital."]
-
-## 4. Final Verdict: A True Compounder?
-[Your final one-paragraph verdict here. Synthesize all findings from the JSON to make a concluding assessment. Your final sentence MUST follow the example format exactly, including bolding. For example: **Potential Compounder with Reservations** because its wide moat is paired with a management team that has shown weaknesses in its capital return strategy.]
-`.trim();
-
-const BMQV_MEMO_PROMPT = `
-Role: You are a long-term, business-focused investment analyst in the style of Buffett and Munger.
-Task: Your task is to determine if {companyName} is a "wonderful business" by synthesizing the facts provided in the JSON data below. You MUST base your analysis exclusively on these facts and not use any outside knowledge.
-
----
-**CRITICAL INSTRUCTIONS:**
-1.  Your final output MUST use the exact markdown structure and headings provided in the template.
-2.  Your analysis for each section MUST be derived *directly* from the provided 'JSON Data (Source of Truth)'. For example, to determine the moat, analyze the 'roicTrend' data. To assess management, analyze the 'summaryTotals' and 'buybacksWithValuation' data.
-3.  Do NOT mention any company names, events (like acquisitions), or data not explicitly present in the JSON data.
----
-
-**JSON Data (Source of Truth):**
-{jsonData}
-
-# Buffett-Munger Quality & Value (BMQV) Memo: {companyName} ({tickerSymbol})
-
-## 1. Executive Summary: Is This a "Wonderful Business"?
-[Synthesize your findings from the sections below to provide a top-line summary and verdict.]
-
-## 2. The Three Pillars of a "Wonderful Business"
-- **A Durable Moat:** [Analyze the 'moatAnalysis.roicTrend'. A consistently high and stable/rising ROIC above 15% indicates a strong moat. Also, use the 'moatAnalysis.qualitativeClues.description' to identify the source of the moat (e.g., network effects, brand).]
-- **Skilled & Trustworthy Management:** [Analyze the 'capitalAllocation.summaryTotals' to determine if management prioritizes shareholder returns or reinvestment. Then, analyze 'capitalAllocation.shareholderReturns.buybacksWithValuation' to assess if buybacks were done at opportune (low P/E) or poor (high P/E) valuations.]
-- **A Resilient Profitability Engine:** [Explain how the high ROIC from the 'moatAnalysis' data is sustained by management's capital allocation philosophy, as seen in the 'capitalAllocation' data.]
-
-## 3. Potential Impairments to Long-Term Value
-- **Identified Weaknesses:** [Based *only* on your analysis of the 'buybacksWithValuation' data, identify any weaknesses in management's capital allocation. If buybacks were consistently done at high P/E ratios, state that as the primary weakness. If no clear weakness is present in the data, state that.]
-
-## 4. Final Verdict
-[Provide a final, one-paragraph verdict synthesizing your data-driven findings. Your final sentence MUST follow the example format exactly, including bolding. For example: **A Good Business with Flaws** because its strong moat is undermined by management's tendency to repurchase shares at high valuations.]
-`.trim();
-
-// --- NEW EXTRACTION & SYNTHESIS PROMPTS (VERSION 2.0) ---
-
-const MOAT_ANALYSIS_EXTRACT_PROMPT = `
-Role: You are a data extraction AI.
-Task: Your only job is to read the provided 'Economic Moat Analysis' report and extract three specific pieces of information.
-CRITICAL INSTRUCTIONS:
-- You MUST return ONLY a valid JSON object.
-- Do not add any text, explanations, or markdown formatting before or after the JSON.
-- For 'verdict', extract one of three possible values: "Wide", "Narrow", or "None".
-- For 'primarySource' and 'keyWeakness', extract the single most important reason, summarizing it in a short phrase.
-
-Report Text:
-{reportContent}
-
-JSON Output Format:
-{
-  "verdict": "...",
-  "primarySource": "...",
-  "keyWeakness": "..."
-}
-`.trim();
-
-const CAPITAL_ALLOCATORS_EXTRACT_PROMPT = `
-Role: You are a data extraction AI.
-Task: Your only job is to read the provided 'Capital Allocation Report' and extract three specific pieces of information.
-CRITICAL INSTRUCTIONS:
-- You MUST return ONLY a valid JSON object.
-- Do not add any text, explanations, or markdown formatting before or after the JSON.
-- For 'verdict', extract the final letter grade (e.g., "A", "C").
-- For 'primaryStrength' and 'primaryWeakness', extract the single most important reason, summarizing it in a short phrase.
-
-Report Text:
-{reportContent}
-
-JSON Output Format:
-{
-  "verdict": "...",
-  "primaryStrength": "...",
-  "primaryWeakness": "..."
-}
-`.trim();
-
-const GARP_MEMO_EXTRACT_PROMPT = `
-Role: You are a data extraction AI.
-Task: Your only job is to read the provided 'Investment Memo' and extract three specific pieces of information.
-CRITICAL INSTRUCTIONS:
-- You MUST return ONLY a valid JSON object.
-- Do not add any text, explanations, or markdown formatting before or after the JSON.
-- For 'verdict', extract the final recommendation (e.g., "High Conviction Buy", "Pass / Sell").
-- For 'coreTension', extract the central conflict the memo aims to resolve.
-- For 'valuationVerdict', extract the memo's final conclusion on valuation.
-
-Report Text:
-{reportContent}
-
-JSON Output Format:
-{
-  "verdict": "...",
-  "coreTension": "...",
-  "valuationVerdict": "..."
-}
-`.trim();
-
-const QARP_ANALYSIS_EXTRACT_PROMPT = `
-Role: You are a data extraction AI.
-Task: Your only job is to read the provided 'QARP Analysis' report and extract three specific pieces of information.
-CRITICAL INSTRUCTIONS:
-- You MUST return ONLY a valid JSON object.
-- Do not add any text, explanations, or markdown formatting before or after the JSON.
-- For 'verdict', extract the final verdict (e.g., "strong QARP candidate", "borderline QARP candidate").
-- For 'coreTension', synthesize the main trade-off discussed in the final synthesis section.
-- For 'valuationVerdict', extract the report's overall conclusion on valuation.
-
-Report Text:
-{reportContent}
-
-JSON Output Format:
-{
-  "verdict": "...",
-  "coreTension": "...",
-  "valuationVerdict": "..."
-}
-`.trim();
-
-const COMPOUNDER_BMQV_EXTRACT_PROMPT = `
-Role: You are a data extraction AI.
-Task: Your only job is to read the provided 'Compounder' or 'BMQV' memo and extract two specific pieces of information.
-CRITICAL INSTRUCTIONS:
-- You MUST return ONLY a valid JSON object.
-- Do not add any text, explanations, or markdown formatting before or after the JSON.
-- For 'verdict', extract the final, one-sentence classification (e.g., "High-Conviction Compounder", "Not a Compounder", "A Wonderful Business", "Not a Wonderful Business").
-- For 'coreTension', summarize the "Core Investment Question" or "Core Tension" identified in the report in a single sentence.
-
-Report Text:
-{reportContent}
-
-JSON Output Format:
-{
-  "verdict": "...",
-  "coreTension": "..."
-}
-`.trim();
-
-// --- NEW DILIGENCE MEMO EXTRACTORS ---
-const QUALITATIVE_DILIGENCE_MEMO_EXTRACT_PROMPT = `
-Role: You are a data extraction AI.
-Task: Your only job is to read the provided 'Qualitative Business Memo' and extract four specific pieces of information.
-CRITICAL INSTRUCTIONS:
-- You MUST return ONLY a valid JSON object.
-- Do not add any text, explanations, or markdown formatting before or after the JSON.
-- For 'verdict', extract the final verdict word (e.g., "High", "Average", "Low") from the final sentence of Section 5.
-- For 'nonConsensusThesis', extract the core non-consensus thesis summary from Section 3. If Section 3 states no thesis was provided or is empty, return "No non-consensus thesis provided.".
-- For 'shareholderBaseQuality', extract the summary of the shareholder base quality from Section 3. If Section 3 states no information was provided or is empty, return "No shareholder base analysis provided.".
-- For 'linchpinThesisAndRisk', extract the synthesized answer for the 'Core Thesis & Linchpin Risk' from Section 4. If Section 4 is empty or does not contain this, return "No linchpin thesis provided.".
-
-Report Text:
-{reportContent}
-
-JSON Output Format:
-{
-  "verdict": "...",
-  "nonConsensusThesis": "...",
-  "shareholderBaseQuality": "...",
-  "linchpinThesisAndRisk": "..."
-}
-`.trim();
-
-const STRUCTURED_DILIGENCE_MEMO_EXTRACT_PROMPT = `
-Role: You are a data extraction AI.
-Task: Your only job is to read the provided 'Quantitative Health Memo' and extract two specific pieces of information.
-CRITICAL INSTRUCTIONS:
-- You MUST return ONLY a valid JSON object.
-- Do not add any text, explanations, or markdown formatting before or after the JSON.
-- For 'verdict', extract the final verdict word (e.g., "Strong", "Average", "Weak") from the final sentence of Section 5.
-- For 'keyWeakness', summarize the primary weakness identified in the final synthesis (Section 5). If no specific weakness is mentioned, return "No specific key weakness identified.".
-
-Report Text:
-{reportContent}
-
-JSON Output Format:
-{
-  "verdict": "...",
-  "keyWeakness": "..."
-}
-`.trim();
-
-const MARKET_SENTIMENT_MEMO_EXTRACT_PROMPT = `
-Role: You are a data extraction AI.
-Task: Your only job is to read the provided 'Market Sentiment Memo' and extract two specific pieces of information.
-CRITICAL INSTRUCTIONS:
-- You MUST return ONLY a valid JSON object.
-- Do not add any text, explanations, or markdown formatting before or after the JSON.
-- For 'verdict', extract the final verdict word (e.g., "Bullish", "Neutral", "Bearish") from the final sentence of Section 4.
-- For 'strongestSignal', identify the strongest sentiment signal (positive or negative) mentioned in the synthesis (Section 4). If no single strongest signal is clear, summarize the overall sentiment drivers.
-
-Report Text:
-{reportContent}
-
-JSON Output Format:
-{
-  "verdict": "...",
-  "strongestSignal": "..."
-}
-`.trim();
-
-const INVESTIGATION_SUMMARY_MEMO_EXTRACT_PROMPT = `
-Role: You are a data extraction AI.
-Task: Your only job is to read the provided 'Investigation Summary Memo' and extract two specific pieces of information.
-CRITICAL INSTRUCTIONS:
-- You MUST return ONLY a valid JSON object.
-- Do not add any text, explanations, or markdown formatting before or after the JSON.
-- For 'keyBullishFinding', extract the single most important positive finding summarized in Section 2. If Section 2 is empty or contains no clear positive findings, return "No key bullish finding identified.".
-- For 'keyBearishFinding', extract the single most important negative finding or unanswered question summarized in Section 3. If Section 3 is empty or contains no clear negative findings, return "No key bearish finding identified.".
-
-Report Text:
-{reportContent}
-
-JSON Output Format:
-{
-  "keyBullishFinding": "...",
-  "keyBearishFinding": "..."
-}
-`.trim();
-// --- END NEW DILIGENCE MEMO EXTRACTORS ---
-
-const FINAL_THESIS_CONFLICT_ID_PROMPT = `
-Role: You are a conflict identification AI.
-Task: Based ONLY on the following JSON of analyst summaries, what is the core disagreement between these reports? Explain the conflict in one concise paragraph. Do not use markdown or headings.
-
-JSON Data:
-{jsonData}
-`.trim();
-
-const FINAL_INVESTMENT_THESIS_PROMPT = `
-Role: You are the Chief Investment Officer of a multi-strategy fund. Your task is to synthesize four separate analyst reports on {companyName} into a final, decisive investment thesis. Your analysis must be objective and based exclusively on the provided inputs.
-
----
-**CRITICAL INSTRUCTIONS & DEFINITIONS:**
-1.  **Source of Truth:** Your analysis MUST be based on the quantitative **GARP Conviction Score** and the qualitative **Analyst Summaries**. These are your primary inputs.
-2.  **Output Format:** Your final output MUST use the exact markdown structure, headings, and table format provided below. Do not deviate.
-3.  **Grading Scale (for your final recommendation):**
-    * **A (High Conviction Buy):** A top-tier GARP idea. Suggested 4-5% portfolio allocation for a full-size position.
-    * **B (Strong Buy):** A solid idea that merits a starter position. Suggested 2-3% portfolio allocation.
-    * **C (Hold / Add on Weakness):** A good company at a questionable price. Suggested 1% allocation for a small tracking position.
-    * **D (Hold / Monitor):** For existing positions only. No new capital should be allocated.
-    * **F (Sell / Pass):** A clear avoidance. The risk/reward is unfavorable.
----
-
-**INPUTS FOR ANALYSIS:**
-
-**1. Quantitative Anchor:**
-* **GARP Conviction Score:** {garpScore}
-
-**2. Qualitative Analyst Summaries (JSON):**
-{analystSummaries}
-
----
-**YOUR TASK (Strict Output Format):**
-
-# Final Investment Thesis: {companyName} ({tickerSymbol})
-
-## 1. Summary of Analyst Verdicts
-(First, you MUST complete this summary table by extracting the final verdict from the provided JSON data. Do NOT alter the structure of this table.)
-
-| Analyst Memo | Final Verdict |
-| :--- | :--- |
-| **GARP Memo** | [Extract the "verdict" field] |
-| **QARP Analysis** | [Extract the "verdict" field] |
-| **Long-Term Compounder**| [Extract the "verdict" field] |
-| **BMQV Memo** | [Extract the "verdict" field] |
-
-## 2. The Core Narrative: Identifying the Theme
-(In one paragraph, analyze the completed table and the analyst summaries to identify the central, unifying theme. Instead of seeking conflict, find the consensus. What is the consistent story these reports are telling about the business?)
-
-## 3. Weighing the Evidence & Final Recommendation
-(In one or two paragraphs, build a case for your final recommendation. Start with the quantitative GARP Score as your anchor. Then, use the qualitative analyst summaries to add color and context to that score, explaining how the qualitative findings either strengthen or temper the quantitative result.)
-
-### Recommendation
-(Your response for this section MUST follow the format below exactly, including the bolding.)
-
-**Recommendation Grade:** [Assign a letter grade from the scale defined above.]
-**Suggested Allocation:** [State the corresponding allocation percentage from the scale.]
-
-(Your one-sentence justification summarizing your conclusion goes here. It must be consistent with the grade and your analysis.)
-
-## 4. Implications for Portfolio Management
-(Based on your final recommendation, provide a brief, actionable interpretation for both scenarios below.)
-* **For a New Investment:** [Explain what this recommendation means for an investor considering deploying new capital.]
-* **For an Existing Position:** [Explain what this recommendation means for a current shareholder.]
-`.trim();
-
-// --- NEW UPDATED FINAL THESIS PROMPT ---
-const UPDATED_FINAL_THESIS_PROMPT = `
-Role: You are the Chief Investment Officer, reviewing a previously generated "Final Investment Thesis" in light of new, direct diligence findings provided by your analyst.
-Task: Your task is to update the original thesis, recommendation, and rationale based *primarily* on the **new Diligence Memo Summaries**. Resolve any conflicts between the original thesis and the new diligence.
-
----
-**CRITICAL INSTRUCTIONS & DEFINITIONS:**
-1.  **Prioritize New Diligence:** The **Diligence Memo Summaries** represent the analyst's latest findings and should be given the *most weight*. Use them to validate, challenge, or refine the conclusions of the **Original Final Thesis**.
-2.  **Explicitly Address Conflicts:** If the new diligence contradicts the original thesis (e.g., original thesis worried about valuation, but new diligence suggests market sentiment is overly bearish), you MUST explicitly state this contradiction and explain how the new information changes the conclusion.
-3.  **Focus on "The Linchpin":** Pay special attention to the 'linchpinThesisAndRisk' from the Qualitative Diligence Memo. This is the most important input and should be the primary driver of your updated recommendation.
-4.  **Output Format:** Your final output MUST use the exact markdown structure, headings, and table format provided below. Do not deviate.
-5.  **Grading Scale (Same as original):** A (High Conviction Buy, 4-5%), B (Strong Buy, 2-3%), C (Hold/Add Weakness, 1%), D (Hold/Monitor), F (Sell/Pass).
----
-
-**INPUTS FOR ANALYSIS:**
-
-**1. Original Final Investment Thesis:**
-\`\`\`markdown
-{originalFinalThesisContent}
-\`\`\`
-
-**2. NEW Diligence Memo Summaries (JSON):**
-{diligenceSummaries}
-
----
-**YOUR TASK (Strict Output Format):**
-
-# Updated Final Thesis: {companyName} ({tickerSymbol})
-
-## 1. Summary of Diligence Findings
-(Complete this summary table by extracting the key findings from the provided JSON data.)
-
-| Diligence Memo | Key Finding / Verdict |
-| :--- | :--- |
-| **Qualitative Memo** | [Extract 'verdict', 'linchpinThesisAndRisk'] |
-| **Structured Memo** | [Extract 'verdict', 'keyWeakness'] |
-| **Market Sentiment** | [Extract 'verdict', 'strongestSignal'] |
-| **Investigation Summary** | [Extract 'keyBullishFinding', 'keyBearishFinding'] |
-
-## 2. Re-evaluating the Core Narrative & Conflicts
-(In one paragraph, compare the **Original Final Thesis Core Narrative** with the **new Diligence Findings**. Identify the main points of agreement or disagreement. Explicitly state any conflicts and explain which information source (original synthesis vs. new diligence) you find more compelling and why, referencing specific diligence findings like the 'linchpinThesisAndRisk' or 'market sentiment verdict'.)
-
-## 3. Updated Recommendation & Rationale
-(In one or two paragraphs, revise the recommendation and justification from the **Original Final Thesis**. Base your updated reasoning primarily on the **Diligence Memo Summaries**, especially the 'linchpinThesisAndRisk' finding. Explain how this core thesis and its associated risk, now that it has been explicitly stated, modifies the initial quantitative score and synthesis memo conclusions.)
-
-### Updated Recommendation
-(Your response for this section MUST follow the format below exactly, including the bolding.)
-
-**Recommendation Grade:** [Assign an updated letter grade based on the *new* synthesis.]
-**Suggested Allocation:** [State the corresponding allocation percentage.]
-
-(Your updated one-sentence justification summarizing your *new* conclusion goes here.)
-
-## 4. Updated Implications for Portfolio Management
-(Based on your *updated* recommendation, provide revised, actionable interpretations.)
-* **For a New Investment:** [Explain the updated meaning.]
-* **For an Existing Position:** [Explain the updated meaning.]
-`.trim();
-// --- END NEW UPDATED FINAL THESIS PROMPT ---
-
-
-// --- REVISED QUALITATIVE DILIGENCE MEMO PROMPT ---
 const QUALITATIVE_DILIGENCE_MEMO_PROMPT = `
 Role: You are an investment analyst AI.
 Task: Synthesize the provided Question & Answer pairs into a professional "Qualitative Business Memo" using the specified markdown template.
@@ -989,8 +522,6 @@ Task: Synthesize the provided Question & Answer pairs into a professional "Quali
 ## 5. Synthesis & Verdict
 [Your synthesis paragraph and final bolded verdict sentence go here based on Instruction 6]
 `.trim();
-// --- END REVISED PROMPT ---
-
 
 const STRUCTURED_DILIGENCE_MEMO_PROMPT = `
 Role: You are an investment analyst AI.
@@ -1021,32 +552,6 @@ Task: Based ONLY on the provided Question & Answer pairs, fill in the template b
 [Your one-paragraph synthesis of all points here. Your final sentence MUST follow the example format exactly, including bolding. For example: **Quantitative health appears Average** because its durable scale is offset by high leverage and a bloated cost structure.]
 `.trim();
 
-const MARKET_SENTIMENT_MEMO_PROMPT = `
-Role: You are a market analyst AI.
-Task: Based ONLY on the provided Question & Answer pairs, fill in the template below to create a "Market Sentiment Memo."
-
----
-**CRITICAL INSTRUCTION: Your final output MUST use the exact markdown structure and headings provided in the template below. Fill in the [Your analysis here] sections based on the Q&A data.**
----
-
-**Q&A Data:**
-{qaData}
-
-# Market Sentiment Memo: {companyName} ({tickerSymbol})
-
-## 1. Analyst Consensus
-[Your summary of the 'Analyst Consensus' Q&A here.]
-
-## 2. Fundamental Factor Scores
-[Your summary of the S&P factor scores from the Q&A here.]
-
-## 3. Technical & Price Momentum
-[Your summary of the technical sentiment and short interest data from the Q&A here.]
-
-## 4. Synthesis & Verdict
-[Your one-paragraph synthesis of all points here. Your final sentence MUST follow the example format exactly, including bolding. For example: **Overall market sentiment appears Bullish** due to the stock's powerful price momentum, which outweighs the valuation concerns.]
-`.trim();
-
 const INVESTIGATION_SUMMARY_MEMO_PROMPT = `
 Role: You are an investment analyst AI specializing in synthesizing research notes.
 Task: Your sole job is to read the unstructured, manually-entered Question & Answer pairs from the diligence log and synthesize them into a professional "Investigation Summary Memo." Your goal is to identify the most critical findings and present them clearly.
@@ -1071,9 +576,6 @@ Task: Your sole job is to read the unstructured, manually-entered Question & Ans
 ## 3. Key Bearish Findings & Unanswered Questions
 (Create a bulleted list summarizing the most significant risks, negative findings, or remaining unanswered questions identified in the Q&A log.)
 `.trim();
-
-
-// --- NEW ONGOING REVIEW PROMPTS ---
 
 const QUARTERLY_REVIEW_MEMO_PROMPT = `
 Role: You are a portfolio manager conducting a quarterly review of an existing holding.
@@ -1136,6 +638,91 @@ Task: Your task is to analyze the user's new annual findings in the context of t
 (Synthesize the user's proposed forward-looking action plan. Conclude with a clear, single-word verdict based on the user's input: **Hold, Add on Weakness, Trim on Strength, or Exit Position**. Provide a concise, 1-2 sentence justification for this plan.)
 `.trim();
 
+// --- Extraction Prompts Still In Use ---
+
+const GARP_MEMO_EXTRACT_PROMPT = `
+Role: You are a data extraction AI.
+Task: Your only job is to read the provided 'Investment Memo' and extract three specific pieces of information.
+CRITICAL INSTRUCTIONS:
+- You MUST return ONLY a valid JSON object.
+- Do not add any text, explanations, or markdown formatting before or after the JSON.
+- For 'verdict', extract the final recommendation (e.g., "High Conviction Buy", "Pass / Sell").
+- For 'coreTension', extract the central conflict the memo aims to resolve.
+- For 'valuationVerdict', extract the memo's final conclusion on valuation.
+
+Report Text:
+{reportContent}
+
+JSON Output Format:
+{
+  "verdict": "...",
+  "coreTension": "...",
+  "valuationVerdict": "..."
+}
+`.trim(); // Used by Updated GARP Memo
+
+const QUALITATIVE_DILIGENCE_MEMO_EXTRACT_PROMPT = `
+Role: You are a data extraction AI.
+Task: Your only job is to read the provided 'Qualitative Business Memo' and extract four specific pieces of information.
+CRITICAL INSTRUCTIONS:
+- You MUST return ONLY a valid JSON object.
+- Do not add any text, explanations, or markdown formatting before or after the JSON.
+- For 'verdict', extract the final verdict word (e.g., "High", "Average", "Low") from the final sentence of Section 5.
+- For 'nonConsensusThesis', extract the core non-consensus thesis summary from Section 3. If Section 3 states no thesis was provided or is empty, return "No non-consensus thesis provided.".
+- For 'shareholderBaseQuality', extract the summary of the shareholder base quality from Section 3. If Section 3 states no information was provided or is empty, return "No shareholder base analysis provided.".
+- For 'linchpinThesisAndRisk', extract the synthesized answer for the 'Core Thesis & Linchpin Risk' from Section 4. If Section 4 is empty or does not contain this, return "No linchpin thesis provided.".
+
+Report Text:
+{reportContent}
+
+JSON Output Format:
+{
+  "verdict": "...",
+  "nonConsensusThesis": "...",
+  "shareholderBaseQuality": "...",
+  "linchpinThesisAndRisk": "..."
+}
+`.trim();
+
+const STRUCTURED_DILIGENCE_MEMO_EXTRACT_PROMPT = `
+Role: You are a data extraction AI.
+Task: Your only job is to read the provided 'Quantitative Health Memo' and extract two specific pieces of information.
+CRITICAL INSTRUCTIONS:
+- You MUST return ONLY a valid JSON object.
+- Do not add any text, explanations, or markdown formatting before or after the JSON.
+- For 'verdict', extract the final verdict word (e.g., "Strong", "Average", "Weak") from the final sentence of Section 5.
+- For 'keyWeakness', summarize the primary weakness identified in the final synthesis (Section 5). If no specific weakness is mentioned, return "No specific key weakness identified.".
+
+Report Text:
+{reportContent}
+
+JSON Output Format:
+{
+  "verdict": "...",
+  "keyWeakness": "..."
+}
+`.trim();
+
+const INVESTIGATION_SUMMARY_MEMO_EXTRACT_PROMPT = `
+Role: You are a data extraction AI.
+Task: Your only job is to read the provided 'Investigation Summary Memo' and extract two specific pieces of information.
+CRITICAL INSTRUCTIONS:
+- You MUST return ONLY a valid JSON object.
+- Do not add any text, explanations, or markdown formatting before or after the JSON.
+- For 'keyBullishFinding', extract the single most important positive finding summarized in Section 2. If Section 2 is empty or contains no clear positive findings, return "No key bullish finding identified.".
+- For 'keyBearishFinding', extract the single most important negative finding or unanswered question summarized in Section 3. If Section 3 is empty or contains no clear negative findings, return "No key bearish finding identified.".
+
+Report Text:
+{reportContent}
+
+JSON Output Format:
+{
+  "keyBullishFinding": "...",
+  "keyBearishFinding": "..."
+}
+`.trim();
+
+// --- End Unused Prompts Removal ---
 
 export const promptMap = {
     'PeerIdentification': {
@@ -1147,24 +734,13 @@ export const promptMap = {
         requires: ['profile']
     },
     'PeerComparison': {
-        prompt: 'N/A' // Placeholder to satisfy help handler check
-    },
-    'QarpAnalysis': {
-        prompt: QARP_ANALYSIS_PROMPT,
-        requires: [] // Uses the same scorecard data as GARP Candidacy
+        prompt: 'N/A' // Placeholder
     },
     'UpdatedQarpMemo': {
         prompt: UPDATED_QARP_MEMO_PROMPT,
         requires: []
     },
-    'MoatAnalysis': {
-        prompt: MOAT_ANALYSIS_PROMPT,
-        requires: ['profile', 'key_metrics_annual', 'income_statement_annual', 'cash_flow_statement_annual', 'ratios_annual']
-    },
-    'CapitalAllocators': {
-        prompt: CAPITAL_ALLOCATORS_PROMPT,
-        requires: ['cash_flow_statement_annual', 'key_metrics_annual', 'income_statement_annual', 'balance_sheet_statement_annual', 'ratios_annual']
-    },
+    // Kept InvestmentMemo entry mapping to UPDATED_GARP_MEMO_PROMPT for ongoing diligence trigger
     'InvestmentMemo': {
         prompt: UPDATED_GARP_MEMO_PROMPT,
         requires: []
@@ -1179,7 +755,7 @@ export const promptMap = {
     },
     'GarpCandidacy': {
         prompt: GARP_CANDIDACY_PROMPT,
-        requires: [] // This analysis calculates its own data, doesn't need pre-filtered FMP endpoints
+        requires: []
     },
     'GarpConvictionScore': {
         prompt: GARP_CONVICTION_SCORE_PROMPT,
@@ -1197,15 +773,7 @@ export const promptMap = {
         prompt: EIGHT_K_ANALYSIS_PROMPT,
         requires: []
     },
-    'LongTermCompounder': {
-        prompt: LONG_TERM_COMPOUNDER_PROMPT,
-        requires: [] // Synthesis report, no direct FMP data
-    },
-    'BmqvMemo': {
-        prompt: BMQV_MEMO_PROMPT,
-        requires: [] // Synthesis report, no direct FMP data
-    },
-    // --- NEW DILIGENCE MEMOS ---
+    // --- Diligence Memos Still Used ---
     'QualitativeDiligenceMemo': {
         prompt: QUALITATIVE_DILIGENCE_MEMO_PROMPT,
         requires: []
@@ -1218,7 +786,7 @@ export const promptMap = {
         prompt: INVESTIGATION_SUMMARY_MEMO_PROMPT,
         requires: []
     },
-    // --- NEW ONGOING REVIEW MEMOS ---
+    // --- Ongoing Review Memos Still Used ---
     'QuarterlyReview': {
         prompt: QUARTERLY_REVIEW_MEMO_PROMPT,
         requires: []
@@ -1227,51 +795,29 @@ export const promptMap = {
         prompt: ANNUAL_REVIEW_MEMO_PROMPT,
         requires: []
     },
-    // --- V2 EXTRACTION & SYNTHESIS PROMPTS ---
-    'MoatAnalysis_Extract': { prompt: MOAT_ANALYSIS_EXTRACT_PROMPT },
-    'CapitalAllocators_Extract': { prompt: CAPITAL_ALLOCATORS_EXTRACT_PROMPT },
-    'InvestmentMemo_Extract': { prompt: GARP_MEMO_EXTRACT_PROMPT },
-    'QarpAnalysis_Extract': { prompt: QARP_ANALYSIS_EXTRACT_PROMPT },
-    'LongTermCompounder_Extract': { prompt: COMPOUNDER_BMQV_EXTRACT_PROMPT },
-    'BmqvMemo_Extract': { prompt: COMPOUNDER_BMQV_EXTRACT_PROMPT },
-    // --- NEW DILIGENCE EXTRACTORS ---
+    // --- Extraction Prompts Still Used ---
+    'InvestmentMemo_Extract': { prompt: GARP_MEMO_EXTRACT_PROMPT }, // Used by Updated GARP Memo
     'QualitativeDiligenceMemo_Extract': { prompt: QUALITATIVE_DILIGENCE_MEMO_EXTRACT_PROMPT },
     'StructuredDiligenceMemo_Extract': { prompt: STRUCTURED_DILIGENCE_MEMO_EXTRACT_PROMPT },
-    'MarketSentimentMemo_Extract': { prompt: MARKET_SENTIMENT_MEMO_EXTRACT_PROMPT },
     'InvestigationSummaryMemo_Extract': { prompt: INVESTIGATION_SUMMARY_MEMO_EXTRACT_PROMPT },
-    // --- END DILIGENCE EXTRACTORS ---
-    'FinalThesis_ConflictID': { prompt: FINAL_THESIS_CONFLICT_ID_PROMPT },
-    'FinalInvestmentThesis': {
-        prompt: FINAL_INVESTMENT_THESIS_PROMPT,
-        requires: [] // Synthesis report, no direct FMP data
-    },
-    // --- NEW UPDATED THESIS ---
-    'UpdatedFinalThesis': {
-        prompt: UPDATED_FINAL_THESIS_PROMPT,
-        requires: [] // Synthesis report, requires original thesis + diligence summaries
-    }
+    // Removed unused extraction prompts: Moat, Capital, QARP, Compounder/BMQV, MarketSentiment, ConflictID, FinalThesis, UpdatedFinalThesis
 };
 
 export const ANALYSIS_ICONS = {
-    'QarpAnalysis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`,
-    'MoatAnalysis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.286zm0 13.036h.008v.008h-.008v-.008z" /></svg>`,
-    'CapitalAllocators': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15.91 15.91a2.25 2.25 0 01-3.182 0l-3.03-3.03a.75.75 0 011.06-1.061l2.47 2.47 2.47-2.47a.75.75 0 011.06 1.06l-3.03 3.03z" /></svg>`,
+    // Keep icons for prompts still in use
+    'UpdatedQarpMemo': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`, // Placeholder icon if needed
+    'InvestmentMemo': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>`, // Used for Updated GARP Memo
     'InvestigationSummaryMemo': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75" /></svg>`,
     'QualitativeDiligenceMemo': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.76 9.76 0 01-2.53-.388m-5.168-4.482A10.457 10.457 0 013 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25" /></svg>`,
     'StructuredDiligenceMemo': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" /></svg>`,
-    'InvestmentMemo': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>`,
     'EightKAnalysis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" /></svg>`,
-    'BmqvMemo': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v17.25m0 0c-1.472 0-2.882.265-4.185.75M12 20.25c1.472 0 2.882.265 4.185.75M18.75 4.97A48.416 48.416 0 0012 4.5c-2.291 0-4.545.16-6.75.47m13.5 0c1.01.143 2.01.317 3 .52m-3-.52l2.62 10.726c.122.499-.106 1.028-.589 1.202a5.988 5.988 0 01-6.861 0c-.483-.174-.711-.703-.59-1.202L18.75 4.971zm-16.5.52c.99-.203 1.99-.377 3-.52m0 0l2.62 10.726c.122.499-.106 1.028-.589 1.202a5.988 5.988 0 01-6.861 0c-.483-.174-.711-.703-.59-1.202L5.25 4.971z" /></svg>`,
-    'FinalInvestmentThesis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 18.75h-9m9 0a3 3 0 013 3h-15a3 3 0 013-3m9 0v-4.5m-9 4.5v-4.5m0 0h9.75M5.25 14.25h13.5M5.25 14.25a3 3 0 00-3 3h19.5a3 3 0 00-3-3M5.25 14.25v-4.5m13.5 4.5v-4.5m0 0h-12a3 3 0 00-3 3v.75" /></svg>`,
-    'UpdatedFinalThesis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.34 15.84c-.688-.06-1.386-.09-2.09-.09H7.5a4.5 4.5 0 01-4.5-4.5V4.5a4.5 4.5 0 014.5-4.5h7.5a4.5 4.5 0 014.5 4.5v1.25m-18 0A2.625 2.625 0 115.25 2.625M10.34 15.84a4.491 4.491 0 00-1.443-1.443 4.49 4.49 0 00-2.093-1.096m1.443 1.443s-.103-.017-.327-.052m2.093 1.096s-.103.017-.327.052m1.327 0c-.688-.06-1.386-.09-2.09-.09h-.094m2.183 0h-.094m2.183 0c.688.06 1.386.09 2.09.09h.094m-2.183 0h.094m2.183 0c.688.06 1.386.09 2.09.09h.094m-2.183 0h.094M10.34 15.84l-1.443-1.443M1.927 10.34l-1.443-1.443M14.25 10.34l1.443-1.443M14.25 10.34l-1.443 1.443M14.25 10.34l1.443 1.443M10.34 15.84l1.443 1.443m-1.443-1.443l-1.443 1.443m1.443-1.443l1.443 1.443M10.34 15.84l1.443 1.443m-4.49-4.49l-1.443-1.443m1.443 1.443l-1.443 1.443m1.443-1.443l1.443 1.443M10.34 15.84l1.443 1.443" /></svg>`
+    // Removed unused icons: QarpAnalysis, MoatAnalysis, CapitalAllocators, BmqvMemo, FinalInvestmentThesis, UpdatedFinalThesis
 };
 
 export const ANALYSIS_NAMES = {
-    'QarpAnalysis': 'QARP Analysis',
+    // Keep names for prompts still in use
     'UpdatedQarpMemo': 'Updated QARP Memo',
-    'MoatAnalysis': 'Moat Analysis',
-    'CapitalAllocators': 'Capital Allocators',
-    'InvestmentMemo': 'Investment Memo',
+    'InvestmentMemo': 'Updated GARP Memo', // Renamed to reflect its current use
     'GarpCandidacy': 'GARP Candidacy Report',
     'PositionAnalysis': 'Position Analysis',
     'PortfolioGarpAnalysis': 'Portfolio GARP Analysis',
@@ -1284,11 +830,8 @@ export const ANALYSIS_NAMES = {
     'EightKAnalysis': '8-K Filing Analysis',
     'QuarterlyReview': 'Quarterly Review',
     'AnnualReview': 'Annual Review',
-    'LongTermCompounder': 'Long-Term Compounder Memo',
-    'BmqvMemo': 'Buffett-Munger Q&V Memo',
-    'FinalInvestmentThesis': 'Final Investment Thesis',
     'QualitativeDiligenceMemo': 'Qualitative Diligence Memo',
     'StructuredDiligenceMemo': 'Structured Diligence Memo',
     'InvestigationSummaryMemo': 'Investigation Summary',
-    'UpdatedFinalThesis': 'Updated Final Thesis' // New entry
+    // Removed unused names: QarpAnalysis, MoatAnalysis, CapitalAllocators, LongTermCompounder, BmqvMemo, FinalInvestmentThesis, UpdatedFinalThesis
 };
