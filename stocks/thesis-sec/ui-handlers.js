@@ -1,5 +1,5 @@
 // fileName: ui-handlers.js
-import { CONSTANTS, state, promptMap, ANALYSIS_REQUIREMENTS, ANALYSIS_NAMES, SECTOR_KPI_SUGGESTIONS, STRUCTURED_DILIGENCE_QUESTIONS, QUALITATIVE_DILIGENCE_QUESTIONS, MARKET_SENTIMENT_QUESTIONS, QUARTERLY_REVIEW_QUESTIONS, ANNUAL_REVIEW_QUESTIONS } from './config.js';
+import { CONSTANTS, state, promptMap, ANALYSIS_REQUIREMENTS, ANALYSIS_NAMES, SECTOR_KPI_SUGGESTIONS, STRUCTURED_DILIGENCE_QUESTIONS, QUALITATIVE_DILIGENCE_QUESTIONS, QUARTERLY_REVIEW_QUESTIONS, ANNUAL_REVIEW_QUESTIONS } from './config.js';
 import { callApi, callGeminiApi, generateRefinedArticle, generatePolishedArticleForSynthesis, getFmpStockData, extractSynthesisData } from './api.js';
 import { openModal, closeModal, displayMessageInModal, openConfirmationModal, openManageStockModal, addKpiRow, addDiligenceEntryRow } from './ui-modals.js';
 import { renderPortfolioManagerList, displayReport, updateReportStatus, fetchAndCachePortfolioData, updateGarpCandidacyStatus, renderCandidacyAnalysis, renderGarpAnalysisSummary, renderDiligenceLog, renderPeerComparisonTable, renderSectorMomentumHeatMap, renderOngoingReviewLog } from './ui-render.js';
@@ -994,8 +994,8 @@ export async function handleGarpMemoRequest(symbol, forceNew = false) {
         const requiredMemos = {
             'GarpCandidacy': 'GARP Analysis Report',
             'StructuredDiligenceMemo': 'Structured Diligence Memo',
-            'QualitativeDiligenceMemo': 'Qualitative Diligence Memo',
-            'MarketSentimentMemo': 'Market Sentiment Memo'
+            'QualitativeDiligenceMemo': 'Qualitative Diligence Memo'
+            // MarketSentimentMemo removed
         };
 
         const fetchedMemos = {};
@@ -1026,7 +1026,7 @@ export async function handleGarpMemoRequest(symbol, forceNew = false) {
             .replace('{garpCandidacyReport}', fetchedMemos.GarpCandidacy)
             .replace('{structuredDiligenceMemo}', fetchedMemos.StructuredDiligenceMemo)
             .replace('{qualitativeDiligenceMemo}', fetchedMemos.QualitativeDiligenceMemo)
-            .replace('{marketSentimentMemo}', fetchedMemos.MarketSentimentMemo);
+            .replace('{marketSentimentMemo}', ''); // Replace removed placeholder with empty string
 
         const memoContent = await generateRefinedArticle(prompt, loadingMessage);
         const synthesisData = await extractSynthesisData(memoContent, reportType);
@@ -1298,7 +1298,7 @@ export async function handleUpdatedFinalThesisRequest(symbol, forceNew = false) 
         const requiredDiligenceTypes = [
             'QualitativeDiligenceMemo',
             'StructuredDiligenceMemo',
-            'MarketSentimentMemo',
+            // MarketSentimentMemo removed
             'InvestigationSummaryMemo'
         ];
         const diligenceSummaries = {};
@@ -1331,6 +1331,8 @@ export async function handleUpdatedFinalThesisRequest(symbol, forceNew = false) 
          if (missingExtraction.length > 0) {
             throw new Error(`Synthesis data is missing and could not be extracted for: ${missingExtraction.join(', ')}. Please regenerate them.`);
         }
+        // Add placeholder for removed Market Sentiment
+        diligenceSummaries['MarketSentimentMemo'] = { verdict: "N/A", strongestSignal: "Market sentiment analysis removed." };
 
 
         loadingMessage.textContent = "Synthesizing updated final thesis...";
@@ -1386,12 +1388,8 @@ export async function handleDiligenceMemoRequest(symbol, reportType, forceNew = 
             diligenceType: 'Structured',
             questions: STRUCTURED_DILIGENCE_QUESTIONS,
             name: 'Structured Diligence'
-        },
-        'MarketSentimentMemo': {
-            diligenceType: 'MarketSentiment',
-            questions: MARKET_SENTIMENT_QUESTIONS,
-            name: 'Market Sentiment'
         }
+        // MarketSentimentMemo removed
     };
     const memoConfig = config[reportType];
     const promptConfig = promptMap[reportType];
@@ -1542,12 +1540,8 @@ export async function handleSaveDiligenceAnswers(symbol, diligenceType) {
             dateSelector: '.structured-diligence-date', // Add selector for date
             questions: STRUCTURED_DILIGENCE_QUESTIONS,
             name: 'Structured Diligence'
-        },
-        'MarketSentiment': {
-            selector: '.market-sentiment-answer',
-            questions: MARKET_SENTIMENT_QUESTIONS,
-            name: 'Market Sentiment'
         }
+        // MarketSentiment removed
     };
 
     const sectionConfig = config[diligenceType];
@@ -1673,7 +1667,7 @@ export async function handleManualDiligenceSave(symbol) {
 export async function handleDeleteAllDiligenceAnswers(symbol) {
     openConfirmationModal(
         'Delete All Saved Answers?',
-        `Are you sure you want to permanently delete all saved diligence answers (Qualitative, Structured, Market Sentiment) for ${symbol}? This action cannot be undone.`,
+        `Are you sure you want to permanently delete all saved diligence answers (Qualitative, Structured) for ${symbol}? This action cannot be undone.`,
         async () => {
             openModal(CONSTANTS.MODAL_LOADING);
             document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Deleting all saved answers for ${symbol}...`;
@@ -1689,20 +1683,29 @@ export async function handleDeleteAllDiligenceAnswers(symbol) {
 
                 const deletePromises = [];
                 snapshot.forEach(doc => {
-                    deletePromises.push(doc.ref.delete());
+                    // Only delete Qualitative and Structured
+                    if (doc.id === 'Qualitative' || doc.id === 'Structured') {
+                        deletePromises.push(doc.ref.delete());
+                    }
                 });
 
-                await Promise.all(deletePromises);
+                if (deletePromises.length > 0) {
+                    await Promise.all(deletePromises);
+                } else {
+                     displayMessageInModal('No Qualitative or Structured answers found to delete.', 'info');
+                     closeModal(CONSTANTS.MODAL_LOADING);
+                     return;
+                }
 
                 // Clear text areas and date input in the UI
-                document.querySelectorAll('.qualitative-diligence-answer, .structured-diligence-answer, .market-sentiment-answer').forEach(textarea => {
+                document.querySelectorAll('.qualitative-diligence-answer, .structured-diligence-answer').forEach(textarea => {
                     textarea.value = '';
                 });
                 document.querySelectorAll('.structured-diligence-date').forEach(input => { // Clear date input too
                      input.value = '';
                 });
 
-                displayMessageInModal(`Successfully deleted all saved diligence answers for ${symbol}.`, 'info');
+                displayMessageInModal(`Successfully deleted all saved Qualitative and Structured diligence answers for ${symbol}.`, 'info');
             } catch (error) {
                 console.error("Error deleting all diligence answers:", error);
                 displayMessageInModal(`Could not delete answers: ${error.message}`, 'error');
@@ -2029,11 +2032,13 @@ async function generateUpdatedMemo(symbol, memoType) {
             const candidacyReports = getReportsFromCache(symbol, 'GarpCandidacy');
             const structuredMemoReports = getReportsFromCache(symbol, 'StructuredDiligenceMemo');
             const qualitativeMemoReports = getReportsFromCache(symbol, 'QualitativeDiligenceMemo');
-            const marketSentimentMemoReports = getReportsFromCache(symbol, 'MarketSentimentMemo');
+            // Market Sentiment Memo removed from check
+            // const marketSentimentMemoReports = getReportsFromCache(symbol, 'MarketSentimentMemo');
 
             if (candidacyReports.length === 0) throw new Error(`The foundational 'GARP Analysis Report' must be generated first.`);
-            if (structuredMemoReports.length === 0 || qualitativeMemoReports.length === 0 || marketSentimentMemoReports.length === 0) {
-                throw new Error("Missing prerequisite diligence memos (Structured, Qualitative, or Market Sentiment) required for GARP Memo synthesis.");
+            // Removed check for Market Sentiment Memo
+            if (structuredMemoReports.length === 0 || qualitativeMemoReports.length === 0) {
+                throw new Error("Missing prerequisite diligence memos (Structured or Qualitative) required for GARP Memo synthesis.");
             }
 
             const candidacyReportContent = (candidacyReports[0].content || '').split('## Actionable Diligence Questions')[0].trim();
@@ -2045,7 +2050,7 @@ async function generateUpdatedMemo(symbol, memoType) {
                 .replace('{garpCandidacyReport}', candidacyReportContent)
                 .replace('{structuredDiligenceMemo}', structuredMemoReports[0].content)
                 .replace('{qualitativeDiligenceMemo}', qualitativeMemoReports[0].content)
-                .replace('{marketSentimentMemo}', marketSentimentMemoReports[0].content);
+                .replace('{marketSentimentMemo}', ''); // Replace removed placeholder
         }
 
         const memoContent = await generateRefinedArticle(prompt);
@@ -2119,7 +2124,7 @@ async function _fetchAndCachePeerData(tickers) {
         throw new Error("FMP API key is required to fetch peer data.");
     }
     const successfullyFetchedTickers = [];
-    
+
     // --- START MODIFICATION ---
     // Use the full list of endpoints required for the scorecard
     const coreEndpoints = [
@@ -2176,7 +2181,7 @@ async function _fetchAndCachePeerData(tickers) {
             if (currentReportName) {
                 currentReportName.textContent = `Fetching data for ${ticker}...`;
             }
-            
+
             // --- START MODIFICATION ---
             // Use the more robust loop from handleRefreshFmpData
             for (const endpoint of coreEndpoints) {
@@ -2367,7 +2372,7 @@ export async function handleFullAnalysisWorkflow(symbol) {
         { reportType: 'CapitalAllocators', handler: handleAnalysisRequest },
         { reportType: 'QualitativeDiligenceMemo', handler: handleDiligenceMemoRequest },
         { reportType: 'StructuredDiligenceMemo', handler: handleDiligenceMemoRequest },
-        { reportType: 'MarketSentimentMemo', handler: handleDiligenceMemoRequest },
+        // MarketSentimentMemo removed
         { reportType: 'InvestigationSummaryMemo', handler: handleInvestigationSummaryRequest }
     ];
 
@@ -2425,7 +2430,7 @@ export async function handleFullAnalysisWorkflow(symbol) {
                 // --- CORRECTED LOGIC ---
                 if (reportType === 'InvestigationSummaryMemo') {
                     await handler(symbol, true); // forceNew = true
-                } else if (['QualitativeDiligenceMemo', 'StructuredDiligenceMemo', 'MarketSentimentMemo'].includes(reportType)) {
+                } else if (['QualitativeDiligenceMemo', 'StructuredDiligenceMemo'].includes(reportType)) { // Market Sentiment Removed
                     await handler(symbol, reportType, true); // Pass reportType and forceNew = true
                 } else if (reportType === 'UpdatedFinalThesis') {
                     await handler(symbol, true); // forceNew = true
