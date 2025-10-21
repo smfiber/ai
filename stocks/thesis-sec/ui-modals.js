@@ -1,5 +1,5 @@
 // fileName: ui-modals.js
-import { CONSTANTS, state, ANALYSIS_ICONS, SECTOR_KPI_SUGGESTIONS, QUALITATIVE_DILIGENCE_QUESTIONS, STRUCTURED_DILIGENCE_QUESTIONS, MARKET_SENTIMENT_QUESTIONS } from './config.js';
+import { CONSTANTS, state, ANALYSIS_ICONS, SECTOR_KPI_SUGGESTIONS, QUALITATIVE_DILIGENCE_QUESTIONS, STRUCTURED_DILIGENCE_QUESTIONS } from './config.js'; // Removed MARKET_SENTIMENT_QUESTIONS
 import { getFmpStockData, getGroupedFmpData } from './api.js';
 import { renderValuationHealthDashboard, _renderGroupedStockList, renderPortfolioManagerList, renderGarpScorecardDashboard, renderGarpInterpretationAnalysis, updateGarpCandidacyStatus, renderCandidacyAnalysis, renderGarpAnalysisSummary, renderDiligenceLog, renderPeerComparisonTable, renderOngoingReviewLog } from './ui-render.js';
 import { getSavedReports } from './ui-handlers.js';
@@ -354,22 +354,22 @@ export async function openRawDataViewer(ticker) {
 
         const qualitativeAnswersPromise = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(ticker).collection('diligence_answers').doc('Qualitative').get();
         const structuredAnswersPromise = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(ticker).collection('diligence_answers').doc('Structured').get();
-        const marketSentimentAnswersPromise = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(ticker).collection('diligence_answers').doc('MarketSentiment').get();
+        // MarketSentimentPromise removed
 
         const [
             fmpData,
             groupedFmpData,
             allSavedReports,
             qualitativeSnap,
-            structuredSnap,
-            marketSentimentSnap
+            structuredSnap
+            // marketSentimentSnap removed
         ] = await Promise.all([
             fmpDataPromise,
             groupedDataPromise,
             savedReportsPromise,
             qualitativeAnswersPromise,
-            structuredAnswersPromise,
-            marketSentimentAnswersPromise
+            structuredAnswersPromise
+            // marketSentimentAnswersPromise removed
         ]);
 
         if (!fmpData || !fmpData.profile || !fmpData.profile.length === 0) {
@@ -389,7 +389,7 @@ export async function openRawDataViewer(ticker) {
         const getAnswersMap = (snap) => snap.exists ? new Map(snap.data().answers.map(item => [item.question, item.answer, item.filingDate])) : new Map(); // Adjusted to include filingDate
         const savedQualitativeAnswers = getAnswersMap(qualitativeSnap);
         const savedStructuredAnswers = getAnswersMap(structuredSnap);
-        const savedMarketSentimentAnswers = getAnswersMap(marketSentimentSnap);
+        // savedMarketSentimentAnswers removed
 
         // 4. POPULATE THE CLEAN STATE
         titleEl.textContent = `Analysis for ${ticker}`;
@@ -468,7 +468,6 @@ export async function openRawDataViewer(ticker) {
                     <div id="manual-diligence-forms-container"></div>
                     <div id="qualitative-diligence-forms-container"></div>
                     <div id="structured-diligence-forms-container"></div>
-                    <div id="market-sentiment-forms-container"></div>
                     <div id="diligence-log-display-container">
                         <div id="diligence-log-container" class="mb-6 text-left"></div>
                     </div>
@@ -532,16 +531,7 @@ export async function openRawDataViewer(ticker) {
             if(structuredContainer) structuredContainer.innerHTML = structuredHtml;
 
 
-            // Populate Market Sentiment Diligence
-            const marketSentimentContainer = diligenceHubContainer.querySelector('#market-sentiment-forms-container');
-            let marketSentimentHtml = `<div class="text-left border rounded-lg p-4 bg-gray-50"><h4 class="text-base font-semibold text-gray-800 mb-1">Market Sentiment Diligence</h4><p class="text-sm text-gray-500 mb-4">Answer these questions using external market data sources.</p><div class="space-y-4">`;
-            for (const [category, question] of Object.entries(MARKET_SENTIMENT_QUESTIONS)) {
-                const savedAnswer = sanitizeText(savedMarketSentimentAnswers.get(question) || '');
-                marketSentimentHtml += `<div class="diligence-card p-3 bg-white rounded-lg border border-gray-200"><h5 class="font-semibold text-sm text-indigo-700 mb-2">${category}</h5><div class="flex items-start gap-2 mb-2"><p class="text-xs text-gray-600 flex-grow" data-question-text>${question}</p><button type="button" class="copy-icon-btn structured-diligence-copy-btn" title="Copy Question">${copyIcon}</button></div><textarea class="market-sentiment-answer w-full border border-gray-300 rounded-lg p-2 text-sm" rows="4" data-category="${category}" placeholder="Your findings from external charts/data here...">${savedAnswer}</textarea></div>`;
-            }
-            
-            marketSentimentHtml += `</div><div class="text-right mt-4"><button data-diligence-type="MarketSentiment" class="save-diligence-answers-button bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg">Save Market Sentiment Answers</button></div></div>`;
-            if(marketSentimentContainer) marketSentimentContainer.innerHTML = marketSentimentHtml;
+            // Market Sentiment population block removed
 
             // Populate Diligence Log
             const diligenceReports = allSavedReports.filter(r => r.reportType === 'DiligenceInvestigation');
