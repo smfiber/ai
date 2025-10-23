@@ -75,7 +75,9 @@ export const MARKET_SENTIMENT_QUESTIONS = {
     'Fundamental Factors': "Summarize the S&P Global Market Intelligence factor scores. What are the scores for Valuation, Quality, Growth Stability, and Financial Health, and how do they compare to the sector median?",
     'Technical Sentiment': "According to the Trading Central report, what is the technical sentiment for the short-term (2-6 weeks), mid-term (6 weeks-9 months), and long-term (9 months-2 years)?",
     'Price Performance': "Summarize the stock's price performance over key timeframes (e.g., 1-month, 3-month, YTD, 1-year, 5-year). Is the stock showing short-term weakness but long-term strength, or vice versa?",
-    'Short Interest': "What is the current Short % of Float, and has the number of shares short increased or decreased recently? What is the 'days to cover' ratio?"
+    'Short Interest': "What is the current Short % of Float, and has the number of shares short increased or decreased recently? What is the 'days to cover' ratio?",
+    'Competitor Snapshot Comparison': "Based on the competitor snapshot, how does the company stack up against its top direct competitors (e.g., CCO, OUT) and the industry average regarding the LSEG StarMine Equity Summary Score, 52-week price performance, and forward P/E (this year's estimate)?",
+    'Insider Activity Analysis': "Review the recent insider transaction data. Are key insiders predominantly buying or selling shares? Note any significant patterns (e.g., volume, timing, specific executives/directors involved) and assess the potential signal regarding insider sentiment."
 };
 
 
