@@ -752,7 +752,9 @@ export async function renderInvestorFilingsView(cik, investorName) {
                     };
                 }
                 acc[ticker].shares += Number(holding.shrsOrPrnAmt.sshPrnamt);
-                acc[ticker].value += (holding.value * 1000);
+                // --- CHANGE STARTS HERE ---
+                acc[ticker].value += holding.value; // Removed * 1000
+                // --- CHANGE ENDS HERE ---
                 return acc;
             }, {});
             
@@ -889,7 +891,9 @@ export function renderWhaleComparisonView() {
                                     <td class="px-2 py-2 whitespace-nowrap font-bold">${sanitizeText(h.ticker)}</td>
                                     <td class="px-2 py-2 whitespace-nowrap">${sanitizeText(h.nameOfIssuer)}</td>
                                     ${showChange ? `<td class="px-2 py-2 whitespace-nowrap text-right font-medium">${h.change.toLocaleString()}</td>` : ''}
-                                    <td class="px-2 py-2 whitespace-nowrap text-right">${(h.value * 1000).toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 })}</td>
+                                    // --- CHANGE STARTS HERE ---
+                                    <td class="px-2 py-2 whitespace-nowrap text-right">${(h.value).toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 })}</td>
+                                    // --- CHANGE ENDS HERE ---
                                 </tr>
                             `).join('')}
                         </tbody>
