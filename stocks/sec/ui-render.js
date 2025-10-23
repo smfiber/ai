@@ -22,11 +22,7 @@ export async function fetchAndCachePortfolioData() {
             return;
         }
         
-        // --- CHANGE STARTS HERE ---
-        // Reverted to fetching the entire collection, per user request, to match other apps.
-        // This is less secure in a multi-user environment but will work for a single user.
         const querySnapshot = await getDocs(collection(state.db, CONSTANTS.DB_COLLECTION_PORTFOLIO));
-        // --- CHANGE ENDS HERE ---
         
         state.portfolioCache = querySnapshot.docs.map(doc => ({ ticker: doc.id, ...doc.data() }));
         
@@ -752,9 +748,7 @@ export async function renderInvestorFilingsView(cik, investorName) {
                     };
                 }
                 acc[ticker].shares += Number(holding.shrsOrPrnAmt.sshPrnamt);
-                // --- CHANGE STARTS HERE ---
-                acc[ticker].value += holding.value; // Removed * 1000
-                // --- CHANGE ENDS HERE ---
+                acc[ticker].value += holding.value;
                 return acc;
             }, {});
             
