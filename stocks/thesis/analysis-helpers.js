@@ -47,10 +47,11 @@ function _getMetricInterpretation(metricName, value) {
 
         case 'Return on Equity':
         case 'Return on Invested Capital':
-            if (value > 0.3) return { category: 'Exceptional Quality', text: 'Indicates a dominant, best-in-breed business with a very strong competitive moat. Finding this at a reasonable price is rare.' };
+            if (value > 0.25) return { category: 'Exceptional Quality', text: 'Indicates a dominant, best-in-breed business with a very strong competitive moat. Finding this at a reasonable price is rare.' }; // Adjusted threshold
             if (value > 0.15) return { category: 'High Quality', text: 'The sign of a strong, well-run company with a solid competitive advantage and efficient management.' };
-            if (value > 0.1) return { category: 'Warning Sign', text: 'Suggests the company operates in a competitive industry or is less effective at deploying capital. Profitability may be a concern.' };
-            return { category: 'Low Quality', text: 'Indicates poor profitability and likely a weak or non-existent competitive moat.' };
+            if (value > 0.10) return { category: 'Solid Quality', text: 'Represents effective capital deployment and profitability, likely exceeding the cost of capital. Supports the quality thesis.' }; // Changed Category & Text
+            if (value > 0.05) return { category: 'Adequate Performance', text: 'Suggests the company operates in a competitive industry or is less effective at deploying capital. May meet cost of capital but lacks a strong moat.' }; // Added a tier, adjusted text
+            return { category: 'Warning Sign / Low Quality', text: 'Indicates poor profitability, potentially below the cost of capital, and likely a weak or non-existent competitive moat.' }; // Adjusted Category & Text
             
         case 'P/E (TTM)':
         case 'Forward P/E':
