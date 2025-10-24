@@ -839,6 +839,7 @@ export function renderDiligenceLog(container, reports) {
                 ${itemsHtml}
             </ul>
         </details>
+        <div id="diligence-log-display-area" class="prose max-w-none mt-4"></div>
     `;
 
     container.querySelectorAll('.view-diligence-answer').forEach(item => {
@@ -846,20 +847,9 @@ export function renderDiligenceLog(container, reports) {
             const reportId = item.dataset.reportId;
             const report = reports.find(r => r.id === reportId);
             if (report) {
-                const articleContainer = document.getElementById('ai-article-container-analysis');
-                const statusContainer = document.getElementById('report-status-container-analysis');
-                
-                // Switch to the 'AI Analysis' tab
-                document.querySelectorAll('#rawDataViewerModal .tab-content').forEach(c => c.classList.add('hidden'));
-                document.querySelectorAll('#rawDataViewerModal .tab-button').forEach(b => b.classList.remove('active'));
-                document.getElementById('ai-analysis-tab').classList.remove('hidden');
-                document.querySelector('.tab-button[data-tab="ai-analysis"]').classList.add('active');
-
-                displayReport(articleContainer, report.content, report.prompt);
-                
-                if (statusContainer) {
-                    statusContainer.classList.remove('hidden');
-                    statusContainer.innerHTML = `<span class="text-sm font-semibold text-blue-800">Displaying saved Diligence Investigation from: ${report.savedAt.toDate().toLocaleString()}</span>`;
+                const displayContainer = document.getElementById('diligence-log-display-area');
+                if (displayContainer) {
+                    displayReport(displayContainer, report.content, report.prompt);
                 }
             }
         });
