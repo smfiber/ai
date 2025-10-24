@@ -885,9 +885,7 @@ export function renderWhaleComparisonView() {
                                     <td class="px-2 py-2 whitespace-nowrap font-bold">${sanitizeText(h.ticker)}</td>
                                     <td class="px-2 py-2 whitespace-nowrap">${sanitizeText(h.nameOfIssuer)}</td>
                                     ${showChange ? `<td class="px-2 py-2 whitespace-nowrap text-right font-medium">${h.change.toLocaleString()}</td>` : ''}
-                                    // --- CHANGE STARTS HERE ---
                                     <td class="px-2 py-2 whitespace-nowrap text-right">${(h.value).toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 })}</td>
-                                    // --- CHANGE ENDS HERE ---
                                 </tr>
                             `).join('')}
                         </tbody>
