@@ -1,1 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Server Admin Backstory Generator</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <div id="api-key-form-container" class="module-card">
+            <h2>API Keys Required</h2>
+            <p>Please provide your API keys to get started.</p>
 
+            <div class="form-group">
+                <label for="gemini-api-key">Google Gemini API Key</label>
+                <input type="text" id="gemini-api-key" placeholder="Enter your Google Gemini API Key">
+            </div>
+
+            <div class="form-group">
+                <label for="gcloud-client-id">Google Cloud Client ID</label>
+                <input type="text" id="gcloud-client-id" placeholder="Enter your Google Cloud Web Client ID">
+            </div>
+
+            <div class="form-group">
+                <label for="fmp-api-key">Financial Modeling Prep API Key</label>
+                <input type="text" id="fmp-api-key" placeholder="Enter your FMP API Key">
+            </div>
+
+            <div class="form-group">
+                <label for="sec-api-key">SEC-API.io Key</label>
+                <input type="text" id="sec-api-key" placeholder="Enter your SEC-API.io Key">
+            </div>
+
+            <div class="form-group">
+                <label for="firebase-config">Firebase Web App Config</label>
+                <textarea id="firebase-config" rows="6" placeholder="Paste your Firebase Web App Config Object"></textarea>
+                <small>e.g., { "apiKey": "...", "authDomain": "...", ... }</small>
+            </div>
+
+            <button id="save-keys-button" class="action-button">Save and Continue</button>
+        </div>
+
+        <div id="app-content" style="display: none;">
+            <header class="app-header">
+                <h1>Server Admin Backstory Generator</h1>
+            </header>
+            <main>
+                <div id="idea-generator-module" class="module-card">
+                    <h2>Module 2: Backstory Idea Generator</h2>
+                    <p>Don't have a problem in mind? Use these prompts to find one.</p>
+                    
+                    <div class="category-buttons" id="category-buttons-container">
+                        </div>
+
+                    <div class="prompt-list" id="prompt-list-container">
+                        </div>
+                </div>
+
+                <div id="problem-finder-module" class="module-card">
+                    <h2>Module 1: Daily Task Problem Finder</h2>
+                    <p>Use this form to quickly build a problem statement based on your daily work.</p>
+                    
+                    <div class="finder-form">
+                        <div class="form-group">
+                            <label for="system-select">1. What system were you working on?</label>
+                            <select id="system-select">
+                                <option value="" disabled selected>-- Select a system --</option>
+                                </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="task-select">2. What was the task?</label>
+                            <select id="task-select">
+                                <option value="" disabled selected>-- Select a task --</option>
+                                </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="problem-select">3. What is the problem?</label>
+                            <select id="problem-select">
+                                <option value="" disabled selected>-- Select a problem --</option>
+                                </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="impact-select">4. What is the impact (the "pain")?</label>
+                            <select id="impact-select">
+                                <option value="" disabled selected>-- Select an impact --</option>
+                                </select>
+                        </div>
+                    </div>
+
+                    <div class="module-controls">
+                        <button id="generate-backstory-button" class="action-button" disabled>
+                            Generate Backstory
+                        </button>
+                        <button id="clear-finder-button" class="clear-button">
+                            Clear
+                        </button>
+                    </div>
+
+                    <div id="generated-backstory-output" class="generated-output" style="display: none;">
+                        <label>Generated Backstory:</label>
+                        <textarea id="generated-backstory-textarea" rows="4" readonly></textarea>
+                        <small>You can copy this text and paste it into Module 3 below.</small>
+                    </div>
+                </div>
+
+                <div id="story-converter-module" class="module-card">
+                    <h2>Module 3: Backstory-to-Story Converter</h2>
+                    <p>Paste your raw idea, problem, or "backstory" below. Then click "Convert" to structure it as a user story.</p>
+                    
+                    <div class="form-group">
+                        <label for="backstory-input">1. Your Backstory / Problem</label>
+                        <textarea
+                            id="backstory-input"
+                            class="backstory-textarea"
+                            rows="6"
+                            placeholder="e.g., 'The weekly server health check is manual. I have to log into 15 servers, open Event Viewer, and check disk space. It takes 2 hours and I can easily miss something.'"
+                        ></textarea>
+                    </div>
+
+                    <div class="module-controls">
+                        <button id="convert-story-button" class="action-button" disabled>
+                            Convert
+                        </button>
+                        <button id="clear-converter-button" class="clear-button">
+                            Clear All
+                        </button>
+                    </div>
+
+                    <div id="user-story-output" class="story-output-section" style="display: none;">
+                        <h3>2. Your User Story</h3>
+                        
+                        <div class="form-group">
+                            <label for="story-as-a">As a:</label>
+                            <input id="story-as-a" type="text" value="Server Administrator">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="story-i-want">I want:</label>
+                            <input id="story-i-want" type="text" placeholder="e.g., 'An automated script that checks health on all servers'">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="story-so-that">So that:</label>
+                            <input id="story-so-that" type="text" placeholder="e.g., 'I can complete the check in 5 minutes and catch critical errors before they cause an outage.'">
+                        </div>
+
+                        <div class="story-preview">
+                            <strong>Preview:</strong>
+                            <p id="story-preview-text">
+                                </p>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
