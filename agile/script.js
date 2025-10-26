@@ -11,7 +11,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Firebase instance
     let db;
     let fetchedTechnologies = [];
-    let selectedIdeaCategory = null;
+    // selectedIdeaCategory removed
 
     // API Key Form Elements
     const apiKeyFormContainer = document.getElementById("api-key-form-container");
@@ -32,8 +32,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const generatedBackstoryTextarea = document.getElementById("generated-backstory-textarea");
 
     // Module 2 (Idea Generator) Elements
-    const categoryButtonsContainer = document.getElementById("category-buttons-container");
-    const promptListContainer = document.getElementById("prompt-list-container");
+    // categoryButtonsContainer removed
+    // promptListContainer removed
+    const technologySelect = document.getElementById("technology-select"); // Added
     const generateAiIdeasButton = document.getElementById("generate-ai-ideas-button");
     const clearAiIdeasButton = document.getElementById("clear-ai-ideas-button");
     const generatedAiIdeasOutput = document.getElementById("generated-ai-ideas-output");
@@ -86,43 +87,7 @@ document.addEventListener("DOMContentLoaded", () => {
         ]
     };
 
-    const ideaGeneratorData = {
-        "Automation (PowerShell, etc.)": [
-            "What's a manual task you do every single day or week?",
-            "What report do you have to build by hand for your manager?",
-            "What task involves copy-pasting from a spreadsheet into a console?",
-            "What process involves updating more than 3 systems to make one change?",
-            "What's the 'dumb' task that everyone on the team hates doing?"
-        ],
-        "Core Services (AD, DNS, CAs)": [
-            "What's a common Active Directory cleanup task (stale users, old computers) that gets skipped?",
-            "Is our Certificate Authority maintenance (e.g., CRL publishing) automated?",
-            "When was the last time we audited DHCP scopes or DNS records for old entries?",
-            "What AD group policy is causing the most help desk tickets?"
-        ],
-        "Hardware & Virtualization (VMware, HPE)": [
-            "Which physical server are you most worried about failing?",
-            "When provisioning a new VM, what's the most time-consuming *manual* step?",
-            "Are there 'zombie' VMs (unused but still on) we could find and reclaim?",
-            "Is our host firmware/driver-level patching a manual nightmare?",
-            "Are all our ESXi host configurations standardized?"
-        ],
-        "Security, Patching & Compliance": [
-            "What's the biggest bottleneck on 'Patch Tuesday'?",
-            "Which systems are the hardest to patch without causing user downtime?",
-            "Is there a manual compliance check you have to perform for an audit?",
-            "Where are we not enforcing 'least privilege' properly?",
-            "Do we have an automated way to check for local admin accounts on servers?"
-        ],
-        "Monitoring & Performance": [
-            "What problem do you always learn about from users *before* your monitoring tools?",
-            "Which server is always running low on [disk space / RAM / CPU]?",
-            "What alert do you get that you always ignore (alert fatigue)?",
-            "What system is everyone complaining about being 'slow'?",
-            "What critical process has *no* monitoring on it at all?"
-        ]
-    };
-
+    // ideaGeneratorData object removed
 
     // --- Helper Functions ---
 
@@ -161,14 +126,20 @@ document.addEventListener("DOMContentLoaded", () => {
             const querySnapshot = await db.collection("technologies").orderBy("name").get();
             fetchedTechnologies = querySnapshot.docs.map(doc => doc.data().name);
             
-            // Clear placeholder and populate select
+            // Clear placeholder and populate select (Module 1)
             systemSelect.innerHTML = '<option value="" disabled selected>-- Select a system --</option>';
             populateSelect(systemSelect, fetchedTechnologies);
+
+            // Clear placeholder and populate select (Module 2)
+            technologySelect.innerHTML = '<option value="" disabled selected>-- Select a technology --</option>';
+            populateSelect(technologySelect, fetchedTechnologies);
+
             console.log("Fetched technologies:", fetchedTechnologies);
 
         } catch (e) {
             console.error("Error fetching technologies from Firestore: ", e);
             systemSelect.innerHTML = '<option value="" disabled selected>-- Error loading systems --</option>';
+            technologySelect.innerHTML = '<option value="" disabled selected>-- Error loading systems --</option>';
             alert("Could not fetch technology list from Firestore. Please check permissions and console.");
         }
     }
@@ -185,7 +156,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const API_URL = `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-pro:generateContent?key=${appKeys.geminiApiKey}`;
 
-        generatedAiIdeasTextarea.value = "Generating ideas... Please wait.";
+        generatedAiIdeasTextarea.value = "Generating... Please wait.";
         generatedAiIdeasOutput.style.display = "block";
         clearAiIdeasButton.style.display = "inline-flex";
         generateAiIdeasButton.disabled = true;
@@ -214,9 +185,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
         } catch (e) {
             console.error("Error calling Gemini API:", e);
-            generatedAiIdeasTextarea.value = `Error generating ideas. Please check the console.\n\n${e.message}`;
+            generatedAiIdeasTextarea.value = `Error generating content. Please check the console.\n\n${e.message}`;
         } finally {
-            generateAiIdeasButton.disabled = false;
+            generateAiIdeasButton.disabled = (technologySelect.value === "");
         }
     }
 
@@ -252,9 +223,6 @@ document.addEventListener("DOMContentLoaded", () => {
     function init() {
         // --- API Key Form Logic ---
         
-        // The API key form is visible by default.
-        // We do not check localStorage.
-
         saveKeysButton.addEventListener("click", () => {
             const fbConfigRaw = firebaseConfigInput.value;
             let fbConfigParsed;
@@ -288,12 +256,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 
             // Initialize Firebase
             initializeFirebase(appKeys.firebaseConfig);
-            // alert("Keys saved for this session!"); // Replaced with console log in initializeFirebase
         });
 
 
         // --- Module 1: Problem Finder Logic ---
-        // populateSelect(systemSelect, problemFinderData.systems); // Replaced by fetchTechnologiesFromFirestore()
         populateSelect(taskSelect, problemFinderData.tasks);
         populateSelect(problemSelect, problemFinderData.problems);
         populateSelect(impactSelect, problemFinderData.impacts);
@@ -329,53 +295,20 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
         // --- Module 2: Idea Generator Logic ---
-        const categories = Object.keys(ideaGeneratorData);
-        categories.forEach(category => {
-            const button = document.createElement("button");
-            button.className = "category-button";
-            button.textContent = category;
-            button.dataset.category = category;
-            categoryButtonsContainer.appendChild(button);
+        // Old category button logic removed
+
+        // Add listener for new technology select
+        technologySelect.addEventListener("change", () => {
+            generateAiIdeasButton.disabled = (technologySelect.value === "");
         });
 
-        categoryButtonsContainer.addEventListener("click", (e) => {
-            if (e.target.classList.contains("category-button")) {
-                const selectedCategory = e.target.dataset.category;
-                selectedIdeaCategory = selectedCategory; // Store selected category
-                
-                // Toggle active class on buttons
-                document.querySelectorAll(".category-button").forEach(btn => {
-                    btn.classList.remove("active");
-                });
-                e.target.classList.add("active");
-
-                // Enable AI idea button
-                generateAiIdeasButton.disabled = false;
-
-                // Generate and display prompts
-                const prompts = ideaGeneratorData[selectedCategory];
-                promptListContainer.innerHTML = `
-                    <h3>Prompts for "${selectedCategory}"</h3>
-                    <ul>
-                        ${prompts.map(prompt => `<li>${prompt}</li>`).join("")}
-                    </ul>
-                    <button class="clear-button" id="hide-prompts-button">Hide Prompts</button>
-                `;
-                promptListContainer.style.display = "block";
-                
-                // Add event listener to the new "Hide Prompts" button
-                document.getElementById("hide-prompts-button").addEventListener("click", () => {
-                    promptListContainer.style.display = "none";
-                    e.target.classList.remove("active");
-                    selectedIdeaCategory = null; // Clear selected category
-                    generateAiIdeasButton.disabled = true; // Disable AI button
-                });
-            }
-        });
+        // Old categoryButtonsContainer listener removed
 
         generateAiIdeasButton.addEventListener("click", () => {
-            if (!selectedIdeaCategory) {
-                alert("Please select a category first.");
+            const selectedTech = technologySelect.value;
+            
+            if (!selectedTech) {
+                alert("Please select a technology first.");
                 return;
             }
             if (fetchedTechnologies.length === 0) {
@@ -383,19 +316,16 @@ document.addEventListener("DOMContentLoaded", () => {
                 return;
             }
 
-            const techList = fetchedTechnologies.join(", ");
             const prompt = `
-                I am a Server Administrator. My goal is to find problems to solve that can be turned into user stories.
+                I am a Server Administrator. 
+                My goal is to find preventative maintenance tasks and other operational tasks for my backlog.
                 
-                My core technologies are: ${techList}.
-                
-                My current area of focus is: "${selectedIdeaCategory}".
+                Please generate 5-7 distinct task ideas for the following technology: "${selectedTech}".
 
-                Please generate 5-7 distinct "problem backstories" based on this focus area and my technologies.
                 For each idea:
-                1.  Be specific, referencing one or more of my technologies.
-                2.  Keep it to 2-3 sentences.
-                3.  Focus on a real-world admin pain point (e.g., manual work, slowness, security risk, compliance gaps).
+                1.  Start with a clear **Task:** (e.g., "Task: Audit stale DNS records").
+                2.  Follow it with the **Pain Point:** this task solves (e.g., "Pain Point: Stale records cause failed connections...").
+                3.  Keep the entire idea (Task + Pain Point) to 2-3 sentences.
                 
                 Do not number the list. Separate each idea with a blank line.
             `;
@@ -407,7 +337,8 @@ document.addEventListener("DOMContentLoaded", () => {
             generatedAiIdeasTextarea.value = "";
             generatedAiIdeasOutput.style.display = "none";
             clearAiIdeasButton.style.display = "none";
-            generateAiIdeasButton.disabled = (selectedIdeaCategory === null); // Only enable if a category is still active
+            technologySelect.selectedIndex = 0; // Reset dropdown
+            generateAiIdeasButton.disabled = true; // Disable button
         });
 
 
