@@ -10,16 +10,33 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Firebase instance
     let db;
+    // Data is now stored as arrays of objects { id: "...", name: "..." }
     let fetchedTechnologies = [];
-    let fetchedFunctions = []; // Added
+    let fetchedFunctions = [];
 
+    // Modal & Scrim Elements
+    const appScrim = document.getElementById("app-scrim");
+    const apiKeyModal = document.getElementById("api-key-modal");
+    const dataCrudModal = document.getElementById("data-crud-modal");
+    
     // API Key Form Elements
     const apiKeyFormContainer = document.getElementById("api-key-form-container");
-    const appContent = document.getElementById("app-content");
     const saveKeysButton = document.getElementById("save-keys-button");
     const geminiApiKeyInput = document.getElementById("gemini-api-key");
     const gCloudClientIdInput = document.getElementById("gcloud-client-id");
     const firebaseConfigInput = document.getElementById("firebase-config");
+
+    // Main App Content
+    const appContent = document.getElementById("app-content");
+
+    // CRUD Modal Elements
+    const manageDataButton = document.getElementById("manage-data-button");
+    const closeCrudModalButton = document.getElementById("close-crud-modal-button");
+    const newItemNameInput = document.getElementById("new-item-name");
+    const newItemCollectionSelect = document.getElementById("new-item-collection");
+    const addItemButton = document.getElementById("add-item-button");
+    const technologiesList = document.getElementById("technologies-list");
+    const functionsList = document.getElementById("functions-list");
 
     // Module 1 (Problem Finder) Elements
     const systemSelect = document.getElementById("system-select");
@@ -54,9 +71,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // --- Data for Modules ---
 
     const problemFinderData = {
-        systems: [
-            // This is now populated from Firestore
-        ],
+        // systems: This is now populated from Firestore
         tasks: [
             "Provisioning a new (VM, user, share)",
             "Running monthly patching",
@@ -86,8 +101,6 @@ document.addEventListener("DOMContentLoaded", () => {
         ]
     };
 
-    // Removed ideaGeneratorCategories array
-
 
     // --- Helper Functions ---
 
@@ -105,13 +118,20 @@ document.addEventListener("DOMContentLoaded", () => {
             console.log("Firebase initialized successfully.");
             
             // Now that Firebase is ready, fetch data
-            fetchTechnologiesFromFirestore();
-            fetchFunctionsFromFirestore(); // Added call
+            refreshAllData(); // Initial data load
 
         } catch (e) {
             console.error("Error initializing Firebase: ", e);
             alert("Could not initialize Firebase. Please check your config and console for errors.");
         }
+    }
+
+    /**
+     * Fetches and repopulates all data from Firestore.
+     */
+    async function refreshAllData() {
+        await fetchTechnologiesFromFirestore();
+        await fetchFunctionsFromFirestore();
     }
 
     /**
@@ -122,26 +142,22 @@ document.addEventListener("DOMContentLoaded", () => {
             console.error("Firestore is not initialized.");
             return;
         }
-
         try {
             const querySnapshot = await db.collection("technologies").orderBy("name").get();
-            fetchedTechnologies = querySnapshot.docs.map(doc => doc.data().name);
+            fetchedTechnologies = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             
-            // Clear placeholder and populate select (Module 1)
-            systemSelect.innerHTML = '<option value="" disabled selected>-- Select a system --</option>';
-            populateSelect(systemSelect, fetchedTechnologies);
-
-            // Clear placeholder and populate select (Module 2)
-            technologySelect.innerHTML = '<option value="" disabled selected>-- Select a technology --</option>';
-            populateSelect(technologySelect, fetchedTechnologies);
-
+            // Populate app dropdowns
+            populateSelect(systemSelect, fetchedTechnologies, "-- Select a system --");
+            populateSelect(technologySelect, fetchedTechnologies, "-- Select a technology --");
+            // Populate CRUD list
+            populateCrudList(technologiesList, "technologies", fetchedTechnologies);
             console.log("Fetched technologies:", fetchedTechnologies);
 
         } catch (e) {
             console.error("Error fetching technologies from Firestore: ", e);
             systemSelect.innerHTML = '<option value="" disabled selected>-- Error loading systems --</option>';
             technologySelect.innerHTML = '<option value="" disabled selected>-- Error loading systems --</option>';
-            alert("Could not fetch technology list from Firestore. Please check permissions and console.");
+            // Do not alert, console error is sufficient
         }
     }
 
@@ -153,21 +169,20 @@ document.addEventListener("DOMContentLoaded", () => {
             console.error("Firestore is not initialized.");
             return;
         }
-
         try {
             const querySnapshot = await db.collection("teamFunctions").orderBy("name").get();
-            fetchedFunctions = querySnapshot.docs.map(doc => doc.data().name);
+            fetchedFunctions = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             
-            // Clear placeholder and populate select (Module 2, categorySelect)
-            categorySelect.innerHTML = '<option value="" disabled selected>-- Select a function --</option>';
-            populateSelect(categorySelect, fetchedFunctions);
-
+            // Populate app dropdown
+            populateSelect(categorySelect, fetchedFunctions, "-- Select a function --");
+            // Populate CRUD list
+            populateCrudList(functionsList, "teamFunctions", fetchedFunctions);
             console.log("Fetched functions:", fetchedFunctions);
 
         } catch (e) {
             console.error("Error fetching functions from Firestore: ", e);
             categorySelect.innerHTML = '<option value="" disabled selected>-- Error loading functions --</option>';
-            alert("Could not fetch team functions list from Firestore. Please check permissions and console.");
+            // Do not alert, console error is sufficient
         }
     }
     
@@ -220,16 +235,44 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     /**
-     * Populates a <select> element with options.
+     * Populates a <select> element with options from an array of objects.
      * @param {HTMLSelectElement} selectElement - The <select> element to populate.
-     * @param {string[]} options - An array of strings for the options.
+     * @param {object[]} options - An array of objects, e.g., { id: "...", name: "..." }.
+     * @param {string} placeholder - The placeholder text (e.g., "-- Select an option --").
      */
-    function populateSelect(selectElement, options) {
+    function populateSelect(selectElement, options, placeholder) {
+        selectElement.innerHTML = `<option value="" disabled selected>${placeholder}</option>`; // Clear old options
         options.forEach(option => {
             const opt = document.createElement("option");
-            opt.value = option;
-            opt.textContent = option;
+            // We set the value to the name, as this is what the AI prompt expects
+            opt.value = option.name;
+            opt.textContent = option.name;
             selectElement.appendChild(opt);
+        });
+    }
+
+    /**
+     * Populates a <ul> in the CRUD modal with list items and buttons.
+     * @param {HTMLUListElement} listElement - The <ul> element to populate.
+     * @param {string} collectionName - The name of the Firestore collection (e.g., "technologies").
+     * @param {object[]} data - The array of data objects { id: "...", name: "..." }.
+     */
+    function populateCrudList(listElement, collectionName, data) {
+        listElement.innerHTML = ""; // Clear old list
+        if (data.length === 0) {
+            listElement.innerHTML = "<li>No items in this collection.</li>";
+            return;
+        }
+        data.forEach(item => {
+            const li = document.createElement("li");
+            li.innerHTML = `
+                <span>${item.name}</span>
+                <div class="item-controls">
+                    <button class="edit-button" data-id="${item.id}" data-collection="${collectionName}" data-name="${item.name}">Edit</button>
+                    <button class="delete-button" data-id="${item.id}" data-collection="${collectionName}" data-name="${item.name}">Delete</button>
+                </div>
+            `;
+            listElement.appendChild(li);
         });
     }
 
@@ -239,9 +282,107 @@ document.addEventListener("DOMContentLoaded", () => {
     function updateStoryPreview() {
         const asA = storyAsA.value || "[Role]";
         const iWant = storyIWant.value || "[Goal]";
-        const soThat = storySoThat.value || "[Benefit]";
+        const soThat = soThat.value || "[Benefit]";
         storyPreviewText.innerHTML = `<strong>As a</strong> ${asA}, <strong>I want</strong> ${iWant}, <strong>so that</strong> ${soThat}.`;
     }
+
+    // --- CRUD Functions ---
+
+    /**
+     * Adds a new item to the selected Firestore collection.
+     */
+    async function handleAddItem() {
+        const name = newItemNameInput.value.trim();
+        const collection = newItemCollectionSelect.value;
+        if (!name) {
+            alert("Please enter an item name.");
+            return;
+        }
+        if (!db) {
+            alert("Firestore is not initialized.");
+            return;
+        }
+
+        try {
+            await db.collection(collection).add({ name: name });
+            console.log(`Added "${name}" to "${collection}"`);
+            newItemNameInput.value = ""; // Clear input
+            
+            // Refresh the specific list that was changed
+            if (collection === "technologies") {
+                await fetchTechnologiesFromFirestore();
+            } else {
+                await fetchFunctionsFromFirestore();
+            }
+        } catch (e) {
+            console.error("Error adding item: ", e);
+            alert(`Could not add item. Error: ${e.message}`);
+        }
+    }
+
+    /**
+     * Updates an existing item's name in Firestore.
+     * @param {string} collection - The collection name ("technologies" or "teamFunctions").
+     * @param {string} id - The document ID.
+     * @param {string} oldName - The current name (for the prompt).
+     */
+    async function handleEditItem(collection, id, oldName) {
+        const newName = prompt(`Enter a new name for "${oldName}":`, oldName);
+        if (!newName || newName.trim() === "" || newName === oldName) {
+            return; // User cancelled or didn't change the name
+        }
+        if (!db) {
+            alert("Firestore is not initialized.");
+            return;
+        }
+
+        try {
+            await db.collection(collection).doc(id).update({ name: newName.trim() });
+            console.log(`Updated "${oldName}" to "${newName}"`);
+
+            // Refresh the specific list that was changed
+            if (collection === "technologies") {
+                await fetchTechnologiesFromFirestore();
+            } else {
+                await fetchFunctionsFromFirestore();
+            }
+        } catch (e) {
+            console.error("Error updating item: ", e);
+            alert(`Could not update item. Error: ${e.message}`);
+        }
+    }
+
+    /**
+     * Deletes an item from Firestore.
+     * @param {string} collection - The collection name.
+     * @param {string} id - The document ID.
+     * @param {string} name - The item name (for confirmation).
+     */
+    async function handleDeleteItem(collection, id, name) {
+        if (!confirm(`Are you sure you want to delete "${name}"?`)) {
+            return;
+        }
+        if (!db) {
+            alert("Firestore is not initialized.");
+            return;
+        }
+
+        try {
+            await db.collection(collection).doc(id).delete();
+            console.log(`Deleted "${name}"`);
+            
+            // Refresh the specific list that was changed
+            if (collection === "technologies") {
+                await fetchTechnologiesFromFirestore();
+            } else {
+                await fetchFunctionsFromFirestore();
+            }
+        } catch (e) {
+            console.error("Error deleting item: ", e);
+            alert(`Could not delete item. Error: ${e.message}`);
+        }
+    }
+
 
     // --- Initialization ---
 
@@ -250,6 +391,9 @@ document.addEventListener("DOMContentLoaded", () => {
      */
     function init() {
         // --- API Key Form Logic ---
+        // App starts with API modal visible and scrim visible
+        appScrim.style.display = "block";
+        apiKeyModal.style.display = "flex";
         
         saveKeysButton.addEventListener("click", () => {
             const fbConfigRaw = firebaseConfigInput.value;
@@ -261,9 +405,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 return;
             }
 
-            // Try to parse Firebase config to ensure it's valid JSON/Object
+            // Try to parse Firebase config
             try {
-                // This will handle either a JSON string or a JS object literal
                 fbConfigParsed = (new Function(`return ${fbConfigRaw}`))();
                 if (typeof fbConfigParsed !== 'object' || fbConfigParsed === null) {
                     throw new Error("Config is not a valid object.");
@@ -273,28 +416,58 @@ document.addEventListener("DOMContentLoaded", () => {
                 return;
             }
 
-            // Save to global state variable (for this session only)
+            // Save to global state variable
             appKeys.geminiApiKey = geminiApiKeyInput.value;
             appKeys.gCloudClientId = gCloudClientIdInput.value;
-            appKeys.firebaseConfig = fbConfigParsed; // Save the parsed object
+            appKeys.firebaseConfig = fbConfigParsed;
 
-            // Hide form, show app
-            apiKeyFormContainer.style.display = "none";
+            // Hide modal and scrim, show app content and FAB
+            apiKeyModal.style.display = "none";
+            appScrim.style.display = "none";
             appContent.style.display = "block";
+            manageDataButton.style.display = "block";
                 
             // Initialize Firebase
             initializeFirebase(appKeys.firebaseConfig);
         });
 
+        // --- CRUD Modal Logic ---
+        manageDataButton.addEventListener("click", () => {
+            dataCrudModal.style.display = "flex";
+            appScrim.style.display = "block";
+        });
+
+        closeCrudModalButton.addEventListener("click", () => {
+            dataCrudModal.style.display = "none";
+            appScrim.style.display = "none";
+        });
+
+        addItemButton.addEventListener("click", handleAddItem);
+
+        // Event delegation for Edit/Delete buttons
+        [technologiesList, functionsList].forEach(list => {
+            list.addEventListener("click", (e) => {
+                const target = e.target;
+                const id = target.dataset.id;
+                const collection = target.dataset.collection;
+                const name = target.dataset.name;
+
+                if (target.classList.contains("edit-button")) {
+                    handleEditItem(collection, id, name);
+                } else if (target.classList.contains("delete-button")) {
+                    handleDeleteItem(collection, id, name);
+                }
+            });
+        });
+
 
         // --- Module 1: Problem Finder Logic ---
-        populateSelect(taskSelect, problemFinderData.tasks);
-        populateSelect(problemSelect, problemFinderData.problems);
-        populateSelect(impactSelect, problemFinderData.impacts);
+        populateSelect(taskSelect, problemFinderData.tasks.map(t => ({id: t, name: t})), "-- Select a task --");
+        populateSelect(problemSelect, problemFinderData.problems.map(p => ({id: p, name: p})), "-- Select a problem --");
+        populateSelect(impactSelect, problemFinderData.impacts.map(i => ({id: i, name: i})), "-- Select an impact --");
 
         const finderInputs = [systemSelect, taskSelect, problemSelect, impactSelect];
         
-        // Enable/disable 'Generate' button based on form completion
         finderInputs.forEach(input => {
             input.addEventListener("change", () => {
                 const allFilled = finderInputs.every(i => i.value !== "");
@@ -323,12 +496,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
         // --- Module 2: Idea Generator Logic ---
-        
-        // Populate the category dropdown (now functions)
-        // populateSelect(categorySelect, ideaGeneratorCategories); // Removed
-        // This is now handled by fetchFunctionsFromFirestore()
-
-        // Add listeners for new dropdowns
         const module2Selects = [technologySelect, categorySelect];
         module2Selects.forEach(select => {
             select.addEventListener("change", () => {
@@ -339,7 +506,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         generateAiIdeasButton.addEventListener("click", () => {
             const selectedTech = technologySelect.value;
-            const selectedFunction = categorySelect.value; // Renamed variable for clarity
+            const selectedFunction = categorySelect.value;
             
             if (!selectedTech || !selectedFunction) {
                 alert("Please select both a technology and a team function.");
@@ -350,7 +517,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 return;
             }
 
-            // Updated prompt with specific team context and negative constraints
             const prompt = `
                 I am a Server Administrator on the core infrastructure team.
                 My goal is to find new operational tasks for my backlog.
@@ -383,8 +549,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
         // --- Module 3: Story Converter Logic ---
-        
-        // Enable/disable 'Convert' button
         backstoryInput.addEventListener("input", () => {
             convertStoryButton.disabled = backstoryInput.value.trim() === "";
         });
@@ -394,7 +558,6 @@ document.addEventListener("DOMContentLoaded", () => {
             updateStoryPreview(); // Initial preview update
         });
 
-        // Real-time preview update
         [storyAsA, storyIWant, storySoThat].forEach(input => {
             input.addEventListener("input", updateStoryPreview);
         });
