@@ -266,7 +266,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 document.getElementById("hide-prompts-button").addEventListener("click", () => {
                     promptListContainer.style.display = "none";
                     e.target.classList.remove("active");
-This.
                 });
             }
         });
