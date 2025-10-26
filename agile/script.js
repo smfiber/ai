@@ -11,7 +11,6 @@ document.addEventListener("DOMContentLoaded", () => {
     // Firebase instance
     let db;
     let fetchedTechnologies = [];
-    // selectedIdeaCategory removed
 
     // API Key Form Elements
     const apiKeyFormContainer = document.getElementById("api-key-form-container");
@@ -32,9 +31,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const generatedBackstoryTextarea = document.getElementById("generated-backstory-textarea");
 
     // Module 2 (Idea Generator) Elements
-    // categoryButtonsContainer removed
-    // promptListContainer removed
-    const technologySelect = document.getElementById("technology-select"); // Added
+    const technologySelect = document.getElementById("technology-select");
+    const categorySelect = document.getElementById("category-select"); // Added
     const generateAiIdeasButton = document.getElementById("generate-ai-ideas-button");
     const clearAiIdeasButton = document.getElementById("clear-ai-ideas-button");
     const generatedAiIdeasOutput = document.getElementById("generated-ai-ideas-output");
@@ -87,7 +85,16 @@ document.addEventListener("DOMContentLoaded", () => {
         ]
     };
 
-    // ideaGeneratorData object removed
+    // New data for Module 2 categories
+    const ideaGeneratorCategories = [
+        "Preventative Maintenance",
+        "Security & Hardening",
+        "Automation & Efficiency",
+        "Reporting & Auditing",
+        "Performance & Monitoring",
+        "Configuration Cleanup"
+    ];
+
 
     // --- Helper Functions ---
 
@@ -187,7 +194,8 @@ document.addEventListener("DOMContentLoaded", () => {
             console.error("Error calling Gemini API:", e);
             generatedAiIdeasTextarea.value = `Error generating content. Please check the console.\n\n${e.message}`;
         } finally {
-            generateAiIdeasButton.disabled = (technologySelect.value === "");
+            // Re-enable button only if both selects are still valid
+            generateAiIdeasButton.disabled = (technologySelect.value === "" || categorySelect.value === "");
         }
     }
 
@@ -295,20 +303,25 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
         // --- Module 2: Idea Generator Logic ---
-        // Old category button logic removed
+        
+        // Populate the new category dropdown
+        populateSelect(categorySelect, ideaGeneratorCategories);
 
-        // Add listener for new technology select
-        technologySelect.addEventListener("change", () => {
-            generateAiIdeasButton.disabled = (technologySelect.value === "");
+        // Add listeners for new dropdowns
+        const module2Selects = [technologySelect, categorySelect];
+        module2Selects.forEach(select => {
+            select.addEventListener("change", () => {
+                const allFilled = module2Selects.every(s => s.value !== "");
+                generateAiIdeasButton.disabled = !allFilled;
+            });
         });
-
-        // Old categoryButtonsContainer listener removed
 
         generateAiIdeasButton.addEventListener("click", () => {
             const selectedTech = technologySelect.value;
+            const selectedCategory = categorySelect.value;
             
-            if (!selectedTech) {
-                alert("Please select a technology first.");
+            if (!selectedTech || !selectedCategory) {
+                alert("Please select both a technology and a category.");
                 return;
             }
             if (fetchedTechnologies.length === 0) {
@@ -318,13 +331,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
             const prompt = `
                 I am a Server Administrator. 
-                My goal is to find preventative maintenance tasks and other operational tasks for my backlog.
+                My goal is to find new operational tasks for my backlog.
                 
-                Please generate 5-7 distinct task ideas for the following technology: "${selectedTech}".
+                Please generate 5-7 distinct task ideas related to the following criteria:
+                -   Technology: "${selectedTech}"
+                -   Category: "${selectedCategory}"
 
                 For each idea:
-                1.  Start with a clear **Task:** (e.g., "Task: Audit stale DNS records").
-                2.  Follow it with the **Pain Point:** this task solves (e.g., "Pain Point: Stale records cause failed connections...").
+                1.  Start with a clear **Task:** (e.g., "Task: Implement GPO block inheritance...").
+                2.  Follow it with the **Pain Point:** this task solves (e.g., "Pain Point: Prevents conflicting policies...").
                 3.  Keep the entire idea (Task + Pain Point) to 2-3 sentences.
                 
                 Do not number the list. Separate each idea with a blank line.
@@ -337,7 +352,8 @@ document.addEventListener("DOMContentLoaded", () => {
             generatedAiIdeasTextarea.value = "";
             generatedAiIdeasOutput.style.display = "none";
             clearAiIdeasButton.style.display = "none";
-            technologySelect.selectedIndex = 0; // Reset dropdown
+            technologySelect.selectedIndex = 0; // Reset dropdowns
+            categorySelect.selectedIndex = 0;
             generateAiIdeasButton.disabled = true; // Disable button
         });
 
