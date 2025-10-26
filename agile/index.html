@@ -7,183 +7,231 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="container">
-        
-<div id="api-key-form-container" class="module-card">
-            <h2>API Keys Required</h2>
-            <p>Please provide your API keys to get started.</p>
 
-            <div class="form-group">
-                <label for="gemini-api-key">Google Gemini API Key</label>
-                <input type="text" id="gemini-api-key" placeholder="Enter your Google Gemini API Key">
+    <div id="app-scrim" class="modal-overlay" style="display: none;"></div>
+
+    <div id="api-key-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="module-card" id="api-key-form-container">
+                <h2>API Keys Required</h2>
+                <p>Please provide your API keys to get started.</p>
+
+                <div class="form-group">
+                    <label for="gemini-api-key">Google Gemini API Key</label>
+                    <input type="text" id="gemini-api-key" placeholder="Enter your Google Gemini API Key">
+                </div>
+
+                <div class="form-group">
+                    <label for="gcloud-client-id">Google Cloud Client ID</label>
+                    <input type="text" id="gcloud-client-id" placeholder="Enter your Google Cloud Web Client ID">
+                </div>
+
+                <div class="form-group">
+                    <label for="firebase-config">Firebase Web App Config</label>
+                    <textarea id="firebase-config" rows="6" placeholder="Paste your Firebase Web App Config Object"></textarea>
+                    <small>e.g., { "apiKey": "...", "authDomain": "...", ... }</small>
+                </div>
+
+                <button id="save-keys-button" class="action-button">Save and Continue</button>
             </div>
-
-            <div class="form-group">
-                <label for="gcloud-client-id">Google Cloud Client ID</label>
-                <input type="text" id="gcloud-client-id" placeholder="Enter your Google Cloud Web Client ID">
-            </div>
-
-            <div class="form-group">
-                <label for="firebase-config">Firebase Web App Config</label>
-                <textarea id="firebase-config" rows="6" placeholder="Paste your Firebase Web App Config Object"></textarea>
-                <small>e.g., { "apiKey": "...", "authDomain": "...", ... }</small>
-            </div>
-
-            <button id="save-keys-button" class="action-button">Save and Continue</button>
         </div>
+    </div>
 
-        
-<div id="app-content" style="display: none;">
-            <header class="app-header">
-                <h1>Server Admin Backstory Generator</h1>
-            </header>
-            <main>
+    <div id="data-crud-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content large">
+            <div class="module-card" id="data-crud-container">
+                <div class_header>
+                    <h2>Manage Data</h2>
+                    <button id="close-crud-modal-button" class="close-button">&times;</button>
+                </div>
                 
-<div id="idea-generator-module" class="module-card">
-                    <h2>Module 2: Backstory Idea Generator</h2>
-                    <p>Select a technology and your team's function to generate specific operational task ideas.</p>
-                    
+                <div class="crud-form-container">
+                    <h3>Add New Item</h3>
                     <div class="form-group">
-                        <label for="technology-select">1. Select Technology</label>
-                        <select id="technology-select">
+                        <label for="new-item-name">Item Name</label>
+                        <input type="text" id="new-item-name" placeholder="e.g., 'VMware' or 'Server Deployment'">
+                    </div>
+                    <div class="form-group">
+                        <label for="new-item-collection">Collection</label>
+                        <select id="new-item-collection">
+                            <option value="technologies">Technology</option>
+                            <option value="teamFunctions">Team Function</option>
+                        </select>
+                    </div>
+                    <button id="add-item-button" class="action-button">Add Item</button>
+                </div>
+
+                <div class="crud-lists-container">
+                    <div class="crud-list-column">
+                        <h3>Technologies</h3>
+                        <ul id="technologies-list" class="data-manage-list">
+                            </ul>
+                    </div>
+                    <div class="crud-list-column">
+                        <h3>Team Functions</h3>
+                        <ul id="functions-list" class="data-manage-list">
+                            </ul>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+
+    <div id="app-content">
+        <header class="app-header">
+            <h1>Server Admin Backstory Generator</h1>
+        </header>
+        <main class="container">
+            
+<div id="idea-generator-module" class="module-card">
+                <h2>Module 2: Backstory Idea Generator</h2>
+                <p>Select a technology and your team's function to generate specific operational task ideas.</p>
+                
+                <div class="form-group">
+                    <label for="technology-select">1. Select Technology</label>
+                    <select id="technology-select">
+                        <option value="" disabled selected>-- Loading technologies... --</option>
+                        
+</select>
+                </div>
+
+                <div class="form-group">
+                    <label for="category-select">2. Select Team Function</label>
+                    <select id="category-select">
+                        <option value="" disabled selected>-- Select a function --</option>
+                        
+</select>
+                </div>
+
+                <div class="module-controls">
+                    <button id="generate-ai-ideas-button" class="action-button" disabled>
+                        Generate Ideas
+                    </button>
+                    <button id="clear-ai-ideas-button" class="clear-button" style="display: none;">
+                        Clear Ideas
+                    </button>
+                </div>
+
+                <div id="generated-ai-ideas-output" class="generated-output" style="display: none;">
+                    <label>Generated AI Ideas:</label>
+                    <textarea id="generated-ai-ideas-textarea" rows="10" readonly></textarea>
+                </div>
+
+                
+</div>
+
+            
+<div id="problem-finder-module" class="module-card">
+                <h2>Module 1: Daily Task Problem Finder</h2>
+                <p>Use this form to quickly build a problem statement based on your daily work.</p>
+                
+                <div class="finder-form">
+                    <div class="form-group">
+                        <label for="system-select">1. What system were you working on?</label>
+                        <select id="system-select">
                             <option value="" disabled selected>-- Loading technologies... --</option>
                             
 </select>
                     </div>
 
                     <div class="form-group">
-                        <label for="category-select">2. Select Team Function</label>
-                        <select id="category-select">
-                            <option value="" disabled selected>-- Select a function --</option>
+                        <label for="task-select">2. What was the task?</label>
+                        <select id="task-select">
+                            <option value="" disabled selected>-- Select a task --</option>
                             
 </select>
                     </div>
 
-                    <div class="module-controls">
-                        <button id="generate-ai-ideas-button" class="action-button" disabled>
-                            Generate Ideas
-                        </button>
-                        <button id="clear-ai-ideas-button" class="clear-button" style="display: none;">
-                            Clear Ideas
-                        </button>
+                    <div class="form-group">
+                        <label for="problem-select">3. What is the problem?</label>
+                        <select id="problem-select">
+                            <option value="" disabled selected>-- Select a problem --</option>
+                            
+</select>
                     </div>
 
-                    <div id="generated-ai-ideas-output" class="generated-output" style="display: none;">
-                        <label>Generated AI Ideas:</label>
-                        <textarea id="generated-ai-ideas-textarea" rows="10" readonly></textarea>
-                    </div>
-
-                    
-</div>
-
-                
-<div id="problem-finder-module" class="module-card">
-                    <h2>Module 1: Daily Task Problem Finder</h2>
-                    <p>Use this form to quickly build a problem statement based on your daily work.</p>
-                    
-                    <div class="finder-form">
-                        <div class="form-group">
-                            <label for="system-select">1. What system were you working on?</label>
-                            <select id="system-select">
-                                <option value="" disabled selected>-- Loading technologies... --</option>
-                                
+                    <div class="form-group">
+                        <label for="impact-select">4. What is the impact (the "pain")?</label>
+                        <select id="impact-select">
+                            <option value="" disabled selected>-- Select an impact --</option>
+                            
 </select>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="task-select">2. What was the task?</label>
-                            <select id="task-select">
-                                <option value="" disabled selected>-- Select a task --</option>
-                                
-</select>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="problem-select">3. What is the problem?</label>
-                            <select id="problem-select">
-                                <option value="" disabled selected>-- Select a problem --</option>
-                                
-</select>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="impact-select">4. What is the impact (the "pain")?</label>
-                            <select id="impact-select">
-                                <option value="" disabled selected>-- Select an impact --</option>
-                                
-</select>
-                        </div>
-                    </div>
-
-                    <div class="module-controls">
-                        <button id="generate-backstory-button" class="action-button" disabled>
-                            Generate Backstory
-                        </button>
-                        <button id="clear-finder-button" class="clear-button">
-                            Clear
-                        </button>
-                    </div>
-
-                    <div id="generated-backstory-output" class="generated-output" style="display: none;">
-                        <label>Generated Backstory:</label>
-                        <textarea id="generated-backstory-textarea" rows="4" readonly></textarea>
-                        <small>You can copy this text and paste it into Module 3 below.</small>
                     </div>
                 </div>
 
-                
+                <div class="module-controls">
+                    <button id="generate-backstory-button" class="action-button" disabled>
+                        Generate Backstory
+                    </button>
+                    <button id="clear-finder-button" class="clear-button">
+                        Clear
+                    </button>
+                </div>
+
+                <div id="generated-backstory-output" class="generated-output" style="display: none;">
+                    <label>Generated Backstory:</label>
+                    <textarea id="generated-backstory-textarea" rows="4" readonly></textarea>
+                    <small>You can copy this text and paste it into Module 3 below.</small>
+                </div>
+            </div>
+
+            
 <div id="story-converter-module" class="module-card">
-                    <h2>Module 3: Backstory-to-Story Converter</h2>
-                    <p>Paste your raw idea, problem, or "backstory" below. Then click "Convert" to structure it as a user story.</p>
+                <h2>Module 3: Backstory-to-Story Converter</h2>
+                <p>Paste your raw idea, problem, or "backstory" below. Then click "Convert" to structure it as a user story.</p>
+                
+                <div class="form-group">
+                    <label for="backstory-input">1. Your Backstory / Problem</label>
+                    <textarea
+                        id="backstory-input"
+                        class="backstory-textarea"
+                        rows="6"
+                        placeholder="e.g., 'The weekly server health check is manual. I have to log into 15 servers, open Event Viewer, and check disk space. It takes 2 hours and I can easily miss something.'"
+                    ></textarea>
+                </div>
+
+                <div class="module-controls">
+                    <button id="convert-story-button" class="action-button" disabled>
+                        Convert
+                    </button>
+                    <button id="clear-converter-button" class="clear-button">
+                        Clear All
+                    </button>
+                </div>
+
+                <div id="user-story-output" class="story-output-section" style="display: none;">
+                    <h3>2. Your User Story</h3>
                     
                     <div class="form-group">
-                        <label for="backstory-input">1. Your Backstory / Problem</label>
-                        <textarea
-                            id="backstory-input"
-                            class="backstory-textarea"
-                            rows="6"
-                            placeholder="e.g., 'The weekly server health check is manual. I have to log into 15 servers, open Event Viewer, and check disk space. It takes 2 hours and I can easily miss something.'"
-                        ></textarea>
+                        <label for="story-as-a">As a:</label>
+                        <input id="story-as-a" type="text" value="Server Administrator">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="story-i-want">I want:</label>
+                        <input id="story-i-want" type="text" placeholder="e.g., 'An automated script that checks health on all servers'">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="story-so-that">So that:</label>
+                        <input id="story-so-that" type="text" placeholder="e.g., 'I can complete the check in 5 minutes and catch critical errors before they cause an outage.'">
                     </div>
 
-                    <div class="module-controls">
-                        <button id="convert-story-button" class="action-button" disabled>
-                            Convert
-                        </button>
-                        <button id="clear-converter-button" class="clear-button">
-                            Clear All
-                        </button>
-                    </div>
-
-                    <div id="user-story-output" class="story-output-section" style="display: none;">
-                        <h3>2. Your User Story</h3>
-                        
-                        <div class="form-group">
-                            <label for="story-as-a">As a:</label>
-                            <input id="story-as-a" type="text" value="Server Administrator">
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="story-i-want">I want:</label>
-                            <input id="story-i-want" type="text" placeholder="e.g., 'An automated script that checks health on all servers'">
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="story-so-that">So that:</label>
-                            <input id="story-so-that" type="text" placeholder="e.g., 'I can complete the check in 5 minutes and catch critical errors before they cause an outage.'">
-                        </div>
-
-                        <div class="story-preview">
-                            <strong>Preview:</strong>
-                            <p id="story-preview-text">
-                                
+                    <div class="story-preview">
+                        <strong>Preview:</strong>
+                        <p id="story-preview-text">
+                            
 </p>
-                        </div>
                     </div>
                 </div>
-            </main>
-        </div>
+            </div>
+        </main>
     </div>
+
+    <button id="manage-data-button" class="floating-action-button" title="Manage Data" style="display: none;">
+        &#9881; </button>
 
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
