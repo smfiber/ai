@@ -11,6 +11,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Firebase instance
     let db;
     let fetchedTechnologies = [];
+    let fetchedFunctions = []; // Added
 
     // API Key Form Elements
     const apiKeyFormContainer = document.getElementById("api-key-form-container");
@@ -32,7 +33,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Module 2 (Idea Generator) Elements
     const technologySelect = document.getElementById("technology-select");
-    const categorySelect = document.getElementById("category-select"); // Added
+    const categorySelect = document.getElementById("category-select"); // This ID is re-used for "Team Function"
     const generateAiIdeasButton = document.getElementById("generate-ai-ideas-button");
     const clearAiIdeasButton = document.getElementById("clear-ai-ideas-button");
     const generatedAiIdeasOutput = document.getElementById("generated-ai-ideas-output");
@@ -85,15 +86,7 @@ document.addEventListener("DOMContentLoaded", () => {
         ]
     };
 
-    // New data for Module 2 categories
-    const ideaGeneratorCategories = [
-        "Preventative Maintenance",
-        "Security & Hardening",
-        "Automation & Efficiency",
-        "Reporting & Auditing",
-        "Performance & Monitoring",
-        "Configuration Cleanup"
-    ];
+    // Removed ideaGeneratorCategories array
 
 
     // --- Helper Functions ---
@@ -111,8 +104,9 @@ document.addEventListener("DOMContentLoaded", () => {
             db = firebase.firestore();
             console.log("Firebase initialized successfully.");
             
-            // Now that Firebase is ready, fetch the technologies
+            // Now that Firebase is ready, fetch data
             fetchTechnologiesFromFirestore();
+            fetchFunctionsFromFirestore(); // Added call
 
         } catch (e) {
             console.error("Error initializing Firebase: ", e);
@@ -148,6 +142,32 @@ document.addEventListener("DOMContentLoaded", () => {
             systemSelect.innerHTML = '<option value="" disabled selected>-- Error loading systems --</option>';
             technologySelect.innerHTML = '<option value="" disabled selected>-- Error loading systems --</option>';
             alert("Could not fetch technology list from Firestore. Please check permissions and console.");
+        }
+    }
+
+    /**
+     * Fetches the list of team functions from the Firestore 'teamFunctions' collection.
+     */
+    async function fetchFunctionsFromFirestore() {
+        if (!db) {
+            console.error("Firestore is not initialized.");
+            return;
+        }
+
+        try {
+            const querySnapshot = await db.collection("teamFunctions").orderBy("name").get();
+            fetchedFunctions = querySnapshot.docs.map(doc => doc.data().name);
+            
+            // Clear placeholder and populate select (Module 2, categorySelect)
+            categorySelect.innerHTML = '<option value="" disabled selected>-- Select a function --</option>';
+            populateSelect(categorySelect, fetchedFunctions);
+
+            console.log("Fetched functions:", fetchedFunctions);
+
+        } catch (e) {
+            console.error("Error fetching functions from Firestore: ", e);
+            categorySelect.innerHTML = '<option value="" disabled selected>-- Error loading functions --</option>';
+            alert("Could not fetch team functions list from Firestore. Please check permissions and console.");
         }
     }
     
@@ -219,7 +239,7 @@ document.addEventListener("DOMContentLoaded", () => {
     function updateStoryPreview() {
         const asA = storyAsA.value || "[Role]";
         const iWant = storyIWant.value || "[Goal]";
-        const soThat = soThat.value || "[Benefit]";
+        const soThat = storySoThat.value || "[Benefit]";
         storyPreviewText.innerHTML = `<strong>As a</strong> ${asA}, <strong>I want</strong> ${iWant}, <strong>so that</strong> ${soThat}.`;
     }
 
@@ -304,8 +324,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // --- Module 2: Idea Generator Logic ---
         
-        // Populate the new category dropdown
-        populateSelect(categorySelect, ideaGeneratorCategories);
+        // Populate the category dropdown (now functions)
+        // populateSelect(categorySelect, ideaGeneratorCategories); // Removed
+        // This is now handled by fetchFunctionsFromFirestore()
 
         // Add listeners for new dropdowns
         const module2Selects = [technologySelect, categorySelect];
@@ -318,30 +339,33 @@ document.addEventListener("DOMContentLoaded", () => {
 
         generateAiIdeasButton.addEventListener("click", () => {
             const selectedTech = technologySelect.value;
-            const selectedCategory = categorySelect.value;
+            const selectedFunction = categorySelect.value; // Renamed variable for clarity
             
-            if (!selectedTech || !selectedCategory) {
-                alert("Please select both a technology and a category.");
+            if (!selectedTech || !selectedFunction) {
+                alert("Please select both a technology and a team function.");
                 return;
             }
-            if (fetchedTechnologies.length === 0) {
-                alert("Technology list is still loading or is empty. Please wait or check Firestore.");
+            if (fetchedTechnologies.length === 0 || fetchedFunctions.length === 0) {
+                alert("Data is still loading or is empty. Please wait or check Firestore.");
                 return;
             }
 
+            // Updated prompt with specific team context and negative constraints
             const prompt = `
-                I am a Server Administrator. 
+                I am a Server Administrator on the core infrastructure team.
                 My goal is to find new operational tasks for my backlog.
                 
                 Please generate 5-7 distinct task ideas related to the following criteria:
                 -   Technology: "${selectedTech}"
-                -   Category: "${selectedCategory}"
+                -   My Team's Function: "${selectedFunction}"
 
                 For each idea:
-                1.  Start with a clear **Task:** (e.g., "Task: Implement GPO block inheritance...").
-                2.  Follow it with the **Pain Point:** this task solves (e.g., "Pain Point: Prevents conflicting policies...").
+                1.  Start with a clear **Task:** (e.g., "Task: Audit stale GPOs...").
+                2.  Follow it with the **Pain Point:** this task solves (e.g., "Pain Point: Reduces logon time...").
                 3.  Keep the entire idea (Task + Pain Point) to 2-3 sentences.
                 
+                IMPORTANT: My team does NOT handle enterprise security, backups, or end-user device management. Please exclude ideas related to those specific areas and focus only on my team's function as it relates to the technology.
+
                 Do not number the list. Separate each idea with a blank line.
             `;
             
