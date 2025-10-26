@@ -8,7 +8,8 @@
 </head>
 <body>
     <div class="container">
-        <div id="api-key-form-container" class="module-card">
+        
+<div id="api-key-form-container" class="module-card">
             <h2>API Keys Required</h2>
             <p>Please provide your API keys to get started.</p>
 
@@ -23,16 +24,6 @@
             </div>
 
             <div class="form-group">
-                <label for="fmp-api-key">Financial Modeling Prep API Key</label>
-                <input type="text" id="fmp-api-key" placeholder="Enter your FMP API Key">
-            </div>
-
-            <div class="form-group">
-                <label for="sec-api-key">SEC-API.io Key</label>
-                <input type="text" id="sec-api-key" placeholder="Enter your SEC-API.io Key">
-            </div>
-
-            <div class="form-group">
                 <label for="firebase-config">Firebase Web App Config</label>
                 <textarea id="firebase-config" rows="6" placeholder="Paste your Firebase Web App Config Object"></textarea>
                 <small>e.g., { "apiKey": "...", "authDomain": "...", ... }</small>
@@ -41,23 +32,28 @@
             <button id="save-keys-button" class="action-button">Save and Continue</button>
         </div>
 
-        <div id="app-content" style="display: none;">
+        
+<div id="app-content" style="display: none;">
             <header class="app-header">
                 <h1>Server Admin Backstory Generator</h1>
             </header>
             <main>
-                <div id="idea-generator-module" class="module-card">
+                
+<div id="idea-generator-module" class="module-card">
                     <h2>Module 2: Backstory Idea Generator</h2>
                     <p>Don't have a problem in mind? Use these prompts to find one.</p>
                     
                     <div class="category-buttons" id="category-buttons-container">
-                        </div>
+                        
+</div>
 
                     <div class="prompt-list" id="prompt-list-container">
-                        </div>
+                        
+</div>
                 </div>
 
-                <div id="problem-finder-module" class="module-card">
+                
+<div id="problem-finder-module" class="module-card">
                     <h2>Module 1: Daily Task Problem Finder</h2>
                     <p>Use this form to quickly build a problem statement based on your daily work.</p>
                     
@@ -66,28 +62,32 @@
                             <label for="system-select">1. What system were you working on?</label>
                             <select id="system-select">
                                 <option value="" disabled selected>-- Select a system --</option>
-                                </select>
+                                
+</select>
                         </div>
 
                         <div class="form-group">
                             <label for="task-select">2. What was the task?</label>
                             <select id="task-select">
                                 <option value="" disabled selected>-- Select a task --</option>
-                                </select>
+                                
+</select>
                         </div>
 
                         <div class="form-group">
                             <label for="problem-select">3. What is the problem?</label>
                             <select id="problem-select">
                                 <option value="" disabled selected>-- Select a problem --</option>
-                                </select>
+                                
+</select>
                         </div>
 
                         <div class="form-group">
                             <label for="impact-select">4. What is the impact (the "pain")?</label>
                             <select id="impact-select">
                                 <option value="" disabled selected>-- Select an impact --</option>
-                                </select>
+                                
+</select>
                         </div>
                     </div>
 
@@ -107,7 +107,8 @@
                     </div>
                 </div>
 
-                <div id="story-converter-module" class="module-card">
+                
+<div id="story-converter-module" class="module-card">
                     <h2>Module 3: Backstory-to-Story Converter</h2>
                     <p>Paste your raw idea, problem, or "backstory" below. Then click "Convert" to structure it as a user story.</p>
                     
@@ -151,7 +152,8 @@
                         <div class="story-preview">
                             <strong>Preview:</strong>
                             <p id="story-preview-text">
-                                </p>
+                                
+</p>
                         </div>
                     </div>
                 </div>
