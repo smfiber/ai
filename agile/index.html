@@ -41,7 +41,7 @@
                 
 <div id="idea-generator-module" class="module-card">
                     <h2>Module 2: Backstory Idea Generator</h2>
-                    <p>Select a technology to generate specific preventative maintenance (PM) and operational task ideas.</p>
+                    <p>Select a technology and category to generate specific operational task ideas.</p>
                     
                     <div class="form-group">
                         <label for="technology-select">1. Select Technology</label>
@@ -51,9 +51,17 @@
 </select>
                     </div>
 
+                    <div class="form-group">
+                        <label for="category-select">2. Select Idea Category</label>
+                        <select id="category-select">
+                            <option value="" disabled selected>-- Select a category --</option>
+                            
+</select>
+                    </div>
+
                     <div class="module-controls">
                         <button id="generate-ai-ideas-button" class="action-button" disabled>
-                            Generate PM Tasks
+                            Generate Ideas
                         </button>
                         <button id="clear-ai-ideas-button" class="clear-button" style="display: none;">
                             Clear Ideas
