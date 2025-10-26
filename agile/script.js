@@ -5,8 +5,6 @@ document.addEventListener("DOMContentLoaded", () => {
     let appKeys = {
         geminiApiKey: null,
         gCloudClientId: null,
-        fmpApiKey: null,
-        secApiKey: null,
         firebaseConfig: null
     };
 
@@ -16,8 +14,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const saveKeysButton = document.getElementById("save-keys-button");
     const geminiApiKeyInput = document.getElementById("gemini-api-key");
     const gCloudClientIdInput = document.getElementById("gcloud-client-id");
-    const fmpApiKeyInput = document.getElementById("fmp-api-key");
-    const secApiKeyInput = document.getElementById("sec-api-key");
     const firebaseConfigInput = document.getElementById("firebase-config");
 
     // Module 1 (Problem Finder) Elements
@@ -165,7 +161,7 @@ document.addEventListener("DOMContentLoaded", () => {
             try {
                 appKeys = JSON.parse(savedKeys);
                 // Check if all keys are present
-                if (appKeys.geminiApiKey && appKeys.gCloudClientId && appKeys.fmpApiKey && appKeys.secApiKey && appKeys.firebaseConfig) {
+                if (appKeys.geminiApiKey && appKeys.gCloudClientId && appKeys.firebaseConfig) {
                     // If keys are valid, hide form and show app
                     apiKeyFormContainer.style.display = "none";
                     appContent.style.display = "block";
@@ -186,7 +182,7 @@ document.addEventListener("DOMContentLoaded", () => {
             let fbConfigParsed;
 
             // Simple validation
-            if (!geminiApiKeyInput.value || !gCloudClientIdInput.value || !fmpApiKeyInput.value || !secApiKeyInput.value || !fbConfigRaw) {
+            if (!geminiApiKeyInput.value || !gCloudClientIdInput.value || !fbConfigRaw) {
                 alert("Please fill out all API key and config fields.");
                 return;
             }
@@ -194,7 +190,6 @@ document.addEventListener("DOMContentLoaded", () => {
             // Try to parse Firebase config to ensure it's valid JSON/Object
             try {
                 // This will handle either a JSON string or a JS object literal
-                // A bit of a hack, but works for dev purposes
                 fbConfigParsed = (new Function(`return ${fbConfigRaw}`))();
                 if (typeof fbConfigParsed !== 'object' || fbConfigParsed === null) {
                     throw new Error("Config is not a valid object.");
@@ -207,8 +202,6 @@ document.addEventListener("DOMContentLoaded", () => {
             // Save to global state
             appKeys.geminiApiKey = geminiApiKeyInput.value;
             appKeys.gCloudClientId = gCloudClientIdInput.value;
-            appKeys.fmpApiKey = fmpApiKeyInput.value;
-            appKeys.secApiKey = secApiKeyInput.value;
             appKeys.firebaseConfig = fbConfigParsed; // Save the parsed object
 
             // Save to localStorage
@@ -232,8 +225,6 @@ document.addEventListener("DOMContentLoaded", () => {
         function populateKeyForm() {
             geminiApiKeyInput.value = appKeys.geminiApiKey || "";
             gCloudClientIdInput.value = appKeys.gCloudClientId || "";
-            fmpApiKeyInput.value = appKeys.fmpApiKey || "";
-            secApiKeyInput.value = appKeys.secApiKey || "";
             // Stringify the config object for the textarea
             if (appKeys.firebaseConfig) {
                 try {
