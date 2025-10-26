@@ -155,27 +155,8 @@ document.addEventListener("DOMContentLoaded", () => {
     function init() {
         // --- API Key Form Logic ---
         
-        // Try to load keys from localStorage
-        const savedKeys = localStorage.getItem("appKeys");
-        if (savedKeys) {
-            try {
-                appKeys = JSON.parse(savedKeys);
-                // Check if all keys are present
-                if (appKeys.geminiApiKey && appKeys.gCloudClientId && appKeys.firebaseConfig) {
-                    // If keys are valid, hide form and show app
-                    apiKeyFormContainer.style.display = "none";
-                    appContent.style.display = "block";
-                    // Initialize Firebase here (we'll add this later)
-                    // initializeFirebase(appKeys.firebaseConfig); 
-                } else {
-                    // Populate form with any saved (but incomplete) keys
-                    populateKeyForm();
-                }
-            } catch (e) {
-                console.error("Failed to parse saved keys:", e);
-                localStorage.removeItem("appKeys");
-            }
-        }
+        // The API key form is visible by default.
+        // We do not check localStorage.
 
         saveKeysButton.addEventListener("click", () => {
             const fbConfigRaw = firebaseConfigInput.value;
@@ -199,41 +180,19 @@ document.addEventListener("DOMContentLoaded", () => {
                 return;
             }
 
-            // Save to global state
+            // Save to global state variable (for this session only)
             appKeys.geminiApiKey = geminiApiKeyInput.value;
             appKeys.gCloudClientId = gCloudClientIdInput.value;
             appKeys.firebaseConfig = fbConfigParsed; // Save the parsed object
 
-            // Save to localStorage
-            try {
-                localStorage.setItem("appKeys", JSON.stringify(appKeys));
+            // Hide form, show app
+            apiKeyFormContainer.style.display = "none";
+            appContent.style.display = "block";
                 
-                // Hide form, show app
-                apiKeyFormContainer.style.display = "none";
-                appContent.style.display = "block";
-                
-                // Initialize Firebase
-                // initializeFirebase(appKeys.firebaseConfig);
-                alert("Keys saved and app initialized!");
-
-            } catch (e) {
-                console.error("Failed to save keys:", e);
-                alert("Error saving keys. See console for details.");
-            }
+            // Initialize Firebase (we'll add this later)
+            // initializeFirebase(appKeys.firebaseConfig);
+            alert("Keys saved for this session!");
         });
-
-        function populateKeyForm() {
-            geminiApiKeyInput.value = appKeys.geminiApiKey || "";
-            gCloudClientIdInput.value = appKeys.gCloudClientId || "";
-            // Stringify the config object for the textarea
-            if (appKeys.firebaseConfig) {
-                try {
-                    firebaseConfigInput.value = JSON.stringify(appKeys.firebaseConfig, null, 2);
-                } catch {
-                    firebaseConfigInput.value = "";
-                }
-            }
-        }
 
 
         // --- Module 1: Problem Finder Logic ---
@@ -307,6 +266,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 document.getElementById("hide-prompts-button").addEventListener("click", () => {
                     promptListContainer.style.display = "none";
                     e.target.classList.remove("active");
+This.
                 });
             }
         });
@@ -328,7 +288,7 @@ document.addEventListener("DOMContentLoaded", () => {
             input.addEventListener("input", updateStoryPreview);
         });
 
-        clearConverterButton.addEventListener("click", () => {
+        clearConverterButton.addEventListener("click", ()=> {
             backstoryInput.value = "";
             storyAsA.value = "Server Administrator";
             storyIWant.value = "";
