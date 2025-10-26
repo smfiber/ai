@@ -41,15 +41,19 @@
                 
 <div id="idea-generator-module" class="module-card">
                     <h2>Module 2: Backstory Idea Generator</h2>
-                    <p>Don't have a problem in mind? Use these prompts to find one.</p>
+                    <p>Select a technology to generate specific preventative maintenance (PM) and operational task ideas.</p>
                     
-                    <div class="category-buttons" id="category-buttons-container">
-                        
-</div>
+                    <div class="form-group">
+                        <label for="technology-select">1. Select Technology</label>
+                        <select id="technology-select">
+                            <option value="" disabled selected>-- Loading technologies... --</option>
+                            
+</select>
+                    </div>
 
                     <div class="module-controls">
                         <button id="generate-ai-ideas-button" class="action-button" disabled>
-                            Generate AI Ideas (using my technologies)
+                            Generate PM Tasks
                         </button>
                         <button id="clear-ai-ideas-button" class="clear-button" style="display: none;">
                             Clear Ideas
@@ -61,10 +65,8 @@
                         <textarea id="generated-ai-ideas-textarea" rows="10" readonly></textarea>
                     </div>
 
-                    <div class="prompt-list" id="prompt-list-container">
-                        
+                    
 </div>
-                </div>
 
                 
 <div id="problem-finder-module" class="module-card">
