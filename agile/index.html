@@ -50,35 +50,36 @@
                     <button id="close-crud-modal-button" class="close-button">&times;</button>
                 </div>
                 
-                <div class="crud-form-container">
-                    <h3>Add New Item</h3>
-                    <div class="form-group">
-                        <label for="new-item-collection">Collection</label>
-                        <select id="new-item-collection">
-                            <option value="technologies">Technology</option>
-                            <option value="teamFunctions">Team Function</option>
-                        </select>
+                <div class="crud-form-container-grid">
+                    <div class="crud-form-container">
+                        <h3>Add New Technology</h3>
+                        <div class="form-group">
+                            <label for="new-item-name">Technology Name</label>
+                            <input type="text" id="new-item-name" placeholder="e.g., 'VMware' or 'Windows Server'">
+                        </div>
+                        <button id="add-technology-button" class="action-button">Add Technology</button>
                     </div>
-                    <div class="form-group">
-                        <label for="new-item-name">Item Name</label>
-                        <input type="text" id="new-item-name" placeholder="e.g., 'VMware' or 'Server Deployment'">
+
+                    <div class="crud-form-container">
+                        <h3>Add New Function</h3>
+                        <div class="form-group">
+                            <label for="add-function-tech-select">1. Select Technology</label>
+                            <select id="add-function-tech-select">
+                                <option value="" disabled selected>-- Select a technology --</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="new-function-name">2. Function Name</label>
+                            <input type="text" id="new-function-name" placeholder="e.g., 'VM Provisioning'">
+                        </div>
+                        <button id="add-function-button" class="action-button" disabled>Add Function</button>
                     </div>
-                    <div id="new-item-technologies-group" class="form-group hidden">
-                        <label for="new-item-technologies">Applicable Technologies (comma-separated)</label>
-                        <input type="text" id="new-item-technologies" placeholder="e.g., VMware, Windows Server, Active Directory">
-                    </div>
-                    <button id="add-item-button" class="action-button">Add Item</button>
                 </div>
 
                 <div class="crud-lists-container">
                     <div class="crud-list-column">
-                        <h3>Technologies</h3>
+                        <h3>Manage Technologies & Functions</h3>
                         <ul id="technologies-list" class="data-manage-list">
-                            </ul>
-                    </div>
-                    <div class="crud-list-column">
-                        <h3>Team Functions</h3>
-                        <ul id="functions-list" class="data-manage-list">
                             </ul>
                     </div>
                 </div>
