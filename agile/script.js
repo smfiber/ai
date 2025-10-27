@@ -316,7 +316,7 @@ document.addEventListener("DOMContentLoaded", () => {
      */
     function populateCrudList(listElement, collectionName, data) {
         listElement.innerHTML = ""; // Clear old list
-        if (data.length === img src="https://firebasestorage.googleapis.com/v0/b/sps-sub-411319.appspot.com/o/images%2F001.png?alt=media&token=c1a3574c-4a34-4b53-a5ba-14532b26090c" alt="Project deployed.">0) {
+        if (data.length === 0) {
             listElement.innerHTML = "<li>No items in this collection.</li>";
             return;
         }
@@ -339,7 +339,7 @@ document.addEventListener("DOMContentLoaded", () => {
     function updateStoryPreview() {
         const asA = storyAsA.value || "[Role]";
         const iWant = storyIWant.value || "[Goal]";
-        const soThat = soThat.value || "[Benefit]";
+        const soThat = storySoThat.value || "[Benefit]";
         storyPreviewText.innerHTML = `<strong>As a</strong> ${asA}, <strong>I want</strong> ${iWant}, <strong>so that</strong> ${soThat}.`;
     }
 
@@ -559,7 +559,7 @@ document.addEventListener("DOMContentLoaded", () => {
             });
         });
 
-        generateBackstoryButton.addEventListener("click", () => {
+        generateBackBstoryButton.addEventListener("click", () => {
             const system = systemSelect.value;
             const task = taskSelect.value;
             const problem = problemSelect.value;
@@ -637,7 +637,7 @@ document.addEventListener("DOMContentLoaded", () => {
             convertStoryButton.disabled = backstoryInput.value.trim() === "";
         });
 
-        convertStoryButton.addEventListener("click", () => {
+s        convertStoryButton.addEventListener("click", () => {
             userStoryOutput.style.display = "block";
             updateStoryPreview(); // Initial preview update
         });
