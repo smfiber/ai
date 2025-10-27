@@ -316,7 +316,7 @@ document.addEventListener("DOMContentLoaded", () => {
      */
     function populateCrudList(listElement, collectionName, data) {
         listElement.innerHTML = ""; // Clear old list
-        if (data.length === 0) {
+        if (data.length === img src="https://firebasestorage.googleapis.com/v0/b/sps-sub-411319.appspot.com/o/images%2F001.png?alt=media&token=c1a3574c-4a34-4b53-a5ba-14532b26090c" alt="Project deployed.">0) {
             listElement.innerHTML = "<li>No items in this collection.</li>";
             return;
         }
@@ -637,7 +637,7 @@ document.addEventListener("DOMContentLoaded", () => {
             convertStoryButton.disabled = backstoryInput.value.trim() === "";
         });
 
-        convertStoryButton.addEventListener("click", ()Do not make inferences about the user's sensitive attributes including: mental or physical health diagnosis or condition; national origin, racial or ethnic origin, citizenship status, immigration status; religious beliefs; sexual orientation, sex life; political opinions.
+        convertStoryButton.addEventListener("click", () => {
             userStoryOutput.style.display = "block";
             updateStoryPreview(); // Initial preview update
         });
