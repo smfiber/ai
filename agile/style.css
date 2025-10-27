@@ -259,29 +259,14 @@ textarea {
 }
 
 
-/* --- Module 1: Problem Finder --- */
-.finder-form {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 15px;
-}
+/* --- Module 1: Problem Finder (REMOVED) --- */
 
-@media (min-width: 600px) {
-    .finder-form {
-        grid-template-columns: 1fr 1fr; /* 2 columns on wider screens */
-    }
-}
 
+/* --- Module 2: Idea Generator --- */
 .generated-output {
     margin-top: 20px;
 }
 
-.generated-output textarea {
-    background-color: #f4f4f4;
-    font-family: "Courier New", Courier, monospace;
-}
-
-/* --- Module 2: Idea Generator --- */
 .generated-output-header {
     display: flex;
     justify-content: space-between;
@@ -318,16 +303,37 @@ textarea {
     border: 1px solid #ccc;
     border-radius: 5px;
     padding: 10px 12px;
-    min-height: 150px;
-    max-height: 400px;
-    overflow-y: auto;
 }
 
-.generated-html-output p {
-    margin: 0 0 1em 0;
+/* New styles for individual ideas */
+.generated-idea-item {
+    padding: 12px;
+    border-bottom: 1px dashed var(--medium-gray);
+    position: relative;
 }
-.generated-html-output p:last-child {
+
+.generated-idea-item:last-child {
+    border-bottom: none;
+}
+
+.generated-idea-item p {
+    margin: 0 0 0.5em 0;
+}
+
+.generated-idea-item p:last-child {
     margin-bottom: 0;
+}
+
+.generated-idea-item .copy-button {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    opacity: 0.2;
+    transition: opacity 0.2s;
+}
+
+.generated-idea-item:hover .copy-button {
+    opacity: 1;
 }
 
 
