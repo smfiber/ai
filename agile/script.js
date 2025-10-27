@@ -559,7 +559,7 @@ document.addEventListener("DOMContentLoaded", () => {
             });
         });
 
-        generateBackBstoryButton.addEventListener("click", () => {
+        generateBackstoryButton.addEventListener("click", () => {
             const system = systemSelect.value;
             const task = taskSelect.value;
             const problem = problemSelect.value;
