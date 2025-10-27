@@ -8,8 +8,9 @@ document.addEventListener("DOMContentLoaded", () => {
         firebaseConfig: null
     };
 
-    // Firebase instance
+    // Firebase instances
     let db;
+    let auth;
     // Data is now stored as arrays of objects { id: "...", name: "..." }
     let fetchedTechnologies = [];
     let fetchedFunctions = [];
@@ -25,9 +26,14 @@ document.addEventListener("DOMContentLoaded", () => {
     const geminiApiKeyInput = document.getElementById("gemini-api-key");
     const gCloudClientIdInput = document.getElementById("gcloud-client-id");
     const firebaseConfigInput = document.getElementById("firebase-config");
+    const googleSignInButton = document.getElementById("google-signin-button");
 
     // Main App Content
     const appContent = document.getElementById("app-content");
+    const userInfoDisplay = document.getElementById("user-info");
+    const userEmailDisplay = document.getElementById("user-email");
+    const signOutButton = document.getElementById("sign-out-button");
+
 
     // CRUD Modal Elements
     const manageDataButton = document.getElementById("manage-data-button");
@@ -105,7 +111,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // --- Helper Functions ---
 
     /**
-     * Initializes the Firebase app and Firestore.
+     * Initializes the Firebase app, Firestore, and Auth.
      * @param {object} firebaseConfig - The Firebase config object.
      */
     function initializeFirebase(firebaseConfig) {
@@ -115,15 +121,66 @@ document.addEventListener("DOMContentLoaded", () => {
                 firebase.initializeApp(firebaseConfig);
             }
             db = firebase.firestore();
+            auth = firebase.auth();
             console.log("Firebase initialized successfully.");
             
-            // Now that Firebase is ready, fetch data
-            refreshAllData(); // Initial data load
+            // Now that Firebase is ready, set up auth listeners
+            setupAuthListeners();
+            // Enable the sign-in button
+            googleSignInButton.disabled = false;
 
         } catch (e) {
             console.error("Error initializing Firebase: ", e);
             alert("Could not initialize Firebase. Please check your config and console for errors.");
         }
+    }
+
+    /**
+     * Sets up the Firebase Auth state change listener.
+     */
+    function setupAuthListeners() {
+        if (!auth) return;
+
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                // User is signed in
+                console.log("User signed in:", user.email);
+                // Hide modal and scrim, show app content
+                apiKeyModal.style.display = "none";
+                appScrim.style.display = "none";
+                appContent.style.display = "block";
+                manageDataButton.style.display = "block";
+                
+                // Show user info
+                userEmailDisplay.textContent = user.email;
+                userInfoDisplay.style.display = "flex";
+
+                // Fetch Firestore data *after* user is logged in
+                refreshAllData();
+
+            } else {
+                // User is signed out
+                console.log("User signed out.");
+                // Show modal and scrim, hide app content
+                apiKeyModal.style.display = "flex";
+                appScrim.style.display = "block";
+                appContent.style.display = "none";
+                manageDataButton.style.display = "none";
+                
+                // Hide user info
+                userInfoDisplay.style.display = "none";
+                userEmailDisplay.textContent = "";
+
+                // Clear any fetched data
+                fetchedTechnologies = [];
+                fetchedFunctions = [];
+                populateSelect(systemSelect, [], "-- Login to load systems --");
+                populateSelect(technologySelect, [], "-- Login to load systems --");
+                populateSelect(categorySelect, [], "-- Login to load functions --");
+                populateCrudList(technologiesList, "technologies", []);
+                populateCrudList(functionsList, "teamFunctions", []);
+            }
+        });
     }
 
     /**
@@ -286,6 +343,33 @@ document.addEventListener("DOMContentLoaded", () => {
         storyPreviewText.innerHTML = `<strong>As a</strong> ${asA}, <strong>I want</strong> ${iWant}, <strong>so that</strong> ${soThat}.`;
     }
 
+    // --- Auth Functions ---
+    
+    /**
+     * Handles the Google Sign-In popup flow.
+     */
+    function handleGoogleSignIn() {
+        if (!auth) {
+            alert("Firebase Auth is not initialized.");
+            return;
+        }
+        const provider = new firebase.auth.GoogleAuthProvider();
+        auth.signInWithPopup(provider).catch((error) => {
+            console.error("Google Sign-In Error:", error);
+            alert(`Could not sign in with Google. Error: ${error.message}`);
+        });
+    }
+
+    /**
+     * Handles the user sign-out flow.
+     */
+    function handleSignOut() {
+        if (auth) {
+            auth.signOut();
+        }
+    }
+
+
     // --- CRUD Functions ---
 
     /**
@@ -421,15 +505,15 @@ document.addEventListener("DOMContentLoaded", () => {
             appKeys.gCloudClientId = gCloudClientIdInput.value;
             appKeys.firebaseConfig = fbConfigParsed;
 
-            // Hide modal and scrim, show app content and FAB
-            apiKeyModal.style.display = "none";
-            appScrim.style.display = "none";
-            appContent.style.display = "block";
-            manageDataButton.style.display = "block";
-                
-            // Initialize Firebase
+            // DO NOT hide modal. Instead, initialize Firebase which enables the sign-in button.
+            // The auth listener will hide the modal upon successful sign-in.
             initializeFirebase(appKeys.firebaseConfig);
         });
+
+        // --- Auth Button Listeners ---
+        googleSignInButton.addEventListener("click", handleGoogleSignIn);
+        signOutButton.addEventListener("click", handleSignOut);
+
 
         // --- CRUD Modal Logic ---
         manageDataButton.addEventListener("click", () => {
@@ -553,7 +637,7 @@ document.addEventListener("DOMContentLoaded", () => {
             convertStoryButton.disabled = backstoryInput.value.trim() === "";
         });
 
-        convertStoryButton.addEventListener("click", () => {
+        convertStoryButton.addEventListener("click", ()Do not make inferences about the user's sensitive attributes including: mental or physical health diagnosis or condition; national origin, racial or ethnic origin, citizenship status, immigration status; religious beliefs; sexual orientation, sex life; political opinions.
             userStoryOutput.style.display = "block";
             updateStoryPreview(); // Initial preview update
         });
