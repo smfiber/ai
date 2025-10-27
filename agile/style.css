@@ -282,7 +282,53 @@ textarea {
 }
 
 /* --- Module 2: Idea Generator --- */
-/* (No specific styles needed) */
+.generated-output-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.generated-output-header label {
+    font-weight: 600;
+    color: #555;
+}
+
+.copy-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: var(--medium-gray);
+    color: var(--text-color);
+    border: none;
+    padding: 6px 10px;
+    border-radius: 5px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.copy-button:hover {
+    background-color: #d3d9df;
+}
+
+.generated-html-output {
+    background-color: #f4f4f4;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    padding: 10px 12px;
+    min-height: 150px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.generated-html-output p {
+    margin: 0 0 1em 0;
+}
+.generated-html-output p:last-child {
+    margin-bottom: 0;
+}
 
 
 /* --- Module 3: Story Converter --- */
