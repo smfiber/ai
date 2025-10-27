@@ -60,7 +60,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const generateAiIdeasButton = document.getElementById("generate-ai-ideas-button");
     const clearAiIdeasButton = document.getElementById("clear-ai-ideas-button");
     const generatedAiIdeasOutput = document.getElementById("generated-ai-ideas-output");
-    const generatedAiIdeasTextarea = document.getElementById("generated-ai-ideas-textarea");
+    const generatedAiIdeasHtml = document.getElementById("generated-ai-ideas-html");
+    const copyAiIdeasButton = document.getElementById("copy-ai-ideas-button");
 
 
     // Module 3 (Story Converter) Elements
@@ -255,9 +256,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const API_URL = `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-pro:generateContent?key=${appKeys.geminiApiKey}`;
 
-        generatedAiIdeasTextarea.value = "Generating... Please wait.";
+        generatedAiIdeasHtml.innerHTML = "<p>Generating... Please wait.</p>";
         generatedAiIdeasOutput.style.display = "block";
         clearAiIdeasButton.style.display = "inline-flex";
+        copyAiIdeasButton.style.display = "none"; // Hide copy button while generating
         generateAiIdeasButton.disabled = true;
 
         try {
@@ -280,11 +282,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
             const data = await response.json();
             const generatedText = data.candidates[0].content.parts[0].text;
-            generatedAiIdeasTextarea.value = generatedText.trim();
+            generatedAiIdeasHtml.innerHTML = marked.parse(generatedText.trim());
+            copyAiIdeasButton.style.display = "inline-flex"; // Show copy button
 
         } catch (e) {
             console.error("Error calling Gemini API:", e);
-            generatedAiIdeasTextarea.value = `Error generating content. Please check the console.\n\n${e.message}`;
+            generatedAiIdeasHtml.innerHTML = `<p>Error generating content. Please check the console.</p><p><strong>${e.message}</strong></p>`;
         } finally {
             // Re-enable button only if both selects are still valid
             generateAiIdeasButton.disabled = (technologySelect.value === "" || categorySelect.value === "");
@@ -623,12 +626,27 @@ document.addEventListener("DOMContentLoaded", () => {
         });
 
         clearAiIdeasButton.addEventListener("click", () => {
-            generatedAiIdeasTextarea.value = "";
+            generatedAiIdeasHtml.innerHTML = "";
             generatedAiIdeasOutput.style.display = "none";
             clearAiIdeasButton.style.display = "none";
+            copyAiIdeasButton.style.display = "none";
             technologySelect.selectedIndex = 0; // Reset dropdowns
             categorySelect.selectedIndex = 0;
             generateAiIdeasButton.disabled = true; // Disable button
+        });
+
+        copyAiIdeasButton.addEventListener("click", () => {
+            const textToCopy = generatedAiIdeasHtml.innerText;
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                const originalText = copyAiIdeasButton.querySelector("span").textContent;
+                copyAiIdeasButton.querySelector("span").textContent = "Copied!";
+                setTimeout(() => {
+                    copyAiIdeasButton.querySelector("span").textContent = originalText;
+                }, 2000);
+            }).catch(err => {
+                console.error("Failed to copy text: ", err);
+                alert("Failed to copy text. See console for details.");
+            });
         });
 
 
@@ -637,7 +655,7 @@ document.addEventListener("DOMContentLoaded", () => {
             convertStoryButton.disabled = backstoryInput.value.trim() === "";
         });
 
-            convertStoryButton.addEventListener("click", () => {
+        convertStoryButton.addEventListener("click", () => {
             userStoryOutput.style.display = "block";
             updateStoryPreview(); // Initial preview update
         });
