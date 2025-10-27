@@ -26,6 +26,11 @@ body {
     margin: 0 auto;
 }
 
+/* --- Utility Classes --- */
+.hidden {
+    display: none;
+}
+
 /* --- Modal & Overlay Styles --- */
 .modal-overlay {
     position: fixed;
