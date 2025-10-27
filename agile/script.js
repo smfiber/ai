@@ -637,7 +637,7 @@ document.addEventListener("DOMContentLoaded", () => {
             convertStoryButton.disabled = backstoryInput.value.trim() === "";
         });
 
-s        convertStoryButton.addEventListener("click", () => {
+            convertStoryButton.addEventListener("click", () => {
             userStoryOutput.style.display = "block";
             updateStoryPreview(); // Initial preview update
         });
