@@ -45,16 +45,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const addFunctionButton = document.getElementById("add-function-button");
     const technologiesList = document.getElementById("technologies-list");
 
-    // Module 1 (Problem Finder) Elements
-    const systemSelect = document.getElementById("system-select");
-    const taskSelect = document.getElementById("task-select");
-    const problemSelect = document.getElementById("problem-select");
-    const impactSelect = document.getElementById("impact-select");
-    const generateBackstoryButton = document.getElementById("generate-backstory-button");
-    const clearFinderButton = document.getElementById("clear-finder-button");
-    const generatedBackstoryOutput = document.getElementById("generated-backstory-output");
-    const generatedBackstoryTextarea = document.getElementById("generated-backstory-textarea");
-
     // Module 2 (Idea Generator) Elements
     const technologySelect = document.getElementById("technology-select");
     const categorySelect = document.getElementById("category-select"); // This ID is re-used for "Team Function"
@@ -62,7 +52,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const clearAiIdeasButton = document.getElementById("clear-ai-ideas-button");
     const generatedAiIdeasOutput = document.getElementById("generated-ai-ideas-output");
     const generatedAiIdeasHtml = document.getElementById("generated-ai-ideas-html");
-    const copyAiIdeasButton = document.getElementById("copy-ai-ideas-button");
 
 
     // Module 3 (Story Converter) Elements
@@ -74,40 +63,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const storyIWant = document.getElementById("story-i-want");
     const storySoThat = document.getElementById("story-so-that");
     const storyPreviewText = document.getElementById("story-preview-text");
-
-
-    // --- Data for Modules ---
-
-    const problemFinderData = {
-        // systems: This is now populated from Firestore
-        tasks: [
-            "Provisioning a new (VM, user, share)",
-            "Running monthly patching",
-            "Troubleshooting a performance issue",
-            "Performing a backup or restore",
-            "Running a compliance/audit report",
-            "Hardware maintenance/firmware updates",
-            "Certificate renewal"
-        ],
-        problems: [
-            "It's 100% manual",
-            "It's slow and blocks other work",
-            "It's error-prone / easy to miss a step",
-            "It requires logging into multiple systems",
-            "The documentation is missing or wrong",
-            "It fails silently without alerts",
-            "It's overly complex"
-        ],
-        impacts: [
-            "wastes X hours per week/month",
-            "creates a security or compliance risk",
-            "could cause an outage or downtime",
-            "leads to alert fatigue",
-            "is frustrating for me and my team",
-            "prevents us from working on project goals",
-            "results in inconsistent configurations"
-        ]
-    };
 
 
     // --- Helper Functions ---
@@ -175,7 +130,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 // Clear any fetched data
                 fetchedTechnologies = [];
-                populateSelect(systemSelect, [], "-- Login to load systems --");
                 populateSelect(technologySelect, [], "-- Login to load systems --");
                 populateSelect(categorySelect, [], "-- Login to load functions --", true); // Disable function select
                 populateCrudList(technologiesList, []);
@@ -204,7 +158,6 @@ document.addEventListener("DOMContentLoaded", () => {
             fetchedTechnologies = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             
             // Populate app dropdowns
-            populateSelect(systemSelect, fetchedTechnologies, "-- Select a system --");
             populateSelect(technologySelect, fetchedTechnologies, "-- Select a technology --");
             // Populate CRUD list
             populateCrudList(technologiesList, fetchedTechnologies);
@@ -215,7 +168,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
         } catch (e) {
             console.error("Error fetching technologies from Firestore: ", e);
-            systemSelect.innerHTML = '<option value="" disabled selected>-- Error loading systems --</option>';
             technologySelect.innerHTML = '<option value="" disabled selected>-- Error loading systems --</option>';
             // Do not alert, console error is sufficient
         }
@@ -236,7 +188,6 @@ document.addEventListener("DOMContentLoaded", () => {
         generatedAiIdeasHtml.innerHTML = "<p>Generating... Please wait.</p>";
         generatedAiIdeasOutput.style.display = "block";
         clearAiIdeasButton.style.display = "inline-flex";
-        copyAiIdeasButton.style.display = "none"; // Hide copy button while generating
         generateAiIdeasButton.disabled = true;
 
         try {
@@ -259,8 +210,32 @@ document.addEventListener("DOMContentLoaded", () => {
 
             const data = await response.json();
             const generatedText = data.candidates[0].content.parts[0].text;
-            generatedAiIdeasHtml.innerHTML = marked.parse(generatedText.trim());
-            copyAiIdeasButton.style.display = "inline-flex"; // Show copy button
+            
+            // --- New logic for individual ideas and copy buttons ---
+            generatedAiIdeasHtml.innerHTML = ""; // Clear "Generating..."
+            
+            // Split ideas by one or more blank lines
+            const ideas = generatedText.trim().split(/\n\s*\n/);
+            
+            ideas.forEach(ideaText => {
+                const ideaDiv = document.createElement("div");
+                ideaDiv.className = "generated-idea-item";
+                
+                // Use marked.parse for the idea text
+                const ideaHtml = marked.parse(ideaText.trim());
+                
+                // Add the copy button
+                ideaDiv.innerHTML = `
+                    <button class="copy-button individual-copy-button" title="Copy to clipboard">
+                        <svg xmlns="http://www.w3.org/2000/svg" height="16" viewBox="0 0 24 24" width="16" fill="currentColor"><path d="M0 0h24v24H0z" fill="none"/><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+                        <span>Copy</span>
+                    </button>
+                    <div class="idea-content">${ideaHtml}</div>
+                `;
+                
+                generatedAiIdeasHtml.appendChild(ideaDiv);
+            });
+
 
         } catch (e) {
             console.error("Error calling Gemini API:", e);
@@ -620,38 +595,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
 
 
-        // --- Module 1: Problem Finder Logic ---
-        populateSelect(taskSelect, problemFinderData.tasks.map(t => ({id: t, name: t})), "-- Select a task --");
-        populateSelect(problemSelect, problemFinderData.problems.map(p => ({id: p, name: p})), "-- Select a problem --");
-        populateSelect(impactSelect, problemFinderData.impacts.map(i => ({id: i, name: i})), "-- Select an impact --");
-
-        const finderInputs = [systemSelect, taskSelect, problemSelect, impactSelect];
-        
-        finderInputs.forEach(input => {
-            input.addEventListener("change", () => {
-                const allFilled = finderInputs.every(i => i.value !== "");
-                generateBackstoryButton.disabled = !allFilled;
-            });
-        });
-
-        generateBackstoryButton.addEventListener("click", () => {
-            const system = systemSelect.value;
-            const task = taskSelect.value;
-            const problem = problemSelect.value;
-            const impact = impactSelect.value;
-            
-            const backstory = `The task of "${task}" on our "${system}" is a problem. The main issue is that "${problem}". This ${impact}.`;
-            
-            generatedBackstoryTextarea.value = backstory;
-            generatedBackstoryOutput.style.display = "block";
-        });
-
-        clearFinderButton.addEventListener("click", () => {
-            finderInputs.forEach(input => input.selectedIndex = 0);
-            generateBackstoryButton.disabled = true;
-            generatedBackstoryOutput.style.display = "none";
-            generatedBackstoryTextarea.value = "";
-        });
+        // --- Module 1: (REMOVED) ---
 
 
         // --- Module 2: Idea Generator Logic ---
@@ -714,7 +658,6 @@ document.addEventListener("DOMContentLoaded", () => {
             generatedAiIdeasHtml.innerHTML = "";
             generatedAiIdeasOutput.style.display = "none";
             clearAiIdeasButton.style.display = "none";
-            copyAiIdeasButton.style.display = "none";
             technologySelect.selectedIndex = 0; // Reset dropdowns
             
             // Reset and disable the category select
@@ -723,13 +666,19 @@ document.addEventListener("DOMContentLoaded", () => {
             generateAiIdeasButton.disabled = true; // Disable button
         });
 
-        copyAiIdeasButton.addEventListener("click", () => {
-            const textToCopy = generatedAiIdeasHtml.innerText;
-            navigator.clipboard.writeText(textToCopy).then(() => {
-                const originalText = copyAiIdeasButton.querySelector("span").textContent;
-                copyAiIdeasButton.querySelector("span").textContent = "Copied!";
+        // Event delegation for individual copy buttons
+        generatedAiIdeasHtml.addEventListener("click", (e) => {
+            const target = e.target.closest(".individual-copy-button");
+            if (!target) return;
+
+            // Find the text content of the idea
+            const ideaContent = target.closest(".generated-idea-item").querySelector(".idea-content").innerText;
+            
+            navigator.clipboard.writeText(ideaContent).then(() => {
+                const originalText = target.querySelector("span").textContent;
+                target.querySelector("span").textContent = "Copied!";
                 setTimeout(() => {
-                    copyAiIdeasButton.querySelector("span").textContent = originalText;
+                    target.querySelector("span").textContent = originalText;
                 }, 2000);
             }).catch(err => {
                 console.error("Failed to copy text: ", err);
