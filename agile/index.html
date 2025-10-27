@@ -124,8 +124,14 @@
                 </div>
 
                 <div id="generated-ai-ideas-output" class="generated-output" style="display: none;">
-                    <label>Generated AI Ideas:</label>
-                    <textarea id="generated-ai-ideas-textarea" rows="10" readonly></textarea>
+                    <div class="generated-output-header">
+                        <label>Generated AI Ideas:</label>
+                        <button id="copy-ai-ideas-button" class="copy-button" title="Copy to clipboard" style="display: none;">
+                            <svg xmlns="http://www.w3.org/2000/svg" height="16" viewBox="0 0 24 24" width="16" fill="currentColor"><path d="M0 0h24v24H0z" fill="none"/><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+                            <span>Copy</span>
+                        </button>
+                    </div>
+                    <div id="generated-ai-ideas-html" class="generated-html-output"></div>
                 </div>
 
                 
@@ -245,6 +251,8 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
     <script src="script.js"></script>
 </body>
