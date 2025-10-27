@@ -104,12 +104,35 @@ body {
 .app-header {
     text-align: center;
     margin-bottom: 30px;
+    position: relative;
 }
 
 .app-header h1 {
     color: #222;
     font-weight: 600;
 }
+
+#user-info {
+    position: absolute;
+    top: 0;
+    right: 0;
+    font-size: 0.9rem;
+    color: var(--dark-gray);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #fff;
+    padding: 8px 12px;
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+}
+
+#user-info #sign-out-button {
+    font-size: 0.85rem;
+    padding: 4px 8px;
+    font-weight: 500;
+}
+
 
 /* --- Form Group Styling (Used by all forms) --- */
 .form-group {
@@ -197,6 +220,20 @@ textarea {
 .clear-button:hover {
     background-color: var(--danger-hover);
 }
+
+.google-signin-button {
+    background-color: #4285F4;
+    color: white;
+    margin-top: 15px;
+}
+.google-signin-button:hover {
+    background-color: #357ae8;
+}
+.google-signin-button:disabled {
+    background-color: #aaa;
+    cursor: not-allowed;
+}
+
 
 /* --- Floating Action Button --- */
 .floating-action-button {
