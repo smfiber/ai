@@ -40,6 +40,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const closeCrudModalButton = document.getElementById("close-crud-modal-button");
     const newItemNameInput = document.getElementById("new-item-name");
     const newItemCollectionSelect = document.getElementById("new-item-collection");
+    const newItemTechnologiesGroup = document.getElementById("new-item-technologies-group");
+    const newItemTechnologiesInput = document.getElementById("new-item-technologies");
     const addItemButton = document.getElementById("add-item-button");
     const technologiesList = document.getElementById("technologies-list");
     const functionsList = document.getElementById("functions-list");
@@ -177,7 +179,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 fetchedFunctions = [];
                 populateSelect(systemSelect, [], "-- Login to load systems --");
                 populateSelect(technologySelect, [], "-- Login to load systems --");
-                populateSelect(categorySelect, [], "-- Login to load functions --");
+                populateSelect(categorySelect, [], "-- Login to load functions --", true); // Disable function select
                 populateCrudList(technologiesList, "technologies", []);
                 populateCrudList(functionsList, "teamFunctions", []);
             }
@@ -229,17 +231,18 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         try {
             const querySnapshot = await db.collection("teamFunctions").orderBy("name").get();
+            // Now fetching the technologies array as well
             fetchedFunctions = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             
-            // Populate app dropdown
-            populateSelect(categorySelect, fetchedFunctions, "-- Select a function --");
+            // Populate app dropdown (will be empty, but this sets the disabled state correctly)
+            populateSelect(categorySelect, [], "-- Select a technology first --", true);
             // Populate CRUD list
             populateCrudList(functionsList, "teamFunctions", fetchedFunctions);
             console.log("Fetched functions:", fetchedFunctions);
 
         } catch (e) {
             console.error("Error fetching functions from Firestore: ", e);
-            categorySelect.innerHTML = '<option value="" disabled selected>-- Error loading functions --</option>';
+            populateSelect(categorySelect, [], "-- Error loading functions --", true);
             // Do not alert, console error is sufficient
         }
     }
@@ -299,9 +302,12 @@ document.addEventListener("DOMContentLoaded", () => {
      * @param {HTMLSelectElement} selectElement - The <select> element to populate.
      * @param {object[]} options - An array of objects, e.g., { id: "...", name: "..." }.
      * @param {string} placeholder - The placeholder text (e.g., "-- Select an option --").
+     * @param {boolean} [disabled=false] - Whether to disable the select element.
      */
-    function populateSelect(selectElement, options, placeholder) {
+    function populateSelect(selectElement, options, placeholder, disabled = false) {
         selectElement.innerHTML = `<option value="" disabled selected>${placeholder}</option>`; // Clear old options
+        selectElement.disabled = disabled;
+        
         options.forEach(option => {
             const opt = document.createElement("option");
             // We set the value to the name, as this is what the AI prompt expects
@@ -325,9 +331,15 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         data.forEach(item => {
             const li = document.createElement("li");
+            // Build the display text, including the technologies list if it's a teamFunction
+            let itemText = `<span>${item.name}</span>`;
+            if (collectionName === "teamFunctions" && item.technologies && item.technologies.length > 0) {
+                itemText += `<small style="display: block; color: #555;">Applies to: ${item.technologies.join(', ')}</small>`;
+            }
+
             li.innerHTML = `
-                <span>${item.name}</span>
-                <div class="item-controls">
+                <div style="flex-grow: 1; word-break: break-all;">${itemText}</div>
+                <div class="item-controls" style="flex-shrink: 0;">
                     <button class="edit-button" data-id="${item.id}" data-collection="${collectionName}" data-name="${item.name}">Edit</button>
                     <button class="delete-button" data-id="${item.id}" data-collection="${collectionName}" data-name="${item.name}">Delete</button>
                 </div>
@@ -390,10 +402,23 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
+        let newItem = { name: name };
+
+        // If it's a teamFunction, get the technologies array
+        if (collection === "teamFunctions") {
+            const techString = newItemTechnologiesInput.value.trim();
+            // Split by comma, map to trim whitespace, and filter out empty strings
+            const techArray = techString.split(',')
+                                      .map(t => t.trim())
+                                      .filter(t => t.length > 0);
+            newItem.technologies = techArray;
+        }
+
         try {
-            await db.collection(collection).add({ name: name });
+            await db.collection(collection).add(newItem);
             console.log(`Added "${name}" to "${collection}"`);
-            newItemNameInput.value = ""; // Clear input
+            newItemNameInput.value = ""; // Clear inputs
+            newItemTechnologiesInput.value = "";
             
             // Refresh the specific list that was changed
             if (collection === "technologies") {
@@ -414,6 +439,7 @@ document.addEventListener("DOMContentLoaded", () => {
      * @param {string} oldName - The current name (for the prompt).
      */
     async function handleEditItem(collection, id, oldName) {
+        // TODO: Add logic here to also edit the technologies array if collection === "teamFunctions"
         const newName = prompt(`Enter a new name for "${oldName}":`, oldName);
         if (!newName || newName.trim() === "" || newName === oldName) {
             return; // User cancelled or didn't change the name
@@ -531,10 +557,21 @@ document.addEventListener("DOMContentLoaded", () => {
 
         addItemButton.addEventListener("click", handleAddItem);
 
+        // Show/hide the "Applicable Technologies" field based on collection selection
+        newItemCollectionSelect.addEventListener("change", () => {
+            if (newItemCollectionSelect.value === "teamFunctions") {
+                newItemTechnologiesGroup.classList.remove("hidden");
+            } else {
+                newItemTechnologiesGroup.classList.add("hidden");
+            }
+        });
+
         // Event delegation for Edit/Delete buttons
         [technologiesList, functionsList].forEach(list => {
             list.addEventListener("click", (e) => {
-                const target = e.target;
+                const target = e.target.closest("button"); // Find the button clicked
+                if (!target) return; // Didn't click a button
+
                 const id = target.dataset.id;
                 const collection = target.dataset.collection;
                 const name = target.dataset.name;
@@ -584,11 +621,28 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // --- Module 2: Idea Generator Logic ---
         const module2Selects = [technologySelect, categorySelect];
-        module2Selects.forEach(select => {
-            select.addEventListener("change", () => {
-                const allFilled = module2Selects.every(s => s.value !== "");
-                generateAiIdeasButton.disabled = !allFilled;
+
+        // NEW: Add filtering logic for Team Functions
+        technologySelect.addEventListener("change", () => {
+            const selectedTech = technologySelect.value;
+            
+            // Filter the global functions list
+            const filteredFunctions = fetchedFunctions.filter(func => {
+                // Check if the function's technologies array includes the selected tech
+                // Also include functions with no/empty tech array (as "General")
+                return !func.technologies || func.technologies.length === 0 || func.technologies.includes(selectedTech);
             });
+
+            // Re-populate the category select
+            populateSelect(categorySelect, filteredFunctions, "-- Select a function --", false); // Enable it
+            
+            // Check button state
+            generateAiIdeasButton.disabled = (technologySelect.value === "" || categorySelect.value === "");
+        });
+
+        categorySelect.addEventListener("change", () => {
+             // Check button state
+            generateAiIdeasButton.disabled = (technologySelect.value === "" || categorySelect.value === "");
         });
 
         generateAiIdeasButton.addEventListener("click", () => {
@@ -631,7 +685,10 @@ document.addEventListener("DOMContentLoaded", () => {
             clearAiIdeasButton.style.display = "none";
             copyAiIdeasButton.style.display = "none";
             technologySelect.selectedIndex = 0; // Reset dropdowns
-            categorySelect.selectedIndex = 0;
+            
+            // Reset and disable the category select
+            populateSelect(categorySelect, [], "-- Select a technology first --", true);
+            
             generateAiIdeasButton.disabled = true; // Disable button
         });
 
