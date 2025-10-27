@@ -11,9 +11,9 @@ document.addEventListener("DOMContentLoaded", () => {
     // Firebase instances
     let db;
     let auth;
-    // Data is now stored as arrays of objects { id: "...", name: "..." }
+    // Data is now stored as an array of technology objects
+    // e.g., { id: "...", name: "...", functions: ["...", "..."] }
     let fetchedTechnologies = [];
-    let fetchedFunctions = [];
 
     // Modal & Scrim Elements
     const appScrim = document.getElementById("app-scrim");
@@ -39,12 +39,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const manageDataButton = document.getElementById("manage-data-button");
     const closeCrudModalButton = document.getElementById("close-crud-modal-button");
     const newItemNameInput = document.getElementById("new-item-name");
-    const newItemCollectionSelect = document.getElementById("new-item-collection");
-    const newItemTechnologiesGroup = document.getElementById("new-item-technologies-group");
-    const newItemTechnologiesInput = document.getElementById("new-item-technologies");
-    const addItemButton = document.getElementById("add-item-button");
+    const addTechnologyButton = document.getElementById("add-technology-button");
+    const addFunctionTechSelect = document.getElementById("add-function-tech-select");
+    const newFunctionNameInput = document.getElementById("new-function-name");
+    const addFunctionButton = document.getElementById("add-function-button");
     const technologiesList = document.getElementById("technologies-list");
-    const functionsList = document.getElementById("functions-list");
 
     // Module 1 (Problem Finder) Elements
     const systemSelect = document.getElementById("system-select");
@@ -176,12 +175,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 // Clear any fetched data
                 fetchedTechnologies = [];
-                fetchedFunctions = [];
                 populateSelect(systemSelect, [], "-- Login to load systems --");
                 populateSelect(technologySelect, [], "-- Login to load systems --");
                 populateSelect(categorySelect, [], "-- Login to load functions --", true); // Disable function select
-                populateCrudList(technologiesList, "technologies", []);
-                populateCrudList(functionsList, "teamFunctions", []);
+                populateCrudList(technologiesList, []);
+                populateSelect(addFunctionTechSelect, [], "-- Select a technology --");
             }
         });
     }
@@ -191,7 +189,6 @@ document.addEventListener("DOMContentLoaded", () => {
      */
     async function refreshAllData() {
         await fetchTechnologiesFromFirestore();
-        await fetchFunctionsFromFirestore();
     }
 
     /**
@@ -210,39 +207,16 @@ document.addEventListener("DOMContentLoaded", () => {
             populateSelect(systemSelect, fetchedTechnologies, "-- Select a system --");
             populateSelect(technologySelect, fetchedTechnologies, "-- Select a technology --");
             // Populate CRUD list
-            populateCrudList(technologiesList, "technologies", fetchedTechnologies);
+            populateCrudList(technologiesList, fetchedTechnologies);
+            // Populate CRUD modal dropdown
+            populateSelect(addFunctionTechSelect, fetchedTechnologies, "-- Select a technology --");
+            
             console.log("Fetched technologies:", fetchedTechnologies);
 
         } catch (e) {
             console.error("Error fetching technologies from Firestore: ", e);
             systemSelect.innerHTML = '<option value="" disabled selected>-- Error loading systems --</option>';
             technologySelect.innerHTML = '<option value="" disabled selected>-- Error loading systems --</option>';
-            // Do not alert, console error is sufficient
-        }
-    }
-
-    /**
-     * Fetches the list of team functions from the Firestore 'teamFunctions' collection.
-     */
-    async function fetchFunctionsFromFirestore() {
-        if (!db) {
-            console.error("Firestore is not initialized.");
-            return;
-        }
-        try {
-            const querySnapshot = await db.collection("teamFunctions").orderBy("name").get();
-            // Now fetching the technologies array as well
-            fetchedFunctions = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            
-            // Populate app dropdown (will be empty, but this sets the disabled state correctly)
-            populateSelect(categorySelect, [], "-- Select a technology first --", true);
-            // Populate CRUD list
-            populateCrudList(functionsList, "teamFunctions", fetchedFunctions);
-            console.log("Fetched functions:", fetchedFunctions);
-
-        } catch (e) {
-            console.error("Error fetching functions from Firestore: ", e);
-            populateSelect(categorySelect, [], "-- Error loading functions --", true);
             // Do not alert, console error is sufficient
         }
     }
@@ -300,7 +274,7 @@ document.addEventListener("DOMContentLoaded", () => {
     /**
      * Populates a <select> element with options from an array of objects.
      * @param {HTMLSelectElement} selectElement - The <select> element to populate.
-     * @param {object[]} options - An array of objects, e.g., { id: "...", name: "..." }.
+     * @param {object[]} options - An array of objects, e.g., { id: "...", name: "..." } or simple strings.
      * @param {string} placeholder - The placeholder text (e.g., "-- Select an option --").
      * @param {boolean} [disabled=false] - Whether to disable the select element.
      */
@@ -310,39 +284,73 @@ document.addEventListener("DOMContentLoaded", () => {
         
         options.forEach(option => {
             const opt = document.createElement("option");
-            // We set the value to the name, as this is what the AI prompt expects
-            opt.value = option.name;
-            opt.textContent = option.name;
+            
+            if (typeof option === 'string') {
+                opt.value = option;
+                opt.textContent = option;
+            } else {
+                // Assumes object with { id: "...", name: "..." }
+                // We use the ID for value in the CRUD select, but name for the main app
+                if (selectElement.id === 'add-function-tech-select') {
+                    opt.value = option.id; // Use Firestore ID for the CRUD selector
+                } else {
+                    opt.value = option.name; // Use name for main app selectors
+                }
+                opt.textContent = option.name;
+            }
             selectElement.appendChild(opt);
         });
     }
 
     /**
-     * Populates a <ul> in the CRUD modal with list items and buttons.
+     * Populates the <ul> in the CRUD modal with technologies and their nested functions.
      * @param {HTMLUListElement} listElement - The <ul> element to populate.
-     * @param {string} collectionName - The name of the Firestore collection (e.g., "technologies").
-     * @param {object[]} data - The array of data objects { id: "...", name: "..." }.
+     * @param {object[]} data - The array of technology objects.
      */
-    function populateCrudList(listElement, collectionName, data) {
+    function populateCrudList(listElement, data) {
         listElement.innerHTML = ""; // Clear old list
         if (data.length === 0) {
-            listElement.innerHTML = "<li>No items in this collection.</li>";
+            listElement.innerHTML = "<li>No technologies defined.</li>";
             return;
         }
-        data.forEach(item => {
-            const li = document.createElement("li");
-            // Build the display text, including the technologies list if it's a teamFunction
-            let itemText = `<span>${item.name}</span>`;
-            if (collectionName === "teamFunctions" && item.technologies && item.technologies.length > 0) {
-                itemText += `<small style="display: block; color: #555;">Applies to: ${item.technologies.join(', ')}</small>`;
-            }
 
+        data.forEach(tech => {
+            const li = document.createElement("li");
+            
+            // Create sublist of functions
+            let functionsHtml = '<ul class="function-sublist">';
+            if (tech.functions && tech.functions.length > 0) {
+                tech.functions.forEach(funcName => {
+                    functionsHtml += `
+                        <li>
+                            <span>${funcName}</span>
+                            <div class="item-controls">
+                                <button class="delete-button delete-function-button" 
+                                        data-tech-id="${tech.id}" 
+                                        data-func-name="${funcName}">Delete</button>
+                            </div>
+                        </li>
+                    `;
+                });
+            } else {
+                functionsHtml += '<li><small>No functions added yet.</small></li>';
+            }
+            functionsHtml += '</ul>';
+
+            // Create the main technology list item
             li.innerHTML = `
-                <div style="flex-grow: 1; word-break: break-all;">${itemText}</div>
-                <div class="item-controls" style="flex-shrink: 0;">
-                    <button class="edit-button" data-id="${item.id}" data-collection="${collectionName}" data-name="${item.name}">Edit</button>
-                    <button class="delete-button" data-id="${item.id}" data-collection="${collectionName}" data-name="${item.name}">Delete</button>
+                <div class="technology-item-header">
+                    <span>${tech.name}</span>
+                    <div class="item-controls">
+                        <button class="edit-button edit-tech-button" 
+                                data-id="${tech.id}" 
+                                data-name="${tech.name}">Edit</button>
+                        <button class="delete-button delete-tech-button" 
+                                data-id="${tech.id}" 
+                                data-name="${tech.name}">Delete</button>
+                    </div>
                 </div>
+                ${functionsHtml}
             `;
             listElement.appendChild(li);
         });
@@ -388,13 +396,12 @@ document.addEventListener("DOMContentLoaded", () => {
     // --- CRUD Functions ---
 
     /**
-     * Adds a new item to the selected Firestore collection.
+     * Adds a new technology document to Firestore.
      */
-    async function handleAddItem() {
+    async function handleAddTechnology() {
         const name = newItemNameInput.value.trim();
-        const collection = newItemCollectionSelect.value;
         if (!name) {
-            alert("Please enter an item name.");
+            alert("Please enter a technology name.");
             return;
         }
         if (!db) {
@@ -402,44 +409,61 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-        let newItem = { name: name };
-
-        // If it's a teamFunction, get the technologies array
-        if (collection === "teamFunctions") {
-            const techString = newItemTechnologiesInput.value.trim();
-            // Split by comma, map to trim whitespace, and filter out empty strings
-            const techArray = techString.split(',')
-                                      .map(t => t.trim())
-                                      .filter(t => t.length > 0);
-            newItem.technologies = techArray;
-        }
+        const newTechnology = { 
+            name: name,
+            functions: [] // Initialize with an empty functions array
+        };
 
         try {
-            await db.collection(collection).add(newItem);
-            console.log(`Added "${name}" to "${collection}"`);
-            newItemNameInput.value = ""; // Clear inputs
-            newItemTechnologiesInput.value = "";
-            
-            // Refresh the specific list that was changed
-            if (collection === "technologies") {
-                await fetchTechnologiesFromFirestore();
-            } else {
-                await fetchFunctionsFromFirestore();
-            }
+            await db.collection("technologies").add(newTechnology);
+            console.log(`Added technology "${name}"`);
+            newItemNameInput.value = ""; // Clear input
+            await fetchTechnologiesFromFirestore(); // Refresh all data
         } catch (e) {
-            console.error("Error adding item: ", e);
-            alert(`Could not add item. Error: ${e.message}`);
+            console.error("Error adding technology: ", e);
+            alert(`Could not add technology. Error: ${e.message}`);
         }
     }
 
     /**
-     * Updates an existing item's name in Firestore.
-     * @param {string} collection - The collection name ("technologies" or "teamFunctions").
+     * Adds a new function string to a technology's 'functions' array.
+     */
+    async function handleAddFunction() {
+        const techId = addFunctionTechSelect.value;
+        const funcName = newFunctionNameInput.value.trim();
+
+        if (!techId || !funcName) {
+            alert("Please select a technology and enter a function name.");
+            return;
+        }
+        if (!db) {
+            alert("Firestore is not initialized.");
+            return;
+        }
+
+        const techRef = db.collection("technologies").doc(techId);
+
+        try {
+            await techRef.update({
+                functions: firebase.firestore.FieldValue.arrayUnion(funcName)
+            });
+            console.log(`Added function "${funcName}" to tech ID "${techId}"`);
+            newFunctionNameInput.value = ""; // Clear input
+            addFunctionTechSelect.selectedIndex = 0;
+            addFunctionButton.disabled = true;
+            await fetchTechnologiesFromFirestore(); // Refresh all data
+        } catch (e) {
+            console.error("Error adding function: ", e);
+            alert(`Could not add function. Error: ${e.message}`);
+        }
+    }
+
+    /**
+     * Updates an existing technology's name in Firestore.
      * @param {string} id - The document ID.
      * @param {string} oldName - The current name (for the prompt).
      */
-    async function handleEditItem(collection, id, oldName) {
-        // TODO: Add logic here to also edit the technologies array if collection === "teamFunctions"
+    async function handleEditTechnology(id, oldName) {
         const newName = prompt(`Enter a new name for "${oldName}":`, oldName);
         if (!newName || newName.trim() === "" || newName === oldName) {
             return; // User cancelled or didn't change the name
@@ -450,29 +474,22 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         try {
-            await db.collection(collection).doc(id).update({ name: newName.trim() });
+            await db.collection("technologies").doc(id).update({ name: newName.trim() });
             console.log(`Updated "${oldName}" to "${newName}"`);
-
-            // Refresh the specific list that was changed
-            if (collection === "technologies") {
-                await fetchTechnologiesFromFirestore();
-            } else {
-                await fetchFunctionsFromFirestore();
-            }
+            await fetchTechnologiesFromFirestore(); // Refresh all data
         } catch (e) {
-            console.error("Error updating item: ", e);
-            alert(`Could not update item. Error: ${e.message}`);
+            console.error("Error updating technology: ", e);
+            alert(`Could not update technology. Error: ${e.message}`);
         }
     }
 
     /**
-     * Deletes an item from Firestore.
-     * @param {string} collection - The collection name.
+     * Deletes a technology document from Firestore.
      * @param {string} id - The document ID.
      * @param {string} name - The item name (for confirmation).
      */
-    async function handleDeleteItem(collection, id, name) {
-        if (!confirm(`Are you sure you want to delete "${name}"?`)) {
+    async function handleDeleteTechnology(id, name) {
+        if (!confirm(`Are you sure you want to delete the TECHNOLOGY "${name}"?\nThis will also delete ALL of its associated functions.`)) {
             return;
         }
         if (!db) {
@@ -481,18 +498,40 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         try {
-            await db.collection(collection).doc(id).delete();
-            console.log(`Deleted "${name}"`);
-            
-            // Refresh the specific list that was changed
-            if (collection === "technologies") {
-                await fetchTechnologiesFromFirestore();
-            } else {
-                await fetchFunctionsFromFirestore();
-            }
+            await db.collection("technologies").doc(id).delete();
+            console.log(`Deleted technology "${name}"`);
+            await fetchTechnologiesFromFirestore(); // Refresh all data
         } catch (e) {
-            console.error("Error deleting item: ", e);
-            alert(`Could not delete item. Error: ${e.message}`);
+            console.error("Error deleting technology: ", e);
+            alert(`Could not delete technology. Error: ${e.message}`);
+        }
+    }
+
+    /**
+     * Deletes a function string from a technology's 'functions' array.
+     * @param {string} techId - The technology document ID.
+     * @param {string} funcName - The function name string to remove.
+     */
+    async function handleDeleteFunction(techId, funcName) {
+        if (!confirm(`Are you sure you want to delete the FUNCTION "${funcName}"?`)) {
+            return;
+        }
+        if (!db) {
+            alert("Firestore is not initialized.");
+            return;
+        }
+
+        const techRef = db.collection("technologies").doc(techId);
+
+        try {
+            await techRef.update({
+                functions: firebase.firestore.FieldValue.arrayRemove(funcName)
+            });
+            console.log(`Deleted function "${funcName}" from tech ID "${techId}"`);
+            await fetchTechnologiesFromFirestore(); // Refresh all data
+        } catch (e) {
+            console.error("Error deleting function: ", e);
+            alert(`Could not delete function. Error: ${e.message}`);
         }
     }
 
@@ -555,33 +594,29 @@ document.addEventListener("DOMContentLoaded", () => {
             appScrim.style.display = "none";
         });
 
-        addItemButton.addEventListener("click", handleAddItem);
+        addTechnologyButton.addEventListener("click", handleAddTechnology);
+        addFunctionButton.addEventListener("click", handleAddFunction);
 
-        // Show/hide the "Applicable Technologies" field based on collection selection
-        newItemCollectionSelect.addEventListener("change", () => {
-            if (newItemCollectionSelect.value === "teamFunctions") {
-                newItemTechnologiesGroup.classList.remove("hidden");
-            } else {
-                newItemTechnologiesGroup.classList.add("hidden");
-            }
+        // Enable "Add Function" button only when both fields are filled
+        [addFunctionTechSelect, newFunctionNameInput].forEach(el => {
+            el.addEventListener("input", () => {
+                const allFilled = addFunctionTechSelect.value !== "" && newFunctionNameInput.value.trim() !== "";
+                addFunctionButton.disabled = !allFilled;
+            });
         });
 
-        // Event delegation for Edit/Delete buttons
-        [technologiesList, functionsList].forEach(list => {
-            list.addEventListener("click", (e) => {
-                const target = e.target.closest("button"); // Find the button clicked
-                if (!target) return; // Didn't click a button
+        // Event delegation for Edit/Delete buttons in the tech list
+        technologiesList.addEventListener("click", (e) => {
+            const target = e.target.closest("button"); // Find the button clicked
+            if (!target) return; // Didn't click a button
 
-                const id = target.dataset.id;
-                const collection = target.dataset.collection;
-                const name = target.dataset.name;
-
-                if (target.classList.contains("edit-button")) {
-                    handleEditItem(collection, id, name);
-                } else if (target.classList.contains("delete-button")) {
-                    handleDeleteItem(collection, id, name);
-                }
-            });
+            if (target.classList.contains("edit-tech-button")) {
+                handleEditTechnology(target.dataset.id, target.dataset.name);
+            } else if (target.classList.contains("delete-tech-button")) {
+                handleDeleteTechnology(target.dataset.id, target.dataset.name);
+            } else if (target.classList.contains("delete-function-button")) {
+                handleDeleteFunction(target.dataset.techId, target.dataset.funcName);
+            }
         });
 
 
@@ -620,24 +655,24 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
         // --- Module 2: Idea Generator Logic ---
-        const module2Selects = [technologySelect, categorySelect];
-
-        // NEW: Add filtering logic for Team Functions
+        // NEW: Add filtering logic for Team Functions based on selected Tech
         technologySelect.addEventListener("change", () => {
-            const selectedTech = technologySelect.value;
+            const selectedTechName = technologySelect.value;
             
-            // Filter the global functions list
-            const filteredFunctions = fetchedFunctions.filter(func => {
-                // Check if the function's technologies array includes the selected tech
-                // Also include functions with no/empty tech array (as "General")
-                return !func.technologies || func.technologies.length === 0 || func.technologies.includes(selectedTech);
-            });
+            // Find the selected technology object from the fetched data
+            const selectedTech = fetchedTechnologies.find(t => t.name === selectedTechName);
 
-            // Re-populate the category select
-            populateSelect(categorySelect, filteredFunctions, "-- Select a function --", false); // Enable it
+            let functions = [];
+            if (selectedTech && selectedTech.functions) {
+                functions = selectedTech.functions;
+            }
+            
+            // Re-populate the category select with the functions
+            const placeholder = functions.length > 0 ? "-- Select a function --" : "-- No functions defined --";
+            populateSelect(categorySelect, functions, placeholder, functions.length === 0); // Enable/disable
             
             // Check button state
-            generateAiIdeasButton.disabled = (technologySelect.value === "" || categorySelect.value === "");
+            generateAiIdeasButton.disabled = true; // Always disable on tech change, wait for func selection
         });
 
         categorySelect.addEventListener("change", () => {
@@ -651,10 +686,6 @@ document.addEventListener("DOMContentLoaded", () => {
             
             if (!selectedTech || !selectedFunction) {
                 alert("Please select both a technology and a team function.");
-                return;
-            }
-            if (fetchedTechnologies.length === 0 || fetchedFunctions.length === 0) {
-                alert("Data is still loading or is empty. Please wait or check Firestore.");
                 return;
             }
 
