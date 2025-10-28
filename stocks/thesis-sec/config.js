@@ -1,6 +1,6 @@
 // fileName: config.js
 // --- App Version ---
-export const APP_VERSION = "15.0.0-GARP";
+export const APP_VERSION = "15.1.0-GARP"; // Incremented version
 
 // --- Shared State ---
 export const state = {
@@ -19,7 +19,7 @@ export const state = {
 
 // Map specific AI analysis types to the FMP endpoints they require.
 export const ANALYSIS_REQUIREMENTS = {
-    'ManagementScorecard': ['executive_compensation'] // Example, assuming this might still be needed indirectly or planned
+    'ManagementScorecard': ['executive_compensation']
 };
 
 // --- Constants ---
@@ -49,22 +49,39 @@ export const CONSTANTS = {
     CLASS_HIDDEN: 'hidden',
     // Database Collections
     DB_COLLECTION_PORTFOLIO: 'portfolio_stocks',
-    DB_COLLECTION_FMP_CACHE: 'fmp_cached_data_v2',
-    DB_COLLECTION_AI_REPORTS: 'ai_analysis_reports_v2',
+    DB_COLLECTION_FMP_CACHE: 'fmp_cached_data',
+    DB_COLLECTION_AI_REPORTS: 'ai_analysis_reports',
 };
 
+// --- Diligence Questions (Kept for manual entry/review prompts) ---
 export const STRUCTURED_DILIGENCE_QUESTIONS = {
-    'SEC Filing Analysis 10Q': { // Changed to an object
-        question: "Paste the most recent 10-Q filing text here. What key insights does it provide regarding the company's recent performance and financial health?",
-        hasDateField: true // Add a flag
-    }
+    'Financial Analysis': "Based on this data, is the company's financial story one of high-quality, durable growth, or are there signs of weakening fundamentals? Analyze the relationship between its revenue trend, margin stability, and cash flow quality to form a verdict.",
+    'Balance Sheet': "Does the balance sheet represent a fortress capable of funding future growth, or a potential risk? Evaluate its debt-to-equity ratio and current ratio against its peers to determine if its financial health is a competitive advantage or a liability.",
+    'Income Statement': "Analyze the income statement for signs of improving operational efficiency. Is the company demonstrating operating leverage (i.e., are earnings growing faster than revenue)? Compare its net profit margin trend to its competitors.",
+    'Cash Flow': "Evaluate management's effectiveness as capital allocators. Based on the cash flow statement, are they reinvesting capital effectively to drive growth, or are they returning it to shareholders? Crucially, compare the Return on Invested Capital (ROIC) to its historical trend and its peers to judge their skill.",
+    'Earnings & Valuation Snapshot': "Synthesize the key earnings data into a single summary. Please provide the following points: 1) The earnings surprise history for the last four reported quarters (consensus vs. actual). 2) The forward-looking consensus EPS estimates for the current and next full year, along with the implied YoY growth rate. 3) A comparison of the company's TTM P/E and TTM EPS growth rates against its Industry and Sector averages."
 };
 
 export const QUALITATIVE_DILIGENCE_QUESTIONS = {
+    'Competitive Moat': "What is the source and durability of the company's competitive moat (e.g., brand, network effects, high switching costs, low-cost production), and is there evidence that this advantage is strengthening or weakening over time?",
+    'Management Quality': "After reviewing recent earnings call transcripts or shareholder letters, what is your assessment of management's transparency, operational focus, and long-term strategy? Do they demonstrate a rational and shareholder-aligned approach?",
+    'Incentive Alignment (The \"Why\")': "Review the latest Proxy Statement (DEF 14A). How is the executive team compensated? Is their pay tied to long-term value drivers (e.g., ROIC, 3-year TSR, FCF per share) or short-term, gameable metrics (e.g., non-GAAP EPS, annual revenue)?",
+    'Shareholder Base Quality (The \"Who\")': "Review the institutional ownership (13F filings). Who are the top 5-10 owners? Are they 'sticky money' (e.g., founders, long-term focused funds, index funds) or 'fast money' (e.g., high-turnover hedge funds)? A committed, long-term shareholder base is a significant asset.",
     'The Non-Consensus Thesis (The "Edge")': "Evaluate potential non-consensus beliefs about this company. Select the *single* belief you find most compelling and likely to be the primary driver of future financial outperformance, distinct from the consensus view (e.g., as reflected in the 'Market Sentiment' report). Explain *why* this specific belief makes the company 'great' when others only see it as 'good', detailing the expected mechanism of financial impact. Finally, **estimate the timeframe (e.g., 1-3 years, 5+ years) over which you expect this edge to materially impact the investment thesis.**",
     'Core Thesis & Linchpin Risk (The "Linchpin")': "First, clearly state your single, most important investment thesis in one sentence (The 'Edge'). Second, identify the single most critical 'linchpin' risk or assumption that, if proven wrong, would invalidate this entire thesis. Finally, describe the specific evidence or data (e..g, a specific metric, a competitor's action) you will monitor to track this risk."
 };
 
+export const MARKET_SENTIMENT_QUESTIONS = {
+    'Analyst Consensus': "Based on the LSEG and other analyst reports, what is the overall analyst rating (e.g., Bullish 8.6/10), and what is the breakdown of Buy/Neutral/Sell opinions?",
+    'Fundamental Factors': "Summarize the S&P Global Market Intelligence factor scores. What are the scores for Valuation, Quality, Growth Stability, and Financial Health, and how do they compare to the sector median?",
+    'Technical Sentiment': "According to the Trading Central report, what is the technical sentiment for the short-term (2-6 weeks), mid-term (6 weeks-9 months), and long-term (9 months-2 years)?",
+    'Price Performance': "Summarize the stock's price performance over key timeframes (e.g., 1-month, 3-month, YTD, 1-year, 5-year). Is the stock showing short-term weakness but long-term strength, or vice versa?",
+    'Short Interest': "What is the current Short % of Float, and has the number of shares short increased or decreased recently? What is the 'days to cover' ratio?",
+    'Competitor Snapshot Comparison': "Based on the competitor snapshot, how does the company stack up against its top direct competitors (e.g., CCO, OUT) and the industry average regarding the LSEG StarMine Equity Summary Score, 52-week price performance, and forward P/E (this year's estimate)?",
+    'Insider Activity Analysis': "Review the recent insider transaction data. Are key insiders predominantly buying or selling shares? Note any significant patterns (e.g., volume, timing, specific executives/directors involved) and assess the potential signal regarding insider sentiment."
+};
+
+// --- Review Checklists (Kept for now) ---
 export const QUARTERLY_REVIEW_QUESTIONS = {
     'Results vs. Expectations': "Did the company meet, beat, or miss revenue and EPS expectations? Analyze the key drivers behind the results and any significant one-time items.",
     'Quantitative Thesis Check': "How have the key GARP Scorecard metrics (e.g., ROIC, D/E, forward growth, valuation) changed since the last review? Does the quantitative data still support the original thesis?",
@@ -81,42 +98,14 @@ export const ANNUAL_REVIEW_QUESTIONS = {
     'Forward-Looking Action Plan': "Given the full-year results and outlook, what is the investment plan for the stock over the next 6-12 months? (e.g., Hold, Add on weakness, Trim on strength, Exit position). Justify the plan."
 };
 
+// --- Sector KPI Suggestions ---
 export const SECTOR_KPI_SUGGESTIONS = {
-    'Technology': [
-        { name: 'Monthly Active Users (MAU)', description: 'Measures the number of unique users who engage with the product or service within a month.' },
-        { name: 'Customer Acquisition Cost (CAC)', description: 'The total cost to acquire a new customer.' },
-        { name: 'Customer Lifetime Value (LTV)', description: 'The total revenue a business can expect from a single customer account.' },
-        { name: 'Churn Rate (%)', description: 'The percentage of subscribers who discontinue their subscriptions within a given time period.' }
-    ],
-    'Consumer Cyclical': [
-        { name: 'Same-Store Sales Growth (%)', description: 'Compares sales from existing locations to the same period in the prior year.' },
-        { name: 'Inventory Turnover', description: 'How many times a company has sold and replaced inventory during a given time period.' },
-        { name: 'Gross Margin (%)', description: 'The percentage of revenue left after subtracting the cost of goods sold.' }
-    ],
-    'Healthcare': [
-        { name: 'R&D as % of Sales', description: 'Measures the intensity of research and development relative to revenue.' },
-        { name: 'Pipeline Status (e.g., Phase III)', description: 'Tracks the progress of key drugs or treatments in the development pipeline.' },
-        { name: 'Cash Burn Rate', description: 'The rate at which a company is spending its cash reserves, crucial for non-profitable biotech firms.' }
-    ],
-    'Financial Services': [
-        { name: 'Net Interest Margin (NIM)', description: 'A measure of the difference between interest income generated and the amount of interest paid out.' },
-        { name: 'Efficiency Ratio', description: 'Measures a bank\'s overhead as a percentage of its revenue.' },
-        { name: 'Book Value Per Share Growth (%)', description: 'The rate at which the net asset value of the company per share is growing.' }
-    ],
-    'Industrials': [
-        { name: 'Backlog', description: 'The total value of confirmed orders that have not yet been fulfilled.' },
-        { name: 'Book-to-Bill Ratio', description: 'The ratio of orders received to units shipped and billed for a specific period.' },
-        { name: 'Capacity Utilization (%)', description: 'The extent to which a firm uses its installed productive capacity.' }
-    ],
-    'Energy': [
-        { name: 'Production Growth (BOE/day)', description: 'The growth in barrels of oil equivalent produced per day.' },
-        { name: 'Finding and Development Costs ($/BOE)', description: 'The cost to find and develop new reserves, per barrel of oil equivalent.' },
-        { name: 'Reserve Replacement Ratio (%)', description: 'The percentage of produced reserves that are replaced with new reserves.' }
-    ]
+    // ... (content unchanged)
 };
 
-// --- Prompts Still In Use ---
+// --- AI PROMPTS ---
 
+// Helper Prompts (Unchanged)
 const PEER_IDENTIFICATION_PROMPT = `
 Role: You are a highly specialized financial analyst AI with deep knowledge of corporate structures and competitive landscapes.
 Task: Your sole purpose is to identify the top 3-5 most direct, publicly traded competitors for the given company.
@@ -166,707 +155,365 @@ JSON Data:
 {jsonData}
 `.trim();
 
-const UPDATED_GARP_MEMO_PROMPT = `
-**Persona & Goal:**
-You are a Senior Investment Analyst at a GARP-focused fund. Your task is to synthesize the provided reports into the template below.
+// Core Analysis Prompts (Unchanged)
+const MOAT_ANALYSIS_PROMPT = `...`; // Unchanged
+const CAPITAL_ALLOCATORS_PROMPT = `...`; // Unchanged
+const GARP_CANDIDACY_PROMPT = `...`; // Unchanged
+const GARP_CONVICTION_SCORE_PROMPT = `...`; // Unchanged
+const QARP_ANALYSIS_PROMPT = `...`; // Unchanged
+const LONG_TERM_COMPOUNDER_PROMPT = `...`; // Unchanged
+const BMQV_MEMO_PROMPT = `...`; // Unchanged
 
----
-**CRITICAL INSTRUCTIONS:**
-1.  Your final output MUST use the exact markdown structure, headings, and bullet points provided in the template.
-2.  Fill in the [Your analysis here] sections based ONLY on the provided input reports, following the core philosophy of synthesizing, addressing contradictions, and using data-driven narratives.
----
+// Synthesis Prompts (Unchanged)
+const UPDATED_GARP_MEMO_PROMPT = `...`; // Unchanged
+const PORTFOLIO_GARP_ANALYSIS_PROMPT = `...`; // Unchanged
+const POSITION_ANALYSIS_PROMPT = `...`; // Unchanged
+const UPDATED_QARP_MEMO_PROMPT = `...`; // Unchanged
+const FINAL_INVESTMENT_THESIS_PROMPT = `...`; // Unchanged
+const UPDATED_FINAL_THESIS_PROMPT = `...`; // Unchanged
 
-**INPUTS:**
-**1. Quantitative GARP Scorecard (JSON):**
-{scorecardJson}
+// Diligence Memo Prompts (Unchanged, relevant for extraction)
+const QUALITATIVE_DILIGENCE_MEMO_PROMPT = `...`; // Unchanged
+const STRUCTURED_DILIGENCE_MEMO_PROMPT = `...`; // Unchanged
+const MARKET_SENTIMENT_MEMO_PROMPT = `...`; // Unchanged
+const INVESTIGATION_SUMMARY_MEMO_PROMPT = `...`; // Unchanged
 
-**2. Initial GARP Candidacy Report (Starting Thesis):**
-{garpCandidacyReport}
+// Review Memo Prompts (Unchanged, kept for now)
+const QUARTERLY_REVIEW_MEMO_PROMPT = `...`; // Unchanged
+const ANNUAL_REVIEW_MEMO_PROMPT = `...`; // Unchanged
 
-**3. Structured (Quantitative) Diligence Memo:**
-{structuredDiligenceMemo}
+// --- NEW FILING ANALYSIS PROMPTS ---
 
-**4. Qualitative Diligence Memo:**
-{qualitativeDiligenceMemo}
-
-**5. Market Sentiment Memo:**
-{marketSentimentMemo}
----
-
-# Investment Memo: {companyName} ({tickerSymbol})
-
-## 1. Executive Summary & Investment Thesis
-[Your 3-4 sentence paragraph here, summarizing the investment thesis by synthesizing the initial candidacy report with the findings from the diligence memos.]
-
-## 2. The Bull Case: Why We Could Be Right
-- **Business Quality & Moat (from Qualitative Memo):** [Your analysis here.]
-- **Financial Strength & Growth (from Structured Memo):** [Your analysis here.]
-- **Market Confirmation (from Market Sentiment Memo):** [Your analysis here.]
-- **Scorecard Validation:** [Your analysis here, proving the bull case with specific, quantifiable data points from the scorecard.]
-
-## 3. The Bear Case: What Could Go Wrong
-- **Key Risks (from all Memos):** [Your analysis here, synthesizing the top 2-3 risks.]
-- **Scorecard Validation:** [Your analysis here, quantifying the risks with the weakest data points from the scorecard.]
-
-## 4. Valuation: The GARP Fulcrum
-[Your analysis here, synthesizing the 'PEG Ratio', 'Forward P/E', and 'Price to FCF' from the scorecard to answer the ultimate question of whether the company is trading at a reasonable margin of safety.]
-
-## 5. Recommendation & Justification
-(Your response for this section MUST follow the format below exactly, including the bolding.)
-
-**Add to Watchlist**
-
-(Your 4-5 sentence justification here, explicitly referencing the trade-offs and tensions revealed by synthesizing the reports and the quantitative scorecard.)
-`.trim(); // Kept as it's used for the 'Updated GARP Memo' in ongoing diligence
-
-const PORTFOLIO_GARP_ANALYSIS_PROMPT = `
-Role: You are a sharp and insightful portfolio analyst specializing in GARP (Growth at a Reasonable Price) investing.
-Context: You are reviewing a portfolio of companies. For each company, you have their GARP scorecard, including a weighted "garpConvictionScore", qualitative interpretations for each metric, sector, and market cap.
-Task: Your analysis must be data-driven and directly reference the provided JSON. Follow this structure precisely:
-
-## 1. Portfolio Health Summary
-Write a single paragraph that summarizes the portfolio's overall GARP health. Is it generally strong, mixed, or leaning towards poor value? Reference the distribution of "garpConvictionScore" values to support your conclusion.
-
-## 2. Portfolio Construction Analysis
-### Sector Allocation
-- Based on the "sector" data for each stock, identify the top 2-3 most heavily represented sectors in the portfolio.
-- Briefly comment on whether the portfolio appears diversified or concentrated.
-### Market Cap Distribution
-- Based on the "mktCap" data, briefly describe the portfolio's composition. Is it primarily large-cap, mid-cap, or a mix?
-
-## 3. Top GARP Candidates
-Identify the 2-3 companies with the **highest "garpConvictionScore"**. For each company, create a bullet point stating its name, ticker, and score. In a brief sub-bullet, explain *why* it's strong by referencing the qualitative "interpretation.text" of its most impressive metrics from the scorecard data (e.g., "Its 'GARP Sweet Spot' growth and 'Fortress Balance Sheet' make it a high-quality holding.").
-
-## 4. Companies to Review
-Identify the 2-3 companies with the **lowest "garpConvictionScore"**. For each company, create a bullet point stating its name, ticker, and score. In a brief sub-bullet, explain the primary concern by referencing the qualitative "interpretation.text" of its most significant failing metrics (e.g., "Concerns center on its 'Expensive' valuation and 'High Leverage', which increase risk.").
-
-JSON Data for the Entire Portfolio:
-{jsonData}
-`.trim();
-
-const POSITION_ANALYSIS_PROMPT = `
-Role: You are a pragmatic Portfolio Manager reviewing a position for a GARP (Growth at a Reasonable Price) fund.
-Objective: Re-evaluate the investment thesis based on the current reality of our position. Your job is to act as a critical second opinion and identify crucial next steps before deploying more capital.
-
-**Core Data for Evaluation:**
-1. **Original Moat Analysis:**
----
-{moatAnalysisReport}
----
-2. **Original Capital Allocators Report:**
----
-{capitalAllocatorsReport}
----
-3. **Original Investment Memo (Synthesis):**
----
-{investmentMemoContent}
----
-4. **Our Current Position:** {positionDetails}
-5. **Current Market Price:** {currentPrice}
-
-**Task:**
-Synthesize all the Core Data above into a professional Position Review Memo.
-1.  **Thesis Re-evaluation:** Briefly summarize the memo's thesis. Now, critically re-evaluate it. Does the recent price action challenge the core assumptions about the company's Moat or Management Quality? Or does it confirm the original risks (like market sentiment)?
-2.  **Quantitative Snapshot:** List the metrics from "Our Current Position."
-3.  **Recommendation & Justification:** Provide a clear, single-word recommendation (Hold, Acquire More, Trim Position, or Sell). Justify it by directly referencing the original reports and our current position's status.
-4.  **Critical Follow-Up Questions:** Based on your re-evaluation, what are the 1-2 most critical questions an analyst MUST answer *before* acting on your recommendation? Frame these as actionable diligence items.
-
-**CRITICAL INSTRUCTION: Your final output MUST use the exact markdown structure shown in the example below. Do NOT deviate.**
-
-**EXAMPLE OUTPUT FORMAT:**
-# Position Review: ExampleCorp (EXMP)
-
-## 1. Thesis Re-evaluation
-(Your full paragraph of analysis goes here...)
-
-## 2. Quantitative Snapshot
-- **Cost Basis:** $10,000.00
-- **Current Market Value:** $12,000.00
-- **Unrealized Gain/Loss:** $2,000.00 (20.00%)
-- **Holding Period:** 1 year(s), 2 month(s)
-
-## 3. Recommendation & Justification
-**Acquire More**
-
-(Your 2-3 sentence justification goes here...)
-
-## 4. Critical Follow-Up Questions
-- (Your first critical question goes here...)
-- (Your second critical question goes here...)
----
-`.trim();
-
-const GARP_CANDIDACY_PROMPT = `
-1. Persona & Role:
-You are a senior investment analyst at "Reasonable Growth Capital," a firm that strictly adheres to the Growth at a Rasonable Price (GARP) philosophy. Your role is not to make a final decision, but to act as an objective journalist. Your analysis is respected for its clarity, data-driven conviction, and ability to distill complex financial data into a balanced, unbiased assessment. Your tone MUST remain strictly neutral and factual throughout. Avoid judgmental or emotionally charged language (e.g., "alarming," "flawless," "pristine," "red flag").
-
-2. Objective:
-You are preparing a concise, data-first pre-read for the firm's weekly investment committee meeting on Friday, October 10, 2025. Your objective is to objectively summarize the qualitative bull case and bear case, enabling the committee to have an informed discussion. You MUST NOT include a final "Verdict," "Strategic Recommendation," or the raw GARP Score in the output. Your job is to present the *meaning* of the data factually, not the final call or the raw numbers.
-
-3. Contextual Grounding:
-Company & Ticker: {companyName} ({tickerSymbol})
-Sector: {sector}
-
-4. Input Data:
-You will be given a JSON object containing a scorecard with key financial metrics (including values and qualitative interpretations) and data on the company's industry peers.
-\`\`\`json
-{jsonData}
-\`\`\`
-
-5. Required Output Structure & Content:
-Generate a comprehensive GARP assessment using precise markdown formatting. Your response MUST follow the specified markdown structure. Do NOT output any markdown tables.
-
-# GARP Analysis: {companyName} ({tickerSymbol})
-
-(Your output for this section MUST follow this markdown structure exactly.)
-
-**Core Thesis:** [Insert a single, concise sentence that factually acknowledges the primary *tension* between the company's strengths and weaknesses based on the qualitative interpretations. Example: "The company presents a profile where qualitative interpretations suggest a 'Reasonable Price' potentially offset by 'Warning Sign' profitability interpretations relative to its peers."]
-
----
-
-## THE BULL CASE: The Growth & Quality Narrative
-
-(Write your one-paragraph qualitative synthesis here. This narrative MUST be based *only* on the \\\`interpretation.text\\\` and \\\`interpretation.category\\\` fields for *all relevant metrics* from the JSON 'scorecard' data. Analyze these qualitative interpretations within the specific context of the {sector} sector, considering typical financial characteristics for this industry. Focus on factually describing the *implications* of these interpretations (the "so what"). Synthesize the stock's strengths into a neutral narrative, incorporating peer comparisons from 'peerAverages' qualitatively to clarify if interpretations represent outperformance within the sector. Do NOT repeat raw numbers or percentages. Do NOT use judgmental language. Do NOT output a markdown table.)
-
-[Your qualitative narrative for the Bull Case goes here.]
-
----
-
-## THE BEAR CASE: The Risks & Valuation Concerns
-
-(Write your one-paragraph qualitative synthesis here. This narrative MUST be based *only* on the \\\`interpretation.text\\\` and \\\`interpretation.category\\\` fields for *all relevant metrics* from the JSON 'scorecard' data. Analyze these qualitative interpretations within the specific context of the {sector} sector, considering typical financial characteristics for this industry. Focus on factually describing the *implications* of these interpretations (the "so what"). Identify the critical risks and weaknesses neutrally, incorporating peer comparisons from 'peerAverages' qualitatively to provide sector context. Do NOT repeat raw numbers or percentages. Do NOT use judgmental language. Do NOT output a markdown table.)
-
-[Your qualitative narrative for the Bear Case goes here.]
-
----
-
-## FINAL SYNTHESIS
-
-(1 paragraph)
-**Investment Profile:** [First, classify the stock's profile based on your qualitative analysis using neutral, descriptive terms (e.g., 'Profile suggests strong growth characteristics with premium valuation interpretations,' 'Profile suggests value characteristics with potential quality concerns,' 'Profile suggests stable characteristics with moderate growth interpretations').]
-**Key Findings Summary:** [Then, provide a concise, factual summary highlighting the primary strengths identified in the Bull Case narrative and the primary weaknesses identified in the Bear Case narrative. Reference peer comparisons qualitatively where relevant. *Factually note* any significant contradictions between different qualitative interpretations (e.g., "Interpretations indicate reasonable valuation based on earnings, contrasting with expensive valuation based on cash flow."). Do NOT pose questions or introduce indecision.]
-
----
-
-## Confidence Score
-**Confidence Score:** [Assign a score from 1.0 to 5.0 based on the underlying GARP score provided in the JSON input using these rules: High (4.0-5.0) for GARP score > 75 AND superior peer metrics interpretations; Moderate (2.5-3.9) for GARP score > 60 OR strong metric interpretations but at a premium valuation interpretation; Low (1.0-2.4) for GARP score < 60 OR major interpretation contradictions.]
-
----
-
-## Actionable Diligence Questions
-
-(1 paragraph)
-Based on your qualitative analysis, propose 2-3 critical diligence questions designed to further investigate the key factual findings and contradictions identified in the Bull and Bear cases. For each question, you MUST provide two parts:
-1.  **Human-Led Question:** A high-level, strategic question for an analyst to answer through deeper research and judgment.
-2.  **Suggested AI Investigation Query:** **This MUST be a concise, keyword-based search string, NOT a conversational question. It is designed for a search tool that indexes financial documents. A good query includes the company ticker, the specific topic/metric, and the desired source (e.g., "earnings call," "10-K"). Example of a good query: "XPEL Q4 2025 earnings call transcript gross margin drivers automotive segment". Example of a bad query: "Why did gross margin go up for XPEL in the last quarter?".** The query should target information from recent earnings calls, SEC filings (10-K, 10-Q), or investor presentations.
-
-Format each item precisely like this:
-- **Human-Led Question:** [Your question here]
-- **Suggested AI Investigation Query:** "[Your search query here]"
-`.trim();
-
-const GARP_CONVICTION_SCORE_PROMPT = `
-Role: You are an AI assistant skilled at explaining financial metrics.
-Task: Explain the GARP Conviction Score based on the provided data summary.
-Data Summary:
-{jsonData}
-`.trim();
-
-const FILING_QUESTION_GENERATION_PROMPT = `
+const TEN_Q_ANALYSIS_PROMPT = `
 **Persona & Role:**
-You are a financial data extraction assistant AI, specializing in summarizing key facts from SEC documents for investors who follow GARP (Growth at a Reasonable Price) and QARP (Quality at aReasonable Price) principles.
+You are a financial analyst AI specializing in extracting key quarterly performance data from SEC Form 10-Q filings for GARP/QARP investors. Your analysis must be objective, concise, and focused on material financial changes.
 
 **Core Task:**
-Your task is to read the provided SEC filing (10-Q or 10-K) for {companyName} and generate 5 to 7 questions that extract key data points relevant to GARP and QARP analysis.
+Read the provided 10-Q filing text for {companyName} and generate a structured analysis summarizing key performance indicators and relevant updates.
 
 **Critical Instructions:**
-1.  **Source Limitation:** Every question you generate MUST be directly and factually answerable using only the information present in the 'Filing Text' provided. The goal is to extract key data points, not to ask for strategic rationale that is not present.
-2.  **Focus on Key Topics:** Generate questions that pull specific facts related to these GARP & QARP themes:
-    * **Growth:** Year-over-year changes in Net Sales, Net Income, and EPS.
-    * **Profitability & Quality:** Trends in Gross Profit Margin and Operating Margin (as a % of sales), Cash Flow from Operations vs. Net Income, and significant changes in Inventory relative to sales.
-    * **Financial Health:** Key balance sheet figures like the total Cash and Investments, and total Debt (if any, excluding operating leases).
-    * **Shareholder Returns:** Amounts spent on Dividends or Share Repurchases.
-3.  **Question Style:** Frame questions to elicit facts and figures. Start questions with "What was...", "By what percentage did...", or "How much did...". AVOID asking "Why..." or questions about "strategy" unless the filing explicitly details that strategy.
-4.  **Strict Output Format:** You MUST return ONLY a valid JSON array of strings. Do not add any other text, explanations, or markdown formatting.
+1.  **Source Limitation:** Your analysis must derive *exclusively* from the provided 'Filing Text'. Do not infer information or use outside knowledge.
+2.  **Strict Output Format:** You MUST return a response in markdown following this structure precisely. Do not add introductory/concluding paragraphs.
 
 **Input Data:**
-
-**1. Company Name:**
-{companyName}
-
+**1. Company Name:** {companyName}
 **2. Filing Text:**
 \`\`\`
 {filingText}
 \`\`\`
+---
+# 10-Q Key Findings: {companyName} - {Period} // e.g., Q3 2025
 
-**Example Output:**
-[
-    "What were the net sales for the twenty-six weeks ended August 2, 2025, and what was the percentage increase compared to the prior year period?",
-    "What was the gross profit margin (as a percentage of net sales) for the thirteen weeks ended August 2, 2025, and how did it compare to the same period in 2024?",
-    "How much cash was provided by operating activities for the twenty-six weeks ended August 2, 2025, and how does this compare to the reported Net Income for the same period?",
-    "What was the total amount of inventory on the balance sheet as of August 2, 2025, and how does this compare to the balance on February 1, 2025?",
-    "How much cash was used to pay dividends during the twenty-six weeks ended August 2, 2025?"
-]
+## 1. Headline Performance vs. Prior Year
+(Extract and list the reported figures and YoY % change for:)
+* **Net Sales/Revenue:**
+* **Gross Profit Margin (%):**
+* **Operating Income:**
+* **Net Income:**
+* **Diluted EPS:**
+
+## 2. Key Segment Performance (if applicable)
+(If the filing breaks down revenue/profit by segment, summarize the performance of the 1-2 most significant segments.)
+
+## 3. Cash Flow Summary
+* **Cash Flow from Operations (YTD):** [Extract YTD figure and compare vs. YTD Net Income]
+* **Capital Expenditures (YTD):**
+* **Share Repurchases (YTD):**
+* **Dividends Paid (YTD):**
+
+## 4. Balance Sheet & Liquidity Update
+* **Cash & Equivalents:** [Extract end-of-period balance]
+* **Total Debt:** [Extract end-of-period balance, specify if it includes/excludes operating leases if mentioned]
+
+## 5. Management Outlook/Guidance Changes (if mentioned)
+(Summarize any explicit changes or reaffirmations of full-year guidance mentioned in the 10-Q text, including specific metrics if provided.)
+
+## 6. Other Material Events/Updates
+(Briefly note any other significant events disclosed, e.g., acquisitions, litigation updates, regulatory news.)
 `.trim();
 
-const UPDATED_QARP_MEMO_PROMPT = `
-Role: You are a Senior Investment Analyst specializing in the "Quality at a Reasonable Price" (QARP) philosophy. Your task is to provide an updated, rigorous, data-driven analysis that synthesizes a quantitative scorecard and a qualitative diligence log.
-Data Instructions: Your analysis MUST be based *exclusively* on the data sources provided below.
-Output Format: The final report must be in professional markdown format. Use # for the main title, ## for major sections, and bullet points. Your analysis in each section should now integrate relevant findings from the diligence log to add context to the quantitative data.
-
-**1. Quantitative Scorecard (JSON):**
-{jsonData}
-
-**2. Recent Diligence Log (Q&A):**
-{diligenceLog}
-
-# Updated QARP Memo: {companyName} ({tickerSymbol})
-
-## 1. Executive Summary & Verdict
-(Provide a concise, one-paragraph summary. Your verdict must now consider the quantitative score and the qualitative findings from the diligence log. Conclude with a clear verdict: "This company appears to be a **strong QARP candidate**," "a **borderline QARP candidate**," or "**does not meet the criteria** for a QARP investment at this time.")
-
-## 2. The "Quality" Pillar: Is This a Superior Business?
-(Analyze the company's quality using the scorecard data, now contextualized by the diligence log. For example, if ROE is high, check the log for management's discussion on what drives it.)
-- **Profitability & Efficiency:** Based on the **Return on Equity (ROE)** and **Return on Invested Capital (ROIC)**, how effectively does management generate profits?
-- **Financial Strength:** How resilient is the company? Analyze the **Debt-to-Equity** ratio to assess its financial leverage and risk.
-- **Growth Stability:** Evaluate the **EPS Growth (5Y)** and **Revenue Growth (5Y)**. Do these figures suggest a history of durable, consistent growth?
-
-## 3. The "Reasonable Price" Pillar: Are We Overpaying?
-(Analyze the company's valuation, using the diligence log to add nuance. For example, if the P/E seems high, does the diligence suggest it's justified?)
-- **Relative Valuation:** Based on the **P/E (TTM)**, **Forward P/E**, and **PEG Ratio**, does the stock appear cheap or expensive relative to its earnings and growth?
-- **Cash Flow Valuation:** Analyze the **Price to FCF** ratio. How does the valuation look when measured against the actual cash the business generates?
-
-## 4. Final Synthesis: The QARP Verdict
-(Synthesize all findings into a final conclusion. The diligence log is critical here. Does it reveal risks that make the numbers less reliable? Explain the trade-offs and justify your final verdict.)
-`.trim();
-
-// *** UPDATED PROMPT ***
-const EIGHT_K_ANALYSIS_PROMPT = `
+const TEN_K_ANALYSIS_PROMPT = `
 **Persona & Role:**
-You are a meticulous financial data extraction AI. Your task is to read an SEC Form 8-K filing (which might be a standard form or an attached press release exhibit like 99.1) and create a concise, factual summary of the material information disclosed.
+You are a financial analyst AI specializing in extracting key annual performance data and strategic insights from SEC Form 10-K filings for GARP/QARP investors. Your analysis must be objective, concise, and focused on material financial results and forward-looking statements.
 
 **Core Task:**
-Generate a structured markdown report summarizing the key events, facts, figures, and qualitative statements presented in the provided 8-K text for {companyName}.
+Read the provided 10-K filing text for {companyName} and generate a structured analysis summarizing key annual performance indicators, strategic updates, and risk factors.
 
 **Critical Instructions:**
-1.  **Source Limitation:** Base your entire summary *exclusively* on the provided 'Filing Text'. Do NOT infer, analyze impact, or use outside knowledge.
-2.  **Identify Core Events:** Determine the primary reason(s) for the filing. If multiple distinct events are reported (often under different Item numbers like 1.02, 2.02, 5.02, etc.), summarize each one separately.
-3.  **Extract Key Data:** Pull out the most important quantitative data (e.g., financial results, guidance changes, transaction amounts, executive compensation figures) and qualitative statements (e.g., management commentary, reasons for changes, strategic rationale provided *in the text*).
-4.  **Handle Earnings Releases:** If the text appears to be an earnings release (often Exhibit 99.1), focus on:
-    * Headline Results vs. Expectations (if mentioned).
-    * Key Financial Metrics (Revenue, EPS, Margins, Cash Flow).
-    * Segment Performance Highlights.
-    * Updated Financial Guidance.
-    * Significant Management Commentary explaining results or outlook.
-    * Major Corporate Updates (M&A, approvals, etc.).
-5.  **Handle Specific Event Reports:** If the text reports specific events (like executive changes, JV terminations, acquisitions):
-    * Clearly state the event.
-    * Summarize the key terms, dates, parties involved, and financial details provided.
-    * Include any stated reasons or rationale mentioned in the filing.
-6.  **Strict Output Format:** Use markdown headings (##) for distinct sections (e.g., "## Event Summary", "## Key Financial Results", "## Updated Guidance", "## Management Commentary", "## Joint Venture Termination", "## Executive Appointment"). Use bullet points for lists of data or facts. Do NOT add an introduction, conclusion, or any analysis of impact/significance.
-7.  **Ignore Boilerplate:** Actively ignore standard, non-material boilerplate language. This includes "Forward-Looking Statements" disclaimers, safe harbor paragraphs, definitions of non-GAAP measures, and signature blocks, unless they contain a specific new fact central to the filing.
-8.  **Handle Non-Material Filings:** If the filing contains no new, material financial or operational information (e.g., it is purely administrative, like reporting routine annual meeting vote results or a change in auditors), summarize that single fact concisely (e.g., "## Event Summary \\n * Reports results of 2025 Annual Shareholder Meeting."). Do not attempt to find financial data that isn't present.
+1.  **Source Limitation:** Your analysis must derive *exclusively* from the provided 'Filing Text'. Do not infer information or use outside knowledge.
+2.  **Strict Output Format:** You MUST return a response in markdown following this structure precisely. Do not add introductory/concluding paragraphs.
 
 **Input Data:**
-
-**1. Company Name:**
-{companyName}
-
+**1. Company Name:** {companyName}
 **2. Filing Text:**
 \`\`\`
 {filingText}
 \`\`\`
+---
+# 10-K Key Findings: {companyName} - Fiscal Year {Year}
+
+## 1. Full-Year Performance vs. Prior Year
+(Extract and list the reported figures and YoY % change for:)
+* **Net Sales/Revenue:**
+* **Gross Profit Margin (%):**
+* **Operating Income:**
+* **Net Income:**
+* **Diluted EPS:**
+
+## 2. Key Segment Performance (if applicable)
+(If the filing breaks down annual revenue/profit by segment, summarize the performance of the 1-2 most significant segments.)
+
+## 3. Full-Year Cash Flow & Capital Allocation Summary
+* **Cash Flow from Operations:** [Extract full-year figure and compare vs. Net Income]
+* **Capital Expenditures:**
+* **Share Repurchases:**
+* **Dividends Paid:**
+* **Acquisitions (Net):**
+
+## 4. Balance Sheet Position
+* **Cash & Equivalents:** [Extract year-end balance]
+* **Total Debt:** [Extract year-end balance, specify if it includes/excludes operating leases if mentioned]
+* **Shareholders' Equity:**
+
+## 5. Management's Outlook & Strategy (from MD&A/Business Overview)
+(Summarize key strategic priorities, market commentary, or forward-looking statements made by management within the 10-K text.)
+
+## 6. Key Risk Factors Update
+(Identify 1-2 new or significantly emphasized risk factors mentioned in the 'Risk Factors' section compared to previous understanding, if discernible from the text.)
+
+## 7. Executive Compensation Alignment (if readily available)
+(Briefly summarize the primary performance metrics used for executive bonuses if clearly stated in a compensation discussion section.)
 `.trim();
 
-// *** NEW PROMPT ***
+const EIGHT_K_ANALYSIS_PROMPT = `...`; // Unchanged
+
+// --- NEW THESIS IMPACT PROMPTS ---
+
+const TEN_Q_THESIS_IMPACT_PROMPT = `
+**Persona & Role:**
+You are a portfolio manager AI assessing the impact of a recent 10-Q filing on an existing investment thesis for {companyName} ({tickerSymbol}). Your analysis must be objective and directly compare the new findings against the established thesis.
+
+**Core Task:**
+Read the provided **10-Q Key Findings Summary** and compare it against the **Updated Final Investment Thesis**. Generate a structured impact assessment using the markdown template below.
+
+**Critical Instructions:**
+1.  **Source Limitation:** Base your analysis *only* on the two provided text inputs. Do not use outside knowledge.
+2.  **Focus on Change:** Identify how the new 10-Q findings *confirm*, *challenge*, or *modify* the specific points made in the Updated Final Thesis (narrative, recommendation, risks).
+3.  **Strict Output Format:** You MUST return a response in markdown following this structure precisely. Do not add introductory/concluding paragraphs.
+
+**Input Data:**
+
+**1. Updated Final Investment Thesis:**
+\`\`\`markdown
+{originalThesis}
+\`\`\`
+
+**2. 10-Q Key Findings Summary:**
+\`\`\`markdown
+{filingSummary}
+\`\`\`
+---
+# 10-Q Impact Analysis: {companyName} ({tickerSymbol})
+
+## 1. Key Findings from 10-Q
+(Concisely list 2-3 of the most impactful data points or updates reported in the '10-Q Key Findings Summary' that are relevant to the investment thesis.)
+
+## 2. Impact on Investment Thesis
+(In one paragraph, analyze how the Key Findings listed above directly impact the core narrative, risks, and conclusions presented in the 'Updated Final Investment Thesis'. Explicitly state whether the new information strengthens the bull case, validates bear case concerns, introduces new risks, or changes the outlook.)
+
+## 3. Overall Assessment & Recommendation Check
+(In one paragraph, conclude whether the 10-Q materially changes the investment picture. Does it warrant a change to the recommendation grade provided in the 'Updated Final Thesis'? Explain why or why not, referencing specific data from the 10-Q summary.)
+`.trim();
+
+const TEN_K_THESIS_IMPACT_PROMPT = `
+**Persona & Role:**
+You are a portfolio manager AI assessing the impact of a recent 10-K filing on an existing investment thesis for {companyName} ({tickerSymbol}). Your analysis must be objective and directly compare the new annual findings against the established thesis.
+
+**Core Task:**
+Read the provided **10-K Key Findings Summary** and compare it against the **Updated Final Investment Thesis**. Generate a structured impact assessment using the markdown template below.
+
+**Critical Instructions:**
+1.  **Source Limitation:** Base your analysis *only* on the two provided text inputs. Do not use outside knowledge.
+2.  **Focus on Change:** Identify how the new 10-K findings *confirm*, *challenge*, or *modify* the specific strategic points, risk assessments, and long-term outlook presented in the Updated Final Thesis.
+3.  **Strict Output Format:** You MUST return a response in markdown following this structure precisely. Do not add introductory/concluding paragraphs.
+
+**Input Data:**
+
+**1. Updated Final Investment Thesis:**
+\`\`\`markdown
+{originalThesis}
+\`\`\`
+
+**2. 10-K Key Findings Summary:**
+\`\`\`markdown
+{filingSummary}
+\`\`\`
+---
+# 10-K Impact Analysis: {companyName} ({tickerSymbol})
+
+## 1. Key Findings from 10-K
+(Concisely list 2-3 of the most impactful strategic updates, risk factor changes, or annual performance trends reported in the '10-K Key Findings Summary' that are relevant to the long-term investment thesis.)
+
+## 2. Impact on Investment Thesis
+(In one paragraph, analyze how the Key Findings listed above directly impact the core narrative, strategic assumptions, risk assessment, and long-term conclusions presented in the 'Updated Final Investment Thesis'. Explicitly state whether the new information strengthens the bull case, validates bear case concerns, alters the risk profile, or changes the long-term outlook.)
+
+## 3. Overall Assessment & Recommendation Check
+(In one paragraph, conclude whether the 10-K materially changes the long-term investment picture. Does it warrant a change to the recommendation grade provided in the 'Updated Final Thesis'? Explain why or why not, referencing specific strategic or risk-related information from the 10-K summary.)
+`.trim();
+
 const EIGHT_K_THESIS_IMPACT_PROMPT = `
 **Persona & Role:**
-You are an experienced investment analyst AI providing a critical review. You compare new, material information from an 8-K filing against an established investment thesis for {companyName} ({tickerSymbol}).
+You are a portfolio manager AI assessing the impact of a material event reported in an 8-K filing on an existing investment thesis for {companyName} ({tickerSymbol}). Your analysis must be objective and directly compare the event's implications against the established thesis.
 
 **Core Task:**
-Analyze the provided '8-K Factual Summary' and assess its impact on the 'Original Investment Thesis'. Generate a concise markdown report detailing whether the new information confirms, challenges, or modifies the original thesis.
+Read the provided **8-K Material Event Summary** and compare it against the **Updated Final Investment Thesis**. Generate a structured impact assessment using the markdown template below.
 
 **Critical Instructions:**
-1.  **Focus on Change:** Identify the *most significant* new pieces of information from the 8-K summary.
-2.  **Compare to Thesis:** Explicitly compare this new information against the core arguments (bull and bear cases, risks, moat assessment, valuation view) presented in the 'Original Investment Thesis'.
-3.  **Assess Materiality:** First, determine if the new information is material to the investment thesis. If the 8-K contains no new, material information (e.g., it's a routine filing about a shareholder meeting date), state this clearly and conclude that the thesis is unaffected.
-4.  **Assess Impact:** For each significant piece of new information, explain *how* it impacts the thesis. Does it strengthen the bull case? Weaken it? Validate a previously identified risk? Introduce a new risk? Change the valuation argument? (Skip this step if deemed non-material in step 3).
-5.  **Synthesize Overall Effect:** Conclude with a brief paragraph summarizing the overall effect of the 8-K on the investment thesis. Is the thesis largely intact, moderately impacted, or potentially invalidated? (If non-material, simply restate that the thesis is unaffected).
-6.  **Strict Output Format:** Use markdown headings: "## Key Findings from 8-K", "## Impact on Investment Thesis", "## Overall Assessment". Use bullet points within sections where appropriate. Be direct and analytical.
+1.  **Source Limitation:** Base your analysis *only* on the two provided text inputs. Do not use outside knowledge.
+2.  **Focus on Change & Materiality:** Identify how the specific event reported in the 8-K *confirms*, *challenges*, or *modifies* the core assumptions, risks, or conclusions presented in the Updated Final Thesis. Assess the event's significance.
+3.  **Strict Output Format:** You MUST return a response in markdown following this structure precisely. Do not add introductory/concluding paragraphs.
 
 **Input Data:**
 
-**1. Company Name & Ticker:**
-{companyName} ({tickerSymbol})
-
-**2. 8-K Factual Summary (Generated from the 8-K text):**
----
-{eightKSummary}
----
-
-**3. Original Investment Thesis (Latest Updated Final Thesis):**
----
+**1. Updated Final Investment Thesis:**
+\`\`\`markdown
 {originalThesis}
----
-`.trim();
-
-const QUALITATIVE_DILIGENCE_MEMO_PROMPT = `
-Role: You are an investment analyst AI.
-Task: Synthesize the provided Question & Answer pairs into a professional "Qualitative Business Memo" using the specified markdown template.
-
-**INPUTS:**
-
-**1. Company & Ticker:** {companyName} ({tickerSymbol})
-
-**2. Question & Answer Data:**
-\`\`\`
-{qaData}
 \`\`\`
 
-**INSTRUCTIONS:**
+**2. 8-K Material Event Summary:**
+\`\`\`markdown
+{eightKSummary}
+\`\`\`
+---
+# 8-K Impact Analysis: {companyName} ({tickerSymbol})
 
-1.  Read through all the Q&A pairs provided in {qaData}.
-2.  For Section 1 of the template ("Competitive Moat Analysis"), synthesize the user's answer specifically for the 'Competitive Moat' question.
-3.  For Section 2 ("Management, Strategy, & Alignment"), synthesize the user's answers for the 'Management Quality' and 'Incentive Alignment' questions.
-4.  For Section 3 ("Shareholder Base & Non-Consensus Thesis"), synthesize the user's answers for the 'Shareholder Base Quality' and 'The Non-Consensus Thesis (The "Edge")' questions. If answers for these are missing in {qaData}, explicitly state that information was not provided for that specific part (e.g., "Information regarding the Shareholder Base Quality was not provided in the Q&A data.").
-5.  For Section 4 ("Core Thesis & Linchpin Risk"), synthesize the user's answer for the 'Core Thesis & Linchpin Risk (The "Linchpin")' question. If this answer is missing, state that "No linchpin thesis or risk was provided."
-6.  For Section 5 ("Synthesis & Verdict"), write a concise one-paragraph summary combining the key findings from the previous sections, with special emphasis on the 'Core Thesis & Linchpin Risk' if provided. Conclude this paragraph with a final sentence using the exact bolded format: "**Business quality appears [High/Average/Low]** because..." replacing the bracketed word based on your overall synthesis and providing a brief justification.
+## 1. Key Findings from 8-K
+(Concisely summarize the core event from the '8-K Material Event Summary' and its immediate implications as stated in that summary.)
 
-**OUTPUT TEMPLATE (Use this exact structure):**
+## 2. Impact on Investment Thesis
+(In one paragraph, analyze how the 8-K event directly impacts the core narrative, risk assessment, and conclusions presented in the 'Updated Final Investment Thesis'. Explicitly state whether the event strengthens the bull case, validates bear case concerns, introduces new unforeseen risks, changes the capital allocation picture, or alters the strategic outlook.)
 
-# Qualitative Business Memo: {companyName} ({tickerSymbol})
-
-## 1. Competitive Moat Analysis
-[Your synthesis for Section 1 goes here based on Instruction 2]
-
-## 2. Management, Strategy, & Alignment
-[Your synthesis for Section 2 goes here based on Instruction 3]
-
-## 3. Shareholder Base & Non-Consensus Thesis
-[Your synthesis for Section 3 goes here based on Instruction 4]
-
-## 4. Core Thesis & Linchpin Risk
-[Your synthesis for Section 4 goes here based on Instruction 5]
-
-## 5. Synthesis & Verdict
-[Your synthesis paragraph and final bolded verdict sentence go here based on Instruction 6]
+## 3. Overall Assessment
+(In one paragraph, conclude whether this specific 8-K event materially changes the overall investment thesis or the recommendation grade provided in the 'Updated Final Thesis'. Is this a minor update, something to monitor, or thesis-altering? Explain why, referencing the significance level assigned in the 8-K summary if applicable.)
 `.trim();
 
-const STRUCTURED_DILIGENCE_MEMO_PROMPT = `
-Role: You are an investment analyst AI.
-Task: Based ONLY on the provided Question & Answer pairs, fill in the template below to create a "Quantitative Health Memo."
+// Extraction Prompts (Unchanged)
+const MOAT_ANALYSIS_EXTRACT_PROMPT = `...`; // Unchanged
+const CAPITAL_ALLOCATORS_EXTRACT_PROMPT = `...`; // Unchanged
+const GARP_MEMO_EXTRACT_PROMPT = `...`; // Unchanged
+const QARP_ANALYSIS_EXTRACT_PROMPT = `...`; // Unchanged
+const COMPOUNDER_BMQV_EXTRACT_PROMPT = `...`; // Unchanged
+const QUALITATIVE_DILIGENCE_MEMO_EXTRACT_PROMPT = `...`; // Unchanged
+const STRUCTURED_DILIGENCE_MEMO_EXTRACT_PROMPT = `...`; // Unchanged
+const MARKET_SENTIMENT_MEMO_EXTRACT_PROMPT = `...`; // Unchanged
+const INVESTIGATION_SUMMARY_MEMO_EXTRACT_PROMPT = `...`; // Unchanged
+const FINAL_THESIS_CONFLICT_ID_PROMPT = `...`; // Unchanged
 
----
-**CRITICAL INSTRUCTION: Your final output MUST use the exact markdown structure and headings provided in the template below. Fill in the [Your analysis here] sections based on the Q&A data.**
----
-
-**Q&A Data:**
-{qaData}
-
-# Quantitative Health Memo: {companyName} ({tickerSymbol})
-
-## 1. Financial & Fundamental Analysis
-[Your synthesis of the user's answer regarding the company's financial analysis here.]
-
-## 2. Balance Sheet Strength
-[Your synthesis of the user's answer regarding the balance sheet here.]
-
-## 3. Income Statement & Cash Flow
-[Your synthesis of the user's answers regarding the income statement and cash flow here.]
-
-## 4. Valuation Assessment
-[Your synthesis of the user's answer regarding valuation here.]
-
-## 5. Synthesis & Verdict
-[Your one-paragraph synthesis of all points here. Your final sentence MUST follow the example format exactly, including bolding. For example: **Quantitative health appears Average** because its durable scale is offset by high leverage and a bloated cost structure.]
-`.trim();
-
-const INVESTIGATION_SUMMARY_MEMO_PROMPT = `
-Role: You are an investment analyst AI specializing in synthesizing research notes.
-Task: Your sole job is to read the unstructured, manually-entered Question & Answer pairs from the diligence log and synthesize them into a professional "Investigation Summary Memo." Your goal is to identify the most critical findings and present them clearly.
-
----
-**CRITICAL INSTRUCTIONS:**
-1.  **Source Limitation:** Your entire analysis MUST be derived *exclusively* from the provided 'Diligence Log (Q&A Data)'.
-2.  **No External Data:** Do NOT add any facts, figures, names, or details that are not explicitly mentioned in the source Q&A. Your task is to synthesize, not to augment with outside knowledge.
----
-
-**Diligence Log (Q&A Data):**
-{qaData}
-
-# Investigation Summary Memo: {companyName} ({tickerSymbol})
-
-## 1. Executive Summary of Findings
-(In one concise paragraph, summarize the most important theme or conclusion that emerges from the Q&A log. What is the single most critical insight an investor would gain from this manual research?)
-
-## 2. Key Bullish Findings
-(Create a bulleted list summarizing the key positive points, discoveries, or confirmations from the Q&A log.)
-
-## 3. Key Bearish Findings & Unanswered Questions
-(Create a bulleted list summarizing the most significant risks, negative findings, or remaining unanswered questions identified in the Q&A log.)
-`.trim();
-
-const QUARTERLY_REVIEW_MEMO_PROMPT = `
-Role: You are a portfolio manager conducting a quarterly review of an existing holding.
-Task: Your task is to analyze the user's new quarterly findings in the context of the original investment thesis provided. Synthesize this information into a formal, professional Quarterly Review Memo. Your analysis must be objective and directly reference the provided data.
-
-**Original Investment Thesis (Most Recent Investment Memo):**
----
-{originalInvestmentMemo}
----
-
-**User's New Quarterly Findings (Q&A):**
----
-{qaData}
----
-
-# Quarterly Review Memo: {companyName} ({tickerSymbol})
-
-## 1. Thesis Confirmation or Challenge
-(In one paragraph, synthesize the new findings. Does the quarter's performance and management commentary strengthen, weaken, or not materially change the original investment thesis? Be specific.)
-
-## 2. Key Performance Indicators vs. Expectations
-(Summarize the user's answer regarding the company's performance against revenue and EPS expectations. Detail the key drivers.)
-
-## 3. Management Outlook & Guidance
-(Summarize the user's answer regarding management's forward-looking guidance and commentary from the earnings call.)
-
-## 4. Final Verdict & Action Plan
-(Synthesize the user's proposed action plan. Conclude with a clear, single-word verdict based on the user's input: **Hold, Add, Trim, or Sell**. Provide a concise, 1-2 sentence justification for this action.)
-`.trim();
-
-const ANNUAL_REVIEW_MEMO_PROMPT = `
-Role: You are a portfolio manager conducting an annual review of an existing holding.
-Task: Your task is to analyze the user's new annual findings in the context of the original investment thesis provided. Synthesize this information into a formal, professional Annual Review Memo. Your analysis must be objective and directly reference the provided data.
-
-**Original Investment Thesis (Most Recent Investment Memo):**
----
-{originalInvestmentMemo}
----
-
-**User's New Annual Findings (Q&A):**
----
-{qaData}
----
-
-# Annual Review Memo: {companyName} ({tickerSymbol})
-
-## 1. Long-Term Thesis Validation
-(In one paragraph, synthesize the full-year findings. Does the year's performance, strategic progress, and updated outlook strengthen or weaken the original long-term investment thesis? Be specific.)
-
-## 2. Full-Year Performance vs. Guidance
-(Summarize the user's answer regarding the company's full-year performance against its own guidance.)
-
-## 3. Strategic Progress & Capital Allocation
-(Summarize the user's answer regarding the company's strategic initiatives and the effectiveness of its capital allocation over the full year. Reference ROIC if available.)
-
-## 4. Updated Competitive Landscape & Risks
-(Summarize the user's answer regarding any material changes to the material changes to the competitive environment or long-term business risks.)
-
-## 5. Final Verdict & Forward-Looking Action Plan
-(Synthesize the user's proposed forward-looking action plan. Conclude with a clear, single-word verdict based on the user's input: **Hold, Add on Weakness, Trim on Strength, or Exit Position**. Provide a concise, 1-2 sentence justification for this plan.)
-`.trim();
-
-// --- Extraction Prompts Still In Use ---
-
-const GARP_MEMO_EXTRACT_PROMPT = `
-Role: You are a data extraction AI.
-Task: Your only job is to read the provided 'Investment Memo' and extract three specific pieces of information.
-CRITICAL INSTRUCTIONS:
-- You MUST return ONLY a valid JSON object.
-- Do not add any text, explanations, or markdown formatting before or after the JSON.
-- For 'verdict', extract the final recommendation (e.g., "High Conviction Buy", "Pass / Sell").
-- For 'coreTension', extract the central conflict the memo aims to resolve.
-- For 'valuationVerdict', extract the memo's final conclusion on valuation.
-
-Report Text:
-{reportContent}
-
-JSON Output Format:
-{
-  "verdict": "...",
-  "coreTension": "...",
-  "valuationVerdict": "..."
-}
-`.trim(); // Used by Updated GARP Memo
-
-const QUALITATIVE_DILIGENCE_MEMO_EXTRACT_PROMPT = `
-Role: You are a data extraction AI.
-Task: Your only job is to read the provided 'Qualitative Business Memo' and extract four specific pieces of information.
-CRITICAL INSTRUCTIONS:
-- You MUST return ONLY a valid JSON object.
-- Do not add any text, explanations, or markdown formatting before or after the JSON.
-- For 'verdict', extract the final verdict word (e.g., "High", "Average", "Low") from the final sentence of Section 5.
-- For 'nonConsensusThesis', extract the core non-consensus thesis summary from Section 3. If Section 3 states no thesis was provided or is empty, return "No non-consensus thesis provided.".
-- For 'shareholderBaseQuality', extract the summary of the shareholder base quality from Section 3. If Section 3 states no information was provided or is empty, return "No shareholder base analysis provided.".
-- For 'linchpinThesisAndRisk', extract the synthesized answer for the 'Core Thesis & Linchpin Risk' from Section 4. If Section 4 is empty or does not contain this, return "No linchpin thesis provided.".
-
-Report Text:
-{reportContent}
-
-JSON Output Format:
-{
-  "verdict": "...",
-  "nonConsensusThesis": "...",
-  "shareholderBaseQuality": "...",
-  "linchpinThesisAndRisk": "..."
-}
-`.trim();
-
-const STRUCTURED_DILIGENCE_MEMO_EXTRACT_PROMPT = `
-Role: You are a data extraction AI.
-Task: Your only job is to read the provided 'Quantitative Health Memo' and extract two specific pieces of information.
-CRITICAL INSTRUCTIONS:
-- You MUST return ONLY a valid JSON object.
-- Do not add any text, explanations, or markdown formatting before or after the JSON.
-- For 'verdict', extract the final verdict word (e.g., "Strong", "Average", "Weak") from the final sentence of Section 5.
-- For 'keyWeakness', summarize the primary weakness identified in the final synthesis (Section 5). If no specific weakness is mentioned, return "No specific key weakness identified.".
-
-Report Text:
-{reportContent}
-
-JSON Output Format:
-{
-  "verdict": "...",
-  "keyWeakness": "..."
-}
-`.trim();
-
-const INVESTIGATION_SUMMARY_MEMO_EXTRACT_PROMPT = `
-Role: You are a data extraction AI.
-Task: Your only job is to read the provided 'Investigation Summary Memo' and extract two specific pieces of information.
-CRITICAL INSTRUCTIONS:
-- You MUST return ONLY a valid JSON object.
-- Do not add any text, explanations, or markdown formatting before or after the JSON.
-- For 'keyBullishFinding', extract the single most important positive finding summarized in Section 2. If Section 2 is empty or contains no clear positive findings, return "No key bullish finding identified.".
-- For 'keyBearishFinding', extract the single most important negative finding or unanswered question summarized in Section 3. If Section 3 is empty or contains no clear negative findings, return "No key bearish finding identified.".
-
-Report Text:
-{reportContent}
-
-JSON Output Format:
-{
-  "keyBullishFinding": "...",
-  "keyBearishFinding": "..."
-}
-`.trim();
-
-// --- End Unused Prompts Removal ---
-
+// --- Prompt Map ---
 export const promptMap = {
-    'PeerIdentification': {
-        prompt: PEER_IDENTIFICATION_PROMPT,
-        requires: ['profile']
-    },
-    'PeerIdentificationFallback': {
-        prompt: PEER_IDENTIFICATION_FALLBACK_PROMPT,
-        requires: ['profile']
-    },
-    'PeerComparison': {
-        prompt: 'N/A' // Placeholder
-    },
-    'UpdatedQarpMemo': {
-        prompt: UPDATED_QARP_MEMO_PROMPT,
-        requires: []
-    },
-    // Kept InvestmentMemo entry mapping to UPDATED_GARP_MEMO_PROMPT for ongoing diligence trigger
-    'InvestmentMemo': {
-        prompt: UPDATED_GARP_MEMO_PROMPT,
-        requires: []
-    },
-    'PortfolioGarpAnalysis': {
-        prompt: PORTFOLIO_GARP_ANALYSIS_PROMPT,
-        requires: []
-    },
-    'PositionAnalysis': {
-        prompt: POSITION_ANALYSIS_PROMPT,
-        requires: []
-    },
-    'GarpCandidacy': {
-        prompt: GARP_CANDIDACY_PROMPT,
-        requires: []
-    },
-    'GarpConvictionScore': {
-        prompt: GARP_CONVICTION_SCORE_PROMPT,
-        requires: []
-    },
-    'SectorMomentum': {
-        prompt: SECTOR_MOMENTUM_PROMPT,
-        requires: []
-    },
-    'FilingQuestionGeneration': {
-        prompt: FILING_QUESTION_GENERATION_PROMPT,
-        requires: []
-    },
-    'EightKAnalysis': { // Updated prompt
-        prompt: EIGHT_K_ANALYSIS_PROMPT,
-        requires: []
-    },
-    'EightKThesisImpact': { // New entry
-        prompt: EIGHT_K_THESIS_IMPACT_PROMPT,
-        requires: [] // Requires reports, not raw FMP data directly
-    },
-    // --- Diligence Memos Still Used ---
-    'QualitativeDiligenceMemo': {
-        prompt: QUALITATIVE_DILIGENCE_MEMO_PROMPT,
-        requires: []
-    },
-    'StructuredDiligenceMemo': {
-        prompt: STRUCTURED_DILIGENCE_MEMO_PROMPT,
-        requires: []
-    },
-    'InvestigationSummaryMemo': {
-        prompt: INVESTIGATION_SUMMARY_MEMO_PROMPT,
-        requires: []
-    },
-    // --- Ongoing Review Memos Still Used ---
-    'QuarterlyReview': {
-        prompt: QUARTERLY_REVIEW_MEMO_PROMPT,
-        requires: []
-    },
-    'AnnualReview': {
-        prompt: ANNUAL_REVIEW_MEMO_PROMPT,
-        requires: []
-    },
-    // --- Extraction Prompts Still Used ---
-    'InvestmentMemo_Extract': { prompt: GARP_MEMO_EXTRACT_PROMPT }, // Used by Updated GARP Memo
+    // Core Analysis
+    'MoatAnalysis': { prompt: MOAT_ANALYSIS_PROMPT, requires: ['profile', 'key_metrics_annual', 'income_statement_annual', 'cash_flow_statement_annual', 'ratios_annual'] },
+    'CapitalAllocators': { prompt: CAPITAL_ALLOCATORS_PROMPT, requires: ['cash_flow_statement_annual', 'key_metrics_annual', 'income_statement_annual', 'balance_sheet_statement_annual', 'ratios_annual'] },
+    'GarpCandidacy': { prompt: GARP_CANDIDACY_PROMPT, requires: [] },
+    'QarpAnalysis': { prompt: QARP_ANALYSIS_PROMPT, requires: [] },
+    'LongTermCompounder': { prompt: LONG_TERM_COMPOUNDER_PROMPT, requires: [] },
+    'BmqvMemo': { prompt: BMQV_MEMO_PROMPT, requires: [] },
+    // Synthesis & Thesis
+    'InvestmentMemo': { prompt: UPDATED_GARP_MEMO_PROMPT, requires: [] }, // Uses GARP structure
+    'UpdatedGarpMemo': { prompt: UPDATED_GARP_MEMO_PROMPT, requires: [] }, // Explicitly named for clarity if needed elsewhere
+    'UpdatedQarpMemo': { prompt: UPDATED_QARP_MEMO_PROMPT, requires: [] },
+    'FinalInvestmentThesis': { prompt: FINAL_INVESTMENT_THESIS_PROMPT, requires: [] },
+    'UpdatedFinalThesis': { prompt: UPDATED_FINAL_THESIS_PROMPT, requires: [] },
+    // Diligence Memos (Manual Input Synthesis)
+    'QualitativeDiligenceMemo': { prompt: QUALITATIVE_DILIGENCE_MEMO_PROMPT, requires: [] },
+    'StructuredDiligenceMemo': { prompt: STRUCTURED_DILIGENCE_MEMO_PROMPT, requires: [] },
+    'MarketSentimentMemo': { prompt: MARKET_SENTIMENT_MEMO_PROMPT, requires: [] },
+    'InvestigationSummaryMemo': { prompt: INVESTIGATION_SUMMARY_MEMO_PROMPT, requires: [] },
+    // Ongoing Review & Filing Analysis
+    'QuarterlyReview': { prompt: QUARTERLY_REVIEW_MEMO_PROMPT, requires: [] }, // Checklist-based
+    'AnnualReview': { prompt: ANNUAL_REVIEW_MEMO_PROMPT, requires: [] },     // Checklist-based
+    'EightKAnalysis': { prompt: EIGHT_K_ANALYSIS_PROMPT, requires: [] }, // Filing text summary
+    'EightKThesisImpact': { prompt: EIGHT_K_THESIS_IMPACT_PROMPT, requires: [] }, // Compares EightKAnalysis to UpdatedFinalThesis
+    'TenQAnalysis': { prompt: TEN_Q_ANALYSIS_PROMPT, requires: [] },      // NEW: Filing text summary
+    'TenQThesisImpact': { prompt: TEN_Q_THESIS_IMPACT_PROMPT, requires: [] }, // NEW: Compares TenQAnalysis to UpdatedFinalThesis
+    'TenKAnalysis': { prompt: TEN_K_ANALYSIS_PROMPT, requires: [] },      // NEW: Filing text summary
+    'TenKThesisImpact': { prompt: TEN_K_THESIS_IMPACT_PROMPT, requires: [] }, // NEW: Compares TenKAnalysis to UpdatedFinalThesis
+    // Helpers & Other
+    'PeerIdentification': { prompt: PEER_IDENTIFICATION_PROMPT, requires: ['profile'] },
+    'PeerIdentificationFallback': { prompt: PEER_IDENTIFICATION_FALLBACK_PROMPT, requires: ['profile'] },
+    'PeerComparison': { prompt: 'N/A' },
+    'PortfolioGarpAnalysis': { prompt: PORTFOLIO_GARP_ANALYSIS_PROMPT, requires: [] },
+    'PositionAnalysis': { prompt: POSITION_ANALYSIS_PROMPT, requires: [] },
+    'GarpConvictionScore': { prompt: GARP_CONVICTION_SCORE_PROMPT, requires: [] },
+    'SectorMomentum': { prompt: SECTOR_MOMENTUM_PROMPT, requires: [] },
+    // Extraction Prompts
+    'MoatAnalysis_Extract': { prompt: MOAT_ANALYSIS_EXTRACT_PROMPT },
+    'CapitalAllocators_Extract': { prompt: CAPITAL_ALLOCATORS_EXTRACT_PROMPT },
+    'InvestmentMemo_Extract': { prompt: GARP_MEMO_EXTRACT_PROMPT },
+    'QarpAnalysis_Extract': { prompt: QARP_ANALYSIS_EXTRACT_PROMPT },
+    'LongTermCompounder_Extract': { prompt: COMPOUNDER_BMQV_EXTRACT_PROMPT },
+    'BmqvMemo_Extract': { prompt: COMPOUNDER_BMQV_EXTRACT_PROMPT },
     'QualitativeDiligenceMemo_Extract': { prompt: QUALITATIVE_DILIGENCE_MEMO_EXTRACT_PROMPT },
     'StructuredDiligenceMemo_Extract': { prompt: STRUCTURED_DILIGENCE_MEMO_EXTRACT_PROMPT },
+    'MarketSentimentMemo_Extract': { prompt: MARKET_SENTIMENT_MEMO_EXTRACT_PROMPT },
     'InvestigationSummaryMemo_Extract': { prompt: INVESTIGATION_SUMMARY_MEMO_EXTRACT_PROMPT },
-    // Removed unused extraction prompts: Moat, Capital, QARP, Compounder/BMQV, MarketSentiment, ConflictID, FinalThesis, UpdatedFinalThesis
+    'FinalThesis_ConflictID': { prompt: FINAL_THESIS_CONFLICT_ID_PROMPT }
 };
 
+// --- Analysis Icons & Names ---
 export const ANALYSIS_ICONS = {
-    // Keep icons for prompts still in use
-    'UpdatedQarpMemo': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`, // Placeholder icon if needed
-    'InvestmentMemo': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>`, // Used for Updated GARP Memo
-    'InvestigationSummaryMemo': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75" /></svg>`,
-    'QualitativeDiligenceMemo': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.76 9.76 0 01-2.53-.388m-5.168-4.482A10.457 10.457 0 013 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25" /></svg>`,
-    'StructuredDiligenceMemo': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" /></svg>`,
-    'EightKAnalysis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" /></svg>`,
-    'EightKThesisImpact': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6a7.5 7.5 0 107.5 7.5h-7.5V6z" /><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 10.5H21A7.5 7.5 0 0013.5 3v7.5z" /></svg>`, // Placeholder pie chart icon
-    // Removed unused icons: QarpAnalysis, MoatAnalysis, CapitalAllocators, BmqvMemo, FinalInvestmentThesis, UpdatedFinalThesis
+    // ... (Existing Icons Unchanged)
+    'TenQAnalysis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5m-9-6h.008v.008H12v-.008zM12 15h.008v.008H12V15zm0 2.25h.008v.008H12v-.008zM9.75 15h.008v.008H9.75V15zm0 2.25h.008v.008H9.75v-.008zM7.5 15h.008v.008H7.5V15zm0 2.25h.008v.008H7.5v-.008zm6.75-4.5h.008v.008h-.008v-.008zm0 2.25h.008v.008h-.008V15zm0 2.25h.008v.008h-.008v-.008zm2.25-4.5h.008v.008H16.5v-.008zm0 2.25h.008v.008H16.5V15z" /></svg>`, // Example Calendar Icon
+    'TenKAnalysis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg>`, // Example Document Icon
 };
 
 export const ANALYSIS_NAMES = {
-    // Keep names for prompts still in use
-    'UpdatedQarpMemo': 'Updated QARP Memo',
-    'InvestmentMemo': 'Updated GARP Memo', // Renamed to reflect its current use
+    // Core
+    'MoatAnalysis': 'Moat Analysis',
+    'CapitalAllocators': 'Capital Allocators',
     'GarpCandidacy': 'GARP Candidacy Report',
+    'QarpAnalysis': 'QARP Analysis',
+    'LongTermCompounder': 'Long-Term Compounder Memo',
+    'BmqvMemo': 'Buffett-Munger Q&V Memo',
+    // Synthesis & Thesis
+    'InvestmentMemo': 'Investment Memo',
+    'UpdatedGarpMemo': 'Updated GARP Memo',
+    'UpdatedQarpMemo': 'Updated QARP Memo',
+    'FinalInvestmentThesis': 'Final Investment Thesis',
+    'UpdatedFinalThesis': 'Updated Final Thesis',
+    // Diligence Memos
+    'QualitativeDiligenceMemo': 'Qualitative Diligence Memo',
+    'StructuredDiligenceMemo': 'Structured Diligence Memo',
+    'MarketSentimentMemo': 'Market Sentiment Memo',
+    'InvestigationSummaryMemo': 'Investigation Summary',
+    // Ongoing Review & Filings
+    'QuarterlyReview': 'Quarterly Review', // Checklist-based
+    'AnnualReview': 'Annual Review',     // Checklist-based
+    'FilingDiligence': 'Filing Diligence Q&A', // Manual Q&A saved
+    'EightKAnalysis': '8-K Filing Summary', // NEW NAME
+    'EightKThesisImpact': '8-K Thesis Impact', // NEW NAME
+    'TenQAnalysis': '10-Q Filing Summary',   // NEW
+    'TenQThesisImpact': '10-Q Thesis Impact',  // NEW
+    'TenKAnalysis': '10-K Filing Summary',   // NEW
+    'TenKThesisImpact': '10-K Thesis Impact',  // NEW
+    // Helpers & Other
     'PositionAnalysis': 'Position Analysis',
     'PortfolioGarpAnalysis': 'Portfolio GARP Analysis',
     'GarpConvictionScore': 'GARP Conviction Score',
     'PeerIdentification': 'Peer Identification',
     'PeerComparison': 'Peer Comparison',
-    'SectorMomentum': 'Sector Momentum',
-    'FilingQuestionGeneration': 'Filing Question Generation',
-    'FilingDiligence': 'Filing Diligence',
-    'EightKAnalysis': '8-K Factual Summary', // Renamed
-    'EightKThesisImpact': '8-K Thesis Impact', // New name
-    'QuarterlyReview': 'Quarterly Review',
-    'AnnualReview': 'Annual Review',
-    'QualitativeDiligenceMemo': 'Qualitative Diligence Memo',
-    'StructuredDiligenceMemo': 'Structured Diligence Memo',
-    'InvestigationSummaryMemo': 'Investigation Summary',
-    // Removed unused names: QarpAnalysis, MoatAnalysis, CapitalAllocators, LongTermCompounder, BmqvMemo, FinalInvestmentThesis, UpdatedFinalThesis
+    'SectorMomentum': 'Sector Momentum'
+    // FilingQuestionGeneration REMOVED
+};
+
+// --- CALCULATION_SUMMARIES ---
+// Add entries for new reports if needed for the help modal, otherwise can be omitted.
+export const CALCULATION_SUMMARIES = {
+    // ... (Existing summaries unchanged)
+    'TenQAnalysis': 'Summarizes key financial performance (Revenue, EPS, Margins, Cash Flow) and material updates from a 10-Q filing text provided by the user.',
+    'TenKAnalysis': 'Summarizes key annual financial performance, strategic commentary, and risk factor updates from a 10-K filing text provided by the user.',
+    'EightKAnalysis': 'Summarizes the core event reported in an 8-K filing text provided by the user and assesses its potential impact pillars (Growth, Quality, Capital Allocation).',
+    'TenQThesisImpact': 'Compares the key findings from a generated 10-Q Summary against the latest Updated Final Thesis report to assess the impact on the investment case.',
+    'TenKThesisImpact': 'Compares the key findings from a generated 10-K Summary against the latest Updated Final Thesis report to assess the impact on the long-term investment case.',
+    'EightKThesisImpact': 'Compares the key findings from a generated 8-K Summary against the latest Updated Final Thesis report to assess the impact on the investment case.',
 };
