@@ -571,9 +571,10 @@ export async function openRawDataViewer(ticker) {
                 if (futureEarnings.length > 0) { nextEarningsDate = futureEarnings[0].date; }
             }
 
-            const reportTypesForLog = ['FilingDiligence', 'EightKAnalysis', 'UpdatedGarpMemo', 'UpdatedQarpMemo', 'QuarterlyReview', 'AnnualReview'];
+            const reportTypesForLog = ['FilingDiligence', 'EightKAnalysis', 'UpdatedGarpMemo', 'UpdatedQarpMemo', 'QuarterlyReview', 'AnnualReview', 'EightKThesisImpact']; // Added new type
             const filingDiligenceReports = allSavedReports.filter(r => reportTypesForLog.includes(r.reportType));
 
+            // *** ADDED NEW BUTTON HERE ***
             ongoingDiligenceContainer.innerHTML = `
                 <div class="bg-white p-6 rounded-2xl shadow-lg border border-gray-200">
                     <div class="flex justify-between items-center mb-6 border-b pb-4">
@@ -598,6 +599,7 @@ export async function openRawDataViewer(ticker) {
                         <div class="mt-4 flex justify-center gap-4">
                             <button id="generate-filing-questions-button" data-symbol="${ticker}" class="bg-teal-600 hover:bg-teal-700 text-white font-semibold py-2 px-5 rounded-lg">Generate Q&A Form</button>
                             <button id="analyze-eight-k-button-new" data-symbol="${ticker}" class="bg-sky-600 hover:bg-sky-700 text-white font-semibold py-2 px-5 rounded-lg">Analyze as 8-K</button>
+                            <button id="analyze-eight-k-thesis-impact-button" data-symbol="${ticker}" class="bg-orange-600 hover:bg-orange-700 text-white font-semibold py-2 px-5 rounded-lg">Analyze 8-K Impact</button>
                         </div>
                     </div>
                     <div id="filing-diligence-form-container" class="hidden mb-6"></div>
