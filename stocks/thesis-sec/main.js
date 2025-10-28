@@ -69,7 +69,7 @@ async function handleApiKeySubmit(e) {
     const tempFirebaseConfigText = document.getElementById('firebaseConfigInput').value.trim();
     let tempFirebaseConfig;
 
-    if (!state.fmpApiKey || !state.geminiApiKey || !state.googleClientId || !tempFirebaseConfigText) {
+    if (!state.fmpApiKey || !state.gemiminiApiKey || !state.googleClientId || !tempFirebaseConfigText) {
         displayMessageInModal("All API Keys, Client ID, and the Firebase Config are required.", "warning");
         return;
     }
@@ -99,16 +99,6 @@ function initializeGoogleSignIn() {
             client_id: state.googleClientId,
             callback: handleCredentialResponse,
         });
-        
-        // After successful initialization, check if we need to render the button
-        const authStatusEl = document.getElementById('auth-status');
-        if (authStatusEl && (!state.auth || !state.auth.currentUser || state.auth.currentUser.isAnonymous)) {
-             google.accounts.id.renderButton(
-                authStatusEl,
-                { theme: "outline", size: "large", type: "standard", text: "signin_with" }
-            );
-        }
-
     } catch (error) {
         console.error("Google Sign-In initialization error:", error);
         displayMessageInModal("Could not initialize Google Sign-In. Check your Client ID and ensure you are loading the page from a valid origin.", "error");
@@ -143,8 +133,9 @@ function setupAuthUI(user) {
     const appContainer = document.getElementById('app-container');
     if (!authStatusEl || !appContainer) return;
 
+    authStatusEl.innerHTML = '';
+
     if (user && !user.isAnonymous) {
-        authStatusEl.innerHTML = ''; // MOVED this line here
         appContainer.classList.remove(CONSTANTS.CLASS_HIDDEN);
         closeModal(CONSTANTS.MODAL_API_KEY);
         
@@ -164,8 +155,12 @@ function setupAuthUI(user) {
         document.getElementById('logout-button').addEventListener('click', handleLogout);
     } else {
         appContainer.classList.add(CONSTANTS.CLASS_HIDDEN);
-        // Button rendering logic is now handled in initializeGoogleSignIn
-        // And we no longer clear the authStatusEl here, allowing the button to persist
+        if (typeof google !== 'undefined' && google.accounts) {
+            google.accounts.id.renderButton(
+                authStatusEl,
+                { theme: "outline", size: "large", type: "standard", text: "signin_with" }
+            );
+        }
     }
 }
 
