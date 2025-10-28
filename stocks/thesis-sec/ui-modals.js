@@ -1,11 +1,15 @@
 // fileName: ui-modals.js
-import { CONSTANTS, state, ANALYSIS_ICONS, SECTOR_KPI_SUGGESTIONS, QUALITATIVE_DILIGENCE_QUESTIONS, STRUCTURED_DILIGENCE_QUESTIONS, MARKET_SENTIMENT_QUESTIONS } from './config.js';
+import { CONSTANTS, state, ANALYSIS_ICONS, SECTOR_KPI_SUGGESTIONS, QUALITATIVE_DILIGENCE_QUESTIONS, STRUCTURED_DILIGENCE_QUESTIONS } from './config.js'; // Removed MARKET_SENTIMENT_QUESTIONS
 import { getFmpStockData, getGroupedFmpData } from './api.js';
 import { renderValuationHealthDashboard, _renderGroupedStockList, renderPortfolioManagerList, renderGarpScorecardDashboard, renderGarpInterpretationAnalysis, updateGarpCandidacyStatus, renderCandidacyAnalysis, renderGarpAnalysisSummary, renderDiligenceLog, renderPeerComparisonTable, renderOngoingReviewLog } from './ui-render.js';
-import { getSavedReports } from './ui-handlers.js'; // Keep this import
+import { getSavedReports } from './ui-handlers.js';
 
 // --- GENERIC MODAL HELPERS ---
 
+/**
+ * Opens a modal dialog by its ID.
+ * @param {string} modalId The ID of the modal element to open.
+ */
 export function openModal(modalId) {
     const modal = document.getElementById(modalId);
     if (modal) {
@@ -14,6 +18,10 @@ export function openModal(modalId) {
     }
 }
 
+/**
+ * Closes a modal dialog by its ID.
+ * @param {string} modalId The ID of the modal element to close.
+ */
 export function closeModal(modalId) {
     const modal = document.getElementById(modalId);
     if (modal) {
@@ -26,6 +34,12 @@ export function closeModal(modalId) {
     }
 }
 
+/**
+ * Displays a temporary message in a dedicated message modal.
+ * @param {string} message The message to display.
+ * @param {string} type The type of message ('info', 'warning', 'error').
+ * @param {number} duration The time in milliseconds before the modal auto-closes.
+ */
 export function displayMessageInModal(message, type = 'info', duration = 2500) {
     const modal = document.getElementById(CONSTANTS.MODAL_MESSAGE);
     const content = modal.querySelector('.modal-content');
@@ -45,6 +59,12 @@ export function displayMessageInModal(message, type = 'info', duration = 2500) {
     setTimeout(() => closeModal(CONSTANTS.MODAL_MESSAGE), duration);
 }
 
+/**
+ * Opens a confirmation dialog with a specific action.
+ * @param {string} title The title for the confirmation dialog.
+ * @param {string} message The message/question to ask the user.
+ * @param {function} onConfirm A callback function to execute if the user confirms.
+ */
 export function openConfirmationModal(title, message, onConfirm) {
     document.getElementById('confirmation-title').textContent = title;
     document.getElementById('confirmation-message').textContent = message;
@@ -62,8 +82,10 @@ export function openConfirmationModal(title, message, onConfirm) {
     openModal(CONSTANTS.MODAL_CONFIRMATION);
 }
 
-// --- SPECIFIC MODAL HELPERS ---
-
+/**
+ * Dynamically adds a KPI input row to the Manage Stock modal.
+ * @param {object} [kpi={}] - The KPI object with name and value.
+ */
 export function addKpiRow(kpi = {}) {
     const container = document.getElementById('kpi-list-container');
     if (!container) return;
@@ -84,19 +106,137 @@ export function addKpiRow(kpi = {}) {
     container.appendChild(row);
 }
 
+
+/**
+ * Opens the "Manage Stock" modal and pre-populates its form fields.
+ * @param {object} stockData The data for the stock to be managed.
+ */
 export function openManageStockModal(stockData) {
-    // ... (content unchanged)
+    const form = document.getElementById('manage-stock-form');
+    form.reset();
+
+    document.getElementById('manage-stock-original-ticker').value = stockData.ticker || '';
+    document.getElementById('manage-stock-ticker').value = stockData.ticker || '';
+    document.getElementById('manage-stock-name').value = stockData.companyName || '';
+    document.getElementById('manage-stock-exchange').value = stockData.exchange || '';
+    document.getElementById('manage-stock-sector').value = stockData.sector || 'N/A';
+    document.getElementById('manage-stock-industry').value = stockData.industry || 'N/A';
+    document.getElementById('manage-stock-status').value = stockData.status || 'Portfolio';
+
+    const deleteButton = document.getElementById('delete-stock-button');
+    deleteButton.style.display = stockData.isEditMode ? 'block' : 'none';
+
+    // --- KPI Logic ---
+    const kpiContainer = document.getElementById('kpi-list-container');
+    kpiContainer.innerHTML = '';
+    document.getElementById('kpi-suggestion-container').innerHTML = '';
+
+    if (stockData.customKpis && stockData.customKpis.length > 0) {
+        stockData.customKpis.forEach(addKpiRow);
+    } else {
+        addKpiRow(); // Add one blank row for a new stock
+    }
+
+    // --- Transaction Logic ---
+    const transactionContainer = document.getElementById('transaction-list-container');
+    transactionContainer.innerHTML = ''; // Clear previous rows
+
+    const addTransactionRow = (transaction = {}) => {
+        const row = document.createElement('div');
+        row.className = 'transaction-row grid grid-cols-12 gap-2 items-center';
+        row.innerHTML = `
+            <div class="col-span-4">
+                <input type="date" class="transaction-date-input mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm" value="${transaction.date || ''}">
+            </div>
+            <div class="col-span-3">
+                <input type="number" step="any" class="transaction-shares-input mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm" placeholder="Shares" value="${transaction.shares || ''}">
+            </div>
+            <div class="col-span-3">
+                <input type="number" step="any" class="transaction-cost-input mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm" placeholder="Cost/Share" value="${transaction.costPerShare || ''}">
+            </div>
+            <div class="col-span-2 text-right">
+                <button type="button" class="remove-transaction-button text-red-500 hover:text-red-700 font-bold text-xl">&times;</button>
+            </div>
+        `;
+        transactionContainer.appendChild(row);
+    };
+
+    if (stockData.transactions && stockData.transactions.length > 0) {
+        stockData.transactions.forEach(addTransactionRow);
+    } else if (stockData.purchaseDate || stockData.shares || stockData.costPerShare) {
+        // Handle legacy single transaction format if present
+        addTransactionRow({
+            date: stockData.purchaseDate,
+            shares: stockData.shares,
+            costPerShare: stockData.costPerShare
+        });
+    } else {
+        addTransactionRow(); // Start with one blank row for new stocks
+    }
+
+    transactionContainer.addEventListener('click', (e) => {
+        if (e.target.closest('.remove-transaction-button')) {
+            e.target.closest('.transaction-row').remove();
+        }
+    });
+
+    // Use cloneNode to prevent multiple listeners from being attached
+    const addButton = document.getElementById('add-transaction-button');
+    const newAddButton = addButton.cloneNode(true);
+    addButton.parentNode.replaceChild(newAddButton, addButton);
+    newAddButton.addEventListener('click', () => addTransactionRow());
+
+    openModal(CONSTANTS.MODAL_MANAGE_STOCK);
 }
 
 
+/**
+ * Opens the "Portfolio & Watchlist Manager" modal.
+ */
 export function openPortfolioManagerModal() {
     renderPortfolioManagerList();
     openModal(CONSTANTS.MODAL_PORTFOLIO_MANAGER);
 }
 
+/**
+ * Opens a modal displaying a list of stocks, fetches their data, and renders the list.
+ * @param {string} listType The type of list to display (e.g., 'Portfolio').
+ */
 export async function openStockListModal(listType) {
-    // ... (content unchanged)
+    const modalId = CONSTANTS.MODAL_STOCK_LIST;
+    const titleEl = document.getElementById('stock-list-modal-title');
+    const contentContainer = document.getElementById('stock-list-modal-content');
+
+    if (!titleEl || !contentContainer) return;
+
+    // Set title and loading state immediately
+    titleEl.textContent = listType;
+    contentContainer.innerHTML = '<div class="loader mx-auto my-8"></div>';
+    openModal(modalId);
+
+    try {
+        // Filter the cached stocks based on the list type
+        const filteredStocks = state.portfolioCache.filter(s => s.status === listType);
+
+        // Enrich the filtered stocks with their cached FMP data
+        const stocksWithData = await Promise.all(
+            filteredStocks.map(async (stock) => {
+                const fmpData = await getFmpStockData(stock.ticker);
+                return { ...stock, fmpData }; // Combine portfolio data with FMP data
+            })
+        );
+
+        // Render the fully populated list
+        await _renderGroupedStockList(contentContainer, stocksWithData, listType);
+
+    } catch (error) {
+        console.error(`Error populating stock list for ${listType}:`, error);
+        contentContainer.innerHTML = `<p class="text-center text-red-500 p-8">Could not load stock list: ${error.message}</p>`;
+    }
 }
+
+
+// --- SPECIFIC, COMPLEX MODAL CONTROLLERS ---
 
 export function addDiligenceEntryRow() {
     const container = document.getElementById('manual-diligence-entries-container');
@@ -116,74 +256,70 @@ export function addDiligenceEntryRow() {
 }
 
 /**
- * Resets the analysis modal to a clean state.
+ * Resets the analysis modal to a clean state. This is the "erase the whiteboard" action.
  */
 function _resetAnalysisModal() {
+    // Helper to safely clear an element if it exists
     const safeClear = (id, content = '') => {
         const el = document.getElementById(id);
-        if (el) el.innerHTML = content;
+        if (el) {
+            el.innerHTML = content;
+        }
     };
 
-    state.reportCache = [];
+    state.reportCache = []; // Clear the local report cache
 
-    // Clear main tab containers
-    safeClear('dashboard-tab', '<div class="loader mx-auto my-8"></div>');
-    safeClear('ai-analysis-tab');
+    // Clear main tab containers first
+    safeClear('dashboard-tab', '<div class="loader mx-auto my-8"></div>'); // Show loading state for dashboard initially
     safeClear('diligence-hub-tab');
     safeClear('ongoing-diligence-tab');
-    safeClear('position-analysis-tab');
-    safeClear('raw-data-tab', '<div id="raw-data-accordion-container"><div class="loader mx-auto my-8"></div></div>');
+    safeClear('position-analysis-tab'); // Clear this as well
+    safeClear('raw-data-tab', '<div id="raw-data-accordion-container"><div class="loader mx-auto my-8"></div></div>'); // Keep container
 
-    // Reset tabs
+    // Reset tabs to default view (Dashboard active)
     document.querySelectorAll('#rawDataViewerModal .tab-content').forEach(c => c.classList.add('hidden'));
     document.querySelectorAll('#rawDataViewerModal .tab-button').forEach(b => {
         b.classList.remove('active');
-        b.removeAttribute('data-loaded');
+        b.removeAttribute('data-loaded'); // Remove any loaded indicators if used
     });
     document.getElementById('dashboard-tab')?.classList.remove('hidden');
     document.querySelector('.tab-button[data-tab="dashboard"]')?.classList.add('active');
 
-    // Ensure position analysis tab button is hidden initially
-    document.querySelector('.tab-button[data-tab="position-analysis"]')?.classList.add('hidden');
+    // Hide position analysis tab button by default
+    const positionAnalysisTabButton = document.querySelector('.tab-button[data-tab="position-analysis"]');
+    if (positionAnalysisTabButton) {
+        positionAnalysisTabButton.classList.add('hidden');
+    }
 
-    // Ensure thesis impact buttons are hidden initially
-    document.querySelectorAll('.analyze-thesis-impact-button').forEach(btn => btn.classList.add('hidden'));
-
-    // Clear specific elements
+    // Clear specific elements inside tabs (redundant now but safe)
     safeClear('raw-data-accordion-container', '<div class="loader mx-auto my-8"></div>');
     safeClear('position-analysis-content-container');
-    safeClear('ai-article-container-analysis');
     safeClear('company-profile-display-container');
-    safeClear('garp-scorecard-container');
-    safeClear('peer-analysis-section-container');
-    safeClear('valuation-health-container');
-    safeClear('ai-garp-summary-container');
-    safeClear('analysis-content-container');
-    safeClear('ongoing-review-log-container'); // Clear log display area
-    safeClear('ongoing-review-display-container'); // Clear report display area
 
-    // Reset status containers
-    ['report-status-container-analysis', 'report-status-container-position'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) {
-            el.innerHTML = '';
-            el.classList.add('hidden');
-            delete el.dataset.activeReportType;
-        }
-    });
+    const statusContainerAnalysis = document.getElementById('report-status-container-analysis');
+    if (statusContainerAnalysis) {
+        statusContainerAnalysis.innerHTML = '';
+        statusContainerAnalysis.classList.add('hidden');
+        delete statusContainerAnalysis.dataset.activeReportType; // Clear active report type
+    }
+    const statusContainerPosition = document.getElementById('report-status-container-position');
+     if (statusContainerPosition) {
+        statusContainerPosition.innerHTML = '';
+        statusContainerPosition.classList.add('hidden');
+    }
+
 }
 
-// *** UPDATED openRawDataViewer Function ***
 export async function openRawDataViewer(ticker) {
     const modalId = 'rawDataViewerModal';
     openModal(modalId);
 
-    // 1. Reset Modal State
+    // 1. ✅ ERASE THE WHITEBOARD FIRST
     _resetAnalysisModal();
 
-    // 2. Set Context
+    // 2. Set the context for the new analysis
     const modal = document.getElementById(modalId);
-    modal.dataset.activeTicker = ticker;
+    modal.dataset.activeTicker = ticker; // Store ticker for later use
     const titleEl = document.getElementById('raw-data-viewer-modal-title');
     titleEl.textContent = `Analyzing ${ticker}...`;
 
@@ -194,184 +330,239 @@ export async function openRawDataViewer(ticker) {
         return tempDiv.innerHTML;
     };
 
+    // --- Declare container variables here ---
+    let rawDataContainer, diligenceHubContainer, ongoingDiligenceContainer, positionAnalysisContainer, profileDisplayContainer, positionAnalysisTabButton;
+
+
     try {
-        // --- 3. Fetch Data ---
+        // --- Get main tab containers ---
+        diligenceHubContainer = document.getElementById('diligence-hub-tab');
+        ongoingDiligenceContainer = document.getElementById('ongoing-diligence-tab');
+        const dashboardTab = document.getElementById('dashboard-tab');
+        const rawDataTab = document.getElementById('raw-data-tab');
+        const positionAnalysisTab = document.getElementById('position-analysis-tab');
+
+        // 3. THEN, FETCH THE NEW DATA
         const fmpDataPromise = getFmpStockData(ticker);
         const groupedDataPromise = getGroupedFmpData(ticker);
-        // Fetch all reports initially to populate cache
+
         const reportsRef = state.db.collection(CONSTANTS.DB_COLLECTION_AI_REPORTS).where("ticker", "==", ticker);
         const savedReportsPromise = reportsRef.get().then(snapshot => {
-            // Populate state.reportCache directly
             state.reportCache = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            return state.reportCache; // Return for consistency if needed, but main goal is state update
+            return state.reportCache;
         });
 
-        // Fetch diligence answers promises (structured slightly differently for clarity)
-        const getDiligenceAnswers = async (type) => {
-            const snap = await state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(ticker).collection('diligence_answers').doc(type).get();
-            return snap.exists ? new Map(snap.data().answers.map(item => [item.question, item.answer])) : new Map();
-        };
-        const qualitativeAnswersPromise = getDiligenceAnswers('Qualitative');
-        const structuredAnswersPromise = getDiligenceAnswers('Structured');
-        const marketSentimentAnswersPromise = getDiligenceAnswers('MarketSentiment'); // Kept for now
+        const qualitativeAnswersPromise = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(ticker).collection('diligence_answers').doc('Qualitative').get();
+        const structuredAnswersPromise = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(ticker).collection('diligence_answers').doc('Structured').get();
+        // MarketSentimentPromise removed
 
         const [
             fmpData,
             groupedFmpData,
-            allSavedReports, // Already populated state.reportCache
-            savedQualitativeAnswers,
-            savedStructuredAnswers,
-            savedMarketSentimentAnswers
+            allSavedReports,
+            qualitativeSnap,
+            structuredSnap
+            // marketSentimentSnap removed
         ] = await Promise.all([
             fmpDataPromise,
             groupedDataPromise,
-            savedReportsPromise, // Wait for cache population
+            savedReportsPromise,
             qualitativeAnswersPromise,
-            structuredAnswersPromise,
-            marketSentimentAnswersPromise
+            structuredAnswersPromise
+            // marketSentimentAnswersPromise removed
         ]);
 
         if (!fmpData || !fmpData.profile || !fmpData.profile.length === 0) {
             closeModal(modalId);
-            displayMessageInModal(`Crucial data is missing for ${ticker}. Please use the "Refresh FMP" button for this stock, then try again.`, 'warning');
+            displayMessageInModal(
+                `Crucial data is missing for ${ticker}. Please use the "Refresh FMP" button for this stock, then try again.`,
+                'warning'
+            );
             return;
         }
 
-        // --- 4. Populate Tabs ---
-        titleEl.textContent = `Analysis for ${ticker}`;
+        // Filter reports from the now-populated local cache
+        const savedReportTypes = new Set(allSavedReports.map(report => report.reportType));
+
         const profile = fmpData.profile[0];
-        const savedReportTypes = new Set(allSavedReports.map(report => report.reportType)); // Use reports from populated cache
+
+        const getAnswersMap = (snap) => snap.exists ? new Map(snap.data().answers.map(item => [item.question, item.answer, item.filingDate])) : new Map(); // Adjusted to include filingDate
+        const savedQualitativeAnswers = getAnswersMap(qualitativeSnap);
+        const savedStructuredAnswers = getAnswersMap(structuredSnap);
+        // savedMarketSentimentAnswers removed
+
+        // 4. POPULATE THE CLEAN STATE
+        titleEl.textContent = `Analysis for ${ticker}`;
 
         // --- DASHBOARD TAB ---
-        const dashboardTab = document.getElementById('dashboard-tab');
+        // Ensure dashboard tab container exists before populating
         if (dashboardTab) {
+            // Add skeleton/placeholders first
             dashboardTab.innerHTML = `
-                <div class="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-8">
+                <div class="grid grid-cols-1 gap-8 mb-8">
                     <div id="company-profile-display-container" class="bg-white p-6 rounded-2xl shadow-lg border border-gray-200"></div>
-                    <div id="peer-analysis-section-container" class="bg-white p-6 rounded-2xl shadow-lg border border-gray-200"></div>
                 </div>
-                <div id="ai-garp-summary-container" class="bg-white p-6 rounded-2xl shadow-lg border border-gray-200"></div>
-                <div id="garp-scorecard-container" class="bg-white p-6 rounded-2xl shadow-lg border border-gray-200"></div>
-                <div id="garp-interpretation-container" class="bg-white p-6 rounded-2xl shadow-lg border border-gray-200"></div>
-                <div id="valuation-health-container" class="bg-white p-6 rounded-2xl shadow-lg border border-gray-200"></div>
             `;
-            const profileDisplayContainer = document.getElementById('company-profile-display-container');
-            const peerAnalysisContainer = document.getElementById('peer-analysis-section-container');
-            const aiGarpSummaryContainer = document.getElementById('ai-garp-summary-container');
-            const garpScorecardContainer = document.getElementById('garp-scorecard-container');
-            const valuationHealthContainer = document.getElementById('valuation-health-container');
+            // NOW get handles to elements inside the dashboard
+            profileDisplayContainer = document.getElementById('company-profile-display-container');
 
             const description = profile.description || 'No description available.';
-            profileDisplayContainer.innerHTML = `<h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Company Overview</h3><p class="text-sm text-gray-700">${description}</p>`;
+            if (profileDisplayContainer) profileDisplayContainer.innerHTML = `<h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Company Overview</h3><p class="text-sm text-gray-700">${description}</p>`;
+        }
 
-            const metrics = renderGarpScorecardDashboard(garpScorecardContainer, ticker, fmpData);
-            renderGarpInterpretationAnalysis(garpScorecardContainer, metrics);
-            renderValuationHealthDashboard(valuationHealthContainer, ticker, fmpData);
-            renderGarpAnalysisSummary(aiGarpSummaryContainer, ticker); // Renders the container + button
 
-            const peerDocRef = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(ticker).collection('analysis').doc('peer_comparison');
-            const peerDocSnap = await peerDocRef.get();
-            const peerHelpIcon = `<button data-report-type="PeerComparison" class="ai-help-button p-1 rounded-full hover:bg-indigo-100" title="What is this?"><svg class="w-5 h-5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z"></path></svg></button>`;
-            peerAnalysisContainer.innerHTML = `
-                <div class="flex justify-between items-center mb-4 border-b pb-2">
-                    <div class="flex items-center gap-2"> <h3 class="text-xl font-bold text-gray-800">Peer Comparison</h3> ${peerHelpIcon} </div>
-                </div>
-                <div id="peer-analysis-content-container"> <p class="text-gray-500 italic">Enter comma-separated tickers below and click "Analyze Peers" to build a comparison table.</p> </div>
-                <div id="manual-peer-entry-container" class="mt-4 pt-4 border-t">
-                    <label for="manual-peer-input" class="block text-sm font-medium text-gray-700">Enter Comma-Separated Peer Tickers:</label>
-                    <textarea id="manual-peer-input" rows="2" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 uppercase" placeholder="e.g., PEP, KOF, CCEP"></textarea>
-                    <div class="mt-2 text-right"> <button id="analyze-manual-peers-button" data-ticker="${ticker}" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-1 px-4 rounded-lg text-sm">Analyze Peers</button> </div>
+        // --- POSITION ANALYSIS TAB ---
+        positionAnalysisTabButton = document.querySelector('.tab-button[data-tab="position-analysis"]');
+        const portfolioData = state.portfolioCache.find(s => s.ticker === ticker);
+        if (positionAnalysisTab && portfolioData && (portfolioData.transactions?.length > 0 || portfolioData.shares > 0)) {
+            positionAnalysisTabButton?.classList.remove('hidden');
+            const helpIconHtmlPos = `<button data-report-type="PositionAnalysis" class="ai-help-button p-1 rounded-full hover:bg-indigo-100" title="What is this?"><svg class="w-5 h-5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" /></svg></button>`;
+            positionAnalysisTab.innerHTML = `
+                <div id="report-status-container-position" class="hidden p-3 mb-4 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between gap-4"></div>
+                <div id="position-analysis-content-container">
+                    <div class="text-center p-8 bg-gray-50 rounded-lg">
+                        <div class="flex justify-center items-center gap-2 mb-2">
+                            <h3 class="text-xl font-bold text-gray-800">Position Review</h3>
+                            ${helpIconHtmlPos}
+                        </div>
+                        <p class="text-gray-600 mb-6 max-w-2xl mx-auto">Re-evaluate the original GARP thesis for this holding based on your actual cost basis and the current market price.</p>
+                        <button id="generate-position-analysis-button" data-symbol="${ticker}" data-report-type="PositionAnalysis" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg text-base shadow-md transition-transform hover:scale-105">
+                            Generate Position Analysis
+                        </button>
+                    </div>
+                    <div id="position-analysis-report-container" class="prose max-w-none mt-6"></div>
                 </div>`;
-            if (peerDocSnap.exists) {
-                renderPeerComparisonTable(peerAnalysisContainer.querySelector('#peer-analysis-content-container'), ticker, metrics, peerDocSnap.data());
-            }
-
-            const savedCandidacyReports = getReportsFromCache(ticker, 'GarpCandidacy'); // Use cache
-            if (savedCandidacyReports.length > 0) {
-                 const latestReport = savedCandidacyReports[0];
-                 const resultContainer = aiGarpSummaryContainer.querySelector('#garp-analysis-container');
-                 const statusContainer = aiGarpSummaryContainer.querySelector('#garp-candidacy-status-container');
-                 updateGarpCandidacyStatus(statusContainer, savedCandidacyReports, latestReport.id, ticker);
-                 const savedDate = latestReport.savedAt.toDate().toLocaleString();
-                 const tempContainer = document.createElement('div');
-                 renderCandidacyAnalysis(tempContainer, latestReport.content, latestReport.prompt, latestReport.diligenceQuestions);
-                 resultContainer.innerHTML = `<details class="border rounded-md bg-gray-50/50"><summary class="p-3 font-semibold text-gray-700 cursor-pointer hover:bg-gray-50">View Latest Saved Report (from ${savedDate})</summary><div class="p-4 border-t bg-white">${tempContainer.innerHTML}</div></details>`;
-            }
+            positionAnalysisContainer = document.getElementById('position-analysis-content-container'); // Now get handle
         }
 
-        // --- AI ANALYSIS TAB ---
-        const aiAnalysisContainer = document.getElementById('ai-analysis-tab');
-        if (aiAnalysisContainer) {
-            const deepDiveButtons = [
-                { reportType: 'MoatAnalysis', text: 'Moat Analysis', tooltip: 'Evaluates the company\'s competitive advantages.' },
-                { reportType: 'CapitalAllocators', text: 'Capital Allocators', tooltip: 'Assesses management\'s skill in deploying capital.' },
-                { reportType: 'InvestigationSummaryMemo', text: 'Investigation Summary', tooltip: 'Synthesizes your manual Q&A from the Diligence Hub into a summary memo.' },
-                { reportType: 'QualitativeDiligenceMemo', text: 'Qualitative Memo', tooltip: 'Synthesizes your answers on moat and management.' },
-                { reportType: 'StructuredDiligenceMemo', text: 'Structured Memo', tooltip: 'Synthesizes your answers on financial health.' },
-                { reportType: 'MarketSentimentMemo', text: 'Market Sentiment', tooltip: 'Synthesizes analyst ratings, technicals, and factor scores.' },
-            ];
-            const copyIconSvg = `<svg class="w-5 h-5 text-gray-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125H4.875A1.125 1.125 0 013.75 20.625V7.875c0-.621.504-1.125 1.125-1.125H6.75m9 9.375h3.375c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125h-9.75A1.125 1.125 0 006 9.375v9.75c0 .621.504 1.125 1.125 1.125h3.375m-3.75-9.375V6.125c0-.621.504-1.125 1.125-1.125h9.75c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-3.375" /></svg>`;
-            const buildButtonHtml = (buttons) => buttons.map((btn) => {
-                const hasSaved = savedReportTypes.has(btn.reportType) ? 'has-saved-report' : '';
-                const icon = ANALYSIS_ICONS[btn.reportType] || '';
-                const helpIconSvg = `<svg class="w-5 h-5 text-indigo-500 group-hover:text-indigo-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" /></svg>`;
-                return `<div class="relative group"> <button data-symbol="${ticker}" data-report-type="${btn.reportType}" class="ai-analysis-button analysis-tile ${hasSaved}" data-tooltip="${btn.tooltip}"> ${icon} <span class="tile-name">${btn.text}</span> </button> <button data-report-type="${btn.reportType}" class="ai-help-button absolute -top-2 -right-2 bg-white p-1 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity" title="What is this report?"> ${helpIconSvg} </button> <button type="button" class="copy-report-btn absolute -bottom-2 -right-2 p-2 rounded-full bg-gray-200 hover:bg-gray-300 opacity-0 group-hover:opacity-100 transition-opacity" data-report-type="${btn.reportType}" title="Copy Latest Report to Clipboard"> <svg class="w-4 h-4 text-gray-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125H4.875A1.125 1.125 0 013.75 20.625V7.875c0-.621.504-1.125 1.125-1.125H6.75m9 9.375h3.375c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125h-9.75A1.125 1.125 0 006 9.375v9.75c0 .621.504 1.125 1.125 1.125h3.375m-3.75-9.375V6.125c0-.621.504-1.125 1.125-1.125h9.75c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-3.375" /></svg> </button> </div>`;
-            }).join('');
-            const buildSynthesisButton = (reportType, buttonId, text, bgColor = 'bg-indigo-600', hoverColor = 'hover:bg-indigo-700') => `<div class="relative flex items-center gap-2"> <button data-symbol="${ticker}" id="${buttonId}" data-report-type="${reportType}" class="ai-analysis-button ${bgColor} ${hoverColor} text-white font-bold py-3 px-4 rounded-lg text-sm flex-grow">${text}</button> <button type="button" class="copy-report-btn p-2 rounded-full bg-gray-200 hover:bg-gray-300" data-report-type="${reportType}" title="Copy Latest Report to Clipboard"> ${copyIconSvg} </button> </div>`;
-
-            aiAnalysisContainer.innerHTML = `
-                <div id="analysis-content-container" class="space-y-8 text-center bg-gray-50 p-4 rounded-lg border-b pb-4 mb-4">
-                    <div class="p-4 bg-white rounded-lg border shadow-sm"> <h3 class="text-lg font-bold text-gray-800 mb-4">Automated Workflow</h3> <p class="text-sm text-gray-500 mb-4">Run the entire sequence of reports, from foundational analysis to the final thesis, in one click.</p> <button id="run-full-workflow-button" data-symbol="${ticker}" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg text-base shadow-md transition-transform hover:scale-105"> Run Full Analysis Workflow </button> </div>
-                    <div class="p-4 bg-white rounded-lg border shadow-sm"> <h3 class="text-lg font-bold text-gray-800 mb-4">Step 1: Foundational Analysis</h3> <p class="text-sm text-gray-500 mb-4">Generate these core reports first. They are the building blocks for the synthesis memos.</p> <div class="flex flex-wrap gap-4 justify-center"> ${buildButtonHtml(deepDiveButtons)} </div> </div>
-                    <div class="p-4 bg-white rounded-lg border shadow-sm"> <h3 class="text-lg font-bold text-gray-800 mb-4">Step 2: Synthesis Memos</h3> <p class="text-sm text-gray-500 mb-4">Synthesize the foundational reports into different analytical frameworks.</p> <div class="grid grid-cols-1 sm:grid-cols-2 gap-4"> ${buildSynthesisButton('LongTermCompounder', 'long-term-compounder-button', 'Compounder Memo')} ${buildSynthesisButton('BmqvMemo', 'bmqv-memo-button', 'BMQV Memo')} ${buildSynthesisButton('InvestmentMemo', 'garp-memo-button', 'GARP Memo')} ${buildSynthesisButton('QarpAnalysis', 'qarp-analysis-button', 'QARP Memo')} </div> </div>
-                    <div class="p-4 bg-white rounded-lg border shadow-sm"> <h3 class="text-lg font-bold text-gray-800 mb-4">Step 3: The Final Verdict</h3> <p class="text-sm text-gray-500 mb-4">Combine all synthesis memos into a single, definitive investment thesis. Then, refine it with your latest diligence.</p> <div class="flex justify-center flex-wrap gap-4"> ${buildSynthesisButton('FinalInvestmentThesis', 'final-thesis-button', 'Final Thesis')} ${buildSynthesisButton('UpdatedFinalThesis', 'updated-final-thesis-button', 'Update with Diligence', 'bg-emerald-600', 'hover:bg-emerald-700')} </div> </div>
-                </div>
-                <div id="report-status-container-analysis" class="hidden p-3 mb-4 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between gap-4"></div>
-                <div id="ai-article-container-analysis" class="prose max-w-none"></div>`;
+        // --- RAW DATA TAB ---
+        if (rawDataTab) {
+            rawDataTab.innerHTML = `<div id="raw-data-accordion-container"></div>`; // Set innerHTML first
+            rawDataContainer = document.getElementById('raw-data-accordion-container'); // Then get handle
+            let rawDataAccordionHtml = '';
+            if (groupedFmpData) {
+                const sortedKeys = Object.keys(groupedFmpData).sort();
+                for (const key of sortedKeys) {
+                    rawDataAccordionHtml += `
+                        <details class="mb-2 bg-white rounded-lg border">
+                            <summary class="p-3 font-semibold text-gray-700 cursor-pointer hover:bg-gray-50">${key.replace(/_/g, ' ')}</summary>
+                            <pre class="text-xs whitespace-pre-wrap break-all bg-gray-900 text-white p-3 rounded-b-lg">${JSON.stringify(groupedFmpData[key], null, 2)}</pre>
+                        </details>
+                    `;
+                }
+                if (rawDataContainer) rawDataContainer.innerHTML = rawDataAccordionHtml;
+            } else if (rawDataContainer) {
+                 rawDataContainer.innerHTML = '<p class="text-center text-gray-500 py-8">Could not load grouped raw data.</p>';
+            }
         }
-
 
         // --- DILIGENCE HUB TAB ---
-        const diligenceHubContainer = document.getElementById('diligence-hub-tab');
         if (diligenceHubContainer) {
             const copyIcon = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125H4.875A1.125 1.125 0 013.75 20.625V7.875c0-.621.504-1.125 1.125-1.125H6.75m9 9.375h3.375c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125h-9.75A1.125 1.125 0 006 9.375v9.75c0 .621.504 1.125 1.125 1.125h3.375m-3.75-9.375V6.125c0-.621.504-1.125 1.125-1.125h9.75c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-3.375" /></svg>`;
             diligenceHubContainer.innerHTML = `
                 <div class="space-y-6">
-                    <div class="mb-4 text-right p-4 bg-gray-100 rounded-lg border flex justify-end gap-4"> <button id="delete-old-diligence-logs-button" data-symbol="${ticker}" class="bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-2 px-4 rounded-lg text-sm">Delete Old Log Entries</button> <button id="delete-all-diligence-button" class="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg text-sm">Delete All Saved Answers</button> </div>
+                     <div class="mb-4 text-right p-4 bg-gray-100 rounded-lg border flex justify-end gap-4">
+                        <button id="delete-old-diligence-logs-button" data-symbol="${ticker}" class="bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-2 px-4 rounded-lg text-sm">Delete Old Log Entries</button>
+                        <button id="delete-all-diligence-button" class="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg text-sm">Delete All Saved Answers</button>
+                    </div>
                     <div id="manual-diligence-forms-container"></div>
                     <div id="qualitative-diligence-forms-container"></div>
                     <div id="structured-diligence-forms-container"></div>
-                    <div id="market-sentiment-forms-container"></div>
-                    <div id="diligence-log-display-container"> <div id="diligence-log-container" class="mb-6 text-left"></div> </div>
-                </div>`;
+                    <div id="diligence-log-display-container">
+                        <div id="diligence-log-container" class="mb-6 text-left"></div>
+                    </div>
+                </div>
+            `;
 
             // Populate Manual Diligence
             const manualContainer = diligenceHubContainer.querySelector('#manual-diligence-forms-container');
-            manualContainer.innerHTML = `<div class="p-6 bg-white rounded-lg border shadow-sm text-left"><div class="flex justify-between items-center mb-4"><div><h4 class="text-base font-semibold text-gray-800">Manual Diligence Entry</h4><p class="text-sm text-gray-500">Add custom questions and answers to the log.</p></div><button id="add-diligence-entry-button" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg text-sm">Add New Q&A</button></div><div id="manual-diligence-entries-container" class="space-y-4"></div><div class="text-right mt-4"><button id="save-manual-diligence-button" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg">Save Manual Entries</button></div></div>`;
-            addDiligenceEntryRow(); // Add initial blank row
+            if(manualContainer) manualContainer.innerHTML = `<div class="p-6 bg-white rounded-lg border shadow-sm text-left"><div class="flex justify-between items-center mb-4"><div><h4 class="text-base font-semibold text-gray-800">Manual Diligence Entry</h4><p class="text-sm text-gray-500">Add custom questions and answers to the log.</p></div><button id="add-diligence-entry-button" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg text-sm">Add New Q&A</button></div><div id="manual-diligence-entries-container" class="space-y-4"></div><div class="text-right mt-4"><button id="save-manual-diligence-button" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg">Save Manual Entries</button></div></div>`;
 
-            // Populate Qualitative, Structured, Market Sentiment Forms
-            const populateDiligenceForm = (containerId, questions, savedAnswers, type) => {
-                const container = diligenceHubContainer.querySelector(`#${containerId}`);
-                let html = `<div class="text-left border rounded-lg p-4 bg-gray-50"><h4 class="text-base font-semibold text-gray-800 mb-1">${type.replace('Diligence','')} Diligence</h4><div class="space-y-4">`;
-                for (const [category, question] of Object.entries(questions)) {
-                    const savedAnswer = sanitizeText(savedAnswers.get(question) || '');
-                    html += `<div class="diligence-card p-3 bg-white rounded-lg border border-gray-200"><h5 class="font-semibold text-sm text-indigo-700 mb-2">${category}</h5><div class="flex items-start gap-2 mb-2"><p class="text-xs text-gray-600 flex-grow" data-question-text>${question}</p><button type="button" class="copy-icon-btn structured-diligence-copy-btn" title="Copy Question">${copyIcon}</button></div><textarea class="${type.toLowerCase()}-diligence-answer w-full border border-gray-300 rounded-lg p-2 text-sm" rows="4" data-category="${category}" placeholder="Your analysis and findings here...">${savedAnswer}</textarea></div>`;
+            // Populate Qualitative Diligence
+            const qualitativeContainer = diligenceHubContainer.querySelector('#qualitative-diligence-forms-container');
+            let qualitativeHtml = `<div class="text-left border rounded-lg p-4 bg-gray-50"><h4 class="text-base font-semibold text-gray-800 mb-1">Qualitative Diligence</h4><p class="text-sm text-gray-500 mb-4">Answer high-level questions about the business itself.</p><div class="space-y-4">`;
+            for (const [category, question] of Object.entries(QUALITATIVE_DILIGENCE_QUESTIONS)) {
+                const savedAnswer = sanitizeText(savedQualitativeAnswers.get(question) || '');
+                qualitativeHtml += `<div class="diligence-card p-3 bg-white rounded-lg border border-gray-200"><h5 class="font-semibold text-sm text-indigo-700 mb-2">${category}</h5><div class="flex items-start gap-2 mb-2"><p class="text-xs text-gray-600 flex-grow" data-question-text>${question}</p><button type="button" class="copy-icon-btn structured-diligence-copy-btn" title="Copy Question">${copyIcon}</button></div><textarea class="qualitative-diligence-answer w-full border border-gray-300 rounded-lg p-2 text-sm" rows="4" data-category="${category}" placeholder="Your analysis and findings here...">${savedAnswer}</textarea></div>`;
+            }
+            qualitativeHtml += `</div><div class="text-right mt-4"><button data-diligence-type="Qualitative" class="save-diligence-answers-button bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg">Save Qualitative Answers</button></div></div>`;
+            if(qualitativeContainer) qualitativeContainer.innerHTML = qualitativeHtml;
+
+            // Populate Structured Diligence
+            const structuredContainer = diligenceHubContainer.querySelector('#structured-diligence-forms-container');
+            let structuredHtml = `<div class="text-left border rounded-lg p-4 bg-gray-50"><h4 class="text-base font-semibold text-gray-800 mb-1">Structured (Quantitative) Diligence</h4><p class="text-sm text-gray-500 mb-4">Answer these core questions to build a foundational thesis.</p><div class="space-y-4">`;
+            for (const [category, questionData] of Object.entries(STRUCTURED_DILIGENCE_QUESTIONS)) {
+                let questionText = '';
+                let hasDateField = false;
+                if (typeof questionData === 'string') {
+                    questionText = questionData;
+                } else if (typeof questionData === 'object' && questionData.question) {
+                    questionText = questionData.question;
+                    hasDateField = questionData.hasDateField; // Check the flag
+                } else {
+                    continue; // Skip if format is unexpected
                 }
-                html += `</div><div class="text-right mt-4"><button data-diligence-type="${type}" class="save-diligence-answers-button bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg">Save ${type.replace('Diligence','')} Answers</button></div></div>`;
-                container.innerHTML = html;
-            };
-            populateDiligenceForm('qualitative-diligence-forms-container', QUALITATIVE_DILIGENCE_QUESTIONS, savedQualitativeAnswers, 'Qualitative');
-            populateDiligenceForm('structured-diligence-forms-container', STRUCTURED_DILIGENCE_QUESTIONS, savedStructuredAnswers, 'Structured');
-            populateDiligenceForm('market-sentiment-forms-container', MARKET_SENTIMENT_QUESTIONS, savedMarketSentimentAnswers, 'MarketSentiment'); // Kept for now
+
+                const savedAnswerData = savedStructuredAnswers.get(questionText);
+                const savedAnswer = sanitizeText(savedAnswerData?.answer || '');
+                const savedDate = sanitizeText(savedAnswerData?.filingDate || ''); // Get saved date
+
+                let dateInputHtml = '';
+                if (hasDateField) {
+                    dateInputHtml = `
+                        <div class="mt-2">
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Filing Date:</label>
+                            <input type="date" class="structured-diligence-date border border-gray-300 rounded-lg p-1 text-sm" value="${savedDate}">
+                        </div>`;
+                }
+
+                structuredHtml += `
+                    <div class="diligence-card p-3 bg-white rounded-lg border border-gray-200">
+                        <h5 class="font-semibold text-sm text-indigo-700 mb-2">${category}</h5>
+                        <div class="flex items-start gap-2 mb-2">
+                            <p class="text-xs text-gray-600 flex-grow" data-question-text>${questionText}</p>
+                            <button type="button" class="copy-icon-btn structured-diligence-copy-btn" title="Copy Question">${copyIcon}</button>
+                        </div>
+                        <textarea class="structured-diligence-answer w-full border border-gray-300 rounded-lg p-2 text-sm" rows="4" data-category="${category}" placeholder="Your analysis and findings here...">${savedAnswer}</textarea>
+                        ${dateInputHtml}
+                    </div>`;
+            }
+            structuredHtml += `</div><div class="text-right mt-4"><button data-diligence-type="Structured" class="save-diligence-answers-button bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg">Save Structured Answers</button></div></div>`;
+            if(structuredContainer) structuredContainer.innerHTML = structuredHtml;
+
+
+            // Market Sentiment population block removed
 
             // Populate Diligence Log
-            const diligenceReports = getReportsFromCache(ticker, 'DiligenceInvestigation'); // Use cache
-            renderDiligenceLog(diligenceHubContainer.querySelector('#diligence-log-container'), diligenceReports);
+            const diligenceReports = allSavedReports.filter(r => r.reportType === 'DiligenceInvestigation');
+            const diligenceLogContainer = diligenceHubContainer.querySelector('#diligence-log-container');
+            if (diligenceLogContainer) renderDiligenceLog(diligenceLogContainer, diligenceReports);
+
+            const checkIcon = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>`;
+            diligenceHubContainer.addEventListener('click', (e) => {
+                const copyBtn = e.target.closest('.structured-diligence-copy-btn');
+                if (copyBtn) {
+                    const textToCopy = copyBtn.previousElementSibling.textContent;
+                    navigator.clipboard.writeText(textToCopy).then(() => {
+                        copyBtn.classList.add('copied');
+                        copyBtn.innerHTML = checkIcon;
+                        setTimeout(() => {
+                            copyBtn.classList.remove('copied');
+                            copyBtn.innerHTML = copyIcon;
+                        }, 2000);
+                    });
+                }
+            });
+
+            diligenceHubContainer.addEventListener('click', (e) => {
+                if (e.target.closest('.delete-diligence-entry-button')) {
+                    e.target.closest('.diligence-entry-row').remove();
+                }
+            });
         }
 
+
         // --- ONGOING DILIGENCE TAB ---
-        const ongoingDiligenceContainer = document.getElementById('ongoing-diligence-tab');
         if (ongoingDiligenceContainer) {
             let nextEarningsDate = 'N/A';
             if (fmpData.earning_calendar && fmpData.earning_calendar.length > 0) {
@@ -380,75 +571,63 @@ export async function openRawDataViewer(ticker) {
                 if (futureEarnings.length > 0) { nextEarningsDate = futureEarnings[0].date; }
             }
 
-            // Define the structure (already done in index.html, just get container)
-            const logContainer = ongoingDiligenceContainer.querySelector('#ongoing-review-log-container');
+            const reportTypesForLog = ['FilingDiligence', 'EightKAnalysis', 'UpdatedGarpMemo', 'UpdatedQarpMemo', 'QuarterlyReview', 'AnnualReview', 'EightKThesisImpact']; // Added new type
+            const filingDiligenceReports = allSavedReports.filter(r => reportTypesForLog.includes(r.reportType));
 
-            // Set dynamic data
-            ongoingDiligenceContainer.querySelector('#next-earnings-date-display').textContent = nextEarningsDate;
-            ongoingDiligenceContainer.querySelector('#analyze-tenq-button').dataset.symbol = ticker;
-            ongoingDiligenceContainer.querySelector('#analyze-tenk-button').dataset.symbol = ticker;
-            ongoingDiligenceContainer.querySelector('#analyze-eightk-button').dataset.symbol = ticker;
-            ongoingDiligenceContainer.querySelector('#generate-updated-garp-memo-button').dataset.symbol = ticker;
-            ongoingDiligenceContainer.querySelector('#generate-updated-qarp-memo-button').dataset.symbol = ticker;
-            ongoingDiligenceContainer.querySelector('#analyze-tenq-thesis-impact-button').dataset.symbol = ticker;
-            ongoingDiligenceContainer.querySelector('#analyze-tenk-thesis-impact-button').dataset.symbol = ticker;
-            ongoingDiligenceContainer.querySelector('#analyze-eightk-thesis-impact-button').dataset.symbol = ticker;
-
-
-            // Render the log initially using the cached reports
-            const ongoingReports = getReportsFromCache(ticker, ONGOING_DILIGENCE_REPORT_TYPES); // Use constant and cache
-            renderOngoingReviewLog(logContainer, ongoingReports);
-
-             // Ensure thesis impact buttons are hidden initially (redundant due to _resetAnalysisModal, but safe)
-            ongoingDiligenceContainer.querySelectorAll('.analyze-thesis-impact-button').forEach(btn => btn.classList.add('hidden'));
-            ongoingDiligenceContainer.querySelector('#updated-memo-section').classList.add('hidden'); // Ensure updated memo section is hidden
-            ongoingDiligenceContainer.querySelector('#review-form-container').classList.add('hidden'); // Ensure review form is hidden
-            ongoingDiligenceContainer.querySelector('#filing-diligence-input-container').classList.add('hidden'); // Ensure filing input is hidden
-            ongoingDiligenceContainer.querySelector('#ongoing-review-actions').classList.remove('hidden'); // Ensure action buttons are shown
-        }
-
-        // --- POSITION ANALYSIS TAB ---
-        const positionAnalysisTab = document.getElementById('position-analysis-tab');
-        const positionAnalysisTabButton = document.querySelector('.tab-button[data-tab="position-analysis"]');
-        const portfolioData = state.portfolioCache.find(s => s.ticker === ticker);
-        if (positionAnalysisTab && positionAnalysisTabButton && portfolioData && (portfolioData.transactions?.length > 0 || portfolioData.shares > 0)) {
-            positionAnalysisTabButton.classList.remove('hidden');
-            const helpIconHtmlPos = `<button data-report-type="PositionAnalysis" class="ai-help-button p-1 rounded-full hover:bg-indigo-100" title="What is this?"><svg class="w-5 h-5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" /></svg></button>`;
-            positionAnalysisTab.innerHTML = `
-                <div id="report-status-container-position" class="hidden p-3 mb-4 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between gap-4"></div>
-                <div id="position-analysis-content-container">
-                    <div class="text-center p-8 bg-gray-50 rounded-lg">
-                        <div class="flex justify-center items-center gap-2 mb-2"> <h3 class="text-xl font-bold text-gray-800">Position Review</h3> ${helpIconHtmlPos} </div>
-                        <p class="text-gray-600 mb-6 max-w-2xl mx-auto">Re-evaluate the original GARP thesis for this holding based on your actual cost basis and the current market price.</p>
-                        <button id="generate-position-analysis-button" data-symbol="${ticker}" data-report-type="PositionAnalysis" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg text-base shadow-md transition-transform hover:scale-105"> Generate Position Analysis </button>
+            // *** ADDED NEW BUTTON HERE ***
+            ongoingDiligenceContainer.innerHTML = `
+                <div class="bg-white p-6 rounded-2xl shadow-lg border border-gray-200">
+                    <div class="flex justify-between items-center mb-6 border-b pb-4">
+                        <div>
+                            <h3 class="text-xl font-bold text-gray-800">Ongoing Review Hub</h3>
+                            <p class="text-sm text-gray-500">Periodically re-evaluate your investment thesis.</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-sm font-semibold text-gray-600">Next Earnings Date</p>
+                            <p class="text-lg font-bold text-indigo-700">${nextEarningsDate}</p>
+                        </div>
                     </div>
-                    <div id="position-analysis-report-container" class="prose max-w-none mt-6"></div>
-                </div>`;
-        }
-
-        // --- RAW DATA TAB ---
-        const rawDataTab = document.getElementById('raw-data-tab');
-        if (rawDataTab) {
-            const rawDataContainer = rawDataTab.querySelector('#raw-data-accordion-container');
-            let rawDataAccordionHtml = '';
-            if (groupedFmpData) {
-                const sortedKeys = Object.keys(groupedFmpData).sort();
-                for (const key of sortedKeys) {
-                    rawDataAccordionHtml += `<details class="mb-2 bg-white rounded-lg border"><summary class="p-3 font-semibold text-gray-700 cursor-pointer hover:bg-gray-50">${key.replace(/_/g, ' ')}</summary><pre class="text-xs whitespace-pre-wrap break-all bg-gray-900 text-white p-3 rounded-b-lg">${JSON.stringify(groupedFmpData[key], null, 2)}</pre></details>`;
-                }
-                rawDataContainer.innerHTML = rawDataAccordionHtml;
-            } else {
-                 rawDataContainer.innerHTML = '<p class="text-center text-gray-500 py-8">Could not load grouped raw data.</p>';
-            }
+                    <div id="ongoing-review-actions" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                        <button data-review-type="Quarterly" class="start-review-button bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-5 rounded-lg">Start Quarterly Review</button>
+                        <button data-review-type="Annual" class="start-review-button bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-5 rounded-lg">Start Annual Review</button>
+                        <button id="show-filing-input-button" class="bg-sky-600 hover:bg-sky-700 text-white font-bold py-3 px-5 rounded-lg">Analyze Filing</button>
+                    </div>
+                    <div id="review-form-container" class="hidden mb-6"></div>
+                    <div id="filing-diligence-input-container" class="hidden mb-6 text-center p-4 border rounded-lg bg-gray-50">
+                        <label for="filing-diligence-textarea" class="block text-sm font-medium text-gray-700 mb-2">Paste 10-K, 10-Q, or 8-K Filing Text Below</label>
+                        <textarea id="filing-diligence-textarea" class="w-full border border-gray-300 rounded-lg p-2 text-sm" rows="10" placeholder="Paste the full text of the filing here..."></textarea>
+                        <div class="mt-4 flex justify-center gap-4">
+                            <button id="generate-filing-questions-button" data-symbol="${ticker}" class="bg-teal-600 hover:bg-teal-700 text-white font-semibold py-2 px-5 rounded-lg">Generate Q&A Form</button>
+                            <button id="analyze-eight-k-button-new" data-symbol="${ticker}" class="bg-sky-600 hover:bg-sky-700 text-white font-semibold py-2 px-5 rounded-lg">Analyze as 8-K</button>
+                            <button id="analyze-eight-k-thesis-impact-button" data-symbol="${ticker}" class="bg-orange-600 hover:bg-orange-700 text-white font-semibold py-2 px-5 rounded-lg">Analyze 8-K Impact</button>
+                        </div>
+                    </div>
+                    <div id="filing-diligence-form-container" class="hidden mb-6"></div>
+                    <div id="updated-memo-section" class="hidden mb-6">
+                         <h4 class="text-lg font-semibold text-gray-800 mb-2">Updated AI-Generated Memo</h4>
+                         <div class="flex items-center gap-4 mb-2">
+                            <button id="generate-updated-garp-memo-button" data-symbol="${ticker}" class="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded-lg text-sm">Update GARP Memo</button>
+                            <button id="generate-updated-qarp-memo-button" data-symbol="${ticker}" class="bg-orange-600 hover:bg-orange-700 text-white font-semibold py-2 px-4 rounded-lg text-sm">Update QARP Memo</button>
+                         </div>
+                         <div id="updated-memo-container" class="prose max-w-none p-4 border rounded-lg bg-gray-50"></div>
+                    </div>
+                    <div id="ongoing-review-log-container"></div>
+                </div>
+            `;
+            const logContainer = ongoingDiligenceContainer.querySelector('#ongoing-review-log-container');
+            if (logContainer) renderOngoingReviewLog(logContainer, filingDiligenceReports);
         }
 
     } catch (error) {
         console.error('Error opening raw data viewer:', error);
         titleEl.textContent = `Error Loading Data for ${ticker}`;
-        const errorMsgHtml = `<p class="text-red-500 text-center p-4">${error.message}</p>`;
-        ['dashboard-tab', 'ai-analysis-tab', 'diligence-hub-tab', 'ongoing-diligence-tab', 'position-analysis-tab', 'raw-data-tab'].forEach(id => {
+        // Add checks before setting innerHTML in catch block
+        const errorDisplayTargets = ['company-profile-display-container'];
+        errorDisplayTargets.forEach(id => {
             const el = document.getElementById(id);
-            if (el) el.innerHTML = errorMsgHtml;
+            if (el) {
+                el.innerHTML = `<p class="text-red-500 text-center">${error.message}</p>`;
+            }
         });
     }
 }
