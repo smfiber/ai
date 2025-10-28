@@ -1266,6 +1266,7 @@ export async function handleFinalThesisRequest(symbol, forceNew = false) {
 }
 
 // --- NEW HANDLER FOR UPDATED FINAL THESIS ---
+// *** MODIFIED FUNCTION ***
 export async function handleUpdatedFinalThesisRequest(symbol, forceNew = false) {
     const contentContainer = document.getElementById('ai-article-container-analysis');
     const statusContainer = document.getElementById('report-status-container-analysis');
@@ -1957,18 +1958,14 @@ export async function handleEightKThesisImpactRequest(symbol, forceNew = false) 
         }
         const latestEightKSummary = eightKSummaries[0];
 
-        // 2. Get the latest Updated Final Thesis
-        const originalThesisReports = getReportsFromCache(symbol, 'UpdatedFinalThesis');
-        if (originalThesisReports.length === 0) {
-            // Fallback to FinalInvestmentThesis if UpdatedFinalThesis doesn't exist
-            const fallbackThesisReports = getReportsFromCache(symbol, 'FinalInvestmentThesis');
-            if (fallbackThesisReports.length === 0) {
-                 throw new Error(`The 'Updated Final Thesis' (or the original 'Final Investment Thesis') must be generated first to compare against.`);
-            }
-             originalThesisReports.push(fallbackThesisReports[0]); // Use the fallback
+        // *** MODIFIED LOGIC: REMOVE FALLBACK ***
+        // 2. Get the latest Updated Final Thesis (NO FALLBACK)
+        const updatedThesisReports = getReportsFromCache(symbol, 'UpdatedFinalThesis');
+        if (updatedThesisReports.length === 0) {
+            throw new Error(`The 'Updated Final Thesis' must be generated first to compare against.`); // Updated error message
         }
-        const latestOriginalThesis = originalThesisReports[0];
-
+        const latestOriginalThesis = updatedThesisReports[0];
+        // *** END MODIFICATION ***
 
         // 3. Construct the prompt
         const profile = state.portfolioCache.find(s => s.ticker === symbol) || {};
