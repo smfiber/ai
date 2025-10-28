@@ -99,6 +99,16 @@ function initializeGoogleSignIn() {
             client_id: state.googleClientId,
             callback: handleCredentialResponse,
         });
+        
+        // After successful initialization, check if we need to render the button
+        const authStatusEl = document.getElementById('auth-status');
+        if (authStatusEl && (!state.auth || !state.auth.currentUser || state.auth.currentUser.isAnonymous)) {
+             google.accounts.id.renderButton(
+                authStatusEl,
+                { theme: "outline", size: "large", type: "standard", text: "signin_with" }
+            );
+        }
+
     } catch (error) {
         console.error("Google Sign-In initialization error:", error);
         displayMessageInModal("Could not initialize Google Sign-In. Check your Client ID and ensure you are loading the page from a valid origin.", "error");
@@ -155,12 +165,7 @@ function setupAuthUI(user) {
         document.getElementById('logout-button').addEventListener('click', handleLogout);
     } else {
         appContainer.classList.add(CONSTANTS.CLASS_HIDDEN);
-        if (typeof google !== 'undefined' && google.accounts) {
-            google.accounts.id.renderButton(
-                authStatusEl,
-                { theme: "outline", size: "large", type: "standard", text: "signin_with" }
-            );
-        }
+        // Button rendering logic is now handled in initializeGoogleSignIn
     }
 }
 
