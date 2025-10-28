@@ -2,24 +2,202 @@
 import { CONSTANTS, state, promptMap, QUARTERLY_REVIEW_QUESTIONS, ANNUAL_REVIEW_QUESTIONS } from './config.js';
 import { openModal, closeModal, openStockListModal, openManageStockModal, openPortfolioManagerModal, openRawDataViewer, addDiligenceEntryRow, addKpiRow } from './ui-modals.js';
 import { fetchAndCachePortfolioData, renderPortfolioManagerList, renderGarpScorecardDashboard, renderGarpInterpretationAnalysis } from './ui-render.js';
-// Removed handleGenerateFilingQuestionsRequest, Added new handlers
-import { handleResearchSubmit, handleSaveStock, handleDeleteStock, handleRefreshFmpData, handleAnalysisRequest, handleGarpMemoRequest, handleSaveReportToDb, handleGeneratePrereqsRequest, handleGarpCandidacyRequest, handlePortfolioGarpAnalysisRequest, handlePositionAnalysisRequest, handleReportHelpRequest, handleManualDiligenceSave, handleDeleteDiligenceLog, handleWorkflowHelpRequest, handleManualPeerAnalysisRequest, handleSaveFilingDiligenceRequest, handleDeleteFilingDiligenceLog, handleGenerateUpdatedGarpMemoRequest, handleGenerateUpdatedQarpMemoRequest, handleAnalyzeEightKRequest, handleCompounderMemoRequest, handleBmqvMemoRequest, handleFinalThesisRequest, handleKpiSuggestionRequest, handleCopyReportRequest, handleFullAnalysisWorkflow, handleDiligenceMemoRequest, handleSaveDiligenceAnswers, handleDeleteAllDiligenceAnswers, handleDeleteOldDiligenceLogs, handleInvestigationSummaryRequest, handleQuarterlyReviewRequest, handleAnnualReviewRequest, handleUpdatedFinalThesisRequest, handleEightKThesisImpactRequest, handleAnalyzeTenQRequest, handleAnalyzeTenKRequest, handleTenQThesisImpactRequest, handleTenKThesisImpactRequest } from './ui-handlers.js';
+// Removed handleUpdatedFinalThesisRequest from the import below
+import { handleResearchSubmit, handleSaveStock, handleDeleteStock, handleRefreshFmpData, handleAnalysisRequest, handleGarpMemoRequest, handleSaveReportToDb, handleGeneratePrereqsRequest, handleGarpCandidacyRequest, handlePortfolioGarpAnalysisRequest, handlePositionAnalysisRequest, handleReportHelpRequest, handleManualDiligenceSave, handleDeleteDiligenceLog, handleWorkflowHelpRequest, handleManualPeerAnalysisRequest, handleGenerateFilingQuestionsRequest, handleSaveFilingDiligenceRequest, handleDeleteFilingDiligenceLog, handleGenerateUpdatedGarpMemoRequest, handleGenerateUpdatedQarpMemoRequest, handleAnalyzeEightKRequest, handleCompounderMemoRequest, handleBmqvMemoRequest, handleFinalThesisRequest, handleKpiSuggestionRequest, handleCopyReportRequest, handleFullAnalysisWorkflow, handleDiligenceMemoRequest, handleSaveDiligenceAnswers, handleDeleteAllDiligenceAnswers, handleDeleteOldDiligenceLogs, handleInvestigationSummaryRequest, handleQuarterlyReviewRequest, handleAnnualReviewRequest, handleEightKThesisImpactRequest } from './ui-handlers.js'; // Added handleEightKThesisImpactRequest
 import { getFmpStockData } from './api.js';
 import { _calculateGarpScorecardMetrics } from './analysis-helpers.js';
 
 // --- DYNAMIC TOOLTIPS ---
 function initializeTooltips() {
-    // ... (content unchanged)
+    let tooltipElement;
+
+    document.body.addEventListener('mouseover', e => {
+        const target = e.target.closest('[data-tooltip]');
+        if (!target) return;
+        const tooltipText = target.getAttribute('data-tooltip');
+        if (!tooltipText) return;
+
+        tooltipElement = document.createElement('div');
+        tooltipElement.className = 'custom-tooltip';
+        tooltipElement.textContent = tooltipText;
+        document.body.appendChild(tooltipElement);
+
+        positionTooltip(target, tooltipElement);
+
+        requestAnimationFrame(() => {
+            if (tooltipElement) {
+                tooltipElement.style.opacity = '1';
+            }
+        });
+    });
+
+    document.body.addEventListener('mouseout', e => {
+        const target = e.target.closest('[data-tooltip]');
+        if (target && tooltipElement) {
+            tooltipElement.remove();
+            tooltipElement = null;
+        }
+    });
+
+    function positionTooltip(target, tooltip) {
+        const targetRect = target.getBoundingClientRect();
+        const tooltipRect = tooltip.getBoundingClientRect();
+        const margin = 8;
+
+        let top = targetRect.top - tooltipRect.height - margin;
+        let left = targetRect.left + (targetRect.width / 2) - (tooltipRect.width / 2);
+
+        // Adjust if tooltip goes off-screen
+        if (top < 0) { // If above screen
+            top = targetRect.bottom + margin;
+        }
+        if (left < 0) { // If left of screen
+            left = margin;
+        } else if (left + tooltipRect.width > window.innerWidth) { // If right of screen
+            left = window.innerWidth - tooltipRect.width - margin;
+        }
+
+        tooltip.style.left = `${left}px`;
+        tooltip.style.top = `${top}px`;
+    }
 }
 
 // --- EVENT LISTENER SETUP ---
 
 async function handleScorecardEdit(target) {
-    // ... (content unchanged)
+    const metricKey = target.dataset.metricKey;
+    const ticker = target.dataset.ticker;
+    const format = target.dataset.format;
+
+    if (!metricKey || !ticker) return;
+
+    const originalValueText = target.textContent.replace(/%|\s|x|\/|5/g, '').trim();
+    const originalValue = parseFloat(originalValueText);
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = isNaN(originalValue) ? '' : originalValue;
+    input.className = 'w-full text-center text-2xl font-bold bg-gray-200 rounded-md';
+
+    target.style.display = 'none';
+    target.parentNode.appendChild(input);
+    input.focus();
+    input.select();
+
+    const saveAndClose = async () => {
+        let newValue = parseFloat(input.value);
+
+        if (isNaN(newValue)) {
+            // If input is blank, we remove the override
+            const docRef = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(ticker).collection('analysis').doc('manual_overrides');
+            await docRef.update({
+                [metricKey]: firebase.firestore.FieldValue.delete()
+            });
+        } else {
+             // If it's a percentage, divide by 100 before saving
+            if (format === 'percent') {
+                newValue = newValue / 100;
+            }
+            const docRef = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(ticker).collection('analysis').doc('manual_overrides');
+            await docRef.set({ [metricKey]: newValue }, { merge: true });
+        }
+
+        // Re-render the dashboard to show the updated score and indicator
+        // Note: The related components are removed, so this rendering won't happen, but we keep the logic in case they are re-added.
+        const garpScorecardContainer = document.getElementById('garp-scorecard-container');
+        if (garpScorecardContainer) {
+            const fmpData = await getFmpStockData(ticker);
+            renderGarpScorecardDashboard(garpScorecardContainer, ticker, fmpData);
+            renderGarpInterpretationAnalysis(garpScorecardContainer, _calculateGarpScorecardMetrics(fmpData));
+        }
+
+        // Cleanup
+        input.remove();
+        target.style.display = 'block';
+    };
+
+    input.addEventListener('blur', saveAndClose);
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            input.blur(); // Trigger the save and close
+        } else if (e.key === 'Escape') {
+            input.remove();
+            target.style.display = 'block';
+        }
+    });
 }
 
 function setupGlobalEventListeners() {
-    // ... (content unchanged)
+    document.getElementById('dashboard-section').addEventListener('click', (e) => {
+        const refreshButton = e.target.closest('.dashboard-refresh-button');
+        if (refreshButton) {
+            fetchAndCachePortfolioData();
+            return;
+        }
+
+        const listButton = e.target.closest('.dashboard-list-button');
+        if (listButton) {
+            const status = listButton.dataset.status;
+            if (status) {
+                openStockListModal(status);
+            }
+            return;
+        }
+
+        const helpButton = e.target.closest('.ai-help-button');
+        if (helpButton) {
+            const reportType = helpButton.dataset.reportType;
+            if (reportType) {
+                handleReportHelpRequest(reportType);
+            }
+            return;
+        }
+    });
+
+    document.getElementById(CONSTANTS.MODAL_STOCK_LIST).addEventListener('click', (e) => {
+        const target = e.target.closest('button');
+        if (!target) return;
+
+        if (target.id === 'expand-all-button') {
+            document.querySelectorAll('#stock-list-modal-content details').forEach(d => d.open = true);
+            return;
+        }
+        if (target.id === 'collapse-all-button') {
+            document.querySelectorAll('#stock-list-modal-content details').forEach(d => d.open = false);
+            return;
+        }
+
+        const ticker = target.dataset.ticker;
+        if (ticker) {
+            if (target.classList.contains('dashboard-item-edit')) {
+                closeModal(CONSTANTS.MODAL_STOCK_LIST);
+                const stockData = state.portfolioCache.find(s => s.ticker === ticker);
+                if (stockData) {
+                    openManageStockModal({ ...stockData, isEditMode: true });
+                }
+            } else if (target.classList.contains('dashboard-item-view')) {
+                openRawDataViewer(ticker);
+            } else if (target.classList.contains('dashboard-item-refresh')) {
+                handleRefreshFmpData(ticker);
+            }
+        }
+    });
+
+    document.getElementById('portfolioManagerModal').addEventListener('click', (e) => {
+        const target = e.target.closest('button');
+        if (!target) return;
+        const ticker = target.dataset.ticker;
+        if (!ticker) return;
+
+        if (target.classList.contains('edit-stock-btn')) {
+            const stockData = state.portfolioCache.find(s => s.ticker === ticker);
+            if (stockData) {
+                openManageStockModal({ ...stockData, isEditMode: true });
+            }
+        } else if (target.classList.contains('delete-stock-btn')) {
+            handleDeleteStock(ticker);
+        }
+    });
 }
 
 export function setupEventListeners() {
@@ -38,7 +216,27 @@ export function setupEventListeners() {
 
     // Event delegation for the Manage Stock modal
     document.getElementById('manageStockModal')?.addEventListener('click', (e) => {
-        // ... (content unchanged)
+        if (e.target.closest('#suggest-kpis-button')) {
+            handleKpiSuggestionRequest();
+            return;
+        }
+        if (e.target.closest('#add-kpi-button')) {
+            addKpiRow();
+            return;
+        }
+
+        const suggestionChip = e.target.closest('.kpi-suggestion-chip');
+        if (suggestionChip) {
+            const kpiName = suggestionChip.dataset.kpiName;
+            addKpiRow({ name: kpiName });
+            return;
+        }
+
+        const removeKpiButton = e.target.closest('.remove-kpi-button');
+        if (removeKpiButton) {
+            removeKpiButton.closest('.kpi-row').remove();
+            return;
+        }
     });
 
 
@@ -168,7 +366,7 @@ export function setupEventListeners() {
             formContainer.innerHTML = formHtml;
             formContainer.classList.remove('hidden');
             document.getElementById('ongoing-review-actions').classList.add('hidden');
-            document.getElementById('filing-diligence-input-container').classList.add('hidden'); // Hide filing input too
+            document.getElementById('filing-diligence-input-container').classList.add('hidden');
             return;
         }
 
@@ -193,51 +391,39 @@ export function setupEventListeners() {
         if (target.id === 'show-filing-input-button') {
             document.getElementById('filing-diligence-input-container').classList.remove('hidden');
             document.getElementById('ongoing-review-actions').classList.add('hidden');
-            document.getElementById('review-form-container').classList.add('hidden'); // Hide review form if open
-             document.getElementById('filing-diligence-form-container').classList.add('hidden'); // Hide old Q&A form if open
+            document.getElementById('review-form-container').classList.add('hidden');
             return;
         }
 
-        // *** REMOVED listener for 'generate-filing-questions-button' ***
+        if (target.id === 'generate-filing-questions-button') {
+            handleGenerateFilingQuestionsRequest(symbol);
+            return;
+        }
 
-        // *** UPDATED listener for analyze 8-K button ID ***
-        if (target.id === 'analyze-eightk-button') {
+        if (target.id === 'analyze-eight-k-button-new') {
             handleAnalyzeEightKRequest(symbol);
             return;
         }
-        // *** NEW listeners for 10-Q and 10-K analysis ***
-        if (target.id === 'analyze-tenq-button') {
-            handleAnalyzeTenQRequest(symbol);
-            return;
-        }
-        if (target.id === 'analyze-tenk-button') {
-            handleAnalyzeTenKRequest(symbol);
-            return;
-        }
 
-        // *** NEW listeners for thesis impact buttons ***
-        if (target.id === 'analyze-eightk-thesis-impact-button') {
+        // *** ADDED EVENT LISTENER FOR NEW BUTTON ***
+        if (target.id === 'analyze-eight-k-thesis-impact-button') {
              handleEightKThesisImpactRequest(symbol);
              return;
         }
-        if (target.id === 'analyze-tenq-thesis-impact-button') {
-             handleTenQThesisImpactRequest(symbol);
-             return;
-        }
-        if (target.id === 'analyze-tenk-thesis-impact-button') {
-             handleTenKThesisImpactRequest(symbol);
-             return;
-        }
 
-        // Listener for saving manual Q&A generated from old process (can likely be removed if UI changes)
         if (target.id === 'save-filing-diligence-button') {
             handleSaveFilingDiligenceRequest(symbol);
             return;
         }
 
-        // *** REMOVED listener for 'cancel-filing-diligence-button' ***
+        if (target.id === 'cancel-filing-diligence-button') {
+            const formContainer = document.getElementById('filing-diligence-form-container');
+            formContainer.innerHTML = '';
+            formContainer.classList.add('hidden');
+            document.getElementById('filing-diligence-input-container').classList.remove('hidden');
+            return;
+        }
 
-        // Handles deleting ANY log entry from ongoing diligence now
         const deleteFilingBtn = e.target.closest('.delete-filing-diligence-log-btn');
         if (deleteFilingBtn) {
             const reportId = deleteFilingBtn.dataset.reportId;
@@ -247,8 +433,20 @@ export function setupEventListeners() {
             return;
         }
 
-        // Removed copy button for generated Q&A form
-        // const copyFilingQuestionBtn = e.target.closest('.copy-filing-question-btn'); ...
+        const copyFilingQuestionBtn = e.target.closest('.copy-filing-question-btn');
+        if (copyFilingQuestionBtn) {
+            const questionText = copyFilingQuestionBtn.previousElementSibling.textContent;
+            navigator.clipboard.writeText(questionText).then(() => {
+                copyFilingQuestionBtn.classList.add('copied');
+                const originalIcon = copyFilingQuestionBtn.innerHTML;
+                copyFilingQuestionBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>`;
+                setTimeout(() => {
+                    copyFilingQuestionBtn.classList.remove('copied');
+                    copyFilingQuestionBtn.innerHTML = originalIcon;
+                }, 2000);
+            });
+            return;
+        }
 
         if (target.id === 'generate-updated-garp-memo-button') {
             handleGenerateUpdatedGarpMemoRequest(symbol);
@@ -260,7 +458,6 @@ export function setupEventListeners() {
             return;
         }
 
-        // --- Diligence Hub Specific ---
         const saveDiligenceBtn = e.target.closest('.save-diligence-answers-button');
         if (saveDiligenceBtn) {
             const diligenceType = saveDiligenceBtn.dataset.diligenceType;
@@ -275,55 +472,21 @@ export function setupEventListeners() {
             return;
         }
 
-        // --- Position Analysis ---
         if (target.id === 'generate-position-analysis-button') {
             handlePositionAnalysisRequest(symbol);
             return;
         }
 
-        // --- AI Analysis Tab Specific ---
-        if (target.id === 'run-full-workflow-button') {
-             handleFullAnalysisWorkflow(symbol);
-             return;
-        }
-
-        // Removed listener for '.generate-candidacy-button' as it's now on dashboard tab
-
-        if (target.matches('.ai-analysis-button')) {
-            const reportType = target.dataset.reportType;
-            const promptConfig = promptMap[reportType];
-            const diligenceMemoTypes = ['QualitativeDiligenceMemo', 'StructuredDiligenceMemo', 'MarketSentimentMemo']; // MarketSentimentMemo kept here for now
-
-            if (reportType === 'InvestigationSummaryMemo') {
-                handleInvestigationSummaryRequest(symbol);
-            } else if (diligenceMemoTypes.includes(reportType)) {
-                handleDiligenceMemoRequest(symbol, reportType);
-            } else if (promptConfig) {
-                // Ensure correct arguments for different handlers
-                if (['InvestmentMemo', 'LongTermCompounder', 'BmqvMemo', 'FinalInvestmentThesis', 'UpdatedFinalThesis'].includes(reportType)) {
-                    // Call handlers that expect (symbol, forceNew = false) or (symbol, reportType, promptConfig, forceNew = false) implicitly using default forceNew
-                    if (reportType === 'InvestmentMemo') handleGarpMemoRequest(symbol);
-                    else if (reportType === 'LongTermCompounder') handleCompounderMemoRequest(symbol);
-                    else if (reportType === 'BmqvMemo') handleBmqvMemoRequest(symbol);
-                    else if (reportType === 'FinalInvestmentThesis') handleFinalThesisRequest(symbol);
-                    else if (reportType === 'UpdatedFinalThesis') handleUpdatedFinalThesisRequest(symbol);
-                 } else {
-                    handleAnalysisRequest(symbol, reportType, promptConfig);
-                }
-            }
-            return; // Added return to prevent falling through
-        }
-
-        // Explicit button IDs removed as they are covered by '.ai-analysis-button' logic above
+        // Removed AI Analysis related button listeners
+        // if (target.id === 'run-full-workflow-button') { ... }
+        // if (target.matches('.generate-candidacy-button')) { ... }
+        // if (target.matches('.ai-analysis-button')) { ... }
         // if (target.id === 'garp-memo-button') ...
         // if (target.id === 'long-term-compounder-button') ...
         // if (target.id === 'bmqv-memo-button') ...
         // if (target.id === 'final-thesis-button') ...
-        // if (target.id === 'updated-final-thesis-button') ...
-        if (target.id === 'generate-prereqs-button') { // Kept separate as it doesn't fit standard pattern
-            handleGeneratePrereqsRequest(symbol);
-            return; // Added return
-        }
+        // if (target.id === 'updated-final-thesis-button') ... // This usage was likely removed previously as well
+        // if (target.id === 'generate-prereqs-button') ...
     });
 
     setupGlobalEventListeners();
