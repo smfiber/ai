@@ -57,7 +57,8 @@ async function autoSaveReport(ticker, reportType, content, prompt, diligenceQues
             'FilingDiligence',
             'EightKAnalysis',
             'QuarterlyReview',
-            'AnnualReview'
+            'AnnualReview',
+            'EightKThesisImpact' // Add new report type here to preserve history
         ];
 
         if (!reportTypesToPreserve.includes(reportType)) {
@@ -1797,7 +1798,8 @@ export async function handleSaveFilingDiligenceRequest(symbol) {
 
         // Refresh log
         const logContainer = document.getElementById('ongoing-review-log-container');
-        const reportTypes = ['FilingDiligence', 'EightKAnalysis', 'UpdatedGarpMemo', 'UpdatedQarpMemo', 'QuarterlyReview', 'AnnualReview'];
+        // *** ADD EightKThesisImpact to reportTypes ***
+        const reportTypes = ['FilingDiligence', 'EightKAnalysis', 'UpdatedGarpMemo', 'UpdatedQarpMemo', 'QuarterlyReview', 'AnnualReview', 'EightKThesisImpact'];
         const savedReports = getReportsFromCache(symbol, reportTypes);
         renderOngoingReviewLog(logContainer, savedReports);
 
@@ -1881,6 +1883,7 @@ export async function handleGenerateFilingQuestionsRequest(symbol) {
     }
 }
 
+// *** MODIFIED FUNCTION ***
 export async function handleAnalyzeEightKRequest(symbol) {
     const filingTextarea = document.getElementById('filing-diligence-textarea');
     const filingText = filingTextarea.value.trim();
@@ -1891,18 +1894,19 @@ export async function handleAnalyzeEightKRequest(symbol) {
 
     openModal(CONSTANTS.MODAL_LOADING);
     const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
-    loadingMessage.textContent = `AI is analyzing the 8-K filing...`;
+    loadingMessage.textContent = `AI is summarizing the 8-K filing...`; // Changed message
 
     try {
         const profile = state.portfolioCache.find(s => s.ticker === symbol);
         const companyName = profile ? profile.companyName : symbol;
 
         const reportType = 'EightKAnalysis';
-        const promptConfig = promptMap[reportType];
+        const promptConfig = promptMap[reportType]; // This now points to the updated prompt
         const prompt = promptConfig.prompt
             .replace('{companyName}', companyName)
             .replace('{filingText}', filingText);
 
+        // Using generateRefinedArticle might still be okay for summarization
         const analysisResult = await generateRefinedArticle(prompt);
 
         await autoSaveReport(symbol, reportType, analysisResult, prompt);
@@ -1911,7 +1915,8 @@ export async function handleAnalyzeEightKRequest(symbol) {
 
         // Refresh the log
         const logContainer = document.getElementById('ongoing-review-log-container');
-        const reportTypes = ['FilingDiligence', 'EightKAnalysis', 'UpdatedGarpMemo', 'UpdatedQarpMemo', 'QuarterlyReview', 'AnnualReview'];
+        // *** ADD EightKThesisImpact to reportTypes ***
+        const reportTypes = ['FilingDiligence', 'EightKAnalysis', 'UpdatedGarpMemo', 'UpdatedQarpMemo', 'QuarterlyReview', 'AnnualReview', 'EightKThesisImpact'];
         const savedReports = getReportsFromCache(symbol, reportTypes);
         renderOngoingReviewLog(logContainer, savedReports);
 
@@ -1919,13 +1924,89 @@ export async function handleAnalyzeEightKRequest(symbol) {
         const displayContainer = document.getElementById('ongoing-review-display-container');
         if (displayContainer) {
             displayReport(displayContainer, analysisResult, prompt);
+            // Add dataset attribute to track displayed report
+             const newReport = getReportsFromCache(symbol, reportType)[0];
+             if(newReport) displayContainer.dataset.displayingReportId = newReport.id;
         }
 
-        displayMessageInModal('8-K analysis saved to the log.', 'info');
+        displayMessageInModal('8-K Factual Summary saved to the log.', 'info'); // Changed message
 
     } catch (error) {
         console.error("Error analyzing 8-K filing:", error);
-        displayMessageInModal(`Could not complete 8-K analysis: ${error.message}`, 'error');
+        displayMessageInModal(`Could not complete 8-K summary: ${error.message}`, 'error'); // Changed message
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
+// *** NEW FUNCTION ***
+export async function handleEightKThesisImpactRequest(symbol, forceNew = false) {
+    // Note: forceNew is included for future use/consistency but not used initially
+    openModal(CONSTANTS.MODAL_LOADING);
+    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+    loadingMessage.textContent = `Analyzing 8-K impact on thesis for ${symbol}...`;
+
+    try {
+        const reportType = 'EightKThesisImpact';
+        const promptConfig = promptMap[reportType];
+
+        // 1. Get the latest 8-K Factual Summary
+        const eightKSummaries = getReportsFromCache(symbol, 'EightKAnalysis');
+        if (eightKSummaries.length === 0) {
+            throw new Error(`The '8-K Factual Summary' must be generated first using the 'Analyze as 8-K' button.`);
+        }
+        const latestEightKSummary = eightKSummaries[0];
+
+        // 2. Get the latest Updated Final Thesis
+        const originalThesisReports = getReportsFromCache(symbol, 'UpdatedFinalThesis');
+        if (originalThesisReports.length === 0) {
+            // Fallback to FinalInvestmentThesis if UpdatedFinalThesis doesn't exist
+            const fallbackThesisReports = getReportsFromCache(symbol, 'FinalInvestmentThesis');
+            if (fallbackThesisReports.length === 0) {
+                 throw new Error(`The 'Updated Final Thesis' (or the original 'Final Investment Thesis') must be generated first to compare against.`);
+            }
+             originalThesisReports.push(fallbackThesisReports[0]); // Use the fallback
+        }
+        const latestOriginalThesis = originalThesisReports[0];
+
+
+        // 3. Construct the prompt
+        const profile = state.portfolioCache.find(s => s.ticker === symbol) || {};
+        const companyName = profile.companyName || symbol;
+
+        const prompt = promptConfig.prompt
+            .replace('{companyName}', companyName)
+            .replace('{tickerSymbol}', symbol)
+            .replace('{eightKSummary}', latestEightKSummary.content)
+            .replace('{originalThesis}', latestOriginalThesis.content);
+
+        // 4. Call AI
+        loadingMessage.textContent = `AI is comparing 8-K findings to your thesis...`;
+        const impactAnalysisResult = await generateRefinedArticle(prompt); // Use refined article for better formatting
+
+        // 5. Save the report
+        await autoSaveReport(symbol, reportType, impactAnalysisResult, prompt);
+
+        // 6. Update UI
+        const logContainer = document.getElementById('ongoing-review-log-container');
+        // *** ADD EightKThesisImpact to reportTypes ***
+        const reportTypes = ['FilingDiligence', 'EightKAnalysis', 'UpdatedGarpMemo', 'UpdatedQarpMemo', 'QuarterlyReview', 'AnnualReview', 'EightKThesisImpact'];
+        const savedReports = getReportsFromCache(symbol, reportTypes);
+        renderOngoingReviewLog(logContainer, savedReports);
+
+        // Display the newly generated report
+        const displayContainer = document.getElementById('ongoing-review-display-container');
+        if (displayContainer) {
+            displayReport(displayContainer, impactAnalysisResult, prompt);
+             const newReport = getReportsFromCache(symbol, reportType)[0];
+             if(newReport) displayContainer.dataset.displayingReportId = newReport.id;
+        }
+
+        displayMessageInModal('8-K Thesis Impact analysis saved to the log.', 'info');
+
+    } catch (error) {
+        console.error("Error generating 8-K Thesis Impact analysis:", error);
+        displayMessageInModal(`Could not complete thesis impact analysis: ${error.message}`, 'error');
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
@@ -1948,7 +2029,8 @@ export async function handleDeleteFilingDiligenceLog(reportId, ticker) {
                 // Re-render the log
                 const logContainer = document.getElementById('ongoing-review-log-container');
                 const displayContainer = document.getElementById('ongoing-review-display-container');
-                const reportTypes = ['FilingDiligence', 'EightKAnalysis', 'UpdatedGarpMemo', 'UpdatedQarpMemo', 'QuarterlyReview', 'AnnualReview'];
+                // *** ADD EightKThesisImpact to reportTypes ***
+                const reportTypes = ['FilingDiligence', 'EightKAnalysis', 'UpdatedGarpMemo', 'UpdatedQarpMemo', 'QuarterlyReview', 'AnnualReview', 'EightKThesisImpact'];
                 const savedReports = getReportsFromCache(ticker, reportTypes);
                 renderOngoingReviewLog(logContainer, savedReports);
 
@@ -1990,6 +2072,7 @@ async function generateUpdatedMemo(symbol, memoType) {
         const filingDiligenceReports = getReportsFromCache(symbol, 'FilingDiligence');
         const diligenceInvestigationReports = getReportsFromCache(symbol, 'DiligenceInvestigation');
         const eightKReports = getReportsFromCache(symbol, 'EightKAnalysis');
+        const eightKImpactReports = getReportsFromCache(symbol, 'EightKThesisImpact'); // Get impact reports too
 
         let combinedDiligenceLog = '';
         const logs = [];
@@ -2006,8 +2089,12 @@ async function generateUpdatedMemo(symbol, memoType) {
              logs.push(investigationLog);
         }
         if (eightKReports.length > 0) {
-            const eightKLog = eightKReports.map(report => `**8-K Analysis Summary (${report.savedAt.toDate().toLocaleDateString()}):**\n${report.content}`).join('\n\n---\n\n');
+            const eightKLog = eightKReports.map(report => `**8-K Factual Summary (${report.savedAt.toDate().toLocaleDateString()}):**\n${report.content}`).join('\n\n---\n\n');
             logs.push(eightKLog);
+        }
+         if (eightKImpactReports.length > 0) { // Add impact reports to log
+            const eightKImpactLog = eightKImpactReports.map(report => `**8-K Thesis Impact Analysis (${report.savedAt.toDate().toLocaleDateString()}):**\n${report.content}`).join('\n\n---\n\n');
+            logs.push(eightKImpactLog);
         }
 
         combinedDiligenceLog = logs.length > 0 ? logs.join('\n\n---\n\n') : 'No recent diligence logs available.';
@@ -2062,7 +2149,8 @@ async function generateUpdatedMemo(symbol, memoType) {
 
         // Refresh log
         const logContainer = document.getElementById('ongoing-review-log-container');
-        const reportTypes = ['FilingDiligence', 'EightKAnalysis', 'UpdatedGarpMemo', 'UpdatedQarpMemo', 'QuarterlyReview', 'AnnualReview'];
+        // *** ADD EightKThesisImpact to reportTypes ***
+        const reportTypes = ['FilingDiligence', 'EightKAnalysis', 'UpdatedGarpMemo', 'UpdatedQarpMemo', 'QuarterlyReview', 'AnnualReview', 'EightKThesisImpact'];
         const savedReports = getReportsFromCache(symbol, reportTypes);
         renderOngoingReviewLog(logContainer, savedReports);
 
@@ -2527,7 +2615,8 @@ async function _handleReviewRequest(symbol, reviewType) {
 
         // Update UI
         const logContainer = document.getElementById('ongoing-review-log-container');
-        const reportTypes = ['FilingDiligence', 'EightKAnalysis', 'UpdatedGarpMemo', 'UpdatedQarpMemo', 'QuarterlyReview', 'AnnualReview'];
+        // *** ADD EightKThesisImpact to reportTypes ***
+        const reportTypes = ['FilingDiligence', 'EightKAnalysis', 'UpdatedGarpMemo', 'UpdatedQarpMemo', 'QuarterlyReview', 'AnnualReview', 'EightKThesisImpact'];
         const savedReports = getReportsFromCache(symbol, reportTypes);
         renderOngoingReviewLog(logContainer, savedReports);
 
