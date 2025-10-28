@@ -34,10 +34,10 @@ export async function fetchAndCachePortfolioData() {
         document.getElementById('watchlist-count').textContent = watchlistCount;
         document.getElementById('revisit-3-months-count').textContent = revisit3MonthsCount;
         document.getElementById('revisit-6-months-count').textContent = revisit6MonthsCount;
-        
+
         // Render the new overview card after data is fetched
         await renderPortfolioGarpOverview();
-        
+
     } catch (error) {
         console.error("Error fetching portfolio data:", error);
     }
@@ -54,7 +54,7 @@ export function renderSectorMomentumHeatMap(performanceData, aiSummary) {
     if (!section || !summaryContainer || !container) return;
 
     summaryContainer.textContent = aiSummary || 'AI summary is currently unavailable.';
-    
+
     const getHeatClass = (value) => {
         if (typeof value !== 'number' || !isFinite(value)) return 'heat-neutral';
         if (value > 5) return 'heat-strong-positive';
@@ -121,7 +121,7 @@ export function renderPeerComparisonTable(container, ticker, companyMetrics, pee
     for (const metric of metricsToCompare) {
         const companyValue = companyMetrics[metric.key]?.value;
         const peerValue = peerData.averages[metric.key];
-        
+
         let premiumHtml = '<td class="text-center text-gray-500">N/A</td>';
         if (typeof companyValue === 'number' && typeof peerValue === 'number' && peerValue !== 0) {
             const premium = (companyValue / peerValue) - 1;
@@ -133,7 +133,7 @@ export function renderPeerComparisonTable(container, ticker, companyMetrics, pee
                 premiumClass = metric.higherIsBetter ? 'price-loss' : 'price-gain';
             } else {
                 if (!metric.higherIsBetter && companyValue < 0) {
-                    premiumClass = 'price-loss'; 
+                    premiumClass = 'price-loss';
                 } else if (premium > 0.001) {
                     premiumClass = metric.higherIsBetter ? 'price-gain' : 'price-loss';
                 } else if (premium < -0.001) {
@@ -142,7 +142,7 @@ export function renderPeerComparisonTable(container, ticker, companyMetrics, pee
             }
             premiumHtml = `<td class="text-center font-semibold ${premiumClass}">${(premium * 100).toFixed(1)}%</td>`;
         }
-        
+
         tableRowsHtml += `
             <tr class="border-b">
                 <td class="py-2 px-3 font-semibold text-gray-700">${metric.label}</td>
@@ -183,8 +183,8 @@ export function renderPeerComparisonTable(container, ticker, companyMetrics, pee
 export async function renderPortfolioGarpOverview() {
     const overviewContainer = document.getElementById('portfolio-garp-overview-container');
     const aiSummaryContainer = document.getElementById('portfolio-garp-ai-summary-container');
-    
-    if (aiSummaryContainer) aiSummaryContainer.innerHTML = ''; 
+
+    if (aiSummaryContainer) aiSummaryContainer.innerHTML = '';
     if (!overviewContainer) return;
 
     try {
@@ -261,7 +261,7 @@ export function renderPortfolioManagerList() {
 
     let html = '';
     const sortedSectors = Object.keys(groupedBySector).sort();
-    
+
     for (const sector of sortedSectors) {
         html += `<div class="p-2 sticky top-0 bg-indigo-50 text-indigo-800 font-semibold text-sm">${sanitizeText(sector)}</div>`;
         html += '<ul class="divide-y divide-gray-200">';
@@ -294,7 +294,7 @@ export function renderPortfolioManagerList() {
 }
 
 export async function _renderGroupedStockList(container, stocksWithData, listType) {
-    container.innerHTML = ''; 
+    container.innerHTML = '';
     if (stocksWithData.length === 0) {
         container.innerHTML = `<p class="text-center text-gray-500 py-8">No stocks in your ${listType}.</p>`;
         return;
@@ -320,7 +320,7 @@ export async function _renderGroupedStockList(container, stocksWithData, listTyp
                 </summary>
                 <div class="bg-gray-50">
                     <ul class="divide-y divide-gray-200">`;
-        
+
         stocks.forEach(stock => {
             const refreshedAt = stock.fmpData?.cachedAt ? stock.fmpData.cachedAt.toDate().toLocaleString() : 'N/A';
             const score = stock.garpConvictionScore;
@@ -393,17 +393,17 @@ export function renderGarpScorecardDashboard(container, ticker, fmpData) {
         'P/S Ratio': 'ps_ratio',
         'P/E (TTM)': 'pe_ttm'
     };
-    
+
     const tilesHtml = Object.entries(metrics).map(([name, data]) => {
         if (name === 'garpConvictionScore') return '';
         let valueDisplay = 'N/A';
         let colorClass = 'text-gray-500 italic';
-        
+
         const overrideKey = metricToOverrideKeyMap[name];
         const isOverridden = overrideKey && overrides.hasOwnProperty(overrideKey);
-        
-        const overrideIndicatorHtml = isOverridden 
-            ? `<span class="override-indicator" title="Manual Override Active">&#9998;</span>` 
+
+        const overrideIndicatorHtml = isOverridden
+            ? `<span class="override-indicator" title="Manual Override Active">&#9998;</span>`
             : '';
 
         if (typeof data.value === 'number' && isFinite(data.value)) {
@@ -422,13 +422,13 @@ export function renderGarpScorecardDashboard(container, ticker, fmpData) {
                 valueDisplay = data.value.toFixed(2);
             }
         }
-        
+
         return `
             <div class="metric-tile p-4 relative">
                 ${overrideIndicatorHtml}
                 <p class="metric-title text-sm">${name}</p>
-                <p class="metric-value text-2xl ${colorClass} cursor-pointer hover:bg-gray-100 rounded-md" 
-                   data-metric-key="${overrideKey || ''}" 
+                <p class="metric-value text-2xl ${colorClass} cursor-pointer hover:bg-gray-100 rounded-md"
+                   data-metric-key="${overrideKey || ''}"
                    data-ticker="${ticker}"
                    data-format="${data.format || 'decimal'}">
                    ${valueDisplay}
@@ -441,7 +441,7 @@ export function renderGarpScorecardDashboard(container, ticker, fmpData) {
     let scoreClass = 'low';
     if (score > 75) scoreClass = 'high';
     else if (score > 50) scoreClass = 'medium';
-    
+
     const helpIconSvg = `<button data-report-type="GarpConvictionScore" class="ai-help-button p-1 rounded-full hover:bg-indigo-100" title="What is this?"><svg class="w-5 h-5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" /></svg></button>`;
 
     const scoreHtml = `
@@ -462,7 +462,7 @@ export function renderGarpScorecardDashboard(container, ticker, fmpData) {
             </div>
         </div>
         <div class="grid grid-cols-2 md:grid-cols-5 gap-4">${tilesHtml}</div>`;
-    
+
     return metrics; // Return metrics for reuse
 }
 
@@ -499,7 +499,7 @@ export function renderGarpInterpretationAnalysis(container, metrics) {
             if (metricData && metricData.interpretation) {
                 const interp = metricData.interpretation;
                 const badgeClass = toKebabCase(interp.category);
-                
+
                 html += `
                     <div class="p-3 bg-gray-50 rounded-lg border">
                         <p class="font-semibold text-gray-800 flex items-center gap-3">
@@ -514,7 +514,7 @@ export function renderGarpInterpretationAnalysis(container, metrics) {
 
         html += '</div></div>';
     }
-    
+
     html += '</div>';
     container.innerHTML += html;
 }
@@ -539,15 +539,15 @@ export function renderValuationHealthDashboard(container, ticker, fmpData) {
             const y = height - ((d - min) / range) * (height - 4) + 2;
             return `${x},${y}`;
         }).join(' ');
-        
+
         return `<svg viewBox="0 0 ${width} ${height}" class="sparkline-container"><polyline points="${points}" class="sparkline ${statusClass}" /></svg>`;
     };
-    
+
     const evaluateMetric = (name, key, history, type, isPercentage, lowerIsBetter) => {
         const latest = history[history.length - 1]?.[key];
         const dataPoints = history.map(h => h[key]).filter(v => typeof v === 'number');
         if (typeof latest !== 'number') return { value: 'N/A', status: 'neutral', text: 'No Data', gaugePercent: 0, sparkline: '' };
-        
+
         const avg = dataPoints.reduce((a, b) => a + b, 0) / dataPoints.length;
         let text, gaugePercent, statusClass;
 
@@ -587,7 +587,7 @@ export function renderValuationHealthDashboard(container, ticker, fmpData) {
     const profile = fmpData.profile?.[0] || {};
     const keyMetrics = (fmpData.key_metrics_annual || []).slice(0, 5).reverse();
     const ratios = (fmpData.ratios_annual || []).slice(0, 5).reverse();
-    
+
     if (keyMetrics.length > 0) {
         keyMetrics[keyMetrics.length - 1].marketCap = profile.mktCap;
     }
@@ -603,7 +603,7 @@ export function renderValuationHealthDashboard(container, ticker, fmpData) {
         { name: 'ROE', key: 'roe', source: keyMetrics, type: 'health', isPct: true, lowerIsBetter: false, tooltip: 'Return on Equity (ROE): A measure of profitability that calculates how many dollars of profit a company generates with each dollar of shareholders\' equity.' },
         { name: 'Debt/Equity', key: 'debtToEquity', source: keyMetrics, type: 'health', isPct: false, lowerIsBetter: true, tooltip: 'Debt/Equity Ratio: Measures a company\'s financial leverage by dividing its total liabilities by shareholder equity. A high ratio indicates more debt.' },
     ];
-    
+
     const tilesHtml = dashboardMetrics.map(m => {
         const data = evaluateMetric(m.name, m.key, m.source, m.type, m.isPct, m.lowerIsBetter);
         return `
@@ -655,7 +655,7 @@ export function updateGarpCandidacyStatus(statusContainer, reports, activeReport
 
     const activeReport = reports.find(r => r.id === activeReportId) || reports[0];
     const savedDate = activeReport.savedAt.toDate().toLocaleString();
-    
+
     statusHtml = `
         <div class="flex items-center gap-2">
             <span class="text-sm font-semibold text-blue-800">Displaying report from:</span>
@@ -665,7 +665,7 @@ export function updateGarpCandidacyStatus(statusContainer, reports, activeReport
         </div>
         <button id="generate-new-candidacy" data-ticker="${ticker}" class="bg-green-500 hover:bg-green-600 text-white text-xs font-semibold py-1 px-3 rounded-full">Generate New</button>
     `;
-    
+
     statusContainer.innerHTML = statusHtml;
 
     document.getElementById('version-selector-candidacy')?.addEventListener('change', (e) => {
@@ -695,7 +695,7 @@ export function renderCandidacyAnalysis(container, reportContent, prompt, dilige
             </div>
         `;
     }
-    
+
     const cleanedContent = (reportContent || '').trim().replace(/^```(?:markdown)?\s*\n/, '').replace(/\n```$/, '').trim();
     const reportHtml = marked.parse(cleanedContent);
     const tempDiv = document.createElement('div');
@@ -750,10 +750,10 @@ export function renderCandidacyAnalysis(container, reportContent, prompt, dilige
         diligenceSection.innerHTML = `Actionable Diligence Questions`;
         diligenceSection.after(doc.body);
     }
-    
+
     const finalHtml = accordionHtml + tempDiv.innerHTML;
     container.innerHTML = finalHtml;
-    
+
     container.querySelectorAll('[data-ai-query]').forEach(item => {
         item.addEventListener('click', () => {
             const query = item.dataset.aiQuery;
@@ -773,7 +773,7 @@ export function renderCandidacyAnalysis(container, reportContent, prompt, dilige
             const parentDiv = copyBtn.parentElement;
             const textContainer = parentDiv.querySelector('.flex-grow');
             const textToCopy = textContainer.querySelector('span').textContent;
-            
+
             navigator.clipboard.writeText(textToCopy).then(() => {
                 copyBtn.classList.add('copied');
                 copyBtn.innerHTML = checkIcon;
@@ -856,6 +856,7 @@ export function renderDiligenceLog(container, reports) {
     });
 }
 
+// *** MODIFIED FUNCTION ***
 export function renderOngoingReviewLog(container, reports) {
     if (!container) return;
 
@@ -870,8 +871,11 @@ export function renderOngoingReviewLog(container, reports) {
                 case 'AnnualReview': return 'Annual Review';
                 case 'QuarterlyReview': return 'Quarterly Review';
                 case 'FilingDiligence': return 'Filing Diligence Q&A';
-                case 'EightKAnalysis': return '8-K Analysis';
-                default: return 'Review';
+                case 'EightKAnalysis': return '8-K Factual Summary'; // Updated name
+                case 'EightKThesisImpact': return '8-K Thesis Impact'; // Added new type
+                case 'UpdatedGarpMemo': return 'Updated GARP Memo';
+                case 'UpdatedQarpMemo': return 'Updated QARP Memo';
+                default: return 'Review Log Entry'; // Generic fallback
             }
         };
         const reportName = getReportName(report.reportType);
@@ -908,6 +912,8 @@ export function renderOngoingReviewLog(container, reports) {
             if (report) {
                 const displayContainer = document.getElementById('ongoing-review-display-container');
                 displayReport(displayContainer, report.content, report.prompt);
+                 // Store the ID of the currently displayed report
+                 if (displayContainer) displayContainer.dataset.displayingReportId = reportId;
             }
         });
     });
@@ -916,7 +922,7 @@ export function renderOngoingReviewLog(container, reports) {
 export function renderTranscriptResults(container, results, query) {
     const aiSummaryContainer = document.getElementById('transcript-ai-summary-container');
     aiSummaryContainer.innerHTML = '';
-    
+
     if (!results || results.length === 0) {
         container.innerHTML = `<p class="text-center text-gray-500 italic p-4 bg-gray-50 rounded-md">No results found for "${sanitizeText(query)}".</p>`;
         return;
@@ -952,7 +958,7 @@ export function updateReportStatus(statusContainer, reports, activeReportId, ana
     if (reports.length > 0) {
         const activeReport = reports.find(r => r.id === activeReportId) || reports[0];
         const savedDate = activeReport.savedAt.toDate().toLocaleString();
-        
+
         statusHtml = `
             <div class="flex items-center gap-2">
                 <span class="text-sm font-semibold text-blue-800">Displaying report from: ${savedDate}</span>
@@ -968,7 +974,7 @@ export function updateReportStatus(statusContainer, reports, activeReportId, ana
             <button id="generate-new-${analysisParams.reportType}" class="bg-green-500 hover:bg-green-600 text-white text-xs font-semibold py-1 px-3 rounded-full">Generate New Report</button>
         `;
     }
-    
+
     statusContainer.innerHTML = statusHtml;
 
     const versionSelector = document.getElementById(`version-selector-${analysisParams.reportType}`);
