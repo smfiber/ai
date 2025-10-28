@@ -996,8 +996,8 @@ export async function handleGarpMemoRequest(symbol, forceNew = false) {
         const requiredMemos = {
             'GarpCandidacy': 'GARP Analysis Report',
             'StructuredDiligenceMemo': 'Structured Diligence Memo',
-            'QualitativeDiligenceMemo': 'Qualitative Diligence Memo'
-            // MarketSentimentMemo removed
+            'QualitativeDiligenceMemo': 'Qualitative Diligence Memo',
+            'MarketSentimentMemo': 'Market Sentiment Memo'
         };
 
         const fetchedMemos = {};
@@ -1028,7 +1028,7 @@ export async function handleGarpMemoRequest(symbol, forceNew = false) {
             .replace('{garpCandidacyReport}', fetchedMemos.GarpCandidacy)
             .replace('{structuredDiligenceMemo}', fetchedMemos.StructuredDiligenceMemo)
             .replace('{qualitativeDiligenceMemo}', fetchedMemos.QualitativeDiligenceMemo)
-            .replace('{marketSentimentMemo}', ''); // Replace removed placeholder with empty string
+            .replace('{marketSentimentMemo}', fetchedMemos.MarketSentimentMemo);
 
         const memoContent = await generateRefinedArticle(prompt, loadingMessage);
         const synthesisData = await extractSynthesisData(memoContent, reportType);
@@ -1266,7 +1266,7 @@ export async function handleFinalThesisRequest(symbol, forceNew = false) {
     }
 }
 
-// *** MODIFIED FUNCTION: Reinstate fallback with direct query to old collection ***
+// *** MODIFIED FUNCTION: Removed fallback logic ***
 export async function handleEightKThesisImpactRequest(symbol, forceNew = false) {
     // Note: forceNew is included for future use/consistency but not used initially
     openModal(CONSTANTS.MODAL_LOADING);
@@ -1284,32 +1284,13 @@ export async function handleEightKThesisImpactRequest(symbol, forceNew = false) 
         }
         const latestEightKSummary = eightKSummaries[0];
 
-        // 2. Try to get the latest Updated Final Thesis from cache (new collection)
+        // 2. Get the latest Updated Final Thesis from cache (current collection)
         const updatedThesisReports = getReportsFromCache(symbol, 'UpdatedFinalThesis');
-        let latestOriginalThesisContent = null;
-
-        if (updatedThesisReports.length > 0) {
-            latestOriginalThesisContent = updatedThesisReports[0].content;
-        } else {
-            // *** FALLBACK: Query the OLD collection ('ai_analysis_reports') for FinalInvestmentThesis ***
-            loadingMessage.textContent = `Updated thesis not found, searching for original thesis in archive...`;
-            console.log(`UpdatedFinalThesis not found for ${symbol}. Querying 'ai_analysis_reports' for FinalInvestmentThesis.`);
-            const oldThesisQuery = state.db.collection('ai_analysis_reports') // *** Directly use the old collection name ***
-                .where("ticker", "==", symbol)
-                .where("reportType", "==", "FinalInvestmentThesis")
-                .orderBy("savedAt", "desc")
-                .limit(1);
-
-            const oldThesisSnapshot = await oldThesisQuery.get();
-
-            if (!oldThesisSnapshot.empty) {
-                latestOriginalThesisContent = oldThesisSnapshot.docs[0].data().content;
-                console.log(`Found original FinalInvestmentThesis in 'ai_analysis_reports' for ${symbol}.`);
-            } else {
-                 // *** ERROR: Neither report found ***
-                 throw new Error(`Neither the 'Updated Final Thesis' (in current collection) nor the original 'Final Investment Thesis' (in archive collection) was found. Please generate one first.`);
-            }
+        if (updatedThesisReports.length === 0) {
+            // *** ERROR: Updated Final Thesis not found ***
+            throw new Error(`The 'Updated Final Thesis' report was not found. Please generate it first before running the 8-K impact analysis.`);
         }
+        const latestUpdatedThesisContent = updatedThesisReports[0].content;
         // *** END MODIFICATION ***
 
         // 3. Construct the prompt
@@ -1320,13 +1301,13 @@ export async function handleEightKThesisImpactRequest(symbol, forceNew = false) 
             .replace(/{companyName}/g, companyName)
             .replace(/{tickerSymbol}/g, symbol)
             .replace('{eightKSummary}', latestEightKSummary.content)
-            .replace('{originalThesis}', latestOriginalThesisContent); // Use the content found
+            .replace('{originalThesis}', latestUpdatedThesisContent); // Use UpdatedFinalThesis content
 
         // 4. Call AI
-        loadingMessage.textContent = `AI is comparing 8-K findings to your thesis...`;
+        loadingMessage.textContent = `AI is comparing 8-K findings to your updated thesis...`;
         const impactAnalysisResult = await generateRefinedArticle(prompt);
 
-        // 5. Save the report (saves to the NEW collection via autoSaveReport)
+        // 5. Save the report (saves to the current collection via autoSaveReport)
         await autoSaveReport(symbol, reportType, impactAnalysisResult, prompt);
 
         // 6. Update UI
@@ -1348,6 +1329,103 @@ export async function handleEightKThesisImpactRequest(symbol, forceNew = false) 
     } catch (error) {
         console.error("Error generating 8-K Thesis Impact analysis:", error);
         displayMessageInModal(`Could not complete thesis impact analysis: ${error.message}`, 'error');
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
+// --- NEW HANDLER FOR UPDATED FINAL THESIS ---
+export async function handleUpdatedFinalThesisRequest(symbol, forceNew = false) {
+    const contentContainer = document.getElementById('ai-article-container-analysis');
+    const statusContainer = document.getElementById('report-status-container-analysis');
+    contentContainer.innerHTML = '';
+    statusContainer.classList.add('hidden');
+
+    try {
+        const reportType = 'UpdatedFinalThesis';
+        const promptConfig = promptMap[reportType];
+        const savedReports = getReportsFromCache(symbol, reportType);
+
+        if (savedReports.length > 0 && !forceNew) {
+            const latestReport = savedReports[0];
+            displayReport(contentContainer, latestReport.content, latestReport.prompt);
+            updateReportStatus(statusContainer, savedReports, latestReport.id, { symbol, reportType, promptConfig });
+            return;
+        }
+
+        openModal(CONSTANTS.MODAL_LOADING);
+        const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+        loadingMessage.textContent = "Gathering original thesis and new diligence summaries...";
+
+        // 1. Get the original FinalInvestmentThesis content
+        const originalThesisReports = getReportsFromCache(symbol, 'FinalInvestmentThesis');
+        if (originalThesisReports.length === 0) {
+            throw new Error(`The original 'Final Investment Thesis' must be generated first.`);
+        }
+        const originalFinalThesisContent = originalThesisReports[0].content;
+
+        // 2. Get the summaries from the four diligence memos
+        const requiredDiligenceTypes = [
+            'QualitativeDiligenceMemo',
+            'StructuredDiligenceMemo',
+            'MarketSentimentMemo',
+            'InvestigationSummaryMemo'
+        ];
+        const diligenceSummaries = {};
+        let missingExtraction = [];
+
+        for (const type of requiredDiligenceTypes) {
+            const reports = getReportsFromCache(symbol, type);
+            if (reports.length === 0) {
+                throw new Error(`The prerequisite diligence memo '${ANALYSIS_NAMES[type]}' has not been generated yet.`);
+            }
+            const reportData = reports[0];
+            if (!reportData.synthesis_data) {
+                console.warn(`Synthesis data missing for ${type}, attempting extraction...`);
+                const extractedData = await extractSynthesisData(reportData.content, type);
+                if (!extractedData) {
+                    missingExtraction.push(ANALYSIS_NAMES[type]);
+                    diligenceSummaries[type] = null; // Indicate missing
+                } else {
+                    diligenceSummaries[type] = extractedData;
+                    // Save back extracted data
+                     await state.db.collection(CONSTANTS.DB_COLLECTION_AI_REPORTS).doc(reportData.id).update({ synthesis_data: extractedData });
+                     const cacheIndex = state.reportCache.findIndex(r => r.id === reportData.id);
+                     if (cacheIndex !== -1) state.reportCache[cacheIndex].synthesis_data = extractedData;
+                }
+            } else {
+                diligenceSummaries[type] = reportData.synthesis_data;
+            }
+        }
+
+         if (missingExtraction.length > 0) {
+            throw new Error(`Synthesis data is missing and could not be extracted for: ${missingExtraction.join(', ')}. Please regenerate them.`);
+        }
+
+
+        loadingMessage.textContent = "Synthesizing updated final thesis...";
+        const profile = state.portfolioCache.find(s => s.ticker === symbol);
+        const companyName = profile ? profile.companyName : symbol;
+
+        const finalPrompt = promptConfig.prompt
+            .replace(/{companyName}/g, companyName)
+            .replace(/{tickerSymbol}/g, symbol)
+            .replace('{originalFinalThesisContent}', originalFinalThesisContent)
+            .replace('{diligenceSummaries}', JSON.stringify(diligenceSummaries, null, 2));
+
+        const memoContent = await generateRefinedArticle(finalPrompt, loadingMessage);
+
+        await autoSaveReport(symbol, reportType, memoContent, finalPrompt);
+
+        const refreshedReports = getReportsFromCache(symbol, reportType);
+        displayReport(contentContainer, memoContent, finalPrompt);
+        updateReportStatus(statusContainer, refreshedReports, refreshedReports[0].id, { symbol, reportType, promptConfig });
+
+    } catch (error) {
+        console.error("Error generating Updated Final Thesis:", error);
+        displayMessageInModal(`Could not generate updated thesis: ${error.message}`, 'error');
+        contentContainer.innerHTML = `<p class="text-red-500">${error.message}</p>`;
+        throw error; // Re-throw to signal failure
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
@@ -1378,8 +1456,12 @@ export async function handleDiligenceMemoRequest(symbol, reportType, forceNew = 
             diligenceType: 'Structured',
             questions: STRUCTURED_DILIGENCE_QUESTIONS,
             name: 'Structured Diligence'
+        },
+        'MarketSentimentMemo': {
+            diligenceType: 'MarketSentiment',
+            questions: MARKET_SENTIMENT_QUESTIONS,
+            name: 'Market Sentiment'
         }
-        // MarketSentimentMemo removed
     };
     const memoConfig = config[reportType];
     const promptConfig = promptMap[reportType];
@@ -1530,8 +1612,12 @@ export async function handleSaveDiligenceAnswers(symbol, diligenceType) {
             dateSelector: '.structured-diligence-date', // Add selector for date
             questions: STRUCTURED_DILIGENCE_QUESTIONS,
             name: 'Structured Diligence'
+        },
+        'MarketSentiment': {
+            selector: '.market-sentiment-answer',
+            questions: MARKET_SENTIMENT_QUESTIONS,
+            name: 'Market Sentiment'
         }
-        // MarketSentiment removed
     };
 
     const sectionConfig = config[diligenceType];
@@ -1657,7 +1743,7 @@ export async function handleManualDiligenceSave(symbol) {
 export async function handleDeleteAllDiligenceAnswers(symbol) {
     openConfirmationModal(
         'Delete All Saved Answers?',
-        `Are you sure you want to permanently delete all saved diligence answers (Qualitative, Structured) for ${symbol}? This action cannot be undone.`,
+        `Are you sure you want to permanently delete all saved diligence answers (Qualitative, Structured, Market Sentiment) for ${symbol}? This action cannot be undone.`,
         async () => {
             openModal(CONSTANTS.MODAL_LOADING);
             document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Deleting all saved answers for ${symbol}...`;
@@ -1673,8 +1759,8 @@ export async function handleDeleteAllDiligenceAnswers(symbol) {
 
                 const deletePromises = [];
                 snapshot.forEach(doc => {
-                    // Only delete Qualitative and Structured
-                    if (doc.id === 'Qualitative' || doc.id === 'Structured') {
+                    // Only delete Qualitative, Structured and MarketSentiment
+                    if (doc.id === 'Qualitative' || doc.id === 'Structured' || doc.id === 'MarketSentiment') {
                         deletePromises.push(doc.ref.delete());
                     }
                 });
@@ -1682,20 +1768,20 @@ export async function handleDeleteAllDiligenceAnswers(symbol) {
                 if (deletePromises.length > 0) {
                     await Promise.all(deletePromises);
                 } else {
-                     displayMessageInModal('No Qualitative or Structured answers found to delete.', 'info');
+                     displayMessageInModal('No Qualitative, Structured or Market Sentiment answers found to delete.', 'info');
                      closeModal(CONSTANTS.MODAL_LOADING);
                      return;
                 }
 
                 // Clear text areas and date input in the UI
-                document.querySelectorAll('.qualitative-diligence-answer, .structured-diligence-answer').forEach(textarea => {
+                document.querySelectorAll('.qualitative-diligence-answer, .structured-diligence-answer, .market-sentiment-answer').forEach(textarea => {
                     textarea.value = '';
                 });
                 document.querySelectorAll('.structured-diligence-date').forEach(input => { // Clear date input too
                      input.value = '';
                 });
 
-                displayMessageInModal(`Successfully deleted all saved Qualitative and Structured diligence answers for ${symbol}.`, 'info');
+                displayMessageInModal(`Successfully deleted all saved Qualitative, Structured and Market Sentiment diligence answers for ${symbol}.`, 'info');
             } catch (error) {
                 console.error("Error deleting all diligence answers:", error);
                 displayMessageInModal(`Could not delete answers: ${error.message}`, 'error');
