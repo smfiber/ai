@@ -150,7 +150,7 @@ function setupAuthUI(user) {
             <div class="bg-white/20 backdrop-blur-sm rounded-full p-1 flex items-center gap-2 text-white text-sm">
                 ${photoEl}
                 <span class="font-medium pr-2">${displayName}</span>
-                <button id="logout-button" class="bg-.white/20 hover:bg-white/40 text-white font-semibold py-1 px-3 rounded-full" title="Sign Out">Logout</button>
+                <button id="logout-button" class="bg-white/20 hover:bg-white/40 text-white font-semibold py-1 px-3 rounded-full" title="Sign Out">Logout</button>
             </div>`;
         document.getElementById('logout-button').addEventListener('click', handleLogout);
     } else {
