@@ -143,9 +143,8 @@ function setupAuthUI(user) {
     const appContainer = document.getElementById('app-container');
     if (!authStatusEl || !appContainer) return;
 
-    authStatusEl.innerHTML = '';
-
     if (user && !user.isAnonymous) {
+        authStatusEl.innerHTML = ''; // MOVED this line here
         appContainer.classList.remove(CONSTANTS.CLASS_HIDDEN);
         closeModal(CONSTANTS.MODAL_API_KEY);
         
@@ -166,6 +165,7 @@ function setupAuthUI(user) {
     } else {
         appContainer.classList.add(CONSTANTS.CLASS_HIDDEN);
         // Button rendering logic is now handled in initializeGoogleSignIn
+        // And we no longer clear the authStatusEl here, allowing the button to persist
     }
 }
 
