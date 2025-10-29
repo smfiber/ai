@@ -574,7 +574,8 @@ export async function openRawDataViewer(ticker) {
             const reportTypesForLog = ['FilingDiligence', 'EightKAnalysis', 'UpdatedGarpMemo', 'UpdatedQarpMemo', 'QuarterlyReview', 'AnnualReview', 'EightKThesisImpact', 'TenQAnalysis', 'TenKAnalysis', 'TenQThesisImpact', 'TenKThesisImpact', 'MarketReactionAnalysis']; // Added new type
             const filingDiligenceReports = allSavedReports.filter(r => reportTypesForLog.includes(r.reportType));
 
-            // *** UPDATED THIS BLOCK TO INCLUDE NEW BUTTON ***
+            // *** MODIFIED THIS BLOCK TO INCLUDE NEW DATE INPUT ***
+            const todayStr = new Date().toISOString().split('T')[0]; // Get today's date in YYYY-MM-DD format
             ongoingDiligenceContainer.innerHTML = `
                 <div class="bg-white p-6 rounded-2xl shadow-lg border border-gray-200">
                     <div class="flex justify-between items-center mb-6 border-b pb-4">
@@ -598,6 +599,10 @@ export async function openRawDataViewer(ticker) {
                         <textarea id="filing-diligence-textarea" class="w-full border border-gray-300 rounded-lg p-2 text-sm" rows="10" placeholder="Paste the full text of the 8-K, 10-Q, or 10-K filing here..."></textarea>
 
                         <div class="mt-4 flex flex-wrap justify-center items-center gap-4">
+                            <div>
+                                <label for="filing-date-input" class="text-xs font-semibold text-gray-600 mr-2">Filing Date:</label>
+                                <input type="date" id="filing-date-input" value="${todayStr}" class="border border-gray-300 rounded-lg p-2 text-sm font-semibold">
+                            </div>
                             <select id="filing-type-selector" class="border border-gray-300 rounded-lg p-2 text-sm font-semibold">
                                 <option value="8-K">8-K</option>
                                 <option value="10-Q">10-Q</option>
@@ -605,7 +610,7 @@ export async function openRawDataViewer(ticker) {
                             </select>
                             <button id="analyze-filing-summary-button" data-symbol="${ticker}" class="bg-sky-600 hover:bg-sky-700 text-white font-semibold py-2 px-5 rounded-lg">Analyze Factual Summary</button>
                             <button id="analyze-filing-impact-button" data-symbol="${ticker}" class="bg-orange-600 hover:bg-orange-700 text-white font-semibold py-2 px-5 rounded-lg">Analyze Thesis Impact</button>
-                            <button id="analyze-market-reaction-button" data-symbol="${ticker}" class="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-5 rounded-lg">Analyze Market Reaction</button> {/* <-- NEW BUTTON ADDED */}
+                            <button id="analyze-market-reaction-button" data-symbol="${ticker}" class="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-5 rounded-lg">Analyze Market Reaction</button>
                         </div>
 
                     </div>
