@@ -1,5 +1,5 @@
 // fileName: ui-handlers.js
-import { CONSTANTS, state, promptMap, ANALYSIS_REQUIREMENTS, ANALYSIS_NAMES, SECTOR_KPI_SUGGESTIONS, STRUCTURED_DILIGENCE_QUESTIONS, QUALITATIVE_DILIGENCE_QUESTIONS, QUARTERLY_REVIEW_QUESTIONS, ANNUAL_REVIEW_QUESTIONS } from './config.js';
+import { CONSTANTS, state, promptMap, ANALYSIS_REQUIREMENTS, ANALYSIS_NAMES, SECTOR_KPI_SUGGESTIONS, STRUCTURED_DILIGENCE_QUESTIONS, QUALITATIVE_DILIGENCE_QUESTIONS, QUARTERLY_REVIEW_QUESTIONS, ANNUAL_REVIEW_QUESTIONS, MARKET_SENTIMENT_QUESTIONS } from './config.js'; // Added MARKET_SENTIMENT_QUESTIONS back
 import { callApi, callGeminiApi, generateRefinedArticle, generatePolishedArticleForSynthesis, getFmpStockData, extractSynthesisData } from './api.js';
 import { openModal, closeModal, displayMessageInModal, openConfirmationModal, openManageStockModal, addKpiRow, addDiligenceEntryRow } from './ui-modals.js';
 import { renderPortfolioManagerList, displayReport, updateReportStatus, fetchAndCachePortfolioData, updateGarpCandidacyStatus, renderCandidacyAnalysis, renderGarpAnalysisSummary, renderDiligenceLog, renderPeerComparisonTable, renderSectorMomentumHeatMap, renderOngoingReviewLog } from './ui-render.js';
@@ -50,7 +50,8 @@ function buildAnalysisPayload(fullData, requiredEndpoints) {
     return payload;
 }
 
-async function autoSaveReport(ticker, reportType, content, prompt, diligenceQuestions = null, synthesisData = null) {
+// *** MODIFIED FUNCTION: Added filingDate parameter ***
+async function autoSaveReport(ticker, reportType, content, prompt, diligenceQuestions = null, synthesisData = null, filingDate = null) {
     try {
         const reportTypesToPreserve = [
             'DiligenceInvestigation',
@@ -92,7 +93,8 @@ async function autoSaveReport(ticker, reportType, content, prompt, diligenceQues
             prompt: prompt || '',
             savedAt: firebase.firestore.Timestamp.now(),
             diligenceQuestions: diligenceQuestions,
-            ...(synthesisData && { synthesis_data: synthesisData })
+            ...(synthesisData && { synthesis_data: synthesisData }),
+            ...(filingDate && { filingDate: filingDate }) // Conditionally add filingDate
         };
         // *** Save to the collection defined in CONSTANTS ***
         const docRef = await state.db.collection(CONSTANTS.DB_COLLECTION_AI_REPORTS).add(reportData);
@@ -106,6 +108,7 @@ async function autoSaveReport(ticker, reportType, content, prompt, diligenceQues
         displayMessageInModal(`The ${reportType} report was generated but failed to auto-save. You can still save it manually. Error: ${error.message}`, 'warning');
     }
 }
+// *** END MODIFICATION ***
 
 // --- FMP API INTEGRATION & MANAGEMENT ---
 export async function handleRefreshFmpData(symbol) {
@@ -131,10 +134,10 @@ export async function handleRefreshFmpData(symbol) {
         const yesterday = new Date(today);
         yesterday.setDate(today.getDate() - 1);
         const fifteenDaysAgo = new Date(today);
-        fifteenDaysAgo.setDate(today.getDate() - 15);
+        fifteenDaysAgo.setDate(today.getDate() - 15); // Fetch 15 days back
 
         const yesterdayStr = formatDate(yesterday);
-        const fifteenDaysAgoStr = formatDate(fifteenDaysAgo);
+        const fifteenDaysAgoStr = formatDate(fifteenDaysAgo); // Adjusted date
         // --- End date calculation ---
 
         const coreEndpoints = [
@@ -150,7 +153,7 @@ export async function handleRefreshFmpData(symbol) {
             { name: 'stock_grade_news', path: 'grade', version: 'v3' },
             { name: 'analyst_estimates', path: 'analyst-estimates', params: 'period=annual', version: 'stable'},
             { name: 'earning_calendar', path: 'earnings', version: 'stable' },
-            // --- Added historical price endpoint ---
+            // --- Adjusted historical price endpoint date range ---
             { name: 'historical_price_eod', path: 'historical-price-full', params: `from=${fifteenDaysAgoStr}&to=${yesterdayStr}`, version: 'v3' }
         ];
 
@@ -1351,7 +1354,9 @@ export async function handleEightKThesisImpactRequest(symbol, forceNew = false) 
         const impactAnalysisResult = await generateRefinedArticle(prompt);
 
         // 5. Save the report (saves to the current collection via autoSaveReport)
-        await autoSaveReport(symbol, reportType, impactAnalysisResult, prompt);
+        // Pass the filingDate from the summary report to the impact report
+        await autoSaveReport(symbol, reportType, impactAnalysisResult, prompt, null, null, latestEightKSummary.filingDate);
+
 
         // 6. Update UI
         const logContainer = document.getElementById('ongoing-review-log-container');
@@ -1934,12 +1939,19 @@ export async function handleSaveFilingDiligenceRequest(symbol) {
 
 // --- REMOVED handleGenerateFilingQuestionsRequest ---
 
-// *** MODIFIED FUNCTION ***
+// *** MODIFIED FUNCTION: Reads filing date input ***
 export async function handleAnalyzeEightKRequest(symbol) {
     const filingTextarea = document.getElementById('filing-diligence-textarea');
+    const filingDateInput = document.getElementById('filing-date-input'); // Get date input
     const filingText = filingTextarea.value.trim();
+    const filingDate = filingDateInput.value; // Get the date value
+
     if (!filingText) {
         displayMessageInModal("Please paste the 8-K filing text into the text area first.", "warning");
+        return;
+    }
+    if (!filingDate) { // Validate date input
+        displayMessageInModal("Please select the filing date.", "warning");
         return;
     }
 
@@ -1960,7 +1972,9 @@ export async function handleAnalyzeEightKRequest(symbol) {
         // Using generateRefinedArticle might still be okay for summarization
         const analysisResult = await generateRefinedArticle(prompt);
 
-        await autoSaveReport(symbol, reportType, analysisResult, prompt);
+        // Pass filingDate to autoSaveReport
+        await autoSaveReport(symbol, reportType, analysisResult, prompt, null, null, filingDate);
+
 
         filingTextarea.value = ''; // Clear textarea after successful analysis
 
@@ -1988,13 +2002,21 @@ export async function handleAnalyzeEightKRequest(symbol) {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
 }
+// *** END MODIFICATION ***
 
-// --- NEW HANDLER FOR 10-Q ANALYSIS ---
+// --- NEW HANDLER FOR 10-Q ANALYSIS (MODIFIED TO READ DATE) ---
 export async function handleAnalyzeTenQRequest(symbol) {
     const filingTextarea = document.getElementById('filing-diligence-textarea');
+    const filingDateInput = document.getElementById('filing-date-input'); // Get date input
     const filingText = filingTextarea.value.trim();
+    const filingDate = filingDateInput.value; // Get the date value
+
     if (!filingText) {
         displayMessageInModal("Please paste the 10-Q filing text into the text area first.", "warning");
+        return;
+    }
+     if (!filingDate) { // Validate date input
+        displayMessageInModal("Please select the filing date.", "warning");
         return;
     }
 
@@ -2013,7 +2035,8 @@ export async function handleAnalyzeTenQRequest(symbol) {
             .replace('{filingText}', filingText);
 
         const analysisResult = await generateRefinedArticle(prompt);
-        await autoSaveReport(symbol, reportType, analysisResult, prompt);
+        // Pass filingDate to autoSaveReport
+        await autoSaveReport(symbol, reportType, analysisResult, prompt, null, null, filingDate);
         filingTextarea.value = '';
 
         // Refresh the log
@@ -2039,13 +2062,21 @@ export async function handleAnalyzeTenQRequest(symbol) {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
 }
+// *** END MODIFICATION ***
 
-// --- NEW HANDLER FOR 10-K ANALYSIS ---
+// --- NEW HANDLER FOR 10-K ANALYSIS (MODIFIED TO READ DATE) ---
 export async function handleAnalyzeTenKRequest(symbol) {
     const filingTextarea = document.getElementById('filing-diligence-textarea');
+    const filingDateInput = document.getElementById('filing-date-input'); // Get date input
     const filingText = filingTextarea.value.trim();
+     const filingDate = filingDateInput.value; // Get the date value
+
     if (!filingText) {
         displayMessageInModal("Please paste the 10-K filing text into the text area first.", "warning");
+        return;
+    }
+     if (!filingDate) { // Validate date input
+        displayMessageInModal("Please select the filing date.", "warning");
         return;
     }
 
@@ -2064,7 +2095,8 @@ export async function handleAnalyzeTenKRequest(symbol) {
             .replace('{filingText}', filingText);
 
         const analysisResult = await generateRefinedArticle(prompt);
-        await autoSaveReport(symbol, reportType, analysisResult, prompt);
+         // Pass filingDate to autoSaveReport
+        await autoSaveReport(symbol, reportType, analysisResult, prompt, null, null, filingDate);
         filingTextarea.value = '';
 
         // Refresh the log
@@ -2090,6 +2122,7 @@ export async function handleAnalyzeTenKRequest(symbol) {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
 }
+// *** END MODIFICATION ***
 
 // --- NEW HANDLER FOR 10-Q THESIS IMPACT ---
 export async function handleTenQThesisImpactRequest(symbol) {
@@ -2124,7 +2157,8 @@ export async function handleTenQThesisImpactRequest(symbol) {
 
         loadingMessage.textContent = `AI is comparing 10-Q findings to your updated thesis...`;
         const impactAnalysisResult = await generateRefinedArticle(prompt);
-        await autoSaveReport(symbol, reportType, impactAnalysisResult, prompt);
+         // Pass the filingDate from the summary report to the impact report
+        await autoSaveReport(symbol, reportType, impactAnalysisResult, prompt, null, null, latestTenQSummary.filingDate);
 
         const logContainer = document.getElementById('ongoing-review-log-container');
         const reportTypes = ['FilingDiligence', 'EightKAnalysis', 'UpdatedGarpMemo', 'UpdatedQarpMemo', 'QuarterlyReview', 'AnnualReview', 'EightKThesisImpact', 'TenQAnalysis', 'TenKAnalysis', 'TenQThesisImpact', 'TenKThesisImpact', 'MarketReactionAnalysis']; // Added new type
@@ -2181,7 +2215,8 @@ export async function handleTenKThesisImpactRequest(symbol) {
 
         loadingMessage.textContent = `AI is comparing 10-K findings to your updated thesis...`;
         const impactAnalysisResult = await generateRefinedArticle(prompt);
-        await autoSaveReport(symbol, reportType, impactAnalysisResult, prompt);
+        // Pass the filingDate from the summary report to the impact report
+        await autoSaveReport(symbol, reportType, impactAnalysisResult, prompt, null, null, latestTenKSummary.filingDate);
 
         const logContainer = document.getElementById('ongoing-review-log-container');
         const reportTypes = ['FilingDiligence', 'EightKAnalysis', 'UpdatedGarpMemo', 'UpdatedQarpMemo', 'QuarterlyReview', 'AnnualReview', 'EightKThesisImpact', 'TenQAnalysis', 'TenKAnalysis', 'TenQThesisImpact', 'TenKThesisImpact', 'MarketReactionAnalysis']; // Added new type
@@ -2205,7 +2240,7 @@ export async function handleTenKThesisImpactRequest(symbol) {
     }
 }
 
-// --- NEW HANDLER FOR MARKET REACTION ANALYSIS ---
+// --- NEW HANDLER FOR MARKET REACTION ANALYSIS (MODIFIED TO USE FILING DATE) ---
 export async function handleMarketReactionAnalysis(symbol) {
     openModal(CONSTANTS.MODAL_LOADING);
     const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
@@ -2215,32 +2250,7 @@ export async function handleMarketReactionAnalysis(symbol) {
         const reportType = 'MarketReactionAnalysis';
         const promptConfig = promptMap[reportType];
 
-        // 1. Get FMP Data
-        const fmpData = await getFmpStockData(symbol);
-        if (!fmpData) throw new Error("Could not retrieve FMP data.");
-
-        // 2. Get Current Price
-        const currentPrice = fmpData.profile?.[0]?.price;
-        if (typeof currentPrice !== 'number') throw new Error("Could not get current price.");
-
-        // 3. Get Previous Close
-        const historicalData = fmpData.historical_price_eod?.historical;
-        if (!historicalData || historicalData.length === 0) {
-            throw new Error("Could not get historical price data. Please refresh FMP data.");
-        }
-        // Sort descending to get the most recent easily
-        historicalData.sort((a, b) => new Date(b.date) - new Date(a.date));
-        const previousClose = historicalData[0]?.close;
-        if (typeof previousClose !== 'number' || previousClose === 0) {
-            throw new Error("Could not determine previous closing price from historical data.");
-        }
-
-        // 4. Calculate Price Change
-        const priceChange = (currentPrice / previousClose) - 1;
-        const priceChangePercent = (priceChange * 100).toFixed(2);
-
-        // 5. Get Prerequisite Reports (Filing Summary & Thesis Impact)
-        // Find the *most recent* factual summary and impact report
+        // 1. Get Prerequisite Reports (Filing Summary & Thesis Impact)
         const summaryReports = getReportsFromCache(symbol, ['TenQAnalysis', 'TenKAnalysis', 'EightKAnalysis']);
         const impactReports = getReportsFromCache(symbol, ['TenQThesisImpact', 'TenKThesisImpact', 'EightKThesisImpact']);
 
@@ -2250,13 +2260,62 @@ export async function handleMarketReactionAnalysis(symbol) {
         const latestSummaryReport = summaryReports[0];
         const latestImpactReport = impactReports[0];
 
-        // Determine Filing Type based on the summary report used
+        // 2. Get Filing Date from Summary Report
+        const filingDateStr = latestSummaryReport.filingDate;
+        if (!filingDateStr || !/^\d{4}-\d{2}-\d{2}$/.test(filingDateStr)) {
+            throw new Error("Could not find a valid filing date (YYYY-MM-DD) on the latest summary report. Please regenerate the summary ensuring the date was entered correctly.");
+        }
+        const filingDate = new Date(filingDateStr + 'T00:00:00'); // Ensure date is parsed correctly
+
+        // 3. Get FMP Data (including historical prices)
+        const fmpData = await getFmpStockData(symbol);
+        if (!fmpData) throw new Error("Could not retrieve FMP data.");
+
+        // 4. Get Historical Prices
+        const historicalData = fmpData.historical_price_eod?.historical;
+        if (!historicalData || historicalData.length < 2) { // Need at least two days
+            throw new Error("Could not get sufficient historical price data. Please refresh FMP data for this stock.");
+        }
+        // Sort ascending by date to easily find previous day
+        historicalData.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+        // 5. Find Closing Prices for Filing Date and Previous Day
+        let closeOnFilingDate = null;
+        let closeOnPreviousDay = null;
+
+        const filingDateISO = filingDateStr; // Already in YYYY-MM-DD
+
+        for (let i = 0; i < historicalData.length; i++) {
+            if (historicalData[i].date === filingDateISO) {
+                closeOnFilingDate = historicalData[i].close;
+                if (i > 0) { // Check if there's a previous day in the array
+                    closeOnPreviousDay = historicalData[i-1].close;
+                }
+                break;
+            }
+        }
+
+        if (closeOnFilingDate === null) {
+            throw new Error(`Could not find historical price data for the filing date (${filingDateISO}). Check the selected date and ensure FMP data is up-to-date.`);
+        }
+        if (closeOnPreviousDay === null) {
+            throw new Error(`Could not find historical price data for the day before the filing date (${filingDateISO}).`);
+        }
+        if (typeof closeOnFilingDate !== 'number' || typeof closeOnPreviousDay !== 'number' || closeOnPreviousDay === 0) {
+            throw new Error(`Invalid closing price data found for calculation around ${filingDateISO}.`);
+        }
+
+        // 6. Calculate Price Change
+        const priceChange = (closeOnFilingDate / closeOnPreviousDay) - 1;
+        const priceChangePercent = (priceChange * 100).toFixed(2);
+
+        // 7. Determine Filing Type
         let filingType = 'Filing';
         if (latestSummaryReport.reportType === 'TenQAnalysis') filingType = '10-Q';
         else if (latestSummaryReport.reportType === 'TenKAnalysis') filingType = '10-K';
         else if (latestSummaryReport.reportType === 'EightKAnalysis') filingType = '8-K';
 
-        // 6. Construct the Prompt
+        // 8. Construct the Prompt
         const profile = state.portfolioCache.find(s => s.ticker === symbol) || {};
         const companyName = profile.companyName || symbol;
 
@@ -2268,14 +2327,15 @@ export async function handleMarketReactionAnalysis(symbol) {
             .replace('{thesisImpactReport}', latestImpactReport.content)
             .replace('{priceChangePercent}', priceChangePercent);
 
-        // 7. Call AI
+        // 9. Call AI
         loadingMessage.textContent = `AI is explaining the market reaction...`;
         const analysisResult = await generateRefinedArticle(prompt);
 
-        // 8. Save Report
-        await autoSaveReport(symbol, reportType, analysisResult, prompt);
+        // 10. Save Report (Pass filing date)
+        await autoSaveReport(symbol, reportType, analysisResult, prompt, null, null, filingDateStr);
 
-        // 9. Update UI
+
+        // 11. Update UI
         const logContainer = document.getElementById('ongoing-review-log-container');
         const reportTypes = ['FilingDiligence', 'EightKAnalysis', 'UpdatedGarpMemo', 'UpdatedQarpMemo', 'QuarterlyReview', 'AnnualReview', 'EightKThesisImpact', 'TenQAnalysis', 'TenKAnalysis', 'TenQThesisImpact', 'TenKThesisImpact', 'MarketReactionAnalysis']; // Added new type
         const savedReports = getReportsFromCache(symbol, reportTypes);
@@ -2298,7 +2358,7 @@ export async function handleMarketReactionAnalysis(symbol) {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
 }
-// --- END NEW HANDLER ---
+// *** END MODIFICATION ***
 
 
 export async function handleDeleteFilingDiligenceLog(reportId, ticker) {
@@ -2488,7 +2548,7 @@ export async function handleDeleteDiligenceLog(reportId, ticker) {
 
                 state.reportCache = state.reportCache.filter(r => r.id !== reportId);
 
-                const diligenceReports = getReportsFromCache(ticker, 'DiliglenceInvestigation');
+                const diligenceReports = getReportsFromCache(ticker, 'DiligenceInvestigation'); // Corrected report type
                 const diligenceLogContainer = document.getElementById('diligence-log-container');
                 renderDiligenceLog(diligenceLogContainer, diligenceReports);
 
