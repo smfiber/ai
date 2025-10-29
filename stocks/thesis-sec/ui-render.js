@@ -992,6 +992,8 @@ export function updateReportStatus(statusContainer, reports, activeReportId, ana
                 contentContainer.dataset.rawMarkdown = selectedReport.content;
                 updateReportStatus(statusContainer, reports, selectedReport.id, analysisParams);
             }
+        }); // <-- This was missing
+    } // <-- This was missing
 
     const generateNewBtn = document.getElementById(`generate-new-${analysisParams.reportType}`);
     if (generateNewBtn) {
@@ -1003,4 +1005,6 @@ export function updateReportStatus(statusContainer, reports, activeReportId, ana
             } else {
                 handleAnalysisRequest(analysisParams.symbol, analysisParams.reportType, analysisParams.promptConfig, true);
             }
-        };
+        });
+    }
+}
