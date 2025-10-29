@@ -639,5 +639,3 @@ export async function openRawDataViewer(ticker) {
         });
     }
 }
-
-}
