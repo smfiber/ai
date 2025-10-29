@@ -208,6 +208,7 @@ export async function handleRefreshFmpData(symbol) {
 
 // --- PORTFOLIO & DASHBOARD MANAGEMENT ---
 
+// ... (handleSectorMomentumRequest, handleKpiSuggestionRequest, handleSaveStock, handleDeleteStock, handleResearchSubmit remain unchanged) ...
 export async function handleSectorMomentumRequest() {
     const section = document.getElementById('sector-momentum-section');
     const container = document.getElementById('sector-momentum-container');
@@ -457,7 +458,9 @@ export async function handleResearchSubmit(e) {
     }
 }
 
+
 // --- AI ANALYSIS REPORT GENERATORS ---
+// ... (handleWorkflowHelpRequest, handleReportHelpRequest, handlePositionAnalysisRequest, handlePortfolioGarpAnalysisRequest, handleSaveReportToDb, handleGarpCandidacyRequest, handleAnalysisRequest, handleGarpMemoRequest, handleCompounderMemoRequest, handleBmqvMemoRequest, handleFinalThesisRequest, handleEightKThesisImpactRequest, handleUpdatedFinalThesisRequest, handleGeneratePrereqsRequest, handleDiligenceMemoRequest, handleInvestigationSummaryRequest, handleSaveDiligenceAnswers, handleManualDiligenceSave, handleDeleteAllDiligenceAnswers, handleDeleteOldDiligenceLogs, handleSaveFilingDiligenceRequest remain unchanged) ...
 export function handleWorkflowHelpRequest() {
     const helpModal = document.getElementById(CONSTANTS.MODAL_HELP);
     const helpTitle = helpModal.querySelector('#help-modal-title');
@@ -1352,7 +1355,7 @@ export async function handleEightKThesisImpactRequest(symbol, forceNew = false) 
 
         // 6. Update UI
         const logContainer = document.getElementById('ongoing-review-log-container');
-        const reportTypes = ['FilingDiligence', 'EightKAnalysis', 'UpdatedGarpMemo', 'UpdatedQarpMemo', 'QuarterlyReview', 'AnnualReview', 'EightKThesisImpact', 'TenQAnalysis', 'TenKAnalysis', 'TenQThesisImpact', 'TenKThesisImpact'];
+        const reportTypes = ['FilingDiligence', 'EightKAnalysis', 'UpdatedGarpMemo', 'UpdatedQarpMemo', 'QuarterlyReview', 'AnnualReview', 'EightKThesisImpact', 'TenQAnalysis', 'TenKAnalysis', 'TenQThesisImpact', 'TenKThesisImpact', 'MarketReactionAnalysis']; // Added new type
         const savedReports = getReportsFromCache(symbol, reportTypes); // Refresh cache includes the newly saved report
         renderOngoingReviewLog(logContainer, savedReports);
 
@@ -1913,7 +1916,7 @@ export async function handleSaveFilingDiligenceRequest(symbol) {
 
         // Refresh log
         const logContainer = document.getElementById('ongoing-review-log-container');
-        const reportTypes = ['FilingDiligence', 'EightKAnalysis', 'UpdatedGarpMemo', 'UpdatedQarpMemo', 'QuarterlyReview', 'AnnualReview', 'EightKThesisImpact', 'TenQAnalysis', 'TenKAnalysis', 'TenQThesisImpact', 'TenKThesisImpact'];
+        const reportTypes = ['FilingDiligence', 'EightKAnalysis', 'UpdatedGarpMemo', 'UpdatedQarpMemo', 'QuarterlyReview', 'AnnualReview', 'EightKThesisImpact', 'TenQAnalysis', 'TenKAnalysis', 'TenQThesisImpact', 'TenKThesisImpact', 'MarketReactionAnalysis']; // Added new type
         const savedReports = getReportsFromCache(symbol, reportTypes);
         renderOngoingReviewLog(logContainer, savedReports);
 
@@ -1963,7 +1966,7 @@ export async function handleAnalyzeEightKRequest(symbol) {
 
         // Refresh the log
         const logContainer = document.getElementById('ongoing-review-log-container');
-        const reportTypes = ['FilingDiligence', 'EightKAnalysis', 'UpdatedGarpMemo', 'UpdatedQarpMemo', 'QuarterlyReview', 'AnnualReview', 'EightKThesisImpact', 'TenQAnalysis', 'TenKAnalysis', 'TenQThesisImpact', 'TenKThesisImpact'];
+        const reportTypes = ['FilingDiligence', 'EightKAnalysis', 'UpdatedGarpMemo', 'UpdatedQarpMemo', 'QuarterlyReview', 'AnnualReview', 'EightKThesisImpact', 'TenQAnalysis', 'TenKAnalysis', 'TenQThesisImpact', 'TenKThesisImpact', 'MarketReactionAnalysis']; // Added new type
         const savedReports = getReportsFromCache(symbol, reportTypes);
         renderOngoingReviewLog(logContainer, savedReports);
 
@@ -2015,7 +2018,7 @@ export async function handleAnalyzeTenQRequest(symbol) {
 
         // Refresh the log
         const logContainer = document.getElementById('ongoing-review-log-container');
-        const reportTypes = ['FilingDiligence', 'EightKAnalysis', 'UpdatedGarpMemo', 'UpdatedQarpMemo', 'QuarterlyReview', 'AnnualReview', 'EightKThesisImpact', 'TenQAnalysis', 'TenKAnalysis', 'TenQThesisImpact', 'TenKThesisImpact'];
+        const reportTypes = ['FilingDiligence', 'EightKAnalysis', 'UpdatedGarpMemo', 'UpdatedQarpMemo', 'QuarterlyReview', 'AnnualReview', 'EightKThesisImpact', 'TenQAnalysis', 'TenKAnalysis', 'TenQThesisImpact', 'TenKThesisImpact', 'MarketReactionAnalysis']; // Added new type
         const savedReports = getReportsFromCache(symbol, reportTypes);
         renderOngoingReviewLog(logContainer, savedReports);
 
@@ -2066,7 +2069,7 @@ export async function handleAnalyzeTenKRequest(symbol) {
 
         // Refresh the log
         const logContainer = document.getElementById('ongoing-review-log-container');
-        const reportTypes = ['FilingDiligence', 'EightKAnalysis', 'UpdatedGarpMemo', 'UpdatedQarpMemo', 'QuarterlyReview', 'AnnualReview', 'EightKThesisImpact', 'TenQAnalysis', 'TenKAnalysis', 'TenQThesisImpact', 'TenKThesisImpact'];
+        const reportTypes = ['FilingDiligence', 'EightKAnalysis', 'UpdatedGarpMemo', 'UpdatedQarpMemo', 'QuarterlyReview', 'AnnualReview', 'EightKThesisImpact', 'TenQAnalysis', 'TenKAnalysis', 'TenQThesisImpact', 'TenKThesisImpact', 'MarketReactionAnalysis']; // Added new type
         const savedReports = getReportsFromCache(symbol, reportTypes);
         renderOngoingReviewLog(logContainer, savedReports);
 
@@ -2124,7 +2127,7 @@ export async function handleTenQThesisImpactRequest(symbol) {
         await autoSaveReport(symbol, reportType, impactAnalysisResult, prompt);
 
         const logContainer = document.getElementById('ongoing-review-log-container');
-        const reportTypes = ['FilingDiligence', 'EightKAnalysis', 'UpdatedGarpMemo', 'UpdatedQarpMemo', 'QuarterlyReview', 'AnnualReview', 'EightKThesisImpact', 'TenQAnalysis', 'TenKAnalysis', 'TenQThesisImpact', 'TenKThesisImpact'];
+        const reportTypes = ['FilingDiligence', 'EightKAnalysis', 'UpdatedGarpMemo', 'UpdatedQarpMemo', 'QuarterlyReview', 'AnnualReview', 'EightKThesisImpact', 'TenQAnalysis', 'TenKAnalysis', 'TenQThesisImpact', 'TenKThesisImpact', 'MarketReactionAnalysis']; // Added new type
         const savedReports = getReportsFromCache(symbol, reportTypes);
         renderOngoingReviewLog(logContainer, savedReports);
 
@@ -2181,7 +2184,7 @@ export async function handleTenKThesisImpactRequest(symbol) {
         await autoSaveReport(symbol, reportType, impactAnalysisResult, prompt);
 
         const logContainer = document.getElementById('ongoing-review-log-container');
-        const reportTypes = ['FilingDiligence', 'EightKAnalysis', 'UpdatedGarpMemo', 'UpdatedQarpMemo', 'QuarterlyReview', 'AnnualReview', 'EightKThesisImpact', 'TenQAnalysis', 'TenKAnalysis', 'TenQThesisImpact', 'TenKThesisImpact'];
+        const reportTypes = ['FilingDiligence', 'EightKAnalysis', 'UpdatedGarpMemo', 'UpdatedQarpMemo', 'QuarterlyReview', 'AnnualReview', 'EightKThesisImpact', 'TenQAnalysis', 'TenKAnalysis', 'TenQThesisImpact', 'TenKThesisImpact', 'MarketReactionAnalysis']; // Added new type
         const savedReports = getReportsFromCache(symbol, reportTypes);
         renderOngoingReviewLog(logContainer, savedReports);
 
@@ -2202,6 +2205,101 @@ export async function handleTenKThesisImpactRequest(symbol) {
     }
 }
 
+// --- NEW HANDLER FOR MARKET REACTION ANALYSIS ---
+export async function handleMarketReactionAnalysis(symbol) {
+    openModal(CONSTANTS.MODAL_LOADING);
+    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+    loadingMessage.textContent = `Analyzing market reaction for ${symbol}...`;
+
+    try {
+        const reportType = 'MarketReactionAnalysis';
+        const promptConfig = promptMap[reportType];
+
+        // 1. Get FMP Data
+        const fmpData = await getFmpStockData(symbol);
+        if (!fmpData) throw new Error("Could not retrieve FMP data.");
+
+        // 2. Get Current Price
+        const currentPrice = fmpData.profile?.[0]?.price;
+        if (typeof currentPrice !== 'number') throw new Error("Could not get current price.");
+
+        // 3. Get Previous Close
+        const historicalData = fmpData.historical_price_eod?.historical;
+        if (!historicalData || historicalData.length === 0) {
+            throw new Error("Could not get historical price data. Please refresh FMP data.");
+        }
+        // Sort descending to get the most recent easily
+        historicalData.sort((a, b) => new Date(b.date) - new Date(a.date));
+        const previousClose = historicalData[0]?.close;
+        if (typeof previousClose !== 'number' || previousClose === 0) {
+            throw new Error("Could not determine previous closing price from historical data.");
+        }
+
+        // 4. Calculate Price Change
+        const priceChange = (currentPrice / previousClose) - 1;
+        const priceChangePercent = (priceChange * 100).toFixed(2);
+
+        // 5. Get Prerequisite Reports (Filing Summary & Thesis Impact)
+        // Find the *most recent* factual summary and impact report
+        const summaryReports = getReportsFromCache(symbol, ['TenQAnalysis', 'TenKAnalysis', 'EightKAnalysis']);
+        const impactReports = getReportsFromCache(symbol, ['TenQThesisImpact', 'TenKThesisImpact', 'EightKThesisImpact']);
+
+        if (summaryReports.length === 0) throw new Error("No recent Filing Summary (10-Q, 10-K, or 8-K) found.");
+        if (impactReports.length === 0) throw new Error("No recent Thesis Impact report found.");
+
+        const latestSummaryReport = summaryReports[0];
+        const latestImpactReport = impactReports[0];
+
+        // Determine Filing Type based on the summary report used
+        let filingType = 'Filing';
+        if (latestSummaryReport.reportType === 'TenQAnalysis') filingType = '10-Q';
+        else if (latestSummaryReport.reportType === 'TenKAnalysis') filingType = '10-K';
+        else if (latestSummaryReport.reportType === 'EightKAnalysis') filingType = '8-K';
+
+        // 6. Construct the Prompt
+        const profile = state.portfolioCache.find(s => s.ticker === symbol) || {};
+        const companyName = profile.companyName || symbol;
+
+        const prompt = promptConfig.prompt
+            .replace('{companyName}', companyName)
+            .replace('{tickerSymbol}', symbol)
+            .replace('{filingType}', filingType)
+            .replace('{filingSummary}', latestSummaryReport.content)
+            .replace('{thesisImpactReport}', latestImpactReport.content)
+            .replace('{priceChangePercent}', priceChangePercent);
+
+        // 7. Call AI
+        loadingMessage.textContent = `AI is explaining the market reaction...`;
+        const analysisResult = await generateRefinedArticle(prompt);
+
+        // 8. Save Report
+        await autoSaveReport(symbol, reportType, analysisResult, prompt);
+
+        // 9. Update UI
+        const logContainer = document.getElementById('ongoing-review-log-container');
+        const reportTypes = ['FilingDiligence', 'EightKAnalysis', 'UpdatedGarpMemo', 'UpdatedQarpMemo', 'QuarterlyReview', 'AnnualReview', 'EightKThesisImpact', 'TenQAnalysis', 'TenKAnalysis', 'TenQThesisImpact', 'TenKThesisImpact', 'MarketReactionAnalysis']; // Added new type
+        const savedReports = getReportsFromCache(symbol, reportTypes);
+        renderOngoingReviewLog(logContainer, savedReports);
+
+        // Display the newly generated report
+        const displayContainer = document.getElementById('ongoing-review-display-container');
+        if (displayContainer) {
+            displayReport(displayContainer, analysisResult, prompt);
+            const newReport = getReportsFromCache(symbol, reportType)[0];
+            if(newReport) displayContainer.dataset.displayingReportId = newReport.id;
+        }
+
+        displayMessageInModal('Market Reaction Analysis saved to the log.', 'info');
+
+    } catch (error) {
+        console.error("Error generating Market Reaction Analysis:", error);
+        displayMessageInModal(`Could not complete market reaction analysis: ${error.message}`, 'error');
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+// --- END NEW HANDLER ---
+
 
 export async function handleDeleteFilingDiligenceLog(reportId, ticker) {
     openConfirmationModal(
@@ -2219,7 +2317,7 @@ export async function handleDeleteFilingDiligenceLog(reportId, ticker) {
                 // Re-render the log
                 const logContainer = document.getElementById('ongoing-review-log-container');
                 const displayContainer = document.getElementById('ongoing-review-display-container');
-                const reportTypes = ['FilingDiligence', 'EightKAnalysis', 'UpdatedGarpMemo', 'UpdatedQarpMemo', 'QuarterlyReview', 'AnnualReview', 'EightKThesisImpact', 'TenQAnalysis', 'TenKAnalysis', 'TenQThesisImpact', 'TenKThesisImpact'];
+                const reportTypes = ['FilingDiligence', 'EightKAnalysis', 'UpdatedGarpMemo', 'UpdatedQarpMemo', 'QuarterlyReview', 'AnnualReview', 'EightKThesisImpact', 'TenQAnalysis', 'TenKAnalysis', 'TenQThesisImpact', 'TenKThesisImpact', 'MarketReactionAnalysis']; // Added new type
                 const savedReports = getReportsFromCache(ticker, reportTypes);
                 renderOngoingReviewLog(logContainer, savedReports);
 
@@ -2359,7 +2457,7 @@ async function generateUpdatedMemo(symbol, memoType) {
 
         // Refresh log
         const logContainer = document.getElementById('ongoing-review-log-container');
-        const reportTypes = ['FilingDiligence', 'EightKAnalysis', 'UpdatedGarpMemo', 'UpdatedQarpMemo', 'QuarterlyReview', 'AnnualReview', 'EightKThesisImpact', 'TenQAnalysis', 'TenKAnalysis', 'TenQThesisImpact', 'TenKThesisImpact'];
+        const reportTypes = ['FilingDiligence', 'EightKAnalysis', 'UpdatedGarpMemo', 'UpdatedQarpMemo', 'QuarterlyReview', 'AnnualReview', 'EightKThesisImpact', 'TenQAnalysis', 'TenKAnalysis', 'TenQThesisImpact', 'TenKThesisImpact', 'MarketReactionAnalysis']; // Added new type
         const savedReports = getReportsFromCache(symbol, reportTypes);
         renderOngoingReviewLog(logContainer, savedReports);
 
@@ -2824,7 +2922,7 @@ async function _handleReviewRequest(symbol, reviewType) {
 
         // Update UI
         const logContainer = document.getElementById('ongoing-review-log-container');
-        const reportTypes = ['FilingDiligence', 'EightKAnalysis', 'UpdatedGarpMemo', 'UpdatedQarpMemo', 'QuarterlyReview', 'AnnualReview', 'EightKThesisImpact', 'TenQAnalysis', 'TenKAnalysis', 'TenQThesisImpact', 'TenKThesisImpact'];
+        const reportTypes = ['FilingDiligence', 'EightKAnalysis', 'UpdatedGarpMemo', 'UpdatedQarpMemo', 'QuarterlyReview', 'AnnualReview', 'EightKThesisImpact', 'TenQAnalysis', 'TenKAnalysis', 'TenQThesisImpact', 'TenKThesisImpact', 'MarketReactionAnalysis']; // Added new type
         const savedReports = getReportsFromCache(symbol, reportTypes);
         renderOngoingReviewLog(logContainer, savedReports);
 
