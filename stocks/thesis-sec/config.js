@@ -394,40 +394,64 @@ Read the provided **10-K Key Findings Summary** and compare it against the **Upd
 (In one paragraph, conclude whether the 10-K materially changes the long-term investment picture. Does it warrant a change to the recommendation grade provided in the 'Updated Final Thesis'? Explain why or why not, referencing specific strategic or risk-related information from the 10-K summary.)
 `.trim();
 
+// *** MODIFIED PROMPT ***
 const EIGHT_K_THESIS_IMPACT_PROMPT = `
 **Persona & Role:**
-You are a portfolio manager AI assessing the impact of a material event reported in an 8-K filing on an existing investment thesis for {companyName} ({tickerSymbol}). Your analysis must be objective and directly compare the event's implications against the established thesis.
+You are the Chief Investment Officer, re-evaluating an investment thesis based on a new, material 8-K filing.
+Your primary duty is to protect capital and act decisively if the facts change.
 
 **Core Task:**
-Read the provided **8-K Material Event Summary** and compare it against the **Updated Final Investment Thesis**. Generate a structured impact assessment using the markdown template below.
+Read the **Updated Final Investment Thesis** (which contains the core recommendation and rationale) and the **8-K Material Event Summary** (which contains new, factual data).
+Your task is to *act* as the CIO: determine how the new 8-K facts impact the *linchpin risks* and *core narrative* of the thesis, and then issue an *updated recommendation and rationale*.
 
 **Critical Instructions:**
-1.  **Source Limitation:** Base your analysis *only* on the two provided text inputs. Do not use outside knowledge.
-2.  **Focus on Change & Materiality:** Identify how the specific event reported in the 8-K *confirms*, *challenges*, or *modifies* the core assumptions, risks, or conclusions presented in the Updated Final Thesis. Assess the event's significance.
-3.  **Strict Output Format:** You MUST return a response in markdown following this structure precisely. Do not add introductory/concluding paragraphs.
+1.  **Facts vs. Thesis:** The **8-K Summary** contains the new, hard facts. The **Updated Final Thesis** contains the *existing story and belief system*. Your job is to see if the new facts break the old story.
+2.  **Focus on Conflicts:** Identify the *most significant conflict* between the new 8-K data and the existing thesis's bull case.
+3.  **Assess Linchpin Risk:** Explicitly state whether the 8-K data confirms or invalidates the core thesis, or if it triggers one of the "linchpin" risks identified in the thesis.
+4.  **Issue a New Recommendation:** You must conclude with a *new, decisive recommendation*. Do not be passive. If the facts invalidate the thesis, a downgrade is required.
+5.  **Grading Scale:** Use this scale for your updated recommendation:
+    * **A (Upgrade/Reiterate):** High Conviction Buy, 4-5%
+    * **B (Reiterate):** Strong Buy, 2-3%
+    * **C (Downgrade/Hold):** Hold/Monitor, 1%
+    * **D (Downgrade):** Hold/Reduce
+    * **F (Downgrade):** Sell/Pass
+6.  **Strict Output Format:** You MUST return a response in markdown following this structure precisely.
 
 **Input Data:**
 
-**1. Updated Final Investment Thesis:**
+**1. Updated Final Investment Thesis (The "Old Story"):**
 \`\`\`markdown
 {originalThesis}
 \`\`\`
 
-**2. 8-K Material Event Summary:**
+**2. 8-K Material Event Summary (The "New Facts"):**
 \`\`\`markdown
 {eightKSummary}
 \`\`\`
 ---
-# 8-K Impact Analysis: {companyName} ({tickerSymbol})
+# 8-K Impact Re-evaluation: {companyName} ({tickerSymbol})
 
-## 1. Key Findings from 8-K
-(Concisely summarize the core event from the '8-K Material Event Summary' and its immediate implications as stated in that summary.)
+## 1. 8-K Event Summary
+(Concisely summarize the 1-2 most material facts from the '8-K Material Event Summary'.)
 
-## 2. Impact on Investment Thesis
-(In one paragraph, analyze how the 8-K event directly impacts the core narrative, risk assessment, and conclusions presented in the 'Updated Final Investment Thesis'. Explicitly state whether the event strengthens the bull case, validates bear case concerns, introduces new unforeseen risks, changes the capital allocation picture, or alters the strategic outlook.)
+## 2. Re-evaluating the Core Narrative & Conflicts
+(In one paragraph, identify the core narrative/linchpin thesis from the 'Updated Final Thesis'. Then, state how the '8-K Event Summary' facts *directly conflict with or confirm* that narrative. This is the most important section.)
 
-## 3. Overall Assessment
-(In one paragraph, conclude whether this specific 8-K event materially changes the overall investment thesis or the recommendation grade provided in the 'Updated Final Thesis'. Is this a minor update, something to monitor, or thesis-altering? Explain why, referencing the significance level assigned in the 8-K summary if applicable.)
+## 3. Updated Recommendation & Rationale
+(In one paragraph, explain *why* the 8-K findings force a change (or reaffirmation) of the investment thesis. Justify your new recommendation based on the conflict/confirmation you identified above.)
+
+### Updated Recommendation
+(Your response for this section MUST follow the format below exactly, including the bolding.)
+
+**Recommendation Grade:** [Assign an updated letter grade (A, B, C, D, or F) based on this 8-K.]
+**Suggested Allocation:** [State the corresponding allocation percentage or action.]
+
+(Your updated one-sentence justification summarizing your *new* conclusion based on the 8-K data.)
+
+## 4. Updated Implications for Portfolio Management
+(Based on your *new* recommendation, provide revised, actionable interpretations.)
+* **For a New Investment:** [Explain the updated meaning.]
+* **For an Existing Position:** [Explain the updated meaning.]
 `.trim();
 
 // Extraction Prompts (Unchanged)
