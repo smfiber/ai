@@ -4,7 +4,7 @@ import { openModal, closeModal, openStockListModal, openManageStockModal, openPo
 import { fetchAndCachePortfolioData, renderPortfolioManagerList, renderGarpScorecardDashboard, renderGarpInterpretationAnalysis } from './ui-render.js';
 // Removed handleUpdatedFinalThesisRequest from the import below
 // Added new handlers for 10Q/10K
-import { handleResearchSubmit, handleSaveStock, handleDeleteStock, handleRefreshFmpData, handleAnalysisRequest, handleGarpMemoRequest, handleSaveReportToDb, handleGeneratePrereqsRequest, handleGarpCandidacyRequest, handlePortfolioGarpAnalysisRequest, handlePositionAnalysisRequest, handleReportHelpRequest, handleManualDiligenceSave, handleDeleteDiligenceLog, handleWorkflowHelpRequest, handleManualPeerAnalysisRequest, handleSaveFilingDiligenceRequest, handleDeleteFilingDiligenceLog, handleGenerateUpdatedGarpMemoRequest, handleGenerateUpdatedQarpMemoRequest, handleAnalyzeEightKRequest, handleCompounderMemoRequest, handleBmqvMemoRequest, handleFinalThesisRequest, handleKpiSuggestionRequest, handleCopyReportRequest, handleFullAnalysisWorkflow, handleDiligenceMemoRequest, handleSaveDiligenceAnswers, handleDeleteAllDiligenceAnswers, handleDeleteOldDiligenceLogs, handleInvestigationSummaryRequest, handleQuarterlyReviewRequest, handleAnnualReviewRequest, handleEightKThesisImpactRequest, handleAnalyzeTenQRequest, handleAnalyzeTenKRequest, handleTenQThesisImpactRequest, handleTenKThesisImpactRequest } from './ui-handlers.js'; // Removed handleGenerateFilingQuestionsRequest & Added handleEightKThesisImpactRequest & 10Q/10K handlers
+import { handleResearchSubmit, handleSaveStock, handleDeleteStock, handleRefreshFmpData, handleAnalysisRequest, handleGarpMemoRequest, handleSaveReportToDb, handleGeneratePrereqsRequest, handleGarpCandidacyRequest, handlePortfolioGarpAnalysisRequest, handlePositionAnalysisRequest, handleReportHelpRequest, handleManualDiligenceSave, handleDeleteDiligenceLog, handleWorkflowHelpRequest, handleManualPeerAnalysisRequest, handleSaveFilingDiligenceRequest, handleDeleteFilingDiligenceLog, handleGenerateUpdatedGarpMemoRequest, handleGenerateUpdatedQarpMemoRequest, handleAnalyzeEightKRequest, handleCompounderMemoRequest, handleBmqvMemoRequest, handleFinalThesisRequest, handleKpiSuggestionRequest, handleCopyReportRequest, handleFullAnalysisWorkflow, handleDiligenceMemoRequest, handleSaveDiligenceAnswers, handleDeleteAllDiligenceAnswers, handleDeleteOldDiligenceLogs, handleInvestigationSummaryRequest, handleQuarterlyReviewRequest, handleAnnualReviewRequest, handleEightKThesisImpactRequest, handleAnalyzeTenQRequest, handleAnalyzeTenKRequest, handleTenQThesisImpactRequest, handleTenKThesisImpactRequest, handleMarketReactionAnalysis } from './ui-handlers.js'; // Removed handleGenerateFilingQuestionsRequest & Added handleMarketReactionAnalysis & 10Q/10K handlers
 import { getFmpStockData } from './api.js';
 import { _calculateGarpScorecardMetrics } from './analysis-helpers.js';
 
@@ -319,7 +319,7 @@ export function setupEventListeners() {
         // const copyReportBtn = e.target.closest('.copy-report-btn'); ...
 
         if (target.id === 'add-diligence-entry-button') {
-            addDiligenceEntryRow();
+            addDiliglenceEntryRow();
             return;
         }
 
@@ -425,6 +425,13 @@ export function setupEventListeners() {
              return;
         }
         // *** END OF UPDATE ***
+
+        // *** NEW LISTENER FOR MARKET REACTION BUTTON ***
+        if (target.id === 'analyze-market-reaction-button') {
+            handleMarketReactionAnalysis(symbol);
+            return;
+        }
+        // *** END NEW LISTENER ***
 
         if (target.id === 'save-filing-diligence-button') {
             handleSaveFilingDiligenceRequest(symbol);
