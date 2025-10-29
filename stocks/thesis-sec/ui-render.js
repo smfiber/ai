@@ -873,6 +873,10 @@ export function renderOngoingReviewLog(container, reports) {
                 case 'FilingDiligence': return 'Filing Diligence Q&A';
                 case 'EightKAnalysis': return '8-K Factual Summary'; // Updated name
                 case 'EightKThesisImpact': return '8-K Thesis Impact'; // Added new type
+                case 'TenQAnalysis': return '10-Q Factual Summary'; // Added new type
+                case 'TenKAnalysis': return '10-K Factual Summary'; // Added new type
+                case 'TenQThesisImpact': return '10-Q Thesis Impact'; // Added new type
+                case 'TenKThesisImpact': return '10-K Thesis Impact'; // Added new type
                 case 'UpdatedGarpMemo': return 'Updated GARP Memo';
                 case 'UpdatedQarpMemo': return 'Updated QARP Memo';
                 default: return 'Review Log Entry'; // Generic fallback
@@ -1003,4 +1007,6 @@ export function updateReportStatus(statusContainer, reports, activeReportId, ana
             }
         });
     }
+}
+
 }
