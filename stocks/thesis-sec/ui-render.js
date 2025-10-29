@@ -992,8 +992,6 @@ export function updateReportStatus(statusContainer, reports, activeReportId, ana
                 contentContainer.dataset.rawMarkdown = selectedReport.content;
                 updateReportStatus(statusContainer, reports, selectedReport.id, analysisParams);
             }
-        });
-    }
 
     const generateNewBtn = document.getElementById(`generate-new-${analysisParams.reportType}`);
     if (generateNewBtn) {
