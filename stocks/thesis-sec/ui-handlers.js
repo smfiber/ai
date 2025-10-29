@@ -181,8 +181,8 @@ export async function handleRefreshFmpData(symbol) {
                 // Special handling for historical data which might return an object with a 'historical' array
                 if (endpoint.name === 'historical_price_eod' && data && data.historical && data.historical.length === 0) {
                      console.warn(`No data returned within the date range for FMP endpoint: ${endpoint.name}`);
-                     continue; // Still count as 'success' technically, just no data for the period
-                } else if (endpoint.name !== 'historical_price_eod') {
+                     //continue; // Still count as 'success' technically, just no data for the period -- Let's save the empty object to mark cache as recent
+                } else if (endpoint.name !== 'historical_price_eod' && (!data || (Array.isArray(data) && data.length === 0))) { // Ensure this check doesn't skip historical_price_eod if it has structure but no data
                     console.warn(`No data returned from FMP for core endpoint: ${endpoint.name}`);
                     continue; // Skip saving empty data for other endpoints
                 }
@@ -190,7 +190,7 @@ export async function handleRefreshFmpData(symbol) {
 
 
             const docRef = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(symbol).collection('endpoints').doc(endpoint.name);
-            await docRef.set({ cachedAt: firebase.firestore.Timestamp.now(), data: data });
+            await docRef.set({ cachedAt: firebase.firestore.Timestamp.now(), data: data }); // Save even if data.historical is empty
             successfulFetches++;
         }
 
@@ -204,6 +204,7 @@ export async function handleRefreshFmpData(symbol) {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
 }
+
 
 // --- PORTFOLIO & DASHBOARD MANAGEMENT ---
 
