@@ -1006,7 +1006,3 @@ export function updateReportStatus(statusContainer, reports, activeReportId, ana
                 handleAnalysisRequest(analysisParams.symbol, analysisParams.reportType, analysisParams.promptConfig, true);
             }
         });
-    }
-}
-
-}
