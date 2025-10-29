@@ -4,7 +4,7 @@ import { openModal, closeModal, openStockListModal, openManageStockModal, openPo
 import { fetchAndCachePortfolioData, renderPortfolioManagerList, renderGarpScorecardDashboard, renderGarpInterpretationAnalysis } from './ui-render.js';
 // Removed handleUpdatedFinalThesisRequest from the import below
 // Added new handlers for 10Q/10K
-import { handleResearchSubmit, handleSaveStock, handleDeleteStock, handleRefreshFmpData, handleAnalysisRequest, handleGarpMemoRequest, handleSaveReportToDb, handleGeneratePrereqsRequest, handleGarpCandidacyRequest, handlePortfolioGarpAnalysisRequest, handlePositionAnalysisRequest, handleReportHelpRequest, handleManualDiligenceSave, handleDeleteDiligenceLog, handleWorkflowHelpRequest, handleManualPeerAnalysisRequest, handleGenerateFilingQuestionsRequest, handleSaveFilingDiligenceRequest, handleDeleteFilingDiligenceLog, handleGenerateUpdatedGarpMemoRequest, handleGenerateUpdatedQarpMemoRequest, handleAnalyzeEightKRequest, handleCompounderMemoRequest, handleBmqvMemoRequest, handleFinalThesisRequest, handleKpiSuggestionRequest, handleCopyReportRequest, handleFullAnalysisWorkflow, handleDiligenceMemoRequest, handleSaveDiligenceAnswers, handleDeleteAllDiligenceAnswers, handleDeleteOldDiligenceLogs, handleInvestigationSummaryRequest, handleQuarterlyReviewRequest, handleAnnualReviewRequest, handleEightKThesisImpactRequest, handleAnalyzeTenQRequest, handleAnalyzeTenKRequest, handleTenQThesisImpactRequest, handleTenKThesisImpactRequest } from './ui-handlers.js'; // Added handleEightKThesisImpactRequest & 10Q/10K handlers
+import { handleResearchSubmit, handleSaveStock, handleDeleteStock, handleRefreshFmpData, handleAnalysisRequest, handleGarpMemoRequest, handleSaveReportToDb, handleGeneratePrereqsRequest, handleGarpCandidacyRequest, handlePortfolioGarpAnalysisRequest, handlePositionAnalysisRequest, handleReportHelpRequest, handleManualDiligenceSave, handleDeleteDiligenceLog, handleWorkflowHelpRequest, handleManualPeerAnalysisRequest, handleSaveFilingDiligenceRequest, handleDeleteFilingDiligenceLog, handleGenerateUpdatedGarpMemoRequest, handleGenerateUpdatedQarpMemoRequest, handleAnalyzeEightKRequest, handleCompounderMemoRequest, handleBmqvMemoRequest, handleFinalThesisRequest, handleKpiSuggestionRequest, handleCopyReportRequest, handleFullAnalysisWorkflow, handleDiligenceMemoRequest, handleSaveDiligenceAnswers, handleDeleteAllDiligenceAnswers, handleDeleteOldDiligenceLogs, handleInvestigationSummaryRequest, handleQuarterlyReviewRequest, handleAnnualReviewRequest, handleEightKThesisImpactRequest, handleAnalyzeTenQRequest, handleAnalyzeTenKRequest, handleTenQThesisImpactRequest, handleTenKThesisImpactRequest } from './ui-handlers.js'; // Removed handleGenerateFilingQuestionsRequest & Added handleEightKThesisImpactRequest & 10Q/10K handlers
 import { getFmpStockData } from './api.js';
 import { _calculateGarpScorecardMetrics } from './analysis-helpers.js';
 
@@ -396,10 +396,7 @@ export function setupEventListeners() {
             return;
         }
 
-        if (target.id === 'generate-filing-questions-button') {
-            handleGenerateFilingQuestionsRequest(symbol);
-            return;
-        }
+        // *** REMOVED LISTENER FOR generate-filing-questions-button ***
 
         // *** UPDATED TO HANDLE GENERIC FILING ANALYSIS BUTTONS ***
         if (target.id === 'analyze-filing-summary-button') {
@@ -508,4 +505,6 @@ export function setupEventListeners() {
     });
 
     setupGlobalEventListeners();
+}
+
 }
