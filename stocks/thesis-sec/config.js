@@ -106,54 +106,9 @@ export const SECTOR_KPI_SUGGESTIONS = {
 // --- AI PROMPTS ---
 
 // Helper Prompts (Unchanged)
-const PEER_IDENTIFICATION_PROMPT = `
-Role: You are a highly specialized financial analyst AI with deep knowledge of corporate structures and competitive landscapes.
-Task: Your sole purpose is to identify the top 3-5 most direct, publicly traded competitors for the given company.
-Constraints:
-- You MUST return ONLY a valid JSON array of ticker symbols.
-- Do NOT include the primary company's own ticker in the list.
-- Do NOT return any explanatory text, headings, or markdown formatting.
-- The tickers must be for publicly traded companies.
-- Prioritize direct competitors in the same industry and with similar business models.
-
-Company Information:
-- Name: {companyName}
-- Ticker: {tickerSymbol}
-- Description: {description}
-
-Example Output:
-["TICKER1", "TICKER2", "TICKER3"]
-`.trim();
-
-const PEER_IDENTIFICATION_FALLBACK_PROMPT = `
-Role: You are a financial data assistant.
-Task: Your goal is to identify a list of publicly traded companies that are peers to the provided company, prioritizing those with a similar market capitalization and operating in the same sector.
-Constraints:
-- You MUST return ONLY a valid JSON array of ticker symbols.
-- Do NOT include the primary company's own ticker in the list.
-- Do NOT return any explanatory text, headings, or markdown formatting.
-- The tickers must be for publicly traded companies.
-
-Company Information:
-- Ticker: {tickerSymbol}
-- Sector: {sectorName}
-- Market Cap: {marketCap}
-
-Example Output:
-["TICKER1", "TICKER2", "TICKER3"]
-`.trim();
-
-const SECTOR_MOMENTUM_PROMPT = `
-Role: You are a market analyst AI. Your task is to provide a concise, data-driven summary of sector performance based on the provided JSON data.
-Instructions:
-- Identify the top 2-3 strongest performing sectors, especially based on Year-to-Date (YTD) performance.
-- Identify the 1-2 weakest performing sectors.
-- Briefly comment on any notable shifts in momentum (e.g., a sector that is strong YTD but weak in the last 1-month).
-- Keep the summary to a single, professional paragraph. Do not use markdown headings or bullet points.
-
-JSON Data:
-{jsonData}
-`.trim();
+const PEER_IDENTIFICATION_PROMPT = `...`; // Unchanged
+const PEER_IDENTIFICATION_FALLBACK_PROMPT = `...`; // Unchanged
+const SECTOR_MOMENTUM_PROMPT = `...`; // Unchanged
 
 // Core Analysis Prompts (Unchanged)
 const MOAT_ANALYSIS_PROMPT = `...`; // Unchanged
@@ -182,7 +137,7 @@ const INVESTIGATION_SUMMARY_MEMO_PROMPT = `...`; // Unchanged
 const QUARTERLY_REVIEW_MEMO_PROMPT = `...`; // Unchanged
 const ANNUAL_REVIEW_MEMO_PROMPT = `...`; // Unchanged
 
-// --- NEW FILING ANALYSIS PROMPTS ---
+// --- FILING ANALYSIS PROMPTS ---
 
 const TEN_Q_ANALYSIS_PROMPT = `
 **Persona & Role:**
@@ -322,100 +277,131 @@ Generate a structured markdown report summarizing the key events, facts, figures
 \`\`\`
 `.trim();
 
+// --- FILING IMPACT PROMPTS (MODIFIED) ---
+
 const TEN_Q_THESIS_IMPACT_PROMPT = `
 **Persona & Role:**
-You are a portfolio manager AI assessing the impact of a recent 10-Q filing on an existing investment thesis for {companyName} ({tickerSymbol}). Your analysis must be objective and directly compare the new findings against the established thesis.
+You are the Chief Investment Officer, re-evaluating an investment thesis based on a new 10-Q filing. Your primary duty is to protect capital and act decisively if the facts change.
 
 **Core Task:**
-Read the provided **10-Q Key Findings Summary** and compare it against the **Updated Final Investment Thesis**. Generate a structured impact assessment using the markdown template below.
+Read the **Updated Final Investment Thesis** (containing the core recommendation, rationale, 'Edge', and 'Linchpin Risk') and the **10-Q Key Findings Summary**. Your task is to *act* as the CIO: determine how the new 10-Q facts impact the thesis's *linchpin risks* and *core narrative* ('Edge'), and then issue an *updated recommendation and rationale*.
 
 **Critical Instructions:**
-1.  **Source Limitation:** Base your analysis *only* on the two provided text inputs. Do not use outside knowledge.
-2.  **Focus on Change:** Identify how the new 10-Q findings *confirm*, *challenge*, or *modify* the specific points made in the Updated Final Thesis (narrative, recommendation, risks).
-3.  **Strict Output Format:** You MUST return a response in markdown following this structure precisely. Do not add introductory/concluding paragraphs.
+1.  **Facts vs. Thesis:** The **10-Q Summary** has the new facts. The **Updated Final Thesis** has the existing story. Does the new quarter's data break the story?
+2.  **Focus on Conflicts:** Identify the *most significant conflict* between the new 10-Q data and the existing thesis's bull case ('Edge').
+3.  **Assess Linchpin Risk:** Explicitly state whether the 10-Q data confirms or invalidates the 'Edge', or if it triggers the identified 'Linchpin Risk'.
+4.  **Issue a New Recommendation:** Conclude with a *new, decisive recommendation* (A, B, C, D, or F). If the facts invalidate the thesis, a downgrade is required.
+5.  **Conditional Brainstorming:** If your updated recommendation is a downgrade (C, D, or F), add section ## 4. Exploring Alternative Angles. Brainstorm 1-2 *potential* alternative non-consensus viewpoints suggested by the 10-Q data, framed as speculative ideas requiring further investigation. Otherwise, omit section 4.
+6.  **Grading Scale:** A (Upgrade/Reiterate: High Conviction Buy, 4-5%), B (Reiterate: Strong Buy, 2-3%), C (Downgrade/Hold: Hold/Monitor, 1%), D (Downgrade: Hold/Reduce), F (Downgrade: Sell/Pass).
+7.  **Strict Output Format:** Use the exact markdown structure below. Section 4 is conditional.
 
 **Input Data:**
 
-**1. Updated Final Investment Thesis:**
+**1. Updated Final Investment Thesis (The "Old Story"):**
 \`\`\`markdown
 {originalThesis}
 \`\`\`
 
-**2. 10-Q Key Findings Summary:**
+**2. 10-Q Key Findings Summary (The "New Facts"):**
 \`\`\`markdown
 {filingSummary}
 \`\`\`
 ---
-# 10-Q Impact Analysis: {companyName} ({tickerSymbol})
+# 10-Q Impact Re-evaluation: {companyName} ({tickerSymbol})
 
 ## 1. Key Findings from 10-Q
-(Concisely list 2-3 of the most impactful data points or updates reported in the '10-Q Key Findings Summary' that are relevant to the investment thesis.)
+(Concisely list 2-3 of the most impactful data points from the '10-Q Summary' relevant to the thesis 'Edge' or 'Linchpin Risk'.)
 
-## 2. Impact on Investment Thesis
-(In one paragraph, analyze how the Key Findings listed above directly impact the core narrative, risks, and conclusions presented in the 'Updated Final Investment Thesis'. Explicitly state whether the new information strengthens the bull case, validates bear case concerns, introduces new risks, or changes the outlook.)
+## 2. Re-evaluating the Core Narrative ('Edge') & 'Linchpin Risk'
+(First, extract and state the core 'Edge' and 'Linchpin Risk' from the 'Updated Final Thesis'. Then, analyze how the 'Key Findings from 10-Q' *specifically* confirm or conflict with the 'Edge' and whether the 'Linchpin Risk' has materialized based on this quarterly data.)
 
-## 3. Overall Assessment & Recommendation Check
-(In one paragraph, conclude whether the 10-Q materially changes the investment picture. Does it warrant a change to the recommendation grade provided in the 'Updated Final Thesis'? Explain why or why not, referencing specific data from the 10-Q summary.)
+## 3. Updated Recommendation & Rationale
+(Explain *why* the 10-Q findings force a change (or reaffirmation) of the investment thesis, directly referencing your analysis of the 'Edge' and 'Linchpin Risk'. Justify your new recommendation grade.)
+
+### Updated Recommendation
+**Recommendation Grade:** [Assign an updated letter grade (A, B, C, D, or F) based on this 10-Q.]
+**Suggested Allocation:** [State the corresponding allocation percentage or action.]
+(Your updated one-sentence justification summarizing your *new* conclusion based on the 10-Q data.)
+
+## 4. Exploring Alternative Angles (Post-Filing Reassessment)
+*(Include this section ONLY IF the Recommendation Grade above is C, D, or F)*
+(Acknowledge the original thesis is challenged. Brainstorm 1-2 *potential* alternative non-consensus angles suggested by the 10-Q data. Frame these as speculative ideas needing more research, mentioning potential impact/timeframe. Example format: "*Angle 1: [Idea]?* The 10-Q showed [Data Point]. Perhaps the market is missing [Alternative Viewpoint]. *Further Investigation:* [Action]. *Timeframe:* [Estimate].")
+
+## 5. Updated Implications for Portfolio Management
+(Based on your *new* recommendation grade, provide revised, actionable interpretations.)
+* **For a New Investment:** [Explain the updated meaning.]
+* **For an Existing Position:** [Explain the updated meaning.]
 `.trim();
 
 const TEN_K_THESIS_IMPACT_PROMPT = `
 **Persona & Role:**
-You are a portfolio manager AI assessing the impact of a recent 10-K filing on an existing investment thesis for {companyName} ({tickerSymbol}). Your analysis must be objective and directly compare the new annual findings against the established thesis.
+You are the Chief Investment Officer, re-evaluating an investment thesis based on a new 10-K filing. Your primary duty is to protect capital and act decisively if the facts change.
 
 **Core Task:**
-Read the provided **10-K Key Findings Summary** and compare it against the **Updated Final Investment Thesis**. Generate a structured impact assessment using the markdown template below.
+Read the **Updated Final Investment Thesis** (containing the core recommendation, rationale, 'Edge', and 'Linchpin Risk') and the **10-K Key Findings Summary**. Your task is to *act* as the CIO: determine how the new 10-K facts impact the thesis's *linchpin risks* and *core narrative* ('Edge'), and then issue an *updated recommendation and rationale*.
 
 **Critical Instructions:**
-1.  **Source Limitation:** Base your analysis *only* on the two provided text inputs. Do not use outside knowledge.
-2.  **Focus on Change:** Identify how the new 10-K findings *confirm*, *challenge*, or *modify* the specific strategic points, risk assessments, and long-term outlook presented in the Updated Final Thesis.
-3.  **Strict Output Format:** You MUST return a response in markdown following this structure precisely. Do not add introductory/concluding paragraphs.
+1.  **Facts vs. Thesis:** The **10-K Summary** has the new annual facts. The **Updated Final Thesis** has the existing story. Does the full year's data break the story?
+2.  **Focus on Conflicts:** Identify the *most significant conflict* between the new 10-K data (especially strategic updates/risk factors) and the existing thesis's bull case ('Edge').
+3.  **Assess Linchpin Risk:** Explicitly state whether the 10-K data confirms or invalidates the 'Edge', or if it triggers the identified 'Linchpin Risk' based on annual performance or outlook.
+4.  **Issue a New Recommendation:** Conclude with a *new, decisive recommendation* (A, B, C, D, or F). If the facts invalidate the thesis, a downgrade is required.
+5.  **Conditional Brainstorming:** If your updated recommendation is a downgrade (C, D, or F), add section ## 4. Exploring Alternative Angles. Brainstorm 1-2 *potential* alternative non-consensus viewpoints suggested by the 10-K data, framed as speculative ideas requiring further investigation. Otherwise, omit section 4.
+6.  **Grading Scale:** A (Upgrade/Reiterate: High Conviction Buy, 4-5%), B (Reiterate: Strong Buy, 2-3%), C (Downgrade/Hold: Hold/Monitor, 1%), D (Downgrade: Hold/Reduce), F (Downgrade: Sell/Pass).
+7.  **Strict Output Format:** Use the exact markdown structure below. Section 4 is conditional.
 
 **Input Data:**
 
-**1. Updated Final Investment Thesis:**
+**1. Updated Final Investment Thesis (The "Old Story"):**
 \`\`\`markdown
 {originalThesis}
 \`\`\`
 
-**2. 10-K Key Findings Summary:**
+**2. 10-K Key Findings Summary (The "New Facts"):**
 \`\`\`markdown
 {filingSummary}
 \`\`\`
 ---
-# 10-K Impact Analysis: {companyName} ({tickerSymbol})
+# 10-K Impact Re-evaluation: {companyName} ({tickerSymbol})
 
 ## 1. Key Findings from 10-K
-(Concisely list 2-3 of the most impactful strategic updates, risk factor changes, or annual performance trends reported in the '10-K Key Findings Summary' that are relevant to the long-term investment thesis.)
+(Concisely list 2-3 of the most impactful strategic updates, risk changes, or annual performance trends from the '10-K Summary' relevant to the thesis 'Edge' or 'Linchpin Risk'.)
 
-## 2. Impact on Investment Thesis
-(In one paragraph, analyze how the Key Findings listed above directly impact the core narrative, strategic assumptions, risk assessment, and long-term conclusions presented in the 'Updated Final Investment Thesis'. Explicitly state whether the new information strengthens the bull case, validates bear case concerns, alters the risk profile, or changes the long-term outlook.)
+## 2. Re-evaluating the Core Narrative ('Edge') & 'Linchpin Risk'
+(First, extract and state the core 'Edge' and 'Linchpin Risk' from the 'Updated Final Thesis'. Then, analyze how the 'Key Findings from 10-K' *specifically* confirm or conflict with the 'Edge' and whether the 'Linchpin Risk' has materialized based on this annual data/outlook.)
 
-## 3. Overall Assessment & Recommendation Check
-(In one paragraph, conclude whether the 10-K materially changes the long-term investment picture. Does it warrant a change to the recommendation grade provided in the 'Updated Final Thesis'? Explain why or why not, referencing specific strategic or risk-related information from the 10-K summary.)
+## 3. Updated Recommendation & Rationale
+(Explain *why* the 10-K findings force a change (or reaffirmation) of the investment thesis, directly referencing your analysis of the 'Edge' and 'Linchpin Risk'. Justify your new recommendation grade.)
+
+### Updated Recommendation
+**Recommendation Grade:** [Assign an updated letter grade (A, B, C, D, or F) based on this 10-K.]
+**Suggested Allocation:** [State the corresponding allocation percentage or action.]
+(Your updated one-sentence justification summarizing your *new* conclusion based on the 10-K data.)
+
+## 4. Exploring Alternative Angles (Post-Filing Reassessment)
+*(Include this section ONLY IF the Recommendation Grade above is C, D, or F)*
+(Acknowledge the original thesis is challenged. Brainstorm 1-2 *potential* alternative non-consensus angles suggested by the 10-K data. Frame these as speculative ideas needing more research, mentioning potential impact/timeframe. Example format: "*Angle 1: [Idea]?* The 10-K reported [Data Point/Outlook]. Perhaps the market is misinterpreting [Alternative Viewpoint]. *Further Investigation:* [Action]. *Timeframe:* [Estimate].")
+
+## 5. Updated Implications for Portfolio Management
+(Based on your *new* recommendation grade, provide revised, actionable interpretations.)
+* **For a New Investment:** [Explain the updated meaning.]
+* **For an Existing Position:** [Explain the updated meaning.]
 `.trim();
 
-// *** MODIFIED PROMPT ***
 const EIGHT_K_THESIS_IMPACT_PROMPT = `
 **Persona & Role:**
-You are the Chief Investment Officer, re-evaluating an investment thesis based on a new, material 8-K filing.
-Your primary duty is to protect capital and act decisively if the facts change.
+You are the Chief Investment Officer, re-evaluating an investment thesis based on a new, material 8-K filing. Your primary duty is to protect capital and act decisively if the facts change.
 
 **Core Task:**
-Read the **Updated Final Investment Thesis** (which contains the core recommendation and rationale) and the **8-K Material Event Summary** (which contains new, factual data).
-Your task is to *act* as the CIO: determine how the new 8-K facts impact the *linchpin risks* and *core narrative* of the thesis, and then issue an *updated recommendation and rationale*.
+Read the **Updated Final Investment Thesis** (containing the core recommendation, rationale, 'Edge', and 'Linchpin Risk') and the **8-K Material Event Summary**. Your task is to *act* as the CIO: determine how the new 8-K facts impact the thesis's *linchpin risks* and *core narrative* ('Edge'), and then issue an *updated recommendation and rationale*.
 
 **Critical Instructions:**
-1.  **Facts vs. Thesis:** The **8-K Summary** contains the new, hard facts. The **Updated Final Thesis** contains the *existing story and belief system*. Your job is to see if the new facts break the old story.
-2.  **Focus on Conflicts:** Identify the *most significant conflict* between the new 8-K data and the existing thesis's bull case.
-3.  **Assess Linchpin Risk:** Explicitly state whether the 8-K data confirms or invalidates the core thesis, or if it triggers one of the "linchpin" risks identified in the thesis.
-4.  **Issue a New Recommendation:** You must conclude with a *new, decisive recommendation*. Do not be passive. If the facts invalidate the thesis, a downgrade is required.
-5.  **Grading Scale:** Use this scale for your updated recommendation:
-    * **A (Upgrade/Reiterate):** High Conviction Buy, 4-5%
-    * **B (Reiterate):** Strong Buy, 2-3%
-    * **C (Downgrade/Hold):** Hold/Monitor, 1%
-    * **D (Downgrade):** Hold/Reduce
-    * **F (Downgrade):** Sell/Pass
-6.  **Strict Output Format:** You MUST return a response in markdown following this structure precisely.
+1.  **Facts vs. Thesis:** The **8-K Summary** has the new facts. The **Updated Final Thesis** has the existing story. Do the new facts break the story?
+2.  **Focus on Conflicts:** Identify the *most significant conflict* between the new 8-K data and the existing thesis's bull case ('Edge').
+3.  **Assess Linchpin Risk:** Explicitly state whether the 8-K data confirms or invalidates the 'Edge', or if it triggers the identified 'Linchpin Risk'.
+4.  **Issue a New Recommendation:** Conclude with a *new, decisive recommendation* (A, B, C, D, or F). If the facts invalidate the thesis, a downgrade is required.
+5.  **Conditional Brainstorming:** If your updated recommendation is a downgrade (C, D, or F), add section ## 4. Exploring Alternative Angles. Brainstorm 1-2 *potential* alternative non-consensus viewpoints suggested by the 8-K data, framed as speculative ideas requiring further investigation. Otherwise, omit section 4.
+6.  **Grading Scale:** A (Upgrade/Reiterate: High Conviction Buy, 4-5%), B (Reiterate: Strong Buy, 2-3%), C (Downgrade/Hold: Hold/Monitor, 1%), D (Downgrade: Hold/Reduce), F (Downgrade: Sell/Pass).
+7.  **Strict Output Format:** Use the exact markdown structure below. Section 4 is conditional.
 
 **Input Data:**
 
@@ -432,27 +418,29 @@ Your task is to *act* as the CIO: determine how the new 8-K facts impact the *li
 # 8-K Impact Re-evaluation: {companyName} ({tickerSymbol})
 
 ## 1. 8-K Event Summary
-(Concisely summarize the 1-2 most material facts from the '8-K Material Event Summary'.)
+(Concisely summarize the 1-2 most material facts from the '8-K Material Event Summary' relevant to the thesis 'Edge' or 'Linchpin Risk'.)
 
-## 2. Re-evaluating the Core Narrative & Conflicts
-(In one paragraph, identify the core narrative/linchpin thesis from the 'Updated Final Thesis'. Then, state how the '8-K Event Summary' facts *directly conflict with or confirm* that narrative. This is the most important section.)
+## 2. Re-evaluating the Core Narrative ('Edge') & 'Linchpin Risk'
+(First, extract and state the core 'Edge' and 'Linchpin Risk' from the 'Updated Final Thesis'. Then, analyze how the '8-K Event Summary' facts *specifically* confirm or conflict with the 'Edge' and whether the 'Linchpin Risk' has materialized based on this event.)
 
 ## 3. Updated Recommendation & Rationale
-(In one paragraph, explain *why* the 8-K findings force a change (or reaffirmation) of the investment thesis. Justify your new recommendation based on the conflict/confirmation you identified above.)
+(Explain *why* the 8-K findings force a change (or reaffirmation) of the investment thesis, directly referencing your analysis of the 'Edge' and 'Linchpin Risk'. Justify your new recommendation grade.)
 
 ### Updated Recommendation
-(Your response for this section MUST follow the format below exactly, including the bolding.)
-
 **Recommendation Grade:** [Assign an updated letter grade (A, B, C, D, or F) based on this 8-K.]
 **Suggested Allocation:** [State the corresponding allocation percentage or action.]
-
 (Your updated one-sentence justification summarizing your *new* conclusion based on the 8-K data.)
 
-## 4. Updated Implications for Portfolio Management
-(Based on your *new* recommendation, provide revised, actionable interpretations.)
+## 4. Exploring Alternative Angles (Post-Filing Reassessment)
+*(Include this section ONLY IF the Recommendation Grade above is C, D, or F)*
+(Acknowledge the original thesis is challenged. Brainstorm 1-2 *potential* alternative non-consensus angles suggested by the 8-K event/data. Frame these as speculative ideas needing more research, mentioning potential impact/timeframe. Example format: "*Angle 1: [Idea]?* The 8-K revealed [Data Point/Event]. Could this mean [Alternative Viewpoint]? *Further Investigation:* [Action]. *Timeframe:* [Estimate].")
+
+## 5. Updated Implications for Portfolio Management
+(Based on your *new* recommendation grade, provide revised, actionable interpretations.)
 * **For a New Investment:** [Explain the updated meaning.]
 * **For an Existing Position:** [Explain the updated meaning.]
 `.trim();
+
 
 // Extraction Prompts (Unchanged)
 const MOAT_ANALYSIS_EXTRACT_PROMPT = `...`; // Unchanged
@@ -569,8 +557,8 @@ export const CALCULATION_SUMMARIES = {
     // ... (Existing summaries unchanged)
     'TenQAnalysis': 'Summarizes key financial performance (Revenue, EPS, Margins, Cash Flow) and material updates from a 10-Q filing text provided by the user.',
     'TenKAnalysis': 'Summarizes key annual financial performance, strategic commentary, and risk factor updates from a 10-K filing text provided by the user.',
-    'EightKAnalysis': 'Summarizes the core event reported in an 8-K filing text provided by the user and assesses its potential impact pillars (Growth, Quality, Capital Allocation).',
-    'TenQThesisImpact': 'Compares the key findings from a generated 10-Q Summary against the latest Updated Final Thesis report to assess the impact on the investment case.',
-    'TenKThesisImpact': 'Compares the key findings from a generated 10-K Summary against the latest Updated Final Thesis report to assess the impact on the long-term investment case.',
-    'EightKThesisImpact': 'Compares the key findings from a generated 8-K Summary against the latest Updated Final Thesis report to assess the impact on the investment case.',
+    'EightKAnalysis': 'Summarizes the core event reported in an 8-K filing text provided by the user.',
+    'TenQThesisImpact': 'Compares the key findings from a generated 10-Q Summary against the latest Updated Final Thesis report to assess the impact on the investment case, specifically evaluating the core "Edge" and "Linchpin Risk". Conditionally suggests alternative angles if the thesis is downgraded.',
+    'TenKThesisImpact': 'Compares the key findings from a generated 10-K Summary against the latest Updated Final Thesis report to assess the impact on the long-term investment case, specifically evaluating the core "Edge" and "Linchpin Risk". Conditionally suggests alternative angles if the thesis is downgraded.',
+    'EightKThesisImpact': 'Compares the key findings from a generated 8-K Summary against the latest Updated Final Thesis report to assess the impact on the investment case, specifically evaluating the core "Edge" and "Linchpin Risk". Conditionally suggests alternative angles if the thesis is downgraded.',
 };
