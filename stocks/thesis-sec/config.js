@@ -109,7 +109,7 @@ export const SECTOR_KPI_SUGGESTIONS = {
         { name: 'Daily Active Users (DAU)', description: 'Total unique users who engage with the product daily.' },
         { name: 'DAU/MAU Ratio', description: 'Measures user stickiness and engagement.' },
         { name: 'Net Revenue Retention (NRR)', description: 'Measures revenue from existing customers, accounting for upsells, downgrades, and churn.' },
-        { name:S: 'Gross Churn', description: 'Percentage of revenue or customers lost in a period.' },
+        { name: 'Gross Churn', description: 'Percentage of revenue or customers lost in a period.' }, // <-- Corrected this line
         { name: 'Rule of 40', description: 'A benchmark for SaaS companies where (YoY Revenue Growth %) + (Free Cash Flow Margin %) should be 40% or more.' },
         { name: 'R&D as % of Revenue', description: 'Indicates investment in future innovation.' }
     ],
@@ -159,7 +159,7 @@ export const SECTOR_KPI_SUGGESTIONS = {
         { name: 'Proved Reserves (1P)', description: 'The amount of oil and gas that can be economically recovered with reasonable certainty.' },
         { name: 'Finding and Development (F&D) Costs', description: 'The cost to find and develop new reserves.' },
         { name: 'Realized Price per Barrel/MCF', description: 'The actual price received for oil or gas, including hedging.' },
-        { name:Read: 'Operating Costs per Barrel/MCF', description: 'The cost to extract the oil or gas.' }
+        { name: 'Operating Costs per Barrel/MCF', description: 'The cost to extract the oil or gas.' } // Corrected typo here too
     ],
     'Utilities': [
         { name: 'Rate Base Growth', description: 'The growth in the value of assets on which a utility is allowed to earn a regulated rate of return.' },
@@ -1289,6 +1289,7 @@ export const ANALYSIS_ICONS = {
     'UpdatedFinalThesis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0011.664 0M2.985 19.644A8.25 8.25 0 0116.023 9.348" /></svg>`,
     'TenQAnalysis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5m-9-6h.008v.008H12v-.008zM12 15h.008v.008H12V15zm0 2.25h.008v.008H12v-.008zM9.75 15h.008v.008H9.75V15zm0 2.25h.008v.008H9.75v-.008zM7.5 15h.008v.008H7.5V15zm0 2.25h.008v.008H7.5v-.008zm6.75-4.5h.008v.008h-.008v-.008zm0 2.25h.008v.008h-.008V15zm0 2.25h.008v.008h-.008v-.008zm2.25-4.5h.008v.008H16.5v-.008zm0 2.25h.008v.008H16.5V15z" /></svg>`, // Example Calendar Icon
     'TenKAnalysis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg>`, // Example Document Icon
+    'MarketReactionAnalysis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18L9 11.25l1.5 1.5L13.5 9.75l2.25 2.25L21.75 6" /></svg>` // Example Trend icon
 };
 
 export const ANALYSIS_NAMES = {
