@@ -3,7 +3,8 @@ import { CONSTANTS, state, promptMap, QUARTERLY_REVIEW_QUESTIONS, ANNUAL_REVIEW_
 import { openModal, closeModal, openStockListModal, openManageStockModal, openPortfolioManagerModal, openRawDataViewer, addDiligenceEntryRow, addKpiRow } from './ui-modals.js';
 import { fetchAndCachePortfolioData, renderPortfolioManagerList, renderGarpScorecardDashboard, renderGarpInterpretationAnalysis } from './ui-render.js';
 // Removed handleUpdatedFinalThesisRequest from the import below
-import { handleResearchSubmit, handleSaveStock, handleDeleteStock, handleRefreshFmpData, handleAnalysisRequest, handleGarpMemoRequest, handleSaveReportToDb, handleGeneratePrereqsRequest, handleGarpCandidacyRequest, handlePortfolioGarpAnalysisRequest, handlePositionAnalysisRequest, handleReportHelpRequest, handleManualDiligenceSave, handleDeleteDiligenceLog, handleWorkflowHelpRequest, handleManualPeerAnalysisRequest, handleGenerateFilingQuestionsRequest, handleSaveFilingDiligenceRequest, handleDeleteFilingDiligenceLog, handleGenerateUpdatedGarpMemoRequest, handleGenerateUpdatedQarpMemoRequest, handleAnalyzeEightKRequest, handleCompounderMemoRequest, handleBmqvMemoRequest, handleFinalThesisRequest, handleKpiSuggestionRequest, handleCopyReportRequest, handleFullAnalysisWorkflow, handleDiligenceMemoRequest, handleSaveDiligenceAnswers, handleDeleteAllDiligenceAnswers, handleDeleteOldDiligenceLogs, handleInvestigationSummaryRequest, handleQuarterlyReviewRequest, handleAnnualReviewRequest, handleEightKThesisImpactRequest } from './ui-handlers.js'; // Added handleEightKThesisImpactRequest
+// Added new handlers for 10Q/10K
+import { handleResearchSubmit, handleSaveStock, handleDeleteStock, handleRefreshFmpData, handleAnalysisRequest, handleGarpMemoRequest, handleSaveReportToDb, handleGeneratePrereqsRequest, handleGarpCandidacyRequest, handlePortfolioGarpAnalysisRequest, handlePositionAnalysisRequest, handleReportHelpRequest, handleManualDiligenceSave, handleDeleteDiligenceLog, handleWorkflowHelpRequest, handleManualPeerAnalysisRequest, handleGenerateFilingQuestionsRequest, handleSaveFilingDiligenceRequest, handleDeleteFilingDiligenceLog, handleGenerateUpdatedGarpMemoRequest, handleGenerateUpdatedQarpMemoRequest, handleAnalyzeEightKRequest, handleCompounderMemoRequest, handleBmqvMemoRequest, handleFinalThesisRequest, handleKpiSuggestionRequest, handleCopyReportRequest, handleFullAnalysisWorkflow, handleDiligenceMemoRequest, handleSaveDiligenceAnswers, handleDeleteAllDiligenceAnswers, handleDeleteOldDiligenceLogs, handleInvestigationSummaryRequest, handleQuarterlyReviewRequest, handleAnnualReviewRequest, handleEightKThesisImpactRequest, handleAnalyzeTenQRequest, handleAnalyzeTenKRequest, handleTenQThesisImpactRequest, handleTenKThesisImpactRequest } from './ui-handlers.js'; // Added handleEightKThesisImpactRequest & 10Q/10K handlers
 import { getFmpStockData } from './api.js';
 import { _calculateGarpScorecardMetrics } from './analysis-helpers.js';
 
@@ -400,16 +401,33 @@ export function setupEventListeners() {
             return;
         }
 
-        if (target.id === 'analyze-eight-k-button-new') {
-            handleAnalyzeEightKRequest(symbol);
+        // *** UPDATED TO HANDLE GENERIC FILING ANALYSIS BUTTONS ***
+        if (target.id === 'analyze-filing-summary-button') {
+            const filingTypeSelect = document.getElementById('filing-type-selector');
+            const filingType = filingTypeSelect ? filingTypeSelect.value : '8-K'; // Default to 8-K if selector not found
+            if (filingType === '10-Q') {
+                handleAnalyzeTenQRequest(symbol);
+            } else if (filingType === '10-K') {
+                handleAnalyzeTenKRequest(symbol);
+            } else { // Default to 8-K
+                handleAnalyzeEightKRequest(symbol);
+            }
             return;
         }
 
-        // *** ADDED EVENT LISTENER FOR NEW BUTTON ***
-        if (target.id === 'analyze-eight-k-thesis-impact-button') {
-             handleEightKThesisImpactRequest(symbol);
+        if (target.id === 'analyze-filing-impact-button') {
+            const filingTypeSelect = document.getElementById('filing-type-selector');
+            const filingType = filingTypeSelect ? filingTypeSelect.value : '8-K'; // Default to 8-K if selector not found
+             if (filingType === '10-Q') {
+                handleTenQThesisImpactRequest(symbol);
+            } else if (filingType === '10-K') {
+                handleTenKThesisImpactRequest(symbol);
+            } else { // Default to 8-K
+                handleEightKThesisImpactRequest(symbol);
+            }
              return;
         }
+        // *** END OF UPDATE ***
 
         if (target.id === 'save-filing-diligence-button') {
             handleSaveFilingDiligenceRequest(symbol);
