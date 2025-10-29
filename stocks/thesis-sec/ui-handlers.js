@@ -62,7 +62,8 @@ async function autoSaveReport(ticker, reportType, content, prompt, diligenceQues
             'TenQAnalysis', // Add new report type here to preserve history
             'TenKAnalysis', // Add new report type here to preserve history
             'TenQThesisImpact', // Add new report type here to preserve history
-            'TenKThesisImpact' // Add new report type here to preserve history
+            'TenKThesisImpact', // Add new report type here to preserve history
+            'MarketReactionAnalysis' // Add new report type here to preserve history
         ];
 
         if (!reportTypesToPreserve.includes(reportType)) {
@@ -118,6 +119,24 @@ export async function handleRefreshFmpData(symbol) {
     loadingMessage.textContent = `Fetching all FMP data for ${symbol}...`;
 
     try {
+        // --- Calculate date range for historical prices ---
+        const formatDate = (date) => {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        };
+
+        const today = new Date();
+        const yesterday = new Date(today);
+        yesterday.setDate(today.getDate() - 1);
+        const fifteenDaysAgo = new Date(today);
+        fifteenDaysAgo.setDate(today.getDate() - 15);
+
+        const yesterdayStr = formatDate(yesterday);
+        const fifteenDaysAgoStr = formatDate(fifteenDaysAgo);
+        // --- End date calculation ---
+
         const coreEndpoints = [
             { name: 'profile', path: 'profile', version: 'v3' },
             { name: 'income_statement_annual', path: 'income-statement', params: 'period=annual&limit=10', version: 'v3' },
@@ -131,6 +150,8 @@ export async function handleRefreshFmpData(symbol) {
             { name: 'stock_grade_news', path: 'grade', version: 'v3' },
             { name: 'analyst_estimates', path: 'analyst-estimates', params: 'period=annual', version: 'stable'},
             { name: 'earning_calendar', path: 'earnings', version: 'stable' },
+            // --- Added historical price endpoint ---
+            { name: 'historical_price_eod', path: 'historical-price-full', params: `from=${fifteenDaysAgoStr}&to=${yesterdayStr}`, version: 'v3' }
         ];
 
         let successfulFetches = 0;
@@ -141,18 +162,32 @@ export async function handleRefreshFmpData(symbol) {
             let url;
             const version = endpoint.version || 'v3';
 
+            // Adjust URL construction based on endpoint path complexity
+            let basePath = `https://financialmodelingprep.com/api/${version}/`;
             if (version === 'stable') {
-                url = `https://financialmodelingprep.com/stable/${endpoint.path}?symbol=${symbol}&${endpoint.params ? endpoint.params + '&' : ''}apikey=${state.fmpApiKey}`;
+                basePath = `https://financialmodelingprep.com/stable/`;
+                url = `${basePath}${endpoint.path}?symbol=${symbol}&${endpoint.params ? endpoint.params + '&' : ''}apikey=${state.fmpApiKey}`;
+            } else if (endpoint.path === 'historical-price-full') {
+                 // Historical price path structure is different
+                 url = `${basePath}${endpoint.path}/${symbol}?${endpoint.params ? endpoint.params + '&' : ''}apikey=${state.fmpApiKey}`;
             } else {
-                url = `https://financialmodelingprep.com/api/${version}/${endpoint.path}/${symbol}?${endpoint.params ? endpoint.params + '&' : ''}apikey=${state.fmpApiKey}`;
+                 url = `${basePath}${endpoint.path}/${symbol}?${endpoint.params ? endpoint.params + '&' : ''}apikey=${state.fmpApiKey}`;
             }
+
 
             const data = await callApi(url);
 
             if (!data || (Array.isArray(data) && data.length === 0)) {
-                console.warn(`No data returned from FMP for core endpoint: ${endpoint.name}`);
-                continue;
+                // Special handling for historical data which might return an object with a 'historical' array
+                if (endpoint.name === 'historical_price_eod' && data && data.historical && data.historical.length === 0) {
+                     console.warn(`No data returned within the date range for FMP endpoint: ${endpoint.name}`);
+                     continue; // Still count as 'success' technically, just no data for the period
+                } else if (endpoint.name !== 'historical_price_eod') {
+                    console.warn(`No data returned from FMP for core endpoint: ${endpoint.name}`);
+                    continue; // Skip saving empty data for other endpoints
+                }
             }
+
 
             const docRef = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(symbol).collection('endpoints').doc(endpoint.name);
             await docRef.set({ cachedAt: firebase.firestore.Timestamp.now(), data: data });
@@ -1893,73 +1928,7 @@ export async function handleSaveFilingDiligenceRequest(symbol) {
     }
 }
 
-export async function handleGenerateFilingQuestionsRequest(symbol) {
-    const filingTextarea = document.getElementById('filing-diligence-textarea');
-    const formContainer = document.getElementById('filing-diligence-form-container');
-
-    const filingText = filingTextarea.value.trim();
-    if (!filingText) {
-        displayMessageInModal("Please paste the filing text into the text area first.", "warning");
-        return;
-    }
-
-    openModal(CONSTANTS.MODAL_LOADING);
-    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
-    loadingMessage.textContent = `AI is analyzing the filing to generate questions...`;
-
-    try {
-        const profile = state.portfolioCache.find(s => s.ticker === symbol);
-        const companyName = profile ? profile.companyName : symbol;
-
-        const promptConfig = promptMap['FilingQuestionGeneration'];
-        const prompt = promptConfig.prompt
-            .replace('{companyName}', companyName)
-            .replace('{filingText}', filingText);
-
-        const aiResponse = await callGeminiApi(prompt);
-
-        const cleanedResponse = aiResponse.trim().replace(/^```json\s*|```\s*$/g, '');
-        const questions = JSON.parse(cleanedResponse);
-
-        if (!Array.isArray(questions) || questions.length === 0) {
-            throw new Error("AI did not return a valid list of questions.");
-        }
-
-        let formHtml = `<div class="text-left mt-4 border rounded-lg p-4 bg-gray-50 space-y-4">`;
-        questions.forEach((q, index) => {
-            formHtml += `
-                <div class="filing-qa-pair p-3 bg-white rounded-lg border border-gray-200">
-                    <div class="flex justify-between items-start gap-2 mb-2">
-                        <p class="filing-question-text font-semibold text-sm text-indigo-700 flex-grow">${q}</p>
-                        <button type="button" class="copy-icon-btn copy-filing-question-btn" title="Copy Question">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125H4.875A1.125 1.125 0 013.75 20.625V7.875c0-.621.504-1.125 1.125-1.125H6.75m9 9.375h3.375c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125h-9.75A1.125 1.125 0 006 9.375v9.75c0 .621.504 1.125 1.125 1.125h3.375m-3.75-9.375V6.125c0-.621.504-1.125 1.125-1.125h9.75c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-3.375" /></svg>
-                        </button>
-                    </div>
-                    <textarea class="filing-answer-textarea w-full border border-gray-300 rounded-lg p-2 text-sm"
-                              rows="5"
-                              data-question-index="${index}"
-                              placeholder="Your analysis and findings here..."></textarea>
-                </div>
-            `;
-        });
-        formHtml += `
-            <div class="text-right mt-4 flex justify-end gap-2">
-                <button type="button" id="cancel-filing-diligence-button" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg">Cancel</button>
-                <button id="save-filing-diligence-button" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg">Save Answers</button>
-            </div>
-        </div>`;
-
-        formContainer.innerHTML = formHtml;
-        formContainer.classList.remove('hidden');
-        document.getElementById('filing-diligence-input-container').classList.add('hidden');
-
-    } catch (error) {
-        console.error("Error generating filing questions:", error);
-        displayMessageInModal(`Could not generate questions. The AI may have returned an invalid format. Error: ${error.message}`, 'error');
-    } finally {
-        closeModal(CONSTANTS.MODAL_LOADING);
-    }
-}
+// --- REMOVED handleGenerateFilingQuestionsRequest ---
 
 // *** MODIFIED FUNCTION ***
 export async function handleAnalyzeEightKRequest(symbol) {
