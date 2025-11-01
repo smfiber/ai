@@ -66,8 +66,8 @@ export const QUALITATIVE_DILIGENCE_QUESTIONS = {
     'Management Quality': "After reviewing recent earnings call transcripts or shareholder letters, what is your assessment of management's transparency, operational focus, and long-term strategy? Do they demonstrate a rational and shareholder-aligned approach?",
     'Incentive Alignment (The \"Why\")': "Review the latest Proxy Statement (DEF 14A). How is the executive team compensated? Is their pay tied to long-term value drivers (e.g., ROIC, 3-year TSR, FCF per share) or short-term, gameable metrics (e.g., non-GAAP EPS, annual revenue)?",
     'Shareholder Base Quality (The \"Who\")': "Review the institutional ownership (13F filings). Who are the top 5-10 owners? Are they 'sticky money' (e.g., founders, long-term focused funds, index funds) or 'fast money' (e.g., high-turnover hedge funds)? A committed, long-term shareholder base is a significant asset.",
-    'The Non-Consensus Thesis (The "Edge")': "First, review the backward-looking **Original Final Thesis** (which is the consensus 'bear' case). Second, review the **latest 10-Q/10-K Factual Summary**. Your task is to reconcile these two. Does the new 10-Q/10-K data *confirm* the original bear case, or does it *conflict* with it? State this data-driven conclusion as your new 'Edge'. Explain the specific financial mechanism (e.g., margin expansion, strong cash flow, accelerating debt paydown) and **estimate the timeframe (e.g., 1-3 years, 5+ years) over which you expect this new, reconciled thesis to play out.**",
-    'Core Thesis & Linchpin Risk (The "Linchpin")': "First, clearly state your single, most important **Reconciled Thesis** in one sentence (The 'Edge' from the prompt above). Second, identify the single most critical 'linchpin' risk or assumption that, if proven wrong, would invalidate this new data-driven thesis. Finally, describe the specific evidence or data (e.g., a specific metric from the next 10-Q, a competitor's action) you will monitor to track this risk."
+    'The "Wonderful Business" & The "Temporary Flaw"': "First, confirm if the \"BMQV\" or \"Compounder\" memos identify this as a \"Wonderful Business\" (wide moat, high quality). Second, identify the \"severe, temporary flaw\" (e.g., a solvable, near-term MCR crisis, a cyclical downturn) that is causing near-term pessimism and mispricing.",
+    'The Long-Term Bet & Margin of Safety': "Articulate the 10-20 year bet. Why will the \"Wonderful Business\" (e.g., pricing power, moat, integrated model) inevitably overcome the \"Temporary Flaw\"? Explain how the current, short-term panic (the \"flaw\") creates the \"margin of safety\" for a long-term purchase."
 };
 
 export const MARKET_SENTIMENT_QUESTIONS = {
@@ -762,9 +762,9 @@ CRITICAL INSTRUCTIONS:
 - You MUST return ONLY a valid JSON object.
 - Do not add any text, explanations, or markdown formatting before or after the JSON.
 - For 'verdict', extract the final verdict word (e.g., "High", "Average", "Low") from the final sentence of Section 5.
-- For 'nonConsensusThesis', extract the core non-consensus thesis summary from Section 3. If Section 3 states no thesis was provided or is empty, return "No non-consensus thesis provided.".
+- For 'wonderfulBusinessFlaw', extract the summary for the 'Wonderful Business & Temporary Flaw' section. If the section is empty or states no info was provided, return "No flaw analysis provided.".
 - For 'shareholderBaseQuality', extract the summary of the shareholder base quality from Section 3. If Section 3 states no information was provided or is empty, return "No shareholder base analysis provided.".
-- For 'linchpinThesisAndRisk', extract the synthesized answer for the 'Core Thesis & Linchpin Risk' from Section 4. If Section 4 is empty or does not contain this, return "No linchpin thesis provided.".
+- For 'longTermBet', extract the synthesized answer for the 'Long-Term Bet & Margin of Safety' section. If the section is empty or does not contain this, return "No long-term bet analysis provided.".
 
 Report Text:
 {reportContent}
@@ -772,9 +772,9 @@ Report Text:
 JSON Output Format:
 {
   "verdict": "...",
-  "nonConsensusThesis": "...",
+  "wonderfulBusinessFlaw": "...",
   "shareholderBaseQuality": "...",
-  "linchpinThesisAndRisk": "..."
+  "longTermBet": "..."
 }
 `.trim();
 
@@ -911,7 +911,7 @@ Task: Your task is to update the original thesis, recommendation, and rationale 
 **CRITICAL INSTRUCTIONS & DEFINITIONS:**
 1.  **Prioritize New Diligence:** The **Diligence Memo Summaries** represent the analyst's latest findings and should be given the *most weight*. Use them to validate, challenge, or refine the conclusions of the **Original Final Thesis**.
 2.  **Explicitly Address Conflicts:** If the new diligence contradicts the original thesis (e.g., original thesis worried about valuation, but new diligence suggests market sentiment is overly bearish), you MUST explicitly state this contradiction and explain how the new information changes the conclusion.
-3.  **Focus on "The Linchpin":** Pay special attention to the 'linchpinThesisAndRisk' from the Qualitative Diligence Memo. This is the most important input and should be the primary driver of your updated recommendation.
+3.  **Focus on "The Long-Term Bet":** Pay special attention to the 'longTermBet' from the Qualitative Diligence Memo. This is the most important input and should be the primary driver of your updated recommendation.
 4.  **Output Format:** Your final output MUST use the exact markdown structure, headings, and table format provided below. Do not deviate.
 5.  **Grading Scale (Same as original):** A (High Conviction Buy, 4-5%), B (Strong Buy, 2-3%), C (Hold/Add Weakness, 1%), D (Hold/Monitor), F (Sell/Pass).
 ---
@@ -936,16 +936,16 @@ Task: Your task is to update the original thesis, recommendation, and rationale 
 
 | Diligence Memo | Key Finding / Verdict |
 | :--- | :--- |
-| **Qualitative Memo** | [Extract 'verdict', 'linchpinThesisAndRisk'] |
+| **Qualitative Memo** | [Extract 'verdict', 'longTermBet', 'wonderfulBusinessFlaw'] |
 | **Structured Memo** | [Extract 'verdict', 'keyWeakness'] |
 | **Market Sentiment** | [Extract 'verdict', 'strongestSignal'] |
 | **Investigation Summary** | [Extract 'keyBullishFinding', 'keyBearishFinding'] |
 
 ## 2. Re-evaluating the Core Narrative & Conflicts
-(In one paragraph, compare the **Original Final Thesis Core Narrative** with the **new Diligence Findings**. Identify the main points of agreement or disagreement. Explicitly state any conflicts and explain which information source (original synthesis vs. new diligence) you find more compelling and why, referencing specific diligence findings like the 'linchpinThesisAndRisk' or 'market sentiment verdict'.)
+(In one paragraph, compare the **Original Final Thesis Core Narrative** with the **new Diligence Findings**. Identify the main points of agreement or disagreement. Explicitly state any conflicts and explain which information source (original synthesis vs. new diligence) you find more compelling and why, referencing specific diligence findings like the 'longTermBet' or 'market sentiment verdict'.)
 
 ## 3. Updated Recommendation & Rationale
-(In one or two paragraphs, revise the recommendation and justification from the **Original Final Thesis**. Base your updated reasoning primarily on the **Diligence Memo Summaries**, especially the 'linchpinThesisAndRisk' finding. Explain how this core thesis and its associated risk, now that it has been explicitly stated, modifies the initial quantitative score and synthesis memo conclusions.)
+(In one or two paragraphs, revise the recommendation and justification from the **Original Final Thesis**. Base your updated reasoning primarily on the **Diligence Memo Summaries**, especially the 'longTermBet' finding. Explain how this core thesis (the wonderful business + temporary flaw), now that it has been explicitly stated, modifies the initial quantitative score and synthesis memo conclusions.)
 
 ### Updated Recommendation
 (Your response for this section MUST follow the format below exactly, including the bolding.)
@@ -960,7 +960,7 @@ Task: Your task is to update the original thesis, recommendation, and rationale 
 * **For a New Investment:** [Explain the updated meaning.]
 * **For an Existing Position:** [Explain the updated meaning.]
 `.trim();
-// --- END NEW UPDATED FINAL THESIS PROMPT ---
+// --- END NEW UPDATED THESIS ---
 
 
 // --- REVISED QUALITATIVE DILIGENCE MEMO PROMPT ---
@@ -982,9 +982,8 @@ Task: Synthesize the provided Question & Answer pairs into a professional "Quali
 1.  Read through all the Q&A pairs provided in {qaData}.
 2.  For Section 1 of the template ("Competitive Moat Analysis"), synthesize the user's answer specifically for the 'Competitive Moat' question.
 3.  For Section 2 ("Management, Strategy, & Alignment"), synthesize the user's answers for the 'Management Quality' and 'Incentive Alignment' questions.
-4.  For Section 3 ("Shareholder Base & Non-Consensus Thesis"), synthesize the user's answers for the 'Shareholder Base Quality' and 'The Non-Consensus Thesis (The "Edge")' questions. If answers for these are missing in {qaData}, explicitly state that information was not provided for that specific part (e.g., "Information regarding the Shareholder Base Quality was not provided in the Q&A data.").
-5.  For Section 4 ("Core Thesis & Linchpin Risk"), synthesize the user's answer for the 'Core Thesis & Linchpin Risk (The "Linchpin")' question. If this answer is missing, state that "No linchpin thesis or risk was provided."
-6.  For Section 5 ("Synthesis & Verdict"), write a concise one-paragraph summary combining the key findings from the previous sections, with special emphasis on the 'Core Thesis & Linchpin Risk' if provided. Conclude this paragraph with a final sentence using the exact bolded format: "**Business quality appears [High/Average/Low]** because..." replacing the bracketed word based on your overall synthesis and providing a brief justification.
+4.  For Section 3 ("Shareholder Base & Long-Term Thesis"), synthesize the user's answers for the 'Shareholder Base Quality', 'The "Wonderful Business" & The "Temporary Flaw"', and 'The Long-Term Bet & Margin of Safety' questions. If answers for any of these are missing in {qaData}, explicitly state that information was not provided for that specific part.
+5.  For Section 4 ("Synthesis & Verdict"), write a concise one-paragraph summary combining the key findings from the previous sections, with special emphasis on the 'Long-Term Bet' if provided. Conclude this paragraph with a final sentence using the exact bolded format: "**Business quality appears [High/Average/Low]** because..." replacing the bracketed word based on your overall synthesis and providing a brief justification.
 
 **OUTPUT TEMPLATE (Use this exact structure):**
 
@@ -996,14 +995,11 @@ Task: Synthesize the provided Question & Answer pairs into a professional "Quali
 ## 2. Management, Strategy, & Alignment
 [Your synthesis for Section 2 goes here based on Instruction 3]
 
-## 3. Shareholder Base & Non-Consensus Thesis
+## 3. Shareholder Base & Long-Term Thesis
 [Your synthesis for Section 3 goes here based on Instruction 4]
 
-## 4. Core Thesis & Linchpin Risk
-[Your synthesis for Section 4 goes here based on Instruction 5]
-
-## 5. Synthesis & Verdict
-[Your synthesis paragraph and final bolded verdict sentence go here based on Instruction 6]
+## 4. Synthesis & Verdict
+[Your synthesis paragraph and final bolded verdict sentence go here based on Instruction 5]
 `.trim();
 // --- END REVISED PROMPT ---
 
