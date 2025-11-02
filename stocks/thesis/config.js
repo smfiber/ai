@@ -910,53 +910,54 @@ Role: You are the Chief Investment Officer of a multi-strategy fund. Your task i
 
 // --- NEW UPDATED FINAL THESIS PROMPT (NEUTRAL SYNTHESIS) ---
 const UPDATED_FINAL_THESIS_PROMPT = `
-Role: You are the Chief Investment Officer, reviewing a previously generated "Final Investment Thesis" in light of new, direct diligence findings provided by your analyst.
-Task: Your task is to **neutrally synthesize** the **Original Final Thesis** with the **new Diligence Memo Summaries**. Your goal is to determine if the new diligence **confirms, contradicts, or modifies** the original thesis.
+**Role:** You are an objective investment analyst.
+
+**Task:** Your task is to **neutrally synthesize** a previously generated **"Original Final Thesis"** with a **"New Diligence Synthesis."** The New Diligence Synthesis is based on a specific analysis of the business's quality and structural flaws.
+
+Your goal is to determine if the new diligence **confirms, contradicts, or modifies** the original thesis and its recommendation.
 
 ---
-**CRITICAL INSTRUCTIONS & DEFINITIONS:**
-1.  **Weigh Inputs Equally:** The **new Diligence Memo Summaries** do *not* automatically override the **Original Final Thesis**. Your job is to weigh the consensus of the original synthesis against the new, specific findings.
-2.  Identify Confirmation or Contradiction:
-    * If the new diligence **confirms** the original thesis, your updated recommendation should *reinforce* that view.
-    * If the new diligence **contradicts** the original thesis, your primary task is to **articulate this conflict as the central finding**. Do not assume the new diligence is "more accurate." Your recommendation must be based on the *uncertainty* created by this conflict (e.g., an "F" thesis conflicting with "B" diligence memos would likely result in a 'C' or 'D' grade, as the path forward is now unclear).
-3.  **The "Long-Term Bet" is a Key *Input*, Not the *Driver*:** The 'longTermBet' from the Qualitative Diligence Memo is a critical *input*, but it must be weighed against all other data. If the 'Structured Memo' verdict is "Weak," you must weigh that against the 'longTermBet'.
-4.  **Output Format:** Your final output MUST use the exact markdown structure, headings, and table format provided below. Do not deviate.
-5.  **Grading Scale:** A (High Conviction Buy, 4-5%), B (Strong Buy, 2-3%), C (Hold/Add Weakness, 1%), D (Hold/Monitor), F (Sell/Pass).
+
+**KEY INSTRUCTIONS:**
+1.  **Weigh Inputs Objectively:** The new diligence does not automatically override the original thesis. Weigh the original consensus against the new, specific findings.
+2.  **Identify Conflicts:** If the new diligence contradicts the original thesis, your primary task is to **articulate this conflict**. Your updated recommendation must be based on the *synthesis* of this conflicting information.
+
 ---
 
 **INPUTS FOR ANALYSIS:**
 
 **1. Original Final Investment Thesis:**
+(This is the pre-existing conclusion and grade.)
 \`\`\`markdown
 {originalFinalThesisContent}
 \`\`\`
 
-**2. NEW Diligence Memo Summaries (JSON):**
-{diligenceSummaries}
+**2. NEW Diligence Synthesis:**
+(This is the new analysis based on the core diligence questions. It should include the consensus on business quality, the primary flaw, and the resulting long-term thesis.)
+\`\`\`markdown
+{newDiligenceSynthesisContent}
+\`\`\`
 
 ---
+
 **YOUR TASK (Strict Output Format):**
 
 # Updated Final Thesis: {companyName} ({tickerSymbol})
 
-## 1. Summary of Diligence Findings
-(Complete this summary table by extracting the key findings from the provided JSON data.)
-
-| Diligence Memo | Key Finding / Verdict |
-| :--- | :--- |
-| **Qualitative Memo** | [Extract 'verdict', 'longTermBet', 'wonderfulBusinessFlaw'] |
-| **Structured Memo** | [Extract 'verdict', 'keyWeakness'] |
-| **Market Sentiment** | [Extract 'verdict', 'strongestSignal'] |
-| **Investigation Summary** | [Extract 'keyBullishFinding', 'keyBearishFinding'] |
+## 1. Summary of New Diligence Findings
+(In one paragraph, summarize the key conclusions from the **"New Diligence Synthesis"** input. What is the consensus on business quality, the primary flaw, and the resulting long-term thesis (e.g., 'value trap', 'compounder')?)
 
 ## 2. Re-evaluating the Core Narrative & Conflicts
-(In one paragraph, compare the **Original Final Thesis Core Narrative** with the **new Diligence Findings**. Identify the main points of agreement or disagreement. Explicitly state any conflicts and explain your *synthesis* of this new information. State whether the new diligence *confirms* or *contradicts* the original thesis.)
+(In one paragraph, compare the **Original Final Thesis Core Narrative** (and its recommendation) with the **New Diligence Synthesis**.
+* Explicitly state the main points of **alignment** or **contradiction**.
+* For example, does the Original Thesis already account for the flaws identified, or does the New Diligence present a much more bearish/bullish case?
+* State whether the new diligence *confirms, contradicts,* or *fundamentally modifies* the original thesis.)
 
 ## 3. Updated Recommendation & Rationale
-(In one or two paragraphs, build your *new* recommendation by synthesizing *all* inputs. Explain how you are weighing the original consensus against the new findings to arrive at this updated conclusion.)
+(In one or two paragraphs, build your *new* recommendation by synthesizing *all* inputs. Explain how you are weighing the original consensus against the new, more detailed findings to arrive at this updated conclusion.)
 
 ### Updated Recommendation
-(Your response for this section MUST follow the format below exactly, including the bolding.)
+(Your response for this section MUST follow the format below exactly, including the bolding. Use the standard A-F grading scale: A (High Conviction Buy), B (Strong Buy), C (Hold/Add), D (Hold/Monitor), F (Sell/Pass).)
 
 **Recommendation Grade:** [Assign an updated letter grade based on your *new* synthesis.]
 **Suggested Allocation:** [State the corresponding allocation percentage.]
