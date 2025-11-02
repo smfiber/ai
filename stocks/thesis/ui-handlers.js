@@ -471,7 +471,7 @@ export async function handleReportHelpRequest(reportType) {
 
     try {
         const metaPrompt = `
-        Role: You are an AI assistant who excels at explaining the purpose and methodology of financial analysis reports to everyday investors. Your tone should be educational, clear, and encouraging.
+        Role: You are an AI assistant skilled at explaining the purpose and methodology of financial analysis reports to everyday investors. Your tone should be educational, clear, and encouraging.
 
         Task: Based on the provided "Core Prompt" and "Data Summary" for a report called "${reportName}", generate a concise explanation for the user. The explanation must be in markdown and follow this structure precisely:
 
@@ -1294,10 +1294,9 @@ export async function handleUpdatedFinalThesisRequest(symbol, forceNew = false) 
         }
         const originalFinalThesisContent = originalThesisReports[0].content;
 
-        // 2. Get the two specific answers from the *NEW* FinalThesis document
+        // 2. Get all answers from the 'FinalThesis' document
         loadingMessage.textContent = "Fetching your final thesis diligence answers...";
         
-        // --- MODIFICATION: Point to the new, isolated document ---
         const docRef = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(symbol).collection('diligence_answers').doc('FinalThesis');
         const docSnap = await docRef.get({ source: 'server' }); // Force server read to get latest save
 
@@ -1306,29 +1305,25 @@ export async function handleUpdatedFinalThesisRequest(symbol, forceNew = false) 
         }
 
         const savedData = docSnap.data().answers || [];
-        const answersMap = new Map(savedData.map(item => [item.question, item.answer]));
-
-        // --- MODIFICATION: Use the new FINAL_THESIS_QUESTIONS constant ---
-        const question1 = FINAL_THESIS_QUESTIONS['Business Quality & Flaw Assessment'];
-        const question2 = FINAL_THESIS_QUESTIONS['Final Thesis & Margin of Safety'];
-
-        const answer1 = answersMap.get(question1) || "";
-        const answer2 = answersMap.get(question2) || "";
         
-        // Removed the checks that threw errors for blank/missing answers.
-        // Blank answers are now a valid state.
+        // Format all saved answers into a single Q&A block
+        const allFinalThesisAnswers = savedData.map(pair => {
+            return `**Question:** ${pair.question}\n\n**Answer:**\n${pair.answer || '(No answer provided)'}`;
+        }).join('\n\n---\n\n');
 
+        if (savedData.length === 0) {
+             throw new Error(`No saved answers found in the 'Final Thesis' document. Please save your answers first.`);
+        }
 
         loadingMessage.textContent = "Synthesizing updated final thesis...";
-        const profile = state.portfolioCache.find(s => s.ticker === symbol);
+        const profile = state.portfolioCache.find(s => s.ticker === symbol) || {};
         const companyName = profile ? profile.companyName : symbol;
 
         const finalPrompt = promptConfig.prompt
             .replace(/{companyName}/g, companyName)
             .replace(/{tickerSymbol}/g, symbol)
             .replace('{originalFinalThesisContent}', originalFinalThesisContent)
-            .replace('{businessQualityFlawAnswer}', answer1)
-            .replace('{finalThesisMarginOfSafetyAnswer}', answer2);
+            .replace('{allFinalThesisAnswers}', allFinalThesisAnswers); // Pass the single block
 
         const memoContent = await generateRefinedArticle(finalPrompt, loadingMessage);
 
@@ -1569,7 +1564,7 @@ export async function handleSaveDiligenceAnswers(symbol, diligenceType) {
     document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Saving ${sectionConfig.name} answers...`;
 
     try {
-        const docRef = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(symbol).collection('diligence_answers').doc(diligenceType);
+        const docRef = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(symbol).collection('diliggance_answers').doc(diligenceType);
         await docRef.set({
             savedAt: firebase.firestore.Timestamp.now(),
             answers: qaPairs
