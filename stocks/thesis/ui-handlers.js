@@ -1299,7 +1299,7 @@ export async function handleUpdatedFinalThesisRequest(symbol, forceNew = false) 
         
         // --- MODIFICATION: Point to the new, isolated document ---
         const docRef = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(symbol).collection('diligence_answers').doc('FinalThesis');
-        const docSnap = await docRef.get(); // No cache-busting needed, it's a direct read
+        const docSnap = await docRef.get({ source: 'server' }); // Force server read to get latest save
 
         if (!docSnap.exists) {
             throw new Error(`You must first save your answers for the 'Final Thesis' section in the 'Final Thesis' tab.`);
