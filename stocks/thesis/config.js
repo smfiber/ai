@@ -916,9 +916,9 @@ Task: Your task is to **neutrally synthesize** the **Original Final Thesis** wit
 ---
 **CRITICAL INSTRUCTIONS & DEFINITIONS:**
 1.  **Weigh Inputs Equally:** The **new Diligence Memo Summaries** do *not* automatically override the **Original Final Thesis**. Your job is to weigh the consensus of the original synthesis against the new, specific findings.
-2.  **Identify Confirmation or Contradiction:**
-    * If the new diligence **confirms** the original thesis (e.g., Original Thesis was 'F' grade, and new diligence finds 'Weak' quantitative health and 'No Moat'), then the 'Updated Recommendation' should *reinforce* that negative view.
-    * If the new diligence **contradicts** the original thesis (e.g., Original Thesis was 'F' grade, but new diligence identifies a clear 'Wonderful Business with a Temporary Flaw'), you must explain this conflict and justify why the new diligence provides a more accurate picture.
+2.  Identify Confirmation or Contradiction:
+    * If the new diligence **confirms** the original thesis, your updated recommendation should *reinforce* that view.
+    * If the new diligence **contradicts** the original thesis, your primary task is to **articulate this conflict as the central finding**. Do not assume the new diligence is "more accurate." Your recommendation must be based on the *uncertainty* created by this conflict (e.g., an "F" thesis conflicting with "B" diligence memos would likely result in a 'C' or 'D' grade, as the path forward is now unclear).
 3.  **The "Long-Term Bet" is a Key *Input*, Not the *Driver*:** The 'longTermBet' from the Qualitative Diligence Memo is a critical *input*, but it must be weighed against all other data. If the 'Structured Memo' verdict is "Weak," you must weigh that against the 'longTermBet'.
 4.  **Output Format:** Your final output MUST use the exact markdown structure, headings, and table format provided below. Do not deviate.
 5.  **Grading Scale:** A (High Conviction Buy, 4-5%), B (Strong Buy, 2-3%), C (Hold/Add Weakness, 1%), D (Hold/Monitor), F (Sell/Pass).
