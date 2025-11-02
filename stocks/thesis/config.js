@@ -65,9 +65,15 @@ export const QUALITATIVE_DILIGENCE_QUESTIONS = {
     'Competitive Moat': "What is the source and durability of the company's competitive moat (e.g., brand, network effects, high switching costs, low-cost production), and is there evidence that this advantage is strengthening or weakening over time?",
     'Management Quality': "After reviewing recent earnings call transcripts or shareholder letters, what is your assessment of management's transparency, operational focus, and long-term strategy? Do they demonstrate a rational and shareholder-aligned approach?",
     'Incentive Alignment (The \"Why\")': "Review the latest Proxy Statement (DEF 14A). How is the executive team compensated? Is their pay tied to long-term value drivers (e.g., ROIC, 3-year TSR, FCF per share) or short-term, gameable metrics (e.g., non-GAAP EPS, annual revenue)?",
-    'Shareholder Base Quality (The \"Who\")': "Review the institutional ownership (13F filings). Who are the top 5-10 owners? Are they 'sticky money' (e.g., founders, long-term focused funds, index funds) or 'fast money' (e.g., high-turnover hedge funds)? A committed, long-term shareholder base is a significant asset.",
-    'The "Wonderful Business" & The "Temporary Flaw"': "First, confirm if the \"BMQV\" or \"Compounder\" memos identify this as a \"Wonderful Business\" (wide moat, high quality). Second, identify the \"severe, temporary flaw\" (e.g., a solvable, near-term MCR crisis, a cyclical downturn) that is causing near-term pessimism and mispricing.",
-    'The Long-Term Bet & Margin of Safety': "Articulate the 10-20 year bet. Why will the \"Wonderful Business\" (e.g., pricing power, moat, integrated model) inevitably overcome the \"Temporary Flaw\"? Explain how the current, short-term panic (the \"flaw\") creates the \"margin of safety\" for a long-term purchase."
+    'Shareholder Base Quality (The \"Who\")': "Review the institutional ownership (13F filings). Who are the top 5-10 owners? Classify them as 'sticky money' (e.g., founders, long-term focused funds, index funds) or 'fast money' (e.g., high-turnover hedge funds).",
+    
+    // --- BIASED QUESTION #5 (REPLACED) ---
+    // 'The "Wonderful Business" & The "Temporary Flaw"': "First, confirm if the \"BMQV\" or \"Compounder\" memos identify this as a \"Wonderful Business\" (wide moat, high quality). Second, identify the \"severe, temporary flaw\" (e.g., a solvable, near-term MCR crisis, a cyclical downturn) that is causing near-term pessimism and mispricing."
+    'Business Quality & Flaw Assessment': "First, based on the 'BMQV' or 'Compounder' memos, what is the *consensus view* on business quality (e.g., 'Wonderful Business', 'Flawed Business', 'Not a Compounder')? Second, what is the *primary flaw* or risk identified that is causing near-term pessimism? Finally, based on your own diligence, assess if this flaw appears to be *temporary* (solvable, cyclical) or *structural* (permanent, a sign of decline).",
+
+    // --- BIASED QUESTION #6 (REPLACED) ---
+    // 'The Long-Term Bet & Margin of Safety': "Articulate the 10-20 year bet. Why will the \"Wonderful Business\" (e.g., pricing power, moat, integrated model) inevitably overcome the \"Temporary Flaw\"? Explain how the current, short-term panic (the \"flaw\") creates the \"margin of safety\" for a long-term purchase."
+    'Final Thesis & Margin of Safety': "Synthesize all your findings. If a 'Wonderful Business' and 'Temporary Flaw' were identified, articulate the long-term *bullish* thesis and margin of safety. *Conversely*, if the business is 'Flawed' or the flaw is 'Structural,' articulate the long-term *bearish* thesis (e.g., 'value trap,' 'secular decline'). State your final, synthesized conclusion."
 };
 
 export const MARKET_SENTIMENT_QUESTIONS = {
@@ -902,18 +908,20 @@ Role: You are the Chief Investment Officer of a multi-strategy fund. Your task i
 * **For an Existing Position:** [Explain what this recommendation means for a current shareholder.]
 `.trim();
 
-// --- NEW UPDATED FINAL THESIS PROMPT ---
+// --- NEW UPDATED FINAL THESIS PROMPT (NEUTRAL SYNTHESIS) ---
 const UPDATED_FINAL_THESIS_PROMPT = `
 Role: You are the Chief Investment Officer, reviewing a previously generated "Final Investment Thesis" in light of new, direct diligence findings provided by your analyst.
-Task: Your task is to update the original thesis, recommendation, and rationale based *primarily* on the **new Diligence Memo Summaries**. Resolve any conflicts between the original thesis and the new diligence.
+Task: Your task is to **neutrally synthesize** the **Original Final Thesis** with the **new Diligence Memo Summaries**. Your goal is to determine if the new diligence **confirms, contradicts, or modifies** the original thesis.
 
 ---
 **CRITICAL INSTRUCTIONS & DEFINITIONS:**
-1.  **Prioritize New Diligence:** The **Diligence Memo Summaries** represent the analyst's latest findings and should be given the *most weight*. Use them to validate, challenge, or refine the conclusions of the **Original Final Thesis**.
-2.  **Explicitly Address Conflicts:** If the new diligence contradicts the original thesis (e.g., original thesis worried about valuation, but new diligence suggests market sentiment is overly bearish), you MUST explicitly state this contradiction and explain how the new information changes the conclusion.
-3.  **Focus on "The Long-Term Bet":** Pay special attention to the 'longTermBet' from the Qualitative Diligence Memo. This is the most important input and should be the primary driver of your updated recommendation.
+1.  **Weigh Inputs Equally:** The **new Diligence Memo Summaries** do *not* automatically override the **Original Final Thesis**. Your job is to weigh the consensus of the original synthesis against the new, specific findings.
+2.  **Identify Confirmation or Contradiction:**
+    * If the new diligence **confirms** the original thesis (e.g., Original Thesis was 'F' grade, and new diligence finds 'Weak' quantitative health and 'No Moat'), then the 'Updated Recommendation' should *reinforce* that negative view.
+    * If the new diligence **contradicts** the original thesis (e.g., Original Thesis was 'F' grade, but new diligence identifies a clear 'Wonderful Business with a Temporary Flaw'), you must explain this conflict and justify why the new diligence provides a more accurate picture.
+3.  **The "Long-Term Bet" is a Key *Input*, Not the *Driver*:** The 'longTermBet' from the Qualitative Diligence Memo is a critical *input*, but it must be weighed against all other data. If the 'Structured Memo' verdict is "Weak," you must weigh that against the 'longTermBet'.
 4.  **Output Format:** Your final output MUST use the exact markdown structure, headings, and table format provided below. Do not deviate.
-5.  **Grading Scale (Same as original):** A (High Conviction Buy, 4-5%), B (Strong Buy, 2-3%), C (Hold/Add Weakness, 1%), D (Hold/Monitor), F (Sell/Pass).
+5.  **Grading Scale:** A (High Conviction Buy, 4-5%), B (Strong Buy, 2-3%), C (Hold/Add Weakness, 1%), D (Hold/Monitor), F (Sell/Pass).
 ---
 
 **INPUTS FOR ANALYSIS:**
@@ -942,15 +950,15 @@ Task: Your task is to update the original thesis, recommendation, and rationale 
 | **Investigation Summary** | [Extract 'keyBullishFinding', 'keyBearishFinding'] |
 
 ## 2. Re-evaluating the Core Narrative & Conflicts
-(In one paragraph, compare the **Original Final Thesis Core Narrative** with the **new Diligence Findings**. Identify the main points of agreement or disagreement. Explicitly state any conflicts and explain which information source (original synthesis vs. new diligence) you find more compelling and why, referencing specific diligence findings like the 'longTermBet' or 'market sentiment verdict'.)
+(In one paragraph, compare the **Original Final Thesis Core Narrative** with the **new Diligence Findings**. Identify the main points of agreement or disagreement. Explicitly state any conflicts and explain your *synthesis* of this new information. State whether the new diligence *confirms* or *contradicts* the original thesis.)
 
 ## 3. Updated Recommendation & Rationale
-(In one or two paragraphs, revise the recommendation and justification from the **Original Final Thesis**. Base your updated reasoning primarily on the **Diligence Memo Summaries**, especially the 'longTermBet' finding. Explain how this core thesis (the wonderful business + temporary flaw), now that it has been explicitly stated, modifies the initial quantitative score and synthesis memo conclusions.)
+(In one or two paragraphs, build your *new* recommendation by synthesizing *all* inputs. Explain how you are weighing the original consensus against the new findings to arrive at this updated conclusion.)
 
 ### Updated Recommendation
 (Your response for this section MUST follow the format below exactly, including the bolding.)
 
-**Recommendation Grade:** [Assign an updated letter grade based on the *new* synthesis.]
+**Recommendation Grade:** [Assign an updated letter grade based on your *new* synthesis.]
 **Suggested Allocation:** [State the corresponding allocation percentage.]
 
 (Your updated one-sentence justification summarizing your *new* conclusion goes here.)
@@ -961,7 +969,6 @@ Task: Your task is to update the original thesis, recommendation, and rationale 
 * **For an Existing Position:** [Explain the updated meaning.]
 `.trim();
 // --- END NEW UPDATED THESIS ---
-
 
 // --- REVISED QUALITATIVE DILIGENCE MEMO PROMPT ---
 const QUALITATIVE_DILIGENCE_MEMO_PROMPT = `
