@@ -1,5 +1,5 @@
 // fileName: ui-handlers.js
-import { CONSTANTS, state, promptMap, ANALYSIS_REQUIREMENTS, ANALYSIS_NAMES, SECTOR_KPI_SUGGESTIONS, STRUCTURED_DILIGENCE_QUESTIONS, QUALITATIVE_DILIGENCE_QUESTIONS, MARKET_SENTIMENT_QUESTIONS, QUARTERLY_REVIEW_QUESTIONS, ANNUAL_REVIEW_QUESTIONS } from './config.js';
+import { CONSTANTS, state, promptMap, ANALYSIS_REQUIREMENTS, ANALYSIS_NAMES, SECTOR_KPI_SUGGESTIONS, STRUCTURED_DILIGENCE_QUESTIONS, QUALITATIVE_DILIGENCE_QUESTIONS, MARKET_SENTIMENT_QUESTIONS, QUARTERLY_REVIEW_QUESTIONS, ANNUAL_REVIEW_QUESTIONS, FINAL_THESIS_QUESTIONS } from './config.js';
 import { callApi, callGeminiApi, generateRefinedArticle, generatePolishedArticleForSynthesis, getFmpStockData, extractSynthesisData } from './api.js';
 import { openModal, closeModal, displayMessageInModal, openConfirmationModal, openManageStockModal, addKpiRow, addDiligenceEntryRow } from './ui-modals.js';
 import { renderPortfolioManagerList, displayReport, updateReportStatus, fetchAndCachePortfolioData, updateGarpCandidacyStatus, renderCandidacyAnalysis, renderGarpAnalysisSummary, renderDiligenceLog, renderPeerComparisonTable, renderSectorMomentumHeatMap, renderOngoingReviewLog } from './ui-render.js';
@@ -1294,26 +1294,27 @@ export async function handleUpdatedFinalThesisRequest(symbol, forceNew = false) 
         }
         const originalFinalThesisContent = originalThesisReports[0].content;
 
-        // 2. Get the two specific answers from the Qualitative Diligence section
-        loadingMessage.textContent = "Fetching your qualitative diligence answers...";
+        // 2. Get the two specific answers from the *NEW* FinalThesis document
+        loadingMessage.textContent = "Fetching your final thesis diligence answers...";
         
-        const docRef = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(symbol).collection('diligence_answers').doc('Qualitative');
-        // --- MODIFICATION: Force fetch from server ---
-        const docSnap = await docRef.get({ source: 'server' });
+        // --- MODIFICATION: Point to the new, isolated document ---
+        const docRef = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(symbol).collection('diligence_answers').doc('FinalThesis');
+        const docSnap = await docRef.get(); // No cache-busting needed, it's a direct read
 
         if (!docSnap.exists) {
-            throw new Error(`You must first save your answers for the 'Qualitative Diligence' section in the 'Diligence Hub' tab.`);
+            throw new Error(`You must first save your answers for the 'Final Thesis' section in the 'Final Thesis' tab.`);
         }
 
         const savedData = docSnap.data().answers || [];
         const answersMap = new Map(savedData.map(item => [item.question, item.answer]));
 
-        const question1 = QUALITATIVE_DILIGENCE_QUESTIONS['Business Quality & Flaw Assessment'];
-        const question2 = QUALITATIVE_DILIGENCE_QUESTIONS['Final Thesis & Margin of Safety'];
+        // --- MODIFICATION: Use the new FINAL_THESIS_QUESTIONS constant ---
+        const question1 = FINAL_THESIS_QUESTIONS['Business Quality & Flaw Assessment'];
+        const question2 = FINAL_THESIS_QUESTIONS['Final Thesis & Margin of Safety'];
 
         const answer1 = answersMap.get(question1) || "";
         const answer2 = answersMap.get(question2) || "";
-
+        
         // Removed the checks that threw errors for blank/missing answers.
         // Blank answers are now a valid state.
 
@@ -1574,9 +1575,8 @@ export async function handleSaveDiligenceAnswers(symbol, diligenceType) {
             answers: qaPairs
         });
 
-        // --- FIX: Force a server read to bust the local cache ---
-        await docRef.get({ source: 'server' });
-        // --- END FIX ---
+        // --- REMOVED THE CACHE-BUSTING LINE AS IT WAS INEFFECTIVE ---
+        // await docRef.get({ source: 'server' }); 
 
         displayMessageInModal(`${sectionConfig.name} answers have been saved. You can now generate the memo from the 'AI Analysis' tab.`, 'info');
 
@@ -1587,6 +1587,54 @@ export async function handleSaveDiligenceAnswers(symbol, diligenceType) {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
 }
+
+// --- NEW FUNCTION TO SAVE FINAL THESIS ANSWERS ---
+export async function handleSaveFinalThesisAnswers(symbol) {
+    const diligenceType = 'FinalThesis';
+    const sectionConfig = {
+        selector: '.final-thesis-answer',
+        questions: FINAL_THESIS_QUESTIONS,
+        name: 'Final Thesis Diligence'
+    };
+
+    const answerElements = document.querySelectorAll(sectionConfig.selector);
+    const qaPairs = [];
+
+    answerElements.forEach(textarea => {
+        const answer = textarea.value.trim();
+        const questionElement = textarea.closest('.diligence-card').querySelector('[data-question-text]');
+        if (!questionElement) {
+             console.warn('Could not find question element for textarea.');
+             return;
+        }
+        const question = questionElement.textContent.trim();
+        if (question) {
+            qaPairs.push({ question, answer });
+        }
+    });
+
+    openModal(CONSTANTS.MODAL_LOADING);
+    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Saving ${sectionConfig.name} answers...`;
+
+    try {
+        const docRef = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(symbol).collection('diligence_answers').doc(diligenceType);
+        await docRef.set({
+            savedAt: firebase.firestore.Timestamp.now(),
+            answers: qaPairs
+        });
+        
+        // No cache-busting needed here, as it's a separate document.
+        
+        displayMessageInModal(`${sectionConfig.name} answers have been saved. You can now generate the 'Updated Final Thesis' from the 'AI Analysis' tab.`, 'info');
+
+    } catch (error) {
+        console.error(`Error saving ${sectionConfig.name} answers:`, error);
+        displayMessageInModal(`Could not save answers: ${error.message}`, 'error');
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+// --- END NEW FUNCTION ---
 
 
 export async function handleManualDiligenceSave(symbol) {
@@ -1642,7 +1690,7 @@ export async function handleManualDiligenceSave(symbol) {
 export async function handleDeleteAllDiligenceAnswers(symbol) {
     openConfirmationModal(
         'Delete All Saved Answers?',
-        `Are you sure you want to permanently delete all saved diligence answers (Qualitative, Structured, Market Sentiment) for ${symbol}? This action cannot be undone.`,
+        `Are you sure you want to permanently delete all saved diligence answers (Qualitative, Structured, Market Sentiment, Final Thesis) for ${symbol}? This action cannot be undone.`,
         async () => {
             openModal(CONSTANTS.MODAL_LOADING);
             document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Deleting all saved answers for ${symbol}...`;
@@ -1664,7 +1712,7 @@ export async function handleDeleteAllDiligenceAnswers(symbol) {
                 await Promise.all(deletePromises);
 
                 // Clear text areas in the UI
-                document.querySelectorAll('.qualitative-diligence-answer, .structured-diligence-answer, .market-sentiment-answer').forEach(textarea => {
+                document.querySelectorAll('.qualitative-diligence-answer, .structured-diligence-answer, .market-sentiment-answer, .final-thesis-answer').forEach(textarea => {
                     textarea.value = '';
                 });
 
