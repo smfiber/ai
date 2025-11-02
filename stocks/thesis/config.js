@@ -76,8 +76,26 @@ export const QUALITATIVE_DILIGENCE_QUESTIONS = {
 
 // --- NEW CONSTANT FOR ISOLATED THESIS QUESTIONS ---
 export const FINAL_THESIS_QUESTIONS = {
-    'Business Quality & Flaw Assessment': "First, based on the 'BMQV' or 'Compounder' memos, what is the *consensus view* on business quality (e.g., 'Wonderful Business', 'Flawed Business', 'Not a Compounder')? Second, what is the *primary flaw* or risk identified that is causing near-term pessimism? Finally, based on your own diligence, assess if this flaw appears to be *temporary* (solvable, cyclical) or *structural* (permanent, a sign of decline).",
-    'Final Thesis & Margin of Safety': "Synthesize all your findings. If a 'Wonderful Business' and 'Temporary Flaw' were identified, articulate the long-term *bullish* thesis and margin of safety. *Conversely*, if the business is 'Flawed' or the flaw is 'Structural,' articulate the long-term *bearish* thesis (e.g., 'value trap,' 'secular decline'). State your final, synthesized conclusion."
+    'Business Quality & Flaw Assessment': {
+        question: "First, based on the 'BMQV' or 'Compounder' memos, what is the *consensus view* on business quality (e.g., 'Wonderful Business', 'Flawed Business', 'Not a Compounder')? Second, what is the *primary flaw* or risk identified that is causing near-term pessimism? Finally, based on your own diligence, assess if this flaw appears to be *temporary* (solvable, cyclical) or *structural* (permanent, a sign of decline).",
+        notation: "Source: Your synthesis of the **BMQV Memo** and **Long-Term Compounder Memo** reports, combined with your own external diligence."
+    },
+    'Final Thesis & Margin of Safety': {
+        question: "Synthesize all your findings. If a 'Wonderful Business' and 'Temporary Flaw' were identified, articulate the long-term *bullish* thesis and margin of safety. *Conversely*, if the business is 'Flawed' or the flaw is 'Structural,' articulate the long-term *bearish* thesis (e.g., 'value trap,' 'secular decline'). State your final, synthesized conclusion.",
+        notation: "Source: Your final, synthesized conclusion based on all previous diligence."
+    },
+    'Forward Guidance & Management Tone': {
+        question: "Based on the latest earnings call, what is management's forward-looking guidance for the next quarter/year? More importantly, what was their qualitative *tone*? (e.g., confident, cautious, defensive, promotional).",
+        notation: "Source: **Latest Earnings Call Transcript** (e.g., from 'Ongoing Diligence' tab) or external financial news sources."
+    },
+    'Key Catalysts & Risks': {
+        question: "What are the 1-2 most significant *forward-looking* catalysts (e.g., new product, regulatory change) and the 1-2 most significant *risks* (e.g., new competition, legal/regulatory threat) that will impact the stock over the next 6-12 months?",
+        notation: "Source: **Latest 10-Q/10-K 'Risk Factors' section** and **Earnings Call Transcript**, combined with external news."
+    },
+    'Thesis Modification Check': {
+        question: "Do the new facts from the latest earnings call or filings *fundamentally modify* the original investment thesis? (e.g., 'Yes, the new guidance invalidates the bull case on margins,' or 'No, the results confirm the original thesis.')",
+        notation: "Source: Your direct comparison of the **Original Final Thesis** against the new findings from this tab."
+    }
 };
 // --- END NEW CONSTANT ---
 
@@ -937,16 +955,11 @@ Your goal is to determine if the new diligence answers **confirm, contradict, or
 {originalFinalThesisContent}
 \`\`\`
 
-**2. NEW Diligence Answers:**
-(These are the user's manually entered answers to two key qualitative questions.)
-
-**Question 1: Business Quality & Flaw Assessment**
-*Answer:*
-{businessQualityFlawAnswer}
-
-**Question 2: Final Thesis & Margin of Safety**
-*Answer:*
-{finalThesisMarginOfSafetyAnswer}
+**2. NEW Diligence Answers (Q&A Block):**
+(These are the user's manually entered answers to all key qualitative questions from the 'Final Thesis' tab.)
+\`\`\`
+{allFinalThesisAnswers}
+\`\`\`
 
 ---
 
@@ -962,25 +975,20 @@ Your goal is to determine if the new diligence answers **confirm, contradict, or
 {originalFinalThesisContent}
 \`\`\`
 
-**B. Diligence Answer (Business Quality & Flaw Assessment):**
+**B. New Diligence Q&A Block:**
 \`\`\`
-{businessQualityFlawAnswer}
-\`\`\`
-
-**C. Diligence Answer (Final Thesis & Margin of Safety):**
-\`\`\`
-{finalThesisMarginOfSafetyAnswer}
+{allFinalThesisAnswers}
 \`\`\`
 
 ---
 
 ## 2. Summary of New Diligence Findings
-(In one paragraph, summarize the key conclusions from the user's **"NEW Diligence Answers"** printed above. What is their consensus on business quality, the nature of the flaw (temporary vs. structural), and their final thesis?)
+(In one paragraph, summarize the key conclusions from the user's **"NEW Diligence Answers (Q&A Block)"** printed above. What is their consensus on business quality, the nature of the flaw, management's tone, key risks, and the final thesis?)
 
 ## 3. Re-evaluating the Core Narrative & Conflicts
-(Compare the **Original Final Thesis** with the **New Diligence Answers**.
+(Compare the **Original Final Thesis** with the **New Diligence Findings**.
 * Explicitly state the main points of **alignment** or **contradiction**.
-* For example: "The original thesis was a 'B' grade 'Strong Buy' based on a high-quality moat. The user's new diligence *fundamentally contradicts* this by identifying a 'Structural' flaw, leading them to a 'bearish' conclusion."
+* For example: "The original thesis was a 'B' grade 'Strong Buy' based on a high-quality moat. The user's new diligence *fundamentally contradicts* this by identifying a 'Structural' flaw and 'cautious' management tone, leading to a new 'bearish' conclusion."
 * State whether the new diligence answers *confirm, contradict,* or *fundamentally modify* the original thesis.)
 
 ## 4. Updated Recommendation & Rationale
