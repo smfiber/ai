@@ -67,14 +67,19 @@ export const QUALITATIVE_DILIGENCE_QUESTIONS = {
     'Incentive Alignment (The \"Why\")': "Review the latest Proxy Statement (DEF 14A). How is the executive team compensated? Is their pay tied to long-term value drivers (e.g., ROIC, 3-year TSR, FCF per share) or short-term, gameable metrics (e.g., non-GAAP EPS, annual revenue)?",
     'Shareholder Base Quality (The \"Who\")': "Review the institutional ownership (13F filings). Who are the top 5-10 owners? Classify them as 'sticky money' (e.g., founders, long-term focused funds, index funds) or 'fast money' (e.g., high-turnover hedge funds).",
     
-    // --- BIASED QUESTION #5 (REPLACED) ---
-    // 'The "Wonderful Business" & The "Temporary Flaw"': "First, confirm if the \"BMQV\" or \"Compounder\" memos identify this as a \"Wonderful Business\" (wide moat, high quality). Second, identify the \"severe, temporary flaw\" (e.g., a solvable, near-term MCR crisis, a cyclical downturn) that is causing near-term pessimism and mispricing."
-    'Business Quality & Flaw Assessment': "First, based on the 'BMQV' or 'Compounder' memos, what is the *consensus view* on business quality (e.g., 'Wonderful Business', 'Flawed Business', 'Not a Compounder')? Second, what is the *primary flaw* or risk identified that is causing near-term pessimism? Finally, based on your own diligence, assess if this flaw appears to be *temporary* (solvable, cyclical) or *structural* (permanent, a sign of decline).",
+    // --- BIASED QUESTION #5 (REPLACED & MOVED) ---
+    // 'Business Quality & Flaw Assessment': "First, based on the 'BMQV' or 'Compounder' memos, what is the *consensus view* on business quality (e.g., 'Wonderful Business', 'Flawed Business', 'Not a Compounder')? Second, what is the *primary flaw* or risk identified that is causing near-term pessimism? Finally, based on your own diligence, assess if this flaw appears to be *temporary* (solvable, cyclical) or *structural* (permanent, a sign of decline).",
 
-    // --- BIASED QUESTION #6 (REPLACED) ---
-    // 'The Long-Term Bet & Margin of Safety': "Articulate the 10-20 year bet. Why will the \"Wonderful Business\" (e.g., pricing power, moat, integrated model) inevitably overcome the \"Temporary Flaw\"? Explain how the current, short-term panic (the \"flaw\") creates the \"margin of safety\" for a long-term purchase."
+    // --- BIASED QUESTION #6 (REPLACED & MOVED) ---
+    // 'Final Thesis & Margin of Safety': "Synthesize all your findings. If a 'Wonderful Business' and 'Temporary Flaw' were identified, articulate the long-term *bullish* thesis and margin of safety. *Conversely*, if the business is 'Flawed' or the flaw is 'Structural,' articulate the long-term *bearish* thesis (e.g., 'value trap,' 'secular decline'). State your final, synthesized conclusion."
+};
+
+// --- NEW CONSTANT FOR ISOLATED THESIS QUESTIONS ---
+export const FINAL_THESIS_QUESTIONS = {
+    'Business Quality & Flaw Assessment': "First, based on the 'BMQV' or 'Compounder' memos, what is the *consensus view* on business quality (e.g., 'Wonderful Business', 'Flawed Business', 'Not a Compounder')? Second, what is the *primary flaw* or risk identified that is causing near-term pessimism? Finally, based on your own diligence, assess if this flaw appears to be *temporary* (solvable, cyclical) or *structural* (permanent, a sign of decline).",
     'Final Thesis & Margin of Safety': "Synthesize all your findings. If a 'Wonderful Business' and 'Temporary Flaw' were identified, articulate the long-term *bullish* thesis and margin of safety. *Conversely*, if the business is 'Flawed' or the flaw is 'Structural,' articulate the long-term *bearish* thesis (e.g., 'value trap,' 'secular decline'). State your final, synthesized conclusion."
 };
+// --- END NEW CONSTANT ---
 
 export const MARKET_SENTIMENT_QUESTIONS = {
     'Analyst Consensus': "Based on the LSEG and other analyst reports, what is the overall analyst rating (e.g., Bullish 8.6/10), and what is the breakdown of Buy/Neutral/Sell opinions?",
@@ -302,7 +307,7 @@ You are a Senior Investment Analyst at a GARP-focused fund. Your task is to synt
 `.trim();
 
 const PORTFOLIO_GARP_ANALYSIS_PROMPT = `
-Role: You are a sharp and insightful portfolio analyst specializing in GARP (Growth at a Reasonable Price) investing.
+Role: You are a sharp and insightful portfolio analyst specializing in GARP (Growth at aReasonable Price) investing.
 Context: You are reviewing a portfolio of companies. For each company, you have their GARP scorecard, including a weighted "garpConvictionScore", qualitative interpretations for each metric, sector, and market cap.
 Task: Your analysis must be data-driven and directly reference the provided JSON. Follow this structure precisely:
 
@@ -898,7 +903,7 @@ Role: You are the Chief Investment Officer of a multi-strategy fund. Your task i
 (Your response for this section MUST follow the format below exactly, including the bolding.)
 
 **Recommendation Grade:** [Assign a letter grade from the scale defined above.]
-**Suggested Allocation:** [State the corresponding allocation percentage from the scale.]
+**Suggested Allocation:** [State the corresponding allocation percentage.]
 
 (Your one-sentence justification summarizing your conclusion goes here. It must be consistent with the grade and your analysis.)
 
