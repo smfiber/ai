@@ -908,19 +908,19 @@ Role: You are the Chief Investment Officer of a multi-strategy fund. Your task i
 * **For an Existing Position:** [Explain what this recommendation means for a current shareholder.]
 `.trim();
 
-// --- NEW UPDATED FINAL THESIS PROMPT (NEUTRAL SYNTHESIS) ---
 const UPDATED_FINAL_THESIS_PROMPT = `
 **Role:** You are an objective investment analyst.
 
-**Task:** Your task is to **neutrally synthesize** a previously generated **"Original Final Thesis"** with a **"New Diligence Synthesis."** The New Diligence Synthesis is based on a specific analysis of the business's quality and structural flaws.
+**Task:** Your task is to **critically re-evaluate** a previously generated **"Original Final Thesis"** by synthesizing it with **"New Diligence Summaries."**
 
-Your goal is to determine if the new diligence **confirms, contradicts, or modifies** the original thesis and its recommendation.
+Your goal is to determine if the new diligence **confirms, contradicts, or modifies** the original thesis and its recommendation, and then to produce a single, updated thesis.
 
 ---
 
 **KEY INSTRUCTIONS:**
-1.  **Weigh Inputs Objectively:** The new diligence does not automatically override the original thesis. Weigh the original consensus against the new, specific findings.
-2.  **Identify Conflicts:** If the new diligence contradicts the original thesis, your primary task is to **articulate this conflict**. Your updated recommendation must be based on the *synthesis* of this conflicting information.
+1.  **Identify Conflicts (Primary Task):** Your most important job is to identify and articulate the core conflict. Does the new diligence (e.g., a "Bearish" sentiment or a "Structural" flaw) directly contradict the "Original Final Thesis"?
+2.  **Form a New Conclusion:** Do not just report the conflict. You must *resolve* it. Based on *all* the information, form a *new, synthesized* recommendation.
+3.  **Explain Your Rationale:** Justify your updated recommendation. For example, if you are changing the grade, explain *why* the new diligence is compelling enough to override the original consensus.
 
 ---
 
@@ -932,10 +932,10 @@ Your goal is to determine if the new diligence **confirms, contradicts, or modif
 {originalFinalThesisContent}
 \`\`\`
 
-**2. NEW Diligence Synthesis:**
-(This is the new analysis based on the core diligence questions. It should include the consensus on business quality, the primary flaw, and the resulting long-term thesis.)
-\`\`\`markdown
-{newDiligenceSynthesisContent}
+**2. NEW Diligence Summaries (JSON):**
+(This is a JSON object containing the extracted verdicts and key findings from the four most recent diligence memos. This is your "new information".)
+\`\`\`json
+{diligenceSummaries}
 \`\`\`
 
 ---
@@ -945,16 +945,16 @@ Your goal is to determine if the new diligence **confirms, contradicts, or modif
 # Updated Final Thesis: {companyName} ({tickerSymbol})
 
 ## 1. Summary of New Diligence Findings
-(In one paragraph, summarize the key conclusions from the **"New Diligence Synthesis"** input. What is the consensus on business quality, the primary flaw, and the resulting long-term thesis (e.g., 'value trap', 'compounder')?)
+(In one paragraph, summarize the key conclusions from the **"NEW Diligence Summaries"** JSON. What is the consensus from the new diligence on quality, flaws, and sentiment?)
 
 ## 2. Re-evaluating the Core Narrative & Conflicts
-(In one paragraph, compare the **Original Final Thesis Core Narrative** (and its recommendation) with the **New Diligence Synthesis**.
+(Compare the **Original Final Thesis** with the **New Diligence Summaries**.
 * Explicitly state the main points of **alignment** or **contradiction**.
-* For example, does the Original Thesis already account for the flaws identified, or does the New Diligence present a much more bearish/bullish case?
+* For example: "The original thesis was a 'B' grade 'Strong Buy' based on a high-quality moat. The new diligence *fundamentally contradicts* this by identifying a 'Structural' flaw and 'Bearish' market sentiment, suggesting the original thesis overlooked a key risk."
 * State whether the new diligence *confirms, contradicts,* or *fundamentally modifies* the original thesis.)
 
 ## 3. Updated Recommendation & Rationale
-(In one or two paragraphs, build your *new* recommendation by synthesizing *all* inputs. Explain how you are weighing the original consensus against the new, more detailed findings to arrive at this updated conclusion.)
+(Build your *new* recommendation by synthesizing *all* inputs. Explain how you are weighing the original thesis against the new, (potentially conflicting) diligence findings to arrive at this updated conclusion. You MUST justify any change in the recommendation grade.)
 
 ### Updated Recommendation
 (Your response for this section MUST follow the format below exactly, including the bolding. Use the standard A-F grading scale: A (High Conviction Buy), B (Strong Buy), C (Hold/Add), D (Hold/Monitor), F (Sell/Pass).)
@@ -969,7 +969,6 @@ Your goal is to determine if the new diligence **confirms, contradicts, or modif
 * **For a New Investment:** [Explain the updated meaning.]
 * **For an Existing Position:** [Explain the updated meaning.]
 `.trim();
-// --- END NEW UPDATED THESIS ---
 
 // --- REVISED QUALITATIVE DILIGENCE MEMO PROMPT ---
 const QUALITATIVE_DILIGENCE_MEMO_PROMPT = `
