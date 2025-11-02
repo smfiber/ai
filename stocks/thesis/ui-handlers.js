@@ -1285,7 +1285,7 @@ export async function handleUpdatedFinalThesisRequest(symbol, forceNew = false) 
 
         openModal(CONSTANTS.MODAL_LOADING);
         const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
-        loadingMessage.textContent = "Gathering original thesis and new diligence summaries...";
+        loadingMessage.textContent = "Gathering original thesis and new diligence answers...";
 
         // 1. Get the original FinalInvestmentThesis content
         const originalThesisReports = getReportsFromCache(symbol, 'FinalInvestmentThesis');
@@ -1294,42 +1294,31 @@ export async function handleUpdatedFinalThesisRequest(symbol, forceNew = false) 
         }
         const originalFinalThesisContent = originalThesisReports[0].content;
 
-        // 2. Get the summaries from the four diligence memos
-        const requiredDiligenceTypes = [
-            'QualitativeDiligenceMemo',
-            'StructuredDiligenceMemo',
-            'MarketSentimentMemo',
-            'InvestigationSummaryMemo'
-        ];
-        const diligenceSummaries = {};
-        let missingExtraction = [];
+        // 2. Get the two specific answers from the Qualitative Diligence section
+        loadingMessage.textContent = "Fetching your qualitative diligence answers...";
+        
+        const docRef = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(symbol).collection('diligence_answers').doc('Qualitative');
+        const docSnap = await docRef.get();
 
-        for (const type of requiredDiligenceTypes) {
-            const reports = getReportsFromCache(symbol, type);
-            if (reports.length === 0) {
-                throw new Error(`The prerequisite diligence memo '${ANALYSIS_NAMES[type]}' has not been generated yet.`);
-            }
-            const reportData = reports[0];
-            if (!reportData.synthesis_data) {
-                console.warn(`Synthesis data missing for ${type}, attempting extraction...`);
-                const extractedData = await extractSynthesisData(reportData.content, type);
-                if (!extractedData) {
-                    missingExtraction.push(ANALYSIS_NAMES[type]);
-                    diligenceSummaries[type] = null; // Indicate missing
-                } else {
-                    diligenceSummaries[type] = extractedData;
-                    // Save back extracted data
-                     await state.db.collection(CONSTANTS.DB_COLLECTION_AI_REPORTS).doc(reportData.id).update({ synthesis_data: extractedData });
-                     const cacheIndex = state.reportCache.findIndex(r => r.id === reportData.id);
-                     if (cacheIndex !== -1) state.reportCache[cacheIndex].synthesis_data = extractedData;
-                }
-            } else {
-                diligenceSummaries[type] = reportData.synthesis_data;
-            }
+        if (!docSnap.exists) {
+            throw new Error(`You must first save your answers for the 'Qualitative Diligence' section in the 'Diligence Hub' tab.`);
         }
 
-         if (missingExtraction.length > 0) {
-            throw new Error(`Synthesis data is missing and could not be extracted for: ${missingExtraction.join(', ')}. Please regenerate them.`);
+        const savedData = docSnap.data().answers || [];
+        const answersMap = new Map(savedData.map(item => [item.question, item.answer]));
+
+        const question1 = QUALITATIVE_DILIGENCE_QUESTIONS['Business Quality & Flaw Assessment'];
+        const question2 = QUALITATIVE_DILIGENCE_QUESTIONS['Final Thesis & Margin of Safety'];
+
+        const answer1 = answersMap.get(question1);
+        const answer2 = answersMap.get(question2);
+
+        if (!answer1 || !answer2) {
+            throw new Error(`Could not find saved answers for 'Business Quality & Flaw Assessment' or 'Final Thesis & Margin of Safety'. Please answer and save them in the Diligence Hub.`);
+        }
+        
+        if (answer1.trim() === '' || answer2.trim() === '') {
+             throw new Error(`Your saved answers for 'Business Quality & Flaw Assessment' or 'Final Thesis & Margin of Safety' are empty. Please fill them out and save again.`);
         }
 
 
@@ -1341,7 +1330,8 @@ export async function handleUpdatedFinalThesisRequest(symbol, forceNew = false) 
             .replace(/{companyName}/g, companyName)
             .replace(/{tickerSymbol}/g, symbol)
             .replace('{originalFinalThesisContent}', originalFinalThesisContent)
-            .replace('{diligenceSummaries}', JSON.stringify(diligenceSummaries, null, 2));
+            .replace('{businessQualityFlawAnswer}', answer1)
+            .replace('{finalThesisMarginOfSafetyAnswer}', answer2);
 
         const memoContent = await generateRefinedArticle(finalPrompt, loadingMessage);
 
