@@ -1298,7 +1298,8 @@ export async function handleUpdatedFinalThesisRequest(symbol, forceNew = false) 
         loadingMessage.textContent = "Fetching your qualitative diligence answers...";
         
         const docRef = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(symbol).collection('diligence_answers').doc('Qualitative');
-        const docSnap = await docRef.get();
+        // --- MODIFICATION: Force fetch from server ---
+        const docSnap = await docRef.get({ source: 'server' });
 
         if (!docSnap.exists) {
             throw new Error(`You must first save your answers for the 'Qualitative Diligence' section in the 'Diligence Hub' tab.`);
@@ -2519,4 +2520,6 @@ export async function handleQuarterlyReviewRequest(symbol) {
 
 export async function handleAnnualReviewRequest(symbol) {
     await _handleReviewRequest(symbol, 'Annual');
+}
+
 }
