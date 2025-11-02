@@ -949,16 +949,36 @@ Your goal is to determine if the new diligence answers **confirm, contradict, or
 
 # Updated Final Thesis: {companyName} ({tickerSymbol})
 
-## 1. Summary of New Diligence Findings
-(In one paragraph, summarize the key conclusions from the user's **"NEW Diligence Answers"**. What is their consensus on business quality, the nature of the flaw (temporary vs. structural), and their final thesis?)
+## 1. Summary of Inputs Received (Verification)
+(In this section, you MUST print the full, unedited text of the inputs you received to verify them.)
 
-## 2. Re-evaluating the Core Narrative & Conflicts
+**A. Original Final Thesis:**
+\`\`\`markdown
+{originalFinalThesisContent}
+\`\`\`
+
+**B. Diligence Answer (Business Quality & Flaw Assessment):**
+\`\`\`
+{businessQualityFlawAnswer}
+\`\`\`
+
+**C. Diligence Answer (Final Thesis & Margin of Safety):**
+\`\`\`
+{finalThesisMarginOfSafetyAnswer}
+\`\`\`
+
+---
+
+## 2. Summary of New Diligence Findings
+(In one paragraph, summarize the key conclusions from the user's **"NEW Diligence Answers"** printed above. What is their consensus on business quality, the nature of the flaw (temporary vs. structural), and their final thesis?)
+
+## 3. Re-evaluating the Core Narrative & Conflicts
 (Compare the **Original Final Thesis** with the **New Diligence Answers**.
 * Explicitly state the main points of **alignment** or **contradiction**.
 * For example: "The original thesis was a 'B' grade 'Strong Buy' based on a high-quality moat. The user's new diligence *fundamentally contradicts* this by identifying a 'Structural' flaw, leading them to a 'bearish' conclusion."
 * State whether the new diligence answers *confirm, contradict,* or *fundamentally modify* the original thesis.)
 
-## 3. Updated Recommendation & Rationale
+## 4. Updated Recommendation & Rationale
 (Build your *new* recommendation by synthesizing *all* inputs. Explain how you are weighing the original thesis against the new, (potentially conflicting) diligence answers to arrive at this updated conclusion. You MUST justify any change in the recommendation grade.)
 
 ### Updated Recommendation
@@ -969,7 +989,7 @@ Your goal is to determine if the new diligence answers **confirm, contradict, or
 
 (Your updated one-sentence justification summarizing your *new* conclusion goes here.)
 
-## 4. Updated Implications for Portfolio Management
+## 5. Updated Implications for Portfolio Management
 (Based on your *updated* recommendation, provide revised, actionable interpretations.)
 * **For a New Investment:** [Explain the updated meaning.]
 * **For an Existing Position:** [Explain the updated meaning.]
@@ -994,8 +1014,8 @@ Task: Synthesize the provided Question & Answer pairs into a professional "Quali
 1.  Read through all the Q&A pairs provided in {qaData}.
 2.  For Section 1 of the template ("Competitive Moat Analysis"), synthesize the user's answer specifically for the 'Competitive Moat' question.
 3.  For Section 2 ("Management, Strategy, & Alignment"), synthesize the user's answers for the 'Management Quality' and 'Incentive Alignment' questions.
-4.  For Section 3 ("Shareholder Base & Long-Term Thesis"), synthesize the user's answers for the 'Shareholder Base Quality', 'The "Wonderful Business" & The "Temporary Flaw"', and 'The Long-Term Bet & Margin of Safety' questions. If answers for any of these are missing in {qaData}, explicitly state that information was not provided for that specific part.
-5.  For Section 4 ("Synthesis & Verdict"), write a concise one-paragraph summary combining the key findings from the previous sections, with special emphasis on the 'Long-Term Bet' if provided. Conclude this paragraph with a final sentence using the exact bolded format: "**Business quality appears [High/Average/Low]** because..." replacing the bracketed word based on your overall synthesis and providing a brief justification.
+4.  For Section 3 ("Shareholder Base & Long-Term Thesis"), synthesize the user's answers for the 'Shareholder Base Quality', 'Business Quality & Flaw Assessment', and 'Final Thesis & Margin of Safety' questions. If answers for any of these are missing in {qaData}, explicitly state that information was not provided for that specific part.
+5.  For Section 4 ("Synthesis & Verdict"), write a concise one-paragraph summary combining the key findings from the previous sections, with special emphasis on the 'Final Thesis & Margin of Safety' if provided. Conclude this paragraph with a final sentence using the exact bolded format: "**Business quality appears [High/Average/Low]** because..." replacing the bracketed word based on your overall synthesis and providing a brief justification.
 
 **OUTPUT TEMPLATE (Use this exact structure):**
 
@@ -1093,7 +1113,7 @@ Task: Your sole job is to read the unstructured, manually-entered Question & Ans
 (Create a bulleted list summarizing the key positive points, discoveries, or confirmations from the Q&A log.)
 
 ## 3. Key Bearish Findings & Unanswered Questions
-(Create a bulleted list summarizing the most significant risks, negative findings, or remaining unanswered questions identified in the Q&A log.)
+(Create a bulleted list summarizing the most significant risks, negative findings, or remaining unanswered questions identified in the Q&Am log.)
 `.trim();
 
 
