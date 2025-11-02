@@ -633,7 +633,7 @@ Task: Your task is to determine if {companyName} is a "wonderful business" by sy
 ---
 **CRITICAL INSTRUCTIONS:**
 1.  Your final output MUST use the exact markdown structure and headings provided in the template.
-2.  Your analysis for each section MUST be derived *directly* from the provided 'JSON Data (Source of Truth)'. For example, to determine the moat, analyze the 'roicTrend' data. To assess management, analyze the 'summaryTotals' and 'buybacksWithValuation' data.
+2.  Your analysis for each section MUST be derived *directly* from the provided 'JSON Data (Source of Truth)'. For example, to determine the moat, analyze the 'roicTrend' data. To assess management, analyze the 'summaryTotals' and 'buybacksWithValVation' data.
 3.  Do NOT mention any company names, events (like acquisitions), or data not explicitly present in the JSON data.
 ---
 
@@ -911,16 +911,16 @@ Role: You are the Chief Investment Officer of a multi-strategy fund. Your task i
 const UPDATED_FINAL_THESIS_PROMPT = `
 **Role:** You are an objective investment analyst.
 
-**Task:** Your task is to **critically re-evaluate** a previously generated **"Original Final Thesis"** by synthesizing it with **"New Diligence Summaries."**
+**Task:** Your task is to **critically re-evaluate** a previously generated **"Original Final Thesis"** by synthesizing it with the user's **"New Diligence Answers"** provided below.
 
-Your goal is to determine if the new diligence **confirms, contradicts, or modifies** the original thesis and its recommendation, and then to produce a single, updated thesis.
+Your goal is to determine if the new diligence answers **confirm, contradict, or modify** the original thesis and its recommendation, and then to produce a single, updated thesis.
 
 ---
 
 **KEY INSTRUCTIONS:**
-1.  **Identify Conflicts (Primary Task):** Your most important job is to identify and articulate the core conflict. Does the new diligence (e.g., a "Bearish" sentiment or a "Structural" flaw) directly contradict the "Original Final Thesis"?
+1.  **Identify Conflicts (Primary Task):** Your most important job is to identify and articulate the core conflict. Do the user's new answers (e.g., identifying a "Structural" flaw) directly contradict the "Original Final Thesis"?
 2.  **Form a New Conclusion:** Do not just report the conflict. You must *resolve* it. Based on *all* the information, form a *new, synthesized* recommendation.
-3.  **Explain Your Rationale:** Justify your updated recommendation. For example, if you are changing the grade, explain *why* the new diligence is compelling enough to override the original consensus.
+3.  **Explain Your Rationale:** Justify your updated recommendation. For example, if you are changing the grade, explain *why* the new diligence answers are compelling enough to override the original consensus.
 
 ---
 
@@ -932,11 +932,16 @@ Your goal is to determine if the new diligence **confirms, contradicts, or modif
 {originalFinalThesisContent}
 \`\`\`
 
-**2. NEW Diligence Summaries (JSON):**
-(This is a JSON object containing the extracted verdicts and key findings from the four most recent diligence memos. This is your "new information".)
-\`\`\`json
-{diligenceSummaries}
-\`\`\`
+**2. NEW Diligence Answers:**
+(These are the user's manually entered answers to two key qualitative questions.)
+
+**Question 1: Business Quality & Flaw Assessment**
+*Answer:*
+{businessQualityFlawAnswer}
+
+**Question 2: Final Thesis & Margin of Safety**
+*Answer:*
+{finalThesisMarginOfSafetyAnswer}
 
 ---
 
@@ -945,16 +950,16 @@ Your goal is to determine if the new diligence **confirms, contradicts, or modif
 # Updated Final Thesis: {companyName} ({tickerSymbol})
 
 ## 1. Summary of New Diligence Findings
-(In one paragraph, summarize the key conclusions from the **"NEW Diligence Summaries"** JSON. What is the consensus from the new diligence on quality, flaws, and sentiment?)
+(In one paragraph, summarize the key conclusions from the user's **"NEW Diligence Answers"**. What is their consensus on business quality, the nature of the flaw (temporary vs. structural), and their final thesis?)
 
 ## 2. Re-evaluating the Core Narrative & Conflicts
-(Compare the **Original Final Thesis** with the **New Diligence Summaries**.
+(Compare the **Original Final Thesis** with the **New Diligence Answers**.
 * Explicitly state the main points of **alignment** or **contradiction**.
-* For example: "The original thesis was a 'B' grade 'Strong Buy' based on a high-quality moat. The new diligence *fundamentally contradicts* this by identifying a 'Structural' flaw and 'Bearish' market sentiment, suggesting the original thesis overlooked a key risk."
-* State whether the new diligence *confirms, contradicts,* or *fundamentally modifies* the original thesis.)
+* For example: "The original thesis was a 'B' grade 'Strong Buy' based on a high-quality moat. The user's new diligence *fundamentally contradicts* this by identifying a 'Structural' flaw, leading them to a 'bearish' conclusion."
+* State whether the new diligence answers *confirm, contradict,* or *fundamentally modify* the original thesis.)
 
 ## 3. Updated Recommendation & Rationale
-(Build your *new* recommendation by synthesizing *all* inputs. Explain how you are weighing the original thesis against the new, (potentially conflicting) diligence findings to arrive at this updated conclusion. You MUST justify any change in the recommendation grade.)
+(Build your *new* recommendation by synthesizing *all* inputs. Explain how you are weighing the original thesis against the new, (potentially conflicting) diligence answers to arrive at this updated conclusion. You MUST justify any change in the recommendation grade.)
 
 ### Updated Recommendation
 (Your response for this section MUST follow the format below exactly, including the bolding. Use the standard A-F grading scale: A (High Conviction Buy), B (Strong Buy), C (Hold/Add), D (Hold/Monitor), F (Sell/Pass).)
