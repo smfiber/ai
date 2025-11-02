@@ -1311,16 +1311,11 @@ export async function handleUpdatedFinalThesisRequest(symbol, forceNew = false) 
         const question1 = QUALITATIVE_DILIGENCE_QUESTIONS['Business Quality & Flaw Assessment'];
         const question2 = QUALITATIVE_DILIGENCE_QUESTIONS['Final Thesis & Margin of Safety'];
 
-        const answer1 = answersMap.get(question1);
-        const answer2 = answersMap.get(question2);
+        const answer1 = answersMap.get(question1) || "";
+        const answer2 = answersMap.get(question2) || "";
 
-        if (!answer1 || !answer2) {
-            throw new Error(`Could not find saved answers for 'Business Quality & Flaw Assessment' or 'Final Thesis & Margin of Safety'. Please answer and save them in the Diligence Hub.`);
-        }
-        
-        if (answer1.trim() === '' || answer2.trim() === '') {
-             throw new Error(`Your saved answers for 'Business Quality & Flaw Assessment' or 'Final Thesis & Margin of Safety' are empty. Please fill them out and save again.`);
-        }
+        // Removed the checks that threw errors for blank/missing answers.
+        // Blank answers are now a valid state.
 
 
         loadingMessage.textContent = "Synthesizing updated final thesis...";
@@ -1563,10 +1558,11 @@ export async function handleSaveDiligenceAnswers(symbol, diligenceType) {
         }
     });
 
-    if (!hasAnswers) {
-        displayMessageInModal(`Please provide at least one answer for the ${sectionConfig.name} section before saving.`, 'warning');
-        return;
-    }
+    // --- MODIFICATION: Removed the check that prevents saving blank answers ---
+    // if (!hasAnswers) {
+    //     displayMessageInModal(`Please provide at least one answer for the ${sectionConfig.name} section before saving.`, 'warning');
+    //     return;
+    // }
 
     openModal(CONSTANTS.MODAL_LOADING);
     document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Saving ${sectionConfig.name} answers...`;
