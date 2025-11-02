@@ -1,5 +1,5 @@
 // fileName: ui-modals.js
-import { CONSTANTS, state, ANALYSIS_ICONS, SECTOR_KPI_SUGGESTIONS, QUALITATIVE_DILIGENCE_QUESTIONS, STRUCTURED_DILIGENCE_QUESTIONS, MARKET_SENTIMENT_QUESTIONS } from './config.js';
+import { CONSTANTS, state, ANALYSIS_ICONS, SECTOR_KPI_SUGGESTIONS, QUALITATIVE_DILIGENCE_QUESTIONS, STRUCTURED_DILIGENCE_QUESTIONS, MARKET_SENTIMENT_QUESTIONS, FINAL_THESIS_QUESTIONS } from './config.js';
 import { getFmpStockData, getGroupedFmpData } from './api.js';
 import { renderValuationHealthDashboard, _renderGroupedStockList, renderPortfolioManagerList, renderGarpScorecardDashboard, renderGarpInterpretationAnalysis, updateGarpCandidacyStatus, renderCandidacyAnalysis, renderGarpAnalysisSummary, renderDiligenceLog, renderPeerComparisonTable, renderOngoingReviewLog } from './ui-render.js';
 import { getSavedReports } from './ui-handlers.js';
@@ -274,6 +274,7 @@ function _resetAnalysisModal() {
     safeClear('ai-analysis-tab');
     safeClear('diligence-hub-tab');
     safeClear('ongoing-diligence-tab');
+    safeClear('final-thesis-tab'); // <-- NEW
     safeClear('position-analysis-tab'); // Clear this as well
     safeClear('raw-data-tab', '<div id="raw-data-accordion-container"><div class="loader mx-auto my-8"></div></div>'); // Keep container
 
@@ -338,7 +339,7 @@ export async function openRawDataViewer(ticker) {
     };
 
     // --- Declare container variables here ---
-    let rawDataContainer, aiAnalysisContainer, diligenceHubContainer, ongoingDiligenceContainer, positionAnalysisContainer, profileDisplayContainer, garpScorecardContainer, positionAnalysisTabButton, peerAnalysisContainer, analysisContentContainer, valuationHealthContainer, aiGarpSummaryContainer;
+    let rawDataContainer, aiAnalysisContainer, diligenceHubContainer, ongoingDiligenceContainer, positionAnalysisContainer, profileDisplayContainer, garpScorecardContainer, positionAnalysisTabButton, peerAnalysisContainer, analysisContentContainer, valuationHealthContainer, aiGarpSummaryContainer, finalThesisContainer;
 
 
     try {
@@ -346,6 +347,7 @@ export async function openRawDataViewer(ticker) {
         aiAnalysisContainer = document.getElementById('ai-analysis-tab');
         diligenceHubContainer = document.getElementById('diligence-hub-tab');
         ongoingDiligenceContainer = document.getElementById('ongoing-diligence-tab');
+        finalThesisContainer = document.getElementById('final-thesis-tab'); // <-- NEW
         const dashboardTab = document.getElementById('dashboard-tab');
         const rawDataTab = document.getElementById('raw-data-tab');
         const positionAnalysisTab = document.getElementById('position-analysis-tab');
@@ -363,6 +365,7 @@ export async function openRawDataViewer(ticker) {
         const qualitativeAnswersPromise = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(ticker).collection('diligence_answers').doc('Qualitative').get();
         const structuredAnswersPromise = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(ticker).collection('diligence_answers').doc('Structured').get();
         const marketSentimentAnswersPromise = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(ticker).collection('diligence_answers').doc('MarketSentiment').get();
+        const finalThesisAnswersPromise = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(ticker).collection('diligence_answers').doc('FinalThesis').get(); // <-- NEW
 
         const [
             fmpData,
@@ -370,14 +373,16 @@ export async function openRawDataViewer(ticker) {
             allSavedReports,
             qualitativeSnap,
             structuredSnap,
-            marketSentimentSnap
+            marketSentimentSnap,
+            finalThesisSnap // <-- NEW
         ] = await Promise.all([
             fmpDataPromise,
             groupedDataPromise,
             savedReportsPromise,
             qualitativeAnswersPromise,
             structuredAnswersPromise,
-            marketSentimentAnswersPromise
+            marketSentimentAnswersPromise,
+            finalThesisAnswersPromise // <-- NEW
         ]);
 
         if (!fmpData || !fmpData.profile || !fmpData.profile.length === 0) {
@@ -401,6 +406,7 @@ export async function openRawDataViewer(ticker) {
         const savedQualitativeAnswers = getAnswersMap(qualitativeSnap);
         const savedStructuredAnswers = getAnswersMap(structuredSnap);
         const savedMarketSentimentAnswers = getAnswersMap(marketSentimentSnap);
+        const savedFinalThesisAnswers = getAnswersMap(finalThesisSnap); // <-- NEW
 
         // 4. POPULATE THE CLEAN STATE
         titleEl.textContent = `Analysis for ${ticker}`;
@@ -718,6 +724,39 @@ export async function openRawDataViewer(ticker) {
                 }
             });
         }
+
+        // --- FINAL THESIS TAB ---
+        if (finalThesisContainer) {
+            const copyIcon = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125H4.875A1.125 1.125 0 013.75 20.625V7.875c0-.621.504-1.125 1.125-1.125H6.75m9 9.375h3.375c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125h-9.75A1.125 1.125 0 006 9.375v9.75c0 .621.504 1.125 1.125 1.125h3.375m-3.75-9.375V6.125c0-.621.504-1.125 1.125-1.125h9.75c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-3.375" /></svg>`;
+            
+            let finalThesisHtml = `<div class="text-left border rounded-lg p-4 bg-gray-50"><h4 class="text-base font-semibold text-gray-800 mb-1">Final Thesis Diligence</h4><p class="text-sm text-gray-500 mb-4">These two questions are used to generate the **Updated Final Thesis** report. Your answers here are saved separately to ensure data integrity.</p><div class="space-y-4">`;
+            
+            for (const [category, question] of Object.entries(FINAL_THESIS_QUESTIONS)) {
+                const savedAnswer = sanitizeText(savedFinalThesisAnswers.get(question) || '');
+                finalThesisHtml += `<div class="diligence-card p-3 bg-white rounded-lg border border-gray-200"><h5 class="font-semibold text-sm text-indigo-700 mb-2">${category}</h5><div class="flex items-start gap-2 mb-2"><p class_build="text-xs text-gray-600 flex-grow" data-question-text>${question}</p><button type="button" class="copy-icon-btn final-thesis-copy-btn" title="Copy Question">${copyIcon}</button></div><textarea class="final-thesis-answer w-full border border-gray-300 rounded-lg p-2 text-sm" rows="6" data-category="${category}" placeholder="Your analysis and findings here...">${savedAnswer}</textarea></div>`;
+            }
+            
+            finalThesisHtml += `</div><div class="text-right mt-4"><button data-symbol="${ticker}" id="save-final-thesis-answers-button" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg">Save Final Thesis Answers</button></div></div>`;
+            finalThesisContainer.innerHTML = finalThesisHtml;
+
+            // Add copy listener just for this new tab
+            finalThesisContainer.addEventListener('click', (e) => {
+                const copyBtn = e.target.closest('.final-thesis-copy-btn');
+                if (copyBtn) {
+                    const textToCopy = copyBtn.previousElementSibling.textContent;
+                    navigator.clipboard.writeText(textToCopy).then(() => {
+                        const checkIcon = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>`;
+                        copyBtn.classList.add('copied');
+                        copyBtn.innerHTML = checkIcon;
+                        setTimeout(() => {
+                            copyBtn.classList.remove('copied');
+                            copyBtn.innerHTML = copyIcon;
+                        }, 2000);
+                    });
+                }
+            });
+        }
+        // --- END FINAL THESIS TAB ---
 
 
         // --- ONGOING DILIGENCE TAB ---
