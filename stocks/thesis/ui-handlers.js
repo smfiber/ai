@@ -1574,6 +1574,10 @@ export async function handleSaveDiligenceAnswers(symbol, diligenceType) {
             answers: qaPairs
         });
 
+        // --- FIX: Force a server read to bust the local cache ---
+        await docRef.get({ source: 'server' });
+        // --- END FIX ---
+
         displayMessageInModal(`${sectionConfig.name} answers have been saved. You can now generate the memo from the 'AI Analysis' tab.`, 'info');
 
     } catch (error) {
