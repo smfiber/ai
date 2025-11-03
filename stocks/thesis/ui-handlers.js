@@ -1564,7 +1564,7 @@ export async function handleSaveDiligenceAnswers(symbol, diligenceType) {
     document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Saving ${sectionConfig.name} answers...`;
 
     try {
-        const docRef = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(symbol).collection('diliggance_answers').doc(diligenceType);
+        const docRef = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(symbol).collection('diligence_answers').doc(diligenceType);
         await docRef.set({
             savedAt: firebase.firestore.Timestamp.now(),
             answers: qaPairs
