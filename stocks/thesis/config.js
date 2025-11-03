@@ -932,77 +932,51 @@ Role: You are the Chief Investment Officer of a multi-strategy fund. Your task i
 `.trim();
 
 const UPDATED_FINAL_THESIS_PROMPT = `
-**Role:** You are an objective investment analyst.
+**Role:** You are a Chief Investment Officer (CIO) tasked with making a final, decisive call on a potential long-term investment. Your job is to synthesize all available intelligence into a single, actionable thesis.
 
-**Task:** Your task is to **critically re-evaluate** a previously generated **"Original Final Thesis"** by synthesizing it with the user's **"New Diligence Answers"** provided below.
-
-Your goal is to determine if the new diligence answers **confirm, contradict, or modify** the original thesis and its recommendation, and then to produce a single, updated thesis.
+**Core Question:** Your analysis must definitively answer: **"Does {companyName} ({tickerSymbol}) have merit as a long-term investment at this price?"**
 
 ---
-
-**KEY INSTRUCTIONS:**
-1.  **Identify Conflicts (Primary Task):** Your most important job is to identify and articulate the core conflict. Do the user's new answers (e.g., identifying a "Structural" flaw) directly contradict the "Original Final Thesis"?
-2.  **Form a New Conclusion:** Do not just report the conflict. You must *resolve* it. Based on *all* the information, form a *new, synthesized* recommendation.
-3.  **Explain Your Rationale:** Justify your updated recommendation. For example, if you are changing the grade, explain *why* the new diligence answers are compelling enough to override the original consensus.
-
----
-
 **INPUTS FOR ANALYSIS:**
 
-**1. Original Final Investment Thesis:**
-(This is the pre-existing conclusion and grade.)
+**1. The Baseline Thesis:**
+(This is the firm's previously synthesized consensus from all foundational memos, including its final recommendation grade.)
 \`\`\`markdown
 {originalFinalThesisContent}
 \`\`\`
 
-**2. NEW Diligence Answers (Q&A Block):**
-(These are the user's manually entered answers to all key qualitative questions from the 'Final Thesis' tab.)
+**2. New Diligence Findings (Q&A Block):**
+(These are your new, overriding findings from your final round of diligence. This Q&A block represents your latest, most synthesized human judgment.)
 \`\`\`
 {allFinalThesisAnswers}
 \`\`\`
 
 ---
-
 **YOUR TASK (Strict Output Format):**
 
 # Updated Final Thesis: {companyName} ({tickerSymbol})
 
-## 1. Summary of Inputs Received (Verification)
-(In this section, you MUST print the full, unedited text of the inputs you received to verify them.)
+## 1. Summary of New Diligence Findings
+(In one paragraph, summarize the key conclusions from the **"New Diligence Findings (Q&A Block)"**. What is your consensus on business quality, the nature of the flaw, management's tone, key risks, and your own synthesized thesis?)
 
-**A. Original Final Thesis:**
-\`\`\`markdown
-{originalFinalThesisContent}
-\`\`\`
+## 2. Thesis Re-evaluation: Conflicts & Conclusions
+(This is the most critical section. Compare the **"Baseline Thesis"** with your **"New Diligence Findings"**.
+* **Identify Conflicts:** Where do your new findings *contradict* the Baseline Thesis? (e.g., "The baseline thesis graded this a 'B' based on a perceived moat, but my new diligence identifies a 'Structural' flaw that invalidates this.")
+* **Identify Confirmations:** Where do your new findings *confirm* the Baseline Thesis? (e.g., "My findings on management's cautious tone confirm the baseline's 'D' grade.")
+* **Final Synthesis:** State whether your new diligence *Confirms*, *Modifies*, or *Invalidates* the Baseline Thesis.)
 
-**B. New Diligence Q&A Block:**
-\`\`\`
-{allFinalThesisAnswers}
-\`\`\`
-
----
-
-## 2. Summary of New Diligence Findings
-(In one paragraph, summarize the key conclusions from the user's **"NEW Diligence Answers (Q&A Block)"** printed above. What is their consensus on business quality, the nature of the flaw, management's tone, key risks, and the final thesis?)
-
-## 3. Re-evaluating the Core Narrative & Conflicts
-(Compare the **Original Final Thesis** with the **New Diligence Findings**.
-* Explicitly state the main points of **alignment** or **contradiction**.
-* For example: "The original thesis was a 'B' grade 'Strong Buy' based on a high-quality moat. The user's new diligence *fundamentally contradicts* this by identifying a 'Structural' flaw and 'cautious' management tone, leading to a new 'bearish' conclusion."
-* State whether the new diligence answers *confirm, contradict,* or *fundamentally modify* the original thesis.)
-
-## 4. Updated Recommendation & Rationale
-(Build your *new* recommendation by synthesizing *all* inputs. Explain how you are weighing the original thesis against the new, (potentially conflicting) diligence answers to arrive at this updated conclusion. You MUST justify any change in the recommendation grade.)
+## 3. The Final Verdict: Long-Term Merit
+(Synthesize *everything*—the baseline and your new findings—to directly answer the Core Question. Explain *why* the company does or does not have merit as a long-term investment *at this price*, referencing the key evidence from your diligence.)
 
 ### Updated Recommendation
-(Your response for this section MUST follow the format below exactly, including the bolding. Use the standard A-F grading scale: A (High Conviction Buy), B (Strong Buy), C (Hold/Add), D (Hold/Monitor), F (Sell/Pass).)
+(Your response for this section MUST follow the format below exactly. Use the standard A-F grading scale: A (High Conviction Buy), B (Strong Buy), C (Hold/Add), D (Hold/Monitor), F (Sell/Pass).)
 
 **Recommendation Grade:** [Assign an updated letter grade based on your *new* synthesis.]
 **Suggested Allocation:** [State the corresponding allocation percentage.]
 
 (Your updated one-sentence justification summarizing your *new* conclusion goes here.)
 
-## 5. Updated Implications for Portfolio Management
+## 4. Updated Implications for Portfolio Management
 (Based on your *updated* recommendation, provide revised, actionable interpretations.)
 * **For a New Investment:** [Explain the updated meaning.]
 * **For an Existing Position:** [Explain the updated meaning.]
