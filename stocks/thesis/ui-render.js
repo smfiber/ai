@@ -1,7 +1,7 @@
 // fileName: ui-render.js
 import { CONSTANTS, state } from './config.js';
 import { _calculateGarpScorecardMetrics } from './analysis-helpers.js';
-import { handleAnalysisRequest, handleGarpMemoRequest, handleGarpCandidacyRequest, handlePositionAnalysisRequest } from './ui-handlers.js';
+import { handleAnalysisRequest, handleGarpMemoRequest, handleGarpCandidacyRequest, handlePositionAnalysisRequest, handleUpdatedFinalThesisRequest } from './ui-handlers.js';
 import { getFmpStockData } from './api.js';
 
 // --- UTILITY & SECURITY HELPERS ---
@@ -1002,6 +1002,8 @@ export function updateReportStatus(statusContainer, reports, activeReportId, ana
                 handleGarpMemoRequest(analysisParams.symbol, true);
             } else if (analysisParams.reportType === 'PositionAnalysis') {
                 handlePositionAnalysisRequest(analysisParams.symbol, true);
+            } else if (analysisParams.reportType === 'UpdatedFinalThesis') {
+                handleUpdatedFinalThesisRequest(analysisParams.symbol, true);
             } else {
                 handleAnalysisRequest(analysisParams.symbol, analysisParams.reportType, analysisParams.promptConfig, true);
             }
