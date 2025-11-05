@@ -686,7 +686,7 @@ export async function handleSaveReportToDb() {
         const promptConfig = promptMap[reportType]; // Needed for updateReportStatus
 
         if (statusContainer && latestReport) {
-            updateReportStatus(statusContainer, savedReports, latestReport.id, { symbol, reportType, promptConfig });
+             updateReportStatus(statusContainer, savedReports, latestReport.id, { symbol, reportType, promptConfig });
         }
 
     } catch (error) {
@@ -860,7 +860,7 @@ export async function handleAnalysisRequest(symbol, reportType, promptConfig, fo
 
         contentContainer.dataset.currentPrompt = prompt; // Store prompt before AI call
 
-        const finalReportContent = await generateRefinedArticle(prompt, loadingMessageElement);
+        const finalReportContent = await generateRefinedArticle(prompt, loadingMessage);
         contentContainer.dataset.rawMarkdown = finalReportContent; // Store raw markdown
 
         let synthesisData = null;
@@ -2584,6 +2584,54 @@ export async function handleFilingCheckinMemoRequest(symbol) {
     } catch (error) {
         console.error("Error handling Filing Check-in Memo request:", error);
         displayMessageInModal(`Could not complete check-in: ${error.message}`, 'error');
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+// --- END NEW FUNCTION ---
+
+// --- NEW FUNCTION TO SAVE FILING CHECK-IN ANSWERS ---
+export async function handleSaveFilingCheckinAnswers(symbol) {
+    const diligenceType = 'FilingCheckin';
+    const sectionConfig = {
+        selector: '.filing-checkin-answer',
+        questions: FILING_CHECKIN_QUESTIONS,
+        name: 'Filing Check-in Diligence'
+    };
+
+    const answerElements = document.querySelectorAll(sectionConfig.selector);
+    const qaPairs = [];
+
+    answerElements.forEach(textarea => {
+        const answer = textarea.value.trim();
+        const questionElement = textarea.closest('.diligence-card').querySelector('[data-question-text]');
+        if (!questionElement) {
+             console.warn('Could not find question element for textarea.');
+             return;
+        }
+        const question = questionElement.textContent.trim();
+        if (question) {
+            qaPairs.push({ question, answer });
+        }
+    });
+
+    openModal(CONSTANTS.MODAL_LOADING);
+    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Saving ${sectionConfig.name} answers...`;
+
+    try {
+        const docRef = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(symbol).collection('diligg_answers').doc(diligenceType);
+        await docRef.set({
+            savedAt: firebase.firestore.Timestamp.now(),
+            answers: qaPairs
+        });
+        
+        await docRef.get({ source: 'server' }); 
+        
+        displayMessageInModal(`${sectionConfig.name} answers have been saved. You can now generate the 'Filing Check-in Memo'.`, 'info');
+
+    } catch (error) {
+        console.error(`Error saving ${sectionConfig.name} answers:`, error);
+        displayMessageInModal(`Could not save answers: ${error.message}`, 'error');
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
