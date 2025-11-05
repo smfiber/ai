@@ -1,8 +1,10 @@
 // fileName: ui.js
-import { CONSTANTS, state, promptMap, QUARTERLY_REVIEW_QUESTIONS, ANNUAL_REVIEW_QUESTIONS } from './config.js';
-import { openModal, closeModal, displayMessageInModal } from './ui-modals.js';
+import { CONSTANTS, state, promptMap, QUARTERLY_REVIEW_QUESTIONS, ANNUAL_REVIEW_QUESTIONS, ONGOING_DILIGENCE_REPORT_TYPES, FILING_CHECKIN_QUESTIONS } from './config.js';
+import { openModal, closeModal, displayMessageInModal, openStockListModal, openManageStockModal, openPortfolioManagerModal, openRawDataViewer, addDiligenceEntryRow, addKpiRow } from './ui-modals.js';
 import { fetchAndCachePortfolioData, renderPortfolioManagerList, renderGarpScorecardDashboard, renderGarpInterpretationAnalysis } from './ui-render.js';
 import { handleResearchSubmit, handleSaveStock, handleDeleteStock, handleRefreshFmpData, handleAnalysisRequest, handleGarpMemoRequest, handleSaveReportToDb, handleGeneratePrereqsRequest, handleGarpCandidacyRequest, handlePortfolioGarpAnalysisRequest, handlePositionAnalysisRequest, handleReportHelpRequest, handleManualDiligenceSave, handleDeleteDiligenceLog, handleWorkflowHelpRequest, handleManualPeerAnalysisRequest, handleGenerateFilingQuestionsRequest, handleSaveFilingDiligenceRequest, handleDeleteFilingDiligenceLog, handleGenerateUpdatedGarpMemoRequest, handleGenerateUpdatedQarpMemoRequest, handleAnalyzeEightKRequest, handleCompounderMemoRequest, handleBmqvMemoRequest, handleFinalThesisRequest, handleKpiSuggestionRequest, handleCopyReportRequest, handleFullAnalysisWorkflow, handleDiligenceMemoRequest, handleSaveDiligenceAnswers, handleDeleteAllDiligenceAnswers, handleDeleteOldDiligenceLogs, handleInvestigationSummaryRequest, handleQuarterlyReviewRequest, handleAnnualReviewRequest, handleUpdatedFinalThesisRequest, handleSaveFinalThesisAnswers, handleFilingCheckinMemoRequest } from './ui-handlers.js'; // Added handleFilingCheckinMemoRequest
+import { getFmpStockData } from './api.js';
+import { _calculateGarpScorecardMetrics } from './analysis-helpers.js';
 
 // --- DYNAMIC TOOLTIPS ---
 function initializeTooltips() {
@@ -309,6 +311,16 @@ export function setupEventListeners() {
             }
             return;
         }
+        
+        // --- ADDED: Event listener for generate-new-candidacy ---
+        if (target.id === 'generate-new-candidacy') {
+            const ticker = target.dataset.ticker;
+            if (ticker) {
+                handleGarpCandidacyRequest(ticker, true); // forceNew = true
+            }
+            return;
+        }
+        // --- END ADD ---
 
 		if (target.matches('.tab-button')) {
 		    const tabId = target.dataset.tab;
