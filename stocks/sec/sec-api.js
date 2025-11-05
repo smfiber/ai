@@ -80,7 +80,9 @@ export async function getSecMaterialEvents(ticker) {
     const queryObject = {
       "query": { "query_string": { "query": `formType:\"8-K\" AND ticker:${ticker} AND filedAt:[${twoYearsAgoDateString} TO *]` } },
       "from": "0",
-      "size": "50",
+      // --- CHANGE STARTS HERE ---
+      "size": "5",
+      // --- CHANGE ENDS HERE ---
       "sort": [{ "filedAt": { "order": "desc" } }]
     };
     const result = await callSecQueryApi(queryObject);
@@ -95,7 +97,9 @@ export async function getSecAnnualReports(ticker) {
     const queryObject = {
       "query": { "query_string": { "query": `formType:\"10-K\" AND ticker:${ticker} AND filedAt:[${twoYearsAgoDateString} TO *]` } },
       "from": "0",
-      "size": "10",
+      // --- CHANGE STARTS HERE ---
+      "size": "5",
+      // --- CHANGE ENDS HERE ---
       "sort": [{ "filedAt": { "order": "desc" } }]
     };
     const result = await callSecQueryApi(queryObject);
@@ -110,7 +114,9 @@ export async function getSecQuarterlyReports(ticker) {
     const queryObject = {
       "query": { "query_string": { "query": `formType:\"10-Q\" AND ticker:${ticker} AND filedAt:[${twoYearsAgoDateString} TO *]` } },
       "from": "0",
-      "size": "10",
+      // --- CHANGE STARTS HERE ---
+      "size": "5",
+      // --- CHANGE ENDS HERE ---
       "sort": [{ "filedAt": { "order": "desc" } }]
     };
     const result = await callSecQueryApi(queryObject);
