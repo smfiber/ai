@@ -53,6 +53,18 @@ export const CONSTANTS = {
     DB_COLLECTION_AI_REPORTS: 'ai_analysis_reports',
 };
 
+// --- NEW: ONGOING DILIGENCE REPORT TYPES ---
+export const ONGOING_DILIGENCE_REPORT_TYPES = [
+    'FilingDiligence', 
+    'EightKAnalysis', 
+    'UpdatedGarpMemo', 
+    'UpdatedQarpMemo', 
+    'QuarterlyReview', 
+    'AnnualReview',
+    'FilingCheckinMemo' // <-- Added new report type
+];
+// --- END NEW CONSTANT ---
+
 export const STRUCTURED_DILIGENCE_QUESTIONS = {
     'Financial Analysis': "Based on this data, is the company's financial story one of high-quality, durable growth, or are there signs of weakening fundamentals? Analyze the relationship between its revenue trend, margin stability, and cash flow quality to form a verdict.",
     'Balance Sheet': "Does the balance sheet represent a fortress capable of funding future growth, or a potential risk? Evaluate its debt-to-equity ratio and current ratio against its peers to determine if its financial health is a competitive advantage or a liability.",
@@ -96,6 +108,18 @@ export const FINAL_THESIS_QUESTIONS = {
         question: "Do the new facts from the latest earnings call or filings *fundamentally modify* the original investment thesis? (e.g., 'Yes, the new guidance invalidates the bull case on margins,' or 'No, the results confirm the original thesis.')",
         notation: "Source: Your direct comparison of the **Original Final Thesis** against the new findings from this tab."
     }
+};
+// --- END NEW CONSTANT ---
+
+// --- NEW CONSTANT FOR FILING CHECK-IN ---
+export const FILING_CHECKIN_QUESTIONS = {
+    'Key Financial Results': "What were the key reported financial results (Total Revenue, Net Income, and EPS) for this period, and what are the year-over-year (YoY) growth rates?",
+    'Profitability Check': "How did the core profitability margins (Gross Margin, Operating Margin, and Net Margin) change compared to the same period last year?",
+    'Balance Sheet Health': "What are the key changes to the Balance Sheet? Specifically, what are the new totals for **Cash & Equivalents**, **Total Debt**, and **Shareholders' Equity**?",
+    'Earnings Quality': "How does the **Cash Flow from Operations (CFO)** for the period compare to the **Net Income**?",
+    'Management\'s Narrative': "What is management's explanation in the MD&A (Management's Discussion and Analysis) for the period's performance? What key **tailwinds and/or headwinds** did they cite?",
+    'New Risk Factors': "Have any **new or materially modified Risk Factors** been disclosed in this filing? If so, what are they?",
+    'Guidance/Outlook Update': "Does the MD&A provide any updates to the company's full-year **guidance or forward-looking outlook**?"
 };
 // --- END NEW CONSTANT ---
 
@@ -252,7 +276,7 @@ JSON Data:
 
 ## 4. Shareholder Returns
 - **Stock Buybacks:** [Your analysis here. Critically analyze the 'shareholderReturns.buybacksWithValuation' data to determine if management repurchased shares at opportunistic (low) or poor (high) valuations.]
-- **Dividends:** [Your analysis here. Analyze the 'shareholderReturns.fcfPayoutRatioTrend' to determine if the dividend is safely covered and sustainable.]
+- **Dividends:** [Your analysis here. Analyze the 'shareHholderReturns.fcfPayoutRatioTrend' to determine if the dividend is safely covered and sustainable.]
 
 ## 5. Final Grade & Justification
 - **Final Grade:** [Provide a single letter grade from A through F.]
@@ -920,7 +944,7 @@ Role: You are the Chief Investment Officer of a multi-strategy fund. Your task i
 `.trim();
 
 const UPDATED_FINAL_THESIS_PROMPT = `
-**Role:** You are a Chief Investment Officer (CIO) tasked with making a final, decisive call on a potential long-term investment. Your job is to synthesize all available intelligence into a single, actionable thesis.
+**Role:** You are a Chief Investment Officer (CIO) tasked with making a final, decisive call on a long-term investment. Your job is to synthesize all available intelligence into a single, actionable thesis.
 
 **Core Question:** Your analysis must definitively answer: **"Does {companyName} ({tickerSymbol}) have merit as a long-term investment at this price?"**
 
@@ -969,6 +993,51 @@ const UPDATED_FINAL_THESIS_PROMPT = `
 * **For a New Investment:** [Explain the updated meaning.]
 * **For an Existing Position:** [Explain the updated meaning.]
 `.trim();
+
+// --- NEW PROMPT FOR FILING CHECK-IN ---
+const FILING_CHECKIN_MEMO_PROMPT = `
+Role: You are a Senior Investment Analyst. Your task is to act as a critical, objective reviewer.
+Goal: You will review an analyst's "New Diligence Findings" (a set of Q&A based on a new SEC filing) and compare it against their "Baseline Investment Thesis." Your goal is to generate a new, synthesized memo that answers the final, critical question.
+
+---
+**CRITICAL INSTRUCTIONS:**
+1.  **Source of Truth:** Your entire analysis MUST be based *exclusively* on the two provided inputs: "1. Baseline Investment Thesis" and "2. New Diligence Findings (Q&A)". Do NOT use any outside knowledge.
+2.  **Strict Output Format:** You MUST use the exact markdown structure and headings provided in the template below.
+3.  **Objective Synthesis:** Your job is to synthesize the analyst's findings. Do not introduce your own opinions, but rather, articulate the logical conclusion based on their inputs.
+---
+
+**INPUTS FOR ANALYSIS:**
+
+**1. Baseline Investment Thesis (The "Updated Final Thesis"):**
+(This is the firm's most recent consensus on the stock, which you must use as the starting point.)
+\`\`\`markdown
+{originalFinalThesisContent}
+\`\`\`
+
+**2. New Diligence Findings (Q&A Block):**
+(These are the analyst's answers to a standardized checklist after reading a new 10-Q or 10-K.)
+\`\`\`
+{newFilingDiligenceAnswers}
+\`\`\`
+
+---
+**YOUR TASK (Strict Output Format):**
+
+# Filing Check-in Memo: {companyName} ({tickerSymbol})
+
+## 1. Summary of New Filing Data
+(In one concise paragraph, summarize the key facts reported in the **"New Diligence Findings (Q&A Block)"**. Focus on the quantitative results [Revenue, EPS, Margins, CFO] and any qualitative callouts [New Risks, Management Tone].)
+
+## 2. Thesis Validation
+(This is the most critical section. In one or two paragraphs, directly compare the "New Diligence Findings" against the "Baseline Investment Thesis".)
+* **Confirmation:** What new data (from the Q&A) *confirms* the bull case in the baseline thesis?
+* **Challenge:** What new data (from the Q&A) *challenges* the baseline thesis or *confirms* its stated risks?
+* **Conclusion:** State whether the new filing *Confirms*, *Modifies*, or *Invalidates* the core assumptions of the Baseline Thesis.
+
+## 3. Final Verdict on Thesis
+(Based on your synthesis, provide a final, one-paragraph verdict that directly answers the question: "Given this new information, does the original 'Updated Final Thesis' still hold true, or does it require re-evaluation?")
+`.trim();
+// --- END NEW PROMPT ---
 
 // --- REVISED QUALITATIVE DILIGENCE MEMO PROMPT ---
 const QUALITATIVE_DILIGENCE_MEMO_PROMPT = `
@@ -1246,6 +1315,11 @@ export const promptMap = {
         prompt: ANNUAL_REVIEW_MEMO_PROMPT,
         requires: []
     },
+    // --- NEW FILING CHECK-IN MEMO ---
+    'FilingCheckinMemo': {
+        prompt: FILING_CHECKIN_MEMO_PROMPT,
+        requires: []
+    },
     // --- V2 EXTRACTION & SYNTHESIS PROMPTS ---
     'MoatAnalysis_Extract': { prompt: MOAT_ANALYSIS_EXTRACT_PROMPT },
     'CapitalAllocators_Extract': { prompt: CAPITAL_ALLOCATORS_EXTRACT_PROMPT },
@@ -1283,7 +1357,8 @@ export const ANALYSIS_ICONS = {
     'BmqvMemo': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v17.25m0 0c-1.472 0-2.882.265-4.185.75M12 20.25c1.472 0 2.882.265 4.185.75M18.75 4.97A48.416 48.416 0 0012 4.5c-2.291 0-4.545.16-6.75.47m13.5 0c1.01.143 2.01.317 3 .52m-3-.52l2.62 10.726c.122.499-.106 1.028-.589 1.202a5.988 5.988 0 01-6.861 0c-.483-.174-.711-.703-.59-1.202L18.75 4.971zm-16.5.52c.99-.203 1.99-.377 3-.52m0 0l2.62 10.726c.122.499-.106 1.028-.589 1.202a5.988 5.988 0 01-6.861 0c-.483-.174-.711-.703-.59-1.202L5.25 4.971z" /></svg>`,
     'MarketSentimentMemo': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 00-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 01-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 003 15h-.75M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" /></svg>`,
     'FinalInvestmentThesis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 18.75h-9m9 0a3 3 0 013 3h-15a3 3 0 013-3m9 0v-4.5m-9 4.5v-4.5m0 0h9.75M5.25 14.25h13.5M5.25 14.25a3 3 0 00-3 3h19.5a3 3 0 00-3-3M5.25 14.25v-4.5m13.5 4.5v-4.5m0 0h-12a3 3 0 00-3 3v.75" /></svg>`,
-    'UpdatedFinalThesis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.34 15.84c-.688-.06-1.386-.09-2.09-.09H7.5a4.5 4.5 0 01-4.5-4.5V4.5a4.5 4.5 0 014.5-4.5h7.5a4.5 4.5 0 014.5 4.5v1.25m-18 0A2.625 2.625 0 115.25 2.625M10.34 15.84a4.491 4.491 0 00-1.443-1.443 4.49 4.49 0 00-2.093-1.096m1.443 1.443s-.103-.017-.327-.052m2.093 1.096s-.103.017-.327.052m1.327 0c-.688-.06-1.386-.09-2.09-.09h-.094m2.183 0h-.094m2.183 0c.688.06 1.386.09 2.09.09h.094m-2.183 0h.094m2.183 0c.688.06 1.386.09 2.09.09h.094m-2.183 0h.094m2.183 0c.688.06 1.386.09 2.09.09h.094m-2.183 0h.094M10.34 15.84l-1.443-1.443M1.927 10.34l-1.443-1.443M14.25 10.34l1.443-1.443M14.25 10.34l-1.443 1.443M14.25 10.34l1.443 1.443M10.34 15.84l1.443 1.443m-1.443-1.443l-1.443 1.443m1.443-1.443l1.443 1.443M10.34 15.84l1.443 1.443m-4.49-4.49l-1.443-1.443m1.443 1.443l-1.443 1.443m1.443-1.443l1.443 1.443M10.34 15.84l1.443 1.443" /></svg>`
+    'UpdatedFinalThesis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.34 15.84c-.688-.06-1.386-.09-2.09-.09H7.5a4.5 4.5 0 01-4.5-4.5V4.5a4.5 4.5 0 014.5-4.5h7.5a4.5 4.5 0 014.5 4.5v1.25m-18 0A2.625 2.625 0 115.25 2.625M10.34 15.84a4.491 4.491 0 00-1.443-1.443 4.49 4.49 0 00-2.093-1.096m1.443 1.443s-.103-.017-.327-.052m2.093 1.096s-.103.017-.327.052m1.327 0c-.688-.06-1.386-.09-2.09-.09h-.094m2.183 0h-.094m2.183 0c.688.06 1.386.09 2.09.09h.094m-2.183 0h.094m2.183 0c.688.06 1.386.09 2.09.09h.094m-2.183 0h.094m2.183 0c.688.06 1.386.09 2.09.09h.094m-2.183 0h.094M10.34 15.84l-1.443-1.443M1.927 10.34l-1.443-1.443M14.25 10.34l1.443-1.443M14.25 10.34l-1.443 1.443M14.25 10.34l1.443 1.443M10.34 15.84l1.443 1.443m-1.443-1.443l-1.443 1.443m1.443-1.443l1.443 1.443M10.34 15.84l1.443 1.443m-4.49-4.49l-1.443-1.443m1.443 1.443l-1.443 1.443m1.443-1.443l1.443 1.443M10.34 15.84l1.443 1.443" /></svg>`,
+    'FilingCheckinMemo': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg>`
 };
 
 export const ANALYSIS_NAMES = {
@@ -1310,5 +1385,6 @@ export const ANALYSIS_NAMES = {
     'StructuredDiligenceMemo': 'Structured Diligence Memo',
     'MarketSentimentMemo': 'Market Sentiment Memo',
     'InvestigationSummaryMemo': 'Investigation Summary',
-    'UpdatedFinalThesis': 'Updated Final Thesis' // New entry
+    'UpdatedFinalThesis': 'Updated Final Thesis',
+    'FilingCheckinMemo': 'Filing Check-in Memo' // <-- Added new entry
 };
