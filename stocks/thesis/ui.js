@@ -280,13 +280,52 @@ export function setupEventListeners() {
     });
 
     analysisModal.addEventListener('click', async (e) => {
-        if (e.target.matches('.metric-value')) {
-            handleScorecardEdit(e.target);
+        const target = e.target.closest('button');
+        if (!target) {
+            // Check for non-button click targets, like the metric value
+            if (e.target.matches('.metric-value')) {
+                handleScorecardEdit(e.target);
+            }
             return;
         }
 
-        const target = e.target.closest('button');
-        if (!target) return;
+        // --- NEW: Event Delegation for "Generate New" buttons ---
+        if (target.id.startsWith('generate-new-')) {
+            const reportType = target.id.replace('generate-new-', '');
+            const promptConfig = promptMap[reportType];
+            const symbol = analysisModal.dataset.activeTicker;
+
+            if (!symbol) return;
+
+            // Logic mirrored from the removed block in ui-render.js
+            if (reportType === 'InvestmentMemo') {
+                handleGarpMemoRequest(symbol, true);
+            } else if (reportType === 'PositionAnalysis') {
+                handlePositionAnalysisRequest(symbol, true);
+            } else if (reportType === 'UpdatedFinalThesis') {
+                handleUpdatedFinalThesisRequest(symbol, true);
+            } else if (reportType === 'LongTermCompounder') {
+                handleCompounderMemoRequest(symbol, true);
+            } else if (reportType === 'BmqvMemo') {
+                handleBmqvMemoRequest(symbol, true);
+            } else if (reportType === 'FinalInvestmentThesis') {
+                handleFinalThesisRequest(symbol, true);
+            } else if (reportType === 'QualitativeDiligenceMemo' || reportType === 'StructuredDiligenceMemo' || reportType === 'MarketSentimentMemo') {
+                handleDiligenceMemoRequest(symbol, reportType, true);
+            } else if (reportType === 'InvestigationSummaryMemo') {
+                handleInvestigationSummaryRequest(symbol, true);
+            } else if (reportType === 'QuarterlyReview') {
+                handleQuarterlyReviewRequest(symbol, true);
+            } else if (reportType === 'AnnualReview') {
+                handleAnnualReviewRequest(symbol, true);
+            } else if (promptConfig) {
+                handleAnalysisRequest(symbol, reportType, promptConfig, true);
+            } else {
+                console.error(`No handler found for "Generate New" on report type: ${reportType}`);
+            }
+            return; // Stop further execution
+        }
+        // --- END NEW BLOCK ---
 
         if (target.matches('.ai-help-button')) {
             const reportType = target.dataset.reportType;
