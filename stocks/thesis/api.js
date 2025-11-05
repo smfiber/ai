@@ -1,4 +1,3 @@
-
 // fileName: api.js
 import { CONSTANTS, state, promptMap } from './config.js';
 
