@@ -1,5 +1,5 @@
 // fileName: ui-modals.js
-import { CONSTANTS, state, ANALYSIS_ICONS, SECTOR_KPI_SUGGESTIONS, QUALITATIVE_DILIGENCE_QUESTIONS, STRUCTURED_DILIGENCE_QUESTIONS, MARKET_SENTIMENT_QUESTIONS, FINAL_THESIS_QUESTIONS } from './config.js';
+import { CONSTANTS, state, ANALYSIS_ICONS, SECTOR_KPI_SUGGESTIONS, QUALITATIVE_DILIGENCE_QUESTIONS, STRUCTURED_DILIGENCE_QUESTIONS, MARKET_SENTIMENT_QUESTIONS, FINAL_THESIS_QUESTIONS, FILING_CHECKIN_QUESTIONS, ONGOING_DILIGENCE_REPORT_TYPES } from './config.js';
 import { getFmpStockData, getGroupedFmpData } from './api.js';
 import { renderValuationHealthDashboard, _renderGroupedStockList, renderPortfolioManagerList, renderGarpScorecardDashboard, renderGarpInterpretationAnalysis, updateGarpCandidacyStatus, renderCandidacyAnalysis, renderGarpAnalysisSummary, renderDiligenceLog, renderPeerComparisonTable, renderOngoingReviewLog } from './ui-render.js';
 import { getSavedReports } from './ui-handlers.js';
@@ -274,7 +274,8 @@ function _resetAnalysisModal() {
     safeClear('ai-analysis-tab');
     safeClear('diligence-hub-tab');
     safeClear('ongoing-diligence-tab');
-    safeClear('final-thesis-tab'); // <-- NEW
+    safeClear('filing-checkin-tab'); // <-- NEW
+    safeClear('final-thesis-tab');
     safeClear('position-analysis-tab'); // Clear this as well
     safeClear('raw-data-tab', '<div id="raw-data-accordion-container"><div class="loader mx-auto my-8"></div></div>'); // Keep container
 
@@ -339,7 +340,7 @@ export async function openRawDataViewer(ticker) {
     };
 
     // --- Declare container variables here ---
-    let rawDataContainer, aiAnalysisContainer, diligenceHubContainer, ongoingDiligenceContainer, positionAnalysisContainer, profileDisplayContainer, garpScorecardContainer, positionAnalysisTabButton, peerAnalysisContainer, analysisContentContainer, valuationHealthContainer, aiGarpSummaryContainer, finalThesisContainer;
+    let rawDataContainer, aiAnalysisContainer, diligenceHubContainer, ongoingDiligenceContainer, positionAnalysisContainer, profileDisplayContainer, garpScorecardContainer, positionAnalysisTabButton, peerAnalysisContainer, analysisContentContainer, valuationHealthContainer, aiGarpSummaryContainer, finalThesisContainer, filingCheckinContainer;
 
 
     try {
@@ -347,7 +348,8 @@ export async function openRawDataViewer(ticker) {
         aiAnalysisContainer = document.getElementById('ai-analysis-tab');
         diligenceHubContainer = document.getElementById('diligence-hub-tab');
         ongoingDiligenceContainer = document.getElementById('ongoing-diligence-tab');
-        finalThesisContainer = document.getElementById('final-thesis-tab'); // <-- NEW
+        filingCheckinContainer = document.getElementById('filing-checkin-tab'); // <-- NEW
+        finalThesisContainer = document.getElementById('final-thesis-tab');
         const dashboardTab = document.getElementById('dashboard-tab');
         const rawDataTab = document.getElementById('raw-data-tab');
         const positionAnalysisTab = document.getElementById('position-analysis-tab');
@@ -365,7 +367,7 @@ export async function openRawDataViewer(ticker) {
         const qualitativeAnswersPromise = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(ticker).collection('diligence_answers').doc('Qualitative').get();
         const structuredAnswersPromise = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(ticker).collection('diligence_answers').doc('Structured').get();
         const marketSentimentAnswersPromise = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(ticker).collection('diligence_answers').doc('MarketSentiment').get();
-        const finalThesisAnswersPromise = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(ticker).collection('diligence_answers').doc('FinalThesis').get(); // <-- NEW
+        const finalThesisAnswersPromise = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(ticker).collection('diligence_answers').doc('FinalThesis').get();
 
         const [
             fmpData,
@@ -374,7 +376,7 @@ export async function openRawDataViewer(ticker) {
             qualitativeSnap,
             structuredSnap,
             marketSentimentSnap,
-            finalThesisSnap // <-- NEW
+            finalThesisSnap
         ] = await Promise.all([
             fmpDataPromise,
             groupedDataPromise,
@@ -382,7 +384,7 @@ export async function openRawDataViewer(ticker) {
             qualitativeAnswersPromise,
             structuredAnswersPromise,
             marketSentimentAnswersPromise,
-            finalThesisAnswersPromise // <-- NEW
+            finalThesisAnswersPromise
         ]);
 
         if (!fmpData || !fmpData.profile || !fmpData.profile.length === 0) {
@@ -399,6 +401,11 @@ export async function openRawDataViewer(ticker) {
         const savedCandidacyReports = allSavedReports
             .filter(r => r.reportType === 'GarpCandidacy')
             .sort((a, b) => b.savedAt.toMillis() - a.savedAt.toMillis());
+        
+        // --- NEW: Get UpdatedFinalThesis for display ---
+        const updatedFinalThesisReport = allSavedReports
+            .filter(r => r.reportType === 'UpdatedFinalThesis')
+            .sort((a, b) => b.savedAt.toMillis() - a.savedAt.toMillis())[0]; // Get the latest one
 
         const profile = fmpData.profile[0];
 
@@ -406,13 +413,13 @@ export async function openRawDataViewer(ticker) {
         const savedQualitativeAnswers = getAnswersMap(qualitativeSnap);
         const savedStructuredAnswers = getAnswersMap(structuredSnap);
         const savedMarketSentimentAnswers = getAnswersMap(marketSentimentSnap);
-        const savedFinalThesisAnswers = getAnswersMap(finalThesisSnap); // <-- NEW
+        const savedFinalThesisAnswers = getAnswersMap(finalThesisSnap);
 
         // 4. POPULATE THE CLEAN STATE
         titleEl.textContent = `Analysis for ${ticker}`;
 
         // --- DASHBOARD TAB ---
-        // Ensure dashboard tab container exists before populating
+        // (No changes here)
         if (dashboardTab) {
             // Add skeleton/placeholders first
             dashboardTab.innerHTML = `
@@ -499,6 +506,7 @@ export async function openRawDataViewer(ticker) {
 
 
         // --- POSITION ANALYSIS TAB ---
+        // (No changes here)
         positionAnalysisTabButton = document.querySelector('.tab-button[data-tab="position-analysis"]');
         const portfolioData = state.portfolioCache.find(s => s.ticker === ticker);
         if (positionAnalysisTab && portfolioData && (portfolioData.transactions?.length > 0 || portfolioData.shares > 0)) {
@@ -523,6 +531,7 @@ export async function openRawDataViewer(ticker) {
         }
 
         // --- RAW DATA TAB ---
+        // (No changes here)
         if (rawDataTab) {
             rawDataTab.innerHTML = `<div id="raw-data-accordion-container"></div>`; // Set innerHTML first
             rawDataContainer = document.getElementById('raw-data-accordion-container'); // Then get handle
@@ -544,6 +553,7 @@ export async function openRawDataViewer(ticker) {
         }
 
         // --- AI ANALYSIS TAB ---
+        // (No changes here)
         if (aiAnalysisContainer) {
             const deepDiveButtons = [
                 { reportType: 'MoatAnalysis', text: 'Moat Analysis', tooltip: 'Evaluates the company\'s competitive advantages.' },
@@ -644,6 +654,7 @@ export async function openRawDataViewer(ticker) {
 
 
         // --- DILIGENCE HUB TAB ---
+        // (No changes here)
         if (diligenceHubContainer) {
             const copyIcon = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125H4.875A1.125 1.125 0 013.75 20.625V7.875c0-.621.504-1.125 1.125-1.125H6.75m9 9.375h3.375c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125h-9.75A1.125 1.125 0 006 9.375v9.75c0 .621.504 1.125 1.125 1.125h3.375m-3.75-9.375V6.125c0-.621.504-1.125 1.125-1.125h9.75c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-3.375" /></svg>`;
             diligenceHubContainer.innerHTML = `
@@ -726,6 +737,7 @@ export async function openRawDataViewer(ticker) {
         }
 
         // --- FINAL THESIS TAB ---
+        // (No changes here)
         if (finalThesisContainer) {
             const copyIcon = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125H4.875A1.125 1.125 0 013.75 20.625V7.875c0-.621.504-1.125 1.125-1.125H6.75m9 9.375h3.375c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125h-9.75A1.125 1.125 0 006 9.375v9.75c0 .621.504 1.125 1.125 1.125h3.375m-3.75-9.375V6.125c0-.621.504-1.125 1.125-1.125h9.75c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-3.375" /></svg>`;
             
@@ -770,7 +782,6 @@ export async function openRawDataViewer(ticker) {
         }
         // --- END FINAL THESIS TAB ---
 
-
         // --- ONGOING DILIGENCE TAB ---
         if (ongoingDiligenceContainer) {
             let nextEarningsDate = 'N/A';
@@ -780,8 +791,9 @@ export async function openRawDataViewer(ticker) {
                 if (futureEarnings.length > 0) { nextEarningsDate = futureEarnings[0].date; }
             }
 
-            const reportTypesForLog = ['FilingDiligence', 'EightKAnalysis', 'UpdatedGarpMemo', 'UpdatedQarpMemo', 'QuarterlyReview', 'AnnualReview'];
-            const filingDiligenceReports = allSavedReports.filter(r => reportTypesForLog.includes(r.reportType));
+            // --- USE NEW CONSTANT ---
+            const filingDiligenceReports = allSavedReports.filter(r => ONGOING_DILIGENCE_REPORT_TYPES.includes(r.reportType));
+            // --- END CHANGE ---
 
             ongoingDiligenceContainer.innerHTML = `
                 <div class="bg-white p-6 rounded-2xl shadow-lg border border-gray-200">
@@ -824,6 +836,66 @@ export async function openRawDataViewer(ticker) {
             const logContainer = ongoingDiligenceContainer.querySelector('#ongoing-review-log-container');
             if (logContainer) renderOngoingReviewLog(logContainer, filingDiligenceReports);
         }
+
+        // --- NEW: FILING CHECK-IN TAB ---
+        if (filingCheckinContainer) {
+            const copyIcon = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125H4.875A1.125 1.125 0 013.75 20.625V7.875c0-.621.504-1.125 1.125-1.125H6.75m9 9.375h3.375c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125h-9.75A1.125 1.125 0 006 9.375v9.75c0 .621.504 1.125 1.125 1.125h3.375m-3.75-9.375V6.125c0-.621.504-1.125 1.125-1.125h9.75c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-3.375" /></svg>`;
+            let thesisHtml = '';
+
+            if (updatedFinalThesisReport) {
+                thesisHtml = `
+                    <div class="mb-6">
+                        <h3 class="text-lg font-bold text-gray-800 mb-2">Baseline Thesis for Comparison</h3>
+                        <div class="prose prose-sm max-w-none p-4 border rounded-lg bg-gray-50 max-h-60 overflow-y-auto">
+                            ${marked.parse(updatedFinalThesisReport.content)}
+                        </div>
+                    </div>
+                `;
+            } else {
+                thesisHtml = `
+                    <div class="mb-6 p-4 border border-yellow-300 bg-yellow-50 rounded-lg">
+                        <p class="font-semibold text-yellow-800">No "Updated Final Thesis" Found</p>
+                        <p class="text-sm text-yellow-700">Please generate an "Updated Final Thesis" from the "AI Analysis" tab first. This memo will be generated without a baseline for comparison.</p>
+                    </div>
+                `;
+            }
+
+            let checkinFormHtml = `<div class="text-left border rounded-lg p-4 bg-gray-50"><h4 class="text-base font-semibold text-gray-800 mb-1">Filing Check-in Q&A</h4><p class="text-sm text-gray-500 mb-4">Review the latest 10-Q/10-K and answer these questions to check them against your thesis.</p><div class="space-y-4">`;
+            for (const [category, question] of Object.entries(FILING_CHECKIN_QUESTIONS)) {
+                checkinFormHtml += `
+                    <div class="diligence-card p-3 bg-white rounded-lg border border-gray-200">
+                        <h5 class="font-semibold text-sm text-indigo-700 mb-2">${category}</h5>
+                        <div class="flex items-start gap-2 mb-2">
+                            <p class="text-xs text-gray-600 flex-grow" data-question-text>${question}</p>
+                            <button type="button" class="copy-icon-btn filing-checkin-copy-btn" title="Copy Question">${copyIcon}</button>
+                        </div>
+                        <textarea class="filing-checkin-answer w-full border border-gray-300 rounded-lg p-2 text-sm" rows="4" data-category="${category}" placeholder="Your findings from the new filing..."></textarea>
+                    </div>
+                `;
+            }
+            checkinFormHtml += `</div><div class="text-right mt-4"><button data-symbol="${ticker}" id="generate-filing-checkin-memo-button" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg">Generate Check-in Memo</button></div></div>`;
+            
+            filingCheckinContainer.innerHTML = thesisHtml + checkinFormHtml;
+
+            // Add copy listener
+            filingCheckinContainer.addEventListener('click', (e) => {
+                const copyBtn = e.target.closest('.filing-checkin-copy-btn');
+                if (copyBtn) {
+                    const textToCopy = copyBtn.previousElementSibling.textContent;
+                    navigator.clipboard.writeText(textToCopy).then(() => {
+                        const checkIcon = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>`;
+                        copyBtn.classList.add('copied');
+                        copyBtn.innerHTML = checkIcon;
+                        setTimeout(() => {
+                            copyBtn.classList.remove('copied');
+                            copyBtn.innerHTML = copyIcon;
+                        }, 2000);
+                    });
+                }
+            });
+        }
+        // --- END NEW TAB ---
+
 
     } catch (error) {
         console.error('Error opening raw data viewer:', error);
