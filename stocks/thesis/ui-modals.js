@@ -1,7 +1,7 @@
 // fileName: ui-modals.js
 import { CONSTANTS, state, ANALYSIS_ICONS, SECTOR_KPI_SUGGESTIONS, QUALITATIVE_DILIGENCE_QUESTIONS, STRUCTURED_DILIGENCE_QUESTIONS, MARKET_SENTIMENT_QUESTIONS, FINAL_THESIS_QUESTIONS, FILING_CHECKIN_QUESTIONS, ONGOING_DILIGENCE_REPORT_TYPES } from './config.js';
 import { getFmpStockData, getGroupedFmpData } from './api.js';
-import { renderValuationHealthDashboard, _renderGroupedStockList, renderPortfolioManagerList, renderGarpScorecardDashboard, renderGarpInterpretationAnalysis, updateGarpCandidacyStatus, renderCandidacyAnalysis, renderGarpAnalysisSummary, renderDiligenceLog, renderPeerComparisonTable, renderOngoingReviewLog } from './ui-render.js';
+import { renderValuationHealthDashboard, _renderGroupedStockList, renderPortfolioManagerList, renderGarpScorecardDashboard, renderGarpInterpretationAnalysis, updateGarpCandidacyStatus, renderCandidacyAnalysis, renderGarpAnalysisSummary, renderDiligenceLog, renderPeerComparisonTable, renderOngoingReviewLog, displayReport } from './ui-render.js';
 import { getSavedReports } from './ui-handlers.js';
 
 // --- GENERIC MODAL HELPERS ---
@@ -368,6 +368,9 @@ export async function openRawDataViewer(ticker) {
         const structuredAnswersPromise = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(ticker).collection('diligence_answers').doc('Structured').get();
         const marketSentimentAnswersPromise = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(ticker).collection('diligence_answers').doc('MarketSentiment').get();
         const finalThesisAnswersPromise = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(ticker).collection('diligence_answers').doc('FinalThesis').get();
+        // --- NEW: Fetch FilingCheckin answers ---
+        const filingCheckinAnswersPromise = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(ticker).collection('diligence_answers').doc('FilingCheckin').get();
+
 
         const [
             fmpData,
@@ -376,7 +379,8 @@ export async function openRawDataViewer(ticker) {
             qualitativeSnap,
             structuredSnap,
             marketSentimentSnap,
-            finalThesisSnap
+            finalThesisSnap,
+            filingCheckinSnap // <-- NEW
         ] = await Promise.all([
             fmpDataPromise,
             groupedDataPromise,
@@ -384,7 +388,8 @@ export async function openRawDataViewer(ticker) {
             qualitativeAnswersPromise,
             structuredAnswersPromise,
             marketSentimentAnswersPromise,
-            finalThesisAnswersPromise
+            finalThesisAnswersPromise,
+            filingCheckinAnswersPromise // <-- NEW
         ]);
 
         if (!fmpData || !fmpData.profile || !fmpData.profile.length === 0) {
@@ -407,6 +412,12 @@ export async function openRawDataViewer(ticker) {
             .filter(r => r.reportType === 'UpdatedFinalThesis')
             .sort((a, b) => b.savedAt.toMillis() - a.savedAt.toMillis())[0]; // Get the latest one
 
+        // --- NEW: Get FilingCheckinMemo for display ---
+        const filingCheckinMemoReport = allSavedReports
+            .filter(r => r.reportType === 'FilingCheckinMemo')
+            .sort((a, b) => b.savedAt.toMillis() - a.savedAt.toMillis())[0]; // Get the latest one
+
+
         const profile = fmpData.profile[0];
 
         const getAnswersMap = (snap) => snap.exists ? new Map(snap.data().answers.map(item => [item.question, item.answer])) : new Map();
@@ -414,6 +425,7 @@ export async function openRawDataViewer(ticker) {
         const savedStructuredAnswers = getAnswersMap(structuredSnap);
         const savedMarketSentimentAnswers = getAnswersMap(marketSentimentSnap);
         const savedFinalThesisAnswers = getAnswersMap(finalThesisSnap);
+        const savedFilingCheckinAnswers = getAnswersMap(filingCheckinSnap); // <-- NEW
 
         // 4. POPULATE THE CLEAN STATE
         titleEl.textContent = `Analysis for ${ticker}`;
@@ -841,12 +853,23 @@ export async function openRawDataViewer(ticker) {
         if (filingCheckinContainer) {
             const copyIcon = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125H4.875A1.125 1.125 0 013.75 20.625V7.875c0-.621.504-1.125 1.125-1.125H6.75m9 9.375h3.375c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125h-9.75A1.125 1.125 0 006 9.375v9.75c0 .621.504 1.125 1.125 1.125h3.375m-3.75-9.375V6.125c0-.621.504-1.125 1.125-1.125h9.75c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-3.375" /></svg>`;
             let thesisHtml = '';
+            
+            // --- NEW: Add "Copy Thesis" button ---
+            const copyThesisBtnHtml = `
+                <button type="button" id="copy-baseline-thesis-button" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-1 px-3 rounded-lg text-xs flex items-center gap-1">
+                    <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125H4.875A1.125 1.125 0 013.75 20.625V7.875c0-.621.504-1.125 1.125-1.125H6.75m9 9.375h3.375c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125h-9.75A1.125 1.125 0 006 9.375v9.75c0 .621.504 1.125 1.125 1.125h3.375m-3.75-9.375V6.125c0-.621.504-1.125 1.125-1.125h9.75c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-3.375" /></svg>
+                    Copy Thesis
+                </button>
+            `;
 
             if (updatedFinalThesisReport) {
                 thesisHtml = `
                     <div class="mb-6">
-                        <h3 class="text-lg font-bold text-gray-800 mb-2">Baseline Thesis for Comparison</h3>
-                        <div class="prose prose-sm max-w-none p-4 border rounded-lg bg-gray-50 max-h-60 overflow-y-auto">
+                        <div class="flex justify-between items-center mb-2">
+                            <h3 class="text-lg font-bold text-gray-800">Baseline Thesis for Comparison</h3>
+                            ${copyThesisBtnHtml}
+                        </div>
+                        <div id="baseline-thesis-content-wrapper" class="prose prose-sm max-w-none p-4 border rounded-lg bg-gray-50 max-h-60 overflow-y-auto">
                             ${marked.parse(updatedFinalThesisReport.content)}
                         </div>
                     </div>
@@ -860,8 +883,10 @@ export async function openRawDataViewer(ticker) {
                 `;
             }
 
+            // --- NEW: Add "Save Answers" button and pre-fill answers ---
             let checkinFormHtml = `<div class="text-left border rounded-lg p-4 bg-gray-50"><h4 class="text-base font-semibold text-gray-800 mb-1">Filing Check-in Q&A</h4><p class="text-sm text-gray-500 mb-4">Review the latest 10-Q/10-K and answer these questions to check them against your thesis.</p><div class="space-y-4">`;
             for (const [category, question] of Object.entries(FILING_CHECKIN_QUESTIONS)) {
+                const savedAnswer = sanitizeText(savedFilingCheckinAnswers.get(question) || ''); // <-- Pre-fill
                 checkinFormHtml += `
                     <div class="diligence-card p-3 bg-white rounded-lg border border-gray-200">
                         <h5 class="font-semibold text-sm text-indigo-700 mb-2">${category}</h5>
@@ -869,15 +894,33 @@ export async function openRawDataViewer(ticker) {
                             <p class="text-xs text-gray-600 flex-grow" data-question-text>${question}</p>
                             <button type="button" class="copy-icon-btn filing-checkin-copy-btn" title="Copy Question">${copyIcon}</button>
                         </div>
-                        <textarea class="filing-checkin-answer w-full border border-gray-300 rounded-lg p-2 text-sm" rows="4" data-category="${category}" placeholder="Your findings from the new filing..."></textarea>
+                        <textarea class="filing-checkin-answer w-full border border-gray-300 rounded-lg p-2 text-sm" rows="4" data-category="${category}" placeholder="Your findings from the new filing...">${savedAnswer}</textarea>
                     </div>
                 `;
             }
-            checkinFormHtml += `</div><div class="text-right mt-4"><button data-symbol="${ticker}" id="generate-filing-checkin-memo-button" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg">Generate Check-in Memo</button></div></div>`;
+            checkinFormHtml += `</div><div class="text-right mt-4 flex justify-end gap-4">
+                                    <button data-symbol="${ticker}" id="save-filing-checkin-answers-button" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg">Save Answers</button>
+                                    <button data-symbol="${ticker}" id="generate-filing-checkin-memo-button" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg">Generate Check-in Memo</button>
+                                </div></div>`;
             
-            filingCheckinContainer.innerHTML = thesisHtml + checkinFormHtml;
+            // --- NEW: Add container for saved memo ---
+            let savedMemoHtml = '';
+            if (filingCheckinMemoReport) {
+                savedMemoHtml = `
+                    <div id="filing-checkin-report-display" class="mt-6">
+                        <h3 class="text-lg font-bold text-gray-800 mb-2">Most Recent Check-in Memo</h3>
+                        <div class="prose prose-sm max-w-none p-4 border rounded-lg bg-gray-50">
+                            ${marked.parse(filingCheckinMemoReport.content)}
+                        </div>
+                    </div>
+                `;
+            } else {
+                savedMemoHtml = `<div id="filing-checkin-report-display"></div>`; // Empty container
+            }
 
-            // Add copy listener
+            filingCheckinContainer.innerHTML = thesisHtml + checkinFormHtml + savedMemoHtml;
+
+            // Add copy listener for Q&A
             filingCheckinContainer.addEventListener('click', (e) => {
                 const copyBtn = e.target.closest('.filing-checkin-copy-btn');
                 if (copyBtn) {
@@ -891,6 +934,24 @@ export async function openRawDataViewer(ticker) {
                             copyBtn.innerHTML = copyIcon;
                         }, 2000);
                     });
+                }
+
+                // --- NEW: Add event listener for "Copy Thesis" button ---
+                const copyThesisBtn = e.target.closest('#copy-baseline-thesis-button');
+                if (copyThesisBtn) {
+                    const contentWrapper = document.getElementById('baseline-thesis-content-wrapper');
+                    if (contentWrapper) {
+                        const plainText = contentWrapper.innerText || contentWrapper.textContent;
+                        navigator.clipboard.writeText(plainText).then(() => {
+                            const originalText = copyThesisBtn.innerHTML;
+                            copyThesisBtn.innerHTML = `<svg class="w-4 h-4 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg> Copied!`;
+                            copyThesisBtn.disabled = true;
+                            setTimeout(() => {
+                                copyThesisBtn.innerHTML = originalText;
+                                copyThesisBtn.disabled = false;
+                            }, 2000);
+                        });
+                    }
                 }
             });
         }
