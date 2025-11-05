@@ -166,81 +166,6 @@ export async function handleRefreshFmpData(symbol) {
 
 // --- PORTFOLIO & DASHBOARD MANAGEMENT ---
 
-export async function handleSectorMomentumRequest() {
-    const section = document.getElementById('sector-momentum-section');
-    const container = document.getElementById('sector-momentum-container');
-    const summaryContainer = document.getElementById('sector-momentum-ai-summary');
-    if (!section || !container || !summaryContainer) return;
-
-    summaryContainer.textContent = 'Fetching sector performance data...';
-    container.innerHTML = '<div class="loader mx-auto my-8"></div>';
-    section.classList.remove('hidden');
-
-    try {
-        const url = `https://financialmodelingprep.com/api/v3/historical-sectors-performance?apikey=${state.fmpApiKey}`;
-        const historicalData = await callApi(url);
-
-        if (!historicalData || historicalData.length < 2) {
-            throw new Error("Not enough historical sector performance data was returned from the API.");
-        }
-
-        const latestData = historicalData[0];
-        const sectors = Object.keys(latestData).filter(k => k !== 'date' && typeof latestData[k] === 'number');
-
-        const findClosestDateRecord = (targetDate) => {
-            const targetTime = targetDate.getTime();
-            return historicalData.reduce((prev, curr) => {
-                const prevDiff = Math.abs(new Date(prev.date).getTime() - targetTime);
-                const currDiff = Math.abs(new Date(curr.date).getTime() - targetTime);
-                return currDiff < prevDiff ? curr : prev;
-            });
-        };
-
-        const today = new Date();
-        const date1M = new Date();
-        date1M.setMonth(today.getMonth() - 1);
-        const date3M = new Date();
-        date3M.setMonth(today.getMonth() - 3);
-
-        const record1M = findClosestDateRecord(date1M);
-        const record3M = findClosestDateRecord(date3M);
-
-        const processedData = sectors.map(sector => {
-            const latestPerf = latestData[sector];
-
-            const calcPerf = (startRecord) => {
-                const startValue = startRecord ? startRecord[sector] : null;
-                if (typeof latestPerf !== 'number' || typeof startValue !== 'number') return null;
-
-                const endFactor = 1 + (latestPerf / 100);
-                const startFactor = 1 + (startValue / 100);
-
-                if (startFactor === 0) return null;
-
-                return ((endFactor / startFactor) - 1) * 100;
-            };
-
-            return {
-                sector: sector.replace(/([A-Z])/g, ' $1').replace('Changes Percentage','').trim(),
-                perf1M: calcPerf(record1M),
-                perf3M: calcPerf(record3M),
-                perfYTD: latestPerf
-            };
-        }).sort((a, b) => (b.perfYTD || -Infinity) - (a.perfYTD || -Infinity));
-
-        summaryContainer.textContent = 'AI is analyzing sector trends...';
-        const promptConfig = promptMap['SectorMomentum'];
-        const prompt = promptConfig.prompt.replace('{jsonData}', JSON.stringify(processedData, null, 2));
-        const aiSummary = await callGeminiApi(prompt);
-
-        renderSectorMomentumHeatMap(processedData, aiSummary);
-
-    } catch (error) {
-        console.error("Error fetching or rendering sector momentum:", error);
-        section.innerHTML = `<div class="p-4 bg-red-50 text-red-700 rounded-lg text-center">Could not load Sector Momentum data: ${error.message}</div>`;
-    }
-}
-
 export function handleKpiSuggestionRequest() {
     const sector = document.getElementById('manage-stock-sector').value;
     const container = document.getElementById('kpi-suggestion-container');
@@ -1564,7 +1489,7 @@ export async function handleSaveDiligenceAnswers(symbol, diligenceType) {
     document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Saving ${sectionConfig.name} answers...`;
 
     try {
-        const docRef = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(symbol).collection('diligence_answers').doc(diligenceType);
+        const docRef = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(symbol).collection('diliggance_answers').doc(diligenceType);
         await docRef.set({
             savedAt: firebase.firestore.Timestamp.now(),
             answers: qaPairs
@@ -1618,7 +1543,8 @@ export async function handleSaveFinalThesisAnswers(symbol) {
             answers: qaPairs
         });
         
-        // No cache-busting needed here, as it's a separate document.
+        // --- ADDED CACHE-BUSTING LINE ---
+        await docRef.get({ source: 'server' }); 
         
         displayMessageInModal(`${sectionConfig.name} answers have been saved. You can now generate the 'Updated Final Thesis' from the 'AI Analysis' tab.`, 'info');
 
