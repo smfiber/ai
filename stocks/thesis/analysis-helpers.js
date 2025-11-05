@@ -559,7 +559,7 @@ export function _calculateCapitalAllocatorsMetrics(data) {
             buybacks: formatLargeNumber(totals.buybacks),
             dividends: formatLargeNumber(totals.dividends),
             totalReinvestment: formatLargeNumber(totalReinvestment),
-            totalShareholderReturns: formatLargeNumber(totalShareholderReturns)
+            totalShareholderReturns: formatLargeNumber(totalShareH olderReturns)
         },
         // --- Existing data structures ---
         cashFlowPriorities: cashFlowPrioritiesData,
@@ -598,6 +598,5 @@ export const CALCULATION_SUMMARIES = {
     'PositionAnalysis': 'This report does not perform new calculations. It uses the previously generated "GARP Candidacy Report" as the original investment thesis and compares it against the user\'s specific position details (cost basis, shares) and the current market price.',
     'PortfolioGarpAnalysis': 'This report aggregates the pre-calculated GARP scorecards for every stock currently in the user\'s "Portfolio" status. It then prepares this aggregated data for an AI to analyze.',
     'PeerComparison': 'This section uses AI to identify a company\'s top publicly traded competitors. It then fetches key financial metrics for both the primary company and the peer group, calculating the average for each metric. The "Premium / (Discount)" column shows how the primary company\'s metric compares to the peer average. A negative percentage (discount) is a good thing for valuation ratios like P/E, while a positive percentage (premium) is a good thing for performance ratios like ROE.',
-    'GarpConvictionScore': 'The GARP Conviction Score is a proprietary metric calculated out of 100, designed to provide a nuanced view of a company\'s quality. Instead of a simple pass/fail, it uses a scaled scoring system. Each of the 10 GARP criteria (covering Growth, Profitability, and Valuation) is graded on its performance, earning a score multiplier (e.g., 0x for poor, 1.0x for good, 1.2x for exceptional). The final score is the weighted sum of these graded results, providing a more precise measure of a company\'s alignment with the GARP strategy.',
-    'SectorMomentum': 'This report fetches historical sector performance data from the FMP API, which provides a cumulative year-to-date return for each day. It then calculates the 1-month and 3-month performance by comparing the most recent cumulative figure against the figures from one and three months prior. The Year-to-Date (YTD) figure is the latest cumulative performance data available. The AI then summarizes these trends to identify market leaders and laggards.'
+    'GarpConvictionScore': 'The GARP Conviction Score is a proprietary metric calculated out of 100, designed to provide a nuanced view of a company\'s quality. Instead of a simple pass/fail, it uses a scaled scoring system. Each of the 10 GARP criteria (covering Growth, Profitability, and Valuation) is graded on its performance, earning a score multiplier (e.g., 0x for poor, 1.0x for good, 1.2x for exceptional). The final score is the weighted sum of these graded results, providing a more precise measure of a company\'s alignment with the GARP strategy.'
 };
