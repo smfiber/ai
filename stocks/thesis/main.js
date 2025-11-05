@@ -25,7 +25,7 @@ async function initializeAppContent() {
     document.getElementById('stock-screener-section').classList.remove(CONSTANTS.CLASS_HIDDEN);
     
     await fetchAndCachePortfolioData();
-    await handleSectorMomentumRequest();
+    // await handleSectorMomentumRequest(); // Removed per user request
 }
 
 async function initializeFirebase() {
