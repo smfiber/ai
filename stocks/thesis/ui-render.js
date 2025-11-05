@@ -945,35 +945,8 @@ export function updateReportStatus(statusContainer, reports, activeReportId, ana
         });
     }
 
-    const generateNewBtn = document.getElementById(`generate-new-${analysisParams.reportType}`);
-    if (generateNewBtn) {
-        generateNewBtn.addEventListener('click', () => {
-            const reportType = analysisParams.reportType;
-            const symbol = analysisParams.symbol;
-            
-            if (reportType === 'InvestmentMemo') {
-                handleGarpMemoRequest(symbol, true);
-            } else if (reportType === 'PositionAnalysis') {
-                handlePositionAnalysisRequest(symbol, true);
-            } else if (reportType === 'UpdatedFinalThesis') {
-                handleUpdatedFinalThesisRequest(symbol, true);
-            } else if (reportType === 'LongTermCompounder') {
-                handleCompounderMemoRequest(symbol, true);
-            } else if (reportType === 'BmqvMemo') {
-                handleBmqvMemoRequest(symbol, true);
-            } else if (reportType === 'FinalInvestmentThesis') {
-                handleFinalThesisRequest(symbol, true);
-            } else if (reportType === 'QualitativeDiligenceMemo' || reportType === 'StructuredDiligenceMemo' || reportType === 'MarketSentimentMemo') {
-                handleDiligenceMemoRequest(symbol, reportType, true);
-            } else if (reportType === 'InvestigationSummaryMemo') {
-                handleInvestigationSummaryRequest(symbol, true);
-            } else if (reportType === 'QuarterlyReview') {
-                handleQuarterlyReviewRequest(symbol, true);
-            } else if (reportType === 'AnnualReview') {
-                handleAnnualReviewRequest(symbol, true);
-            } else {
-                handleAnalysisRequest(symbol, reportType, analysisParams.promptConfig, true);
-            }
-        });
-    }
+    // const generateNewBtn = document.getElementById(`generate-new-${analysisParams.reportType}`);
+    // if (generateNewBtn) {
+    //     // THIS BLOCK HAS BEEN MOVED TO ui.js TO PREVENT REFERENCE ERRORS
+    // }
 }
