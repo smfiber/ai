@@ -46,58 +46,6 @@ export async function fetchAndCachePortfolioData() {
 
 // --- UI RENDERING ---
 
-export function renderSectorMomentumHeatMap(performanceData, aiSummary) {
-    const section = document.getElementById('sector-momentum-section');
-    const summaryContainer = document.getElementById('sector-momentum-ai-summary');
-    const container = document.getElementById('sector-momentum-container');
-
-    if (!section || !summaryContainer || !container) return;
-
-    summaryContainer.textContent = aiSummary || 'AI summary is currently unavailable.';
-    
-    const getHeatClass = (value) => {
-        if (typeof value !== 'number' || !isFinite(value)) return 'heat-neutral';
-        if (value > 5) return 'heat-strong-positive';
-        if (value > 1) return 'heat-positive';
-        if (value < -5) return 'heat-strong-negative';
-        if (value < -1) return 'heat-negative';
-        return 'heat-neutral';
-    };
-
-    let tableHtml = `
-        <div class="overflow-x-auto">
-            <table class="w-full text-sm border-collapse">
-                <thead>
-                    <tr class="bg-gray-100">
-                        <th class="text-left font-semibold text-gray-700 p-3">Sector</th>
-                        <th class="text-center font-semibold text-gray-700 p-3">1-Month</th>
-                        <th class="text-center font-semibold text-gray-700 p-3">3-Month</th>
-                        <th class="text-center font-semibold text-gray-700 p-3">YTD</th>
-                    </tr>
-                </thead>
-                <tbody>
-    `;
-
-    performanceData.forEach(item => {
-        const perf1M = parseFloat(item.perf1M);
-        const perf3M = parseFloat(item.perf3M);
-        const perfYTD = parseFloat(item.perfYTD);
-
-        tableHtml += `
-            <tr class="border-b border-gray-200">
-                <td class="p-3 font-semibold text-gray-800">${sanitizeText(item.sector)}</td>
-                <td class="p-2"><div class="heat-cell ${getHeatClass(perf1M)}">${isFinite(perf1M) ? perf1M.toFixed(2) + '%' : 'N/A'}</div></td>
-                <td class="p-2"><div class="heat-cell ${getHeatClass(perf3M)}">${isFinite(perf3M) ? perf3M.toFixed(2) + '%' : 'N/A'}</div></td>
-                <td class="p-2"><div class="heat-cell ${getHeatClass(perfYTD)}">${isFinite(perfYTD) ? perfYTD.toFixed(2) + '%' : 'N/A'}</div></td>
-            </tr>
-        `;
-    });
-
-    tableHtml += '</tbody></table></div>';
-    container.innerHTML = tableHtml;
-    section.classList.remove('hidden');
-}
-
 export function renderPeerComparisonTable(container, ticker, companyMetrics, peerData) {
     if (!container || !companyMetrics || !peerData || !peerData.averages) {
         container.innerHTML = '<p class="text-center text-gray-500 p-4">Could not render peer comparison data.</p>';
