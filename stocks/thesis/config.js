@@ -997,13 +997,14 @@ const UPDATED_FINAL_THESIS_PROMPT = `
 // --- NEW PROMPT FOR FILING CHECK-IN ---
 const FILING_CHECKIN_MEMO_PROMPT = `
 Role: You are a Senior Investment Analyst. Your task is to act as a critical, objective reviewer.
-Goal: You will review an analyst's "New Diligence Findings" (a set of Q&A based on a new SEC filing) and compare it against their "Baseline Investment Thesis." Your goal is to generate a new, synthesized memo that answers the final, critical question.
+Goal: You will review an analyst's "New Diligence Findings" (a set of Q&A based on a new SEC filing) and compare it against their "Baseline Investment Thesis." Your goal is to generate a new, synthesized memo that answers the final, critical question and provides an updated recommendation.
 
 ---
 **CRITICAL INSTRUCTIONS:**
 1.  **Source of Truth:** Your entire analysis MUST be based *exclusively* on the two provided inputs: "1. Baseline Investment Thesis" and "2. New Diligence Findings (Q&A)". Do NOT use any outside knowledge.
 2.  **Strict Output Format:** You MUST use the exact markdown structure and headings provided in the template below.
 3.  **Objective Synthesis:** Your job is to synthesize the analyst's findings. Do not introduce your own opinions, but rather, articulate the logical conclusion based on their inputs.
+4.  **Recommendation:** For Section 4, use the *original* recommendation grade from the baseline thesis as your starting point. Then, based on your "Thesis Validation", state whether the new filing data *Confirms*, *Upgrades*, or *Downgrades* that original recommendation and provide a new grade if necessary.
 ---
 
 **INPUTS FOR ANALYSIS:**
@@ -1036,6 +1037,19 @@ Goal: You will review an analyst's "New Diligence Findings" (a set of Q&A based 
 
 ## 3. Final Verdict on Thesis
 (Based on your synthesis, provide a final, one-paragraph verdict that directly answers the question: "Given this new information, does the original 'Updated Final Thesis' still hold true, or does it require re-evaluation?")
+
+## 4. Updated Recommendation & Rationale
+(Your response for this section MUST follow the format below exactly. Use the standard A-F grading scale.)
+
+**Recommendation Grade:** [State the *new* letter grade (A, B, C, D, F). This grade should be an update to the grade from the Baseline Thesis, based on your findings.]
+**Suggested Allocation:** [State the corresponding allocation percentage.]
+
+(Your one-sentence justification explaining *why* the grade was confirmed, upgraded, or downgraded based on the new filing data.)
+
+## 5. Updated Implications for Portfolio Management
+(Based on your *updated* recommendation, provide revised, actionable interpretations.)
+* **For a New Investment:** [Explain the updated meaning.]
+* **For an Existing Position:** [Explain the updated meaning.]
 `.trim();
 // --- END NEW PROMPT ---
 
@@ -1215,7 +1229,7 @@ Task: Your task is to analyze the user's new annual findings in the context of t
 (Summarize the user's answer regarding the company's full-year performance against its own guidance.)
 
 ## 3. Strategic Progress & Capital Allocation
-(Summarize the user's answer regarding the company's strategic initiatives and the effectiveness of its capital allocation over the full year. Reference ROIC if available.)
+(Review the company's strategic initiatives from the start of the year. Was capital allocated effectively (e.g., acquisitions, buybacks, R&D)? How has ROIC trended over the full year?)
 
 ## 4. Updated Competitive Landscape & Risks
 (Summarize the user's answer regarding any material changes to the material changes to the competitive environment or long-term business risks.)
