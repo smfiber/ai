@@ -259,18 +259,6 @@ JSON Data:
 - **Justification:** [Your analysis here. Justify the grade by summarizing the strongest and weakest points from your quantitative analysis above and provide a bottom-line assessment.]
 `.trim();
 
-const SECTOR_MOMENTUM_PROMPT = `
-Role: You are a market analyst AI. Your task is to provide a concise, data-driven summary of sector performance based on the provided JSON data.
-Instructions:
-- Identify the top 2-3 strongest performing sectors, especially based on Year-to-Date (YTD) performance.
-- Identify the 1-2 weakest performing sectors.
-- Briefly comment on any notable shifts in momentum (e.g., a sector that is strong YTD but weak in the last 1-month).
-- Keep the summary to a single, professional paragraph. Do not use markdown headings or bullet points.
-
-JSON Data:
-{jsonData}
-`.trim();
-
 const UPDATED_GARP_MEMO_PROMPT = `
 **Persona & Goal:**
 You are a Senior Investment Analyst at a GARP-focused fund. Your task is to synthesize the provided reports into the template below.
@@ -1216,10 +1204,6 @@ export const promptMap = {
         prompt: GARP_CONVICTION_SCORE_PROMPT,
         requires: []
     },
-    'SectorMomentum': {
-        prompt: SECTOR_MOMENTUM_PROMPT,
-        requires: []
-    },
     'FilingQuestionGeneration': {
         prompt: FILING_QUESTION_GENERATION_PROMPT,
         requires: []
@@ -1314,7 +1298,6 @@ export const ANALYSIS_NAMES = {
     'GarpConvictionScore': 'GARP Conviction Score',
     'PeerIdentification': 'Peer Identification',
     'PeerComparison': 'Peer Comparison',
-    'SectorMomentum': 'Sector Momentum',
     'FilingQuestionGeneration': 'Filing Question Generation',
     'FilingDiligence': 'Filing Diligence',
     'EightKAnalysis': '8-K Filing Analysis',
