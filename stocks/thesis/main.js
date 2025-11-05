@@ -1,7 +1,6 @@
 import { setupEventListeners } from './ui.js';
 import { openModal, closeModal, displayMessageInModal } from './ui-modals.js';
 import { fetchAndCachePortfolioData } from './ui-render.js';
-import { handleSectorMomentumRequest } from './ui-handlers.js';
 import { CONSTANTS, APP_VERSION, state } from './config.js';
 
 // --- CONFIG & INITIALIZATION ---
