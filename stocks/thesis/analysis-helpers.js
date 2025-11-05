@@ -573,7 +573,7 @@ export function _calculateCapitalAllocatorsMetrics(data) {
             year: bs.calendarYear,
             goodwill: formatLargeNumber(bs.goodwill),
             acquisitions: formatLargeNumber(cashFlow.find(cf => cf.calendarYear === bs.calendarYear)?.acquisitionsNet)
-        }),
+        })),
         shareholderReturns: {
             buybacksWithValuation: buybacksWithValuation,
             fcfPayoutRatioTrend: cashFlow.map(cf => {
