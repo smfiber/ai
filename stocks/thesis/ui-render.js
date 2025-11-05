@@ -1,7 +1,7 @@
 // fileName: ui-render.js
 import { CONSTANTS, state } from './config.js';
 import { _calculateGarpScorecardMetrics } from './analysis-helpers.js';
-import { handleAnalysisRequest, handleGarpMemoRequest, handleGarpCandidacyRequest, handlePositionAnalysisRequest, handleUpdatedFinalThesisRequest, handleCompounderMemoRequest, handleBmqvMemoRequest, handleFinalThesisRequest, handleDiligenceMemoRequest, handleInvestigationSummaryRequest } from './ui-handlers.js';
+// Removed: import { handleAnalysisRequest, ... } from './ui-handlers.js';
 import { getFmpStockData } from './api.js';
 
 // --- UTILITY & SECURITY HELPERS ---
@@ -625,9 +625,10 @@ export function updateGarpCandidacyStatus(statusContainer, reports, activeReport
         }
     });
 
-    document.getElementById('generate-new-candidacy')?.addEventListener('click', (e) => {
-        handleGarpCandidacyRequest(e.target.dataset.ticker);
-    });
+    // Event listener is now in ui.js
+    // document.getElementById('generate-new-candidacy')?.addEventListener('click', (e) => {
+    //     handleGarpCandidacyRequest(e.target.dataset.ticker);
+    // });
 }
 
 export function renderCandidacyAnalysis(container, reportContent, prompt, diligenceQuestions = []) {
@@ -829,6 +830,7 @@ export function renderOngoingReviewLog(container, reports) {
                 case 'QuarterlyReview': return 'Quarterly Review';
                 case 'FilingDiligence': return 'Filing Diligence Q&A';
                 case 'EightKAnalysis': return '8-K Analysis';
+                case 'FilingCheckinMemo': return 'Filing Check-in Memo'; // <-- NEW
                 default: return 'Review';
             }
         };
@@ -965,6 +967,10 @@ export function updateReportStatus(statusContainer, reports, activeReportId, ana
                 handleDiligenceMemoRequest(symbol, reportType, true);
             } else if (reportType === 'InvestigationSummaryMemo') {
                 handleInvestigationSummaryRequest(symbol, true);
+            } else if (reportType === 'QuarterlyReview') {
+                handleQuarterlyReviewRequest(symbol, true);
+            } else if (reportType === 'AnnualReview') {
+                handleAnnualReviewRequest(symbol, true);
             } else {
                 handleAnalysisRequest(symbol, reportType, analysisParams.promptConfig, true);
             }
