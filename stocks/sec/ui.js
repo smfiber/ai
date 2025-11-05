@@ -15,8 +15,6 @@ function setupGlobalEventListeners() {
             // ... (unchanged) ...
         }
 
-        // --- CHANGE STARTS HERE ---
-        // Fix for company link click handler
         if (target.closest('.company-link')) {
             e.preventDefault();
             const ticker = target.closest('.company-link').dataset.ticker;
@@ -26,7 +24,6 @@ function setupGlobalEventListeners() {
             }
             return;
         }
-        // --- CHANGE ENDS HERE ---
 
         if (target.closest('#start-batch-process-btn')) {
             handleBatchProcess();
@@ -117,7 +114,21 @@ export function setupEventListeners() {
         { modal: 'deepDiveModal', button: 'close-deep-dive-modal', bg: 'close-deep-dive-modal-bg' },
     ];
 
+    // --- CHANGE STARTS HERE ---
+    // Adds the event listeners for closing modals
     modalsToClose.forEach(item => {
-        // ... (unchanged) ...
+        const modalEl = document.getElementById(item.modal);
+        if (!modalEl) return;
+
+        const closeButton = document.getElementById(item.button);
+        if (closeButton) {
+            closeButton.addEventListener('click', () => closeModal(item.modal));
+        }
+
+        const bgClose = document.getElementById(item.bg);
+        if (bgClose) {
+            bgClose.addEventListener('click', () => closeModal(item.modal));
+        }
     });
+    // --- CHANGE ENDS HERE ---
 }
