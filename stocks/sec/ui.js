@@ -15,9 +15,18 @@ function setupGlobalEventListeners() {
             // ... (unchanged) ...
         }
 
+        // --- CHANGE STARTS HERE ---
+        // Fix for company link click handler
         if (target.closest('.company-link')) {
-            // ... (unchanged) ...
+            e.preventDefault();
+            const ticker = target.closest('.company-link').dataset.ticker;
+            if (ticker) {
+                openDeepDiveModal(ticker);
+                renderCompanyDeepDive(ticker);
+            }
+            return;
         }
+        // --- CHANGE ENDS HERE ---
 
         if (target.closest('#start-batch-process-btn')) {
             handleBatchProcess();
