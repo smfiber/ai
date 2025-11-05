@@ -1322,7 +1322,7 @@ export async function handleDiligenceMemoRequest(symbol, reportType, forceNew = 
         const docSnap = await docRef.get();
 
         if (!docSnap.exists) {
-            throw new Error(`You must first save your answers for the '${memoConfig.name}' section in the 'Diligence Hub' tab.`);
+            throw new Error(`You must first save your answers for the '${memoConfig.name}' section in the 'Diligdiligence_answersigence Hub' tab.`);
         }
 
         const savedData = docSnap.data().answers || [];
@@ -2557,7 +2557,7 @@ export async function handleFilingCheckinMemoRequest(symbol) {
         await autoSaveReport(symbol, reportType, memoContent, prompt);
 
         // Clear the form textareas
-        answerElements.forEach(textarea => { textarea.value = ''; });
+        // answerElements.forEach(textarea => { textarea.value = ''; }); // <-- THIS LINE WAS REMOVED
         
         // Refresh the 'Ongoing Diligence' log
         const logContainer = document.getElementById('ongoing-review-log-container');
@@ -2619,7 +2619,7 @@ export async function handleSaveFilingCheckinAnswers(symbol) {
     document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Saving ${sectionConfig.name} answers...`;
 
     try {
-        const docRef = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(symbol).collection('diligg_answers').doc(diligenceType);
+        const docRef = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(symbol).collection('diligence_answers').doc(diligenceType);
         await docRef.set({
             savedAt: firebase.firestore.Timestamp.now(),
             answers: qaPairs
