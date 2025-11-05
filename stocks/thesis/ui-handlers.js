@@ -1,5 +1,5 @@
 // fileName: ui-handlers.js
-import { CONSTANTS, state, promptMap, ANALYSIS_REQUIREMENTS, ANALYSIS_NAMES, SECTOR_KPI_SUGGESTIONS, STRUCTURED_DILIGENCE_QUESTIONS, QUALITATIVE_DILIGENCE_QUESTIONS, MARKET_SENTIMENT_QUESTIONS, QUARTERLY_REVIEW_QUESTIONS, ANNUAL_REVIEW_QUESTIONS, FINAL_THESIS_QUESTIONS } from './config.js';
+import { CONSTANTS, state, promptMap, ANALYSIS_REQUIREMENTS, ANALYSIS_NAMES, SECTOR_KPI_SUGGESTIONS, STRUCTURED_DILIGENCE_QUESTIONS, QUALITATIVE_DILIGENCE_QUESTIONS, MARKET_SENTIMENT_QUESTIONS, QUARTERLY_REVIEW_QUESTIONS, ANNUAL_REVIEW_QUESTIONS, FINAL_THESIS_QUESTIONS, FILING_CHECKIN_QUESTIONS, ONGOING_DILIGENCE_REPORT_TYPES } from './config.js';
 import { callApi, callGeminiApi, generateRefinedArticle, generatePolishedArticleForSynthesis, getFmpStockData, extractSynthesisData } from './api.js';
 import { openModal, closeModal, displayMessageInModal, openConfirmationModal, openManageStockModal, addKpiRow, addDiligenceEntryRow } from './ui-modals.js';
 import { renderPortfolioManagerList, displayReport, updateReportStatus, fetchAndCachePortfolioData, updateGarpCandidacyStatus, renderCandidacyAnalysis, renderGarpAnalysisSummary, renderDiligenceLog, renderPeerComparisonTable, renderOngoingReviewLog } from './ui-render.js';
@@ -57,7 +57,8 @@ async function autoSaveReport(ticker, reportType, content, prompt, diligenceQues
             'FilingDiligence',
             'EightKAnalysis',
             'QuarterlyReview',
-            'AnnualReview'
+            'AnnualReview',
+            'FilingCheckinMemo' // <-- Added new report type to preserve
         ];
 
         if (!reportTypesToPreserve.includes(reportType)) {
@@ -859,7 +860,7 @@ export async function handleAnalysisRequest(symbol, reportType, promptConfig, fo
 
         contentContainer.dataset.currentPrompt = prompt; // Store prompt before AI call
 
-        const finalReportContent = await generateRefinedArticle(prompt, loadingMessage);
+        const finalReportContent = await generateRefinedArticle(prompt, loadingMessageElement);
         contentContainer.dataset.rawMarkdown = finalReportContent; // Store raw markdown
 
         let synthesisData = null;
@@ -1729,8 +1730,8 @@ export async function handleSaveFilingDiligenceRequest(symbol) {
 
         // Refresh log
         const logContainer = document.getElementById('ongoing-review-log-container');
-        const reportTypes = ['FilingDiligence', 'EightKAnalysis', 'UpdatedGarpMemo', 'UpdatedQarpMemo', 'QuarterlyReview', 'AnnualReview'];
-        const savedReports = getReportsFromCache(symbol, reportTypes);
+        // --- USE NEW CONSTANT ---
+        const savedReports = getReportsFromCache(symbol, ONGOING_DILIGENCE_REPORT_TYPES);
         renderOngoingReviewLog(logContainer, savedReports);
 
         // Show update memo section
@@ -1843,8 +1844,8 @@ export async function handleAnalyzeEightKRequest(symbol) {
 
         // Refresh the log
         const logContainer = document.getElementById('ongoing-review-log-container');
-        const reportTypes = ['FilingDiligence', 'EightKAnalysis', 'UpdatedGarpMemo', 'UpdatedQarpMemo', 'QuarterlyReview', 'AnnualReview'];
-        const savedReports = getReportsFromCache(symbol, reportTypes);
+        // --- USE NEW CONSTANT ---
+        const savedReports = getReportsFromCache(symbol, ONGOING_DILIGENCE_REPORT_TYPES);
         renderOngoingReviewLog(logContainer, savedReports);
 
         // Optionally display the generated report
@@ -1880,8 +1881,8 @@ export async function handleDeleteFilingDiligenceLog(reportId, ticker) {
                 // Re-render the log
                 const logContainer = document.getElementById('ongoing-review-log-container');
                 const displayContainer = document.getElementById('ongoing-review-display-container');
-                const reportTypes = ['FilingDiligence', 'EightKAnalysis', 'UpdatedGarpMemo', 'UpdatedQarpMemo', 'QuarterlyReview', 'AnnualReview'];
-                const savedReports = getReportsFromCache(ticker, reportTypes);
+                // --- USE NEW CONSTANT ---
+                const savedReports = getReportsFromCache(ticker, ONGOING_DILIGENCE_REPORT_TYPES);
                 renderOngoingReviewLog(logContainer, savedReports);
 
                 // Clear display if the deleted report was showing
@@ -1992,8 +1993,8 @@ async function generateUpdatedMemo(symbol, memoType) {
 
         // Refresh log
         const logContainer = document.getElementById('ongoing-review-log-container');
-        const reportTypes = ['FilingDiligence', 'EightKAnalysis', 'UpdatedGarpMemo', 'UpdatedQarpMemo', 'QuarterlyReview', 'AnnualReview'];
-        const savedReports = getReportsFromCache(symbol, reportTypes);
+        // --- USE NEW CONSTANT ---
+        const savedReports = getReportsFromCache(symbol, ONGOING_DILIGENCE_REPORT_TYPES);
         renderOngoingReviewLog(logContainer, savedReports);
 
     } catch(error) {
@@ -2457,8 +2458,8 @@ async function _handleReviewRequest(symbol, reviewType) {
 
         // Update UI
         const logContainer = document.getElementById('ongoing-review-log-container');
-        const reportTypes = ['FilingDiligence', 'EightKAnalysis', 'UpdatedGarpMemo', 'UpdatedQarpMemo', 'QuarterlyReview', 'AnnualReview'];
-        const savedReports = getReportsFromCache(symbol, reportTypes);
+        // --- USE NEW CONSTANT ---
+        const savedReports = getReportsFromCache(symbol, ONGOING_DILIGENCE_REPORT_TYPES);
         renderOngoingReviewLog(logContainer, savedReports);
 
         const displayContainer = document.getElementById('ongoing-review-display-container');
@@ -2490,3 +2491,101 @@ export async function handleQuarterlyReviewRequest(symbol) {
 export async function handleAnnualReviewRequest(symbol) {
     await _handleReviewRequest(symbol, 'Annual');
 }
+
+// --- NEW FUNCTION TO HANDLE FILING CHECK-IN MEMO ---
+export async function handleFilingCheckinMemoRequest(symbol) {
+    openModal(CONSTANTS.MODAL_LOADING);
+    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+    const filingCheckinContainer = document.getElementById('filing-checkin-tab');
+
+    try {
+        const reportType = 'FilingCheckinMemo';
+        const promptConfig = promptMap[reportType];
+
+        loadingMessage.textContent = 'Gathering your new diligence findings...';
+        
+        // 1. Gather all Q&A from the form
+        const answerElements = document.querySelectorAll('.filing-checkin-answer');
+        const qaPairs = [];
+        let hasAnswers = false;
+        
+        answerElements.forEach(textarea => {
+            const answer = textarea.value.trim();
+            const questionElement = textarea.closest('.diligence-card').querySelector('[data-question-text]');
+            const question = questionElement.textContent.trim();
+            
+            if (question) {
+                qaPairs.push({ question, answer });
+                if (answer) hasAnswers = true;
+            }
+        });
+
+        if (!hasAnswers) {
+            throw new Error("Please provide at least one answer for the Filing Check-in before generating the memo.");
+        }
+        
+        const newFilingDiligenceAnswers = qaPairs.map(pair => {
+            return `**Question:** ${pair.question}\n\n**Answer:**\n${pair.answer || '(No answer provided)'}`;
+        }).join('\n\n---\n\n');
+
+        // 2. Fetch the baseline "Updated Final Thesis"
+        loadingMessage.textContent = 'Retrieving baseline investment thesis...';
+        
+        const thesisReports = getReportsFromCache(symbol, 'UpdatedFinalThesis');
+        let originalFinalThesisContent = "No baseline 'Updated Final Thesis' was found. The AI will analyze the new findings on their own.";
+        
+        if (thesisReports.length > 0) {
+            originalFinalThesisContent = thesisReports[0].content;
+        } else {
+             console.warn(`No 'UpdatedFinalThesis' report found for ${symbol}. Proceeding without baseline.`);
+        }
+
+        // 3. Prepare and send to AI
+        const profile = state.portfolioCache.find(s => s.ticker === symbol) || {};
+        const companyName = profile.companyName || symbol;
+
+        const prompt = promptConfig.prompt
+            .replace(/{companyName}/g, companyName)
+            .replace(/{tickerSymbol}/g, symbol)
+            .replace('{originalFinalThesisContent}', originalFinalThesisContent)
+            .replace('{newFilingDiligenceAnswers}', newFilingDiligenceAnswers);
+
+        loadingMessage.textContent = `AI is synthesizing your Filing Check-in Memo...`;
+        const memoContent = await generateRefinedArticle(prompt, loadingMessage);
+
+        // 4. Save and update UI
+        await autoSaveReport(symbol, reportType, memoContent, prompt);
+
+        // Clear the form textareas
+        answerElements.forEach(textarea => { textarea.value = ''; });
+        
+        // Refresh the 'Ongoing Diligence' log
+        const logContainer = document.getElementById('ongoing-review-log-container');
+        if (logContainer) {
+            const savedReports = getReportsFromCache(symbol, ONGOING_DILIGENCE_REPORT_TYPES);
+            renderOngoingReviewLog(logContainer, savedReports);
+        }
+
+        // Display the new memo directly in the 'Filing Check-in' tab
+        const reportDisplayContainer = filingCheckinContainer.querySelector('#filing-checkin-report-display');
+        if (reportDisplayContainer) {
+            reportDisplayContainer.innerHTML = `<h3 class="text-lg font-bold text-gray-800 mb-2">Most Recent Check-in Memo</h3><div class="prose prose-sm max-w-none p-4 border rounded-lg bg-gray-50">${marked.parse(memoContent)}</div>`;
+        } else {
+            // If it doesn't exist, create it (this is for the first run)
+            const formContainer = filingCheckinContainer.querySelector('.text-left.border.rounded-lg');
+            const newDisplay = document.createElement('div');
+            newDisplay.id = 'filing-checkin-report-display';
+            newDisplay.innerHTML = `<h3 class="text-lg font-bold text-gray-800 mb-2 mt-6">Most Recent Check-in Memo</h3><div class="prose prose-sm max-w-none p-4 border rounded-lg bg-gray-50">${marked.parse(memoContent)}</div>`;
+            formContainer.after(newDisplay);
+        }
+
+        displayMessageInModal('Filing Check-in Memo saved to the log.', 'info');
+
+    } catch (error) {
+        console.error("Error handling Filing Check-in Memo request:", error);
+        displayMessageInModal(`Could not complete check-in: ${error.message}`, 'error');
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+// --- END NEW FUNCTION ---
