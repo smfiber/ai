@@ -374,12 +374,13 @@ Objective: Your goal is to synthesize the **current state of your investment** (
 3. **Current Market Price:** {currentPrice}
 
 **Task:**
-Synthesize all the Core Data above into a professional Position Review Memo. Your analysis must answer the user's key questions.
+Synthesize all the Core Data above into a professional Position Review Memo.
 
 **CRITICAL INSTRUCTIONS:**
 - Your final output MUST be a single, valid Markdown block.
-- You MUST use the exact Markdown structure (headings with '#', '##', bullet points with '-', and bolding with '**') as shown in the template below.
-- Do NOT deviate or output plain text.
+- You MUST use the exact Markdown structure (headings with '#', '##', bullet points with '-', and bolding with '**') as shown in the template.
+- Your response MUST begin *exactly* with \`# Position Review: {companyName} ({tickerSymbol})\`. Do NOT add any text before this heading.
+- Do NOT use numbered lists (1., 2., 3.). You MUST use Markdown '##' headings.
 
 --- REQUIRED MARKDOWN TEMPLATE ---
 # Position Review: {companyName} ({tickerSymbol})
