@@ -365,14 +365,6 @@ const POSITION_ANALYSIS_PROMPT = `
 Role: You are a long-term Portfolio Manager reviewing an existing position.
 Objective: Your goal is to synthesize the **current state of your investment** (your P/L and the stock's current price) with the **latest fundamental check-in** on the company.
 
-**Core Data for Evaluation:**
-1. **Latest Fundamental Thesis (The FilingCheckinMemo):**
----
-{latestThesisContent}
----
-2. **Our Current Position:** {positionDetails}
-3. **Current Market Price:** {currentPrice}
-
 **Task:**
 Synthesize all the Core Data above into a professional Position Review Memo.
 
@@ -406,6 +398,15 @@ Synthesize all the Core Data above into a professional Position Review Memo.
 **[Your one-sentence, bolded verdict here. State whether the long-term investment thesis appears intact, challenged, or broken based on the synthesis.]**
 
 [Your justification here. Synthesize *why* this is the long-term verdict. Connect the fundamental strengths (Section 2), the objective risk/reward synthesis (Section 3), and the valuation verdict (Section 4) to form a final conclusion on the stock's long-term merit as an investment.]
+
+---
+**Core Data for Evaluation:**
+1. **Latest Fundamental Thesis (The FilingCheckinMemo):**
+---
+{latestThesisContent}
+---
+2. **Our Current Position:** {positionDetails}
+3. **Current Market Price:** {currentPrice}
 `.trim();
 
 // --- FINAL GARP CANDIDACY PROMPT (Version 6 - Incorporating Sector Context, Contradiction Acknowledgment, and Neutral Tone) ---
