@@ -1239,11 +1239,11 @@ export const promptMap = {
         requires: ['profile']
     },
     'PeerComparison': {
-        prompt: 'N/A' // Placeholder to satisfy help handler check
+        prompt: 'N/A'
     },
     'QarpAnalysis': {
         prompt: QARP_ANALYSIS_PROMPT,
-        requires: [] // Uses the same scorecard data as GARP Candidacy
+        requires: []
     },
     'UpdatedQarpMemo': {
         prompt: UPDATED_QARP_MEMO_PROMPT,
@@ -1271,7 +1271,7 @@ export const promptMap = {
     },
     'GarpCandidacy': {
         prompt: GARP_CANDIDACY_PROMPT,
-        requires: [] // This analysis calculates its own data, doesn't need pre-filtered FMP endpoints
+        requires: []
     },
     'GarpConvictionScore': {
         prompt: GARP_CONVICTION_SCORE_PROMPT,
@@ -1287,13 +1287,12 @@ export const promptMap = {
     },
     'LongTermCompounder': {
         prompt: LONG_TERM_COMPOUNDER_PROMPT,
-        requires: [] // Synthesis report, no direct FMP data
+        requires: []
     },
     'BmqvMemo': {
         prompt: BMQV_MEMO_PROMPT,
-        requires: [] // Synthesis report, no direct FMP data
+        requires: []
     },
-    // --- NEW DILIGENCE MEMOS ---
     'QualitativeDiligenceMemo': {
         prompt: QUALITATIVE_DILIGENCE_MEMO_PROMPT,
         requires: []
@@ -1310,7 +1309,6 @@ export const promptMap = {
         prompt: INVESTIGATION_SUMMARY_MEMO_PROMPT,
         requires: []
     },
-    // --- NEW ONGOING REVIEW MEMOS ---
     'QuarterlyReview': {
         prompt: QUARTERLY_REVIEW_MEMO_PROMPT,
         requires: []
@@ -1319,33 +1317,28 @@ export const promptMap = {
         prompt: ANNUAL_REVIEW_MEMO_PROMPT,
         requires: []
     },
-    // --- NEW FILING CHECK-IN MEMO ---
     'FilingCheckinMemo': {
         prompt: FILING_CHECKIN_MEMO_PROMPT,
         requires: []
     },
-    // --- V2 EXTRACTION & SYNTHESIS PROMPTS ---
     'MoatAnalysis_Extract': { prompt: MOAT_ANALYSIS_EXTRACT_PROMPT },
     'CapitalAllocators_Extract': { prompt: CAPITAL_ALLOCATORS_EXTRACT_PROMPT },
     'InvestmentMemo_Extract': { prompt: GARP_MEMO_EXTRACT_PROMPT },
     'QarpAnalysis_Extract': { prompt: QARP_ANALYSIS_EXTRACT_PROMPT },
     'LongTermCompounder_Extract': { prompt: COMPOUNDER_BMQV_EXTRACT_PROMPT },
     'BmqvMemo_Extract': { prompt: COMPOUNDER_BMQV_EXTRACT_PROMPT },
-    // --- NEW DILIGENCE EXTRACTORS ---
     'QualitativeDiligenceMemo_Extract': { prompt: QUALITATIVE_DILIGENCE_MEMO_EXTRACT_PROMPT },
     'StructuredDiligenceMemo_Extract': { prompt: STRUCTURED_DILIGENCE_MEMO_EXTRACT_PROMPT },
     'MarketSentimentMemo_Extract': { prompt: MARKET_SENTIMENT_MEMO_EXTRACT_PROMPT },
     'InvestigationSummaryMemo_Extract': { prompt: INVESTIGATION_SUMMARY_MEMO_EXTRACT_PROMPT },
-    // --- END DILIGENCE EXTRACTORS ---
     'FinalThesis_ConflictID': { prompt: FINAL_THESIS_CONFLICT_ID_PROMPT },
     'FinalInvestmentThesis': {
         prompt: FINAL_INVESTMENT_THESIS_PROMPT,
-        requires: [] // Synthesis report, no direct FMP data
+        requires: []
     },
-    // --- NEW UPDATED THESIS ---
     'UpdatedFinalThesis': {
         prompt: UPDATED_FINAL_THESIS_PROMPT,
-        requires: [] // Synthesis report, requires original thesis + diligence summaries
+        requires: []
     }
 };
 
