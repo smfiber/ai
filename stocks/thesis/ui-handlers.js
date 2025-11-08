@@ -2620,5 +2620,3 @@ export async function handleSaveFilingCheckinAnswers(symbol) {
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
-}
-// --- END NEW FUNCTION ---
