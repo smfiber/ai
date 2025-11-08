@@ -1390,5 +1390,5 @@ export const ANALYSIS_NAMES = {
     'MarketSentimentMemo': 'Market Sentiment Memo',
     'InvestigationSummaryMemo': 'Investigation Summary',
     'UpdatedFinalThesis': 'Updated Final Thesis',
-    'FilingCheckinMemo': 'Filing Check-in Memo' // <-- Added new entry
+    'FilingCheckinMemo': 'Filing Check-in Memo'
 };
