@@ -1392,5 +1392,3 @@ export const ANALYSIS_NAMES = {
     'UpdatedFinalThesis': 'Updated Final Thesis',
     'FilingCheckinMemo': 'Filing Check-in Memo' // <-- Added new entry
 };
-
-}
