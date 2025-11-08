@@ -371,9 +371,9 @@ Synthesize all the Core Data above into a professional Position Review Memo.
 **CRITICAL INSTRUCTIONS:**
 - Your final output MUST be a single, valid Markdown block.
 - You MUST use the exact Markdown structure (headings with '#', '##', bullet points with '-', and bolding with '**') as shown in the template.
-- Your response MUST begin *exactly* with `# Position Review: {companyName} ({tickerSymbol})`. Do NOT add any text before this heading.
+- Your response MUST begin *exactly* with \`# Position Review: {companyName} ({tickerSymbol})\`. Do NOT add any text before this heading.
 - Do NOT use numbered lists (1., 2., 3.). You MUST use Markdown '##' headings.
-- The `{latestThesisContent}` in the 'Core Data' is a *source* for your synthesis. Your final output MUST NOT just repeat this data; it MUST be newly formatted *only* according to the 'REQUIRED MARKDOWN TEMPLATE'.
+- The \`{latestThesisContent}\` in the 'Core Data' is a *source* for your synthesis. Your final output MUST NOT just repeat this data; it MUST be newly formatted *only* according to the 'REQUIRED MARKDOWN TEMPLATE'.
 
 --- REQUIRED MARKDOWN TEMPLATE ---
 # Position Review: {companyName} ({tickerSymbol})
