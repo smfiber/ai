@@ -543,7 +543,7 @@ export async function handlePositionAnalysisRequest(ticker, forceNew = false) {
             .replace('{positionDetails}', JSON.stringify(positionDetails, null, 2))
             .replace('{currentPrice}', `$${currentPrice.toFixed(2)}`);
 
-        const analysisResult = await generateRefinedArticle(prompt, loadingMessage);
+        const analysisResult = await generatePolishedArticleForSynthesis(prompt, loadingMessage);
 
         await autoSaveReport(ticker, reportType, analysisResult, prompt);
 
