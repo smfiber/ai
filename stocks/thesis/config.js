@@ -366,7 +366,7 @@ Role: You are a long-term Portfolio Manager reviewing an existing position.
 Objective: Your goal is to synthesize the **current state of your investment** (your P/L and the stock's current price) with the **latest fundamental check-in** on the company.
 
 **Core Data for Evaluation:**
-1. **Latest Fundamental Thesis (The `FilingCheckinMemo`):**
+1. **Latest Fundamental Thesis (The \`FilingCheckinMemo\`):**
 ---
 {latestThesisContent}
 ---
