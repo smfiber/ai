@@ -401,10 +401,10 @@ Synthesize all the Core Data above into a professional Position Review Memo. You
 ## 4. Verdict: Overpriced or Still Growing?
 [Your analysis here. Directly answer the user's question. Based on your objective risk/reward synthesis from Section 3 and the \`{currentPrice}\`, does the stock now appear "fully valued/overpriced," or does the "long-term growth thesis remain intact" with more room to run?]
 
-## 5. Recommendation & Justification
-**[Provide a clear, single-word recommendation: Hold, Add More, Trim Position, or Sell]**
+## 5. Long-Term Investment Verdict
+**[Your one-sentence, bolded verdict here. State whether the long-term investment thesis appears intact, challenged, or broken based on the synthesis.]**
 
-[Your justification here. Your reasoning must connect the fundamental thesis (Section 2) and your **objective risk/reward synthesis** (Section 3) with the valuation verdict (Section 4).]
+[Your justification here. Synthesize *why* this is the long-term verdict. Connect the fundamental strengths (Section 2), the objective risk/reward synthesis (Section 3), and the valuation verdict (Section 4) to form a final conclusion on the stock's long-term merit as an investment.]
 `.trim();
 
 // --- FINAL GARP CANDIDACY PROMPT (Version 6 - Incorporating Sector Context, Contradiction Acknowledgment, and Neutral Tone) ---
