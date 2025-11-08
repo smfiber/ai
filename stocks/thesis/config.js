@@ -378,36 +378,36 @@ Synthesize all the Core Data above into a professional Position Review Memo.
 --- REQUIRED MARKDOWN TEMPLATE ---
 # Position Review: {companyName} ({tickerSymbol})
 
-## 1. Quantitative Position Snapshot
+## Quantitative Position Snapshot
 - **Cost Basis:** [Extract from positionDetails.totalCostBasis]
 - **Current Market Value:** [Extract from positionDetails.currentMarketValue]
 - **Unrealized Gain/Loss:** [Extract from positionDetails.unrealizedGainLoss]
 - **Holding Period:** [Extract from positionDetails.holdingPeriod]
 
-## 2. Thesis & Price Synthesis
+## Thesis & Price Synthesis
 [Your analysis here. Compare the **Latest Fundamental Thesis** against the **Quantitative Position Snapshot**.
 - First, summarize the recommendation from the \`{latestThesisContent}\` (e.g., "The latest filing check-in confirmed the thesis and upgraded the recommendation to 'A'").
 - Second, analyze this in the context of your P/L. For example, if you have a loss, does the 'A' rating confirm this is a good time to add to the position?]
 
-## 3. Risk / Reward Synthesis
+## Risk / Reward Synthesis
 [Your analysis here. Based on the \`{latestThesisContent}\` and current market context, identify the primary bear arguments or risks (e.g., high P/E valuation, execution risk). Then, **objectively weigh them against the fundamental strengths** identified in the thesis (e.g., AI demand, GAAP misinterpretation). Does the market appear to be pricing in the risk appropriately, or does the thesis present a compelling argument that the strengths outweigh the risks?]
 
-## 4. Verdict: Overpriced or Still Growing?
+## Verdict: Overpriced or Still Growing?
 [Your analysis here. Directly answer the user's question. Based on your objective risk/reward synthesis from Section 3 and the \`{currentPrice}\`, does the stock now appear "fully valued/overpriced," or does the "long-term growth thesis remain intact" with more room to run?]
 
-## 5. Long-Term Investment Verdict
+## Long-Term Investment Verdict
 **[Your one-sentence, bolded verdict here. State whether the long-term investment thesis appears intact, challenged, or broken based on the synthesis.]**
 
 [Your justification here. Synthesize *why* this is the long-term verdict. Connect the fundamental strengths (Section 2), the objective risk/reward synthesis (Section 3), and the valuation verdict (Section 4) to form a final conclusion on the stock's long-term merit as an investment.]
 
 ---
 **Core Data for Evaluation:**
-1. **Latest Fundamental Thesis (The FilingCheckinMemo):**
+**Latest Fundamental Thesis (The FilingCheckinMemo):**
 ---
 {latestThesisContent}
 ---
-2. **Our Current Position:** {positionDetails}
-3. **Current Market Price:** {currentPrice}
+**Our Current Position:** {positionDetails}
+**Current Market Price:** {currentPrice}
 `.trim();
 
 // --- FINAL GARP CANDIDACY PROMPT (Version 6 - Incorporating Sector Context, Contradiction Acknowledgment, and Neutral Tone) ---
