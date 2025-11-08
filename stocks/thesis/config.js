@@ -378,7 +378,7 @@ Synthesize all the Core Data above into a professional Position Review Memo. You
 
 **CRITICAL INSTRUCTIONS:**
 - Your final output MUST be a single, valid Markdown block.
-- You MUST use the exact Markdown structure (headings with '#', bullet points with '-', and bolding with '**') as shown in the template below.
+- You MUST use the exact Markdown structure (headings with '#', '##', bullet points with '-', and bolding with '**') as shown in the template below.
 - Do NOT deviate or output plain text.
 
 --- REQUIRED MARKDOWN TEMPLATE ---
@@ -393,16 +393,18 @@ Synthesize all the Core Data above into a professional Position Review Memo. You
 ## 2. Thesis & Price Synthesis
 [Your analysis here. Compare the **Latest Fundamental Thesis** against the **Quantitative Position Snapshot**.
 - First, summarize the recommendation from the \`{latestThesisContent}\` (e.g., "The latest filing check-in confirmed the thesis and upgraded the recommendation to 'A'").
-- Second, analyze this in the context of your P/L. For example, if you have a large gain, does the 'A' rating suggest adding more, or is the {currentPrice} now fully valued?
-- If you have a loss, does the 'A' rating confirm this is a good time to add to the position?]
+- Second, analyze this in the context of your P/L. For example, if you have a loss, does the 'A' rating confirm this is a good time to add to the position?]
 
-## 3. Verdict: Overpriced or Still Growing?
-[Your analysis here. Directly answer the user's question. Based on the \`{latestThesisContent}\` and the \`{currentPrice}\`, does the stock now appear "fully valued/overpriced," or does the "long-term growth thesis remain intact" with more room to run?]
+## 3. Risk / Reward Synthesis
+[Your analysis here. Based on the \`{latestThesisContent}\` and current market context, identify the primary bear arguments or risks (e.g., high P/E valuation, execution risk). Then, **objectively weigh them against the fundamental strengths** identified in the thesis (e.g., AI demand, GAAP misinterpretation). Does the market appear to be pricing in the risk appropriately, or does the thesis present a compelling argument that the strengths outweigh the risks?]
 
-## 4. Recommendation & Justification
+## 4. Verdict: Overpriced or Still Growing?
+[Your analysis here. Directly answer the user's question. Based on your objective risk/reward synthesis from Section 3 and the \`{currentPrice}\`, does the stock now appear "fully valued/overpriced," or does the "long-term growth thesis remain intact" with more room to run?]
+
+## 5. Recommendation & Justification
 **[Provide a clear, single-word recommendation: Hold, Add More, Trim Position, or Sell]**
 
-[Your justification here. Your reasoning must connect the fundamental thesis from \`{latestThesisContent}\` with the valuation context from \`{currentPrice}\` and your position's P/L.]
+[Your justification here. Your reasoning must connect the fundamental thesis (Section 2) and your **objective risk/reward synthesis** (Section 3) with the valuation verdict (Section 4).]
 `.trim();
 
 // --- FINAL GARP CANDIDACY PROMPT (Version 6 - Incorporating Sector Context, Contradiction Acknowledgment, and Neutral Tone) ---
