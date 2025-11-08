@@ -376,9 +376,12 @@ Objective: Your goal is to synthesize the **current state of your investment** (
 **Task:**
 Synthesize all the Core Data above into a professional Position Review Memo. Your analysis must answer the user's key questions.
 
-**CRITICAL INSTRUCTION: Your final output MUST use the exact markdown structure shown in the example below. Do NOT deviate.**
+**CRITICAL INSTRUCTIONS:**
+- Your final output MUST be a single, valid Markdown block.
+- You MUST use the exact Markdown structure (headings with '#', bullet points with '-', and bolding with '**') as shown in the template below.
+- Do NOT deviate or output plain text.
 
-**EXAMPLE OUTPUT FORMAT:**
+--- REQUIRED MARKDOWN TEMPLATE ---
 # Position Review: {companyName} ({tickerSymbol})
 
 ## 1. Quantitative Position Snapshot
@@ -400,7 +403,6 @@ Synthesize all the Core Data above into a professional Position Review Memo. You
 **[Provide a clear, single-word recommendation: Hold, Add More, Trim Position, or Sell]**
 
 [Your justification here. Your reasoning must connect the fundamental thesis from \`{latestThesisContent}\` with the valuation context from \`{currentPrice}\` and your position's P/L.]
----
 `.trim();
 
 // --- FINAL GARP CANDIDACY PROMPT (Version 6 - Incorporating Sector Context, Contradiction Acknowledgment, and Neutral Tone) ---
