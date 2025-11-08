@@ -474,26 +474,13 @@ export async function handlePositionAnalysisRequest(ticker, forceNew = false) {
         const portfolioData = state.portfolioCache.find(s => s.ticker === ticker);
         const fmpData = await getFmpStockData(ticker);
 
-        const memoReports = getReportsFromCache(ticker, 'InvestmentMemo');
-        const moatReports = getReportsFromCache(ticker, 'MoatAnalysis');
-        const capitalReports = getReportsFromCache(ticker, 'CapitalAllocators');
-
+        const memoReports = getReportsFromCache(ticker, 'FilingCheckinMemo');
         let sourceReportContent;
+
         if (memoReports.length > 0) {
             sourceReportContent = memoReports[0].content;
         } else {
-            const candidacyReports = getReportsFromCache(ticker, 'GarpCandidacy');
-            if (candidacyReports.length === 0) {
-                throw new Error(`The foundational 'GARP Analysis Report' or 'Investment Memo' must be generated first.`);
-            }
-            sourceReportContent = (candidacyReports[0].content || '').split('## Actionable Diligence Questions')[0].trim();
-        }
-
-        if (moatReports.length === 0) {
-            throw new Error("The 'Moat Analysis' report must be generated first to re-evaluate the thesis.");
-        }
-        if (capitalReports.length === 0) {
-            throw new Error("The 'Capital Allocators' report must be generated first to re-evaluate the thesis.");
+            throw new Error(`The 'Filing Check-in Memo' must be generated first. Please run that report from the 'Filing Check-in' tab.`);
         }
 
         if (!fmpData || !fmpData.profile || !fmpData.profile.length === 0) {
@@ -552,9 +539,7 @@ export async function handlePositionAnalysisRequest(ticker, forceNew = false) {
         const prompt = promptConfig.prompt
             .replace('{companyName}', companyName)
             .replace('{tickerSymbol}', ticker)
-            .replace('{moatAnalysisReport}', moatReports[0].content)
-            .replace('{capitalAllocatorsReport}', capitalReports[0].content)
-            .replace('{investmentMemoContent}', sourceReportContent)
+            .replace('{latestThesisContent}', sourceReportContent)
             .replace('{positionDetails}', JSON.stringify(positionDetails, null, 2))
             .replace('{currentPrice}', `$${currentPrice.toFixed(2)}`);
 
@@ -2551,7 +2536,7 @@ export async function handleFilingCheckinMemoRequest(symbol) {
             .replace('{newFilingDiligenceAnswers}', newFilingDiligenceAnswers);
 
         loadingMessage.textContent = `AI is synthesizing your Filing Check-in Memo...`;
-        const memoContent = await generateRefinedArticle(prompt, loadingMessage);
+        const memoContent = await generateRefinedArticle(prompt);
 
         // 4. Save and update UI
         await autoSaveReport(symbol, reportType, memoContent, prompt);
@@ -2619,7 +2604,7 @@ export async function handleSaveFilingCheckinAnswers(symbol) {
     document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Saving ${sectionConfig.name} answers...`;
 
     try {
-        const docRef = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(symbol).collection('diligence_answers').doc(diligenceType);
+        const docRef = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(symbol).collection('diliggance_answers').doc(diligenceType);
         await docRef.set({
             savedAt: firebase.firestore.Timestamp.now(),
             answers: qaPairs
@@ -2637,3 +2622,5 @@ export async function handleSaveFilingCheckinAnswers(symbol) {
     }
 }
 // --- END NEW FUNCTION ---
+
+}
