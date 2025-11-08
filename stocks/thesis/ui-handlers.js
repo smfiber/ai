@@ -543,7 +543,7 @@ export async function handlePositionAnalysisRequest(ticker, forceNew = false) {
             .replace('{positionDetails}', JSON.stringify(positionDetails, null, 2))
             .replace('{currentPrice}', `$${currentPrice.toFixed(2)}`);
 
-        const analysisResult = await callGeminiApi(prompt);
+        const analysisResult = await generateRefinedArticle(prompt, loadingMessage);
 
         await autoSaveReport(ticker, reportType, analysisResult, prompt);
 
@@ -2437,7 +2437,7 @@ async function _handleReviewRequest(symbol, reviewType) {
             .replace('{qaData}', qaData);
 
         loadingMessage.textContent = `AI is synthesizing your ${reviewType} Review Memo...`;
-        const memoContent = await generateRefinedArticle(prompt);
+        const memoContent = await generateRefinedArticle(prompt, loadingMessage);
 
         await autoSaveReport(symbol, reportType, memoContent, prompt);
 
@@ -2604,7 +2604,7 @@ export async function handleSaveFilingCheckinAnswers(symbol) {
     document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Saving ${sectionConfig.name} answers...`;
 
     try {
-        const docRef = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(symbol).collection('diliggance_answers').doc(diligenceType);
+        const docRef = state.db.collection(CONSTANTS.DB_COLLECTION_FMP_CACHE).doc(symbol).collection('diligence_answers').doc(diligenceType);
         await docRef.set({
             savedAt: firebase.firestore.Timestamp.now(),
             answers: qaPairs
