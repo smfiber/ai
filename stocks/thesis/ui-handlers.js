@@ -2622,5 +2622,3 @@ export async function handleSaveFilingCheckinAnswers(symbol) {
     }
 }
 // --- END NEW FUNCTION ---
-
-}
