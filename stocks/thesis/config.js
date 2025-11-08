@@ -366,7 +366,7 @@ Role: You are a long-term Portfolio Manager reviewing an existing position.
 Objective: Your goal is to synthesize the **current state of your investment** (your P/L and the stock's current price) with the **latest fundamental check-in** on the company.
 
 **Core Data for Evaluation:**
-1. **Latest Fundamental Thesis (The \`FilingCheckinMemo\`):**
+1. **Latest Fundamental Thesis (The `FilingCheckinMemo`):**
 ---
 {latestThesisContent}
 ---
@@ -1239,11 +1239,11 @@ export const promptMap = {
         requires: ['profile']
     },
     'PeerComparison': {
-        prompt: 'N/A'
+        prompt: 'N/A' // Placeholder to satisfy help handler check
     },
     'QarpAnalysis': {
         prompt: QARP_ANALYSIS_PROMPT,
-        requires: []
+        requires: [] // Uses the same scorecard data as GARP Candidacy
     },
     'UpdatedQarpMemo': {
         prompt: UPDATED_QARP_MEMO_PROMPT,
@@ -1271,7 +1271,7 @@ export const promptMap = {
     },
     'GarpCandidacy': {
         prompt: GARP_CANDIDACY_PROMPT,
-        requires: []
+        requires: [] // This analysis calculates its own data, doesn't need pre-filtered FMP endpoints
     },
     'GarpConvictionScore': {
         prompt: GARP_CONVICTION_SCORE_PROMPT,
@@ -1287,12 +1287,13 @@ export const promptMap = {
     },
     'LongTermCompounder': {
         prompt: LONG_TERM_COMPOUNDER_PROMPT,
-        requires: []
+        requires: [] // Synthesis report, no direct FMP data
     },
     'BmqvMemo': {
         prompt: BMQV_MEMO_PROMPT,
-        requires: []
+        requires: [] // Synthesis report, no direct FMP data
     },
+    // --- NEW DILIGENCE MEMOS ---
     'QualitativeDiligenceMemo': {
         prompt: QUALITATIVE_DILIGENCE_MEMO_PROMPT,
         requires: []
@@ -1309,6 +1310,7 @@ export const promptMap = {
         prompt: INVESTIGATION_SUMMARY_MEMO_PROMPT,
         requires: []
     },
+    // --- NEW ONGOING REVIEW MEMOS ---
     'QuarterlyReview': {
         prompt: QUARTERLY_REVIEW_MEMO_PROMPT,
         requires: []
@@ -1317,28 +1319,33 @@ export const promptMap = {
         prompt: ANNUAL_REVIEW_MEMO_PROMPT,
         requires: []
     },
+    // --- NEW FILING CHECK-IN MEMO ---
     'FilingCheckinMemo': {
         prompt: FILING_CHECKIN_MEMO_PROMPT,
         requires: []
     },
+    // --- V2 EXTRACTION & SYNTHESIS PROMPTS ---
     'MoatAnalysis_Extract': { prompt: MOAT_ANALYSIS_EXTRACT_PROMPT },
     'CapitalAllocators_Extract': { prompt: CAPITAL_ALLOCATORS_EXTRACT_PROMPT },
     'InvestmentMemo_Extract': { prompt: GARP_MEMO_EXTRACT_PROMPT },
     'QarpAnalysis_Extract': { prompt: QARP_ANALYSIS_EXTRACT_PROMPT },
     'LongTermCompounder_Extract': { prompt: COMPOUNDER_BMQV_EXTRACT_PROMPT },
     'BmqvMemo_Extract': { prompt: COMPOUNDER_BMQV_EXTRACT_PROMPT },
+    // --- NEW DILIGENCE EXTRACTORS ---
     'QualitativeDiligenceMemo_Extract': { prompt: QUALITATIVE_DILIGENCE_MEMO_EXTRACT_PROMPT },
     'StructuredDiligenceMemo_Extract': { prompt: STRUCTURED_DILIGENCE_MEMO_EXTRACT_PROMPT },
     'MarketSentimentMemo_Extract': { prompt: MARKET_SENTIMENT_MEMO_EXTRACT_PROMPT },
     'InvestigationSummaryMemo_Extract': { prompt: INVESTIGATION_SUMMARY_MEMO_EXTRACT_PROMPT },
+    // --- END DILIGENCE EXTRACTORS ---
     'FinalThesis_ConflictID': { prompt: FINAL_THESIS_CONFLICT_ID_PROMPT },
     'FinalInvestmentThesis': {
         prompt: FINAL_INVESTMENT_THESIS_PROMPT,
-        requires: []
+        requires: [] // Synthesis report, no direct FMP data
     },
+    // --- NEW UPDATED THESIS ---
     'UpdatedFinalThesis': {
         prompt: UPDATED_FINAL_THESIS_PROMPT,
-        requires: []
+        requires: [] // Synthesis report, requires original thesis + diligence summaries
     }
 };
 
@@ -1383,5 +1390,5 @@ export const ANALYSIS_NAMES = {
     'MarketSentimentMemo': 'Market Sentiment Memo',
     'InvestigationSummaryMemo': 'Investigation Summary',
     'UpdatedFinalThesis': 'Updated Final Thesis',
-    'FilingCheckinMemo': 'Filing Check-in Memo'
+    'FilingCheckinMemo': 'Filing Check-in Memo' // <-- Added new entry
 };
