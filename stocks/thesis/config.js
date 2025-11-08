@@ -362,54 +362,44 @@ JSON Data for the Entire Portfolio:
 `.trim();
 
 const POSITION_ANALYSIS_PROMPT = `
-Role: You are a pragmatic Portfolio Manager reviewing a position for a GARP (Growth at a Reasonable Price) fund.
-Objective: Re-evaluate the investment thesis based on the current reality of our position. Your job is to act as a critical second opinion and identify crucial next steps before deploying more capital.
+Role: You are a long-term Portfolio Manager reviewing an existing position.
+Objective: Your goal is to synthesize the **current state of your investment** (your P/L and the stock's current price) with the **latest fundamental check-in** on the company.
 
 **Core Data for Evaluation:**
-1. **Original Moat Analysis:**
+1. **Latest Fundamental Thesis (The FilingCheckinMemo):**
 ---
-{moatAnalysisReport}
+{latestThesisContent}
 ---
-2. **Original Capital Allocators Report:**
----
-{capitalAllocatorsReport}
----
-3. **Original Investment Memo (Synthesis):**
----
-{investmentMemoContent}
----
-4. **Our Current Position:** {positionDetails}
-5. **Current Market Price:** {currentPrice}
+2. **Our Current Position:** {positionDetails}
+3. **Current Market Price:** {currentPrice}
 
 **Task:**
-Synthesize all the Core Data above into a professional Position Review Memo.
-1.  **Thesis Re-evaluation:** Briefly summarize the memo's thesis. Now, critically re-evaluate it. Does the recent price action challenge the core assumptions about the company's Moat or Management Quality? Or does it confirm the original risks (like market sentiment)?
-2.  **Quantitative Snapshot:** List the metrics from "Our Current Position."
-3.  **Recommendation & Justification:** Provide a clear, single-word recommendation (Hold, Acquire More, Trim Position, or Sell). Justify it by directly referencing the original reports and our current position's status.
-4.  **Critical Follow-Up Questions:** Based on your re-evaluation, what are the 1-2 most critical questions an analyst MUST answer *before* acting on your recommendation? Frame these as actionable diligence items.
+Synthesize all the Core Data above into a professional Position Review Memo. Your analysis must answer the user's key questions.
 
 **CRITICAL INSTRUCTION: Your final output MUST use the exact markdown structure shown in the example below. Do NOT deviate.**
 
 **EXAMPLE OUTPUT FORMAT:**
-# Position Review: ExampleCorp (EXMP)
+# Position Review: {companyName} ({tickerSymbol})
 
-## 1. Thesis Re-evaluation
-(Your full paragraph of analysis goes here...)
+## 1. Quantitative Position Snapshot
+- **Cost Basis:** [Extract from positionDetails.totalCostBasis]
+- **Current Market Value:** [Extract from positionDetails.currentMarketValue]
+- **Unrealized Gain/Loss:** [Extract from positionDetails.unrealizedGainLoss]
+- **Holding Period:** [Extract from positionDetails.holdingPeriod]
 
-## 2. Quantitative Snapshot
-- **Cost Basis:** $10,000.00
-- **Current Market Value:** $12,000.00
-- **Unrealized Gain/Loss:** $2,000.00 (20.00%)
-- **Holding Period:** 1 year(s), 2 month(s)
+## 2. Thesis & Price Synthesis
+[Your analysis here. Compare the **Latest Fundamental Thesis** against the **Quantitative Position Snapshot**.
+- First, summarize the recommendation from the \`{latestThesisContent}\` (e.g., "The latest filing check-in confirmed the thesis and upgraded the recommendation to 'A'").
+- Second, analyze this in the context of your P/L. For example, if you have a large gain, does the 'A' rating suggest adding more, or is the {currentPrice} now fully valued?
+- If you have a loss, does the 'A' rating confirm this is a good time to add to the position?]
 
-## 3. Recommendation & Justification
-**Acquire More**
+## 3. Verdict: Overpriced or Still Growing?
+[Your analysis here. Directly answer the user's question. Based on the \`{latestThesisContent}\` and the \`{currentPrice}\`, does the stock now appear "fully valued/overpriced," or does the "long-term growth thesis remain intact" with more room to run?]
 
-(Your 2-3 sentence justification goes here...)
+## 4. Recommendation & Justification
+**[Provide a clear, single-word recommendation: Hold, Add More, Trim Position, or Sell]**
 
-## 4. Critical Follow-Up Questions
-- (Your first critical question goes here...)
-- (Your second critical question goes here...)
+[Your justification here. Your reasoning must connect the fundamental thesis from \`{latestThesisContent}\` with the valuation context from \`{currentPrice}\` and your position's P/L.]
 ---
 `.trim();
 
