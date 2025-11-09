@@ -460,7 +460,7 @@ export async function handlePositionAnalysisRequest(ticker, forceNew = false) {
 
         if (savedReports.length > 0 && !forceNew) {
             const latestReport = savedReports[0];
-            displayReport(contentContainer, latestReport.content, latestReport.prompt);
+            displayReport(container, latestReport.content, latestReport.prompt);
             container.dataset.currentPrompt = latestReport.prompt || '';
             container.dataset.rawMarkdown = latestReport.content;
             updateReportStatus(statusContainer, savedReports, latestReport.id, { reportType, symbol: ticker });
