@@ -431,7 +431,6 @@ export async function openRawDataViewer(ticker) {
         titleEl.textContent = `Analysis for ${ticker}`;
 
         // --- DASHBOARD TAB ---
-        // (No changes here)
         if (dashboardTab) {
             // Add skeleton/placeholders first
             dashboardTab.innerHTML = `
@@ -518,16 +517,17 @@ export async function openRawDataViewer(ticker) {
 
 
         // --- POSITION ANALYSIS TAB ---
-        // (No changes here)
         positionAnalysisTabButton = document.querySelector('.tab-button[data-tab="position-analysis"]');
         const portfolioData = state.portfolioCache.find(s => s.ticker === ticker);
         if (positionAnalysisTab && portfolioData && (portfolioData.transactions?.length > 0 || portfolioData.shares > 0)) {
             positionAnalysisTabButton?.classList.remove('hidden');
             const helpIconHtmlPos = `<button data-report-type="PositionAnalysis" class="ai-help-button p-1 rounded-full hover:bg-indigo-100" title="What is this?"><svg class="w-5 h-5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" /></svg></button>`;
+            
+            // --- MODIFICATION: Added ID to button wrapper div ---
             positionAnalysisTab.innerHTML = `
                 <div id="report-status-container-position" class="hidden p-3 mb-4 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between gap-4"></div>
                 <div id="position-analysis-content-container">
-                    <div class="text-center p-8 bg-gray-50 rounded-lg">
+                    <div id="position-analysis-button-wrapper" class="text-center p-8 bg-gray-50 rounded-lg">
                         <div class="flex justify-center items-center gap-2 mb-2">
                             <h3 class="text-xl font-bold text-gray-800">Position Review</h3>
                             ${helpIconHtmlPos}
@@ -539,11 +539,11 @@ export async function openRawDataViewer(ticker) {
                     </div>
                     <div id="position-analysis-report-container" class="prose max-w-none mt-6"></div>
                 </div>`;
+            // --- END MODIFICATION ---
             positionAnalysisContainer = document.getElementById('position-analysis-content-container'); // Now get handle
         }
 
         // --- RAW DATA TAB ---
-        // (No changes here)
         if (rawDataTab) {
             rawDataTab.innerHTML = `<div id="raw-data-accordion-container"></div>`; // Set innerHTML first
             rawDataContainer = document.getElementById('raw-data-accordion-container'); // Then get handle
@@ -565,7 +565,6 @@ export async function openRawDataViewer(ticker) {
         }
 
         // --- AI ANALYSIS TAB ---
-        // (No changes here)
         if (aiAnalysisContainer) {
             const deepDiveButtons = [
                 { reportType: 'MoatAnalysis', text: 'Moat Analysis', tooltip: 'Evaluates the company\'s competitive advantages.' },
@@ -666,7 +665,6 @@ export async function openRawDataViewer(ticker) {
 
 
         // --- DILIGENCE HUB TAB ---
-        // (No changes here)
         if (diligenceHubContainer) {
             const copyIcon = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125H4.875A1.125 1.125 0 013.75 20.625V7.875c0-.621.504-1.125 1.125-1.125H6.75m9 9.375h3.375c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125h-9.75A1.125 1.125 0 006 9.375v9.75c0 .621.504 1.125 1.125 1.125h3.375m-3.75-9.375V6.125c0-.621.504-1.125 1.125-1.125h9.75c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-3.375" /></svg>`;
             diligenceHubContainer.innerHTML = `
@@ -749,7 +747,6 @@ export async function openRawDataViewer(ticker) {
         }
 
         // --- FINAL THESIS TAB ---
-        // (No changes here)
         if (finalThesisContainer) {
             const copyIcon = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125H4.875A1.125 1.125 0 013.75 20.625V7.875c0-.621.504-1.125 1.125-1.125H6.75m9 9.375h3.375c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125h-9.75A1.125 1.125 0 006 9.375v9.75c0 .621.504 1.125 1.125 1.125h3.375m-3.75-9.375V6.125c0-.621.504-1.125 1.125-1.125h9.75c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-3.375" /></svg>`;
             
