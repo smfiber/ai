@@ -450,20 +450,35 @@ export async function handleReportHelpRequest(reportType) {
 }
 
 export async function handlePositionAnalysisRequest(ticker, forceNew = false) {
-    const container = document.getElementById('position-analysis-content-container');
+    // --- MODIFICATION: Target the correct inner containers ---
+    const reportContainer = document.getElementById('position-analysis-report-container');
+    const buttonWrapper = document.getElementById('position-analysis-button-wrapper');
+    // --- END MODIFICATION ---
     const statusContainer = document.getElementById('report-status-container-position');
     const reportType = 'PositionAnalysis';
-    if (!container || !statusContainer) return;
+
+    // --- MODIFICATION: Check reportContainer, not the old 'container' ---
+    if (!reportContainer || !statusContainer || !buttonWrapper) {
+        console.error("Position analysis containers not found in the DOM.");
+        return;
+    }
+    // --- END MODIFICATION ---
 
     try {
         const savedReports = getReportsFromCache(ticker, reportType);
 
         if (savedReports.length > 0 && !forceNew) {
             const latestReport = savedReports[0];
-            displayReport(container, latestReport.content, latestReport.prompt);
-            container.dataset.currentPrompt = latestReport.prompt || '';
-            container.dataset.rawMarkdown = latestReport.content;
+            // --- MODIFICATION: Target the correct inner container ---
+            displayReport(reportContainer, latestReport.content, latestReport.prompt);
+            reportContainer.dataset.currentPrompt = latestReport.prompt || '';
+            reportContainer.dataset.rawMarkdown = latestReport.content;
+            // --- END MODIFICATION ---
             updateReportStatus(statusContainer, savedReports, latestReport.id, { reportType, symbol: ticker });
+            
+            // --- MODIFICATION: Hide the button wrapper ---
+            buttonWrapper.classList.add('hidden');
+            // --- END MODIFICATION ---
             return;
         }
 
@@ -543,25 +558,41 @@ export async function handlePositionAnalysisRequest(ticker, forceNew = false) {
             .replace('{positionDetails}', JSON.stringify(positionDetails, null, 2))
             .replace('{currentPrice}', `$${currentPrice.toFixed(2)}`);
 
-        const analysisResult = await generateRefinedArticle(prompt, loadingMessage);
+        // --- MODIFICATION: Switch to callGeminiApi to get raw markdown ---
+        const analysisResult = await callGeminiApi(prompt);
+        // --- END MODIFICATION ---
 
         await autoSaveReport(ticker, reportType, analysisResult, prompt);
 
         const refreshedReports = getReportsFromCache(ticker, reportType);
 
-        displayReport(container, analysisResult, prompt);
+        // --- MODIFICATION: Target the correct inner container ---
+        displayReport(reportContainer, analysisResult, prompt);
+        reportContainer.dataset.currentPrompt = prompt || '';
+        reportContainer.dataset.rawMarkdown = analysisResult;
+        // --- END MODIFICATION ---
         updateReportStatus(statusContainer, refreshedReports, refreshedReports[0].id, { reportType, symbol: ticker });
+        
+        // --- MODIFICATION: Hide the button wrapper ---
+        buttonWrapper.classList.add('hidden');
+        // --- END MODIFICATION ---
 
     } catch (error) {
         console.error("Error during Position Analysis:", error);
         displayMessageInModal(`Could not complete analysis: ${error.message}`, 'error');
+        // --- MODIFICATION: Target the correct inner container for error ---
         const containerHtml = `<p class="text-red-500 p-4">Could not complete analysis: ${error.message}</p>`;
 
         if(statusContainer) {
             statusContainer.classList.add('hidden');
             statusContainer.innerHTML = '';
         }
-        container.innerHTML = containerHtml;
+        reportContainer.innerHTML = containerHtml;
+        // --- END MODIFICATION ---
+        
+        // --- MODIFICATION: Show the button wrapper on error ---
+        buttonWrapper.classList.remove('hidden');
+        // --- END MODIFICATION ---
         throw error; // Re-throw to signal failure
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
