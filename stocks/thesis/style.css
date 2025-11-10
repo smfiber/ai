@@ -288,22 +288,47 @@ body.modal-open {
 
 /*
  * =================================================================
- * TAB STYLES
+ * TAB STYLES (NEW VERTICAL LAYOUT)
  * =================================================================
  */
 
+.analysis-nav {
+    width: 240px;
+    flex-shrink: 0;
+    background-color: #ffffff;
+    border-right: 1px solid #e5e7eb;
+    padding: 1rem;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
 .tab-button {
-    padding: 1rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
     font-weight: 600;
     font-size: 0.875rem;
-    color: #6b7280;
-    border-bottom: 3px solid transparent;
+    color: #4b5563;
+    border-radius: 0.5rem;
+    border-left: 4px solid transparent;
     transition: all 0.2s ease-in-out;
     cursor: pointer;
     background-color: transparent;
     border-top: none;
-    border-left: none;
     border-right: none;
+    border-bottom: none;
+    width: 100%;
+    text-align: left;
+}
+
+.tab-button svg {
+    width: 1.25rem; /* 20px */
+    height: 1.25rem; /* 20px */
+    flex-shrink: 0;
+    color: #6b7280;
 }
 
 .tab-button:hover {
@@ -311,10 +336,20 @@ body.modal-open {
     background-color: #f9fafb;
 }
 
+.tab-button:hover svg {
+    color: #1f2937;
+}
+
 .tab-button.active {
     color: var(--color-primary);
-    border-bottom-color: var(--color-primary);
+    border-left-color: var(--color-primary);
+    background-color: #eef2ff;
 }
+
+.tab-button.active svg {
+    color: var(--color-primary);
+}
+
 
 @keyframes spin {
   from {
