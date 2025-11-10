@@ -4,7 +4,7 @@ import { openModal, closeModal, displayMessageInModal, openStockListModal, openM
 import { fetchAndCachePortfolioData, renderPortfolioManagerList, renderGarpScorecardDashboard, renderGarpInterpretationAnalysis } from './ui-render.js';
 import { handleResearchSubmit, handleSaveStock, handleDeleteStock, handleRefreshFmpData, handleAnalysisRequest, handleGarpMemoRequest, handleSaveReportToDb, handleGeneratePrereqsRequest, handleGarpCandidacyRequest, handlePortfolioGarpAnalysisRequest, handlePositionAnalysisRequest, handleReportHelpRequest, handleManualDiligenceSave, handleDeleteDiligenceLog, handleWorkflowHelpRequest, handleManualPeerAnalysisRequest, handleGenerateFilingQuestionsRequest, handleSaveFilingDiligenceRequest, handleDeleteFilingDiligenceLog, handleGenerateUpdatedGarpMemoRequest, handleGenerateUpdatedQarpMemoRequest, handleAnalyzeEightKRequest, handleCompounderMemoRequest, handleBmqvMemoRequest, handleFinalThesisRequest, handleKpiSuggestionRequest, handleCopyReportRequest, handleFullAnalysisWorkflow, handleDiligenceMemoRequest, handleSaveDiligenceAnswers, handleDeleteAllDiligenceAnswers, handleDeleteOldDiligenceLogs, handleInvestigationSummaryRequest, handleQuarterlyReviewRequest, handleAnnualReviewRequest, handleUpdatedFinalThesisRequest, handleSaveFinalThesisAnswers, handleFilingCheckinMemoRequest, handleSaveFilingCheckinAnswers } from './ui-handlers.js'; // Added handleFilingCheckinMemoRequest & handleSaveFilingCheckinAnswers
 import { getFmpStockData } from './api.js';
-import { _calculateGarpScorecardMetrics } from './analysis-helpers.js';
+import { _calculateGarpScorecardMetrics, renderAnalysisScorecardHtml } from './analysis-helpers.js';
 
 // --- DYNAMIC TOOLTIPS ---
 function initializeTooltips() {
@@ -104,8 +104,17 @@ async function handleScorecardEdit(target) {
         // Re-render the dashboard to show the updated score and indicator
         const garpScorecardContainer = document.getElementById('garp-scorecard-container');
         const fmpData = await getFmpStockData(ticker);
+        const newMetrics = _calculateGarpScorecardMetrics(fmpData);
+        
         renderGarpScorecardDashboard(garpScorecardContainer, ticker, fmpData);
-        renderGarpInterpretationAnalysis(garpScorecardContainer, _calculateGarpScorecardMetrics(fmpData));
+        renderGarpInterpretationAnalysis(garpScorecardContainer, newMetrics);
+
+        // --- NEW: Re-render the Analysis Scorecard tab to keep it in sync ---
+        const scorecardTab = document.getElementById('scorecard-tab');
+        if (scorecardTab) {
+            scorecardTab.innerHTML = renderAnalysisScorecardHtml(newMetrics);
+        }
+        // --- END NEW ---
 
         // Also regenerate the AI candidacy report to reflect the new numbers
         // handleGarpCandidacyRequest(ticker, true);
