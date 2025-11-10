@@ -419,6 +419,10 @@ export async function openRawDataViewer(ticker) {
 
 
         const profile = fmpData.profile[0];
+        // --- NEW: Update modal title with Ticker (CompanyName) and Logo ---
+        const companyNameForTitle = profile.companyName ? `(${profile.companyName})` : '';
+        titleEl.textContent = `${ticker} ${companyNameForTitle}`;
+        // --- END NEW ---
 
         const getAnswersMap = (snap) => snap.exists ? new Map(snap.data().answers.map(item => [item.question, item.answer])) : new Map();
         const savedQualitativeAnswers = getAnswersMap(qualitativeSnap);
@@ -428,8 +432,6 @@ export async function openRawDataViewer(ticker) {
         const savedFilingCheckinAnswers = getAnswersMap(filingCheckinSnap); // <-- NEW
 
         // 4. POPULATE THE CLEAN STATE
-        titleEl.textContent = `Analysis for ${ticker}`;
-
         // --- DASHBOARD TAB ---
         if (dashboardTab) {
             // Add skeleton/placeholders first
@@ -450,8 +452,17 @@ export async function openRawDataViewer(ticker) {
             garpScorecardContainer = document.getElementById('garp-scorecard-container');
             valuationHealthContainer = document.getElementById('valuation-health-container');
 
+            // --- NEW: Populate Profile Container with Logo, Name, and Description ---
             const description = profile.description || 'No description available.';
-            if (profileDisplayContainer) profileDisplayContainer.innerHTML = `<h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Company Overview</h3><p class="text-sm text-gray-700">${description}</p>`;
+            const logoHtml = profile.image ? `<img src="${profile.image}" alt="${profile.companyName} Logo" class="w-16 h-16 rounded-md mb-4 float-right ml-4">` : '';
+            if (profileDisplayContainer) {
+                profileDisplayContainer.innerHTML = `
+                    ${logoHtml}
+                    <h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">${profile.companyName || 'Company Overview'}</h3>
+                    <p class="text-sm text-gray-700">${description}</p>
+                `;
+            }
+            // --- END NEW ---
 
             const metrics = renderGarpScorecardDashboard(garpScorecardContainer, ticker, fmpData);
             renderGarpInterpretationAnalysis(garpScorecardContainer, metrics); // Uses garpScorecardContainer
