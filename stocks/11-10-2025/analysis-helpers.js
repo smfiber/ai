@@ -880,7 +880,7 @@ export function _calculateCapitalAllocatorsMetrics(data) {
             buybacks: formatLargeNumber(totals.buybacks),
             dividends: formatLargeNumber(totals.dividends),
             totalReinvestment: formatLargeNumber(totalReinvestment),
-            totalShareholderReturns: formatLargeNumber(totalShareHholderReturns)
+            totalShareholderReturns: formatLargeNumber(totalShareholderReturns)
         },
         // --- Existing data structures ---
         cashFlowPriorities: cashFlowPrioritiesData,
