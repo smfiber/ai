@@ -137,7 +137,7 @@ export async function getPlantDetails(plantSlug) {
     }
 
     // --- FIX: Prepend a CORS proxy to the Trefle URL ---
-    const trefleUrl = `https://trefle.io/api/v1/plants/${plantSlug}?token=${configStore.trefleApiKey}`;
+    const trefleUrl = `httpshttps://trefle.io/api/v1/plants/${plantSlug}?token=${configStore.trefleApiKey}`;
     const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(trefleUrl)}`;
 
 
@@ -166,7 +166,7 @@ export async function generatePlantArticle(plantData, regionName) {
         return "Error: Gemini API key not configured.";
     }
 
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${configStore.geminiApiKey}`;
+    const apiUrl = `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-pro:generateContent?key=${configStore.geminiApiKey}`;
 
     // Helper function to safely extract nested data
     const get = (obj, path, defaultValue = 'N/A') => {
