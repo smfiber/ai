@@ -105,14 +105,16 @@ export async function getNativePlants(regionSlug) {
         console.error("Trefle API Key is missing.");
         return [];
     }
-
-    // Note: Trefle API can be slow.
-    const url = `https://trefle.io/api/v1/distributions/${regionSlug}/plants?filter[establishment]=native&token=${configStore.trefleApiKey}`;
+    
+    // --- FIX: Prepend a CORS proxy to the Trefle URL ---
+    // This is to bypass the CORS error you were seeing.
+    const trefleUrl = `https://trefle.io/api/v1/distributions/${regionSlug}/plants?filter[establishment]=native&token=${configStore.trefleApiKey}`;
+    const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(trefleUrl)}`;
 
     try {
-        const response = await fetch(url);
+        const response = await fetch(proxyUrl); // Use the proxied URL
         if (!response.ok) {
-            throw new Error(`Trefle API error: ${response.statusText}`);
+            throw new Error(`Trefle API error (via proxy): ${response.statusText}`);
         }
         const data = await response.json();
         // Filter out plants with no common name or image for a cleaner UI
@@ -134,12 +136,15 @@ export async function getPlantDetails(plantSlug) {
         return null;
     }
 
-    const url = `https://trefle.io/api/v1/plants/${plantSlug}?token=${configStore.trefleApiKey}`;
+    // --- FIX: Prepend a CORS proxy to the Trefle URL ---
+    const trefleUrl = `https://trefle.io/api/v1/plants/${plantSlug}?token=${configStore.trefleApiKey}`;
+    const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(trefleUrl)}`;
+
 
     try {
-        const response = await fetch(url);
+        const response = await fetch(proxyUrl); // Use the proxied URL
         if (!response.ok) {
-            throw new Error(`Trefle API error: ${response.statusText}`);
+            throw new Error(`Trefle API error (via proxy): ${response.statusText}`);
         }
         const data = await response.json();
         return data.data;
@@ -186,7 +191,7 @@ export async function generatePlantArticle(plantData, regionName) {
         * **Primary Image URL:** ${get(plantData, 'image_url')}
         * **Sunlight Needs:** ${get(plantData, 'growth.sunlight', 'See description')}
         * **Watering Needs:** ${get(plantData, 'growth.watering', 'See description')}
-        * **Soil Needs:** ${get(plantData, 'growth.soil_texture', 'See description')}
+        * **Soil Needs:** ${get(plantData,An 'growth.soil_texture', 'See description')}
         * **Min. pH:** ${get(plantData, 'growth.ph_minimum', 'N/A')}
         * **Max. pH:** ${get(plantData, 'growth.ph_maximum', 'N/A')}
         * **Bloom Months:** ${get(plantData, 'growth.bloom_months', []).join(', ') || 'N/A'}
