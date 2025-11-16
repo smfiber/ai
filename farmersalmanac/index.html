@@ -68,15 +68,13 @@
             
             <div id="discovery-view">
                 <div class="mb-6">
-                    <label for="region-select" class="block text-lg font-medium text-gray-300 mb-2">Select a region to explore native plants:</label>
-                    <select id="region-select" class="w-full max-w-md bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2 text-base focus:ring-green-500 focus:border-green-500">
-                        <option value="">-- Please select a region --</option>
-                        <option value="fla">Florida (fla)</option>
-                        <option value="geo">Georgia (geo)</option>
-                        <option value="ala">Alabama (ala)</option>
-                        <option value="mis">Mississippi (mis)</option>
-                        <option value="lsa">Louisiana (lsa)</option>
-                        <option value="sca">South Carolina (sca)</option>
+                    <label for="species-type-select" class="block text-lg font-medium text-gray-300 mb-2">Select a Species Type:</label>
+                    <select id="species-type-select" class="w-full max-w-md bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2 text-base focus:ring-green-500 focus:border-green-500">
+                        <option value="">-- Please select a species type --</option>
+                        <option value="tree">Tree</option>
+                        <option value="shrub">Shrub</option>
+                        <option value="herb">Herb</option>
+                        <option value="vine">Vine</option>
                     </select>
                 </div>
 
@@ -86,6 +84,16 @@
                     </div>
                     <div id="plant-gallery" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                         </div>
+                </div>
+
+                <div id="pagination-container" class="hidden flex justify-between items-center mt-8 pt-6 border-t border-gray-700">
+                    <button id="prev-btn" class="bg-gray-700 text-white font-medium py-2 px-4 rounded-lg shadow-md hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                        &larr; Previous
+                    </button>
+                    <span id="page-info" class="text-gray-400 text-sm font-medium">Page 1 of 1</span>
+                    <button id="next-btn" class="bg-green-600 text-white font-medium py-2 px-4 rounded-lg shadow-md hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                        Next &rarr;
+                    </button>
                 </div>
             </div>
 
