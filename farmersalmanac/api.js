@@ -191,7 +191,7 @@ export async function generatePlantArticle(plantData, regionName) {
         * **Primary Image URL:** ${get(plantData, 'image_url')}
         * **Sunlight Needs:** ${get(plantData, 'growth.sunlight', 'See description')}
         * **Watering Needs:** ${get(plantData, 'growth.watering', 'See description')}
-        * **Soil Needs:** ${get(plantData,An 'growth.soil_texture', 'See description')}
+        * **Soil Needs:** ${get(plantData, 'growth.soil_texture', 'See description')}
         * **Min. pH:** ${get(plantData, 'growth.ph_minimum', 'N/A')}
         * **Max. pH:** ${get(plantData, 'growth.ph_maximum', 'N/A')}
         * **Bloom Months:** ${get(plantData, 'growth.bloom_months', []).join(', ') || 'N/A'}
