@@ -166,7 +166,7 @@ export async function generatePlantArticle(plantData, regionName) {
         return "Error: Gemini API key not configured.";
     }
 
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${configStore.geminiApiKey}`;
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${configStore.geminiApiKey}`;
 
     // Helper function to safely extract nested data
     const get = (obj, path, defaultValue = 'N/A') => {
