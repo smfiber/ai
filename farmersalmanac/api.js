@@ -96,19 +96,19 @@ export async function signOutUser() {
 
 
 /**
- * Fetches native plants for a specific Trefle distribution zone (slug).
- * @param {string} regionSlug - The Trefle slug for the region (e.g., 'fla').
- * @returns {Promise<Array>} A promise that resolves to an array of plant objects.
+ * Fetches native plants for Florida based on species type and page.
+ * @param {string} speciesType - The Trefle growth_form (e.g., 'tree', 'shrub').
+ * @param {number} page - The page number to fetch.
+ * @returns {Promise<object>} A promise that resolves to an object containing plant data, links, and meta.
  */
-export async function getNativePlants(regionSlug) {
+export async function getNativePlants(speciesType, page) {
     if (!configStore.trefleApiKey) {
         console.error("Trefle API Key is missing.");
-        return [];
+        return { data: [], links: {}, meta: {} }; // Return a structured object
     }
     
-    // --- FIX: Prepend a CORS proxy to the Trefle URL ---
-    // This is to bypass the CORS error you were seeing.
-    const trefleUrl = `https://trefle.io/api/v1/distributions/${regionSlug}/plants?filter[establishment]=native&token=${configStore.trefleApiKey}`;
+    const zoneId = 9; // Trefle Zone ID for Florida
+    const trefleUrl = `https://trefle.io/api/v1/plants?filter[establishment]=native&filter[zone_id]=${zoneId}&filter[growth_form]=${speciesType}&page=${page}&token=${configStore.trefleApiKey}`;
     const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(trefleUrl)}`;
 
     try {
@@ -117,11 +117,18 @@ export async function getNativePlants(regionSlug) {
             throw new Error(`Trefle API error (via proxy): ${response.statusText}`);
         }
         const data = await response.json();
-        // Filter out plants with no common name or image for a cleaner UI
-        return data.data.filter(plant => plant.common_name && plant.image_url);
+        
+        // Filter the results for a cleaner UI, but return the full object for pagination
+        const filteredData = data.data.filter(plant => plant.common_name && plant.image_url);
+        
+        return {
+            data: filteredData,
+            links: data.links,
+            meta: data.meta
+        };
     } catch (error) {
         console.error("Error fetching native plants:", error);
-        return [];
+        return { data: [], links: {}, meta: {} }; // Return empty structure on error
     }
 }
 
@@ -137,7 +144,7 @@ export async function getPlantDetails(plantSlug) {
     }
 
     // --- FIX: Prepend a CORS proxy to the Trefle URL ---
-    const trefleUrl = `httpshttps://trefle.io/api/v1/plants/${plantSlug}?token=${configStore.trefleApiKey}`;
+    const trefleUrl = `https://trefle.io/api/v1/plants/${plantSlug}?token=${configStore.trefleApiKey}`;
     const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(trefleUrl)}`;
 
 
