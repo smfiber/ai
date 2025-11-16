@@ -16,9 +16,14 @@ import {
 
 // --- Global DOM Element Variables ---
 let modalBackdrop, apiKeyForm, appContainer, mainContent, authContainer,
-    signInBtn, signOutBtn, userInfo, userName, userPhoto, regionSelect,
+    signInBtn, signOutBtn, userInfo, userName, userPhoto, speciesTypeSelect,
     plantGalleryContainer, plantGallery, loader, articleView, 
-    articleContent, articleLoader, backToGalleryBtn;
+    articleContent, articleLoader, backToGalleryBtn,
+    paginationContainer, prevBtn, nextBtn, pageInfo;
+
+// --- App State ---
+let currentSpeciesType = null;
+let currentPage = 1;
 
 /**
  * Main function to initialize the application
@@ -40,7 +45,7 @@ function main() {
         userName = document.getElementById('user-name');
         userPhoto = document.getElementById('user-photo');
 
-        regionSelect = document.getElementById('region-select');
+        speciesTypeSelect = document.getElementById('species-type-select');
         plantGalleryContainer = document.getElementById('plant-gallery-container');
         plantGallery = document.getElementById('plant-gallery');
         loader = document.getElementById('loader');
@@ -49,6 +54,11 @@ function main() {
         articleContent = document.getElementById('article-content');
         articleLoader = document.getElementById('article-loader');
         backToGalleryBtn = document.getElementById('back-to-gallery-btn');
+
+        paginationContainer = document.getElementById('pagination-container');
+        prevBtn = document.getElementById('prev-btn');
+        nextBtn = document.getElementById('next-btn');
+        pageInfo = document.getElementById('page-info');
         
         // 3. Add all event listeners
         addEventListeners();
@@ -71,8 +81,12 @@ function addEventListeners() {
     // Listen for Google Sign-out button click
     signOutBtn.addEventListener('click', handleGoogleSignOut);
 
-    // Listen for region selection change
-    regionSelect.addEventListener('change', handleRegionSelect);
+    // Listen for species type selection change
+    speciesTypeSelect.addEventListener('change', handleSpeciesTypeSelect);
+
+    // Listen for pagination clicks
+    prevBtn.addEventListener('click', handlePrevClick);
+    nextBtn.addEventListener('click', handleNextClick);
 
     // Listen for clicks on the plant gallery (event delegation)
     plantGallery.addEventListener('click', handlePlantCardClick);
@@ -186,25 +200,55 @@ function updateAuthState(user) {
 }
 
 /**
- * Handles the selection of a new region from the dropdown.
+ * Handles the selection of a new species type from the dropdown.
  */
-async function handleRegionSelect(e) {
-    const regionSlug = e.target.value;
-    if (!regionSlug) {
-        plantGallery.innerHTML = ''; // Clear gallery if they select "--"
+function handleSpeciesTypeSelect(e) {
+    currentSpeciesType = e.target.value;
+    currentPage = 1; // Reset to page 1
+
+    if (!currentSpeciesType) {
+        plantGallery.innerHTML = '';
+        paginationContainer.classList.add('hidden');
         return;
     }
 
-    console.log(`Region selected: ${regionSlug}`);
+    console.log(`Species type selected: ${currentSpeciesType}`);
+    fetchAndRenderPlants();
+}
+
+/**
+ * Handles the "Previous Page" button click.
+ */
+function handlePrevClick() {
+    if (currentPage > 1) {
+        currentPage--;
+        fetchAndRenderPlants();
+    }
+}
+
+/**
+ * Handles the "Next Page" button click.
+ */
+function handleNextClick() {
+    currentPage++;
+    fetchAndRenderPlants();
+}
+
+/**
+ * Fetches plant data from the API and renders the gallery and pagination.
+ */
+async function fetchAndRenderPlants() {
     loader.classList.remove('hidden');
     plantGallery.innerHTML = '';
     articleView.classList.add('hidden');
     plantGalleryContainer.classList.remove('hidden');
+    paginationContainer.classList.add('hidden'); // Hide until we know we have pages
 
     try {
-        const plants = await getNativePlants(regionSlug);
-        console.log(`Found ${plants.length} native plants.`);
-        renderPlantGallery(plants);
+        const { data, links, meta } = await getNativePlants(currentSpeciesType, currentPage);
+        console.log(`Found ${data.length} native plants for page ${currentPage}.`);
+        renderPlantGallery(data);
+        renderPagination(links, meta);
     } catch (error) {
         console.error(error);
         plantGallery.innerHTML = '<p class="text-red-400">Could not load plants. Check console for errors.</p>';
@@ -214,13 +258,34 @@ async function handleRegionSelect(e) {
 }
 
 /**
+ * Renders the pagination controls (buttons, page info).
+ * @param {object} links - The links object from Trefle (next, prev, last).
+ * @param {object} meta - The meta object from Trefle (total).
+ */
+function renderPagination(links, meta) {
+    if (!meta || !meta.total) {
+        paginationContainer.classList.add('hidden');
+        return;
+    }
+
+    const totalPlants = meta.total;
+    const totalPages = Math.ceil(totalPlants / 20); // Trefle API uses 20 per page
+
+    pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
+    prevBtn.disabled = !links.prev;
+    nextBtn.disabled = !links.next;
+
+    paginationContainer.classList.remove('hidden');
+}
+
+/**
  * Renders the plant cards in the gallery.
  * @param {Array} plants - An array of plant objects from Trefle.
  */
 function renderPlantGallery(plants) {
     plantGallery.innerHTML = ''; // Clear previous results
     if (plants.length === 0) {
-        plantGallery.innerHTML = '<p class="text-gray-400">No native plants found for this region with images.</p>';
+        plantGallery.innerHTML = '<p class="text-gray-400">No native plants found for this species type with images.</p>';
         return;
     }
 
@@ -229,7 +294,7 @@ function renderPlantGallery(plants) {
         card.className = 'plant-card bg-gray-800 rounded-lg shadow-lg overflow-hidden cursor-pointer transition-transform hover:scale-105';
         card.dataset.slug = plant.slug;
         card.dataset.name = plant.common_name;
-        card.dataset.region = regionSelect.options[regionSelect.selectedIndex].text; // Store common name of region
+        card.dataset.region = "Florida"; // Hardcode region for the prompt
 
         card.innerHTML = `
             <img src="${plant.image_url}" alt="${plant.common_name}" class="w-full h-48 object-cover">
@@ -255,6 +320,7 @@ async function handlePlantCardClick(e) {
 
     // Show article view and loader
     plantGalleryContainer.classList.add('hidden');
+    paginationContainer.classList.add('hidden');
     articleView.classList.remove('hidden');
     articleContent.innerHTML = '';
     articleLoader.classList.remove('hidden');
@@ -301,6 +367,7 @@ function renderArticle(articleHtml, plantName) {
 function showGalleryView() {
     articleView.classList.add('hidden');
     plantGalleryContainer.classList.remove('hidden');
+    paginationContainer.classList.remove('hidden'); // Show pagination again
     articleContent.innerHTML = '';
 }
 
