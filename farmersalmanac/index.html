@@ -1,1 +1,150 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-gray-900">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digital Gardener's Almanac</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load custom styles -->
+    <link rel="stylesheet" href="style.css">
+    <!-- Load Firebase libraries (we'll initialize them in api.js) -->
+    <!-- We're using 11.x.x, which is a modern modular version -->
+    <script type_to_remove="module">
+        // This is a placeholder to show where firebase would be imported if this were a bundled app.
+        // In our api.js, we will use the dynamic import() function to load these 
+        // *after* we get the config, which is safer.
+    </script>
+</head>
+<body class="h-full font-sans antialiased text-gray-200">
 
+    <!-- 
+      API Key Modal
+      This covers the entire screen on load and is hidden by app.js on successful submit.
+    -->
+    <div id="api-key-modal-backdrop" class="fixed inset-0 z-50 bg-gray-900/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white text-gray-800 rounded-lg shadow-2xl p-6 w-full max-w-lg">
+            <form id="api-key-form">
+                <h2 class="text-2xl font-bold mb-2">API Keys Required</h2>
+                <p class="text-gray-600 mb-6">Please provide your API keys and config to get started. These are not stored and are lost on page refresh.</p>
+
+                <!-- Trefle API Key -->
+                <div class="mb-4">
+                    <label for="trefle-key" class="block text-sm font-medium text-gray-700 mb-1">Trefle API Key</label>
+                    <input type="password" id="trefle-key" name="trefle-key" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" placeholder="Enter your Trefle API Key" required>
+                </div>
+
+                <!-- Gemini API Key -->
+                <div class="mb-4">
+                    <label for="gemini-key" class="block text-sm font-medium text-gray-700 mb-1">Google Gemini API Key</label>
+                    <input type="password" id="gemini-key" name="gemini-key" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" placeholder="Enter your Google Gemini API Key" required>
+                </div>
+
+                <!-- Google Cloud Client ID -->
+                <div class="mb-4">
+                    <label for="google-client-id" class="block text-sm font-medium text-gray-700 mb-1">Google Cloud Client ID</label>
+                    <input type="text" id="google-client-id" name="google-client-id" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" placeholder="Enter your Google Cloud Web Client ID" required>
+                </div>
+
+                <!-- Firebase Web App Config -->
+                <div class="mb-6">
+                    <label for="firebase-config" class="block text-sm font-medium text-gray-700 mb-1">Firebase Web App Config (JSON)</label>
+                    <textarea id="firebase-config" name="firebase-config" rows="6" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm font-mono text-xs focus:ring-indigo-500 focus:border-indigo-500" placeholder='{ "apiKey": "...", "authDomain": "...", ... }' required></textarea>
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit" id="api-key-submit" class="w-full bg-indigo-600 text-white py-2 px-4 rounded-md font-semibold shadow-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+                    Save and Continue
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 
+      Main Application UI
+      This is hidden by the modal backdrop until the keys are submitted.
+    -->
+    <div id="app-container" class="max-w-7xl mx-auto p-4 md:p-8">
+        
+        <!-- Header -->
+        <header class="flex flex-col md:flex-row justify-between items-center pb-6 border-b border-gray-700 mb-6">
+            <h1 class="text-3xl font-bold text-white mb-4 md:mb-0">Digital Gardener's Almanac <span class="text-green-400">(Zone 9 Natives)</span></h1>
+            
+            <!-- Auth & User Info -->
+            <div id="auth-container">
+                <button id="google-signin-btn" class="bg-blue-600 text-white font-medium py-2 px-4 rounded-lg shadow-md hover:bg-blue-700 transition-colors">
+                    Sign in with Google
+                </button>
+                <div id="user-info" class="hidden items-center">
+                    <img id="user-photo" src="" alt="User" class="w-10 h-10 rounded-full mr-3">
+                    <span id="user-name" class="font-medium text-white"></span>
+                    <button id="google-signout-btn" class="ml-4 text-sm text-gray-400 hover:text-white">Sign Out</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content Area -->
+        <main id="main-content">
+            
+            <!-- Discovery: Region Selector -->
+            <div id="discovery-view">
+                <div class="mb-6">
+                    <label for="region-select" class="block text-lg font-medium text-gray-300 mb-2">Select a region to explore native plants:</label>
+                    <select id="region-select" class="w-full max-w-md bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2 text-base focus:ring-green-500 focus:border-green-500">
+                        <option value="">-- Please select a region --</option>
+                        <option value="fla">Florida (fla)</option>
+                        <option value="tex">Texas (tex)</option>
+                        <option value="lsa">Louisiana (lsa)</option>
+                        <option value="cal">California (cal)</option>
+                        <!-- We can add more Zone 9 state slugs here -->
+                    </select>
+                </div>
+
+                <!-- Plant Gallery -->
+                <div id="plant-gallery-container">
+                    <div id="loader" class="hidden text-center py-10">
+                        <p class="text-lg text-green-400">Loading native plants...</p>
+                    </div>
+                    <div id="plant-gallery" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                        <!-- Plant cards will be injected here by app.js -->
+                        <!-- 
+                        Example Card:
+                        <div class="plant-card bg-gray-800 rounded-lg shadow-lg overflow-hidden cursor-pointer" data-slug="serenoa-repens">
+                            <img src="https://placehold.co/600x400/2D3748/718096?text=Plant+Image" alt="Plant Name" class="w-full h-48 object-cover">
+                            <div class="p-4">
+                                <h3 class="text-xl font-semibold text-white">Saw Palmetto</h3>
+                                <p class="text-gray-400 text-sm">Serenoa repens</p>
+                            </div>
+                        </div> 
+                        -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Article View (Initially Hidden) -->
+            <div id="article-view" class="hidden bg-gray-800 p-6 md:p-8 rounded-lg shadow-xl">
+                <button id="back-to-gallery-btn" class="text-green-400 font-medium mb-6">&larr; Back to Gallery</button>
+                <div id="article-loader" class="hidden text-center py-10">
+                    <p class="text-lg text-green-400">Generating your guide...</p>
+                </div>
+                <div id="article-content" class="prose prose-invert prose-lg max-w-none">
+                    <!-- Article title and content will be injected here by app.js -->
+                    <!--
+                    <h2 class="text-3xl font-bold text-white mb-4">The Digital Gardener's Guide to Saw Palmetto</h2>
+                    <img src="..." alt="Saw Palmetto" class="w-full rounded-lg mb-6">
+                    <p>This is where the Gemini-generated article content will go...</p>
+                    -->
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Load JavaScript files as modules -->
+    <!-- config.js must be loaded first (though modules handle dependencies) -->
+    <script src="config.js" type="module"></script>
+    <script src="api.js" type="module"></script>
+    <script src="app.js" type="module"></script>
+
+</body>
+</html>
