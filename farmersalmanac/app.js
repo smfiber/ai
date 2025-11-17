@@ -1,397 +1,286 @@
 /*
- * APP.JS
- * This file handles all the DOM manipulation and user interaction.
- * It connects the UI (index.html) to the logic (api.js).
+ * API.JS
+ * This file handles all external communication:
+ * - Firebase Initialization & Auth
+ * - Trefle API calls
+ * - Gemini API calls
  */
 
-import { setApiKeys } from './config.js';
-import { 
-    initFirebase, 
-    signInWithGoogle, 
-    signOutUser,
-    searchNativePlants,
-    getPlantDetails
-} from './api.js';
+import { configStore } from './config.js';
 
-// --- Global DOM Element Variables ---
-let modalBackdrop, apiKeyForm, appContainer, mainContent, authContainer,
-    signInBtn, signOutBtn, userInfo, userName, userPhoto, searchForm,
-    searchInput, plantGalleryContainer, plantGallery, loader,
-    paginationContainer, prevBtn, nextBtn, pageInfo,
-    plantDetailModal, modalTitle, modalCloseBtn, modalContentContainer,
-    modalLoader, modalContent;
-
-// --- App State ---
-let currentSearchQuery = null;
-let currentPage = 1;
-let currentLinks = null;
-let currentMeta = null;
+// --- Firebase SDKs (will be dynamically imported) ---
+let app, auth, db;
+let GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut;
 
 /**
- * Main function to initialize the application
+ * Dynamically imports Firebase modules and initializes the app.
+ * This is called by app.js *after* the config is provided.
  */
-function main() {
-    // 1. Wait for the DOM to be fully loaded
-    document.addEventListener('DOMContentLoaded', () => {
-        
-        // 2. Assign all DOM elements
-        modalBackdrop = document.getElementById('api-key-modal-backdrop');
-        apiKeyForm = document.getElementById('api-key-form');
-        appContainer = document.getElementById('app-container');
-        mainContent = document.getElementById('main-content');
-        
-        authContainer = document.getElementById('auth-container');
-        signInBtn = document.getElementById('google-signin-btn');
-        signOutBtn = document.getElementById('google-signout-btn');
-        userInfo = document.getElementById('user-info');
-        userName = document.getElementById('user-name');
-        userPhoto = document.getElementById('user-photo');
+export async function initFirebase() {
+    if (app) return; // Already initialized
 
-        searchForm = document.getElementById('search-form');
-        searchInput = document.getElementById('search-input');
+    if (!configStore.firebaseConfig || !configStore.googleClientId) {
+        console.error("Firebase config or Google Client ID is missing.");
+        return;
+    }
+
+    try {
+        // Dynamically import the Firebase modules
+        const { initializeApp } = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js');
+        const { getAuth, GoogleAuthProvider: GAuthProvider, signInWithPopup: siwp, onAuthStateChanged: oasc, setPersistence, browserSessionPersistence, signOut: so } = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js');
+        const { getFirestore } = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js');
+
+        // Assign to module-level variables
+        GoogleAuthProvider = GAuthProvider;
+        signInWithPopup = siwp;
+        onAuthStateChanged = oasc;
+        signOut = so;
+
+        // Initialize Firebase
+        app = initializeApp(configStore.firebaseConfig);
+        auth = getAuth(app);
+        db = getFirestore(app);
+
+        // Set auth persistence to session. This respects the "no local storage" rule.
+        // User stays logged in for the session (tab) but is logged out when tab is closed.
+        await setPersistence(auth, browserSessionPersistence);
+
+        console.log("Firebase Initialized Successfully.");
         
-        plantGalleryContainer = document.getElementById('plant-gallery-container');
-        plantGallery = document.getElementById('plant-gallery');
-        loader = document.getElementById('loader');
+        // Pass auth to the app to set up the listener
+        return { auth, onAuthStateChanged };
 
-        plantDetailModal = document.getElementById('plant-detail-modal');
-        modalTitle = document.getElementById('modal-title');
-        modalCloseBtn = document.getElementById('modal-close-btn');
-        modalContentContainer = document.getElementById('modal-content-container');
-        modalLoader = document.getElementById('modal-loader');
-        modalContent = document.getElementById('modal-content');
-
-        paginationContainer = document.getElementById('pagination-container');
-        prevBtn = document.getElementById('prev-btn');
-        nextBtn = document.getElementById('next-btn');
-        pageInfo = document.getElementById('page-info');
-        
-        // 3. Add all event listeners
-        addEventListeners();
-
-        // 4. App is ready
-        console.log("App ready. Waiting for API keys.");
-        plantGallery.innerHTML = '<p class="text-gray-400">Please enter a search term to find plants.</p>';
-    });
+    } catch (error) {
+        console.error("Error initializing Firebase:", error);
+        alert("Could not initialize Firebase. Please check your config JSON.");
+    }
 }
 
 /**
- * Groups all event listeners for clean initialization
+ * Initiates the Google Sign-In popup flow.
  */
-function addEventListeners() {
-    apiKeyForm.addEventListener('submit', handleApiKeySubmit);
-    signInBtn.addEventListener('click', handleGoogleSignIn);
-    signOutBtn.addEventListener('click', handleGoogleSignOut);
-    searchForm.addEventListener('submit', handleSearchSubmit);
-    prevBtn.addEventListener('click', handlePrevClick);
-    nextBtn.addEventListener('click', handleNextClick);
-    plantGallery.addEventListener('click', handlePlantCardClick);
+export async function signInWithGoogle() {
+    if (!auth || !GoogleAuthProvider) {
+        console.error("Firebase Auth not initialized.");
+        return;
+    }
+
+    const provider = new GoogleAuthProvider();
+    // Specify the Client ID from the config
+    provider.setCustomParameters({
+      'client_id': configStore.googleClientId
+    });
+
+    try {
+        const result = await signInWithPopup(auth, provider);
+        const user = result.user;
+        console.log("User signed in:", user.displayName);
+        return user;
+    } catch (error) {
+        console.error("Google Sign-In Error:", error);
+    }
+}
+
+/**
+ * Signs the current user out.
+ */
+export async function signOutUser() {
+    if (!auth) return;
+    try {
+        await signOut(auth);
+        console.log("User signed in.");
+    } catch (error) {
+        console.error("Sign out error:", error);
+    }
+}
+
+
+/**
+ * Fetches native plants for Florida based on species type and page.
+ * @param {string} speciesType - The Trefle growth_form (e.g., 'tree', 'shrub').
+ * @param {number} page - The page number to fetch.
+ * @returns {Promise<object>} A promise that resolves to an object containing plant data, links, and meta.
+ */
+export async function getNativePlants(speciesType, page) {
+    if (!configStore.trefleApiKey) {
+        console.error("Trefle API Key is missing.");
+        return { data: [], links: {}, meta: {} }; // Return a structured object
+    }
     
-    // Modal listeners
-    modalCloseBtn.addEventListener('click', closeModal);
-    plantDetailModal.addEventListener('click', (e) => {
-        if (e.target === plantDetailModal) {
-            closeModal();
+    // NOTE: This function is not currently called by app.js,
+    // but we will leave it in case we want to add a category filter later.
+    // The regional filter has been removed.
+    const trefleUrl = `https://trefle.io/api/v1/species?filter[growth_form]=${speciesType}&page=${page}&token=${configStore.trefleApiKey}`;
+    const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(trefleUrl)}`;
+
+    try {
+        const response = await fetch(proxyUrl); // Use the proxied URL
+        if (!response.ok) {
+            throw new Error(`Trefle API error (via proxy): ${response.statusText}`);
         }
-    });
+        const data = await response.json();
+        
+        // Filter the results for a cleaner UI, but return the full object for pagination
+        const filteredData = data.data.filter(plant => plant.common_name && plant.image_url);
+        
+        return {
+            data: filteredData,
+            links: data.links,
+            meta: data.meta
+        };
+    } catch (error) {
+        console.error("Error fetching native plants:", error);
+        return { data: [], links: {}, meta: {} }; // Return empty structure on error
+    }
 }
 
 /**
- * Handles the submission of the API key modal.
- * @param {Event} e - The form submit event
+ * Searches plants based on a query string.
+ * @param {string} query - The user's search term (e.g., 'Oak').
+ * @param {number} page - The page number to fetch.
+ * @returns {Promise<object>} A promise that resolves to an object containing plant data, links, and meta.
  */
-async function handleApiKeySubmit(e) {
-    e.preventDefault();
-    const submitButton = document.getElementById('api-key-submit');
-    submitButton.disabled = true;
-    submitButton.textContent = 'Initializing...';
+export async function searchNativePlants(query, page) {
+    if (!configStore.trefleApiKey) {
+        console.error("Trefle API Key is missing.");
+        return { data: [], links: {}, meta: {} }; // Return a structured object
+    }
+
+    // Removed the hard-coded distributionId = 63 to make this a global search.
+    const trefleUrl = `https://trefle.io/api/v1/species/search?q=${query}&page=${page}&token=${configStore.trefleApiKey}`;
+    const proxyUrl = `https::/corsproxy.io/?${encodeURIComponent(trefleUrl)}`;
 
     try {
-        const formData = new FormData(apiKeyForm);
-        const trefle = formData.get('trefle-key');
-        const gemini = formData.get('gemini-key');
-        const googleClientId = formData.get('google-client-id');
-        const firebaseConfigString = formData.get('firebase-config');
-
-        let firebase;
-        try {
-            firebase = JSON.parse(firebaseConfigString);
-            if (typeof firebase !== 'object' || !firebase.apiKey) {
-                throw new Error("Invalid JSON format or missing 'apiKey'.");
-            }
-        } catch (parseError) {
-            alert(`Error parsing Firebase Config: ${parseError.message}\nPlease paste the valid JSON object from your Firebase project settings.`);
-            submitButton.disabled = false;
-            submitButton.textContent = 'Save and Continue';
-            return;
+        const response = await fetch(proxyUrl); // Use the proxied URL
+        if (!response.ok) {
+            throw new Error(`Trefle API error (via proxy): ${response.statusText}`);
         }
-
-        setApiKeys({ trefle, gemini, googleClientId, firebase });
-
-        const authModule = await initFirebase();
-
-        if (authModule && authModule.auth) {
-            authModule.onAuthStateChanged(authModule.auth, (user) => {
-                updateAuthState(user);
-            });
-        } else {
-            throw new Error("Firebase auth module not loaded.");
-        }
-
-        modalBackdrop.classList.add('hidden');
-        console.log("API keys set and Firebase initialized. App is live.");
-
+        const data = await response.json();
+        
+        // Filter the results for a cleaner UI, but return the full object for pagination
+        const filteredData = data.data.filter(plant => plant.common_name && plant.image_url);
+        
+        return {
+            data: filteredData,
+            links: data.links,
+            meta: data.meta
+        };
     } catch (error) {
-        console.error("Error during API key submission:", error);
-        alert(`Failed to initialize: ${error.message}`);
-        submitButton.disabled = false;
-        submitButton.textContent = 'Save and Continue';
+        console.error("Error searching native plants:", error);
+        return { data: [], links: {}, meta: {} }; // Return empty structure on error
     }
-}
-
-// --- Auth Functions ---
-async function handleGoogleSignIn() {
-    try {
-        await signInWithGoogle();
-    } catch (error) {
-        console.error("Sign-in failed:", error);
-    }
-}
-
-async function handleGoogleSignOut() {
-    try {
-        await signOutUser();
-    } catch (error) {
-        console.error("Sign-out failed:", error);
-    }
-}
-
-function updateAuthState(user) {
-    if (user) {
-        signInBtn.classList.add('hidden');
-        userInfo.classList.remove('hidden');
-        userInfo.classList.add('flex');
-        userName.textContent = user.displayName;
-        userPhoto.src = user.photoURL;
-    } else {
-        signInBtn.classList.remove('hidden');
-        userInfo.classList.add('hidden');
-        userInfo.classList.remove('flex');
-        userName.textContent = '';
-        userPhoto.src = '';
-    }
-}
-
-// --- Search & Filtering ---
-
-/**
- * Handles the simple search form submission (now global).
- * @param {Event} e - The form submit event
- */
-function handleSearchSubmit(e) {
-    e.preventDefault();
-    const query = searchInput.value.trim();
-
-    if (query === currentSearchQuery) {
-        return;
-    }
-
-    currentSearchQuery = query;
-    currentPage = 1;
-    currentLinks = null;
-    currentMeta = null;
-
-    console.log(`Global searching for: ${currentSearchQuery}`);
-    fetchAndRenderPlants();
 }
 
 /**
- * Fetches plant data from the API and renders the gallery and pagination.
+ * Fetches detailed information for a single plant by its slug.
+ * @param {string} plantSlug - The Trefle slug for the plant (e.g., 'serenoa-repens').
+ * @returns {Promise<object>} A promise that resolves to the detailed plant object.
  */
-async function fetchAndRenderPlants() {
-    loader.classList.remove('hidden');
-    plantGallery.innerHTML = '';
-    paginationContainer.classList.add('hidden');
+export async function getPlantDetails(plantSlug) {
+    if (!configStore.trefleApiKey) {
+        console.error("Trefle API Key is missing.");
+        return null;
+    }
+
+    // --- We must get /api/v1/species, NOT /api/v1/plants ---
+    const trefleUrl = `https://trefle.io/api/v1/species/${plantSlug}?token=${configStore.trefleApiKey}`;
+    const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(trefleUrl)}`;
+
 
     try {
-        let results = { data: [], links: {}, meta: {} };
-
-        if (currentSearchQuery) {
-            // --- Global Search Path ---
-            results = await searchNativePlants(currentSearchQuery, currentPage);
-            console.log(`Found ${results.data.length} plants for query "${currentSearchQuery}", page ${currentPage}.`);
-        
-        } else {
-            // --- No Search Active ---
-            plantGallery.innerHTML = '<p class="text-gray-400">Please enter a search term to find plants.</p>';
-            loader.classList.add('hidden');
-            return;
+        const response = await fetch(proxyUrl); // Use the proxied URL
+        if (!response.ok) {
+            throw new Error(`Trefle API error (via proxy): ${response.statusText}`);
         }
-        
-        currentLinks = results.links;
-        currentMeta = results.meta;
-
-        renderPlantGallery(results.data);
-        renderPagination(results.links, results.meta);
-
+        const data = await response.json();
+        return data.data;
     } catch (error) {
-        console.error(error);
-        plantGallery.innerHTML = '<p class="text-red-400">Could not load plants. Check console for errors.</p>';
-    } finally {
-        loader.classList.add('hidden');
+        console.error("Error fetching plant details:", error);
+        return null;
     }
 }
 
-// --- Pagination & Gallery Rendering ---
-
-function handlePrevClick() {
-    if (currentPage > 1) {
-        currentPage--;
-        fetchAndRenderPlants();
-    }
-}
-
-function handleNextClick() {
-    currentPage++;
-    fetchAndRenderPlants();
-}
-
-function renderPagination(links, meta) {
-    if (!meta || !meta.total || meta.total === 0) {
-        paginationContainer.classList.add('hidden');
-        return;
+/**
+ * Augments plant data by fetching missing fields from the Gemini API.
+ * @param {object} plantData - The incomplete plant data object from Trefle.
+ * @returns {Promise<object>} A promise that resolves to an object with the augmented data.
+ */
+export async function fetchAugmentedPlantData(plantData) {
+    if (!configStore.geminiApiKey) {
+        console.error("Gemini API Key is missing. Skipping augmentation.");
+        return {}; // Return empty object
     }
 
-    const totalPlants = meta.total;
-    const perPage = 20; // Trefle default is 20 per page
-    const totalPages = Math.ceil(totalPlants / perPage);
+    const scientificName = plantData.scientific_name;
+    const commonName = plantData.common_name;
 
-    pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
-    prevBtn.disabled = !links.prev;
-    nextBtn.disabled = !links.next;
+    // This prompt asks Gemini for a JSON object with keys that
+    // match the structure of the Trefle API response.
+    const prompt = `
+        You are an expert botanist. A user has incomplete data for the plant: "${scientificName}" (Common Name: ${commonName}).
 
-    paginationContainer.classList.remove('hidden');
-}
+        Please provide the following missing details. If you do not know a value, use "N/A".
+        - Family (common name, e.g., "Rose family")
+        - Genus (scientific name, e.g., "Syagrus")
+        - Growth Form (e.g., "Tree", "Shrub", "Herb")
+        - Sunlight (e.g., "Full Sun", "Partial Shade")
+        - Watering (e.g., "Low", "Medium", "High")
+        - Soil Texture (e.g., "Sandy", "Loamy", "Clay")
+        - Soil pH (Min/Max) (e.g., "6.0 / 7.5")
+        - Bloom Months (e.g., "June, July, August")
 
-function renderPlantGallery(plants) {
-    plantGallery.innerHTML = '';
-    if (plants.length === 0) {
-        plantGallery.innerHTML = '<p class="text-gray-400">No plants found for this search or filter.</p>';
-        return;
-    }
-
-    plants.forEach(plant => {
-        const card = document.createElement('div');
-        card.className = 'plant-card bg-gray-800 rounded-lg shadow-lg overflow-hidden cursor-pointer transition-transform hover:scale-105';
-        card.dataset.slug = plant.slug;
-        card.dataset.name = plant.common_name;
-
-        card.innerHTML = `
-            <img src="${plant.image_url}" alt="${plant.common_name}" class="w-full h-48 object-cover">
-            <div class="p-4">
-                <h3 class="text-xl font-semibold text-white">${plant.common_name}</h3>
-                <p class="text-gray-400 text-sm italic">${plant.scientific_name}</p>
-            </div>
-        `;
-        plantGallery.appendChild(card);
-    });
-}
-
-// --- Modal Functions ---
-
-async function handlePlantCardClick(e) {
-    const card = e.target.closest('.plant-card');
-    if (!card) return;
-
-    const { slug, name } = card.dataset;
-    console.log(`Card clicked: ${name} (slug: ${slug})`);
-
-    plantDetailModal.classList.remove('hidden');
-    modalContent.classList.add('hidden');
-    modalLoader.classList.remove('hidden');
-    modalTitle.textContent = name || "Loading...";
-    modalContent.innerHTML = ''; 
-
-    try {
-        const plantData = await getPlantDetails(slug);
-        if (!plantData) {
-            throw new Error("Could not fetch plant details.");
+        Respond with ONLY a valid JSON object matching this structure. Do not use markdown.
+        {
+          "family_common_name": "...",
+          "genus_name": "...",
+          "growth_form": "...",
+          "sunlight": "...",
+          "watering": "...",
+          "soil_texture": "...",
+          "ph_min_max": "...",
+          "bloom_months": "..."
         }
-        console.log("Got plant details:", plantData);
+    `;
 
-        const articleHtml = createPlantDetailHtml(plantData);
-        
-        modalTitle.textContent = plantData.common_name || plantData.scientific_name;
-        modalContent.innerHTML = articleHtml;
+    // Using the v1beta endpoint as it's the standard for generative models.
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${configStore.geminiApiKey}`;
 
-    } catch (error) {
-        console.error(error);
-        modalContent.innerHTML = `<p class="text-red-400">Sorry, an error occurred: ${error.message}</p>`;
-    } finally {
-        modalLoader.classList.add('hidden');
-        modalContent.classList.remove('hidden');
-        modalContentContainer.scrollTop = 0;
-    }
-}
-
-function createPlantDetailHtml(plantData) {
-    // This helper is used for simple, direct paths
-    const get = (obj, path, defaultValue = 'N/A') => {
-        const result = path.split('.').reduce((acc, key) => (acc && acc[key] !== undefined) ? acc[key] : undefined, obj);
-        const value = result !== undefined ? result : defaultValue;
-        if (Array.isArray(value)) {
-            // This is the line that causes the [object Object] bug,
-            // so we will NOT use this helper for the distributions array.
-            return value.length > 0 ? value.join(', ') : defaultValue;
+    const requestBody = {
+        contents: [{
+            parts: [{ text: prompt }]
+        }],
+        generationConfig: {
+            response_mime_type: "application/json", // Request JSON output
+            temperature: 0.2,
         }
-        return value;
     };
 
-    // --- New logic to handle distributions ---
-    // We get the raw array, not using the 'get' helper which would stringify it
-    const nativeDists = (plantData.distributions && plantData.distributions.native) ? plantData.distributions.native : [];
-    let distributionText = 'No native distribution data available.';
-    
-    if (Array.isArray(nativeDists) && nativeDists.length > 0) {
-        distributionText = nativeDists
-            .map(dist => dist.name) // Pluck the 'name' from each object
-            .filter(name => name) // Filter out any null/undefined names
-            .join(', '); // Join them with a comma
-    }
-    // --- End new logic ---
+    try {
+        const response = await fetch(geminiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestBody)
+        });
 
-    return `
-        <img src="${get(plantData, 'image_url')}" alt="${get(plantData, 'common_name')}" class="w-full rounded-lg shadow-lg mb-6">
+        if (!response.ok) {
+            throw new Error(`Gemini API error: ${response.statusText}`);
+        }
+
+        const data = await response.json();
         
-        <h3>Scientific Classification</h3>
-        <ul class="plant-data-list">
-            <li><strong>Scientific Name:</strong> <em>${get(plantData, 'scientific_name')}</em></li>
-            <li><strong>Family:</strong> ${get(plantData, 'family_common_name', get(plantData, 'family.name'))}</li>
-            <li><strong>Genus:</strong> ${get(plantData, 'genus.name', 'N/A')}</li>
-        </ul>
+        // Extract the JSON string from Gemini's response
+        const jsonText = data.candidates[0].content.parts[0].text;
+        
+        // Parse the JSON text into a usable object
+        const augmentedData = JSON.parse(jsonText);
+        
+        console.log("Gemini augmentation successful:", augmentedData);
+        return augmentedData;
 
-        <h3>Growth &amp; Characteristics</h3>
-        <ul class="plant-data-list">
-            <li><strong>Growth Form:</strong> ${get(plantData, 'growth.growth_form', 'N/A')}</li>
-            <li><strong>Sunlight:</strong> ${get(plantData, 'growth.sunlight', 'N/A')}</li>
-            <li><strong>Watering:</strong> ${get(plantData, 'growth.watering', 'N/A')}</li>
-            <li><strong>Soil Texture:</strong> ${get(plantData, 'growth.soil_texture', 'N/A')}</li>
-            <li><strong>Soil pH (Min/Max):</strong> ${get(plantData, 'growth.ph_minimum', 'N/A')} / ${get(plantData, 'growth.ph_maximum', 'N/A')}</li>
-            <li><strong>Bloom Months:</strong> ${get(plantData, 'growth.bloom_months', 'N/A')}</li>
-            <li><strong>Edible:</strong> ${get(plantData, 'edible', 'N/A')}</li>
-        </ul>
-
-        <h3>Distributions</h3>
-        <p>This plant is native to the following regions:</p>
-        <p class="text-gray-400 text-sm">${distributionText}</p>
-    `;
+    } catch (error) {
+        console.error("Error augmenting plant data with Gemini:", error);
+        return {}; // Return empty object on failure
+    }
 }
-
-function closeModal() {
-    plantDetailModal.classList.add('hidden');
-    modalContent.innerHTML = '';
-    modalTitle.textContent = 'Plant Details';
-}
-
-// --- Run the app ---
-main();
