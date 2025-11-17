@@ -694,7 +694,7 @@
                         if (!apiKey) {
                             throw new Error("API Key not provided.");
                         }
-                        const apiUrl = `https://generativelanguage.googleapis.com/v1/models/imagen-3.2-generate-002:generateImages?key=${apiKey}`;
+                        const apiUrl = `https://generativelanguage.googleapis.com/v1/models/imagen-3.2-preview-002:generateImages?key=${apiKey}`;
                         const payload = { "prompt": prompt, "sampleCount": 1 };
                         const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
                         if (!response.ok) {
