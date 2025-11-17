@@ -148,7 +148,7 @@ export async function searchNativePlants(query, page) {
 
     // Removed the hard-coded distributionId = 63 to make this a global search.
     const trefleUrl = `https://trefle.io/api/v1/species/search?q=${query}&page=${page}&token=${configStore.trefleApiKey}`;
-    const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(trefleUrl)}`;
+    const proxyUrl = `https::/corsproxy.io/?${encodeURIComponent(trefleUrl)}`;
 
     try {
         const response = await fetch(proxyUrl); // Use the proxied URL
@@ -197,5 +197,90 @@ export async function getPlantDetails(plantSlug) {
     } catch (error) {
         console.error("Error fetching plant details:", error);
         return null;
+    }
+}
+
+/**
+ * Augments plant data by fetching missing fields from the Gemini API.
+ * @param {object} plantData - The incomplete plant data object from Trefle.
+ * @returns {Promise<object>} A promise that resolves to an object with the augmented data.
+ */
+export async function fetchAugmentedPlantData(plantData) {
+    if (!configStore.geminiApiKey) {
+        console.error("Gemini API Key is missing. Skipping augmentation.");
+        return {}; // Return empty object
+    }
+
+    const scientificName = plantData.scientific_name;
+    const commonName = plantData.common_name;
+
+    // This prompt asks Gemini for a JSON object with keys that
+    // match the structure of the Trefle API response.
+    const prompt = `
+        You are an expert botanist. A user has incomplete data for the plant: "${scientificName}" (Common Name: ${commonName}).
+
+        Please provide the following missing details. If you do not know a value, use "N/A".
+        - Family (common name, e.g., "Rose family")
+        - Genus (scientific name, e.g., "Syagrus")
+        - Growth Form (e.g., "Tree", "Shrub", "Herb")
+        - Sunlight (e.g., "Full Sun", "Partial Shade")
+        - Watering (e.g., "Low", "Medium", "High")
+        - Soil Texture (e.g., "Sandy", "Loamy", "Clay")
+        - Soil pH (Min/Max) (e.g., "6.0 / 7.5")
+        - Bloom Months (e.g., "June, July, August")
+
+        Respond with ONLY a valid JSON object matching this structure. Do not use markdown.
+        {
+          "family_common_name": "...",
+          "genus_name": "...",
+          "growth_form": "...",
+          "sunlight": "...",
+          "watering": "...",
+          "soil_texture": "...",
+          "ph_min_max": "...",
+          "bloom_months": "..."
+        }
+    `;
+
+    // Using the v1beta endpoint as it's the standard for generative models.
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${configStore.geminiApiKey}`;
+
+    const requestBody = {
+        contents: [{
+            parts: [{ text: prompt }]
+        }],
+        generationConfig: {
+            response_mime_type: "application/json", // Request JSON output
+            temperature: 0.2,
+        }
+    };
+
+    try {
+        const response = await fetch(geminiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestBody)
+        });
+
+        if (!response.ok) {
+            throw new Error(`Gemini API error: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        
+        // Extract the JSON string from Gemini's response
+        const jsonText = data.candidates[0].content.parts[0].text;
+        
+        // Parse the JSON text into a usable object
+        const augmentedData = JSON.parse(jsonText);
+        
+        console.log("Gemini augmentation successful:", augmentedData);
+        return augmentedData;
+
+    } catch (error) {
+        console.error("Error augmenting plant data with Gemini:", error);
+        return {}; // Return empty object on failure
     }
 }
