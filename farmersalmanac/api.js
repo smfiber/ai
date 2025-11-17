@@ -148,7 +148,9 @@ export async function searchNativePlants(query, page) {
 
     // Removed the hard-coded distributionId = 63 to make this a global search.
     const trefleUrl = `https://trefle.io/api/v1/species/search?q=${query}&page=${page}&token=${configStore.trefleApiKey}`;
-    const proxyUrl = `https::/corsproxy.io/?${encodeURIComponent(trefleUrl)}`;
+    
+    // --- THIS LINE IS NOW FIXED ---
+    const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(trefleUrl)}`;
 
     try {
         const response = await fetch(proxyUrl); // Use the proxied URL
