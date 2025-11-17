@@ -4,11 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lamination Creator</title>
-    <!-- Tailwind CSS for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- html-to-image library for PNG export -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js"></script>
-    <!-- interact.js for drag, resize, rotate -->
     <script src="https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js"></script>
     <style>
         /* Embedded Google Fonts to prevent CORS issues with html-to-image */
@@ -93,7 +90,6 @@
 </head>
 <body class="bg-gray-900 text-white h-full flex items-center justify-center p-4 antialiased">
     <div id="app-container" class="w-full max-w-5xl h-[95vh] flex flex-col bg-gray-800 rounded-2xl shadow-2xl p-4 sm:p-6">
-        <!-- Header Section -->
         <header class="flex flex-col sm:flex-row justify-between items-start w-full mb-4 pb-4 border-b border-red-500">
             <div class="flex-shrink-0 mr-6">
                 <h1 class="text-xl font-bold text-white flex items-center gap-2">
@@ -112,7 +108,6 @@
                         <circle cx="15" cy="13" r="1.5" fill="black"/>
                     </svg>
                     Lamination Creator
-                    <!-- NOTE TO SELF: Per user request, keep version at 7.11. -->
                     <span id="version-number" class="text-xs font-mono bg-red-900/20 px-2 py-1 rounded">7.11</span>
                     <button id="change-api-key-btn" title="Change API Key">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-key-fill text-red-300 hover:text-white" viewBox="0 0 16 16">
@@ -143,10 +138,8 @@
             </div>
         </header>
 
-        <!-- Lamination Display Area -->
         <main id="display-area" class="flex-grow w-full min-h-0 overflow-y-auto p-4 flex flex-col items-center justify-center"></main>
         
-        <!-- User Input Area -->
         <footer class="mt-4 pt-4 border-t border-red-500">
             <textarea id="prompt-input" class="w-full bg-red-900/20 text-white rounded-lg p-3 focus:ring-2 focus:ring-red-500 focus:outline-none transition resize-none" rows="3" placeholder="Enter text for your lamination..."></textarea>
             <div class="flex justify-end items-center mt-2 gap-4">
@@ -161,7 +154,6 @@
         </footer>
     </div>
 
-    <!-- API Key Modal -->
     <div id="api-key-modal" class="hidden fixed inset-0 bg-black/75 flex items-center justify-center p-4 z-50">
         <div class="bg-red-900/30 rounded-lg shadow-xl p-6 w-full max-w-md">
             <h2 class="text-2xl font-bold mb-4 text-white text-center">Enter Your API Key</h2>
@@ -179,7 +171,6 @@
         </div>
     </div>
     
-    <!-- Instructions Modal -->
     <div id="instructions-modal" class="hidden fixed inset-0 bg-black/75 flex items-center justify-center p-4 z-50">
         <div class="bg-red-900/30 rounded-lg shadow-xl p-6 w-full max-w-3xl h-[80vh] flex flex-col">
             <h2 class="text-2xl font-bold mb-4 text-white text-center">How to Use Lamination Creator</h2>
@@ -224,7 +215,6 @@
         </div>
     </div>
     
-    <!-- Lamination Save Options Modal -->
     <div id="lamination-save-modal" class="hidden fixed inset-0 bg-black/75 flex items-center justify-center p-4 z-50">
         <div class="bg-red-900/30 rounded-lg shadow-xl p-6 w-full max-w-sm text-center">
             <h3 class="text-xl font-bold mb-4">Save Lamination As...</h3>
@@ -704,8 +694,8 @@
                         if (!apiKey) {
                             throw new Error("API Key not provided.");
                         }
-                        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
-                        const payload = { instances: [{ "prompt": prompt }], parameters: { "sampleCount": 1 } };
+                        const apiUrl = `https://generativelanguage.googleapis.com/v1/models/imagen-3.2-generate-002:generateImages?key=${apiKey}`;
+                        const payload = { "prompt": prompt, "sampleCount": 1 };
                         const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
                         if (!response.ok) {
                             const errorText = await response.text();
@@ -713,8 +703,8 @@
                             try { const errorData = JSON.parse(errorText); throw new Error(errorData?.error?.message || `API request failed with status: ${response.status}`); } catch (e) { throw new Error(errorText || `API request failed with status: ${response.status}`); }
                         }
                         const result = await response.json();
-                        if (result.predictions && result.predictions.length > 0 && result.predictions[0].bytesBase64Encoded) {
-                            return `data:image/png;base64,${result.predictions[0].bytesBase64Encoded}`;
+                        if (result.images && result.images.length > 0 && result.images[0].bytesBase64Encoded) {
+                            return `data:image/png;base64,${result.images[0].bytesBase64Encoded}`;
                         } else {
                             console.error("Unexpected image generation response:", result);
                             throw new Error('Could not retrieve image from the API response.');
