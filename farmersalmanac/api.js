@@ -107,8 +107,8 @@ export async function getNativePlants(speciesType, page) {
         return { data: [], links: {}, meta: {} }; // Return a structured object
     }
     
-    const zoneId = 9; // Trefle Zone ID for Florida
-    const trefleUrl = `https://trefle.io/api/v1/plants?filter[establishment]=native&filter[zone_id]=${zoneId}&filter[growth_form]=${speciesType}&page=${page}&token=${configStore.trefleApiKey}`;
+    const distributionId = 63; // Trefle Distribution ID for Florida
+    const trefleUrl = `https://trefle.io/api/v1/species?filter[distribution_id]=${distributionId}&filter[growth_form]=${speciesType}&page=${page}&token=${configStore.trefleApiKey}`;
     const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(trefleUrl)}`;
 
     try {
@@ -143,8 +143,8 @@ export async function getPlantDetails(plantSlug) {
         return null;
     }
 
-    // --- FIX: Prepend a CORS proxy to the Trefle URL ---
-    const trefleUrl = `https://trefle.io/api/v1/plants/${plantSlug}?token=${configStore.trefleApiKey}`;
+    // --- We must get /api/v1/species, NOT /api/v1/plants ---
+    const trefleUrl = `https://trefle.io/api/v1/species/${plantSlug}?token=${configStore.trefleApiKey}`;
     const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(trefleUrl)}`;
 
 
@@ -246,7 +246,7 @@ export async function generatePlantArticle(plantData, regionName) {
             // Fallback to text part
             const textPart = data.candidates[0].content.parts.find(part => part.text);
             if (textPart) {
-                return textPart.text; // Will be raw text, but better than nothing
+                return textPart.text; // Will be raw text, but
             }
         }
         
