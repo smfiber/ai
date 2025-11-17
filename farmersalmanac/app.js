@@ -446,7 +446,8 @@ function createPlantDetailHtml(plantData) {
             <li><strong>Soil Texture:</strong> ${get(plantData.soil_texture)}</li>
             <li><strong>Soil pH (Min/Max):</strong> ${get(plantData.ph_min_max)}</li>
             <li><strong>Bloom Months:</strong> ${get(plantData.bloom_months)}</li>
-            <li><strong>Edible:</strong> ${get(plantEntry => plantEntry.edible, 'N/A')}</li>
+            
+            <li><strong>Edible:</strong> ${get(plantData.edible, 'N/A')}</li>
         </ul>
 
         <h3>Distributions</h3>
