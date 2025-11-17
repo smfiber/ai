@@ -52,6 +52,11 @@
         <header class="flex flex-col md:flex-row justify-between items-center pb-6 border-b border-gray-700 mb-6">
             <h1 class="text-3xl font-bold text-white mb-4 md:mb-0">Digital Gardener's Almanac <span class="text-green-400">(SE Natives)</span></h1>
             
+            <form id="search-form" class="w-full md:w-auto md:max-w-md flex-1 mx-0 md:mx-6 my-4 md:my-0">
+                <label for="search-input" class="sr-only">Search Plants</label>
+                <input type="search" id="search-input" name="search" class="w-full bg-gray-800 border border-gray-700 text-white rounded-lg px-4 py-2 text-base focus:ring-green-500 focus:border-green-500" placeholder="Search native plants (e.g., 'Saw Palmetto')">
+            </form>
+
             <div id="auth-container">
                 <button id="google-signin-btn" class="bg-blue-600 text-white font-medium py-2 px-4 rounded-lg shadow-md hover:bg-blue-700 transition-colors">
                     Sign in with Google
@@ -67,19 +72,6 @@
         <main id="main-content">
             
             <div id="discovery-view">
-                <div class="mb-6">
-                    <label for="species-type-select" class="block text-lg font-medium text-gray-300 mb-2">Select a Species Type:</label>
-                    <select id="species-type-select" class="w-full max-w-md bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2 text-base focus:ring-green-500 focus:border-green-500">
-                        <option value="">-- Please select a species type --</option>
-                        <option value="tree">Tree</option>
-                        <option value="shrub">Shrub</option>
-                        <option value="herb">Herb</option>
-                        <option value="liana">Vine (Liana)</option>
-                        <option value="fern">Fern</option>
-                        <option value="grass">Grass</option>
-                    </select>
-                </div>
-
                 <div id="plant-gallery-container">
                     <div id="loader" class="hidden text-center py-10">
                         <p class="text-lg text-green-400">Loading native plants...</p>
