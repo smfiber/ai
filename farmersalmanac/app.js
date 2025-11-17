@@ -11,7 +11,8 @@ import {
     signOutUser,
     searchNativePlants,
     getPlantDetails,
-    // generatePlantArticle // We are leaving this imported but unused for now
+    getAllDistributions, // New import
+    getFilteredPlants // New import
 } from './api.js';
 
 // --- Global DOM Element Variables ---
@@ -20,13 +21,20 @@ let modalBackdrop, apiKeyForm, appContainer, mainContent, authContainer,
     searchInput, plantGalleryContainer, plantGallery, loader,
     paginationContainer, prevBtn, nextBtn, pageInfo,
     plantDetailModal, modalTitle, modalCloseBtn, modalContentContainer,
-    modalLoader, modalContent; // New modal variables
+    modalLoader, modalContent;
+
+// New Advanced Search elements
+let advancedSearchToggle, advancedSearchView, backToSimpleSearch,
+    advancedSearchForm, distributionSelect, growthFormSelect;
 
 // --- App State ---
 let currentSearchQuery = null;
 let currentPage = 1;
 let currentLinks = null;
 let currentMeta = null;
+let isAdvancedSearchActive = false; // Track search mode
+let currentAdvancedFilters = {}; // Store advanced filters
+let distributionsCache = null; // Cache for distributions
 
 /**
  * Main function to initialize the application
@@ -55,7 +63,6 @@ function main() {
         plantGallery = document.getElementById('plant-gallery');
         loader = document.getElementById('loader');
 
-        // Assign new modal elements
         plantDetailModal = document.getElementById('plant-detail-modal');
         modalTitle = document.getElementById('modal-title');
         modalCloseBtn = document.getElementById('modal-close-btn');
@@ -67,6 +74,14 @@ function main() {
         prevBtn = document.getElementById('prev-btn');
         nextBtn = document.getElementById('next-btn');
         pageInfo = document.getElementById('page-info');
+
+        // Assign new advanced search elements
+        advancedSearchToggle = document.getElementById('advanced-search-toggle');
+        advancedSearchView = document.getElementById('advanced-search-view');
+        backToSimpleSearch = document.getElementById('back-to-simple-search');
+        advancedSearchForm = document.getElementById('advanced-search-form');
+        distributionSelect = document.getElementById('distribution-select');
+        growthFormSelect = document.getElementById('growth-form-select');
         
         // 3. Add all event listeners
         addEventListeners();
@@ -89,14 +104,18 @@ function addEventListeners() {
     nextBtn.addEventListener('click', handleNextClick);
     plantGallery.addEventListener('click', handlePlantCardClick);
     
-    // New modal listeners
+    // Modal listeners
     modalCloseBtn.addEventListener('click', closeModal);
     plantDetailModal.addEventListener('click', (e) => {
-        // Close if click is on the backdrop
         if (e.target === plantDetailModal) {
             closeModal();
         }
     });
+
+    // Advanced search listeners
+    advancedSearchToggle.addEventListener('click', showAdvancedSearch);
+    backToSimpleSearch.addEventListener('click', showSimpleSearch);
+    advancedSearchForm.addEventListener('submit', handleAdvancedSearchSubmit);
 }
 
 /**
@@ -152,9 +171,7 @@ async function handleApiKeySubmit(e) {
     }
 }
 
-/**
- * Handles the Google Sign-In process.
- */
+// --- Auth Functions ---
 async function handleGoogleSignIn() {
     try {
         await signInWithGoogle();
@@ -163,9 +180,6 @@ async function handleGoogleSignIn() {
     }
 }
 
-/**
- * Handles the Google Sign-Out process.
- */
 async function handleGoogleSignOut() {
     try {
         await signOutUser();
@@ -174,10 +188,6 @@ async function handleGoogleSignOut() {
     }
 }
 
-/**
- * Updates the UI based on the user's authentication state.
- * @param {object | null} user - The Firebase user object, or null
- */
 function updateAuthState(user) {
     if (user) {
         signInBtn.classList.add('hidden');
@@ -194,13 +204,54 @@ function updateAuthState(user) {
     }
 }
 
+// --- View Toggling ---
+
 /**
- * Handles the search form submission.
+ * Shows the Advanced Search view and populates dropdowns.
+ */
+function showAdvancedSearch() {
+    document.getElementById('discovery-view').classList.add('hidden');
+    advancedSearchView.classList.remove('hidden');
+    paginationContainer.classList.add('hidden'); // Hide pagination
+    plantGallery.innerHTML = '<p class="text-gray-400">Please select filters to find plants.</p>'; // Reset gallery
+
+    // Populate dropdowns if not already populated
+    if (!distributionsCache) {
+        populateDistributionDropdown();
+    }
+}
+
+/**
+ * Shows the Simple Search (main gallery) view.
+ */
+function showSimpleSearch() {
+    advancedSearchView.classList.add('hidden');
+    document.getElementById('discovery-view').classList.remove('hidden');
+    // Restore previous search state if it exists
+    if (currentLinks || currentMeta) {
+        renderPagination(currentLinks, currentMeta);
+    }
+    // Re-render gallery if we have a query
+    if (currentSearchQuery) {
+        fetchAndRenderPlants(); // Re-runs simple search
+    } else {
+        plantGallery.innerHTML = '<p class="text-gray-400">Please enter a search term to find native plants.</p>';
+    }
+}
+
+// --- Search & Filtering ---
+
+/**
+ * Handles the simple search form submission (Florida only).
  * @param {Event} e - The form submit event
  */
 function handleSearchSubmit(e) {
     e.preventDefault();
     const query = searchInput.value.trim();
+
+    // Reset advanced search
+    isAdvancedSearchActive = false;
+    currentAdvancedFilters = {};
 
     if (query === currentSearchQuery) {
         return;
@@ -211,51 +262,78 @@ function handleSearchSubmit(e) {
     currentLinks = null;
     currentMeta = null;
 
-    console.log(`Searching for: ${currentSearchQuery}`);
+    console.log(`Simple searching for: ${currentSearchQuery}`);
     fetchAndRenderPlants();
 }
 
 /**
- * Handles the "Previous Page" button click.
+ * Handles the advanced search form submission.
+ * @param {Event} e - The form submit event
  */
-function handlePrevClick() {
-    if (currentPage > 1) {
-        currentPage--;
-        fetchAndRenderPlants();
-    }
-}
+function handleAdvancedSearchSubmit(e) {
+    e.preventDefault();
+    
+    // Set advanced search mode
+    isAdvancedSearchActive = true;
+    currentSearchQuery = null; // Clear simple search
+    currentPage = 1;
+    currentLinks = null;
+    currentMeta = null;
 
-/**
- * Handles the "Next Page" button click.
- */
-function handleNextClick() {
-    currentPage++;
+    // Store the selected filters
+    currentAdvancedFilters = {
+        distributionId: distributionSelect.value,
+        growthForm: growthFormSelect.value
+    };
+
+    console.log("Advanced searching with filters:", currentAdvancedFilters);
     fetchAndRenderPlants();
 }
 
 /**
  * Fetches plant data from the API and renders the gallery and pagination.
+ * This function now intelligently decides which API to call.
  */
 async function fetchAndRenderPlants() {
-    if (!currentSearchQuery) {
-        plantGallery.innerHTML = '<p class="text-gray-400">Please enter a search term to find native plants.</p>';
-        paginationContainer.classList.add('hidden');
-        return;
-    }
-
     loader.classList.remove('hidden');
     plantGallery.innerHTML = '';
     paginationContainer.classList.add('hidden');
 
-    try {
-        const { data, links, meta } = await searchNativePlants(currentSearchQuery, currentPage);
-        console.log(`Found ${data.length} native plants for query "${currentSearchQuery}", page ${currentPage}.`);
-        
-        currentLinks = links;
-        currentMeta = meta;
+    // Restore gallery view in case modal was open
+    document.getElementById('discovery-view').classList.remove('hidden');
+    advancedSearchView.classList.add('hidden');
 
-        renderPlantGallery(data);
-        renderPagination(links, meta);
+    try {
+        let results = { data: [], links: {}, meta: {} };
+
+        if (isAdvancedSearchActive) {
+            // --- Advanced Filter Path ---
+            if (!currentAdvancedFilters.distributionId && !currentAdvancedFilters.growthForm) {
+                plantGallery.innerHTML = '<p class="text-gray-400">Please select at least one filter for advanced search.</p>';
+                loader.classList.add('hidden');
+                return;
+            }
+            results = await getFilteredPlants(currentAdvancedFilters, currentPage);
+            console.log(`Found ${results.data.length} plants for advanced filter, page ${currentPage}.`);
+
+        } else if (currentSearchQuery) {
+            // --- Simple Search Path ---
+            results = await searchNativePlants(currentSearchQuery, currentPage);
+            console.log(`Found ${results.data.length} native plants for query "${currentSearchQuery}", page ${currentPage}.`);
+        
+        } else {
+            // --- No Search Active ---
+            plantGallery.innerHTML = '<p class="text-gray-400">Please enter a search term to find native plants.</p>';
+            loader.classList.add('hidden');
+            return;
+        }
+        
+        currentLinks = results.links;
+        currentMeta = results.meta;
+
+        renderPlantGallery(results.data);
+        renderPagination(results.links, results.meta);
+
     } catch (error) {
         console.error(error);
         plantGallery.innerHTML = '<p class="text-red-400">Could not load plants. Check console for errors.</p>';
@@ -265,10 +343,52 @@ async function fetchAndRenderPlants() {
 }
 
 /**
- * Renders the pagination controls (buttons, page info).
- * @param {object} links - The links object from Trefle (next, prev, last).
- * @param {object} meta - The meta object from Tfrefle (total).
+ * Populates the distribution (region) dropdown.
  */
+async function populateDistributionDropdown() {
+    distributionSelect.disabled = true;
+    
+    try {
+        const distributions = await getAllDistributions();
+        // Sort alphabetically by name
+        distributions.sort((a, b) => a.name.localeCompare(b.name));
+        
+        distributionsCache = distributions; // Cache the results
+        
+        distributionSelect.innerHTML = '<option value="">-- Any Region --</option>'; // Reset
+        
+        distributions.forEach(dist => {
+            const option = document.createElement('option');
+            option.value = dist.id;
+            option.textContent = dist.name;
+            distributionSelect.appendChild(option);
+        });
+
+        // Set default to Florida (ID 63)
+        distributionSelect.value = '63'; 
+
+    } catch (error) {
+        console.error("Could not load distributions:", error);
+        distributionSelect.innerHTML = '<option value="">-- Error loading regions --</option>';
+    } finally {
+        distributionSelect.disabled = false;
+    }
+}
+
+// --- Pagination & Gallery Rendering ---
+
+function handlePrevClick() {
+    if (currentPage > 1) {
+        currentPage--;
+        fetchAndRenderPlants();
+    }
+}
+
+function handleNextClick() {
+    currentPage++;
+    fetchAndRenderPlants();
+}
+
 function renderPagination(links, meta) {
     if (!meta || !meta.total || meta.total === 0) {
         paginationContainer.classList.add('hidden');
@@ -276,7 +396,7 @@ function renderPagination(links, meta) {
     }
 
     const totalPlants = meta.total;
-    const perPage = 20;
+    const perPage = 20; // Trefle default is 20 per page
     const totalPages = Math.ceil(totalPlants / perPage);
 
     pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
@@ -286,14 +406,10 @@ function renderPagination(links, meta) {
     paginationContainer.classList.remove('hidden');
 }
 
-/**
- * Renders the plant cards in the gallery.
- * @param {Array} plants - An array of plant objects from Trefle.
- */
 function renderPlantGallery(plants) {
     plantGallery.innerHTML = '';
     if (plants.length === 0) {
-        plantGallery.innerHTML = '<p class="text-gray-400">No native plants found for this search.</p>';
+        plantGallery.innerHTML = '<p class="text-gray-400">No plants found for this search or filter.</p>';
         return;
     }
 
@@ -302,7 +418,8 @@ function renderPlantGallery(plants) {
         card.className = 'plant-card bg-gray-800 rounded-lg shadow-lg overflow-hidden cursor-pointer transition-transform hover:scale-105';
         card.dataset.slug = plant.slug;
         card.dataset.name = plant.common_name;
-        card.dataset.region = "Florida";
+        // We can't hardcode region anymore
+        // card.dataset.region = "Florida"; 
 
         card.innerHTML = `
             <img src="${plant.image_url}" alt="${plant.common_name}" class="w-full h-48 object-cover">
@@ -315,10 +432,8 @@ function renderPlantGallery(plants) {
     });
 }
 
-/**
- * Handles the click on a plant card, fetching details and showing the modal.
- * @param {Event} e - The click event
- */
+// --- Modal Functions ---
+
 async function handlePlantCardClick(e) {
     const card = e.target.closest('.plant-card');
     if (!card) return;
@@ -326,13 +441,11 @@ async function handlePlantCardClick(e) {
     const { slug, name } = card.dataset;
     console.log(`Card clicked: ${name} (slug: ${slug})`);
 
-    // Show modal and loader
     plantDetailModal.classList.remove('hidden');
     modalContent.classList.add('hidden');
-    // REMOVED THE STRAY 't' THAT WAS HERE
     modalLoader.classList.remove('hidden');
     modalTitle.textContent = name || "Loading...";
-    modalContent.innerHTML = ''; // Clear previous content
+    modalContent.innerHTML = ''; 
 
     try {
         const plantData = await getPlantDetails(slug);
@@ -341,10 +454,8 @@ async function handlePlantCardClick(e) {
         }
         console.log("Got plant details:", plantData);
 
-        // Generate rich HTML from the data
         const articleHtml = createPlantDetailHtml(plantData);
         
-        // Render the article
         modalTitle.textContent = plantData.common_name || plantData.scientific_name;
         modalContent.innerHTML = articleHtml;
 
@@ -352,21 +463,13 @@ async function handlePlantCardClick(e) {
         console.error(error);
         modalContent.innerHTML = `<p class="text-red-400">Sorry, an error occurred: ${error.message}</p>`;
     } finally {
-        // Hide loader and show content
         modalLoader.classList.add('hidden');
         modalContent.classList.remove('hidden');
-        // Reset scroll to top
         modalContentContainer.scrollTop = 0;
     }
 }
 
-/**
- * Takes a Trefle plant data object and generates rich HTML.
- * @param {object} plantData - The detailed plant object from Trefle.
- * @returns {string} - The generated HTML string.
- */
 function createPlantDetailHtml(plantData) {
-    // Helper to safely get nested data
     const get = (obj, path, defaultValue = 'N/A') => {
         const result = path.split('.').reduce((acc, key) => (acc && acc[key] !== undefined) ? acc[key] : undefined, obj);
         const value = result !== undefined ? result : defaultValue;
@@ -403,13 +506,10 @@ function createPlantDetailHtml(plantData) {
     `;
 }
 
-/**
- * Hides the plant detail modal.
- */
 function closeModal() {
     plantDetailModal.classList.add('hidden');
-    modalContent.innerHTML = ''; // Clear content
-    modalTitle.textContent = 'Plant Details'; // Reset title
+    modalContent.innerHTML = '';
+    modalTitle.textContent = 'Plant Details';
 }
 
 // --- Run the app ---
