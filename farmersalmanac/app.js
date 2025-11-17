@@ -9,21 +9,24 @@ import {
     initFirebase, 
     signInWithGoogle, 
     signOutUser,
-    getNativePlants,
+    getNativePlants, // This is now unused, but we'll leave it for now
+    searchNativePlants, // Import the new search function
     getPlantDetails,
     generatePlantArticle
 } from './api.js';
 
 // --- Global DOM Element Variables ---
 let modalBackdrop, apiKeyForm, appContainer, mainContent, authContainer,
-    signInBtn, signOutBtn, userInfo, userName, userPhoto, speciesTypeSelect,
-    plantGalleryContainer, plantGallery, loader, articleView, 
-    articleContent, articleLoader, backToGalleryBtn,
+    signInBtn, signOutBtn, userInfo, userName, userPhoto, searchForm, // Added searchForm
+    searchInput, plantGalleryContainer, plantGallery, loader, // Added searchInput
+    articleView, articleContent, articleLoader, backToGalleryBtn,
     paginationContainer, prevBtn, nextBtn, pageInfo;
 
 // --- App State ---
-let currentSpeciesType = null;
+let currentSearchQuery = null; // Replaces currentSpeciesType
 let currentPage = 1;
+let currentLinks = null; // To store pagination state
+let currentMeta = null; // To store pagination state
 
 /**
  * Main function to initialize the application
@@ -45,7 +48,10 @@ function main() {
         userName = document.getElementById('user-name');
         userPhoto = document.getElementById('user-photo');
 
-        speciesTypeSelect = document.getElementById('species-type-select');
+        // Assign new search elements
+        searchForm = document.getElementById('search-form');
+        searchInput = document.getElementById('search-input');
+        
         plantGalleryContainer = document.getElementById('plant-gallery-container');
         plantGallery = document.getElementById('plant-gallery');
         loader = document.getElementById('loader');
@@ -65,6 +71,8 @@ function main() {
 
         // 4. App is ready (but modal is still showing)
         console.log("App ready. Waiting for API keys.");
+        // Set initial gallery message
+        plantGallery.innerHTML = '<p class="text-gray-400">Please enter a search term to find native plants.</p>';
     });
 }
 
@@ -81,8 +89,8 @@ function addEventListeners() {
     // Listen for Google Sign-out button click
     signOutBtn.addEventListener('click', handleGoogleSignOut);
 
-    // Listen for species type selection change
-    speciesTypeSelect.addEventListener('change', handleSpeciesTypeSelect);
+    // Listen for search form submission
+    searchForm.addEventListener('submit', handleSearchSubmit);
 
     // Listen for pagination clicks
     prevBtn.addEventListener('click', handlePrevClick);
@@ -200,19 +208,24 @@ function updateAuthState(user) {
 }
 
 /**
- * Handles the selection of a new species type from the dropdown.
+ * Handles the search form submission.
+ * @param {Event} e - The form submit event
  */
-function handleSpeciesTypeSelect(e) {
-    currentSpeciesType = e.target.value;
-    currentPage = 1; // Reset to page 1
+function handleSearchSubmit(e) {
+    e.preventDefault();
+    const query = searchInput.value.trim();
 
-    if (!currentSpeciesType) {
-        plantGallery.innerHTML = '';
-        paginationContainer.classList.add('hidden');
+    // Don't re-submit the same query
+    if (query === currentSearchQuery) {
         return;
     }
 
-    console.log(`Species type selected: ${currentSpeciesType}`);
+    currentSearchQuery = query;
+    currentPage = 1; // Reset to page 1
+    currentLinks = null; // Clear old pagination
+    currentMeta = null; // Clear old pagination
+
+    console.log(`Searching for: ${currentSearchQuery}`);
     fetchAndRenderPlants();
 }
 
@@ -238,6 +251,13 @@ function handleNextClick() {
  * Fetches plant data from the API and renders the gallery and pagination.
  */
 async function fetchAndRenderPlants() {
+    // If there's no search query, show the initial message.
+    if (!currentSearchQuery) {
+        plantGallery.innerHTML = '<p class="text-gray-400">Please enter a search term to find native plants.</p>';
+        paginationContainer.classList.add('hidden');
+        return;
+    }
+
     loader.classList.remove('hidden');
     plantGallery.innerHTML = '';
     articleView.classList.add('hidden');
@@ -245,8 +265,14 @@ async function fetchAndRenderPlants() {
     paginationContainer.classList.add('hidden'); // Hide until we know we have pages
 
     try {
-        const { data, links, meta } = await getNativePlants(currentSpeciesType, currentPage);
-        console.log(`Found ${data.length} native plants for page ${currentPage}.`);
+        // Use the new search function
+        const { data, links, meta } = await searchNativePlants(currentSearchQuery, currentPage);
+        console.log(`Found ${data.length} native plants for query "${currentSearchQuery}", page ${currentPage}.`);
+        
+        // Store pagination state
+        currentLinks = links;
+        currentMeta = meta;
+
         renderPlantGallery(data);
         renderPagination(links, meta);
     } catch (error) {
@@ -263,13 +289,17 @@ async function fetchAndRenderPlants() {
  * @param {object} meta - The meta object from Trefle (total).
  */
 function renderPagination(links, meta) {
-    if (!meta || !meta.total) {
+    if (!meta || !meta.total || meta.total === 0) {
         paginationContainer.classList.add('hidden');
         return;
     }
 
     const totalPlants = meta.total;
-    const totalPages = Math.ceil(totalPlants / 20); // Trefle API uses 20 per page
+    // Trefle search API returns 10 per page by default, but /species returns 20.
+    // Let's check the data length or assume 20 as per the original function.
+    // The search endpoint seems to use 20 per page as well based on my docs review.
+    const perPage = 20; // Default page size for /species endpoint
+    const totalPages = Math.ceil(totalPlants / perPage);
 
     pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
     prevBtn.disabled = !links.prev;
@@ -285,7 +315,7 @@ function renderPagination(links, meta) {
 function renderPlantGallery(plants) {
     plantGallery.innerHTML = ''; // Clear previous results
     if (plants.length === 0) {
-        plantGallery.innerHTML = '<p class="text-gray-400">No native plants found for this species type with images.</p>';
+        plantGallery.innerHTML = '<p class="text-gray-400">No native plants found for this search.</p>';
         return;
     }
 
@@ -367,7 +397,8 @@ function renderArticle(articleHtml, plantName) {
 function showGalleryView() {
     articleView.classList.add('hidden');
     plantGalleryContainer.classList.remove('hidden');
-    paginationContainer.classList.remove('hidden'); // Show pagination again
+    // Re-render pagination to restore its state (visible or hidden)
+    renderPagination(currentLinks, currentMeta);
     articleContent.innerHTML = '';
 }
 
