@@ -470,14 +470,30 @@ async function handlePlantCardClick(e) {
 }
 
 function createPlantDetailHtml(plantData) {
+    // This helper is used for simple, direct paths
     const get = (obj, path, defaultValue = 'N/A') => {
         const result = path.split('.').reduce((acc, key) => (acc && acc[key] !== undefined) ? acc[key] : undefined, obj);
         const value = result !== undefined ? result : defaultValue;
         if (Array.isArray(value)) {
+            // This is the line that causes the [object Object] bug,
+            // so we will NOT use this helper for the distributions array.
             return value.length > 0 ? value.join(', ') : defaultValue;
         }
         return value;
     };
+
+    // --- New logic to handle distributions ---
+    // We get the raw array, not using the 'get' helper which would stringify it
+    const nativeDists = (plantData.distributions && plantData.distributions.native) ? plantData.distributions.native : [];
+    let distributionText = 'No native distribution data available.';
+    
+    if (Array.isArray(nativeDists) && nativeDists.length > 0) {
+        distributionText = nativeDists
+            .map(dist => dist.name) // Pluck the 'name' from each object
+            .filter(name => name) // Filter out any null/undefined names
+            .join(', '); // Join them with a comma
+    }
+    // --- End new logic ---
 
     return `
         <img src="${get(plantData, 'image_url')}" alt="${get(plantData, 'common_name')}" class="w-full rounded-lg shadow-lg mb-6">
@@ -502,7 +518,7 @@ function createPlantDetailHtml(plantData) {
 
         <h3>Distributions</h3>
         <p>This plant is native to the following regions:</p>
-        <p class="text-gray-400 text-sm">${get(plantData, 'distributions.native', 'No native distribution data available.')}</p>
+        <p class="text-gray-400 text-sm">${distributionText}</p>
     `;
 }
 
