@@ -88,7 +88,7 @@ export async function signOutUser() {
     if (!auth) return;
     try {
         await signOut(auth);
-        console.log("User signed out.");
+        console.log("User signed in.");
     } catch (error) {
         console.error("Sign out error:", error);
     }
@@ -169,6 +169,80 @@ export async function searchNativePlants(query, page) {
     }
 }
 
+/**
+ * Fetches all distributions (states, countries) from Trefle.
+ * @returns {Promise<Array>} A promise that resolves to an array of distribution objects.
+ */
+export async function getAllDistributions() {
+    if (!configStore.trefleApiKey) {
+        console.error("Trefle API Key is missing.");
+        return [];
+    }
+
+    const trefleUrl = `https://trefle.io/api/v1/distributions?token=${configStore.trefleApiKey}`;
+    const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(trefleUrl)}`;
+
+    try {
+        const response = await fetch(proxyUrl);
+        if (!response.ok) {
+            throw new Error(`Trefle API error (via proxy): ${response.statusText}`);
+        }
+        const data = await response.json();
+        return data.data; // Return just the array of distributions
+    } catch (error) {
+        console.error("Error fetching distributions:", error);
+        return [];
+    }
+}
+
+/**
+ * Fetches plants based on advanced filters (distribution, growth form).
+ * @param {object} filters - An object containing filter criteria.
+ * @param {string} filters.distributionId - The Trefle ID for the region.
+ * @param {string} filters.growthForm - The growth form (e.g., 'tree').
+ * @param {number} page - The page number to fetch.
+ * @returns {Promise<object>} A promise that resolves to an object containing plant data, links, and meta.
+ */
+export async function getFilteredPlants(filters, page) {
+    if (!configStore.trefleApiKey) {
+        console.error("Trefle API Key is missing.");
+        return { data: [], links: {}, meta: {} };
+    }
+
+    // Start building the URL
+    let trefleUrl = `https://trefle.io/api/v1/species?page=${page}&token=${configStore.trefleApiKey}`;
+
+    // Add filters dynamically
+    if (filters.distributionId) {
+        trefleUrl += `&filter[distribution_id]=${filters.distributionId}`;
+    }
+    if (filters.growthForm) {
+        trefleUrl += `&filter[growth_form]=${filters.growthForm}`;
+    }
+
+    const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(trefleUrl)}`;
+
+    try {
+        const response = await fetch(proxyUrl);
+        if (!response.ok) {
+            throw new Error(`Trefle API error (via proxy): ${response.statusText}`);
+        }
+        const data = await response.json();
+        
+        // Filter the results for a cleaner UI
+        const filteredData = data.data.filter(plant => plant.common_name && plant.image_url);
+        
+        return {
+            data: filteredData,
+            links: data.links,
+            meta: data.meta
+        };
+    } catch (error) {
+        console.error("Error fetching filtered plants:", error);
+        return { data: [], links: {}, meta: {} };
+    }
+}
+
 
 /**
  * Fetches detailed information for a single plant by its slug.
@@ -198,5 +272,3 @@ export async function getPlantDetails(plantSlug) {
         return null;
     }
 }
-
-// --- Removed generatePlantArticle function ---
