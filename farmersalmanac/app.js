@@ -10,9 +10,7 @@ import {
     signInWithGoogle, 
     signOutUser,
     searchNativePlants,
-    getPlantDetails,
-    getAllDistributions, // New import
-    getFilteredPlants // New import
+    getPlantDetails
 } from './api.js';
 
 // --- Global DOM Element Variables ---
@@ -23,18 +21,11 @@ let modalBackdrop, apiKeyForm, appContainer, mainContent, authContainer,
     plantDetailModal, modalTitle, modalCloseBtn, modalContentContainer,
     modalLoader, modalContent;
 
-// New Advanced Search elements
-let advancedSearchToggle, advancedSearchView, backToSimpleSearch,
-    advancedSearchForm, distributionSelect, growthFormSelect;
-
 // --- App State ---
 let currentSearchQuery = null;
 let currentPage = 1;
 let currentLinks = null;
 let currentMeta = null;
-let isAdvancedSearchActive = false; // Track search mode
-let currentAdvancedFilters = {}; // Store advanced filters
-let distributionsCache = null; // Cache for distributions
 
 /**
  * Main function to initialize the application
@@ -74,21 +65,13 @@ function main() {
         prevBtn = document.getElementById('prev-btn');
         nextBtn = document.getElementById('next-btn');
         pageInfo = document.getElementById('page-info');
-
-        // Assign new advanced search elements
-        advancedSearchToggle = document.getElementById('advanced-search-toggle');
-        advancedSearchView = document.getElementById('advanced-search-view');
-        backToSimpleSearch = document.getElementById('back-to-simple-search');
-        advancedSearchForm = document.getElementById('advanced-search-form');
-        distributionSelect = document.getElementById('distribution-select');
-        growthFormSelect = document.getElementById('growth-form-select');
         
         // 3. Add all event listeners
         addEventListeners();
 
         // 4. App is ready
         console.log("App ready. Waiting for API keys.");
-        plantGallery.innerHTML = '<p class="text-gray-400">Please enter a search term to find native plants.</p>';
+        plantGallery.innerHTML = '<p class="text-gray-400">Please enter a search term to find plants.</p>';
     });
 }
 
@@ -111,11 +94,6 @@ function addEventListeners() {
             closeModal();
         }
     });
-
-    // Advanced search listeners
-    advancedSearchToggle.addEventListener('click', showAdvancedSearch);
-    backToSimpleSearch.addEventListener('click', showSimpleSearch);
-    advancedSearchForm.addEventListener('submit', handleAdvancedSearchSubmit);
 }
 
 /**
@@ -204,54 +182,15 @@ function updateAuthState(user) {
     }
 }
 
-// --- View Toggling ---
-
-/**
- * Shows the Advanced Search view and populates dropdowns.
- */
-function showAdvancedSearch() {
-    document.getElementById('discovery-view').classList.add('hidden');
-    advancedSearchView.classList.remove('hidden');
-    paginationContainer.classList.add('hidden'); // Hide pagination
-    plantGallery.innerHTML = '<p class="text-gray-400">Please select filters to find plants.</p>'; // Reset gallery
-
-    // Populate dropdowns if not already populated
-    if (!distributionsCache) {
-        populateDistributionDropdown();
-    }
-}
-
-/**
- * Shows the Simple Search (main gallery) view.
- */
-function showSimpleSearch() {
-    advancedSearchView.classList.add('hidden');
-    document.getElementById('discovery-view').classList.remove('hidden');
-    // Restore previous search state if it exists
-    if (currentLinks || currentMeta) {
-        renderPagination(currentLinks, currentMeta);
-    }
-    // Re-render gallery if we have a query
-    if (currentSearchQuery) {
-        fetchAndRenderPlants(); // Re-runs simple search
-    } else {
-        plantGallery.innerHTML = '<p class="text-gray-400">Please enter a search term to find native plants.</p>';
-    }
-}
-
 // --- Search & Filtering ---
 
 /**
- * Handles the simple search form submission (Florida only).
+ * Handles the simple search form submission (now global).
  * @param {Event} e - The form submit event
  */
 function handleSearchSubmit(e) {
     e.preventDefault();
     const query = searchInput.value.trim();
-
-    // Reset advanced search
-    isAdvancedSearchActive = false;
-    currentAdvancedFilters = {};
 
     if (query === currentSearchQuery) {
         return;
@@ -262,68 +201,29 @@ function handleSearchSubmit(e) {
     currentLinks = null;
     currentMeta = null;
 
-    console.log(`Simple searching for: ${currentSearchQuery}`);
-    fetchAndRenderPlants();
-}
-
-/**
- * Handles the advanced search form submission.
- * @param {Event} e - The form submit event
- */
-function handleAdvancedSearchSubmit(e) {
-    e.preventDefault();
-    
-    // Set advanced search mode
-    isAdvancedSearchActive = true;
-    currentSearchQuery = null; // Clear simple search
-    currentPage = 1;
-    currentLinks = null;
-    currentMeta = null;
-
-    // Store the selected filters
-    currentAdvancedFilters = {
-        distributionId: distributionSelect.value,
-        growthForm: growthFormSelect.value
-    };
-
-    console.log("Advanced searching with filters:", currentAdvancedFilters);
+    console.log(`Global searching for: ${currentSearchQuery}`);
     fetchAndRenderPlants();
 }
 
 /**
  * Fetches plant data from the API and renders the gallery and pagination.
- * This function now intelligently decides which API to call.
  */
 async function fetchAndRenderPlants() {
     loader.classList.remove('hidden');
     plantGallery.innerHTML = '';
     paginationContainer.classList.add('hidden');
 
-    // Restore gallery view in case modal was open
-    document.getElementById('discovery-view').classList.remove('hidden');
-    advancedSearchView.classList.add('hidden');
-
     try {
         let results = { data: [], links: {}, meta: {} };
 
-        if (isAdvancedSearchActive) {
-            // --- Advanced Filter Path ---
-            if (!currentAdvancedFilters.distributionId && !currentAdvancedFilters.growthForm) {
-                plantGallery.innerHTML = '<p class="text-gray-400">Please select at least one filter for advanced search.</p>';
-                loader.classList.add('hidden');
-                return;
-            }
-            results = await getFilteredPlants(currentAdvancedFilters, currentPage);
-            console.log(`Found ${results.data.length} plants for advanced filter, page ${currentPage}.`);
-
-        } else if (currentSearchQuery) {
-            // --- Simple Search Path ---
+        if (currentSearchQuery) {
+            // --- Global Search Path ---
             results = await searchNativePlants(currentSearchQuery, currentPage);
-            console.log(`Found ${results.data.length} native plants for query "${currentSearchQuery}", page ${currentPage}.`);
+            console.log(`Found ${results.data.length} plants for query "${currentSearchQuery}", page ${currentPage}.`);
         
         } else {
             // --- No Search Active ---
-            plantGallery.innerHTML = '<p class="text-gray-400">Please enter a search term to find native plants.</p>';
+            plantGallery.innerHTML = '<p class="text-gray-400">Please enter a search term to find plants.</p>';
             loader.classList.add('hidden');
             return;
         }
@@ -339,39 +239,6 @@ async function fetchAndRenderPlants() {
         plantGallery.innerHTML = '<p class="text-red-400">Could not load plants. Check console for errors.</p>';
     } finally {
         loader.classList.add('hidden');
-    }
-}
-
-/**
- * Populates the distribution (region) dropdown.
- */
-async function populateDistributionDropdown() {
-    distributionSelect.disabled = true;
-    
-    try {
-        const distributions = await getAllDistributions();
-        // Sort alphabetically by name
-        distributions.sort((a, b) => a.name.localeCompare(b.name));
-        
-        distributionsCache = distributions; // Cache the results
-        
-        distributionSelect.innerHTML = '<option value="">-- Any Region --</option>'; // Reset
-        
-        distributions.forEach(dist => {
-            const option = document.createElement('option');
-            option.value = dist.id;
-            option.textContent = dist.name;
-            distributionSelect.appendChild(option);
-        });
-
-        // Set default to Florida (ID 63)
-        distributionSelect.value = '63'; 
-
-    } catch (error) {
-        console.error("Could not load distributions:", error);
-        distributionSelect.innerHTML = '<option value="">-- Error loading regions --</option>';
-    } finally {
-        distributionSelect.disabled = false;
     }
 }
 
@@ -418,8 +285,6 @@ function renderPlantGallery(plants) {
         card.className = 'plant-card bg-gray-800 rounded-lg shadow-lg overflow-hidden cursor-pointer transition-transform hover:scale-105';
         card.dataset.slug = plant.slug;
         card.dataset.name = plant.common_name;
-        // We can't hardcode region anymore
-        // card.dataset.region = "Florida"; 
 
         card.innerHTML = `
             <img src="${plant.image_url}" alt="${plant.common_name}" class="w-full h-48 object-cover">
