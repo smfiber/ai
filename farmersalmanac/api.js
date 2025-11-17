@@ -133,6 +133,44 @@ export async function getNativePlants(speciesType, page) {
 }
 
 /**
+ * Searches native plants for Florida based on a query string.
+ * @param {string} query - The user's search term (e.g., 'Oak').
+ * @param {number} page - The page number to fetch.
+ * @returns {Promise<object>} A promise that resolves to an object containing plant data, links, and meta.
+ */
+export async function searchNativePlants(query, page) {
+    if (!configStore.trefleApiKey) {
+        console.error("Trefle API Key is missing.");
+        return { data: [], links: {}, meta: {} }; // Return a structured object
+    }
+
+    const distributionId = 63; // Trefle Distribution ID for Florida
+    const trefleUrl = `https://trefle.io/api/v1/species/search?filter[distribution_id]=${distributionId}&q=${query}&page=${page}&token=${configStore.trefleApiKey}`;
+    const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(trefleUrl)}`;
+
+    try {
+        const response = await fetch(proxyUrl); // Use the proxied URL
+        if (!response.ok) {
+            throw new Error(`Trefle API error (via proxy): ${response.statusText}`);
+        }
+        const data = await response.json();
+        
+        // Filter the results for a cleaner UI, but return the full object for pagination
+        const filteredData = data.data.filter(plant => plant.common_name && plant.image_url);
+        
+        return {
+            data: filteredData,
+            links: data.links,
+            meta: data.meta
+        };
+    } catch (error) {
+        console.error("Error searching native plants:", error);
+        return { data: [], links: {}, meta: {} }; // Return empty structure on error
+    }
+}
+
+
+/**
  * Fetches detailed information for a single plant by its slug.
  * @param {string} plantSlug - The Trefle slug for the plant (e.g., 'serenoa-repens').
  * @returns {Promise<object>} A promise that resolves to the detailed plant object.
