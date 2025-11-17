@@ -267,7 +267,7 @@ async function fetchAndRenderPlants() {
 /**
  * Renders the pagination controls (buttons, page info).
  * @param {object} links - The links object from Trefle (next, prev, last).
- * @param {object} meta - The meta object from Trefle (total).
+ * @param {object} meta - The meta object from Tfrefle (total).
  */
 function renderPagination(links, meta) {
     if (!meta || !meta.total || meta.total === 0) {
@@ -329,7 +329,7 @@ async function handlePlantCardClick(e) {
     // Show modal and loader
     plantDetailModal.classList.remove('hidden');
     modalContent.classList.add('hidden');
-t
+    // REMOVED THE STRAY 't' THAT WAS HERE
     modalLoader.classList.remove('hidden');
     modalTitle.textContent = name || "Loading...";
     modalContent.innerHTML = ''; // Clear previous content
