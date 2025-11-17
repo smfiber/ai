@@ -149,7 +149,6 @@ export async function searchNativePlants(query, page) {
     // Removed the hard-coded distributionId = 63 to make this a global search.
     const trefleUrl = `https://trefle.io/api/v1/species/search?q=${query}&page=${page}&token=${configStore.trefleApiKey}`;
     
-    // --- THIS LINE IS NOW FIXED ---
     const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(trefleUrl)}`;
 
     try {
@@ -244,8 +243,9 @@ export async function fetchAugmentedPlantData(plantData) {
         }
     `;
 
-    // Using the v1beta endpoint as it's the standard for generative models.
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${configStore.geminiApiKey}`;
+    // --- THIS LINE IS NOW FIXED ---
+    // Using the v1 endpoint and the 2.5-pro model as requested in guidelines.
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-pro:generateContent?key=${configStore.geminiApiKey}`;
 
     const requestBody = {
         contents: [{
@@ -281,7 +281,8 @@ export async function fetchAugmentedPlantData(plantData) {
         console.log("Gemini augmentation successful:", augmentedData);
         return augmentedData;
 
-    } catch (error) {
+    } catch (error)
+ {
         console.error("Error augmenting plant data with Gemini:", error);
         return {}; // Return empty object on failure
     }
