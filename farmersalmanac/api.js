@@ -107,8 +107,10 @@ export async function getNativePlants(speciesType, page) {
         return { data: [], links: {}, meta: {} }; // Return a structured object
     }
     
-    const distributionId = 63; // Trefle Distribution ID for Florida
-    const trefleUrl = `https://trefle.io/api/v1/species?filter[distribution_id]=${distributionId}&filter[growth_form]=${speciesType}&page=${page}&token=${configStore.trefleApiKey}`;
+    // NOTE: This function is not currently called by app.js,
+    // but we will leave it in case we want to add a category filter later.
+    // The regional filter has been removed.
+    const trefleUrl = `https://trefle.io/api/v1/species?filter[growth_form]=${speciesType}&page=${page}&token=${configStore.trefleApiKey}`;
     const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(trefleUrl)}`;
 
     try {
@@ -133,7 +135,7 @@ export async function getNativePlants(speciesType, page) {
 }
 
 /**
- * Searches native plants for Florida based on a query string.
+ * Searches plants based on a query string.
  * @param {string} query - The user's search term (e.g., 'Oak').
  * @param {number} page - The page number to fetch.
  * @returns {Promise<object>} A promise that resolves to an object containing plant data, links, and meta.
@@ -144,8 +146,8 @@ export async function searchNativePlants(query, page) {
         return { data: [], links: {}, meta: {} }; // Return a structured object
     }
 
-    const distributionId = 63; // Trefle Distribution ID for Florida
-    const trefleUrl = `https://trefle.io/api/v1/species/search?filter[distribution_id]=${distributionId}&q=${query}&page=${page}&token=${configStore.trefleApiKey}`;
+    // Removed the hard-coded distributionId = 63 to make this a global search.
+    const trefleUrl = `https://trefle.io/api/v1/species/search?q=${query}&page=${page}&token=${configStore.trefleApiKey}`;
     const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(trefleUrl)}`;
 
     try {
@@ -168,81 +170,6 @@ export async function searchNativePlants(query, page) {
         return { data: [], links: {}, meta: {} }; // Return empty structure on error
     }
 }
-
-/**
- * Fetches all distributions (states, countries) from Trefle.
- * @returns {Promise<Array>} A promise that resolves to an array of distribution objects.
- */
-export async function getAllDistributions() {
-    if (!configStore.trefleApiKey) {
-        console.error("Trefle API Key is missing.");
-        return [];
-    }
-
-    const trefleUrl = `https://trefle.io/api/v1/distributions?token=${configStore.trefleApiKey}`;
-    const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(trefleUrl)}`;
-
-    try {
-        const response = await fetch(proxyUrl);
-        if (!response.ok) {
-            throw new Error(`Trefle API error (via proxy): ${response.statusText}`);
-        }
-        const data = await response.json();
-        return data.data; // Return just the array of distributions
-    } catch (error) {
-        console.error("Error fetching distributions:", error);
-        return [];
-    }
-}
-
-/**
- * Fetches plants based on advanced filters (distribution, growth form).
- * @param {object} filters - An object containing filter criteria.
- * @param {string} filters.distributionId - The Trefle ID for the region.
- * @param {string} filters.growthForm - The growth form (e.g., 'tree').
- * @param {number} page - The page number to fetch.
- * @returns {Promise<object>} A promise that resolves to an object containing plant data, links, and meta.
- */
-export async function getFilteredPlants(filters, page) {
-    if (!configStore.trefleApiKey) {
-        console.error("Trefle API Key is missing.");
-        return { data: [], links: {}, meta: {} };
-    }
-
-    // Start building the URL
-    let trefleUrl = `https://trefle.io/api/v1/species?page=${page}&token=${configStore.trefleApiKey}`;
-
-    // Add filters dynamically
-    if (filters.distributionId) {
-        trefleUrl += `&filter[distribution_id]=${filters.distributionId}`;
-    }
-    if (filters.growthForm) {
-        trefleUrl += `&filter[growth_form]=${filters.growthForm}`;
-    }
-
-    const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(trefleUrl)}`;
-
-    try {
-        const response = await fetch(proxyUrl);
-        if (!response.ok) {
-            throw new Error(`Trefle API error (via proxy): ${response.statusText}`);
-        }
-        const data = await response.json();
-        
-        // Filter the results for a cleaner UI
-        const filteredData = data.data.filter(plant => plant.common_name && plant.image_url);
-        
-        return {
-            data: filteredData,
-            links: data.links,
-            meta: data.meta
-        };
-    } catch (error) {
-        console.error("Error fetching filtered plants:", error);
-        return { data: [], links: {}, meta: {} };
-    }
-}
-
 
 /**
  * Fetches detailed information for a single plant by its slug.
