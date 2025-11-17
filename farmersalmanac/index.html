@@ -53,25 +53,63 @@
         <header class="flex flex-col md:flex-row justify-between items-center pb-6 border-b border-gray-700 mb-6">
             <h1 class="text-3xl font-bold text-white mb-4 md:mb-0">Digital Gardener's Almanac <span class="text-green-400">(SE Natives)</span></h1>
             
-            <form id="search-form" class="w-full md:w-auto md:max-w-md flex-1 mx-0 md:mx-6 my-4 md:my-0">
-                <label for="search-input" class="sr-only">Search Plants</label>
-                <input type="search" id="search-input" name="search" class="w-full bg-gray-800 border border-gray-700 text-white rounded-lg px-4 py-2 text-base focus:ring-green-500 focus:border-green-500" placeholder="Search native plants (e.g., 'Saw Palmetto')">
-            </form>
+            <nav class="flex flex-col md:flex-row items-center w-full md:w-auto">
+                <form id="search-form" class="w-full md:w-auto md:max-w-md flex-1 mx-0 md:mx-6 my-4 md:my-0">
+                    <label for="search-input" class="sr-only">Search Plants</label>
+                    <input type="search" id="search-input" name="search" class="w-full bg-gray-800 border border-gray-700 text-white rounded-lg px-4 py-2 text-base focus:ring-green-500 focus:border-green-500" placeholder="Search Florida natives...">
+                </form>
 
-            <div id="auth-container">
-                <button id="google-signin-btn" class="bg-blue-600 text-white font-medium py-2 px-4 rounded-lg shadow-md hover:bg-blue-700 transition-colors">
-                    Sign in with Google
+                <button id="advanced-search-toggle" class="text-green-400 hover:text-green-300 text-sm whitespace-nowrap">
+                    Advanced Search
                 </button>
-                <div id="user-info" class="hidden items-center">
-                    <img id="user-photo" src="" alt="User" class="w-10 h-10 rounded-full mr-3">
-                    <span id="user-name" class="font-medium text-white"></span>
-                    <button id="google-signout-btn" class="ml-4 text-sm text-gray-400 hover:text-white">Sign Out</button>
+
+                <div id="auth-container" class="ml-0 md:ml-6 mt-4 md:mt-0">
+                    <button id="google-signin-btn" class="bg-blue-600 text-white font-medium py-2 px-4 rounded-lg shadow-md hover:bg-blue-700 transition-colors">
+                        Sign in with Google
+                    </button>
+                    <div id="user-info" class="hidden items-center">
+                        <img id="user-photo" src="" alt="User" class="w-10 h-10 rounded-full mr-3">
+                        <span id="user-name" class="font-medium text-white"></span>
+                        <button id="google-signout-btn" class="ml-4 text-sm text-gray-400 hover:text-white">Sign Out</button>
+                    </div>
                 </div>
-            </div>
+            </nav>
         </header>
 
         <main id="main-content">
             
+            <div id="advanced-search-view" class="hidden bg-gray-800 p-6 md:p-8 rounded-lg shadow-xl mb-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-white">Advanced Filter</h2>
+                    <button id="back-to-simple-search" class="text-green-400 font-medium">&larr; Back to Simple Search</button>
+                </div>
+                <form id="advanced-search-form" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label for="distribution-select" class="block text-sm font-medium text-gray-300 mb-1">Filter by Region (State/Country)</label>
+                        <select id="distribution-select" class="w-full bg-gray-700 border border-gray-600 text-white rounded-lg px-3 py-2 text-base focus:ring-green-500 focus:border-green-500">
+                            <option value="">-- Loading Regions --</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="growth-form-select" class="block text-sm font-medium text-gray-300 mb-1">Filter by Growth Form</label>
+                        <select id="growth-form-select" class="w-full bg-gray-700 border border-gray-600 text-white rounded-lg px-3 py-2 text-base focus:ring-green-500 focus:border-green-500">
+                            <option value="">-- Any Growth Form --</option>
+                            <option value="tree">Tree</option>
+                            <option value="shrub">Shrub</option>
+                            <option value="herb">Herb</option>
+                            <option value="liana">Vine (Liana)</option>
+                            <option value="fern">Fern</option>
+                            <option value="grass">Grass</option>
+                        </select>
+                    </div>
+                    <div class="md:self-end">
+                        <button type="submit" id="advanced-search-submit" class="w-full bg-green-600 text-white py-2 px-4 rounded-md font-semibold shadow-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">
+                            Apply Filters
+                        </button>
+                    </div>
+                </form>
+            </div>
+
             <div id="discovery-view">
                 <div id="plant-gallery-container">
                     <div id="loader" class="hidden text-center py-10">
@@ -92,18 +130,15 @@
                 </div>
             </div>
 
-            </main>
+        </main>
     </div>
 
     <div id="plant-detail-modal" class="hidden fixed inset-0 z-40 bg-gray-900/80 backdrop-blur-sm flex items-center justify-center p-4">
-        
         <div class="bg-gray-800 rounded-lg shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col">
-            
             <div class="flex justify-between items-center p-4 border-b border-gray-700">
                 <h2 id="modal-title" class="text-2xl font-bold text-white">Plant Details</h2>
                 <button id="modal-close-btn" class="text-gray-400 hover:text-white">&times;</button>
             </div>
-
             <div id="modal-content-container" class="p-6 overflow-y-auto">
                 <div id="modal-loader" class="hidden text-center py-10">
                     <p class="text-lg text-green-400">Loading plant details...</p>
@@ -111,7 +146,6 @@
                 <div id="modal-content" class="prose prose-invert prose-lg max-w-none">
                     </div>
             </div>
-
         </div>
     </div>
 
