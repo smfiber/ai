@@ -11,22 +11,30 @@ import {
     signOutUser,
     searchNativePlants,
     getPlantDetails,
-    fetchAugmentedPlantData // New import for Gemini
+    fetchAugmentedPlantData,
+    // Database functions
+    savePlantToGarden,
+    removePlantFromGarden,
+    isPlantInGarden,
+    getGardenPlants
 } from './api.js';
 
 // --- Global DOM Element Variables ---
 let modalBackdrop, apiKeyForm, appContainer, mainContent, authContainer,
-    signInBtn, signOutBtn, userInfo, userName, userPhoto, searchForm,
-    searchInput, plantGalleryContainer, plantGallery, loader,
+    signInBtn, signOutBtn, userInfo, userName, userPhoto, myGardenBtn, 
+    searchForm, searchInput, plantGalleryContainer, plantGallery, loader,
     paginationContainer, prevBtn, nextBtn, pageInfo,
     plantDetailModal, modalTitle, modalCloseBtn, modalContentContainer,
-    modalLoader, modalContent;
+    modalLoader, modalContent, savePlantBtn,
+    gardenView, backToSearchBtn, gardenLoader, gardenGallery, gardenEmptyState;
 
 // --- App State ---
 let currentSearchQuery = null;
 let currentPage = 1;
 let currentLinks = null;
 let currentMeta = null;
+let currentUser = null; // Track the logged-in user
+let currentModalPlant = null; // Track data for the currently open modal
 
 /**
  * Main function to initialize the application
@@ -47,6 +55,7 @@ function main() {
         userInfo = document.getElementById('user-info');
         userName = document.getElementById('user-name');
         userPhoto = document.getElementById('user-photo');
+        myGardenBtn = document.getElementById('my-garden-btn');
 
         searchForm = document.getElementById('search-form');
         searchInput = document.getElementById('search-input');
@@ -61,11 +70,19 @@ function main() {
         modalContentContainer = document.getElementById('modal-content-container');
         modalLoader = document.getElementById('modal-loader');
         modalContent = document.getElementById('modal-content');
+        savePlantBtn = document.getElementById('save-plant-btn');
 
         paginationContainer = document.getElementById('pagination-container');
         prevBtn = document.getElementById('prev-btn');
         nextBtn = document.getElementById('next-btn');
         pageInfo = document.getElementById('page-info');
+
+        // Garden View Elements
+        gardenView = document.getElementById('garden-view');
+        backToSearchBtn = document.getElementById('back-to-search-btn');
+        gardenLoader = document.getElementById('garden-loader');
+        gardenGallery = document.getElementById('garden-gallery');
+        gardenEmptyState = document.getElementById('garden-empty-state');
         
         // 3. Add all event listeners
         addEventListeners();
@@ -83,10 +100,16 @@ function addEventListeners() {
     apiKeyForm.addEventListener('submit', handleApiKeySubmit);
     signInBtn.addEventListener('click', handleGoogleSignIn);
     signOutBtn.addEventListener('click', handleGoogleSignOut);
+    myGardenBtn.addEventListener('click', showGardenView);
+    backToSearchBtn.addEventListener('click', showDiscoveryView);
+
     searchForm.addEventListener('submit', handleSearchSubmit);
     prevBtn.addEventListener('click', handlePrevClick);
     nextBtn.addEventListener('click', handleNextClick);
+    
+    // Gallery clicks (delegated)
     plantGallery.addEventListener('click', handlePlantCardClick);
+    gardenGallery.addEventListener('click', handlePlantCardClick);
     
     // Modal listeners
     modalCloseBtn.addEventListener('click', closeModal);
@@ -95,11 +118,11 @@ function addEventListeners() {
             closeModal();
         }
     });
+    savePlantBtn.addEventListener('click', handleSaveToggle);
 }
 
 /**
  * Handles the submission of the API key modal.
- * @param {Event} e - The form submit event
  */
 async function handleApiKeySubmit(e) {
     e.preventDefault();
@@ -168,27 +191,43 @@ async function handleGoogleSignOut() {
 }
 
 function updateAuthState(user) {
+    currentUser = user; // Update global state
+    
     if (user) {
         signInBtn.classList.add('hidden');
         userInfo.classList.remove('hidden');
         userInfo.classList.add('flex');
         userName.textContent = user.displayName;
         userPhoto.src = user.photoURL;
+        // Enable garden button
+        myGardenBtn.classList.remove('hidden');
     } else {
         signInBtn.classList.remove('hidden');
         userInfo.classList.add('hidden');
         userInfo.classList.remove('flex');
         userName.textContent = '';
         userPhoto.src = '';
+        // Reset views
+        showDiscoveryView();
+        myGardenBtn.classList.add('hidden');
     }
+}
+
+// --- View Toggling ---
+
+function showGardenView() {
+    document.getElementById('discovery-view').classList.add('hidden');
+    gardenView.classList.remove('hidden');
+    loadGardenPlants(); // Fetch data
+}
+
+function showDiscoveryView() {
+    gardenView.classList.add('hidden');
+    document.getElementById('discovery-view').classList.remove('hidden');
 }
 
 // --- Search & Filtering ---
 
-/**
- * Handles the simple search form submission (now global).
- * @param {Event} e - The form submit event
- */
 function handleSearchSubmit(e) {
     e.preventDefault();
     const query = searchInput.value.trim();
@@ -206,9 +245,6 @@ function handleSearchSubmit(e) {
     fetchAndRenderPlants();
 }
 
-/**
- * Fetches plant data from the API and renders the gallery and pagination.
- */
 async function fetchAndRenderPlants() {
     loader.classList.remove('hidden');
     plantGallery.innerHTML = '';
@@ -218,12 +254,9 @@ async function fetchAndRenderPlants() {
         let results = { data: [], links: {}, meta: {} };
 
         if (currentSearchQuery) {
-            // --- Global Search Path ---
             results = await searchNativePlants(currentSearchQuery, currentPage);
             console.log(`Found ${results.data.length} plants for query "${currentSearchQuery}", page ${currentPage}.`);
-        
         } else {
-            // --- No Search Active ---
             plantGallery.innerHTML = '<p class="text-gray-400">Please enter a search term to find plants.</p>';
             loader.classList.add('hidden');
             return;
@@ -232,7 +265,7 @@ async function fetchAndRenderPlants() {
         currentLinks = results.links;
         currentMeta = results.meta;
 
-        renderPlantGallery(results.data);
+        renderPlantGallery(results.data, plantGallery); // Render to main gallery
         renderPagination(results.links, results.meta);
 
     } catch (error) {
@@ -240,6 +273,31 @@ async function fetchAndRenderPlants() {
         plantGallery.innerHTML = '<p class="text-red-400">Could not load plants. Check console for errors.</p>';
     } finally {
         loader.classList.add('hidden');
+    }
+}
+
+// --- Garden Logic ---
+
+async function loadGardenPlants() {
+    if (!currentUser) return;
+    
+    gardenLoader.classList.remove('hidden');
+    gardenGallery.innerHTML = '';
+    gardenEmptyState.classList.add('hidden');
+
+    try {
+        const savedPlants = await getGardenPlants(currentUser.uid);
+        
+        if (savedPlants.length === 0) {
+            gardenEmptyState.classList.remove('hidden');
+        } else {
+            renderPlantGallery(savedPlants, gardenGallery);
+        }
+    } catch (error) {
+        console.error("Error loading garden:", error);
+        gardenGallery.innerHTML = '<p class="text-red-400">Failed to load garden.</p>';
+    } finally {
+        gardenLoader.classList.add('hidden');
     }
 }
 
@@ -264,7 +322,7 @@ function renderPagination(links, meta) {
     }
 
     const totalPlants = meta.total;
-    const perPage = 20; // Trefle default is 20 per page
+    const perPage = 20;
     const totalPages = Math.ceil(totalPlants / perPage);
 
     pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
@@ -274,10 +332,13 @@ function renderPagination(links, meta) {
     paginationContainer.classList.remove('hidden');
 }
 
-function renderPlantGallery(plants) {
-    plantGallery.innerHTML = '';
-    if (plants.length === 0) {
-        plantGallery.innerHTML = '<p class="text-gray-400">No plants found for this search or filter.</p>';
+/**
+ * Generic render function for any gallery container
+ */
+function renderPlantGallery(plants, container) {
+    container.innerHTML = '';
+    if (plants.length === 0 && container === plantGallery) {
+        container.innerHTML = '<p class="text-gray-400">No plants found for this search or filter.</p>';
         return;
     }
 
@@ -294,39 +355,25 @@ function renderPlantGallery(plants) {
                 <p class="text-gray-400 text-sm italic">${plant.scientific_name}</p>
             </div>
         `;
-        plantGallery.appendChild(card);
+        container.appendChild(card);
     });
 }
 
 // --- Modal Functions ---
 
-/**
- * A helper function to safely check for null/undefined/empty string
- * @param {*} value - The value to check
- * @returns {boolean} True if the value is null, undefined, or 'N/A'
- */
 function isValueMissing(value) {
     return value === null || value === undefined || value === 'N/A' || value === '';
 }
 
-/**
- * Merges Trefle data with augmented Gemini data.
- * It prioritizes Trefle data unless it's missing.
- * @param {object} trefleData - Original data from Trefle
- * @param {object} geminiData - Augmented data from Gemini
- * @returns {object} The final merged data object
- */
 function mergePlantData(trefleData, geminiData) {
-    // We create a new, structured object to pass to the renderer.
-    // This makes the HTML templating function much cleaner.
     const finalData = {
         image_url: trefleData.image_url,
         scientific_name: trefleData.scientific_name,
         common_name: trefleData.common_name,
         edible: trefleData.edible,
+        slug: trefleData.slug, // Ensure slug is preserved
         distributions: trefleData.distributions,
 
-        // Use Trefle data first, or Gemini data as a fallback
         family_common_name: !isValueMissing(trefleData.family_common_name) ? trefleData.family_common_name : 
                               !isValueMissing(trefleData.family?.name) ? trefleData.family.name : 
                               geminiData.family_common_name,
@@ -352,11 +399,12 @@ function mergePlantData(trefleData, geminiData) {
         
         bloom_months: !isValueMissing(trefleData.growth?.bloom_months) ? trefleData.growth.bloom_months :
                         geminiData.bloom_months,
+        
+        care_plan: geminiData.care_plan
     };
 
     return finalData;
 }
-
 
 async function handlePlantCardClick(e) {
     const card = e.target.closest('.plant-card');
@@ -369,31 +417,41 @@ async function handlePlantCardClick(e) {
     modalContent.classList.add('hidden');
     modalLoader.classList.remove('hidden');
     modalTitle.textContent = name || "Loading...";
-    // Update loader text
     modalLoader.querySelector('p').textContent = 'Loading plant details...';
     modalContent.innerHTML = ''; 
+    
+    // Reset Save Button
+    savePlantBtn.classList.add('hidden');
+    savePlantBtn.textContent = 'Save';
+    savePlantBtn.classList.remove('bg-red-600', 'hover:bg-red-700');
+    savePlantBtn.classList.add('bg-green-600', 'hover:bg-green-700');
 
     try {
-        // --- Step 1: Get base data from Trefle ---
+        // --- 1. Check if saved (if logged in) ---
+        let isSaved = false;
+        if (currentUser) {
+            isSaved = await isPlantInGarden(currentUser.uid, slug);
+            updateSaveButtonState(isSaved);
+            savePlantBtn.classList.remove('hidden');
+        }
+
+        // --- 2. Get base data from Trefle ---
         const trefleData = await getPlantDetails(slug);
         if (!trefleData) {
             throw new Error("Could not fetch plant details.");
         }
-        console.log("Got Trefle details:", trefleData);
 
-        // --- Step 2: Augment data with Gemini ---
+        // --- 3. Augment data with Gemini ---
         modalLoader.querySelector('p').textContent = 'Augmenting data with AI...';
         const geminiData = await fetchAugmentedPlantData(trefleData);
-        console.log("Got Gemini details:", geminiData);
 
-        // --- Step 3: Merge Trefle and Gemini data ---
-        const finalPlantData = mergePlantData(trefleData, geminiData);
-        console.log("Final merged data:", finalPlantData);
+        // --- 4. Merge Data ---
+        currentModalPlant = mergePlantData(trefleData, geminiData);
 
-        // --- Step 4: Render the final data ---
-        const articleHtml = createPlantDetailHtml(finalPlantData);
+        // --- 5. Render ---
+        const articleHtml = createPlantDetailHtml(currentModalPlant);
         
-        modalTitle.textContent = finalPlantData.common_name || finalPlantData.scientific_name;
+        modalTitle.textContent = currentModalPlant.common_name || currentModalPlant.scientific_name;
         modalContent.innerHTML = articleHtml;
 
     } catch (error) {
@@ -403,33 +461,70 @@ async function handlePlantCardClick(e) {
         modalLoader.classList.add('hidden');
         modalContent.classList.remove('hidden');
         modalContentContainer.scrollTop = 0;
-        // Reset loader text for next time
         modalLoader.querySelector('p').textContent = 'Loading plant details...';
     }
 }
 
+function updateSaveButtonState(isSaved) {
+    if (isSaved) {
+        savePlantBtn.textContent = 'Remove';
+        savePlantBtn.classList.remove('bg-green-600', 'hover:bg-green-700');
+        savePlantBtn.classList.add('bg-red-600', 'hover:bg-red-700');
+        savePlantBtn.dataset.action = 'remove';
+    } else {
+        savePlantBtn.textContent = 'Save';
+        savePlantBtn.classList.remove('bg-red-600', 'hover:bg-red-700');
+        savePlantBtn.classList.add('bg-green-600', 'hover:bg-green-700');
+        savePlantBtn.dataset.action = 'save';
+    }
+}
+
+async function handleSaveToggle() {
+    if (!currentUser || !currentModalPlant) return;
+    
+    const action = savePlantBtn.dataset.action;
+    const originalText = savePlantBtn.textContent;
+    savePlantBtn.disabled = true;
+    savePlantBtn.textContent = '...';
+
+    try {
+        if (action === 'save') {
+            await savePlantToGarden(currentUser.uid, currentModalPlant);
+            updateSaveButtonState(true);
+        } else {
+            await removePlantFromGarden(currentUser.uid, currentModalPlant.slug);
+            updateSaveButtonState(false);
+            // If we are in garden view, reload the list to reflect removal
+            if (!gardenView.classList.contains('hidden')) {
+                loadGardenPlants();
+            }
+        }
+    } catch (error) {
+        console.error("Save action failed:", error);
+        alert("Failed to update garden. See console.");
+        savePlantBtn.textContent = originalText;
+    } finally {
+        savePlantBtn.disabled = false;
+    }
+}
+
 function createPlantDetailHtml(plantData) {
-    // This helper is now much simpler, just for basic values
-    // All complex merging is done in mergePlantData
     const get = (value, defaultValue = 'N/A') => {
         return !isValueMissing(value) ? value : defaultValue;
     };
 
-    // --- Handle distributions (this logic is still needed) ---
     const nativeDists = (plantData.distributions && plantData.distributions.native) ? plantData.distributions.native : [];
     let distributionText = 'No native distribution data available.';
     
     if (Array.isArray(nativeDists) && nativeDists.length > 0) {
         distributionText = nativeDists
-            .map(dist => dist.name) // Pluck the 'name' from each object
-            .filter(name => name) // Filter out any null/undefined names
-            .join(', '); // Join them with a comma
+            .map(dist => dist.name)
+            .filter(name => name) 
+            .join(', ');
     }
-    // --- End distributions logic ---
 
-    // Note: We now use the keys from the finalPlantData object
     return `
-        <img src="${get(plantData.image_url)}" alt="${get(plantData.common_name)}" class="w-full rounded-lg shadow-lg mb-6">
+        <img src="${get(plantData.image_url)}" alt="${get(plantData.common_name)}" class="w-full rounded-lg shadow-lg mb-6 max-h-[50vh] object-cover">
         
         <h3>Scientific Classification</h3>
         <ul class="plant-data-list">
@@ -446,9 +541,11 @@ function createPlantDetailHtml(plantData) {
             <li><strong>Soil Texture:</strong> ${get(plantData.soil_texture)}</li>
             <li><strong>Soil pH (Min/Max):</strong> ${get(plantData.ph_min_max)}</li>
             <li><strong>Bloom Months:</strong> ${get(plantData.bloom_months)}</li>
-            
             <li><strong>Edible:</strong> ${get(plantData.edible, 'N/A')}</li>
         </ul>
+
+        <h3>Care Plan</h3>
+        <p>${get(plantData.care_plan, 'No care plan available.')}</p>
 
         <h3>Distributions</h3>
         <p>This plant is native to the following regions:</p>
@@ -460,6 +557,7 @@ function closeModal() {
     plantDetailModal.classList.add('hidden');
     modalContent.innerHTML = '';
     modalTitle.textContent = 'Plant Details';
+    currentModalPlant = null;
 }
 
 // --- Run the app ---
