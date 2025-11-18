@@ -1042,7 +1042,7 @@
 
         async function callApi(apiUrl, payload) {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 60000);
+            const timeoutId = setTimeout(() => controller.abort(), 180000); // Increased timeout to 180 seconds (3 minutes)
 
             try {
                 const response = await fetch(apiUrl, {
@@ -2392,7 +2392,7 @@ Return ONLY the final, valid JSON array.`;
             document.body.appendChild(fileDownload);
             fileDownload.href = source;
             
-            const cleanTitle = title.replace("In-Depth: ", "").replace(/[^a-z0-g]/gi, '_').toLowerCase();
+            const cleanTitle = title.replace("In-Depth: ", "").replace(/[^a-z0-9]/gi, '_').toLowerCase();
             fileDownload.download = `${cleanTitle || 'yoga_plan'}.doc`;
             fileDownload.click();
             document.body.removeChild(fileDownload);
