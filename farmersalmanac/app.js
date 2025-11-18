@@ -563,7 +563,7 @@ function createPlantDetailHtml(plantData) {
             
             <div class="bg-gray-700/50 p-5 rounded-xl shadow-inner border border-gray-600">
                 <h3 class="flex items-center text-xl font-bold text-green-400 mb-4 pb-2 border-b border-gray-600">
-                    <span class="mr-2">溌</span> Scientific Classification
+                    <span class="mr-2">🔬</span> Scientific Classification
                 </h3>
                 <ul class="space-y-3 text-gray-200">
                     <li class="flex justify-between">
@@ -583,7 +583,7 @@ function createPlantDetailHtml(plantData) {
 
             <div class="bg-gray-700/50 p-5 rounded-xl shadow-inner border border-gray-600">
                 <h3 class="flex items-center text-xl font-bold text-green-400 mb-4 pb-2 border-b border-gray-600">
-                    <span class="mr-2">験</span> Characteristics
+                    <span class="mr-2">🌿</span> Characteristics
                 </h3>
                 <ul class="space-y-3 text-gray-200">
                     <li class="flex justify-between items-center">
@@ -592,11 +592,11 @@ function createPlantDetailHtml(plantData) {
                     </li>
                     <li class="flex justify-between items-center">
                         <span class="text-gray-400">Sunlight</span>
-                        <span class="font-medium text-right flex items-center gap-1">笘 ｸ${get(plantData.sunlight)}</span>
+                        <span class="font-medium text-right flex items-center gap-1">☀️ ${get(plantData.sunlight)}</span>
                     </li>
                     <li class="flex justify-between items-center">
                         <span class="text-gray-400">Watering</span>
-                        <span class="font-medium text-right flex items-center gap-1">挑 ${get(plantData.watering)}</span>
+                        <span class="font-medium text-right flex items-center gap-1">💧 ${get(plantData.watering)}</span>
                     </li>
                     <li class="flex justify-between items-center">
                         <span class="text-gray-400">Soil</span>
@@ -614,7 +614,7 @@ function createPlantDetailHtml(plantData) {
 
         <div class="bg-green-900/20 border-l-4 border-green-500 p-6 rounded-r-xl mb-8 shadow-lg">
             <h3 class="flex items-center text-xl font-bold text-white mb-3">
-                <span class="mr-2">丁</span> AI Care Plan
+                <span class="mr-2">🤖</span> AI Care Plan
             </h3>
             <p class="text-gray-300 leading-relaxed italic">
                 ${get(plantData.care_plan, 'No care plan available.')}
@@ -623,7 +623,7 @@ function createPlantDetailHtml(plantData) {
 
         <div class="bg-gray-800 p-6 rounded-xl">
             <h3 class="flex items-center text-xl font-bold text-white mb-3">
-                <span class="mr-2">訣</span> Native Distributions
+                <span class="mr-2">🗺️</span> Native Distributions
             </h3>
             <p class="text-gray-400 text-sm leading-relaxed">
                 ${distributionText}
