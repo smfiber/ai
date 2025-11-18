@@ -1,34 +1,13 @@
-/* This file is for custom styles that are tricky with Tailwind 
-  or for base styles.
-*/
+/* * STYLE.CSS
+ * Custom styles that are tricky with Tailwind or for base components.
+ */
 
 body {
-    /* Base font settings */
+    /* Base font settings handled by Tailwind */
 }
 
-/* Custom styles for the article content (now in modal) */
-#modal-content h3 {
-    @apply text-2xl font-semibold text-green-400 mt-6 mb-3;
-}
-
-#modal-content p {
-    @apply text-gray-300 mb-4 leading-relaxed;
-}
-
-#modal-content ul.plant-data-list {
-    @apply list-none list-inside text-gray-300 mb-4 pl-0;
-}
-
-#modal-content ul.plant-data-list li {
-    @apply border-b border-gray-700 py-2;
-}
-
-#modal-content img {
-    @apply w-full rounded-lg shadow-lg my-6;
-}
-
-/* A simple loading spinner */
-#loader::after, #modal-loader::after {
+/* --- Loading Spinner --- */
+#loader::after, #modal-loader::after, #garden-loader::after {
     content: '';
     display: inline-block;
     width: 2rem;
@@ -47,7 +26,26 @@ body {
     }
 }
 
-/* Make the modal close button bigger */
+/* --- Custom Scrollbar for Modal Content --- */
+/* This makes the scrollbar inside the modal look nicer on Webkit browsers */
+#modal-content-container::-webkit-scrollbar {
+    width: 8px;
+}
+
+#modal-content-container::-webkit-scrollbar-track {
+    background: theme('colors.gray.800'); 
+}
+
+#modal-content-container::-webkit-scrollbar-thumb {
+    background: theme('colors.gray.600'); 
+    border-radius: 4px;
+}
+
+#modal-content-container::-webkit-scrollbar-thumb:hover {
+    background: theme('colors.gray.500'); 
+}
+
+/* Make the modal close button bigger/easier to hit */
 #modal-close-btn {
-    @apply text-2xl font-bold leading-none px-2;
+    @apply text-3xl font-bold leading-none px-2 text-gray-400 hover:text-white transition-colors;
 }
