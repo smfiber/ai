@@ -243,7 +243,6 @@ export async function fetchAugmentedPlantData(plantData) {
         }
     `;
 
-    // --- THIS LINE IS NOW FIXED ---
     // Using the v1 endpoint and the 2.5-pro model as requested in guidelines.
     const geminiUrl = `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-pro:generateContent?key=${configStore.geminiApiKey}`;
 
@@ -252,7 +251,8 @@ export async function fetchAugmentedPlantData(plantData) {
             parts: [{ text: prompt }]
         }],
         generationConfig: {
-            response_mime_type: "application/json", // Request JSON output
+            // --- THIS LINE IS NOW FIXED ---
+            responseMimeType: "application/json", // Request JSON output
             temperature: 0.2,
         }
     };
