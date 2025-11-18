@@ -523,33 +523,80 @@ function createPlantDetailHtml(plantData) {
             .join(', ');
     }
 
+    // --- Rich HTML Layout ---
     return `
-        <img src="${get(plantData.image_url)}" alt="${get(plantData.common_name)}" class="w-full rounded-lg shadow-lg mb-6 max-h-[50vh] object-cover">
+        <img src="${get(plantData.image_url)}" alt="${get(plantData.common_name)}" class="w-full rounded-lg shadow-lg mb-8 max-h-[50vh] object-cover">
         
-        <h3>Scientific Classification</h3>
-        <ul class="plant-data-list">
-            <li><strong>Scientific Name:</strong> <em>${get(plantData.scientific_name)}</em></li>
-            <li><strong>Family:</strong> ${get(plantData.family_common_name)}</li>
-            <li><strong>Genus:</strong> ${get(plantData.genus_name)}</li>
-        </ul>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            
+            <div class="bg-gray-700/50 p-5 rounded-xl shadow-inner border border-gray-600">
+                <h3 class="flex items-center text-xl font-bold text-green-400 mb-4 pb-2 border-b border-gray-600">
+                    <span class="mr-2">🔬</span> Scientific Classification
+                </h3>
+                <ul class="space-y-3 text-gray-200">
+                    <li class="flex justify-between">
+                        <span class="text-gray-400">Scientific Name</span>
+                        <span class="font-medium italic text-right">${get(plantData.scientific_name)}</span>
+                    </li>
+                    <li class="flex justify-between">
+                        <span class="text-gray-400">Family</span>
+                        <span class="font-medium text-right">${get(plantData.family_common_name)}</span>
+                    </li>
+                    <li class="flex justify-between">
+                        <span class="text-gray-400">Genus</span>
+                        <span class="font-medium text-right">${get(plantData.genus_name)}</span>
+                    </li>
+                </ul>
+            </div>
 
-        <h3>Growth &amp; Characteristics</h3>
-        <ul class="plant-data-list">
-            <li><strong>Growth Form:</strong> ${get(plantData.growth_form)}</li>
-            <li><strong>Sunlight:</strong> ${get(plantData.sunlight)}</li>
-            <li><strong>Watering:</strong> ${get(plantData.watering)}</li>
-            <li><strong>Soil Texture:</strong> ${get(plantData.soil_texture)}</li>
-            <li><strong>Soil pH (Min/Max):</strong> ${get(plantData.ph_min_max)}</li>
-            <li><strong>Bloom Months:</strong> ${get(plantData.bloom_months)}</li>
-            <li><strong>Edible:</strong> ${get(plantData.edible, 'N/A')}</li>
-        </ul>
+            <div class="bg-gray-700/50 p-5 rounded-xl shadow-inner border border-gray-600">
+                <h3 class="flex items-center text-xl font-bold text-green-400 mb-4 pb-2 border-b border-gray-600">
+                    <span class="mr-2">🌱</span> Characteristics
+                </h3>
+                <ul class="space-y-3 text-gray-200">
+                    <li class="flex justify-between items-center">
+                        <span class="text-gray-400">Form</span>
+                        <span class="font-medium text-right">${get(plantData.growth_form)}</span>
+                    </li>
+                    <li class="flex justify-between items-center">
+                        <span class="text-gray-400">Sunlight</span>
+                        <span class="font-medium text-right flex items-center gap-1">☀️ ${get(plantData.sunlight)}</span>
+                    </li>
+                    <li class="flex justify-between items-center">
+                        <span class="text-gray-400">Watering</span>
+                        <span class="font-medium text-right flex items-center gap-1">💧 ${get(plantData.watering)}</span>
+                    </li>
+                    <li class="flex justify-between items-center">
+                        <span class="text-gray-400">Soil</span>
+                        <span class="font-medium text-right">${get(plantData.soil_texture)}</span>
+                    </li>
+                    <li class="flex justify-between items-center">
+                        <span class="text-gray-400">Edible</span>
+                        <span class="px-2 py-0.5 rounded text-xs font-bold ${String(plantData.edible) === 'true' ? 'bg-green-900 text-green-300' : 'bg-gray-600 text-gray-300'}">
+                            ${get(plantData.edible, 'N/A')}
+                        </span>
+                    </li>
+                </ul>
+            </div>
+        </div>
 
-        <h3>Care Plan</h3>
-        <p>${get(plantData.care_plan, 'No care plan available.')}</p>
+        <div class="bg-green-900/20 border-l-4 border-green-500 p-6 rounded-r-xl mb-8 shadow-lg">
+            <h3 class="flex items-center text-xl font-bold text-white mb-3">
+                <span class="mr-2">💚</span> AI Care Plan
+            </h3>
+            <p class="text-gray-300 leading-relaxed italic">
+                ${get(plantData.care_plan, 'No care plan available.')}
+            </p>
+        </div>
 
-        <h3>Distributions</h3>
-        <p>This plant is native to the following regions:</p>
-        <p class="text-gray-400 text-sm">${distributionText}</p>
+        <div class="bg-gray-800 p-6 rounded-xl">
+            <h3 class="flex items-center text-xl font-bold text-white mb-3">
+                <span class="mr-2">🌍</span> Native Distributions
+            </h3>
+            <p class="text-gray-400 text-sm leading-relaxed">
+                ${distributionText}
+            </p>
+        </div>
     `;
 }
 
