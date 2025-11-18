@@ -4,6 +4,7 @@
  * - Firebase Initialization & Auth
  * - Trefle API calls
  * - Gemini API calls
+ * - Firestore Database calls
  */
 
 import { configStore } from './config.js';
@@ -11,6 +12,8 @@ import { configStore } from './config.js';
 // --- Firebase SDKs (will be dynamically imported) ---
 let app, auth, db;
 let GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut;
+// Firestore functions
+let collection, addDoc, deleteDoc, doc, query, where, getDocs;
 
 /**
  * Dynamically imports Firebase modules and initializes the app.
@@ -28,21 +31,29 @@ export async function initFirebase() {
         // Dynamically import the Firebase modules
         const { initializeApp } = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js');
         const { getAuth, GoogleAuthProvider: GAuthProvider, signInWithPopup: siwp, onAuthStateChanged: oasc, setPersistence, browserSessionPersistence, signOut: so } = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js');
-        const { getFirestore } = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js');
+        const { getFirestore, collection: col, addDoc: ad, deleteDoc: dd, doc: d, query: q, where: w, getDocs: gd } = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js');
 
-        // Assign to module-level variables
+        // Assign Auth variables
         GoogleAuthProvider = GAuthProvider;
         signInWithPopup = siwp;
         onAuthStateChanged = oasc;
         signOut = so;
+
+        // Assign Firestore variables
+        collection = col;
+        addDoc = ad;
+        deleteDoc = dd;
+        doc = d;
+        query = q;
+        where = w;
+        getDocs = gd;
 
         // Initialize Firebase
         app = initializeApp(configStore.firebaseConfig);
         auth = getAuth(app);
         db = getFirestore(app);
 
-        // Set auth persistence to session. This respects the "no local storage" rule.
-        // User stays logged in for the session (tab) but is logged out when tab is closed.
+        // Set auth persistence to session.
         await setPersistence(auth, browserSessionPersistence);
 
         console.log("Firebase Initialized Successfully.");
@@ -66,7 +77,6 @@ export async function signInWithGoogle() {
     }
 
     const provider = new GoogleAuthProvider();
-    // Specify the Client ID from the config
     provider.setCustomParameters({
       'client_id': configStore.googleClientId
     });
@@ -88,108 +98,177 @@ export async function signOutUser() {
     if (!auth) return;
     try {
         await signOut(auth);
-        console.log("User signed in.");
+        console.log("User signed out.");
     } catch (error) {
         console.error("Sign out error:", error);
     }
 }
 
+// --- Firestore Database Functions ---
 
 /**
- * Fetches native plants for Florida based on species type and page.
- * @param {string} speciesType - The Trefle growth_form (e.g., 'tree', 'shrub').
- * @param {number} page - The page number to fetch.
- * @returns {Promise<object>} A promise that resolves to an object containing plant data, links, and meta.
+ * Saves a plant to the user's 'digital_gardener' collection.
+ * @param {string} userId - The Firebase User UID.
+ * @param {object} plant - The plant data to save (slug, names, image).
  */
+export async function savePlantToGarden(userId, plant) {
+    if (!db) return;
+    try {
+        // We only save the essential data needed for the list view
+        await addDoc(collection(db, "digital_gardener"), {
+            uid: userId,
+            slug: plant.slug,
+            common_name: plant.common_name,
+            scientific_name: plant.scientific_name,
+            image_url: plant.image_url,
+            saved_at: Date.now()
+        });
+        console.log(`Saved ${plant.common_name} to garden.`);
+    } catch (error) {
+        console.error("Error saving plant:", error);
+        throw error;
+    }
+}
+
+/**
+ * Removes a plant from the user's 'digital_gardener' collection.
+ * @param {string} userId - The Firebase User UID.
+ * @param {string} plantSlug - The slug of the plant to remove.
+ */
+export async function removePlantFromGarden(userId, plantSlug) {
+    if (!db) return;
+    try {
+        // Query to find the document with matching UID and Slug
+        const q = query(
+            collection(db, "digital_gardener"), 
+            where("uid", "==", userId),
+            where("slug", "==", plantSlug)
+        );
+        
+        const snapshot = await getDocs(q);
+        
+        // Delete all matching documents (should usually be one)
+        const deletePromises = snapshot.docs.map(document => 
+            deleteDoc(doc(db, "digital_gardener", document.id))
+        );
+        
+        await Promise.all(deletePromises);
+        console.log(`Removed ${plantSlug} from garden.`);
+    } catch (error) {
+        console.error("Error removing plant:", error);
+        throw error;
+    }
+}
+
+/**
+ * Checks if a plant is already in the user's garden.
+ * @param {string} userId - The Firebase User UID.
+ * @param {string} plantSlug - The slug of the plant to check.
+ * @returns {Promise<boolean>} True if saved, false otherwise.
+ */
+export async function isPlantInGarden(userId, plantSlug) {
+    if (!db) return false;
+    try {
+        const q = query(
+            collection(db, "digital_gardener"), 
+            where("uid", "==", userId),
+            where("slug", "==", plantSlug)
+        );
+        const snapshot = await getDocs(q);
+        return !snapshot.empty;
+    } catch (error) {
+        console.error("Error checking plant status:", error);
+        return false;
+    }
+}
+
+/**
+ * Gets all plants saved by the user.
+ * @param {string} userId - The Firebase User UID.
+ * @returns {Promise<Array>} An array of plant objects.
+ */
+export async function getGardenPlants(userId) {
+    if (!db) return [];
+    try {
+        const q = query(
+            collection(db, "digital_gardener"), 
+            where("uid", "==", userId)
+        );
+        const snapshot = await getDocs(q);
+        
+        const plants = [];
+        snapshot.forEach(doc => {
+            plants.push(doc.data());
+        });
+        return plants;
+    } catch (error) {
+        console.error("Error fetching garden:", error);
+        return [];
+    }
+}
+
+
+// --- Trefle API Functions ---
+
 export async function getNativePlants(speciesType, page) {
     if (!configStore.trefleApiKey) {
         console.error("Trefle API Key is missing.");
-        return { data: [], links: {}, meta: {} }; // Return a structured object
+        return { data: [], links: {}, meta: {} };
     }
     
-    // NOTE: This function is not currently called by app.js,
-    // but we will leave it in case we want to add a category filter later.
-    // The regional filter has been removed.
     const trefleUrl = `https://trefle.io/api/v1/species?filter[growth_form]=${speciesType}&page=${page}&token=${configStore.trefleApiKey}`;
     const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(trefleUrl)}`;
 
     try {
-        const response = await fetch(proxyUrl); // Use the proxied URL
+        const response = await fetch(proxyUrl);
         if (!response.ok) {
             throw new Error(`Trefle API error (via proxy): ${response.statusText}`);
         }
         const data = await response.json();
-        
-        // Filter the results for a cleaner UI, but return the full object for pagination
         const filteredData = data.data.filter(plant => plant.common_name && plant.image_url);
         
-        return {
-            data: filteredData,
-            links: data.links,
-            meta: data.meta
-        };
+        return { data: filteredData, links: data.links, meta: data.meta };
     } catch (error) {
         console.error("Error fetching native plants:", error);
-        return { data: [], links: {}, meta: {} }; // Return empty structure on error
+        return { data: [], links: {}, meta: {} };
     }
 }
 
-/**
- * Searches plants based on a query string.
- * @param {string} query - The user's search term (e.g., 'Oak').
- * @param {number} page - The page number to fetch.
- * @returns {Promise<object>} A promise that resolves to an object containing plant data, links, and meta.
- */
 export async function searchNativePlants(query, page) {
     if (!configStore.trefleApiKey) {
         console.error("Trefle API Key is missing.");
-        return { data: [], links: {}, meta: {} }; // Return a structured object
+        return { data: [], links: {}, meta: {} };
     }
 
-    // Removed the hard-coded distributionId = 63 to make this a global search.
     const trefleUrl = `https://trefle.io/api/v1/species/search?q=${query}&page=${page}&token=${configStore.trefleApiKey}`;
-    
     const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(trefleUrl)}`;
 
     try {
-        const response = await fetch(proxyUrl); // Use the proxied URL
+        const response = await fetch(proxyUrl);
         if (!response.ok) {
             throw new Error(`Trefle API error (via proxy): ${response.statusText}`);
         }
         const data = await response.json();
-        
-        // Filter the results for a cleaner UI, but return the full object for pagination
         const filteredData = data.data.filter(plant => plant.common_name && plant.image_url);
         
-        return {
-            data: filteredData,
-            links: data.links,
-            meta: data.meta
-        };
+        return { data: filteredData, links: data.links, meta: data.meta };
     } catch (error) {
         console.error("Error searching native plants:", error);
-        return { data: [], links: {}, meta: {} }; // Return empty structure on error
+        return { data: [], links: {}, meta: {} };
     }
 }
 
-/**
- * Fetches detailed information for a single plant by its slug.
- * @param {string} plantSlug - The Trefle slug for the plant (e.g., 'serenoa-repens').
- * @returns {Promise<object>} A promise that resolves to the detailed plant object.
- */
 export async function getPlantDetails(plantSlug) {
     if (!configStore.trefleApiKey) {
         console.error("Trefle API Key is missing.");
         return null;
     }
 
-    // --- We must get /api/v1/species, NOT /api/v1/plants ---
     const trefleUrl = `https://trefle.io/api/v1/species/${plantSlug}?token=${configStore.trefleApiKey}`;
     const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(trefleUrl)}`;
 
-
     try {
-        const response = await fetch(proxyUrl); // Use the proxied URL
+        const response = await fetch(proxyUrl);
         if (!response.ok) {
             throw new Error(`Trefle API error (via proxy): ${response.statusText}`);
         }
@@ -201,13 +280,9 @@ export async function getPlantDetails(plantSlug) {
     }
 }
 
-/**
- * Extracts a JSON string from Gemini's markdown-formatted text response.
- * @param {string} text - The raw text from Gemini API.
- * @returns {object} The parsed JSON object.
- */
+// --- Gemini API Functions ---
+
 function extractJsonFromGeminiResponse(text) {
-    // Find the start and end of the JSON block
     const jsonStart = text.indexOf('{');
     const jsonEnd = text.lastIndexOf('}');
     
@@ -219,21 +294,15 @@ function extractJsonFromGeminiResponse(text) {
     return JSON.parse(jsonText);
 }
 
-/**
- * Augments plant data by fetching missing fields from the Gemini API.
- * @param {object} plantData - The incomplete plant data object from Trefle.
- * @returns {Promise<object>} A promise that resolves to an object with the augmented data.
- */
 export async function fetchAugmentedPlantData(plantData) {
     if (!configStore.geminiApiKey) {
         console.error("Gemini API Key is missing. Skipping augmentation.");
-        return {}; // Return empty object
+        return {}; 
     }
 
     const scientificName = plantData.scientific_name;
     const commonName = plantData.common_name;
 
-    // --- THIS PROMPT IS NOW UPDATED ---
     const prompt = `
         You are an expert botanist. A user has incomplete data for the plant: "${scientificName}" (Common Name: ${commonName}).
 
@@ -284,19 +353,14 @@ export async function fetchAugmentedPlantData(plantData) {
         }
 
         const data = await response.json();
-        
-        // Extract the raw text from the (now) text-based response
         const rawText = data.candidates[0].content.parts[0].text;
-        
-        // Clean and parse the text to get the JSON object
         const augmentedData = extractJsonFromGeminiResponse(rawText);
         
         console.log("Gemini augmentation successful:", augmentedData);
         return augmentedData;
 
-    } catch (error)
- {
+    } catch (error) {
         console.error("Error augmenting plant data with Gemini:", error);
-        return {}; // Return empty object on failure
+        return {}; 
     }
 }
