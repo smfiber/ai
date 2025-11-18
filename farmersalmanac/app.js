@@ -16,7 +16,8 @@ import {
     savePlantToGarden,
     removePlantFromGarden,
     isPlantInGarden,
-    getGardenPlants
+    getGardenPlants,
+    getSavedPlant // <--- NEW IMPORT
 } from './api.js';
 
 // --- Global DOM Element Variables ---
@@ -427,28 +428,59 @@ async function handlePlantCardClick(e) {
     savePlantBtn.classList.add('bg-green-600', 'hover:bg-green-700');
 
     try {
-        // --- 1. Check if saved (if logged in) ---
         let isSaved = false;
+        
+        // --- 1. Fast Path: Check if already saved with full data ---
         if (currentUser) {
-            isSaved = await isPlantInGarden(currentUser.uid, slug);
-            updateSaveButtonState(isSaved);
-            savePlantBtn.classList.remove('hidden');
+            modalLoader.querySelector('p').textContent = 'Checking your garden...';
+            const savedPlant = await getSavedPlant(currentUser.uid, slug);
+            
+            // If we have the plant AND it has a care_plan, we know it's the full Augmented version
+            if (savedPlant && savedPlant.care_plan) {
+                console.log("Loaded from Garden (Skipped APIs)");
+                currentModalPlant = savedPlant;
+                
+                // Render immediately
+                const articleHtml = createPlantDetailHtml(currentModalPlant);
+                modalTitle.textContent = currentModalPlant.common_name || currentModalPlant.scientific_name;
+                modalContent.innerHTML = articleHtml;
+                
+                // Update button to "Remove" state
+                updateSaveButtonState(true);
+                savePlantBtn.classList.remove('hidden');
+                
+                // Skip the rest of the function
+                modalLoader.classList.add('hidden');
+                modalContent.classList.remove('hidden');
+                modalContentContainer.scrollTop = 0;
+                return;
+            }
+            
+            // If found but partial data (legacy save), or not found, update status boolean
+            if (savedPlant) isSaved = true;
         }
 
-        // --- 2. Get base data from Trefle ---
+        // --- 2. Slow Path: Fetch from APIs ---
+        if (currentUser) {
+             updateSaveButtonState(isSaved);
+             savePlantBtn.classList.remove('hidden');
+        }
+
+        // Get base data from Trefle
+        modalLoader.querySelector('p').textContent = 'Fetching data from Trefle...';
         const trefleData = await getPlantDetails(slug);
         if (!trefleData) {
             throw new Error("Could not fetch plant details.");
         }
 
-        // --- 3. Augment data with Gemini ---
+        // Augment data with Gemini
         modalLoader.querySelector('p').textContent = 'Augmenting data with AI...';
         const geminiData = await fetchAugmentedPlantData(trefleData);
 
-        // --- 4. Merge Data ---
+        // Merge Data
         currentModalPlant = mergePlantData(trefleData, geminiData);
 
-        // --- 5. Render ---
+        // Render
         const articleHtml = createPlantDetailHtml(currentModalPlant);
         
         modalTitle.textContent = currentModalPlant.common_name || currentModalPlant.scientific_name;
@@ -531,7 +563,7 @@ function createPlantDetailHtml(plantData) {
             
             <div class="bg-gray-700/50 p-5 rounded-xl shadow-inner border border-gray-600">
                 <h3 class="flex items-center text-xl font-bold text-green-400 mb-4 pb-2 border-b border-gray-600">
-                    <span class="mr-2">🔬</span> Scientific Classification
+                    <span class="mr-2">溌</span> Scientific Classification
                 </h3>
                 <ul class="space-y-3 text-gray-200">
                     <li class="flex justify-between">
@@ -551,7 +583,7 @@ function createPlantDetailHtml(plantData) {
 
             <div class="bg-gray-700/50 p-5 rounded-xl shadow-inner border border-gray-600">
                 <h3 class="flex items-center text-xl font-bold text-green-400 mb-4 pb-2 border-b border-gray-600">
-                    <span class="mr-2">🌱</span> Characteristics
+                    <span class="mr-2">験</span> Characteristics
                 </h3>
                 <ul class="space-y-3 text-gray-200">
                     <li class="flex justify-between items-center">
@@ -560,11 +592,11 @@ function createPlantDetailHtml(plantData) {
                     </li>
                     <li class="flex justify-between items-center">
                         <span class="text-gray-400">Sunlight</span>
-                        <span class="font-medium text-right flex items-center gap-1">☀️ ${get(plantData.sunlight)}</span>
+                        <span class="font-medium text-right flex items-center gap-1">笘 ｸ${get(plantData.sunlight)}</span>
                     </li>
                     <li class="flex justify-between items-center">
                         <span class="text-gray-400">Watering</span>
-                        <span class="font-medium text-right flex items-center gap-1">💧 ${get(plantData.watering)}</span>
+                        <span class="font-medium text-right flex items-center gap-1">挑 ${get(plantData.watering)}</span>
                     </li>
                     <li class="flex justify-between items-center">
                         <span class="text-gray-400">Soil</span>
@@ -582,7 +614,7 @@ function createPlantDetailHtml(plantData) {
 
         <div class="bg-green-900/20 border-l-4 border-green-500 p-6 rounded-r-xl mb-8 shadow-lg">
             <h3 class="flex items-center text-xl font-bold text-white mb-3">
-                <span class="mr-2">💚</span> AI Care Plan
+                <span class="mr-2">丁</span> AI Care Plan
             </h3>
             <p class="text-gray-300 leading-relaxed italic">
                 ${get(plantData.care_plan, 'No care plan available.')}
@@ -591,7 +623,7 @@ function createPlantDetailHtml(plantData) {
 
         <div class="bg-gray-800 p-6 rounded-xl">
             <h3 class="flex items-center text-xl font-bold text-white mb-3">
-                <span class="mr-2">🌍</span> Native Distributions
+                <span class="mr-2">訣</span> Native Distributions
             </h3>
             <p class="text-gray-400 text-sm leading-relaxed">
                 ${distributionText}
