@@ -18,7 +18,8 @@ import {
     isPlantInGarden,
     getGardenPlants,
     getSavedPlant,
-    fetchCustomCareAdvice // <--- NEW IMPORT
+    fetchCustomCareAdvice,
+    fetchScientificNameLookup // <--- NEW IMPORT
 } from './api.js';
 
 // --- Global DOM Element Variables ---
@@ -30,9 +31,11 @@ let modalBackdrop, apiKeyForm, appContainer, mainContent, authContainer,
     modalLoader, modalContent, savePlantBtn,
     gardenView, backToSearchBtn, gardenLoader, gardenGallery, gardenEmptyState;
 
-// --- New Global DOM Variables for Q&A ---
+// --- New Global DOM Variables for Q&A and Search Lookup ---
 let careQuestionSection, careQuestionForm, careQuestionInput, careQuestionSubmit,
     careResponseContainer, careResponseText, careResponseLoader;
+
+let scientificLookupBtn; // <--- NEW DOM VARIABLE
 
 // --- App State ---
 let currentSearchQuery = null;
@@ -66,6 +69,9 @@ function main() {
         searchForm = document.getElementById('search-form');
         searchInput = document.getElementById('search-input');
         
+        // --- NEW DOM ASSIGNMENT ---
+        scientificLookupBtn = document.getElementById('scientific-lookup-btn');
+
         plantGalleryContainer = document.getElementById('plant-gallery-container');
         plantGallery = document.getElementById('plant-gallery');
         loader = document.getElementById('loader');
@@ -90,7 +96,7 @@ function main() {
         gardenGallery = document.getElementById('garden-gallery');
         gardenEmptyState = document.getElementById('garden-empty-state');
         
-        // --- New Q&A DOM Assignments (Elements exist in index.html) ---
+        // --- Q&A DOM Assignments ---
         careQuestionSection = document.getElementById('care-question-section');
         careQuestionForm = document.getElementById('care-question-form');
         careQuestionInput = document.getElementById('care-question-input');
@@ -125,6 +131,9 @@ function addEventListeners() {
     prevBtn.addEventListener('click', handlePrevClick);
     nextBtn.addEventListener('click', handleNextClick);
     
+    // --- NEW LISTENER FOR SCIENTIFIC LOOKUP ---
+    scientificLookupBtn.addEventListener('click', handleScientificLookup);
+
     // Gallery clicks (delegated)
     plantGallery.addEventListener('click', handlePlantCardClick);
     gardenGallery.addEventListener('click', handlePlantCardClick);
@@ -140,6 +149,47 @@ function addEventListeners() {
 
     // Q&A listeners are set up/torn down dynamically in handlePlantCardClick
 }
+
+/**
+ * Handles the Scientific Name Lookup via Gemini.
+ */
+async function handleScientificLookup() {
+    const commonName = searchInput.value.trim();
+
+    if (commonName.length === 0) {
+        alert("Please enter a common plant name (e.g., Sea Grape Tree) into the search box first.");
+        return;
+    }
+    
+    // UI Feedback
+    const originalText = scientificLookupBtn.textContent;
+    scientificLookupBtn.disabled = true;
+    scientificLookupBtn.textContent = 'AI Looking Up...';
+    searchInput.disabled = true;
+
+    try {
+        const scientificName = await fetchScientificNameLookup(commonName);
+
+        if (scientificName && scientificName.toLowerCase().includes('error') === false) {
+            alert(`AI Suggestion for "${commonName}":\n\n${scientificName}\n\nPaste this name into the search box and press Enter for a more accurate Trefle search!`);
+            
+            // Optionally populate the search box for the user
+            searchInput.value = scientificName; 
+        } else {
+            alert(`Sorry, the AI could not reliably find the scientific name for "${commonName}". Please try a more specific common name.`);
+        }
+    } catch (error) {
+        console.error("Scientific Lookup Error:", error);
+        alert("An unexpected error occurred during AI lookup.");
+    } finally {
+        // Restore UI state
+        scientificLookupBtn.textContent = originalText;
+        scientificLookupBtn.disabled = false;
+        searchInput.disabled = false;
+        searchInput.focus();
+    }
+}
+
 
 /**
  * Sets up listeners and resets the state for the dynamic Q&A form.
@@ -640,7 +690,7 @@ async function handlePlantCardClick(e) {
             // If found but partial data (legacy save), or not found, update status boolean
             if (savedPlant) isSaved = true;
         }
-        
+
         // --- 2. Slow Path: Fetch from APIs ---
         if (currentUser) {
              updateSaveButtonState(isSaved);
