@@ -108,22 +108,19 @@ export async function signOutUser() {
 
 /**
  * Saves a plant to the user's 'digital_gardener' collection.
+ * Includes the FULL augmented data (care plan, etc).
  * @param {string} userId - The Firebase User UID.
- * @param {object} plant - The plant data to save (slug, names, image).
+ * @param {object} plant - The full plant data object.
  */
 export async function savePlantToGarden(userId, plant) {
     if (!db) return;
     try {
-        // We only save the essential data needed for the list view
         await addDoc(collection(db, "digital_gardener"), {
+            ...plant, // Spread the full object (Gemini data, Trefle data)
             uid: userId,
-            slug: plant.slug,
-            common_name: plant.common_name,
-            scientific_name: plant.scientific_name,
-            image_url: plant.image_url,
             saved_at: Date.now()
         });
-        console.log(`Saved ${plant.common_name} to garden.`);
+        console.log(`Saved ${plant.common_name} (with AI data) to garden.`);
     } catch (error) {
         console.error("Error saving plant:", error);
         throw error;
@@ -179,6 +176,34 @@ export async function isPlantInGarden(userId, plantSlug) {
     } catch (error) {
         console.error("Error checking plant status:", error);
         return false;
+    }
+}
+
+/**
+ * Retrieves the FULL saved plant data for a specific slug.
+ * Used to skip API calls if the data is already in Firestore.
+ * @param {string} userId 
+ * @param {string} plantSlug 
+ * @returns {Promise<object|null>} The plant object or null.
+ */
+export async function getSavedPlant(userId, plantSlug) {
+    if (!db) return null;
+    try {
+        const q = query(
+            collection(db, "digital_gardener"), 
+            where("uid", "==", userId),
+            where("slug", "==", plantSlug)
+        );
+        const snapshot = await getDocs(q);
+        
+        if (!snapshot.empty) {
+            // Return the data of the first match
+            return snapshot.docs[0].data();
+        }
+        return null;
+    } catch (error) {
+        console.error("Error fetching saved plant details:", error);
+        return null;
     }
 }
 
