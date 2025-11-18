@@ -202,6 +202,24 @@ export async function getPlantDetails(plantSlug) {
 }
 
 /**
+ * Extracts a JSON string from Gemini's markdown-formatted text response.
+ * @param {string} text - The raw text from Gemini API.
+ * @returns {object} The parsed JSON object.
+ */
+function extractJsonFromGeminiResponse(text) {
+    // Find the start and end of the JSON block
+    const jsonStart = text.indexOf('{');
+    const jsonEnd = text.lastIndexOf('}');
+    
+    if (jsonStart === -1 || jsonEnd === -1) {
+        throw new Error("Could not find JSON in Gemini's response.");
+    }
+
+    const jsonText = text.substring(jsonStart, jsonEnd + 1);
+    return JSON.parse(jsonText);
+}
+
+/**
  * Augments plant data by fetching missing fields from the Gemini API.
  * @param {object} plantData - The incomplete plant data object from Trefle.
  * @returns {Promise<object>} A promise that resolves to an object with the augmented data.
@@ -215,8 +233,6 @@ export async function fetchAugmentedPlantData(plantData) {
     const scientificName = plantData.scientific_name;
     const commonName = plantData.common_name;
 
-    // This prompt asks Gemini for a JSON object with keys that
-    // match the structure of the Trefle API response.
     const prompt = `
         You are an expert botanist. A user has incomplete data for the plant: "${scientificName}" (Common Name: ${commonName}).
 
@@ -243,18 +259,14 @@ export async function fetchAugmentedPlantData(plantData) {
         }
     `;
 
-    // Using the v1 endpoint and the 2.5-pro model as requested in guidelines.
     const geminiUrl = `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-pro:generateContent?key=${configStore.geminiApiKey}`;
 
+    // --- THIS BODY IS NOW FIXED ---
+    // We removed the generationConfig to avoid the 400 error.
     const requestBody = {
         contents: [{
             parts: [{ text: prompt }]
-        }],
-        generationConfig: {
-            // --- THIS LINE IS NOW FIXED ---
-            responseMimeType: "application/json", // Request JSON output
-            temperature: 0.2,
-        }
+        }]
     };
 
     try {
@@ -272,11 +284,12 @@ export async function fetchAugmentedPlantData(plantData) {
 
         const data = await response.json();
         
-        // Extract the JSON string from Gemini's response
-        const jsonText = data.candidates[0].content.parts[0].text;
+        // --- THIS PARSING LOGIC IS NEW ---
+        // Extract the raw text from the (now) text-based response
+        const rawText = data.candidates[0].content.parts[0].text;
         
-        // Parse the JSON text into a usable object
-        const augmentedData = JSON.parse(jsonText);
+        // Clean and parse the text to get the JSON object
+        const augmentedData = extractJsonFromGeminiResponse(rawText);
         
         console.log("Gemini augmentation successful:", augmentedData);
         return augmentedData;
