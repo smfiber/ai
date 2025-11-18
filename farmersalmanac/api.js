@@ -217,7 +217,9 @@ export async function getNativePlants(speciesType, page) {
     }
     
     const trefleUrl = `https://trefle.io/api/v1/species?filter[growth_form]=${speciesType}&page=${page}&token=${configStore.trefleApiKey}`;
-    const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(trefleUrl)}`;
+    
+    // UPDATED PROXY
+    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(trefleUrl)}`;
 
     try {
         const response = await fetch(proxyUrl);
@@ -241,7 +243,9 @@ export async function searchNativePlants(query, page) {
     }
 
     const trefleUrl = `https://trefle.io/api/v1/species/search?q=${query}&page=${page}&token=${configStore.trefleApiKey}`;
-    const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(trefleUrl)}`;
+    
+    // UPDATED PROXY
+    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(trefleUrl)}`;
 
     try {
         const response = await fetch(proxyUrl);
@@ -265,7 +269,9 @@ export async function getPlantDetails(plantSlug) {
     }
 
     const trefleUrl = `https://trefle.io/api/v1/species/${plantSlug}?token=${configStore.trefleApiKey}`;
-    const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(trefleUrl)}`;
+    
+    // UPDATED PROXY
+    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(trefleUrl)}`;
 
     try {
         const response = await fetch(proxyUrl);
