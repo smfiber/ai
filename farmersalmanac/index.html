@@ -54,9 +54,13 @@
             <h1 class="text-3xl font-bold text-white mb-4 md:mb-0">Digital Gardener's Almanac</h1>
             
             <nav class="flex flex-col md:flex-row items-center w-full md:w-auto">
-                <form id="search-form" class="w-full md:w-auto md:max-w-md flex-1 mx-0 md:mx-6 my-4 md:my-0">
+                <form id="search-form" class="flex w-full md:w-auto md:max-w-md flex-1 mx-0 md:mx-6 my-4 md:my-0">
                     <label for="search-input" class="sr-only">Search Plants</label>
-                    <input type="search" id="search-input" name="search" class="w-full bg-gray-800 border border-gray-700 text-white rounded-lg px-4 py-2 text-base focus:ring-green-500 focus:border-green-500" placeholder="Search all plants...">
+                    <input type="search" id="search-input" name="search" class="w-full bg-gray-800 border border-gray-700 text-white rounded-l-lg px-4 py-2 text-base focus:ring-green-500 focus:border-green-500" placeholder="Search all plants...">
+                    
+                    <button type="button" id="scientific-lookup-btn" class="px-3 py-2 bg-purple-600 text-white rounded-r-lg shadow-md hover:bg-purple-700 transition-colors text-sm whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2">
+                        AI Sci. Name
+                    </button>
                 </form>
 
                 <div id="auth-container" class="ml-0 md:ml-6 mt-4 md:mt-0">
