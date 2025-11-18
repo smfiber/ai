@@ -445,3 +445,47 @@ export async function fetchCustomCareAdvice(plantData, question) {
         return `Failed to get custom advice: ${error.message}`;
     }
 }
+
+export async function fetchScientificNameLookup(commonName) {
+    if (!configStore.geminiApiKey) {
+        console.error("Gemini API Key is missing. Skipping scientific name lookup.");
+        return null; 
+    }
+
+    const prompt = `
+        You are an expert botanist. The common name for a plant is: "${commonName}".
+        
+        Provide ONLY the scientific name (Genus species) for this plant. 
+        Do not include any conversational text, descriptions, or markdown formatting.
+    `;
+
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-pro:generateContent?key=${configStore.geminiApiKey}`;
+
+    const requestBody = {
+        contents: [{
+            parts: [{ text: prompt }]
+        }]
+    };
+
+    try {
+        const response = await fetch(geminiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestBody)
+        });
+
+        if (!response.ok) {
+            throw new Error(`Gemini API error: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        // Return the clean, trimmed text response
+        return data.candidates[0].content.parts[0].text.trim();
+
+    } catch (error) {
+        console.error("Error fetching scientific name with Gemini:", error);
+        return null; 
+    }
+}
