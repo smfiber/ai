@@ -180,6 +180,58 @@ function toggleQuestionSubmitButton() {
 }
 
 /**
+ * Handles the submission of the API key modal.
+ */
+async function handleApiKeySubmit(e) {
+    e.preventDefault();
+    const submitButton = document.getElementById('api-key-submit');
+    submitButton.disabled = true;
+    submitButton.textContent = 'Initializing...';
+
+    try {
+        const formData = new FormData(apiKeyForm);
+        const trefle = formData.get('trefle-key');
+        const gemini = formData.get('gemini-key');
+        const googleClientId = formData.get('google-client-id');
+        const firebaseConfigString = formData.get('firebase-config');
+
+        let firebase;
+        try {
+            firebase = JSON.parse(firebaseConfigString);
+            if (typeof firebase !== 'object' || !firebase.apiKey) {
+                throw new Error("Invalid JSON format or missing 'apiKey'.");
+            }
+        } catch (parseError) {
+            alert(`Error parsing Firebase Config: ${parseError.message}\nPlease paste the valid JSON object from your Firebase project settings.`);
+            submitButton.disabled = false;
+            submitButton.textContent = 'Save and Continue';
+            return;
+        }
+
+        setApiKeys({ trefle, gemini, googleClientId, firebase });
+
+        const authModule = await initFirebase();
+
+        if (authModule && authModule.auth) {
+            authModule.onAuthStateChanged(authModule.auth, (user) => {
+                updateAuthState(user);
+            });
+        } else {
+            throw new Error("Firebase auth module not loaded.");
+        }
+
+        modalBackdrop.classList.add('hidden');
+        console.log("API keys set and Firebase initialized. App is live.");
+
+    } catch (error) {
+        console.error("Error during API key submission:", error);
+        alert(`Failed to initialize: ${error.message}`);
+        submitButton.disabled = false;
+        submitButton.textContent = 'Save and Continue';
+    }
+}
+
+/**
  * Handles the submission of a custom care question to Gemini.
  */
 async function handleCustomCareQuestion(e) {
