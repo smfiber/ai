@@ -1,6 +1,12 @@
-/* * STYLE.CSS
+/*
+ * STYLE.CSS
  * Custom styles that are tricky with Tailwind or for base components.
  */
+
+/* FAILSAFE: Ensure hidden elements stay hidden even if Tailwind takes a moment to load */
+.hidden {
+    display: none !important;
+}
 
 body {
     /* Base font settings handled by Tailwind */
