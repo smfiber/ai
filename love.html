@@ -4,9 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Creations</title>
-    <!-- Tailwind CSS for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Fonts - Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
@@ -32,51 +30,47 @@
         }
     </style>
 </head>
-<body class="bg-custom-image bg-cover bg-center bg-no-repeat w-full h-screen m-0">
+<body class="bg-custom-image bg-cover bg-center bg-no-repeat w-full h-screen m-0 fixed">
 
-    <!-- Main container to position the content -->
-    <div class="flex items-center justify-start w-full h-full bg-black bg-opacity-20">
+    <div class="flex items-center justify-start w-full h-full bg-black bg-opacity-30 overflow-auto">
 
-        <!-- Link card container -->
-        <div class="bg-[#16353B] bg-opacity-80 backdrop-blur-sm border border-slate-600 rounded-2xl shadow-2xl p-8 md:p-12 m-4 md:m-8 lg:m-16 max-w-md w-full">
+        <div class="bg-[#16353B] bg-opacity-90 backdrop-blur-md border border-slate-600 rounded-2xl shadow-2xl p-8 md:p-12 m-4 md:m-8 lg:m-16 max-w-md w-full relative">
             
-            <!-- Header -->
-            <h1 class="text-3xl md:text-4xl font-bold text-[#FDF4DB] mb-6">My Creations</h1>
-            <p class="text-slate-300 mb-8">A collection of my projects and tools. Select a link to learn more.</p>
+            <h1 class="text-3xl md:text-4xl font-bold text-[#FDF4DB] mb-2">My Creations</h1>
+            <p class="text-slate-300 text-sm mb-8 border-b border-slate-500 pb-4">A collection of my projects and tools. Select a link to learn more.</p>
 
-            <!-- Links list -->
-            <div class="space-y-4">
+            <div class="space-y-3">
                 
-                <!-- Yoga Themes -->
-                <a href="https://smfiber.github.io/ai/yogathemes.html" target="_blank" rel="noopener noreferrer" class="link-item block p-4 rounded-lg border border-transparent hover:border-slate-400">
-                    <h2 class="text-xl font-semibold text-[#FDF4DB]">Yoga Themes</h2>
-                    <p class="text-slate-300">Explore different yoga themes.</p>
-                </a>
-                
-                <!-- Yoga Nidra Scripts -->
-                <a href="https://smfiber.github.io/ai/yoganidra.html" target="_blank" rel="noopener noreferrer" class="link-item block p-4 rounded-lg border border-transparent hover:border-slate-400">
-                    <h2 class="text-xl font-semibold text-[#FDF4DB]">Yoga Nidra Scripts</h2>
-                    <p class="text-slate-300">Generate guided meditation scripts.</p>
+                <a href="https://smfiber.github.io/ai/yogathemes.html" target="_blank" rel="noopener noreferrer" class="link-item block p-3 rounded-lg border border-transparent hover:border-slate-400 group">
+                    <h2 class="text-lg font-semibold text-[#FDF4DB] group-hover:text-white">Yoga Themes</h2>
+                    <p class="text-slate-400 text-sm">Explore different yoga themes.</p>
                 </a>
 
-                <!-- The Stretch Solution -->
-                <a href="https://smfiber.github.io/ai/stretch.html" target="_blank" rel="noopener noreferrer" class="link-item block p-4 rounded-lg border border-transparent hover:border-slate-400">
-                    <h2 class="text-xl font-semibold text-[#FDF4DB]">Stretch Routine</h2>
-                    <p class="text-slate-300">View stretches for common ailments, body parts and more.</p>
+                <a href="https://smfiber.github.io/ai/yoganidra.html" target="_blank" rel="noopener noreferrer" class="link-item block p-3 rounded-lg border border-transparent hover:border-slate-400 group">
+                    <h2 class="text-lg font-semibold text-[#FDF4DB] group-hover:text-white">Yoga Nidra Scripts</h2>
+                    <p class="text-slate-400 text-sm">Generate guided meditation scripts.</p>
                 </a>
 
-                <!-- Digital Gardener -->
-                <a href="https://smfiber.github.io/ai/farmersalmanac/index.html" target="_blank" rel="noopener noreferrer" class="link-item block p-4 rounded-lg border border-transparent hover:border-slate-400">
-                    <h2 class="text-xl font-semibold text-[#FDF4DB]">Digital Gardener</h2>
-                    <p class="text-slate-300">Help your plants come to life! Save your garden.</p>
-                </a>                
-                
-                <!-- Lamination Creator -->
-                <a href="https://smfiber.github.io/ai/laminations.html" target="_blank" rel="noopener noreferrer" class="link-item block p-4 rounded-lg border border-transparent hover:border-slate-400">
-                    <h2 class="text-xl font-semibold text-[#FDF4DB]">Lamination Creator (Currently Broken)</h2>
-                    <p class="text-slate-300">Design and visualize custom laminations.</p>
+                <a href="https://smfiber.github.io/ai/stretch.html" target="_blank" rel="noopener noreferrer" class="link-item block p-3 rounded-lg border border-transparent hover:border-slate-400 group">
+                    <h2 class="text-lg font-semibold text-[#FDF4DB] group-hover:text-white">Stretch Routine</h2>
+                    <p class="text-slate-400 text-sm">View stretches for common ailments.</p>
                 </a>
                 
+                <a href="https://smfiber.github.io/ai/farmersalmanac/index.html" target="_blank" rel="noopener noreferrer" class="link-item block p-3 rounded-lg border border-transparent hover:border-slate-400 group">
+                    <h2 class="text-lg font-semibold text-[#FDF4DB] group-hover:text-white">Digital Gardener</h2>
+                    <p class="text-slate-400 text-sm">Help your plants come to life! Save your garden.</p>
+                </a>      
+                
+                 <a href="https://smfiber.github.io/ai/laminations.html" target="_blank" rel="noopener noreferrer" class="link-item block p-3 rounded-lg border border-transparent hover:border-slate-400 group">
+                    <h2 class="text-lg font-semibold text-[#FDF4DB] group-hover:text-white">Lamination Creator</h2>
+                    <p class="text-slate-400 text-sm">Design and visualize custom laminations.</p>
+                </a>
+                
+                <a href="https://smfiber.github.io/ai/whiteboard.html" target="_blank" rel="noopener noreferrer" class="link-item block p-3 rounded-lg border border-transparent hover:border-slate-400 group">
+                    <h2 class="text-lg font-semibold text-[#FDF4DB] group-hover:text-white">Whiteboard</h2>
+                    <p class="text-slate-400 text-sm">A simple, collaborative digital whiteboard.</p>
+                </a>
+
             </div>
         </div>
     </div>
