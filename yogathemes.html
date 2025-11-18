@@ -168,12 +168,8 @@
         .themed-loader { border: 4px solid var(--color-card-border); border-top: 4px solid var(--color-primary); }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-        .header-bg-image { 
-            background-image: url('https://i.ibb.co/gFXPP4Gt/Image-fx-88.png'); 
-            background-size: cover; background-position: center; opacity: 1;
-            transition: opacity 1.5s ease-in-out;
-        }
-        .header-loader-spinner { width: 50px; height: 50px; border: 5px solid rgba(255,255,255,0.3); border-top-color: white; }
+        /* Removed .header-bg-image */
+        /* Removed .header-loader-spinner */
 
         .accordion-item { border-bottom: 1px solid var(--color-card-border); }
         .accordion-item:last-child { border-bottom: none; }
@@ -393,18 +389,18 @@
                 <div class="flex items-center gap-4">
                      <div class="tooltip-container">
                          <svg class="tooltip-icon w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                         <div class="tooltip">Describe a mood or scene (e.g., "Misty forest at dawn") and the AI will generate a new color palette and header image for the entire app.</div>
+                         <div class="tooltip">Describe a mood or scene (e.g., "Misty forest at dawn") and the AI will generate a new color palette for the entire app.</div>
                     </div>
                     <button id="closeThemeGeneratorModal" class="themed-text-muted hover:themed-text-accent text-3xl leading-none" title="Close Modal">×</button>
                 </div>
             </div>
             <div class="p-6">
-                <p class="mb-6 themed-text-muted">Describe a mood or concept to create a new color palette and header image for the app.</p>
+                <p class="mb-6 themed-text-muted">Describe a mood or concept to create a new color palette for the app.</p>
                 <textarea id="theme-prompt" rows="3" class="w-full p-3 themed-input border rounded-lg focus:ring-2" placeholder="e.g., 'A quiet, misty forest at dawn'"></textarea>
-                <button id="generate-theme-btn" class="btn-primary w-full mt-4" title="Generate new app visuals based on your text">Generate Visuals</button>
+                <button id="generate-theme-btn" class="btn-primary w-full mt-4" title="Generate new color palette based on your text">Generate Colors</button>
                 <div id="theme-loader-container" class="hidden mt-4 flex items-center space-x-3">
                     <div class="loader themed-loader" style="width:25px; height:25px;"></div>
-                    <span class="themed-text-muted">AI is generating colors & image...</span>
+                    <span class="themed-text-muted">AI is generating colors...</span>
                 </div>
                 <div id="theme-error-container" class="hidden mt-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg"></div>
             </div>
@@ -444,11 +440,7 @@
     
     <div class="container mx-auto">
         <header id="app-header" class="relative text-center mb-10 rounded-2xl overflow-hidden shadow-lg">
-            <div id="header-loader" class="hidden absolute inset-0 bg-black bg-opacity-50 flex-col items-center justify-center z-20 transition-opacity duration-500">
-                <div class="loader header-loader-spinner"></div>
-                <p class="text-white mt-4 text-lg">Generating new header image...</p>
-            </div>
-            <div id="header-bg-image" class="absolute inset-0 header-bg-image"></div>
+            <div id="header-bg-image" class="absolute inset-0" style="background-image: url('https://i.ibb.co/gFXPP4Gt/Image-fx-88.png'); background-size: cover; background-position: center; opacity: 1;"></div>
             <div class="absolute inset-0 bg-black opacity-40"></div>
             <div class="relative z-10 py-24 px-12 text-white">
                  <h1 class="text-4xl md:text-5xl font-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">AI Yoga Class & Theme Generator</h1>
@@ -1092,17 +1084,12 @@
 
             payload.generationConfig = generationConfig;
             
-            const result = await callApi(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${userApiKey}`, payload);
+            const result = await callApi(`https://generativelanguage.googleapis.com/v1/models/gemini-2.5-pro:generateContent?key=${userApiKey}`, payload);
             return result?.candidates?.[0]?.content?.parts?.[0]?.text || null;
         }
 
-        async function callImageGenAPI(prompt) {
-             const payload = { instances: [{ prompt: prompt }], parameters: { "sampleCount": 1 } };
-             const result = await callApi(`https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${userApiKey}`, payload);
-             const base64 = result?.predictions?.[0]?.bytesBase64Encoded;
-             return base64 ? `data:image/png;base64,${base64}` : null;
-        }
-        
+        // Removed callImageGenAPI function
+
         async function callColorGenAPI(prompt) {
              const fullPrompt = `Based on the theme "${prompt}", generate a color palette. I need a JSON object with keys: "bg", "text", "primary", "primaryDark", "accent", "cardBg", "cardBorder", "textMuted", "inputBg", "inputBorder", "buttonText". Determine if the "primary" color is light or dark to set the "buttonText" appropriately (#FFFFFF for dark, #111827 for light). Return only the complete, valid JSON.`;
              const jsonText = await callGeminiAPI(fullPrompt, true);
@@ -1119,23 +1106,16 @@
         }
         
         async function generateAndApplyDefaultTheme() {
-            showThemeLoading(true);
             const themePrompt = "Big Sunset on the beach";
-            const imagePrompt = `Artistic, abstract background image inspired by "${themePrompt}". Suitable for a yoga website. Serene, calming. Wide aspect ratio, photographic, cinematic lighting.`;
             try {
-                const [colorResult, imageResult] = await Promise.allSettled([callColorGenAPI(themePrompt), callImageGenAPI(imagePrompt)]);
+                const colorResult = await callColorGenAPI(themePrompt);
                 
-                if (colorResult.status === 'fulfilled' && colorResult.value) applyTheme(colorResult.value);
-                else throw colorResult.reason || new Error("Failed to generate color theme.");
-
-                if (imageResult.status === 'fulfilled' && imageResult.value) applyHeaderImage(imageResult.value);
-                else throw imageResult.reason || new Error("Failed to generate header image.");
+                if (colorResult) applyTheme(colorResult);
+                else throw new Error("Failed to generate color theme.");
 
             } catch (error) {
                  handleApiError(error, null, 'default theme');
                  throw error;
-            } finally {
-                showThemeLoading(false);
             }
         }
         
@@ -1228,16 +1208,8 @@ Return ONLY a valid JSON array of strings.`;
             });
         }
         
-        function applyHeaderImage(imageUrl) {
-            const bgImageDiv = document.getElementById('header-bg-image');
-            bgImageDiv.style.backgroundImage = `url('${imageUrl}')`;
-        }
-
-        function showThemeLoading(isLoading) {
-            const loader = document.getElementById('header-loader');
-            loader.classList.toggle('hidden', !isLoading);
-            loader.classList.toggle('flex', isLoading);
-        }
+        // Removed applyHeaderImage function
+        // Removed showThemeLoading function
         
         function convertMarkdownToHtml(text) {
             if (!text || typeof text !== 'string') {
@@ -1418,14 +1390,10 @@ Return ONLY a valid JSON array of strings.`;
             generateBtn.disabled = true;
 
             try {
-                const imagePrompt = `Artistic, abstract background image inspired by "${prompt}". Suitable for a yoga website. Serene, calming. Wide aspect ratio, photographic, cinematic lighting.`;
-                const [colorResult, imageResult] = await Promise.allSettled([callColorGenAPI(prompt), callImageGenAPI(imagePrompt)]);
+                const colorResult = await callColorGenAPI(prompt);
                 
-                if (colorResult.status === 'fulfilled' && colorResult.value) applyTheme(colorResult.value);
-                else throw colorResult.reason || new Error("Failed to generate color theme.");
-
-                if (imageResult.status === 'fulfilled' && imageResult.value) applyHeaderImage(imageResult.value);
-                else throw imageResult.reason || new Error("Failed to generate header image.");
+                if (colorResult) applyTheme(colorResult);
+                else throw new Error("Failed to generate color theme.");
                 
                 document.getElementById('themeGeneratorModal').classList.add('hidden');
             } catch (error) {
@@ -2422,7 +2390,7 @@ Return ONLY the final, valid JSON array.`;
             document.body.appendChild(fileDownload);
             fileDownload.href = source;
             
-            const cleanTitle = title.replace("In-Depth: ", "").replace(/[^a-z0-9]/gi, '_').toLowerCase();
+            const cleanTitle = title.replace("In-Depth: ", "").replace(/[^a-z0-g]/gi, '_').toLowerCase();
             fileDownload.download = `${cleanTitle || 'yoga_plan'}.doc`;
             fileDownload.click();
             document.body.removeChild(fileDownload);
