@@ -346,7 +346,7 @@ export async function fetchAugmentedPlantData(plantData) {
         - Soil Texture (e.g., "Sandy", "Loamy", "Clay")
         - Soil pH (Min/Max) (e.g., "6.0 / 7.5")
         - Bloom Months (e.g., "June, July, August")
-        - A brief 2-3 sentence care plan.
+        - A detailed, multi-paragraph care plan covering light, water, and soil requirements.
 
         Respond with ONLY a valid JSON object matching this structure. Do not use markdown.
         {
@@ -393,5 +393,55 @@ export async function fetchAugmentedPlantData(plantData) {
     } catch (error) {
         console.error("Error augmenting plant data with Gemini:", error);
         return {}; 
+    }
+}
+
+export async function fetchCustomCareAdvice(plantData, question) {
+    if (!configStore.geminiApiKey) {
+        console.error("Gemini API Key is missing. Skipping custom advice.");
+        return "Gemini API Key is missing.";
+    }
+
+    const scientificName = plantData.scientific_name;
+    const commonName = plantData.common_name;
+
+    const prompt = `
+        You are an expert botanist providing highly specific advice. 
+        
+        The plant in question is: ${commonName} (${scientificName}).
+        
+        The user has asked the following question regarding its care: "${question}"
+        
+        Provide a detailed, helpful, and concise answer (2-3 paragraphs max) based on your knowledge of the plant's requirements. Do not include any JSON or markdown formatting.
+    `;
+
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-pro:generateContent?key=${configStore.geminiApiKey}`;
+
+    const requestBody = {
+        contents: [{
+            parts: [{ text: prompt }]
+        }]
+    };
+
+    try {
+        const response = await fetch(geminiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestBody)
+        });
+
+        if (!response.ok) {
+            throw new Error(`Gemini API error: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        // Since we asked for plain text, just return the raw text output.
+        return data.candidates[0].content.parts[0].text;
+
+    } catch (error) {
+        console.error("Error fetching custom care advice with Gemini:", error);
+        return `Failed to get custom advice: ${error.message}`;
     }
 }
