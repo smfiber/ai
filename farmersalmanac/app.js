@@ -17,7 +17,8 @@ import {
     removePlantFromGarden,
     isPlantInGarden,
     getGardenPlants,
-    getSavedPlant // <--- NEW IMPORT
+    getSavedPlant,
+    fetchCustomCareAdvice // <--- NEW IMPORT
 } from './api.js';
 
 // --- Global DOM Element Variables ---
@@ -28,6 +29,10 @@ let modalBackdrop, apiKeyForm, appContainer, mainContent, authContainer,
     plantDetailModal, modalTitle, modalCloseBtn, modalContentContainer,
     modalLoader, modalContent, savePlantBtn,
     gardenView, backToSearchBtn, gardenLoader, gardenGallery, gardenEmptyState;
+
+// --- New Global DOM Variables for Q&A ---
+let careQuestionSection, careQuestionForm, careQuestionInput, careQuestionSubmit,
+    careResponseContainer, careResponseText, careResponseLoader;
 
 // --- App State ---
 let currentSearchQuery = null;
@@ -85,12 +90,24 @@ function main() {
         gardenGallery = document.getElementById('garden-gallery');
         gardenEmptyState = document.getElementById('garden-empty-state');
         
-        // 3. Add all event listeners
+        // --- New Q&A DOM Assignments (Elements exist in index.html) ---
+        careQuestionSection = document.getElementById('care-question-section');
+        careQuestionForm = document.getElementById('care-question-form');
+        careQuestionInput = document.getElementById('care-question-input');
+        careQuestionSubmit = document.getElementById('care-question-submit');
+        careResponseContainer = document.getElementById('care-response-container');
+        careResponseText = document.getElementById('care-response-text');
+        careResponseLoader = document.getElementById('care-response-loader');
+        
+        // 3. Add all event listeners (Initial setup)
         addEventListeners();
-
+        
         // 4. App is ready
         console.log("App ready. Waiting for API keys.");
         plantGallery.innerHTML = '<p class="text-gray-400">Please enter a search term to find plants.</p>';
+        
+        // Initial setup for the Q&A section which is loaded but not active
+        careQuestionSection.classList.add('hidden');
     });
 }
 
@@ -120,59 +137,97 @@ function addEventListeners() {
         }
     });
     savePlantBtn.addEventListener('click', handleSaveToggle);
+
+    // Q&A listeners are set up/torn down dynamically in handlePlantCardClick
 }
 
 /**
- * Handles the submission of the API key modal.
+ * Sets up listeners and resets the state for the dynamic Q&A form.
  */
-async function handleApiKeySubmit(e) {
+function setupCareQuestionForm() {
+    // 1. Remove previous listeners to prevent multiple execution
+    careQuestionForm.removeEventListener('submit', handleCustomCareQuestion);
+    careQuestionInput.removeEventListener('input', toggleQuestionSubmitButton);
+
+    // 2. Add new listeners (must be done after modalContent is updated)
+    careQuestionForm.addEventListener('submit', handleCustomCareQuestion);
+    careQuestionInput.addEventListener('input', toggleQuestionSubmitButton);
+
+    // 3. Reset state
+    careQuestionInput.value = '';
+    careQuestionSubmit.disabled = true;
+    careQuestionInput.disabled = false;
+    careResponseText.textContent = 'Submit a question above to get customized AI care advice.';
+    careResponseText.classList.remove('text-red-400');
+    careResponseText.classList.remove('hidden');
+    careResponseLoader.classList.add('hidden');
+    
+    // Check auth state to control form interaction
+    if (!currentUser) {
+        careQuestionSubmit.disabled = true;
+        careQuestionInput.disabled = true;
+        careResponseText.textContent = 'Sign in to enable custom care questions.';
+    }
+
+    careQuestionSection.classList.remove('hidden');
+}
+
+/**
+ * Toggles the submit button based on the input field content.
+ */
+function toggleQuestionSubmitButton() {
+    careQuestionSubmit.disabled = careQuestionInput.value.trim().length === 0;
+}
+
+/**
+ * Handles the submission of a custom care question to Gemini.
+ */
+async function handleCustomCareQuestion(e) {
     e.preventDefault();
-    const submitButton = document.getElementById('api-key-submit');
-    submitButton.disabled = true;
-    submitButton.textContent = 'Initializing...';
+
+    if (!currentUser || !currentModalPlant) {
+        careResponseText.textContent = 'Error: Please sign in to ask custom questions.';
+        careResponseText.classList.add('text-red-400');
+        careResponseText.classList.remove('hidden');
+        return;
+    }
+
+    const question = careQuestionInput.value.trim();
+    if (question.length === 0) return;
+
+    // UI Feedback: Disable input/button, show loader
+    careQuestionInput.disabled = true;
+    careQuestionSubmit.disabled = true;
+    const originalSubmitText = careQuestionSubmit.textContent;
+    careQuestionSubmit.textContent = 'Getting Advice...';
+    
+    // Clear previous response and show loader
+    careResponseText.classList.add('hidden');
+    careResponseLoader.classList.remove('hidden');
 
     try {
-        const formData = new FormData(apiKeyForm);
-        const trefle = formData.get('trefle-key');
-        const gemini = formData.get('gemini-key');
-        const googleClientId = formData.get('google-client-id');
-        const firebaseConfigString = formData.get('firebase-config');
-
-        let firebase;
-        try {
-            firebase = JSON.parse(firebaseConfigString);
-            if (typeof firebase !== 'object' || !firebase.apiKey) {
-                throw new Error("Invalid JSON format or missing 'apiKey'.");
-            }
-        } catch (parseError) {
-            alert(`Error parsing Firebase Config: ${parseError.message}\nPlease paste the valid JSON object from your Firebase project settings.`);
-            submitButton.disabled = false;
-            submitButton.textContent = 'Save and Continue';
-            return;
-        }
-
-        setApiKeys({ trefle, gemini, googleClientId, firebase });
-
-        const authModule = await initFirebase();
-
-        if (authModule && authModule.auth) {
-            authModule.onAuthStateChanged(authModule.auth, (user) => {
-                updateAuthState(user);
-            });
-        } else {
-            throw new Error("Firebase auth module not loaded.");
-        }
-
-        modalBackdrop.classList.add('hidden');
-        console.log("API keys set and Firebase initialized. App is live.");
+        const responseText = await fetchCustomCareAdvice(currentModalPlant, question);
+        
+        // Render the response, replacing the placeholder
+        careResponseText.innerHTML = responseText.replace(/\n/g, '<br><br>'); // Preserve paragraphs/line breaks
+        careResponseText.classList.remove('text-red-400');
+        careResponseText.classList.remove('hidden');
 
     } catch (error) {
-        console.error("Error during API key submission:", error);
-        alert(`Failed to initialize: ${error.message}`);
-        submitButton.disabled = false;
-        submitButton.textContent = 'Save and Continue';
+        console.error("Custom care question failed:", error);
+        careResponseText.textContent = `Error: Could not get advice. ${error.message}`;
+        careResponseText.classList.add('text-red-400');
+        careResponseText.classList.remove('hidden');
+    } finally {
+        // Restore UI state
+        careResponseLoader.classList.add('hidden');
+        careQuestionInput.disabled = false;
+        careQuestionSubmit.textContent = originalSubmitText;
+        // Keep submit button disabled if input is still empty, enabled otherwise
+        careQuestionSubmit.disabled = careQuestionInput.value.trim().length === 0;
     }
 }
+
 
 // --- Auth Functions ---
 async function handleGoogleSignIn() {
@@ -202,6 +257,17 @@ function updateAuthState(user) {
         userPhoto.src = user.photoURL;
         // Enable garden button
         myGardenBtn.classList.remove('hidden');
+        
+        // Enable Q&A form elements if modal is open
+        if (plantDetailModal.classList.contains('hidden') === false) {
+             careQuestionInput.disabled = false;
+             // Only enable submit button if there's text
+             careQuestionSubmit.disabled = careQuestionInput.value.trim().length === 0;
+             if (careResponseText.textContent === 'Sign in to enable custom care questions.') {
+                careResponseText.textContent = 'Submit a question above to get customized AI care advice.';
+             }
+        }
+
     } else {
         signInBtn.classList.remove('hidden');
         userInfo.classList.add('hidden');
@@ -211,6 +277,13 @@ function updateAuthState(user) {
         // Reset views
         showDiscoveryView();
         myGardenBtn.classList.add('hidden');
+        
+        // Disable Q&A form elements if modal is open
+        if (plantDetailModal.classList.contains('hidden') === false) {
+            careQuestionSubmit.disabled = true;
+            careQuestionInput.disabled = true;
+            careResponseText.textContent = 'Sign in to enable custom care questions.';
+        }
     }
 }
 
@@ -419,8 +492,17 @@ async function handlePlantCardClick(e) {
     modalLoader.classList.remove('hidden');
     modalTitle.textContent = name || "Loading...";
     modalLoader.querySelector('p').textContent = 'Loading plant details...';
-    modalContent.innerHTML = ''; 
     
+    // --- Q&A Management START: Extract and prepare the form element ---
+    // The Q&A section will be overwritten, so we clone the current DOM element
+    const qaSectionClone = careQuestionSection.cloneNode(true);
+    // Hide it immediately until data is loaded
+    careQuestionSection.classList.add('hidden'); 
+    
+    // Clear modal content (which removes the static Q&A form if it was present)
+    modalContent.innerHTML = '';
+    // --- Q&A Management END ---
+
     // Reset Save Button
     savePlantBtn.classList.add('hidden');
     savePlantBtn.textContent = 'Save';
@@ -448,6 +530,10 @@ async function handlePlantCardClick(e) {
                 // Update button to "Remove" state
                 updateSaveButtonState(true);
                 savePlantBtn.classList.remove('hidden');
+                
+                // --- Q&A Management: Re-append and set up ---
+                modalContent.appendChild(qaSectionClone);
+                setupCareQuestionForm();
                 
                 // Skip the rest of the function
                 modalLoader.classList.add('hidden');
@@ -485,10 +571,15 @@ async function handlePlantCardClick(e) {
         
         modalTitle.textContent = currentModalPlant.common_name || currentModalPlant.scientific_name;
         modalContent.innerHTML = articleHtml;
+        
+        // --- Q&A Management: Re-append and set up ---
+        modalContent.appendChild(qaSectionClone);
+        setupCareQuestionForm();
 
     } catch (error) {
         console.error(error);
         modalContent.innerHTML = `<p class="text-red-400">Sorry, an error occurred: ${error.message}</p>`;
+        careQuestionSection.classList.add('hidden'); // Ensure it stays hidden on error
     } finally {
         modalLoader.classList.add('hidden');
         modalContent.classList.remove('hidden');
@@ -614,9 +705,9 @@ function createPlantDetailHtml(plantData) {
 
         <div class="bg-green-900/20 border-l-4 border-green-500 p-6 rounded-r-xl mb-8 shadow-lg">
             <h3 class="flex items-center text-xl font-bold text-white mb-3">
-                <span class="mr-2">🤖</span> AI Care Plan
+                <span class="mr-2">🤖</span> AI Care Plan (Detailed)
             </h3>
-            <p class="text-gray-300 leading-relaxed italic">
+            <p class="text-gray-300 leading-relaxed italic whitespace-pre-wrap">
                 ${get(plantData.care_plan, 'No care plan available.')}
             </p>
         </div>
@@ -637,6 +728,15 @@ function closeModal() {
     modalContent.innerHTML = '';
     modalTitle.textContent = 'Plant Details';
     currentModalPlant = null;
+    
+    // --- Q&A Management: Hide and reset the form ---
+    careQuestionSection.classList.add('hidden');
+    careQuestionInput.value = '';
+    careQuestionSubmit.disabled = true;
+    careResponseText.textContent = 'Submit a question above to get customized AI care advice.';
+    careResponseText.classList.remove('text-red-400');
+    careResponseText.classList.remove('hidden');
+    careResponseLoader.classList.add('hidden');
 }
 
 // --- Run the app ---
