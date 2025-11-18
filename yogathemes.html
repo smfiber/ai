@@ -1069,18 +1069,20 @@
         }
 
         async function callGeminiAPI(prompt, isJson = false) {
+            let finalPrompt = prompt;
+            
+            if (isJson) {
+                finalPrompt += " Return ONLY a valid JSON object.";
+            }
+
             const payload = {
-                contents: [{ parts: [{ text: prompt }] }]
+                contents: [{ parts: [{ text: finalPrompt }] }]
             };
 
             const generationConfig = {
                 temperature: temperature, // Use the global variable for creativity
                 maxOutputTokens: 8192
             };
-
-            if (isJson) {
-                generationConfig.responseMimeType = "application/json";
-            }
 
             payload.generationConfig = generationConfig;
             
