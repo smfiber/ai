@@ -144,7 +144,7 @@ function addEventListeners() {
 /**
  * Sets up listeners and resets the state for the dynamic Q&A form.
  */
-function setupCareQuestionForm() {
+function setupCareQuestionForm(history) {
     // 1. Remove previous listeners to prevent multiple execution
     careQuestionForm.removeEventListener('submit', handleCustomCareQuestion);
     careQuestionInput.removeEventListener('input', toggleQuestionSubmitButton);
@@ -153,16 +153,22 @@ function setupCareQuestionForm() {
     careQuestionForm.addEventListener('submit', handleCustomCareQuestion);
     careQuestionInput.addEventListener('input', toggleQuestionSubmitButton);
 
-    // 3. Reset state
+    // 3. Reset Q&A input/loader state
     careQuestionInput.value = '';
     careQuestionSubmit.disabled = true;
     careQuestionInput.disabled = false;
-    careResponseText.textContent = 'Submit a question above to get customized AI care advice.';
-    careResponseText.classList.remove('text-red-400');
-    careResponseText.classList.remove('hidden');
     careResponseLoader.classList.add('hidden');
     
-    // Check auth state to control form interaction
+    // 4. Render or reset history text
+    if (history && history.length > 0) {
+        renderQaHistory(history);
+    } else {
+        careResponseText.textContent = 'Submit a question above to get customized AI care advice.';
+        careResponseText.classList.remove('text-red-400');
+        careResponseText.classList.remove('hidden');
+    }
+
+    // 5. Check auth state to control form interaction
     if (!currentUser) {
         careQuestionSubmit.disabled = true;
         careQuestionInput.disabled = true;
@@ -232,6 +238,31 @@ async function handleApiKeySubmit(e) {
 }
 
 /**
+ * Renders the saved Q&A history into the response container.
+ * @param {Array<object>} history - Array of {question, answer} objects.
+ */
+function renderQaHistory(history) {
+    if (!history || history.length === 0) {
+        careResponseText.textContent = 'Submit a question above to get customized AI care advice.';
+        careResponseText.classList.remove('hidden');
+        return;
+    }
+    
+    // Clear the response text content
+    careResponseText.innerHTML = '';
+    careResponseText.classList.remove('hidden');
+
+    const historyHtml = history.map(item => `
+        <div class="mb-4 pb-4 border-b border-gray-600 last:border-b-0">
+            <p class="text-base font-semibold text-white mb-2">Q: ${item.question}</p>
+            <p class="text-sm text-gray-300 whitespace-pre-wrap">${item.answer.replace(/\n/g, '<br>')}</p>
+        </div>
+    `).join('');
+
+    careResponseText.innerHTML = historyHtml;
+}
+
+/**
  * Handles the submission of a custom care question to Gemini.
  */
 async function handleCustomCareQuestion(e) {
@@ -253,22 +284,32 @@ async function handleCustomCareQuestion(e) {
     const originalSubmitText = careQuestionSubmit.textContent;
     careQuestionSubmit.textContent = 'Getting Advice...';
     
-    // Clear previous response and show loader
+    // Clear current text and show loader
     careResponseText.classList.add('hidden');
     careResponseLoader.classList.remove('hidden');
 
     try {
         const responseText = await fetchCustomCareAdvice(currentModalPlant, question);
         
-        // Render the response, replacing the placeholder
-        careResponseText.innerHTML = responseText.replace(/\n/g, '<br><br>'); // Preserve paragraphs/line breaks
+        // 1. Save to state for persistence
+        if (!currentModalPlant.qa_history) {
+            currentModalPlant.qa_history = [];
+        }
+        currentModalPlant.qa_history.push({ 
+            question: question, 
+            answer: responseText 
+        });
+
+        // 2. Render all history
+        renderQaHistory(currentModalPlant.qa_history);
         careResponseText.classList.remove('text-red-400');
-        careResponseText.classList.remove('hidden');
 
     } catch (error) {
         console.error("Custom care question failed:", error);
-        careResponseText.textContent = `Error: Could not get advice. ${error.message}`;
-        careResponseText.classList.add('text-red-400');
+        careResponseText.innerHTML = `
+            <p class="text-red-400">Error: Could not get advice. ${error.message}</p>
+            <p class="text-gray-400 mt-2">Previous Q&A history remains available.</p>
+        `;
         careResponseText.classList.remove('hidden');
     } finally {
         // Restore UI state
@@ -277,6 +318,7 @@ async function handleCustomCareQuestion(e) {
         careQuestionSubmit.textContent = originalSubmitText;
         // Keep submit button disabled if input is still empty, enabled otherwise
         careQuestionSubmit.disabled = careQuestionInput.value.trim().length === 0;
+        careQuestionInput.value = ''; // Clear the input after submission
     }
 }
 
@@ -316,7 +358,8 @@ function updateAuthState(user) {
              // Only enable submit button if there's text
              careQuestionSubmit.disabled = careQuestionInput.value.trim().length === 0;
              if (careResponseText.textContent === 'Sign in to enable custom care questions.') {
-                careResponseText.textContent = 'Submit a question above to get customized AI care advice.';
+                // Re-render history or reset to placeholder if no history exists
+                setupCareQuestionForm(currentModalPlant.qa_history); 
              }
         }
 
@@ -546,12 +589,12 @@ async function handlePlantCardClick(e) {
     modalLoader.querySelector('p').textContent = 'Loading plant details...';
     
     // --- Q&A Management START: Extract and prepare the form element ---
-    // The Q&A section will be overwritten, so we clone the current DOM element
+    // Clone the static Q&A form element
     const qaSectionClone = careQuestionSection.cloneNode(true);
     // Hide it immediately until data is loaded
     careQuestionSection.classList.add('hidden'); 
     
-    // Clear modal content (which removes the static Q&A form if it was present)
+    // Clear modal content (removes dynamic content)
     modalContent.innerHTML = '';
     // --- Q&A Management END ---
 
@@ -585,7 +628,7 @@ async function handlePlantCardClick(e) {
                 
                 // --- Q&A Management: Re-append and set up ---
                 modalContent.appendChild(qaSectionClone);
-                setupCareQuestionForm();
+                setupCareQuestionForm(currentModalPlant.qa_history);
                 
                 // Skip the rest of the function
                 modalLoader.classList.add('hidden');
@@ -597,7 +640,7 @@ async function handlePlantCardClick(e) {
             // If found but partial data (legacy save), or not found, update status boolean
             if (savedPlant) isSaved = true;
         }
-
+        
         // --- 2. Slow Path: Fetch from APIs ---
         if (currentUser) {
              updateSaveButtonState(isSaved);
@@ -617,6 +660,8 @@ async function handlePlantCardClick(e) {
 
         // Merge Data
         currentModalPlant = mergePlantData(trefleData, geminiData);
+        // Initialize history for a newly fetched plant
+        currentModalPlant.qa_history = [];
 
         // Render
         const articleHtml = createPlantDetailHtml(currentModalPlant);
@@ -626,7 +671,7 @@ async function handlePlantCardClick(e) {
         
         // --- Q&A Management: Re-append and set up ---
         modalContent.appendChild(qaSectionClone);
-        setupCareQuestionForm();
+        setupCareQuestionForm(currentModalPlant.qa_history);
 
     } catch (error) {
         console.error(error);
@@ -648,13 +693,15 @@ function updateSaveButtonState(isSaved) {
         savePlantBtn.dataset.action = 'remove';
     } else {
         savePlantBtn.textContent = 'Save';
-        savePlantBtn.classList.remove('bg-red-600', 'hover:bg-red-700');
+        savePlantBtn.classList.remove('bg-red-600', 'hover:bg-green-700');
         savePlantBtn.classList.add('bg-green-600', 'hover:bg-green-700');
         savePlantBtn.dataset.action = 'save';
     }
 }
 
 async function handleSaveToggle() {
+    // Note: Since currentModalPlant now holds the potentially updated qa_history, 
+    // saving the whole object handles persistence automatically.
     if (!currentUser || !currentModalPlant) return;
     
     const action = savePlantBtn.dataset.action;
@@ -759,7 +806,7 @@ function createPlantDetailHtml(plantData) {
             <h3 class="flex items-center text-xl font-bold text-white mb-3">
                 <span class="mr-2">🤖</span> AI Care Plan (Detailed)
             </h3>
-            <p class="text-gray-300 leading-relaxed italic whitespace-pre-wrap">
+            <p class="text-gray-300 leading-relaxed whitespace-pre-wrap">
                 ${get(plantData.care_plan, 'No care plan available.')}
             </p>
         </div>
