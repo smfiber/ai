@@ -233,6 +233,7 @@ export async function fetchAugmentedPlantData(plantData) {
     const scientificName = plantData.scientific_name;
     const commonName = plantData.common_name;
 
+    // --- THIS PROMPT IS NOW UPDATED ---
     const prompt = `
         You are an expert botanist. A user has incomplete data for the plant: "${scientificName}" (Common Name: ${commonName}).
 
@@ -245,6 +246,7 @@ export async function fetchAugmentedPlantData(plantData) {
         - Soil Texture (e.g., "Sandy", "Loamy", "Clay")
         - Soil pH (Min/Max) (e.g., "6.0 / 7.5")
         - Bloom Months (e.g., "June, July, August")
+        - A brief 2-3 sentence care plan.
 
         Respond with ONLY a valid JSON object matching this structure. Do not use markdown.
         {
@@ -255,14 +257,13 @@ export async function fetchAugmentedPlantData(plantData) {
           "watering": "...",
           "soil_texture": "...",
           "ph_min_max": "...",
-          "bloom_months": "..."
+          "bloom_months": "...",
+          "care_plan": "..."
         }
     `;
 
     const geminiUrl = `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-pro:generateContent?key=${configStore.geminiApiKey}`;
 
-    // --- THIS BODY IS NOW FIXED ---
-    // We removed the generationConfig to avoid the 400 error.
     const requestBody = {
         contents: [{
             parts: [{ text: prompt }]
@@ -284,7 +285,6 @@ export async function fetchAugmentedPlantData(plantData) {
 
         const data = await response.json();
         
-        // --- THIS PARSING LOGIC IS NEW ---
         // Extract the raw text from the (now) text-based response
         const rawText = data.candidates[0].content.parts[0].text;
         
