@@ -15,7 +15,6 @@ import {
     // Database functions
     savePlantToGarden,
     removePlantFromGarden,
-    isPlantInGarden,
     getGardenPlants,
     getSavedPlant,
     fetchCustomCareAdvice,
