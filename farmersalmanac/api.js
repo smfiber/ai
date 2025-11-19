@@ -5,15 +5,18 @@
  * - Trefle API calls
  * - Gemini API calls
  * - Firestore Database calls
+ * - Firebase Storage calls (NEW)
  */
 
 import { configStore } from './config.js';
 
 // --- Firebase SDKs (will be dynamically imported) ---
-let app, auth, db;
+let app, auth, db, storage; // storage added
 let GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut;
 // Firestore functions
-let collection, addDoc, deleteDoc, doc, query, where, getDocs, setDoc; // <-- setDoc added
+let collection, addDoc, deleteDoc, doc, query, where, getDocs, setDoc; 
+// Storage functions
+let getStorage, ref, uploadBytes, getDownloadURL; // Storage functions added
 
 /**
  * Dynamically imports Firebase modules and initializes the app.
@@ -31,9 +34,10 @@ export async function initFirebase() {
         // Dynamically import the Firebase modules
         const { initializeApp } = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js');
         const { getAuth, GoogleAuthProvider: GAuthProvider, signInWithPopup: siwp, onAuthStateChanged: oasc, setPersistence, browserSessionPersistence, signOut: so } = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js');
-        // setDoc imported here
         const { getFirestore, collection: col, addDoc: ad, deleteDoc: dd, doc: d, query: q, where: w, getDocs: gd, setDoc: setD } = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js');
-
+        // Dynamically import Storage modules
+        const StorageModules = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js');
+        
         // Assign Auth variables
         GoogleAuthProvider = GAuthProvider;
         signInWithPopup = siwp;
@@ -48,12 +52,20 @@ export async function initFirebase() {
         query = q;
         where = w;
         getDocs = gd;
-        setDoc = setD; // <-- setDoc assigned
+        setDoc = setD;
+
+        // Assign Storage variables
+        getStorage = StorageModules.getStorage;
+        ref = StorageModules.ref;
+        uploadBytes = StorageModules.uploadBytes;
+        getDownloadURL = StorageModules.getDownloadURL;
+
 
         // Initialize Firebase
         app = initializeApp(configStore.firebaseConfig);
         auth = getAuth(app);
         db = getFirestore(app);
+        storage = getStorage(app); // Initialize Storage
 
         // Set auth persistence to session.
         await setPersistence(auth, browserSessionPersistence);
@@ -105,6 +117,33 @@ export async function signOutUser() {
         console.error("Sign out error:", error);
     }
 }
+
+// --- Firebase Storage Functions ---
+
+/**
+ * Uploads a plant image file to Firebase Storage.
+ * @param {File} file - The file object to upload.
+ * @param {string} userId - The Firebase User UID.
+ * @returns {Promise<string>} The public download URL for the image.
+ */
+export async function uploadPlantImage(file, userId) {
+    if (!storage) throw new Error("Firebase Storage not initialized.");
+
+    // Create a unique file path: users/<uid>/<timestamp>-<filename>
+    const filePath = `users/${userId}/${Date.now()}-${file.name}`;
+    const storageRef = ref(storage, filePath);
+
+    try {
+        const snapshot = await uploadBytes(storageRef, file);
+        const downloadURL = await getDownloadURL(snapshot.ref);
+        console.log("Image uploaded successfully:", downloadURL);
+        return downloadURL;
+    } catch (error) {
+        console.error("Error uploading image:", error);
+        throw error;
+    }
+}
+
 
 // --- Firestore Database Functions ---
 
@@ -350,7 +389,7 @@ export async function fetchAugmentedPlantData(plantData) {
         - A detailed, multi-paragraph care plan covering light, water, and soil requirements.
         - Pests and Diseases: A list of common pests and diseases and simple preventative measures.
         - Minimum Winter Temperature: The lowest temperature (in Fahrenheit) the plant can survive.
-        - Maximum Summer Temperature: The highest temperature (in Fahrenheit) the plant can survive.
+        - Maximum Summer Temperature: The highest temperature (in Fahrenheit) the plant can tolerate.
         - Frost Sensitivity: Describe its tolerance level (e.g., "High tolerance, very hardy", "Moderate sensitivity, protect from hard frost", "Zero tolerance").
 
         Respond with ONLY a valid JSON object matching this structure. Do not use markdown.
@@ -404,6 +443,75 @@ export async function fetchAugmentedPlantData(plantData) {
         return {}; 
     }
 }
+
+/**
+ * Identifies a plant from an image URL using Gemini Vision.
+ * @param {string} imageUrl - Public URL of the image to analyze.
+ * @returns {Promise<{scientific_name: string, common_name: string}|null>} Structured identification data.
+ */
+export async function fetchImageIdentification(imageUrl) {
+    if (!configStore.geminiApiKey) {
+        console.error("Gemini API Key is missing. Skipping image identification.");
+        return null;
+    }
+
+    const prompt = `
+        You are an expert botanist specialized in plant identification from images.
+        Identify the plant shown in the image.
+        
+        Provide ONLY the following information in a valid JSON object: the scientific name (Genus species) and the common name. If you cannot identify the plant, use "Unknown" for both fields. Do not use markdown.
+
+        {
+          "scientific_name": "...",
+          "common_name": "..."
+        }
+    `;
+
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-pro:generateContent?key=${configStore.geminiApiKey}`;
+
+    const requestBody = {
+        contents: [
+            {
+                parts: [{ text: prompt }]
+            },
+            {
+                // Image part using the public URL
+                parts: [{
+                    inlineData: {
+                        mimeType: 'image/jpeg', // Assuming images will be stored as JPEGs or convertible
+                        data: imageUrl // Gemini API can handle public URLs in this structure
+                    }
+                }]
+            }
+        ]
+    };
+
+    try {
+        const response = await fetch(geminiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestBody)
+        });
+
+        if (!response.ok) {
+            throw new Error(`Gemini API error: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        const rawText = data.candidates[0].content.parts[0].text;
+        const identifiedData = extractJsonFromGeminiResponse(rawText);
+        
+        console.log("Gemini identification successful:", identifiedData);
+        return identifiedData;
+
+    } catch (error) {
+        console.error("Error fetching image identification with Gemini:", error);
+        return null; 
+    }
+}
+
 
 export async function fetchCustomCareAdvice(plantData, question) {
     if (!configStore.geminiApiKey) {
