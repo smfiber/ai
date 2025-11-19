@@ -14,8 +14,6 @@ let app, auth, db;
 let GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut;
 // Firestore functions
 let collection, addDoc, deleteDoc, doc, query, where, getDocs, setDoc; // <-- setDoc added
-// Import Firestore setDoc function
-import { setDoc as sd } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
 
 /**
  * Dynamically imports Firebase modules and initializes the app.
@@ -70,6 +68,45 @@ export async function initFirebase() {
         alert("Could not initialize Firebase. Please check your config JSON.");
     }
 }
+
+/**
+ * Initiates the Google Sign-In popup flow.
+ */
+export async function signInWithGoogle() {
+    if (!auth || !GoogleAuthProvider) {
+        console.error("Firebase Auth not initialized.");
+        return;
+    }
+
+    const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({
+      'client_id': configStore.googleClientId
+    });
+
+    try {
+        const result = await signInWithPopup(auth, provider);
+        const user = result.user;
+        console.log("User signed in:", user.displayName);
+        return user;
+    } catch (error) {
+        console.error("Google Sign-In Error:", error);
+    }
+}
+
+/**
+ * Signs the current user out.
+ */
+export async function signOutUser() {
+    if (!auth) return;
+    try {
+        await signOut(auth);
+        console.log("User signed out.");
+    } catch (error) {
+        console.error("Sign out error:", error);
+    }
+}
+
+// --- Firestore Database Functions ---
 
 /**
  * Saves a plant to the user's 'digital_gardener' collection.
@@ -142,9 +179,10 @@ export async function removePlantFromGarden(userId, plantSlug) {
 }
 
 /**
- * Checks if a plant is already in the user's garden.
- * @param {string} userId - The Firebase User UID.
- * @param {string} plantSlug - The slug of the plant to check.
+ * Retrieves the FULL saved plant data for a specific slug.
+ * Used to skip API calls if the data is already in Firestore.
+ * @param {string} userId 
+ * @param {string} plantSlug 
  * @returns {Promise<{plantData: object|null, docId: string|null}>} The plant data and its Firestore ID.
  */
 export async function getSavedPlant(userId, plantSlug) {
@@ -310,6 +348,10 @@ export async function fetchAugmentedPlantData(plantData) {
         - Soil pH (Min/Max) (e.g., "6.0 / 7.5")
         - Bloom Months (e.g., "June, July, August")
         - A detailed, multi-paragraph care plan covering light, water, and soil requirements.
+        - Pests and Diseases: A list of common pests and diseases and simple preventative measures.
+        - Minimum Winter Temperature: The lowest temperature (in Fahrenheit) the plant can survive.
+        - Maximum Summer Temperature: The highest temperature (in Fahrenheit) the plant can survive.
+        - Frost Sensitivity: Describe its tolerance level (e.g., "High tolerance, very hardy", "Moderate sensitivity, protect from hard frost", "Zero tolerance").
 
         Respond with ONLY a valid JSON object matching this structure. Do not use markdown.
         {
@@ -321,7 +363,11 @@ export async function fetchAugmentedPlantData(plantData) {
           "soil_texture": "...",
           "ph_min_max": "...",
           "bloom_months": "...",
-          "care_plan": "..."
+          "care_plan": "...",
+          "pests_and_diseases": "...",
+          "min_winter_temp_f": "...",
+          "max_summer_temp_f": "...",
+          "frost_sensitivity": "..."
         }
     `;
 
