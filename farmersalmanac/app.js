@@ -353,6 +353,12 @@ async function handleCustomCareQuestion(e) {
         // 2. Render all history
         renderQaHistory(currentModalPlant.qa_history);
         careResponseText.classList.remove('text-red-400');
+        
+        // 3. Auto-save if the plant is already saved to Firestore
+        if (currentModalPlant.docId) {
+            await savePlantToGarden(currentUser.uid, currentModalPlant, currentModalPlant.docId);
+            console.log(`Auto-saved Q&A history for ${currentModalPlant.slug}`);
+        }
 
     } catch (error) {
         console.error("Custom care question failed:", error);
@@ -619,7 +625,14 @@ function mergePlantData(trefleData, geminiData) {
         bloom_months: !isValueMissing(trefleData.growth?.bloom_months) ? trefleData.growth.bloom_months :
                         geminiData.bloom_months,
         
-        care_plan: geminiData.care_plan
+        care_plan: geminiData.care_plan,
+
+        // --- NEW ENVIRONMENTAL & HAZARD FIELDS ---
+        pests_and_diseases: geminiData.pests_and_diseases,
+        min_winter_temp_f: geminiData.min_winter_temp_f,
+        max_summer_temp_f: geminiData.max_summer_temp_f,
+        frost_sensitivity: geminiData.frost_sensitivity
+        // --- END NEW FIELDS ---
     };
 
     return finalData;
@@ -660,12 +673,13 @@ async function handlePlantCardClick(e) {
         // --- 1. Fast Path: Check if already saved with full data ---
         if (currentUser) {
             modalLoader.querySelector('p').textContent = 'Checking your garden...';
-            const savedPlant = await getSavedPlant(currentUser.uid, slug);
+            // getSavedPlant now returns { plantData, docId }
+            const savedResult = await getSavedPlant(currentUser.uid, slug);
             
             // If we have the plant AND it has a care_plan, we know it's the full Augmented version
-            if (savedPlant && savedPlant.care_plan) {
+            if (savedResult.plantData && savedResult.plantData.care_plan) {
                 console.log("Loaded from Garden (Skipped APIs)");
-                currentModalPlant = savedPlant;
+                currentModalPlant = { ...savedResult.plantData, docId: savedResult.docId };
                 
                 // Render immediately
                 const articleHtml = createPlantDetailHtml(currentModalPlant);
@@ -688,7 +702,7 @@ async function handlePlantCardClick(e) {
             }
             
             // If found but partial data (legacy save), or not found, update status boolean
-            if (savedPlant) isSaved = true;
+            if (savedResult.plantData) isSaved = true;
         }
 
         // --- 2. Slow Path: Fetch from APIs ---
@@ -743,14 +757,14 @@ function updateSaveButtonState(isSaved) {
         savePlantBtn.dataset.action = 'remove';
     } else {
         savePlantBtn.textContent = 'Save';
-        savePlantBtn.classList.remove('bg-red-600', 'hover:bg-green-700');
+        savePlantBtn.classList.remove('bg-red-600', 'hover:bg-red-700');
         savePlantBtn.classList.add('bg-green-600', 'hover:bg-green-700');
         savePlantBtn.dataset.action = 'save';
     }
 }
 
 async function handleSaveToggle() {
-    // Note: Since currentModalPlant now holds the potentially updated qa_history, 
+    // Note: Since currentModalPlant now holds the potentially updated qa_history AND docId, 
     // saving the whole object handles persistence automatically.
     if (!currentUser || !currentModalPlant) return;
     
@@ -761,10 +775,14 @@ async function handleSaveToggle() {
 
     try {
         if (action === 'save') {
-            await savePlantToGarden(currentUser.uid, currentModalPlant);
+            const newDocId = await savePlantToGarden(currentUser.uid, currentModalPlant, currentModalPlant.docId);
+            // Ensure the docId is stored if it was a new save
+            currentModalPlant.docId = newDocId; 
             updateSaveButtonState(true);
         } else {
             await removePlantFromGarden(currentUser.uid, currentModalPlant.slug);
+            // Clear docId and reset state after removal
+            currentModalPlant.docId = null;
             updateSaveButtonState(false);
             // If we are in garden view, reload the list to reflect removal
             if (!gardenView.classList.contains('hidden')) {
@@ -842,6 +860,20 @@ function createPlantDetailHtml(plantData) {
                         <span class="text-gray-400">Soil</span>
                         <span class="font-medium text-right">${get(plantData.soil_texture)}</span>
                     </li>
+                    
+                    <li class="flex justify-between items-center">
+                        <span class="text-gray-400">Min Winter Temp</span>
+                        <span class="font-medium text-right">${get(plantData.min_winter_temp_f)} °F</span>
+                    </li>
+                    <li class="flex justify-between items-center">
+                        <span class="text-gray-400">Max Summer Temp</span>
+                        <span class="font-medium text-right">${get(plantData.max_summer_temp_f)} °F</span>
+                    </li>
+                    <li class="flex justify-between items-center">
+                        <span class="text-gray-400">Frost Sensitivity</span>
+                        <span class="font-medium text-right">${get(plantData.frost_sensitivity)}</span>
+                    </li>
+
                     <li class="flex justify-between items-center">
                         <span class="text-gray-400">Edible</span>
                         <span class="px-2 py-0.5 rounded text-xs font-bold ${String(plantData.edible) === 'true' ? 'bg-green-900 text-green-300' : 'bg-gray-600 text-gray-300'}">
@@ -856,8 +888,17 @@ function createPlantDetailHtml(plantData) {
             <h3 class="flex items-center text-xl font-bold text-white mb-3">
                 <span class="mr-2">🤖</span> AI Care Plan (Detailed)
             </h3>
-            <p class="text-gray-300 leading-relaxed whitespace-pre-wrap">
+            <p class="text-gray-300 leading-relaxed whitespace-pre-wrap m-0">
                 ${get(plantData.care_plan, 'No care plan available.')}
+            </p>
+        </div>
+        
+        <div class="bg-red-900/20 border-l-4 border-red-500 p-6 rounded-r-xl mb-8 shadow-lg">
+            <h3 class="flex items-center text-xl font-bold text-white mb-3">
+                <span class="mr-2">🐞</span> Pests & Diseases
+            </h3>
+            <p class="text-gray-300 leading-relaxed whitespace-pre-wrap m-0">
+                ${get(plantData.pests_and_diseases, 'No specific pest information available.')}
             </p>
         </div>
 
