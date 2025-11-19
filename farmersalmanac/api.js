@@ -13,7 +13,9 @@ import { configStore } from './config.js';
 let app, auth, db;
 let GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut;
 // Firestore functions
-let collection, addDoc, deleteDoc, doc, query, where, getDocs;
+let collection, addDoc, deleteDoc, doc, query, where, getDocs, setDoc; // <-- setDoc added
+// Import Firestore setDoc function
+import { setDoc as sd } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
 
 /**
  * Dynamically imports Firebase modules and initializes the app.
@@ -31,7 +33,8 @@ export async function initFirebase() {
         // Dynamically import the Firebase modules
         const { initializeApp } = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js');
         const { getAuth, GoogleAuthProvider: GAuthProvider, signInWithPopup: siwp, onAuthStateChanged: oasc, setPersistence, browserSessionPersistence, signOut: so } = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js');
-        const { getFirestore, collection: col, addDoc: ad, deleteDoc: dd, doc: d, query: q, where: w, getDocs: gd } = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js');
+        // setDoc imported here
+        const { getFirestore, collection: col, addDoc: ad, deleteDoc: dd, doc: d, query: q, where: w, getDocs: gd, setDoc: setD } = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js');
 
         // Assign Auth variables
         GoogleAuthProvider = GAuthProvider;
@@ -47,6 +50,7 @@ export async function initFirebase() {
         query = q;
         where = w;
         getDocs = gd;
+        setDoc = setD; // <-- setDoc assigned
 
         // Initialize Firebase
         app = initializeApp(configStore.firebaseConfig);
@@ -68,59 +72,39 @@ export async function initFirebase() {
 }
 
 /**
- * Initiates the Google Sign-In popup flow.
- */
-export async function signInWithGoogle() {
-    if (!auth || !GoogleAuthProvider) {
-        console.error("Firebase Auth not initialized.");
-        return;
-    }
-
-    const provider = new GoogleAuthProvider();
-    provider.setCustomParameters({
-      'client_id': configStore.googleClientId
-    });
-
-    try {
-        const result = await signInWithPopup(auth, provider);
-        const user = result.user;
-        console.log("User signed in:", user.displayName);
-        return user;
-    } catch (error) {
-        console.error("Google Sign-In Error:", error);
-    }
-}
-
-/**
- * Signs the current user out.
- */
-export async function signOutUser() {
-    if (!auth) return;
-    try {
-        await signOut(auth);
-        console.log("User signed out.");
-    } catch (error) {
-        console.error("Sign out error:", error);
-    }
-}
-
-// --- Firestore Database Functions ---
-
-/**
  * Saves a plant to the user's 'digital_gardener' collection.
- * Includes the FULL augmented data (care plan, etc).
+ * Uses setDoc to update if docId is known, or addDoc for initial save.
  * @param {string} userId - The Firebase User UID.
  * @param {object} plant - The full plant data object.
+ * @param {string} [docId] - Optional ID of the existing document for updating.
  */
-export async function savePlantToGarden(userId, plant) {
+export async function savePlantToGarden(userId, plant, docId = null) {
     if (!db) return;
+    
+    // Clean up temporary docId property if it exists on the plant object
+    const plantToSave = { ...plant };
+    delete plantToSave.docId;
+
     try {
-        await addDoc(collection(db, "digital_gardener"), {
-            ...plant, // Spread the full object (Gemini data, Trefle data)
-            uid: userId,
-            saved_at: Date.now()
-        });
-        console.log(`Saved ${plant.common_name} (with AI data) to garden.`);
+        if (docId) {
+            // Update existing document
+            await setDoc(doc(db, "digital_gardener", docId), {
+                ...plantToSave,
+                uid: userId,
+                saved_at: Date.now()
+            });
+            console.log(`Updated ${plant.common_name} (ID: ${docId}) in garden.`);
+            return docId;
+        } else {
+            // Initial save: create a new document
+            const docRef = await addDoc(collection(db, "digital_gardener"), {
+                ...plantToSave, 
+                uid: userId,
+                saved_at: Date.now()
+            });
+            console.log(`Saved ${plant.common_name} (New ID: ${docRef.id}) to garden.`);
+            return docRef.id;
+        }
     } catch (error) {
         console.error("Error saving plant:", error);
         throw error;
@@ -161,33 +145,10 @@ export async function removePlantFromGarden(userId, plantSlug) {
  * Checks if a plant is already in the user's garden.
  * @param {string} userId - The Firebase User UID.
  * @param {string} plantSlug - The slug of the plant to check.
- * @returns {Promise<boolean>} True if saved, false otherwise.
- */
-export async function isPlantInGarden(userId, plantSlug) {
-    if (!db) return false;
-    try {
-        const q = query(
-            collection(db, "digital_gardener"), 
-            where("uid", "==", userId),
-            where("slug", "==", plantSlug)
-        );
-        const snapshot = await getDocs(q);
-        return !snapshot.empty;
-    } catch (error) {
-        console.error("Error checking plant status:", error);
-        return false;
-    }
-}
-
-/**
- * Retrieves the FULL saved plant data for a specific slug.
- * Used to skip API calls if the data is already in Firestore.
- * @param {string} userId 
- * @param {string} plantSlug 
- * @returns {Promise<object|null>} The plant object or null.
+ * @returns {Promise<{plantData: object|null, docId: string|null}>} The plant data and its Firestore ID.
  */
 export async function getSavedPlant(userId, plantSlug) {
-    if (!db) return null;
+    if (!db) return { plantData: null, docId: null };
     try {
         const q = query(
             collection(db, "digital_gardener"), 
@@ -197,13 +158,14 @@ export async function getSavedPlant(userId, plantSlug) {
         const snapshot = await getDocs(q);
         
         if (!snapshot.empty) {
-            // Return the data of the first match
-            return snapshot.docs[0].data();
+            // Return the data AND the document ID of the first match
+            const doc = snapshot.docs[0];
+            return { plantData: doc.data(), docId: doc.id };
         }
-        return null;
+        return { plantData: null, docId: null };
     } catch (error) {
         console.error("Error fetching saved plant details:", error);
-        return null;
+        return { plantData: null, docId: null };
     }
 }
 
@@ -223,7 +185,8 @@ export async function getGardenPlants(userId) {
         
         const plants = [];
         snapshot.forEach(doc => {
-            plants.push(doc.data());
+            // Attach the Firestore ID to the plant object for easier referencing/updating later
+            plants.push({ ...doc.data(), docId: doc.id });
         });
         return plants;
     } catch (error) {
