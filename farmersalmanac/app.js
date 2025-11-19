@@ -19,7 +19,10 @@ import {
     getGardenPlants,
     getSavedPlant,
     fetchCustomCareAdvice,
-    fetchScientificNameLookup // <--- NEW IMPORT
+    fetchScientificNameLookup,
+    // NEW Image Functions
+    uploadPlantImage, // <--- NEW IMPORT
+    fetchImageIdentification // <--- NEW IMPORT
 } from './api.js';
 
 // --- Global DOM Element Variables ---
@@ -35,7 +38,12 @@ let modalBackdrop, apiKeyForm, appContainer, mainContent, authContainer,
 let careQuestionSection, careQuestionForm, careQuestionInput, careQuestionSubmit,
     careResponseContainer, careResponseText, careResponseLoader;
 
-let scientificLookupBtn; // <--- NEW DOM VARIABLE
+let scientificLookupBtn; 
+
+// --- NEW Image Upload DOM Variables ---
+let identifyPlantBtn, imageUploadModal, imageModalCloseBtn, imageUploadForm,
+    imageFileInput, imagePreviewContainer, imagePreview, previewPlaceholder,
+    uploadStatus, uploadMessage, identifyImageBtn;
 
 // --- App State ---
 let currentSearchQuery = null;
@@ -69,7 +77,6 @@ function main() {
         searchForm = document.getElementById('search-form');
         searchInput = document.getElementById('search-input');
         
-        // --- NEW DOM ASSIGNMENT ---
         scientificLookupBtn = document.getElementById('scientific-lookup-btn');
 
         plantGalleryContainer = document.getElementById('plant-gallery-container');
@@ -105,6 +112,20 @@ function main() {
         careResponseText = document.getElementById('care-response-text');
         careResponseLoader = document.getElementById('care-response-loader');
         
+        // --- NEW Image Upload DOM Assignments ---
+        identifyPlantBtn = document.getElementById('identify-plant-btn');
+        imageUploadModal = document.getElementById('image-upload-modal');
+        imageModalCloseBtn = document.getElementById('image-modal-close-btn');
+        imageUploadForm = document.getElementById('image-upload-form');
+        imageFileInput = document.getElementById('image-file-input');
+        imagePreviewContainer = document.getElementById('image-preview-container');
+        imagePreview = document.getElementById('image-preview');
+        previewPlaceholder = document.getElementById('preview-placeholder');
+        uploadStatus = document.getElementById('upload-status');
+        uploadMessage = document.getElementById('upload-message');
+        identifyImageBtn = document.getElementById('identify-image-btn');
+
+
         // 3. Add all event listeners (Initial setup)
         addEventListeners();
         
@@ -131,7 +152,6 @@ function addEventListeners() {
     prevBtn.addEventListener('click', handlePrevClick);
     nextBtn.addEventListener('click', handleNextClick);
     
-    // --- NEW LISTENER FOR SCIENTIFIC LOOKUP ---
     scientificLookupBtn.addEventListener('click', handleScientificLookup);
 
     // Gallery clicks (delegated)
@@ -147,12 +167,142 @@ function addEventListeners() {
     });
     savePlantBtn.addEventListener('click', handleSaveToggle);
 
-    // Q&A listeners are set up/torn down dynamically in handlePlantCardClick
+    // --- NEW IMAGE UPLOAD LISTENERS ---
+    identifyPlantBtn.addEventListener('click', openImageUploadModal);
+    imageModalCloseBtn.addEventListener('click', closeImageUploadModal);
+    imageUploadForm.addEventListener('submit', handleImageUpload);
+    imageFileInput.addEventListener('change', handleImageFileChange);
 }
 
-/**
- * Handles the Scientific Name Lookup via Gemini.
- */
+// --- NEW IMAGE UPLOAD FUNCTIONS ---
+
+function openImageUploadModal() {
+    if (!currentUser) {
+        alert("Please sign in with Google to use the Plant Identification feature.");
+        return;
+    }
+    imageUploadModal.classList.remove('hidden');
+    // Ensure form is reset on open
+    imageUploadForm.reset();
+    imagePreview.classList.add('hidden');
+    previewPlaceholder.classList.remove('hidden');
+    identifyImageBtn.disabled = true;
+    uploadStatus.classList.add('hidden');
+}
+
+function closeImageUploadModal() {
+    imageUploadModal.classList.add('hidden');
+}
+
+function handleImageFileChange(e) {
+    const file = e.target.files[0];
+    if (file) {
+        // Show preview
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            imagePreview.src = event.target.result;
+            imagePreview.classList.remove('hidden');
+            previewPlaceholder.classList.add('hidden');
+            identifyImageBtn.disabled = false;
+        };
+        reader.readAsDataURL(file);
+    } else {
+        imagePreview.classList.add('hidden');
+        previewPlaceholder.classList.remove('hidden');
+        identifyImageBtn.disabled = true;
+    }
+}
+
+async function handleImageUpload(e) {
+    e.preventDefault();
+
+    if (!currentUser) {
+        alert("Authentication required.");
+        return;
+    }
+
+    const file = imageFileInput.files[0];
+    if (!file) return;
+
+    // UI State: Start Processing
+    identifyImageBtn.disabled = true;
+    const originalBtnText = identifyImageBtn.textContent;
+    uploadStatus.classList.remove('hidden');
+    uploadMessage.textContent = 'Step 1 of 4: Uploading image to storage...';
+
+    let imageUrl = null;
+    let plantData = null;
+    let identifiedName = null;
+    let trefleData = null;
+
+    try {
+        // 1. UPLOAD IMAGE TO FIREBASE STORAGE
+        imageUrl = await uploadPlantImage(file, currentUser.uid);
+        uploadMessage.textContent = 'Step 2 of 4: Analyzing image with AI...';
+
+        // 2. IDENTIFY PLANT VIA GEMINI VISION
+        identifiedName = await fetchImageIdentification(imageUrl);
+
+        if (!identifiedName || identifiedName.scientific_name === 'Unknown') {
+            throw new Error(`AI could not identify the plant. Identified as: ${identifiedName.scientific_name}`);
+        }
+
+        const scientificName = identifiedName.scientific_name;
+        uploadMessage.textContent = `Step 3 of 4: Identified as "${scientificName}". Searching database...`;
+
+        // 3. SEARCH TREFLE (using scientific name for highest accuracy)
+        const trefleSearch = await searchNativePlants(scientificName, 1);
+        
+        if (trefleSearch.data.length === 0) {
+             throw new Error("Could not find detailed data on Trefle after AI identification.");
+        }
+
+        // Use the slug of the first result to get full details
+        const plantSlug = trefleSearch.data[0].slug;
+        trefleData = await getPlantDetails(plantSlug);
+
+        if (!trefleData) {
+            throw new Error("Trefle details not found.");
+        }
+        
+        // Inject the image URL from storage since Trefle doesn't have it
+        trefleData.image_url = imageUrl;
+        
+        // 4. AUGMENT DATA WITH GEMINI
+        uploadMessage.textContent = 'Step 4 of 4: Augmenting care plan and hazards with AI...';
+        const geminiData = await fetchAugmentedPlantData(trefleData);
+
+        // 5. MERGE AND SAVE TO GARDEN
+        plantData = mergePlantData(trefleData, geminiData);
+        // Ensure new saves have the image URL included in the final object
+        plantData.image_url = imageUrl; 
+        plantData.qa_history = []; // Initialize history
+        
+        const docId = await savePlantToGarden(currentUser.uid, plantData);
+
+        // Success!
+        closeImageUploadModal();
+        alert(`Success! Plant "${plantData.common_name}" has been identified and saved to your garden.`);
+        // Reload the garden view if currently open
+        if (!gardenView.classList.contains('hidden')) {
+             loadGardenPlants();
+        }
+
+    } catch (error) {
+        console.error("Image Identification Workflow Failed:", error);
+        uploadMessage.textContent = `Error: ${error.message}. Please try a different photo.`;
+        uploadMessage.classList.add('text-red-400');
+        uploadMessage.classList.remove('text-green-400');
+
+    } finally {
+        identifyImageBtn.textContent = originalBtnText;
+        identifyImageBtn.disabled = false;
+    }
+}
+
+
+// --- Q&A AND MODAL FUNCTIONS ---
+
 async function handleScientificLookup() {
     const commonName = searchInput.value.trim();
 
@@ -191,9 +341,6 @@ async function handleScientificLookup() {
 }
 
 
-/**
- * Sets up listeners and resets the state for the dynamic Q&A form.
- */
 function setupCareQuestionForm(history) {
     // 1. Remove previous listeners to prevent multiple execution
     careQuestionForm.removeEventListener('submit', handleCustomCareQuestion);
