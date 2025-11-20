@@ -1,7 +1,7 @@
 import { CONSTANTS, state } from './config.js';
 import { fetchAndRenderRecentFilings, fetchAndRenderRevisitFilings, fetchAndRenderWatchlistFilings, renderCompanyDeepDive, renderInsiderTrackerView, renderInstitutionalTrackerView, renderUpcomingEarningsView, renderFilingsActivityView, renderMarketAnalysisView, renderInvestorFilingsDropdownView, renderInvestorFilingsView, renderWhaleComparisonView } from './ui-render.js';
 import { closeModal, openDeepDiveModal } from './ui-modals.js';
-// UPDATED: Added handleFilingAnalysis to the import
+// UPDATED: Imported handleFilingAnalysis
 import { handleFilingAnalysis, handleBatchProcess, handleMarketAnalysis } from './ui-handlers.js';
 
 function setupGlobalEventListeners() {
@@ -39,7 +39,7 @@ function setupGlobalEventListeners() {
             const type = btn.dataset.formType;
             const ticker = btn.dataset.ticker;
             
-            // Trigger the analysis handler defined in ui-handlers.js
+            // Trigger the analysis handler with the 500k character limit logic
             handleFilingAnalysis(url, type, ticker);
             return;
         }
