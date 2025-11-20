@@ -22,10 +22,10 @@ export async function handleFilingAnalysis(filingUrl, formType, ticker, filingIt
 
     try {
         // 2. Fetch Filing Content
-        // We limit to ~100k characters to ensure low latency, though Gemini 3 can handle much more.
+        // UPDATED: Increased limit to 500k characters to handle full 10-Ks
         let filingText = await getFilingContent(filingUrl, filingItem);
-        if (filingText.length > 100000) {
-            filingText = filingText.substring(0, 100000) + "... [Text Truncated]";
+        if (filingText.length > 500000) {
+            filingText = filingText.substring(0, 500000) + "... [Text Truncated]";
         }
 
         // 3. Construct Prompt
