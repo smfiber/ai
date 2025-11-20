@@ -2,87 +2,247 @@ import { state, promptMap, TOP_25_INVESTORS, CONSTANTS } from './config.js';
 import { openModal, closeModal, displayMessageInModal } from './ui-modals.js';
 import { callGeminiApi } from './api.js';
 import { getFilingContent, getWhaleFilings } from './sec-api.js';
-import { doc, setDoc, getDocs, collection, query, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { doc, setDoc, getDoc, Timestamp, collection, query, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 /**
- * Handles the AI analysis of a specific SEC filing.
+ * Helper to format SEC Item codes into readable text.
+ */
+function formatItemName(item) {
+    const map = {
+        'part1item2': 'MD&A',
+        'item7': 'MD&A',
+        'item1': 'Business',
+        'item1a': 'Risk Factors',
+        'part2item1a': 'Risk Factors',
+        '2-2': 'Earnings Results',
+        '8-1': 'Other Events',
+        '1-1': 'Material Agreements',
+        '7-1': 'Reg FD Disclosure',
+        '5-2': 'Officer Departures'
+    };
+    return map[item] || `Item ${item}`;
+}
+
+/**
+ * Generates a unique ID for the report based on filing details.
+ */
+function generateReportId(ticker, formType, filingItem, filingUrl) {
+    // Extract Accession Number from URL (unique SEC ID)
+    // URL format usually: .../data/123456/0001234567-23-000001-index.html
+    const accessionMatch = filingUrl.match(/(\d{10}-\d{2}-\d{6})/);
+    const uniqueId = accessionMatch ? accessionMatch[1] : btoa(filingUrl).substring(0, 20); // Fallback to base64 stub
+    const itemSuffix = filingItem ? `_${filingItem}` : '_FULL';
+    return `${ticker}_${formType}_${uniqueId}${itemSuffix}`;
+}
+
+/**
+ * Renders the Analysis Report UI (Shared by Live and Cached flows).
+ */
+function renderReportUI(container, formType, ticker, usedItem, analysisResult, timestamp = new Date(), isCached = false, usedSections = []) {
+    const displayItemName = usedItem ? formatItemName(usedItem) : null;
+    const dateStr = timestamp instanceof Timestamp ? timestamp.toDate().toLocaleDateString() : new Date(timestamp).toLocaleDateString();
+    
+    // Adjust Grid Layout (33% List / 66% Report)
+    const parentGrid = container.parentElement;
+    if (parentGrid) {
+        parentGrid.classList.remove('md:grid-cols-2');
+        parentGrid.classList.add('md:grid-cols-3');
+        if (parentGrid.firstElementChild) parentGrid.firstElementChild.classList.add('md:col-span-1');
+        container.classList.add('md:col-span-2');
+    }
+
+    // Container Styling
+    container.classList.remove('p-6', 'prose', 'max-w-none');
+    container.classList.add('h-full', 'flex', 'flex-col', 'bg-gray-50', 'overflow-hidden');
+
+    container.innerHTML = `
+        <div class="bg-white border-b px-6 py-3 flex justify-between items-center shadow-sm shrink-0 z-10">
+            <div class="flex items-center gap-3">
+                <div class="p-2 bg-indigo-50 rounded-lg text-indigo-600">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path><polyline points="14 2 14 8 20 8"></polyline><path d="M16 13H8"></path><path d="M16 17H8"></path><path d="M10 9H8"></path></svg>
+                </div>
+                <div>
+                    <h3 class="font-bold text-gray-900 leading-tight">Analysis Report</h3>
+                    <p class="text-xs text-gray-500 font-medium">${formType} • ${ticker} • ${isCached ? `Generated: ${dateStr}` : 'Just Now'}</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                ${isCached ? 
+                    `<span class="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded bg-green-50 text-green-700 border border-green-100 flex items-center gap-1">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                        Saved
+                    </span>` 
+                    : ''}
+                <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded bg-indigo-50 text-indigo-700 border border-indigo-100">
+                    Gemini 3 Pro
+                </span>
+            </div>
+        </div>
+
+        <div class="flex-1 overflow-y-auto p-4 sm:p-8 custom-scrollbar">
+            <div class="bg-white p-8 sm:p-10 rounded-xl shadow-sm border border-gray-200 max-w-3xl mx-auto">
+                
+                ${displayItemName ? `
+                    <div class="mb-8 flex items-start gap-3 p-4 bg-blue-50 border border-blue-100 rounded-lg text-sm text-blue-800">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0 text-blue-600 mt-0.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" /></svg>
+                        <div>
+                            <span class="font-bold block mb-1 text-blue-900">Scope Note</span>
+                            To ensure analysis accuracy, this report focuses specifically on <strong>${displayItemName}</strong>.
+                        </div>
+                    </div>
+                ` : ''}
+
+                ${usedSections.length > 0 && usedSections[0] !== 'Full Filing Text' && !displayItemName ? `
+                    <div class="mb-8 flex items-start gap-3 p-4 bg-blue-50 border border-blue-100 rounded-lg text-sm text-blue-800">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0 text-blue-600 mt-0.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" /></svg>
+                        <div>
+                            <span class="font-bold block mb-1 text-blue-900">Composite Analysis Mode</span>
+                            Full text unavailable via API. Analysis synthesized from: <strong>${usedSections.join(', ')}</strong>.
+                        </div>
+                    </div>
+                ` : ''}
+                
+                <div class="prose prose-slate prose-headings:text-indigo-900 prose-a:text-indigo-600 hover:prose-a:text-indigo-500 max-w-none">
+                    ${marked.parse(analysisResult)}
+                </div>
+
+                <div class="mt-12 pt-6 border-t border-gray-100 text-center">
+                    <p class="text-xs text-gray-400 uppercase tracking-widest font-semibold">AI Generated Content • Verify with Original Filings</p>
+                </div>
+            </div>
+            <div class="h-8"></div>
+        </div>
+    `;
+}
+
+/**
+ * Handles the AI analysis of a specific SEC filing with Caching.
  */
 export async function handleFilingAnalysis(filingUrl, formType, ticker, filingItem = null) {
     const container = document.getElementById('filing-analysis-container');
     if (!container) return;
 
-    // 1. Set Loading State
+    // 1. Determine Target Section (Same logic as before)
+    let targetItem = filingItem;
+    if (!targetItem) {
+        if (formType === '10-Q') targetItem = 'part1item2';
+        if (formType === '10-K') targetItem = 'item7';
+    }
+
+    // 2. Generate Report ID & Check Cache
+    const reportId = generateReportId(ticker, formType, targetItem, filingUrl);
+    
     container.innerHTML = `
         <div class="flex flex-col items-center justify-center h-full">
             <div class="loader mb-4"></div>
-            <p class="text-gray-600 font-medium">Gemini is analyzing the ${formType} for ${ticker}...</p>
-            <p class="text-xs text-gray-400 mt-2">Extracting text & generating insights.</p>
+            <p class="text-gray-600 font-medium">Checking for existing analysis...</p>
         </div>
     `;
 
     try {
-        // 2. Fetch Filing Content
-        // UPDATED: Increased limit to 500k characters to handle full 10-Ks
-        let filingText = await getFilingContent(filingUrl, filingItem);
-        if (filingText.length > 500000) {
-            filingText = filingText.substring(0, 500000) + "... [Text Truncated]";
+        // --- CHECK CACHE ---
+        const docRef = doc(state.db, 'ai_analysis_cache', reportId);
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            console.log("Serving analysis from cache:", reportId);
+            renderReportUI(container, formType, ticker, data.targetItem, data.analysisResult, data.timestamp, true, data.usedSections);
+            return;
         }
 
-        // 3. Construct Prompt
-        const basePrompt = promptMap[formType] || promptMap['8-K']; // Default to 8-K prompt if type unknown
-        const fullPrompt = `${basePrompt}\n\n--- START OF FILING TEXT ---\n${filingText}\n--- END OF FILING TEXT ---`;
+        // --- NO CACHE FOUND: PROCEED TO FETCH ---
+        container.querySelector('p').textContent = `Gemini is analyzing the ${formType} for ${ticker}...`;
 
-        // 4. Call Gemini API
+        let filingText = '';
+        let usedSections = [];
+        let finalUsedItem = targetItem;
+
+        try {
+            filingText = await getFilingContent(filingUrl, targetItem);
+            if(targetItem) usedSections.push(formatItemName(targetItem));
+            else usedSections.push('Full Filing Text');
+
+        } catch (error) {
+            // Handle 404 / Composite Logic
+            if (error.message.includes('Supported items are:') || error.message.includes('404')) {
+                console.log("Full text failed. Switching to Composite Strategy.");
+                let partsToFetch = [];
+                
+                if (formType === '10-K') partsToFetch = ['item7', 'item1a', 'item1']; 
+                else if (formType === '10-Q') partsToFetch = ['part1item2', 'part2item1a']; 
+                else if (formType === '8-K') {
+                    const match = error.message.match(/Supported items are: (.*?)["}]/);
+                    if (match) {
+                        const available = match[1].split(',').map(s => s.trim());
+                        const priority = ['2-2', '8-1', '1-1', '7-1', '5-2'];
+                        finalUsedItem = priority.find(p => available.includes(p)) || available[0];
+                        partsToFetch = [finalUsedItem];
+                    }
+                }
+
+                if (partsToFetch.length > 0) {
+                    if (formType === '8-K' && partsToFetch.length === 1) {
+                        filingText = await getFilingContent(filingUrl, partsToFetch[0]);
+                    } else {
+                        // Parallel Fetch
+                        const results = await Promise.all(
+                            partsToFetch.map(item => getFilingContent(filingUrl, item).then(text => ({ item, text })).catch(() => ({ item, text: '' })))
+                        );
+                        filingText = results.filter(r => r.text.length > 100).map(r => {
+                            usedSections.push(formatItemName(r.item));
+                            return `\n\n=== SECTION: ${formatItemName(r.item)} ===\n${r.text}`;
+                        }).join('\n');
+                        
+                        // If composite, clear the specific item so UI shows "Composite"
+                        if (usedSections.length > 1) finalUsedItem = null;
+                    }
+                    if (!filingText) throw new Error("Could not extract any meaningful sections.");
+                } else {
+                    throw error;
+                }
+            } else {
+                throw error;
+            }
+        }
+
+        if (filingText.length > 700000) {
+            filingText = filingText.substring(0, 700000) + "... [Text Truncated]";
+        }
+
+        const basePrompt = promptMap[formType] || promptMap['8-K']; 
+        const fullPrompt = `${basePrompt}\n\n--- START OF FILING DATA ---\n${filingText}\n--- END OF FILING DATA ---`;
+
         const analysisResult = await callGeminiApi(fullPrompt);
 
-        // 5. Render Result with Copy Functionality
-        const copyBtnId = `copy-btn-${Date.now()}`;
+        // --- SAVE TO CACHE ---
+        const cacheData = {
+            ticker,
+            formType,
+            filingUrl,
+            targetItem: finalUsedItem,
+            usedSections: usedSections,
+            analysisResult,
+            timestamp: Timestamp.now(),
+            model: "Gemini 3 Pro"
+        };
         
-        container.innerHTML = `
-            <div class="prose max-w-none p-4 relative">
-                <div class="mb-4 flex justify-between items-center border-b pb-2">
-                    <h3 class="text-xl font-bold text-indigo-800">AI Analysis: ${formType}</h3>
-                    <div class="flex items-center gap-2">
-                        <span class="text-xs text-gray-500">Gemini 3 Pro Preview</span>
-                        <button id="${copyBtnId}" class="text-gray-500 hover:text-indigo-600 p-1 rounded transition-colors" title="Copy Report">
-                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
-                               <path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184" />
-                             </svg>
-                        </button>
-                    </div>
-                </div>
-                ${marked.parse(analysisResult)}
-            </div>
-        `;
+        await setDoc(docRef, cacheData);
+        console.log("Analysis saved to cache:", reportId);
 
-        // Attach event listener for the copy button
-        const copyBtn = document.getElementById(copyBtnId);
-        if (copyBtn) {
-            copyBtn.addEventListener('click', () => {
-                navigator.clipboard.writeText(analysisResult).then(() => {
-                    // Visual feedback: Change icon to Checkmark briefly
-                    const originalIcon = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184" /></svg>`;
-                    const checkIcon = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 text-green-600"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>`;
-                    
-                    copyBtn.innerHTML = checkIcon;
-                    setTimeout(() => {
-                        copyBtn.innerHTML = originalIcon;
-                    }, 2000);
-                }).catch(err => {
-                    console.error('Failed to copy: ', err);
-                });
-            });
-        }
+        renderReportUI(container, formType, ticker, finalUsedItem, analysisResult, new Date(), false, usedSections);
 
     } catch (error) {
         console.error("Analysis failed:", error);
+        container.classList.add('p-6');
+        container.classList.remove('bg-gray-50', 'flex', 'flex-col', 'h-full'); 
         container.innerHTML = `
-            <div class="flex flex-col items-center justify-center h-full text-red-500">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <p class="font-bold">Analysis Failed</p>
-                <p class="text-sm mt-1 text-center max-w-xs">${error.message}</p>
+            <div class="flex flex-col items-center justify-center h-full text-red-500 pt-12">
+                <div class="bg-red-50 p-4 rounded-full mb-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                </div>
+                <h3 class="text-lg font-bold text-gray-900">Analysis Failed</h3>
+                <p class="text-sm mt-2 text-center max-w-xs text-gray-600 bg-white p-3 rounded border border-gray-200 shadow-sm">${error.message}</p>
             </div>
         `;
     }
@@ -90,8 +250,6 @@ export async function handleFilingAnalysis(filingUrl, formType, ticker, filingIt
 
 /**
  * Helper function to create a delay.
- * @param {number} ms Milliseconds to wait.
- * @returns {Promise<void>}
  */
 const delay = ms => new Promise(res => setTimeout(res, ms));
 
@@ -121,15 +279,12 @@ export async function handleBatchProcess() {
             statusBar.textContent = `(${i + 1}/${TOP_25_INVESTORS.length}) Fetching filings for ${investor.name}...`;
             progressBar.style.width = `${progress}%`;
             
-            // Add a 1-second delay between each request to avoid hitting the API rate limit.
             await delay(1000); 
 
-            // 1. Fetch filings
             const { filings } = await getWhaleFilings(investor.cik);
             if (!filings || filings.length === 0) continue;
 
-            // 2. Process filings (merge amendments, aggregate holdings)
-            const groupedByPeriod = filings.reduce((acc, filing) => { /* ... */ acc[filing.periodOfReport] = acc[filing.periodOfReport] || {}; if (filing.formType.endsWith('/A')) acc[filing.periodOfReport].amendment = filing; else acc[filing.periodOfReport].original = filing; return acc; }, {});
+            const groupedByPeriod = filings.reduce((acc, filing) => { acc[filing.periodOfReport] = acc[filing.periodOfReport] || {}; if (filing.formType.endsWith('/A')) acc[filing.periodOfReport].amendment = filing; else acc[filing.periodOfReport].original = filing; return acc; }, {});
             const filingsToProcess = Object.values(groupedByPeriod).map(group => { if (group.original && group.amendment) { const holdingsMap = new Map(group.original.holdings.map(h => [h.cusip, h])); group.amendment.holdings.forEach(h => holdingsMap.set(h.cusip, h)); return { ...group.amendment, holdings: Array.from(holdingsMap.values()) }; } return group.amendment || group.original; }).sort((a, b) => new Date(b.periodOfReport) - new Date(a.periodOfReport));
 
             const batch = writeBatch(state.db);
@@ -138,13 +293,11 @@ export async function handleBatchProcess() {
                 const currentFiling = filingsToProcess[j];
                 const previousFiling = filingsToProcess[j + 1];
 
-                // 3. Aggregate holdings for the current quarter
                 const aggregate = (filing) => { if (!filing || !filing.holdings) return []; const map = new Map(); for (const h of filing.holdings) { const t = h.ticker || 'N/A'; if (!map.has(t)) map.set(t, { n: h.nameOfIssuer, s: 0, v: 0 }); const e = map.get(t); e.s += Number(h.shrsOrPrnAmt.sshPrnamt); e.v += h.value; } return Array.from(map.entries()).map(([t, d]) => ({ t, ...d })); };
                 const currentHoldingsAggregated = aggregate(currentFiling);
 
                 let changes = {};
                 if (previousFiling) {
-                    // 4. Calculate Changes
                     const latestHoldingsMap = new Map(currentHoldingsAggregated.map(h => [h.t, h]));
                     const previousHoldingsMap = new Map(aggregate(previousFiling).map(h => [h.t, h]));
                     const c = { new: [], exited: [], increased: [], decreased: [] };
@@ -153,7 +306,6 @@ export async function handleBatchProcess() {
                     changes = c;
                 }
                 
-                // 5. Save to Firestore
                 const docRef = doc(state.db, CONSTANTS.DB_COLLECTION_INVESTOR_DATA, investor.cik, "QuarterlyReports", currentFiling.periodOfReport);
                 batch.set(docRef, {
                     investorName: investor.name,
@@ -190,7 +342,6 @@ export async function handleMarketAnalysis() {
     analysisContainer.innerHTML = `<div class="p-4"><div class="loader mx-auto my-4"></div><p class="text-center text-gray-500">Querying database and analyzing trends...</p></div>`;
 
     try {
-        // 1. Query all data from Firestore
         const allChanges = { buys: {}, sells: {} };
         const latestPeriods = {};
 
@@ -208,7 +359,6 @@ export async function handleMarketAnalysis() {
             if(latestReport && latestReport.changes) latestPeriods[investor.cik] = latestReport;
         }
 
-        // 2. Aggregate the changes
         for(const report of Object.values(latestPeriods)) {
             const buys = [...(report.changes.new || []), ...(report.changes.increased || [])];
             const sells = [...(report.changes.exited || []), ...(report.changes.decreased || [])];
@@ -226,7 +376,6 @@ export async function handleMarketAnalysis() {
         const topBuys = Object.entries(allChanges.buys).sort(([,a],[,b]) => b.count - a.count).slice(0, 20).map(([ticker, data]) => ({ ticker, ...data }));
         const topSells = Object.entries(allChanges.sells).sort(([,a],[,b]) => b.count - a.count).slice(0, 20).map(([ticker, data]) => ({ ticker, ...data }));
 
-        // 3. Construct GenAI Prompt
         const prompt = `
         You are a senior hedge fund analyst delivering a concise, data-driven market briefing to your Portfolio Manager. Your analysis will synthesize historical institutional positioning (from 13F filings) with the immediate, real-time market and macroeconomic context to identify potential investment opportunities.
         
@@ -235,73 +384,33 @@ export async function handleMarketAnalysis() {
         Timestamp: ${new Date().toISOString()}
         
         Current US Economic Indicators:
-        
         Latest CPI (YoY): [Insert latest CPI %]
-        
         Latest Unemployment Rate: [Insert latest Unemployment %]
-        
         Latest Non-Farm Payrolls: [Insert latest NFP number]
-        
         Fed Funds Rate: [Insert current Fed Funds Rate Range]
-        
         US 10-Year Treasury Yield: [Insert current 10-Yr Yield]
         
         Today's Market Snapshot:
-        
         S&P 500: [Insert S&P 500 daily change %]
-        
         NASDAQ 100: [Insert NASDAQ 100 daily change %]
-        
         CBOE Volatility Index (VIX): [Insert current VIX level]
         
         Aggregated 13F Data (Last Quarter) from 25 Top Firms:
         
-        Top Buys (by conviction & number of firms):
-        Data should include symbol, sector, number of firms buying, total shares added, and number of firms initiating a new position.
-        
-        JSON
-        
+        Top Buys:
         ${JSON.stringify(topBuys, null, 2)}
-        Top Sells (by conviction & number of firms):
-        Data should include symbol, sector, number of firms selling, total shares sold, and number of firms exiting their position completely.
         
-        JSON
-        
+        Top Sells:
         ${JSON.stringify(topSells, null, 2)}
+        
         Analysis Required:
-        
-        Executive Summary (The "So What?"):
-        
-        Synthesize the macro context with the institutional positioning. Is the "smart money" positioning (from the 13Fs) aligned with or contrary to the latest economic data?
-        
-        Based on this synthesis, characterize the prevailing market sentiment. Is it risk-on, risk-off, or something more nuanced (e.g., cautiously optimistic, defensively positioned for a slowdown)?
-        
-        Key Sector & Thematic Rotations:
-        
-        Identify the top 2-3 sectors being bought and the top 2-3 sectors being sold.
-        
-        What macro-thematic narrative do these flows suggest? (e.g., a rotation into cyclical value, a flight to defensive tech, an exit from consumer discretionary due to inflation fears, etc.).
-        
-        High-Conviction Stock Analysis:
-        
-        Highlight the top 2-3 stocks with the highest conviction from the topBuys data (consider new positions and large share increases). For each, provide a plausible thesis explaining why top managers are buying now.
-        
-        Highlight the most notable stock from the topSells data, especially if it represents a major trend reversal or an exit from multiple respected firms. What is the likely bear thesis?
-        
-        Prospective QARP & GARP Screener:
-        
-        From the topBuys list, identify 2-3 potential GARP candidates. Justify your selection based on their sector, growth narrative, and the fact that respected growth-oriented funds are accumulating shares.
-        
-        From the topBuys list, identify 2-3 potential QARP candidates. Justify your selection based on their likely stable earnings, strong balance sheets, and acquisition by value or quality-focused managers at a perceived reasonable valuation.
-        
-        Contrarian & Risk Signals:
-        
-        Are there any highly crowded trades evident in the data that might pose a risk?
-        
-        Does the selling activity point to any sectors or themes that may be falling out of favor, presenting a potential "value trap" or short opportunity?
+        1. Executive Summary (The "So What?")
+        2. Key Sector & Thematic Rotations
+        3. High-Conviction Stock Analysis
+        4. Prospective QARP & GARP Screener
+        5. Contrarian & Risk Signals
         `.trim();
 
-        // 4. Get and render analysis
         const analysisContent = await callGeminiApi(prompt);
         analysisContainer.innerHTML = `<div class="prose max-w-none p-4 border-l-4 border-indigo-500 bg-indigo-50 rounded-lg">${marked.parse(analysisContent)}</div>`;
 
