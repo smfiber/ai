@@ -1086,7 +1086,7 @@
 
             payload.generationConfig = generationConfig;
             
-            const result = await callApi(`https://generativelanguage.googleapis.com/v1/models/gemini-2.5-pro:generateContent?key=${userApiKey}`, payload);
+            const result = await callApi(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=${userApiKey}`, payload);
             return result?.candidates?.[0]?.content?.parts?.[0]?.text || null;
         }
 
