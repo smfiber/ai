@@ -1,7 +1,7 @@
 import { CONSTANTS, state } from './config.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// --- UTILITY & SECURITY HELPERS (Moved from ui.js) ---
+// --- UTILITY & SECURITY HELPERS ---
 function isValidHttpUrl(urlString) {
     if (typeof urlString !== 'string' || !urlString) return false;
     try {
@@ -51,7 +51,9 @@ export async function callGeminiApi(prompt) {
 
     state.sessionLog.push({ type: 'prompt', timestamp: new Date(), content: prompt });
 
+    // UPDATED: Using v1beta and gemini-3-pro-preview
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=${state.geminiApiKey}`;
+    
     const body = { contents: [{ parts: [{ "text": prompt }] }] };
     const data = await callApi(url, {
         method: 'POST',
@@ -100,7 +102,6 @@ export async function getFmpStockData(symbol) {
     return stockData;
 }
 
-// --- CHANGE STARTS HERE ---
 const delay = ms => new Promise(res => setTimeout(res, ms));
 
 export async function getEarningsCalendar(tickers) {
@@ -112,7 +113,6 @@ export async function getEarningsCalendar(tickers) {
     }
 
     const allEarnings = [];
-    // Switched from Promise.all to a sequential loop to prevent rate limiting
     for (const ticker of tickers) {
         try {
             const url = `https://financialmodelingprep.com/api/v3/historical/earning_calendar/${ticker}?apikey=${state.fmpApiKey}`;
@@ -120,7 +120,7 @@ export async function getEarningsCalendar(tickers) {
             if (Array.isArray(result)) {
                 allEarnings.push(...result);
             }
-            await delay(200); // Add a small delay between each request
+            await delay(200); 
         } catch (error) {
             console.warn(`Could not fetch earnings for ${ticker}:`, error);
         }
@@ -128,4 +128,3 @@ export async function getEarningsCalendar(tickers) {
     
     return allEarnings;
 }
-// --- CHANGE ENDS HERE ---
