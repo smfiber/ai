@@ -1,3 +1,7 @@
+{
+type: uploaded file
+fileName: ui-handlers.js
+fullContent:
 import { state, promptMap, TOP_25_INVESTORS, CONSTANTS } from './config.js';
 import { openModal, closeModal, displayMessageInModal } from './ui-modals.js';
 import { callGeminiApi } from './api.js';
@@ -21,21 +25,29 @@ export async function handleFilingAnalysis(filingUrl, formType, ticker, filingIt
     `;
 
     try {
-        // 2. Fetch Filing Content
+        // 2. Determine Target Section (if not specified)
+        // Fixing "Item type not supported" errors by targeting MD&A for large filings
+        let targetItem = filingItem;
+        if (!targetItem) {
+            if (formType === '10-Q') targetItem = 'part1item2'; // MD&A
+            if (formType === '10-K') targetItem = 'item7';      // MD&A
+        }
+
+        // 3. Fetch Filing Content
         // UPDATED: Increased limit to 500k characters to handle full 10-Ks
-        let filingText = await getFilingContent(filingUrl, filingItem);
+        let filingText = await getFilingContent(filingUrl, targetItem);
         if (filingText.length > 500000) {
             filingText = filingText.substring(0, 500000) + "... [Text Truncated]";
         }
 
-        // 3. Construct Prompt
+        // 4. Construct Prompt
         const basePrompt = promptMap[formType] || promptMap['8-K']; // Default to 8-K prompt if type unknown
         const fullPrompt = `${basePrompt}\n\n--- START OF FILING TEXT ---\n${filingText}\n--- END OF FILING TEXT ---`;
 
-        // 4. Call Gemini API
+        // 5. Call Gemini API
         const analysisResult = await callGeminiApi(fullPrompt);
 
-        // 5. Render Result
+        // 6. Render Result
         container.innerHTML = `
             <div class="prose max-w-none p-4">
                 <div class="mb-4 flex justify-between items-center border-b pb-2">
@@ -283,4 +295,6 @@ export async function handleMarketAnalysis() {
     } finally {
         analyzeBtn.disabled = false;
     }
+}
+
 }
