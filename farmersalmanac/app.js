@@ -15,14 +15,14 @@ import {
     // Database functions
     savePlantToGarden,
     removePlantFromGarden,
-    isPlantInGarden,
+    // isPlantInGarden, <--- REMOVED THIS LINE
     getGardenPlants,
     getSavedPlant,
     fetchCustomCareAdvice,
     fetchScientificNameLookup,
     // NEW Image Functions
-    uploadPlantImage, // <--- NEW IMPORT
-    fetchImageIdentification // <--- NEW IMPORT
+    uploadPlantImage, 
+    fetchImageIdentification 
 } from './api.js';
 
 // --- Global DOM Element Variables ---
