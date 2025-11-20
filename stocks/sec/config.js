@@ -1,3 +1,7 @@
+{
+type: uploaded file
+fileName: config.js
+fullContent:
 export const APP_VERSION = '1.0.0';
 
 /**
@@ -90,6 +94,8 @@ export const promptMap = {
         4.  **Synthesize a Summary:** Combine the above points into a well-structured summary using Markdown formatting. Start with a title that includes the company ticker and the core event. Use bullet points for key details. End with a bolded "Sentiment" line.
 
         The analysis should be objective and based ONLY on the text provided. Do not include external information or speculation.
+        
+        IMPORTANT: Return ONLY the raw Markdown content. Do not include introductory "Scope Notes", preambles, or concluding disclaimers like "AI Generated Content".
     `,
     '10-K': `
         You are an expert financial analyst. Analyze the provided text from the "Risk Factors" and "Management's Discussion and Analysis" (MD&A) sections of a 10-K annual report for the company.
@@ -108,6 +114,8 @@ export const promptMap = {
 
         ### 💡 Analyst Conclusion
         Based ONLY on the provided text, provide a one-paragraph conclusion. Does management's tone seem confident, cautious, or concerned? What is the single most important takeaway an investor should have after reading these sections?
+
+        IMPORTANT: Return ONLY the raw Markdown content. Do not include introductory "Scope Notes", preambles, or concluding disclaimers like "AI Generated Content".
     `,
     '10-Q': `
         You are a financial analyst reviewing a 10-Q quarterly report for the company. Analyze the provided text, focusing on changes since the last annual report.
@@ -127,6 +135,8 @@ export const promptMap = {
 
         ### 📉 Overall Assessment
         Provide a brief, one-paragraph summary. Based on the text, did the company's position improve, decline, or remain stable during the quarter? What is the most critical update for an investor from this filing?
+
+        IMPORTANT: Return ONLY the raw Markdown content. Do not include introductory "Scope Notes", preambles, or concluding disclaimers like "AI Generated Content".
     `,
     '4': `
         Analyze the provided text from an SEC Form 4 filing, which reports an insider transaction.
@@ -143,5 +153,7 @@ export const promptMap = {
         - **Ownership After Transaction:** [Number of shares] shares.
 
         Finally, add a one-sentence **"Significance"** line. Classify the transaction as either "Informative Buy/Sell" (a direct, open-market transaction) or "Non-Informative" (related to compensation, options exercise, or a gift).
+
+        IMPORTANT: Return ONLY the raw Markdown content. Do not include introductory "Scope Notes", preambles, or concluding disclaimers like "AI Generated Content".
     `
 };
