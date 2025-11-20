@@ -1,6 +1,7 @@
 import { CONSTANTS, state } from './config.js';
 import { fetchAndRenderRecentFilings, fetchAndRenderRevisitFilings, fetchAndRenderWatchlistFilings, renderCompanyDeepDive, renderInsiderTrackerView, renderInstitutionalTrackerView, renderUpcomingEarningsView, renderFilingsActivityView, renderMarketAnalysisView, renderInvestorFilingsDropdownView, renderInvestorFilingsView, renderWhaleComparisonView } from './ui-render.js';
 import { closeModal, openDeepDiveModal } from './ui-modals.js';
+// UPDATED: Added handleFilingAnalysis to the import
 import { handleFilingAnalysis, handleBatchProcess, handleMarketAnalysis } from './ui-handlers.js';
 
 function setupGlobalEventListeners() {
@@ -12,7 +13,13 @@ function setupGlobalEventListeners() {
         const target = e.target;
 
         if (target.closest('#refresh-filings-button')) {
-            // ... (unchanged) ...
+             const btn = target.closest('#refresh-filings-button');
+             const icon = btn.querySelector('svg');
+             icon.classList.add('animate-spin');
+             fetchAndRenderRecentFilings().then(() => {
+                 setTimeout(() => icon.classList.remove('animate-spin'), 500);
+             });
+             return;
         }
 
         if (target.closest('.company-link')) {
@@ -24,6 +31,19 @@ function setupGlobalEventListeners() {
             }
             return;
         }
+
+        // --- NEW: Analyze Filing Button Listener ---
+        if (target.closest('.analyze-filing-btn')) {
+            const btn = target.closest('.analyze-filing-btn');
+            const url = btn.dataset.filingUrl;
+            const type = btn.dataset.formType;
+            const ticker = btn.dataset.ticker;
+            
+            // Trigger the analysis handler defined in ui-handlers.js
+            handleFilingAnalysis(url, type, ticker);
+            return;
+        }
+        // -------------------------------------------
 
         if (target.closest('#start-batch-process-btn')) {
             handleBatchProcess();
@@ -63,7 +83,9 @@ function setupGlobalEventListeners() {
     // Event delegation for the Deep Dive Modal
     const deepDiveModal = document.getElementById('deepDiveModal');
     if (deepDiveModal) {
-        // ... (unchanged) ...
+         deepDiveModal.addEventListener('click', (e) => {
+             // Any specific modal-internal events can go here if not covered by appContainer
+         });
     }
     
     // Event delegation for the main tabs
@@ -114,7 +136,6 @@ export function setupEventListeners() {
         { modal: 'deepDiveModal', button: 'close-deep-dive-modal', bg: 'close-deep-dive-modal-bg' },
     ];
 
-    // --- CHANGE STARTS HERE ---
     // Adds the event listeners for closing modals
     modalsToClose.forEach(item => {
         const modalEl = document.getElementById(item.modal);
@@ -130,5 +151,4 @@ export function setupEventListeners() {
             bgClose.addEventListener('click', () => closeModal(item.modal));
         }
     });
-    // --- CHANGE ENDS HERE ---
 }
