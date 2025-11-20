@@ -410,7 +410,7 @@ export async function fetchAugmentedPlantData(plantData) {
         }
     `;
 
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-pro:generateContent?key=${configStore.geminiApiKey}`;
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1/models/gemini-3-pro:generateContent?key=${configStore.geminiApiKey}`;
 
     const requestBody = {
         contents: [{
@@ -467,7 +467,7 @@ export async function fetchImageIdentification(imageUrl) {
         }
     `;
 
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-pro:generateContent?key=${configStore.geminiApiKey}`;
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1/models/gemini-3-pro:generateContent?key=${configStore.geminiApiKey}`;
 
     const requestBody = {
         contents: [
@@ -532,7 +532,7 @@ export async function fetchCustomCareAdvice(plantData, question) {
         Provide a detailed, helpful, and concise answer (2-3 paragraphs max) based on your knowledge of the plant's requirements. Do not include any JSON or markdown formatting.
     `;
 
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-pro:generateContent?key=${configStore.geminiApiKey}`;
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1/models/gemini-3-pro:generateContent?key=${configStore.geminiApiKey}`;
 
     const requestBody = {
         contents: [{
@@ -576,7 +576,7 @@ export async function fetchScientificNameLookup(commonName) {
         Do not include any conversational text, descriptions, or markdown formatting.
     `;
 
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-pro:generateContent?key=${configStore.geminiApiKey}`;
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1/models/gemini-3-pro:generateContent?key=${configStore.geminiApiKey}`;
 
     const requestBody = {
         contents: [{
