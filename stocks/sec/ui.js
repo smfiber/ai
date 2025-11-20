@@ -1,15 +1,12 @@
 import { CONSTANTS, state } from './config.js';
 import { fetchAndRenderRecentFilings, fetchAndRenderRevisitFilings, fetchAndRenderWatchlistFilings, renderCompanyDeepDive, renderInsiderTrackerView, renderInstitutionalTrackerView, renderUpcomingEarningsView, renderFilingsActivityView, renderMarketAnalysisView, renderInvestorFilingsDropdownView, renderInvestorFilingsView, renderWhaleComparisonView } from './ui-render.js';
 import { closeModal, openDeepDiveModal } from './ui-modals.js';
-// UPDATED: Imported handleFilingAnalysis
 import { handleFilingAnalysis, handleBatchProcess, handleMarketAnalysis } from './ui-handlers.js';
 
 function setupGlobalEventListeners() {
-    const appContainer = document.getElementById('app-container');
-    if (!appContainer) return;
-
-    // Main event delegation for the app
-    appContainer.addEventListener('click', (e) => {
+    // CHANGED: Attached listener to document.body to capture events in Modals
+    // which sit outside the #app-container in the DOM structure.
+    document.body.addEventListener('click', (e) => {
         const target = e.target;
 
         if (target.closest('#refresh-filings-button')) {
@@ -32,18 +29,16 @@ function setupGlobalEventListeners() {
             return;
         }
 
-        // --- NEW: Analyze Filing Button Listener ---
+        // Analyze Filing Button Listener
         if (target.closest('.analyze-filing-btn')) {
             const btn = target.closest('.analyze-filing-btn');
             const url = btn.dataset.filingUrl;
             const type = btn.dataset.formType;
             const ticker = btn.dataset.ticker;
             
-            // Trigger the analysis handler with the 500k character limit logic
             handleFilingAnalysis(url, type, ticker);
             return;
         }
-        // -------------------------------------------
 
         if (target.closest('#start-batch-process-btn')) {
             handleBatchProcess();
@@ -55,16 +50,15 @@ function setupGlobalEventListeners() {
             return;
         }
 
-        // Handle compare quarters button click in the new Investor Filings tab
         if (target.closest('#compare-quarters-btn')) {
             renderWhaleComparisonView();
-            target.closest('#compare-quarters-btn').remove(); // Remove button after clicking
+            target.closest('#compare-quarters-btn').remove(); 
             return;
         }
     });
 
-    // Listen for changes on the investor dropdown
-    appContainer.addEventListener('change', (e) => {
+    // CHANGED: Moved change listener to document.body for consistency
+    document.body.addEventListener('change', (e) => {
         const target = e.target;
         if (target.id === 'investor-select') {
             const selectedOption = target.options[target.selectedIndex];
@@ -73,22 +67,12 @@ function setupGlobalEventListeners() {
             if (cik) {
                 renderInvestorFilingsView(cik, investorName);
             } else {
-                // Clear the view if they select the placeholder
                 const container = document.getElementById('investor-filings-container');
                 if (container) container.innerHTML = '';
             }
         }
     });
 
-    // Event delegation for the Deep Dive Modal
-    const deepDiveModal = document.getElementById('deepDiveModal');
-    if (deepDiveModal) {
-         deepDiveModal.addEventListener('click', (e) => {
-             // Any specific modal-internal events can go here if not covered by appContainer
-         });
-    }
-    
-    // Event delegation for the main tabs
     const mainTabs = document.getElementById('main-tabs');
     if (mainTabs) {
         mainTabs.addEventListener('click', (e) => {
@@ -136,7 +120,6 @@ export function setupEventListeners() {
         { modal: 'deepDiveModal', button: 'close-deep-dive-modal', bg: 'close-deep-dive-modal-bg' },
     ];
 
-    // Adds the event listeners for closing modals
     modalsToClose.forEach(item => {
         const modalEl = document.getElementById(item.modal);
         if (!modalEl) return;
