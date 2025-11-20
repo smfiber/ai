@@ -1,7 +1,3 @@
-{
-type: uploaded file
-fileName: ui-handlers.js
-fullContent:
 import { state, promptMap, TOP_25_INVESTORS, CONSTANTS } from './config.js';
 import { openModal, closeModal, displayMessageInModal } from './ui-modals.js';
 import { callGeminiApi } from './api.js';
@@ -315,6 +311,4 @@ export async function handleMarketAnalysis() {
     } finally {
         analyzeBtn.disabled = false;
     }
-}
-
 }
