@@ -2,7 +2,7 @@ import { state, promptMap, TOP_25_INVESTORS, CONSTANTS } from './config.js';
 import { openModal, closeModal, displayMessageInModal } from './ui-modals.js';
 import { callGeminiApi } from './api.js';
 import { getFilingContent, getWhaleFilings } from './sec-api.js';
-import { doc, setDoc, getDocs, collection, query, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { doc, setDoc, getDoc, Timestamp, collection, query, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 /**
  * Helper to format SEC Item codes into readable text.
@@ -24,13 +24,25 @@ function formatItemName(item) {
 }
 
 /**
- * Handles the AI analysis of a specific SEC filing.
+ * Generates a unique ID for the report based on filing details.
  */
-export async function handleFilingAnalysis(filingUrl, formType, ticker, filingItem = null) {
-    const container = document.getElementById('filing-analysis-container');
-    if (!container) return;
+function generateReportId(ticker, formType, filingItem, filingUrl) {
+    // Extract Accession Number from URL (unique SEC ID)
+    // URL format usually: .../data/123456/0001234567-23-000001-index.html
+    const accessionMatch = filingUrl.match(/(\d{10}-\d{2}-\d{6})/);
+    const uniqueId = accessionMatch ? accessionMatch[1] : btoa(filingUrl).substring(0, 20); // Fallback to base64 stub
+    const itemSuffix = filingItem ? `_${filingItem}` : '_FULL';
+    return `${ticker}_${formType}_${uniqueId}${itemSuffix}`;
+}
 
-    // 1. Adjust Layout for Better Readability (33% List / 66% Report)
+/**
+ * Renders the Analysis Report UI (Shared by Live and Cached flows).
+ */
+function renderReportUI(container, formType, ticker, usedItem, analysisResult, timestamp = new Date(), isCached = false, usedSections = []) {
+    const displayItemName = usedItem ? formatItemName(usedItem) : null;
+    const dateStr = timestamp instanceof Timestamp ? timestamp.toDate().toLocaleDateString() : new Date(timestamp).toLocaleDateString();
+    
+    // Adjust Grid Layout (33% List / 66% Report)
     const parentGrid = container.parentElement;
     if (parentGrid) {
         parentGrid.classList.remove('md:grid-cols-2');
@@ -39,142 +51,191 @@ export async function handleFilingAnalysis(filingUrl, formType, ticker, filingIt
         container.classList.add('md:col-span-2');
     }
 
-    // 2. Reset Container Styling
+    // Container Styling
     container.classList.remove('p-6', 'prose', 'max-w-none');
     container.classList.add('h-full', 'flex', 'flex-col', 'bg-gray-50', 'overflow-hidden');
 
     container.innerHTML = `
+        <div class="bg-white border-b px-6 py-3 flex justify-between items-center shadow-sm shrink-0 z-10">
+            <div class="flex items-center gap-3">
+                <div class="p-2 bg-indigo-50 rounded-lg text-indigo-600">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path><polyline points="14 2 14 8 20 8"></polyline><path d="M16 13H8"></path><path d="M16 17H8"></path><path d="M10 9H8"></path></svg>
+                </div>
+                <div>
+                    <h3 class="font-bold text-gray-900 leading-tight">Analysis Report</h3>
+                    <p class="text-xs text-gray-500 font-medium">${formType} • ${ticker} • ${isCached ? `Generated: ${dateStr}` : 'Just Now'}</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                ${isCached ? 
+                    `<span class="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded bg-green-50 text-green-700 border border-green-100 flex items-center gap-1">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                        Saved
+                    </span>` 
+                    : ''}
+                <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded bg-indigo-50 text-indigo-700 border border-indigo-100">
+                    Gemini 3 Pro
+                </span>
+            </div>
+        </div>
+
+        <div class="flex-1 overflow-y-auto p-4 sm:p-8 custom-scrollbar">
+            <div class="bg-white p-8 sm:p-10 rounded-xl shadow-sm border border-gray-200 max-w-3xl mx-auto">
+                
+                ${displayItemName ? `
+                    <div class="mb-8 flex items-start gap-3 p-4 bg-blue-50 border border-blue-100 rounded-lg text-sm text-blue-800">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0 text-blue-600 mt-0.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" /></svg>
+                        <div>
+                            <span class="font-bold block mb-1 text-blue-900">Scope Note</span>
+                            To ensure analysis accuracy, this report focuses specifically on <strong>${displayItemName}</strong>.
+                        </div>
+                    </div>
+                ` : ''}
+
+                ${usedSections.length > 0 && usedSections[0] !== 'Full Filing Text' && !displayItemName ? `
+                    <div class="mb-8 flex items-start gap-3 p-4 bg-blue-50 border border-blue-100 rounded-lg text-sm text-blue-800">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0 text-blue-600 mt-0.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" /></svg>
+                        <div>
+                            <span class="font-bold block mb-1 text-blue-900">Composite Analysis Mode</span>
+                            Full text unavailable via API. Analysis synthesized from: <strong>${usedSections.join(', ')}</strong>.
+                        </div>
+                    </div>
+                ` : ''}
+                
+                <div class="prose prose-slate prose-headings:text-indigo-900 prose-a:text-indigo-600 hover:prose-a:text-indigo-500 max-w-none">
+                    ${marked.parse(analysisResult)}
+                </div>
+
+                <div class="mt-12 pt-6 border-t border-gray-100 text-center">
+                    <p class="text-xs text-gray-400 uppercase tracking-widest font-semibold">AI Generated Content • Verify with Original Filings</p>
+                </div>
+            </div>
+            <div class="h-8"></div>
+        </div>
+    `;
+}
+
+/**
+ * Handles the AI analysis of a specific SEC filing with Caching.
+ */
+export async function handleFilingAnalysis(filingUrl, formType, ticker, filingItem = null) {
+    const container = document.getElementById('filing-analysis-container');
+    if (!container) return;
+
+    // 1. Determine Target Section (Same logic as before)
+    let targetItem = filingItem;
+    if (!targetItem) {
+        if (formType === '10-Q') targetItem = 'part1item2';
+        if (formType === '10-K') targetItem = 'item7';
+    }
+
+    // 2. Generate Report ID & Check Cache
+    const reportId = generateReportId(ticker, formType, targetItem, filingUrl);
+    
+    container.innerHTML = `
         <div class="flex flex-col items-center justify-center h-full">
             <div class="loader mb-4"></div>
-            <p class="text-gray-600 font-medium">Gemini is analyzing the ${formType} for ${ticker}...</p>
-            <p class="text-xs text-gray-400 mt-2">Extracting full text & generating insights.</p>
+            <p class="text-gray-600 font-medium">Checking for existing analysis...</p>
         </div>
     `;
 
     try {
-        // 3. Fetch Filing Content (Attempt Full Text First)
+        // --- CHECK CACHE ---
+        const docRef = doc(state.db, 'ai_analysis_cache', reportId);
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            console.log("Serving analysis from cache:", reportId);
+            renderReportUI(container, formType, ticker, data.targetItem, data.analysisResult, data.timestamp, true, data.usedSections);
+            return;
+        }
+
+        // --- NO CACHE FOUND: PROCEED TO FETCH ---
+        container.querySelector('p').textContent = `Gemini is analyzing the ${formType} for ${ticker}...`;
+
         let filingText = '';
         let usedSections = [];
-        
+        let finalUsedItem = targetItem;
+
         try {
-            // Try to get the whole thing first
-            filingText = await getFilingContent(filingUrl, filingItem); 
-            if(filingItem) usedSections.push(formatItemName(filingItem));
+            filingText = await getFilingContent(filingUrl, targetItem);
+            if(targetItem) usedSections.push(formatItemName(targetItem));
             else usedSections.push('Full Filing Text');
 
         } catch (error) {
-            // 4. Handle "Item Not Supported" / 404 Errors (The Composite Strategy)
+            // Handle 404 / Composite Logic
             if (error.message.includes('Supported items are:') || error.message.includes('404')) {
                 console.log("Full text failed. Switching to Composite Strategy.");
-                
                 let partsToFetch = [];
                 
-                // Define Composite Parts based on Form Type
-                if (formType === '10-K') {
-                    // MD&A + Risks + Business
-                    partsToFetch = ['item7', 'item1a', 'item1']; 
-                } else if (formType === '10-Q') {
-                    // MD&A + Updated Risks
-                    partsToFetch = ['part1item2', 'part2item1a']; 
-                } else if (formType === '8-K') {
-                    // 8-K Smart Retry Logic (Existing)
+                if (formType === '10-K') partsToFetch = ['item7', 'item1a', 'item1']; 
+                else if (formType === '10-Q') partsToFetch = ['part1item2', 'part2item1a']; 
+                else if (formType === '8-K') {
                     const match = error.message.match(/Supported items are: (.*?)["}]/);
                     if (match) {
                         const available = match[1].split(',').map(s => s.trim());
                         const priority = ['2-2', '8-1', '1-1', '7-1', '5-2'];
-                        const bestItem = priority.find(p => available.includes(p)) || available[0];
-                        partsToFetch = [bestItem];
+                        finalUsedItem = priority.find(p => available.includes(p)) || available[0];
+                        partsToFetch = [finalUsedItem];
                     }
                 }
 
                 if (partsToFetch.length > 0) {
-                    // Fetch all parts in parallel
-                    const results = await Promise.all(
-                        partsToFetch.map(item => 
-                            getFilingContent(filingUrl, item)
-                                .then(text => ({ item, text }))
-                                .catch(() => ({ item, text: '' })) // Ignore individual failures
-                        )
-                    );
-
-                    // Stitch them together
-                    filingText = results
-                        .filter(r => r.text.length > 100) // Filter empty/failed sections
-                        .map(r => {
+                    if (formType === '8-K' && partsToFetch.length === 1) {
+                        filingText = await getFilingContent(filingUrl, partsToFetch[0]);
+                    } else {
+                        // Parallel Fetch
+                        const results = await Promise.all(
+                            partsToFetch.map(item => getFilingContent(filingUrl, item).then(text => ({ item, text })).catch(() => ({ item, text: '' })))
+                        );
+                        filingText = results.filter(r => r.text.length > 100).map(r => {
                             usedSections.push(formatItemName(r.item));
                             return `\n\n=== SECTION: ${formatItemName(r.item)} ===\n${r.text}`;
-                        })
-                        .join('\n');
+                        }).join('\n');
                         
-                    if (!filingText) throw new Error("Could not extract any meaningful sections from this filing.");
-                    
+                        // If composite, clear the specific item so UI shows "Composite"
+                        if (usedSections.length > 1) finalUsedItem = null;
+                    }
+                    if (!filingText) throw new Error("Could not extract any meaningful sections.");
                 } else {
-                    throw error; // Rethrow if we can't handle it
+                    throw error;
                 }
             } else {
                 throw error;
             }
         }
 
-        // Truncate if still too huge (Gemini 1.5 Pro has a huge context window, but let's be safe for the generic endpoint)
         if (filingText.length > 700000) {
             filingText = filingText.substring(0, 700000) + "... [Text Truncated]";
         }
 
-        // 5. Construct Prompt
         const basePrompt = promptMap[formType] || promptMap['8-K']; 
         const fullPrompt = `${basePrompt}\n\n--- START OF FILING DATA ---\n${filingText}\n--- END OF FILING DATA ---`;
 
-        // 6. Call Gemini API
         const analysisResult = await callGeminiApi(fullPrompt);
 
-        // 7. Render Result
-        container.innerHTML = `
-            <div class="bg-white border-b px-6 py-3 flex justify-between items-center shadow-sm shrink-0 z-10">
-                <div class="flex items-center gap-3">
-                    <div class="p-2 bg-indigo-50 rounded-lg text-indigo-600">
-                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path><polyline points="14 2 14 8 20 8"></polyline><path d="M16 13H8"></path><path d="M16 17H8"></path><path d="M10 9H8"></path></svg>
-                    </div>
-                    <div>
-                        <h3 class="font-bold text-gray-900 leading-tight">Analysis Report</h3>
-                        <p class="text-xs text-gray-500 font-medium">${formType} • ${ticker} • ${new Date().toLocaleDateString()}</p>
-                    </div>
-                </div>
-                <div class="flex items-center gap-2">
-                    <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded bg-indigo-50 text-indigo-700 border border-indigo-100">Gemini 3 Pro</span>
-                </div>
-            </div>
+        // --- SAVE TO CACHE ---
+        const cacheData = {
+            ticker,
+            formType,
+            filingUrl,
+            targetItem: finalUsedItem,
+            usedSections: usedSections,
+            analysisResult,
+            timestamp: Timestamp.now(),
+            model: "Gemini 3 Pro"
+        };
+        
+        await setDoc(docRef, cacheData);
+        console.log("Analysis saved to cache:", reportId);
 
-            <div class="flex-1 overflow-y-auto p-4 sm:p-8 custom-scrollbar">
-                <div class="bg-white p-8 sm:p-10 rounded-xl shadow-sm border border-gray-200 max-w-3xl mx-auto">
-                    
-                    ${usedSections.length > 0 && usedSections[0] !== 'Full Filing Text' ? `
-                        <div class="mb-8 flex items-start gap-3 p-4 bg-blue-50 border border-blue-100 rounded-lg text-sm text-blue-800">
-                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0 text-blue-600 mt-0.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" /></svg>
-                            <div>
-                                <span class="font-bold block mb-1 text-blue-900">Composite Analysis Mode</span>
-                                Full text unavailable via API. Analysis synthesized from: <strong>${usedSections.join(', ')}</strong>.
-                            </div>
-                        </div>
-                    ` : ''}
-                    
-                    <div class="prose prose-slate prose-headings:text-indigo-900 prose-a:text-indigo-600 hover:prose-a:text-indigo-500 max-w-none">
-                        ${marked.parse(analysisResult)}
-                    </div>
-
-                    <div class="mt-12 pt-6 border-t border-gray-100 text-center">
-                        <p class="text-xs text-gray-400 uppercase tracking-widest font-semibold">AI Generated Content • Verify with Original Filings</p>
-                    </div>
-                </div>
-                <div class="h-8"></div>
-            </div>
-        `;
+        renderReportUI(container, formType, ticker, finalUsedItem, analysisResult, new Date(), false, usedSections);
 
     } catch (error) {
         console.error("Analysis failed:", error);
         container.classList.add('p-6');
         container.classList.remove('bg-gray-50', 'flex', 'flex-col', 'h-full'); 
-        
         container.innerHTML = `
             <div class="flex flex-col items-center justify-center h-full text-red-500 pt-12">
                 <div class="bg-red-50 p-4 rounded-full mb-4">
