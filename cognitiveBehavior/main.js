@@ -1,98 +1,129 @@
-// main.js
+import { initializeFirebase } from './config.js';
 import { initAuth } from './auth.js';
 import * as DB from './db.js';
 import * as UI from './ui.js';
 import { generateCBTContent } from './gemini.js';
 
-// Global State
+// State
 let GEMINI_KEY = null;
 let CURRENT_USER = null;
 
-// --- 1. Initialization Flow ---
+// DOM Elements
+const setupModal = document.getElementById('setup-modal');
+const appContainer = document.getElementById('app-container');
+const inputGemini = document.getElementById('input-gemini-key');
+const inputFirebase = document.getElementById('input-firebase-json');
+const btnSaveConfig = document.getElementById('btn-save-config');
+const errorMsg = document.getElementById('config-error');
 
-// Start Authentication Listener
-initAuth((user) => {
-    CURRENT_USER = user;
-    // Once logged in, show the API Key Modal
-    document.getElementById('key-modal').classList.remove('hidden');
-});
+// --- 1. Bootstrap Application ---
 
-// Handle API Key Submission
-document.getElementById('btn-save-key').addEventListener('click', () => {
-    const input = document.getElementById('input-api-key');
-    if (input.value.trim()) {
-        GEMINI_KEY = input.value.trim();
-        
-        // Hide Modal, Show App
-        document.getElementById('key-modal').classList.add('hidden');
-        document.getElementById('app-container').classList.remove('hidden');
-        
-        // Start the Core App Logic
-        startApp();
+function checkConfigAndStart() {
+    const storedGemini = localStorage.getItem('cbt_gemini_key');
+    const storedFirebase = localStorage.getItem('cbt_firebase_config');
+
+    if (storedGemini && storedFirebase) {
+        // Attempt to Start
+        try {
+            initializeFirebase(storedFirebase);
+            GEMINI_KEY = storedGemini;
+            setupModal.classList.add('hidden');
+            appContainer.classList.remove('hidden');
+            startMainApp();
+        } catch (e) {
+            console.error("Saved config is invalid", e);
+            localStorage.clear(); // Clear bad config
+            setupModal.classList.remove('hidden');
+        }
     } else {
-        alert("Please enter a valid API Key.");
+        // Show Setup Modal
+        setupModal.classList.remove('hidden');
+    }
+}
+
+// Handle "Save and Continue"
+btnSaveConfig.addEventListener('click', () => {
+    const geminiKey = inputGemini.value.trim();
+    const firebaseJson = inputFirebase.value.trim();
+
+    if (!geminiKey || !firebaseJson) {
+        showError("Please fill in both fields.");
+        return;
+    }
+
+    try {
+        // 1. Try to Init Firebase (validates JSON)
+        initializeFirebase(firebaseJson);
+        
+        // 2. If success, save to LocalStorage
+        localStorage.setItem('cbt_gemini_key', geminiKey);
+        localStorage.setItem('cbt_firebase_config', firebaseJson);
+        GEMINI_KEY = geminiKey;
+
+        // 3. Transition UI
+        setupModal.classList.add('hidden');
+        appContainer.classList.remove('hidden');
+        startMainApp();
+
+    } catch (err) {
+        showError(err.message);
     }
 });
 
-// --- 2. Core Application Logic ---
+function showError(msg) {
+    errorMsg.textContent = msg;
+    errorMsg.classList.remove('hidden');
+}
 
-function startApp() {
-    console.log("App Started. Listening for DB changes...");
+// --- 2. Main App Logic (Only runs after config is set) ---
 
-    // A. Subscribe to Curriculum Updates (Real-time)
+function startMainApp() {
+    // Initialize Auth Listener
+    initAuth((user) => {
+        CURRENT_USER = user;
+    });
+
+    // Initialize Database Listener
     DB.subscribeToModules((modules) => {
         UI.renderModules(modules, handleTopicSelection);
     });
 
-    // B. Setup Manager Mode Toggles
+    // Setup Manager Mode UI
     document.getElementById('edit-mode-toggle').addEventListener('change', (e) => {
         UI.toggleManagerView(e.target.checked);
     });
-
-    // C. Setup "New Module" Button (Manager Only)
+    
+    // New Module Button
     document.getElementById('btn-add-module').addEventListener('click', () => {
         const title = prompt("Enter name for new Module:");
-        if (title) {
-            DB.addModule(title);
+        if (title) DB.addModule(title);
+    });
+
+    // Reset Config Button
+    document.getElementById('btn-clear-config').addEventListener('click', () => {
+        if(confirm("Clear all saved keys and reset?")) {
+            localStorage.clear();
+            location.reload();
         }
     });
 }
 
-/**
- * Handles what happens when a user clicks a Topic in the sidebar
- */
 async function handleTopicSelection(topicId, topicTitle, moduleTitle) {
-    // 1. Show Loading State
-    UI.showLoading(`Loading lesson: ${topicTitle}...`);
-
+    // ... Same logic as before ...
+    UI.showLoading(`Loading: ${topicTitle}...`);
     try {
-        // 2. Check Firestore: Do we already have this article?
         const existingArticle = await DB.getArticle(CURRENT_USER.uid, topicId);
-
         if (existingArticle) {
-            console.log("Found cached article in Firestore.");
             UI.renderContent(existingArticle.content);
         } else {
-            console.log("No local article. generating via Gemini...");
-            UI.showLoading(`Gemini is writing your lesson on "${topicTitle}"...`);
-
-            // 3. Generate via API
             const content = await generateCBTContent(GEMINI_KEY, topicTitle, moduleTitle);
-
-            // 4. Render immediately
             UI.renderContent(content);
-
-            // 5. Save to Firestore (Background)
             await DB.saveArticle(CURRENT_USER.uid, topicId, content, moduleTitle, topicTitle);
         }
-
     } catch (error) {
-        console.error("Error loading content:", error);
-        UI.renderContent(`
-            ### Error Loading Content
-            Something went wrong. Please check your API Key and connection.
-            
-            **Error details:** ${error.message}
-        `);
+        UI.renderContent(`### Error: ${error.message}`);
     }
 }
+
+// Start Boot Sequence
+checkConfigAndStart();
