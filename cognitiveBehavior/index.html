@@ -1,1 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CBT Architect</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
 
+    <div id="auth-overlay">
+        <div class="card">
+            <h1>CBT Architect</h1>
+            <p>Sign in to load your curriculum.</p>
+            <button id="btn-login">Sign in with Google</button>
+        </div>
+    </div>
+
+    <div id="key-modal" class="modal hidden">
+        <div class="modal-content">
+            <h3>Enter Gemini API Key</h3>
+            <input type="password" id="input-api-key" placeholder="Paste API Key here">
+            <button id="btn-save-key">Start Session</button>
+            <p class="small">Key is stored in memory only.</p>
+        </div>
+    </div>
+
+    <div id="app-container" class="hidden">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>Curriculum</h2>
+                <div class="toggle-container">
+                    <label for="edit-mode-toggle">Manager Mode</label>
+                    <input type="checkbox" id="edit-mode-toggle">
+                </div>
+            </div>
+            <div id="module-list">
+                </div>
+            <button id="btn-add-module" class="manager-only hidden">+ New Module</button>
+        </aside>
+
+        <main class="content-area">
+            <div id="article-container">
+                <div class="placeholder">Select a topic to begin.</div>
+            </div>
+        </main>
+    </div>
+
+    <script type="module" src="main.js"></script>
+</body>
+</html>
