@@ -1443,7 +1443,7 @@ async function callGeminiAPI(prompt, isJson = false, logType = "General") {
     if (!geminiApiKey) {
         throw new Error("Gemini API Key is not set. Please enter it in the initial modal.");
     }
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`;
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=${geminiApiKey}`;
     
     let finalPrompt = prompt;
     if (isJson && !prompt.includes(jsonInstruction)) {
@@ -1665,7 +1665,7 @@ async function callGeminiAPI(prompt, isJson = false, logType = "General") {
     if (!geminiApiKey) {
         throw new Error("Gemini API Key is not set. Please enter it in the initial modal.");
     }
-    const apiUrl = \`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=\${geminiApiKey}\`;
+    const apiUrl = \`https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=\${geminiApiKey}\`;
     
     let finalPrompt = prompt;
     if (isJson && !prompt.includes(jsonInstruction)) {
