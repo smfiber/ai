@@ -3,20 +3,43 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/fireba
 import { getFirestore } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 import { getAuth, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
 
-// --- REPLACE THIS OBJECT WITH YOUR ACTUAL FIREBASE CONFIG ---
-const firebaseConfig = {
-    apiKey: "AIzaSy...",
-    authDomain: "your-project.firebaseapp.com",
-    projectId: "your-project-id",
-    storageBucket: "your-project.appspot.com",
-    messagingSenderId: "123456...",
-    appId: "1:123456..."
+// Holds the instances after initialization
+let appInstance = null;
+let dbInstance = null;
+let authInstance = null;
+let providerInstance = null;
+
+/**
+ * Takes the JSON string from the textarea, parses it, and initializes Firebase.
+ */
+export function initializeFirebase(configJson) {
+    try {
+        // 1. Parse the JSON string
+        const firebaseConfig = JSON.parse(configJson);
+
+        // 2. Initialize
+        appInstance = initializeApp(firebaseConfig);
+        dbInstance = getFirestore(appInstance);
+        authInstance = getAuth(appInstance);
+        providerInstance = new GoogleAuthProvider();
+
+        console.log("Firebase Initialized Successfully");
+        return true;
+    } catch (error) {
+        console.error("Firebase Init Error:", error);
+        throw new Error("Invalid JSON Config or Firebase Error: " + error.message);
+    }
+}
+
+// Getters to access the instances safely
+export const getDb = () => {
+    if (!dbInstance) throw new Error("Database not initialized. Set config first.");
+    return dbInstance;
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
+export const getAuthInstance = () => {
+    if (!authInstance) throw new Error("Auth not initialized. Set config first.");
+    return authInstance;
+};
 
-// Export services for other modules to use
-export const db = getFirestore(app);
-export const auth = getAuth(app);
-export const provider = new GoogleAuthProvider();
+export const getProvider = () => providerInstance;
