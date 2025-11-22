@@ -1037,18 +1037,14 @@ function createPlantDetailHtml(plantData) {
             <h3 class="flex items-center text-xl font-bold text-white mb-3">
                 <span class="mr-2">🤖</span> AI Care Plan (Detailed)
             </h3>
-            <p class="text-gray-300 leading-relaxed whitespace-pre-wrap m-0">
-                ${get(plantData.care_plan, 'No care plan available.')}
-            </p>
+            <p class="text-gray-300 leading-relaxed whitespace-pre-wrap m-0">${get(plantData.care_plan, 'No care plan available.')}</p>
         </div>
         
         <div class="bg-red-900/20 border-l-4 border-red-500 p-6 rounded-r-xl mb-8 shadow-lg">
             <h3 class="flex items-center text-xl font-bold text-white mb-3">
                 <span class="mr-2">🐞</span> Pests & Diseases
             </h3>
-            <p class="text-gray-300 leading-relaxed whitespace-pre-wrap m-0">
-                ${get(plantData.pests_and_diseases, 'No specific pest information available.')}
-            </p>
+            <p class="text-gray-300 leading-relaxed whitespace-pre-wrap m-0">${get(plantData.pests_and_diseases, 'No specific pest information available.')}</p>
         </div>
 
         <div class="bg-gray-800 p-6 rounded-xl">
