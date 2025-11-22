@@ -243,8 +243,10 @@ async function handleImageUpload(e) {
         // 2. IDENTIFY PLANT VIA GEMINI VISION
         identifiedName = await fetchImageIdentification(imageUrl);
 
+        // FIX: safely handle if identifiedName is null (API failure) or Unknown
         if (!identifiedName || identifiedName.scientific_name === 'Unknown') {
-            throw new Error(`AI could not identify the plant. Identified as: ${identifiedName.scientific_name}`);
+            const debugInfo = identifiedName ? identifiedName.scientific_name : "API Error / Null Response";
+            throw new Error(`AI could not identify the plant. Result: ${debugInfo}`);
         }
 
         const scientificName = identifiedName.scientific_name;
