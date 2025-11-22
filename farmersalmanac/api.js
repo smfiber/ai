@@ -455,38 +455,57 @@ export async function fetchImageIdentification(imageUrl) {
         return null;
     }
 
-    const prompt = `
-        You are an expert botanist specialized in plant identification from images.
-        Identify the plant shown in the image.
-        
-        Provide ONLY the following information in a valid JSON object: the scientific name (Genus species) and the common name. If you cannot identify the plant, use "Unknown" for both fields. Do not use markdown.
-
-        {
-          "scientific_name": "...",
-          "common_name": "..."
-        }
-    `;
-
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=${configStore.geminiApiKey}`;
-
-    const requestBody = {
-        contents: [
-            {
-                parts: [{ text: prompt }]
-            },
-            {
-                // Image part using the public URL
-                parts: [{
-                    inlineData: {
-                        mimeType: 'image/jpeg', // Assuming images will be stored as JPEGs or convertible
-                        data: imageUrl // Gemini API can handle public URLs in this structure
-                    }
-                }]
-            }
-        ]
-    };
-
     try {
+        // FIX: Fetch the image from the URL and convert to Base64
+        // The Gemini API 'inlineData' requires base64 bytes, not a URL.
+        const imageResponse = await fetch(imageUrl);
+        if (!imageResponse.ok) {
+            throw new Error(`Failed to fetch image from storage: ${imageResponse.statusText}`);
+        }
+        const blob = await imageResponse.blob();
+        
+        // Convert Blob to Base64 string (strip the data:image/jpeg;base64, prefix)
+        const base64Data = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                const base64 = reader.result.split(',')[1];
+                resolve(base64);
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+        });
+
+        const prompt = `
+            You are an expert botanist specialized in plant identification from images.
+            Identify the plant shown in the image.
+            
+            Provide ONLY the following information in a valid JSON object: the scientific name (Genus species) and the common name. If you cannot identify the plant, use "Unknown" for both fields. Do not use markdown.
+
+            {
+              "scientific_name": "...",
+              "common_name": "..."
+            }
+        `;
+
+        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=${configStore.geminiApiKey}`;
+
+        const requestBody = {
+            contents: [
+                {
+                    parts: [{ text: prompt }]
+                },
+                {
+                    // Image part using Base64 data
+                    parts: [{
+                        inlineData: {
+                            mimeType: blob.type || 'image/jpeg', 
+                            data: base64Data 
+                        }
+                    }]
+                }
+            ]
+        };
+
         const response = await fetch(geminiUrl, {
             method: 'POST',
             headers: {
@@ -496,7 +515,10 @@ export async function fetchImageIdentification(imageUrl) {
         });
 
         if (!response.ok) {
-            throw new Error(`Gemini API error: ${response.statusText}`);
+            // Log detail to help debug if it fails again
+            const errText = await response.text();
+            console.error("Gemini API Error Detail:", errText);
+            throw new Error(`Gemini API error: ${response.status} ${response.statusText}`);
         }
 
         const data = await response.json();
