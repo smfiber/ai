@@ -780,7 +780,13 @@ function mergePlantData(trefleData, geminiData) {
         pests_and_diseases: geminiData.pests_and_diseases,
         min_winter_temp_f: geminiData.min_winter_temp_f,
         max_summer_temp_f: geminiData.max_summer_temp_f,
-        frost_sensitivity: geminiData.frost_sensitivity
+        frost_sensitivity: geminiData.frost_sensitivity,
+
+        // --- NEW MAINTENANCE & SAFETY FIELDS ---
+        fertilizer_info: geminiData.fertilizer_info,
+        pruning_season: geminiData.pruning_season,
+        propagation_methods: geminiData.propagation_methods,
+        toxicity_info: geminiData.toxicity_info
         // --- END NEW FIELDS ---
     };
 
@@ -968,27 +974,53 @@ function createPlantDetailHtml(plantData) {
         
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
             
-            <div class="bg-gray-700/50 p-5 rounded-xl shadow-inner border border-gray-600">
-                <h3 class="flex items-center text-xl font-bold text-green-400 mb-4 pb-2 border-b border-gray-600">
-                    <span class="mr-2">🔬</span> Scientific Classification
-                </h3>
-                <ul class="space-y-3 text-gray-200">
-                    <li class="flex justify-between">
-                        <span class="text-gray-400">Scientific Name</span>
-                        <span class="font-medium italic text-right">${get(plantData.scientific_name)}</span>
-                    </li>
-                    <li class="flex justify-between">
-                        <span class="text-gray-400">Family</span>
-                        <span class="font-medium text-right">${get(plantData.family_common_name)}</span>
-                    </li>
-                    <li class="flex justify-between">
-                        <span class="text-gray-400">Genus</span>
-                        <span class="font-medium text-right">${get(plantData.genus_name)}</span>
-                    </li>
-                </ul>
+            <div class="space-y-6">
+                <div class="bg-gray-700/50 p-5 rounded-xl shadow-inner border border-gray-600">
+                    <h3 class="flex items-center text-xl font-bold text-green-400 mb-4 pb-2 border-b border-gray-600">
+                        <span class="mr-2">🔬</span> Scientific Classification
+                    </h3>
+                    <ul class="space-y-3 text-gray-200">
+                        <li class="flex justify-between">
+                            <span class="text-gray-400">Scientific Name</span>
+                            <span class="font-medium italic text-right">${get(plantData.scientific_name)}</span>
+                        </li>
+                        <li class="flex justify-between">
+                            <span class="text-gray-400">Family</span>
+                            <span class="font-medium text-right">${get(plantData.family_common_name)}</span>
+                        </li>
+                        <li class="flex justify-between">
+                            <span class="text-gray-400">Genus</span>
+                            <span class="font-medium text-right">${get(plantData.genus_name)}</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="bg-gray-700/50 p-5 rounded-xl shadow-inner border border-gray-600">
+                    <h3 class="flex items-center text-xl font-bold text-green-400 mb-4 pb-2 border-b border-gray-600">
+                        <span class="mr-2">🛡️</span> Maintenance & Safety
+                    </h3>
+                    <ul class="space-y-3 text-gray-200">
+                        <li class="flex flex-col sm:flex-row sm:justify-between">
+                            <span class="text-gray-400">Fertilizer</span>
+                            <span class="font-medium text-right text-sm sm:text-base">${get(plantData.fertilizer_info)}</span>
+                        </li>
+                        <li class="flex justify-between items-center">
+                            <span class="text-gray-400">Pruning</span>
+                            <span class="font-medium text-right">${get(plantData.pruning_season)}</span>
+                        </li>
+                         <li class="flex justify-between items-center">
+                            <span class="text-gray-400">Propagation</span>
+                            <span class="font-medium text-right">${get(plantData.propagation_methods)}</span>
+                        </li>
+                        <li class="flex flex-col sm:flex-row sm:justify-between">
+                            <span class="text-gray-400">Toxicity</span>
+                            <span class="font-medium text-right text-sm sm:text-base text-yellow-200">${get(plantData.toxicity_info)}</span>
+                        </li>
+                    </ul>
+                </div>
             </div>
 
-            <div class="bg-gray-700/50 p-5 rounded-xl shadow-inner border border-gray-600">
+            <div class="bg-gray-700/50 p-5 rounded-xl shadow-inner border border-gray-600 h-full">
                 <h3 class="flex items-center text-xl font-bold text-green-400 mb-4 pb-2 border-b border-gray-600">
                     <span class="mr-2">🌿</span> Characteristics
                 </h3>
