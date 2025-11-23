@@ -5,18 +5,18 @@
  * - Trefle API calls
  * - Gemini API calls
  * - Firestore Database calls
- * - Firebase Storage calls (NEW)
+ * - Firebase Storage calls
  */
 
 import { configStore } from './config.js';
 
 // --- Firebase SDKs (will be dynamically imported) ---
-let app, auth, db, storage; // storage added
+let app, auth, db, storage; 
 let GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut;
 // Firestore functions
 let collection, addDoc, deleteDoc, doc, query, where, getDocs, setDoc; 
 // Storage functions
-let getStorage, ref, uploadBytes, getDownloadURL; // Storage functions added
+let getStorage, ref, uploadBytes, getDownloadURL; 
 
 /**
  * Dynamically imports Firebase modules and initializes the app.
@@ -65,7 +65,7 @@ export async function initFirebase() {
         app = initializeApp(configStore.firebaseConfig);
         auth = getAuth(app);
         db = getFirestore(app);
-        storage = getStorage(app); // Initialize Storage
+        storage = getStorage(app); 
 
         // Set auth persistence to session.
         await setPersistence(auth, browserSessionPersistence);
@@ -275,6 +275,58 @@ export async function getGardenPlants(userId) {
 
 // --- Trefle API Functions ---
 
+// NEW FUNCTION: Native Florida Plants
+export async function getFloridaNativePlants(category, page) {
+    if (!configStore.trefleApiKey) {
+        console.error("Trefle API Key is missing.");
+        return { data: [], links: {}, meta: {} };
+    }
+
+    // Base URL for Florida distribution
+    let trefleUrl = `https://trefle.io/api/v1/distributions/florida/plants?page=${page}&token=${configStore.trefleApiKey}`;
+
+    // Map user-friendly category to Trefle 'growth_form'
+    switch (category) {
+        case 'trees':
+            trefleUrl += '&filter[growth_form]=Tree';
+            break;
+        case 'shrubs':
+            trefleUrl += '&filter[growth_form]=Shrub';
+            break;
+        case 'wildflowers':
+            // 'Forb' is the botanical term for herbaceous flowering plants
+            trefleUrl += '&filter[growth_form]=Forb'; 
+            break;
+        case 'ferns':
+            trefleUrl += '&filter[growth_form]=Fern';
+            break;
+        case 'vines':
+            trefleUrl += '&filter[growth_form]=Vine';
+            break;
+        default:
+            // If 'all' or unknown, no extra filter is applied
+            break;
+    }
+    
+    // Use CORS Proxy
+    const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(trefleUrl)}`;
+
+    try {
+        const response = await fetch(proxyUrl);
+        if (!response.ok) {
+            throw new Error(`Trefle API error (via proxy): ${response.statusText}`);
+        }
+        const data = await response.json();
+        // Filter out results without images/names for a better UI experience
+        const filteredData = data.data.filter(plant => plant.common_name && plant.image_url);
+        
+        return { data: filteredData, links: data.links, meta: data.meta };
+    } catch (error) {
+        console.error("Error fetching Florida native plants:", error);
+        return { data: [], links: {}, meta: {} };
+    }
+}
+
 export async function getNativePlants(speciesType, page) {
     if (!configStore.trefleApiKey) {
         console.error("Trefle API Key is missing.");
@@ -283,7 +335,6 @@ export async function getNativePlants(speciesType, page) {
     
     const trefleUrl = `https://trefle.io/api/v1/species?filter[growth_form]=${speciesType}&page=${page}&token=${configStore.trefleApiKey}`;
     
-    // UPDATED PROXY (CorsProxy.io)
     const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(trefleUrl)}`;
 
     try {
@@ -309,7 +360,6 @@ export async function searchNativePlants(query, page) {
 
     const trefleUrl = `https://trefle.io/api/v1/species/search?q=${query}&page=${page}&token=${configStore.trefleApiKey}`;
     
-    // UPDATED PROXY (CorsProxy.io)
     const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(trefleUrl)}`;
 
     try {
@@ -335,7 +385,6 @@ export async function getPlantDetails(plantSlug) {
 
     const trefleUrl = `https://trefle.io/api/v1/species/${plantSlug}?token=${configStore.trefleApiKey}`;
     
-    // UPDATED PROXY (CorsProxy.io)
     const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(trefleUrl)}`;
 
     try {
@@ -465,8 +514,7 @@ export async function fetchImageIdentification(imageUrl) {
     }
 
     try {
-        // FIX: Fetch the image from the URL and convert to Base64
-        // The Gemini API 'inlineData' requires base64 bytes, not a URL.
+        // Fetch the image from the URL and convert to Base64
         const imageResponse = await fetch(imageUrl);
         if (!imageResponse.ok) {
             throw new Error(`Failed to fetch image from storage: ${imageResponse.statusText}`);
@@ -524,7 +572,6 @@ export async function fetchImageIdentification(imageUrl) {
         });
 
         if (!response.ok) {
-            // Log detail to help debug if it fails again
             const errText = await response.text();
             console.error("Gemini API Error Detail:", errText);
             throw new Error(`Gemini API error: ${response.status} ${response.statusText}`);
@@ -585,7 +632,6 @@ export async function fetchCustomCareAdvice(plantData, question) {
         }
 
         const data = await response.json();
-        // Since we asked for plain text, just return the raw text output.
         return data.candidates[0].content.parts[0].text;
 
     } catch (error) {
@@ -629,7 +675,6 @@ export async function fetchScientificNameLookup(commonName) {
         }
 
         const data = await response.json();
-        // Return the clean, trimmed text response
         return data.candidates[0].content.parts[0].text.trim();
 
     } catch (error) {
