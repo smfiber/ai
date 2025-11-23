@@ -391,6 +391,11 @@ export async function fetchAugmentedPlantData(plantData) {
         - Minimum Winter Temperature: The lowest temperature (in Fahrenheit) the plant can survive.
         - Maximum Summer Temperature: The highest temperature (in Fahrenheit) the plant can tolerate.
         - Frost Sensitivity: Describe its tolerance level (e.g., "High tolerance, very hardy", "Moderate sensitivity, protect from hard frost", "Zero tolerance").
+        
+        - Fertilizer Recommendation: Type and frequency (e.g., "Balanced 10-10-10 monthly").
+        - Pruning Season: Best time to prune (e.g., "Late Winter").
+        - Propagation Methods: Common ways to reproduce (e.g., "Stem cuttings, seeds").
+        - Toxicity Info: Safety for humans and pets (e.g., "Toxic to cats if ingested").
 
         Respond with ONLY a valid JSON object matching this structure. Do not use markdown.
         {
@@ -406,7 +411,11 @@ export async function fetchAugmentedPlantData(plantData) {
           "pests_and_diseases": "...",
           "min_winter_temp_f": "...",
           "max_summer_temp_f": "...",
-          "frost_sensitivity": "..."
+          "frost_sensitivity": "...",
+          "fertilizer_info": "...",
+          "pruning_season": "...",
+          "propagation_methods": "...",
+          "toxicity_info": "..."
         }
     `;
 
