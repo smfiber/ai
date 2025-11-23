@@ -874,12 +874,12 @@ function renderPlantGallery(plants, container) {
         card.dataset.slug = plant.slug;
         card.dataset.name = plant.common_name;
 
-        // UPDATED IMAGE CLASS: aspect-[3/4] for portrait photos
+        // UPDATED IMAGE CLASS: fixed height h-48 for smaller/more uniform cards
         card.innerHTML = `
-            <img src="${plant.image_url}" alt="${plant.common_name}" class="w-full aspect-[3/4] object-cover">
-            <div class="p-4">
-                <h3 class="text-xl font-semibold text-white drop-shadow-sm">${plant.common_name}</h3>
-                <p class="text-gray-300 text-sm italic">${plant.scientific_name}</p>
+            <img src="${plant.image_url}" alt="${plant.common_name}" class="w-full h-48 object-cover">
+            <div class="p-3">
+                <h3 class="text-lg font-semibold text-white drop-shadow-sm truncate">${plant.common_name}</h3>
+                <p class="text-gray-400 text-xs italic truncate">${plant.scientific_name}</p>
             </div>
         `;
         container.appendChild(card);
@@ -1234,14 +1234,16 @@ function createPlantDetailHtml(plantData) {
             .join(', ');
     }
 
-    // --- Rich HTML Layout ---
+    // --- UPDATED: Rich HTML Layout with Split View for Dense Information ---
     return `
-        <img src="${get(plantData.image_url)}" alt="${get(plantData.common_name)}" class="max-h-[70vh] w-auto mx-auto rounded-lg shadow-lg mb-8 object-cover">
-        
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-            
-            <div class="space-y-6">
-                <div class="bg-gray-800/50 backdrop-blur-sm p-5 rounded-xl border border-white/10">
+        <div class="flex flex-col lg:flex-row gap-8 mb-8">
+            <div class="w-full lg:w-1/3 flex-shrink-0">
+                <img src="${get(plantData.image_url)}" alt="${get(plantData.common_name)}" class="w-full rounded-xl shadow-lg object-cover bg-gray-900/50">
+            </div>
+
+            <div class="w-full lg:w-2/3 grid grid-cols-1 md:grid-cols-2 gap-6 content-start">
+                
+                <div class="bg-gray-800/50 backdrop-blur-sm p-5 rounded-xl border border-white/10 h-fit">
                     <h3 class="flex items-center text-xl font-bold text-green-400 mb-4 pb-2 border-b border-gray-600">
                         <span class="mr-2">🔬</span> Scientific Classification
                     </h3>
@@ -1261,73 +1263,56 @@ function createPlantDetailHtml(plantData) {
                     </ul>
                 </div>
 
-                <div class="bg-gray-800/50 backdrop-blur-sm p-5 rounded-xl border border-white/10">
+                <div class="bg-gray-800/50 backdrop-blur-sm p-5 rounded-xl border border-white/10 h-fit">
                     <h3 class="flex items-center text-xl font-bold text-green-400 mb-4 pb-2 border-b border-gray-600">
-                        <span class="mr-2">🛡️</span> Maintenance & Safety
+                        <span class="mr-2">🌿</span> Characteristics
                     </h3>
                     <ul class="space-y-3 text-gray-200">
-                        <li class="flex flex-col sm:flex-row sm:justify-between">
-                            <span class="text-gray-300">Fertilizer</span>
-                            <span class="font-medium text-right text-sm sm:text-base">${get(plantData.fertilizer_info)}</span>
+                        <li class="flex justify-between items-center">
+                            <span class="text-gray-300">Form</span>
+                            <span class="font-medium text-right">${get(plantData.growth_form)}</span>
                         </li>
                         <li class="flex justify-between items-center">
-                            <span class="text-gray-300">Pruning</span>
-                            <span class="font-medium text-right">${get(plantData.pruning_season)}</span>
+                            <span class="text-gray-300">Sunlight</span>
+                            <span class="font-medium text-right flex items-center gap-1">☀️ ${get(plantData.sunlight)}</span>
                         </li>
-                         <li class="flex justify-between items-center">
-                            <span class="text-gray-300">Propagation</span>
-                            <span class="font-medium text-right">${get(plantData.propagation_methods)}</span>
+                        <li class="flex justify-between items-center">
+                            <span class="text-gray-300">Watering</span>
+                            <span class="font-medium text-right flex items-center gap-1">💧 ${get(plantData.watering)}</span>
                         </li>
-                        <li class="flex flex-col sm:flex-row sm:justify-between">
-                            <span class="text-gray-300">Toxicity</span>
-                            <span class="font-medium text-right text-sm sm:text-base text-yellow-200">${get(plantData.toxicity_info)}</span>
+                        <li class="flex justify-between items-center">
+                            <span class="text-gray-300">Edible</span>
+                            <span class="px-2 py-0.5 rounded text-xs font-bold ${String(plantData.edible) === 'true' ? 'bg-green-900 text-green-300' : 'bg-gray-600 text-gray-300'}">
+                                ${get(plantData.edible, 'N/A')}
+                            </span>
                         </li>
                     </ul>
                 </div>
-            </div>
 
-            <div class="bg-gray-800/50 backdrop-blur-sm p-5 rounded-xl border border-white/10 h-full">
-                <h3 class="flex items-center text-xl font-bold text-green-400 mb-4 pb-2 border-b border-gray-600">
-                    <span class="mr-2">🌿</span> Characteristics
-                </h3>
-                <ul class="space-y-3 text-gray-200">
-                    <li class="flex justify-between items-center">
-                        <span class="text-gray-300">Form</span>
-                        <span class="font-medium text-right">${get(plantData.growth_form)}</span>
-                    </li>
-                    <li class="flex justify-between items-center">
-                        <span class="text-gray-300">Sunlight</span>
-                        <span class="font-medium text-right flex items-center gap-1">☀️ ${get(plantData.sunlight)}</span>
-                    </li>
-                    <li class="flex justify-between items-center">
-                        <span class="text-gray-300">Watering</span>
-                        <span class="font-medium text-right flex items-center gap-1">💧 ${get(plantData.watering)}</span>
-                    </li>
-                    <li class="flex justify-between items-center">
-                        <span class="text-gray-300">Soil</span>
-                        <span class="font-medium text-right">${get(plantData.soil_texture)}</span>
-                    </li>
-                    
-                    <li class="flex justify-between items-center">
-                        <span class="text-gray-300">Min Winter Temp</span>
-                        <span class="font-medium text-right">${get(plantData.min_winter_temp_f)} °F</span>
-                    </li>
-                    <li class="flex justify-between items-center">
-                        <span class="text-gray-300">Max Summer Temp</span>
-                        <span class="font-medium text-right">${get(plantData.max_summer_temp_f)} °F</span>
-                    </li>
-                    <li class="flex justify-between items-center">
-                        <span class="text-gray-300">Frost Sensitivity</span>
-                        <span class="font-medium text-right">${get(plantData.frost_sensitivity)}</span>
-                    </li>
+                <div class="md:col-span-2 bg-gray-800/50 backdrop-blur-sm p-5 rounded-xl border border-white/10 h-fit">
+                    <h3 class="flex items-center text-xl font-bold text-green-400 mb-4 pb-2 border-b border-gray-600">
+                        <span class="mr-2">🛡️</span> Maintenance & Safety
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3">
+                         <div class="flex flex-col">
+                            <span class="text-gray-400 text-sm">Fertilizer</span>
+                            <span class="font-medium">${get(plantData.fertilizer_info)}</span>
+                         </div>
+                         <div class="flex flex-col">
+                            <span class="text-gray-400 text-sm">Pruning</span>
+                            <span class="font-medium">${get(plantData.pruning_season)}</span>
+                         </div>
+                         <div class="flex flex-col">
+                            <span class="text-gray-400 text-sm">Propagation</span>
+                            <span class="font-medium">${get(plantData.propagation_methods)}</span>
+                         </div>
+                         <div class="flex flex-col">
+                            <span class="text-gray-400 text-sm">Toxicity</span>
+                            <span class="font-medium text-yellow-200">${get(plantData.toxicity_info)}</span>
+                         </div>
+                    </div>
+                </div>
 
-                    <li class="flex justify-between items-center">
-                        <span class="text-gray-300">Edible</span>
-                        <span class="px-2 py-0.5 rounded text-xs font-bold ${String(plantData.edible) === 'true' ? 'bg-green-900 text-green-300' : 'bg-gray-600 text-gray-300'}">
-                            ${get(plantData.edible, 'N/A')}
-                        </span>
-                    </li>
-                </ul>
             </div>
         </div>
 
