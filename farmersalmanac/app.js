@@ -171,6 +171,9 @@ function addEventListeners() {
     plantGallery.addEventListener('click', handlePlantCardClick);
     gardenGallery.addEventListener('click', handlePlantCardClick);
     
+    // NEW: Analytics clicks (delegated)
+    gardenAnalytics.addEventListener('click', handleAnalyticsItemClick);
+    
     // Modal listeners
     modalCloseBtn.addEventListener('click', closeModal);
     plantDetailModal.addEventListener('click', (e) => {
@@ -743,8 +746,8 @@ function renderAnalyticsView(plants) {
             ${frostSensitive.length > 0 ? `
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     ${frostSensitive.map(p => `
-                        <div class="flex justify-between items-center bg-gray-900/40 p-3 rounded-lg">
-                            <span class="font-medium text-white">${p.common_name}</span>
+                        <div class="analytics-plant-link flex justify-between items-center bg-gray-900/40 p-3 rounded-lg cursor-pointer hover:bg-white/5 transition-colors" data-slug="${p.slug}" data-name="${p.common_name}">
+                            <span class="font-medium text-green-300 underline decoration-dotted hover:text-green-200">${p.common_name}</span>
                             <span class="text-red-300 text-sm">Min: ${p.min_winter_temp_f}°F</span>
                         </div>
                     `).join('')}
@@ -765,7 +768,8 @@ function renderAnalyticsView(plants) {
         else if (info.includes("balanced") || info.includes("10-10-10")) group = "Balanced Feeders";
         
         if (!fertilizerGroups[group]) fertilizerGroups[group] = [];
-        fertilizerGroups[group].push(p.common_name);
+        // CHANGED: Push object instead of string string
+        fertilizerGroups[group].push({ name: p.common_name, slug: p.slug });
     });
 
     const fertilizerHtml = `
@@ -774,11 +778,11 @@ function renderAnalyticsView(plants) {
                 <span class="mr-2">🧪</span> Fertilizer Groups
             </h3>
             <div class="space-y-4">
-                ${Object.entries(fertilizerGroups).map(([group, plantNames]) => `
+                ${Object.entries(fertilizerGroups).map(([group, plantObjects]) => `
                     <div>
                         <h4 class="text-sm uppercase text-gray-400 font-bold mb-2">${group}</h4>
                         <div class="flex flex-wrap gap-2">
-                            ${plantNames.map(name => `<span class="px-2 py-1 bg-gray-800 rounded text-sm text-gray-200 border border-gray-600">${name}</span>`).join('')}
+                            ${plantObjects.map(p => `<span class="analytics-plant-link px-2 py-1 bg-gray-800 rounded text-sm text-green-300 border border-gray-600 cursor-pointer hover:bg-gray-700 hover:text-white transition-colors" data-slug="${p.slug}" data-name="${p.name}">${p.name}</span>`).join('')}
                         </div>
                     </div>
                 `).join('')}
@@ -790,9 +794,11 @@ function renderAnalyticsView(plants) {
     const waterGroups = { 'Low': [], 'Medium': [], 'High': [] };
     plants.forEach(p => {
         const w = (p.watering || "").toLowerCase();
-        if (w.includes("low") || w.includes("minimum")) waterGroups['Low'].push(p.common_name);
-        else if (w.includes("high") || w.includes("frequent")) waterGroups['High'].push(p.common_name);
-        else waterGroups['Medium'].push(p.common_name);
+        // CHANGED: Push object instead of string
+        const plantObj = { name: p.common_name, slug: p.slug };
+        if (w.includes("low") || w.includes("minimum")) waterGroups['Low'].push(plantObj);
+        else if (w.includes("high") || w.includes("frequent")) waterGroups['High'].push(plantObj);
+        else waterGroups['Medium'].push(plantObj);
     });
 
     const waterHtml = `
@@ -804,19 +810,19 @@ function renderAnalyticsView(plants) {
                 <div>
                     <h4 class="text-blue-200 font-bold mb-3 border-b border-blue-500/30 pb-1">Low / Dry</h4>
                     <ul class="space-y-1 text-sm text-gray-300">
-                        ${waterGroups['Low'].map(n => `<li>• ${n}</li>`).join('') || '<li class="text-gray-500 italic">None</li>'}
+                        ${waterGroups['Low'].map(p => `<li class="analytics-plant-link cursor-pointer hover:text-blue-300 transition-colors" data-slug="${p.slug}" data-name="${p.name}">• ${p.name}</li>`).join('') || '<li class="text-gray-500 italic">None</li>'}
                     </ul>
                 </div>
                 <div>
                     <h4 class="text-blue-300 font-bold mb-3 border-b border-blue-500/30 pb-1">Medium</h4>
                     <ul class="space-y-1 text-sm text-gray-300">
-                         ${waterGroups['Medium'].map(n => `<li>• ${n}</li>`).join('') || '<li class="text-gray-500 italic">None</li>'}
+                         ${waterGroups['Medium'].map(p => `<li class="analytics-plant-link cursor-pointer hover:text-blue-300 transition-colors" data-slug="${p.slug}" data-name="${p.name}">• ${p.name}</li>`).join('') || '<li class="text-gray-500 italic">None</li>'}
                     </ul>
                 </div>
                 <div>
                     <h4 class="text-blue-400 font-bold mb-3 border-b border-blue-500/30 pb-1">High / Wet</h4>
                     <ul class="space-y-1 text-sm text-gray-300">
-                         ${waterGroups['High'].map(n => `<li>• ${n}</li>`).join('') || '<li class="text-gray-500 italic">None</li>'}
+                         ${waterGroups['High'].map(p => `<li class="analytics-plant-link cursor-pointer hover:text-blue-300 transition-colors" data-slug="${p.slug}" data-name="${p.name}">• ${p.name}</li>`).join('') || '<li class="text-gray-500 italic">None</li>'}
                     </ul>
                 </div>
             </div>
@@ -1049,13 +1055,34 @@ async function handleRefreshData() {
     }
 }
 
-async function handlePlantCardClick(e) {
+/**
+ * NEW: Delegated handler for analytics items
+ */
+function handleAnalyticsItemClick(e) {
+    const target = e.target.closest('.analytics-plant-link');
+    if (!target) return;
+
+    const { slug, name } = target.dataset;
+    console.log(`Analytics item clicked: ${name} (${slug})`);
+    openPlantModal(slug, name);
+}
+
+/**
+ * Delegated handler for gallery cards
+ */
+function handlePlantCardClick(e) {
     const card = e.target.closest('.plant-card');
     if (!card) return;
 
     const { slug, name } = card.dataset;
     console.log(`Card clicked: ${name} (slug: ${slug})`);
+    openPlantModal(slug, name);
+}
 
+/**
+ * REFACTORED: Unified function to open the modal for any plant slug
+ */
+async function openPlantModal(slug, name) {
     plantDetailModal.classList.remove('hidden');
     modalContent.classList.add('hidden');
     modalLoader.classList.remove('hidden');
