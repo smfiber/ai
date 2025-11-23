@@ -102,15 +102,29 @@
             </div>
 
             <div id="garden-view" class="hidden">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-2xl font-bold text-white drop-shadow-md">My Garden</h2>
-                    <button id="back-to-search-btn" class="text-green-400 hover:text-green-300 font-medium transition-colors drop-shadow-sm">&larr; Back to Search</button>
+                <div class="flex flex-col md:flex-row justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-white drop-shadow-md mb-4 md:mb-0">My Garden</h2>
+                    
+                    <div class="flex items-center space-x-4">
+                        <div class="glass-panel rounded-lg p-1 flex">
+                            <button id="view-gallery-btn" class="px-4 py-1 rounded-md bg-green-600 text-white font-medium shadow-sm transition-colors">Gallery</button>
+                            <button id="view-analytics-btn" class="px-4 py-1 rounded-md text-gray-300 hover:text-white font-medium transition-colors">📊 Analytics</button>
+                        </div>
+
+                        <button id="back-to-search-btn" class="text-green-400 hover:text-green-300 font-medium transition-colors drop-shadow-sm">&larr; Back to Search</button>
+                    </div>
                 </div>
+
                 <div id="garden-loader" class="hidden text-center py-10">
                     <p class="text-lg text-green-400 font-medium drop-shadow-md">Loading your garden...</p>
                 </div>
+                
                 <div id="garden-gallery" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                    </div>
+                </div>
+                
+                <div id="garden-analytics" class="hidden space-y-8">
+                </div>
+
                 <div id="garden-empty-state" class="hidden text-center py-10 text-gray-400">
                     <div class="glass-panel inline-block p-6 rounded-xl">
                         <p>Your garden is empty. Go find and save some plants!</p>
