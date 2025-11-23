@@ -793,19 +793,19 @@ function renderAnalyticsView(plants) {
                 </h4>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div>
-                        <h5 class="text-sm font-semibold text-green-400 mb-2">Hardy (< 32°F)</h5>
+                        <h5 class="text-sm font-semibold text-green-400 mb-2">❄️ Freeze Hardy (Survives < 32°F)</h5>
                         <div class="bg-gray-900/30 rounded-lg p-2 max-h-48 overflow-y-auto">
                             ${generateList(coldHardy)}
                         </div>
                     </div>
                     <div>
-                        <h5 class="text-sm font-semibold text-yellow-400 mb-2">Frost Risk (32-40°F)</h5>
+                        <h5 class="text-sm font-semibold text-yellow-400 mb-2">⚠️ Frost Sensitive (Protect at 32-40°F)</h5>
                         <div class="bg-gray-900/30 rounded-lg p-2 max-h-48 overflow-y-auto border border-yellow-500/20">
                             ${generateList(coldSensitive)}
                         </div>
                     </div>
                     <div>
-                        <h5 class="text-sm font-semibold text-red-400 mb-2">Cold Intolerant (> 40°F)</h5>
+                        <h5 class="text-sm font-semibold text-red-400 mb-2">🚫 Tropical / No Freeze (Keep > 40°F)</h5>
                         <div class="bg-gray-900/30 rounded-lg p-2 max-h-48 overflow-y-auto border border-red-500/20">
                             ${generateList(coldIntolerant)}
                         </div>
@@ -1391,6 +1391,26 @@ function createPlantDetailHtml(plantData) {
                             <span class="px-2 py-0.5 rounded text-xs font-bold ${String(plantData.edible) === 'true' ? 'bg-green-900 text-green-300' : 'bg-gray-600 text-gray-300'}">
                                 ${get(plantData.edible, 'N/A')}
                             </span>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="md:col-span-2 bg-gray-800/50 backdrop-blur-sm p-5 rounded-xl border border-white/10 h-fit">
+                    <h3 class="flex items-center text-xl font-bold text-orange-400 mb-4 pb-2 border-b border-gray-600">
+                        <span class="mr-2">🌡️</span> Temperature Limits
+                    </h3>
+                    <ul class="space-y-3 text-gray-200">
+                        <li class="flex justify-between items-center">
+                            <span class="text-gray-300">Min Winter Temp</span>
+                            <span class="font-medium text-right text-blue-300">${get(plantData.min_winter_temp_f)}°F</span>
+                        </li>
+                        <li class="flex justify-between items-center">
+                            <span class="text-gray-300">Max Summer Temp</span>
+                            <span class="font-medium text-right text-orange-300">${get(plantData.max_summer_temp_f)}°F</span>
+                        </li>
+                        <li class="flex flex-col mt-2">
+                            <span class="text-gray-300 text-sm mb-1">Frost Sensitivity</span>
+                            <span class="font-medium italic text-gray-400">${get(plantData.frost_sensitivity)}</span>
                         </li>
                     </ul>
                 </div>
