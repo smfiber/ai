@@ -21,7 +21,9 @@ import {
     fetchScientificNameLookup,
     // NEW Image Functions
     uploadPlantImage, 
-    fetchImageIdentification 
+    fetchImageIdentification,
+    // NEW Collection Function
+    getFloridaNativePlants
 } from './api.js';
 
 // --- Global DOM Element Variables ---
@@ -50,14 +52,51 @@ let refreshPlantBtn, updateImageBtn, updateImageInput;
 // --- NEW Analytics Variables ---
 let viewGalleryBtn, viewAnalyticsBtn, gardenAnalytics;
 
+// --- NEW Collections Variables ---
+let collectionsContainer, collectionsGrid, galleryHeader, galleryTitle, backToCollectionsBtn;
+
 // --- App State ---
 let currentSearchQuery = null;
+let currentCollectionCategory = null; // Track active collection
 let currentPage = 1;
 let currentLinks = null;
 let currentMeta = null;
 let currentUser = null; // Track the logged-in user
 let currentModalPlant = null; // Track data for the currently open modal
 let myGardenCache = []; // Store garden plants for analytics switching
+
+// --- Data: Florida Collections Definitions ---
+const FLORIDA_COLLECTIONS = [
+    {
+        id: 'wildflowers',
+        title: 'Native Wildflowers',
+        subtitle: 'Pollinator favorites',
+        image: 'https://images.unsplash.com/photo-1490750967868-58cb807861d2?auto=format&fit=crop&w=600&q=80',
+        filter: 'wildflowers'
+    },
+    {
+        id: 'trees',
+        title: 'Native Trees',
+        subtitle: 'Canopy & shade providers',
+        image: 'https://images.unsplash.com/photo-1542273917363-3b1817f69a2d?auto=format&fit=crop&w=600&q=80',
+        filter: 'trees'
+    },
+    {
+        id: 'shrubs',
+        title: 'Native Shrubs',
+        subtitle: 'Hedges & understory',
+        image: 'https://images.unsplash.com/photo-1621961458348-f013d219b50c?auto=format&fit=crop&w=600&q=80',
+        filter: 'shrubs'
+    },
+    {
+        id: 'ferns',
+        title: 'Native Ferns',
+        subtitle: 'Lush groundcover',
+        image: 'https://images.unsplash.com/photo-1533038590840-1cde6e668a91?auto=format&fit=crop&w=600&q=80',
+        filter: 'ferns'
+    }
+];
+
 
 /**
  * Main function to initialize the application
@@ -84,6 +123,13 @@ function main() {
         searchInput = document.getElementById('search-input');
         
         scientificLookupBtn = document.getElementById('scientific-lookup-btn');
+
+        // Discovery View Elements
+        collectionsContainer = document.getElementById('collections-container');
+        collectionsGrid = document.getElementById('collections-grid');
+        galleryHeader = document.getElementById('gallery-header');
+        galleryTitle = document.getElementById('gallery-title');
+        backToCollectionsBtn = document.getElementById('back-to-collections-btn');
 
         plantGalleryContainer = document.getElementById('plant-gallery-container');
         plantGallery = document.getElementById('plant-gallery');
@@ -112,9 +158,9 @@ function main() {
         gardenLoader = document.getElementById('garden-loader');
         gardenGallery = document.getElementById('garden-gallery');
         gardenEmptyState = document.getElementById('garden-empty-state');
-        gardenAnalytics = document.getElementById('garden-analytics'); // NEW
-        viewGalleryBtn = document.getElementById('view-gallery-btn'); // NEW
-        viewAnalyticsBtn = document.getElementById('view-analytics-btn'); // NEW
+        gardenAnalytics = document.getElementById('garden-analytics'); 
+        viewGalleryBtn = document.getElementById('view-gallery-btn'); 
+        viewAnalyticsBtn = document.getElementById('view-analytics-btn'); 
         
         // --- Q&A DOM Assignments ---
         careQuestionSection = document.getElementById('care-question-section');
@@ -144,7 +190,9 @@ function main() {
         
         // 4. App is ready
         console.log("App ready. Waiting for API keys.");
-        plantGallery.innerHTML = '<div class="col-span-full text-center py-10"><p class="text-gray-300 text-lg">Enter a search term above to begin your botanical journey.</p></div>';
+        
+        // Initial State: Render Collections (hidden until keys are set, but good to have ready)
+        renderCollections();
         
         // Initial setup for the Q&A section which is loaded but not active
         careQuestionSection.classList.add('hidden');
@@ -160,6 +208,9 @@ function addEventListeners() {
     signOutBtn.addEventListener('click', handleGoogleSignOut);
     myGardenBtn.addEventListener('click', showGardenView);
     backToSearchBtn.addEventListener('click', showDiscoveryView);
+    
+    // NEW: Back to collections
+    backToCollectionsBtn.addEventListener('click', returnToCollections);
 
     searchForm.addEventListener('submit', handleSearchSubmit);
     prevBtn.addEventListener('click', handlePrevClick);
@@ -167,11 +218,12 @@ function addEventListeners() {
     
     scientificLookupBtn.addEventListener('click', handleScientificLookup);
 
-    // Gallery clicks (delegated)
+    // Delegated Clicks
     plantGallery.addEventListener('click', handlePlantCardClick);
     gardenGallery.addEventListener('click', handlePlantCardClick);
-    
-    // NEW: Analytics clicks (delegated)
+    collectionsGrid.addEventListener('click', handleCollectionCardClick); // NEW
+
+    // Analytics clicks
     gardenAnalytics.addEventListener('click', handleAnalyticsItemClick);
     
     // Modal listeners
@@ -199,219 +251,62 @@ function addEventListeners() {
     viewAnalyticsBtn.addEventListener('click', () => switchGardenMode('analytics'));
 }
 
-// --- NEW IMAGE UPLOAD FUNCTIONS ---
+// --- COLLECTIONS FUNCTIONS (NEW) ---
 
-function openImageUploadModal() {
-    if (!currentUser) {
-        alert("Please sign in with Google to use the Plant Identification feature.");
-        return;
-    }
-    imageUploadModal.classList.remove('hidden');
-    // Ensure form is reset on open
-    imageUploadForm.reset();
-    imagePreview.classList.add('hidden');
-    previewPlaceholder.classList.remove('hidden');
-    identifyImageBtn.disabled = true;
-    uploadStatus.classList.add('hidden');
+function renderCollections() {
+    collectionsGrid.innerHTML = FLORIDA_COLLECTIONS.map(col => `
+        <div class="collection-card glass-panel rounded-xl overflow-hidden cursor-pointer hover:scale-105 hover-glow transition-transform group" data-filter="${col.filter}" data-title="${col.title}">
+            <div class="h-32 w-full overflow-hidden relative">
+                <div class="absolute inset-0 bg-black/30 group-hover:bg-black/10 transition-colors z-10"></div>
+                <img src="${col.image}" alt="${col.title}" class="w-full h-full object-cover">
+            </div>
+            <div class="p-4">
+                <h3 class="text-lg font-bold text-white group-hover:text-green-400 transition-colors">${col.title}</h3>
+                <p class="text-sm text-gray-400">${col.subtitle}</p>
+            </div>
+        </div>
+    `).join('');
 }
 
-function closeImageUploadModal() {
-    imageUploadModal.classList.add('hidden');
-}
+function handleCollectionCardClick(e) {
+    const card = e.target.closest('.collection-card');
+    if (!card) return;
 
-function handleImageFileChange(e) {
-    const file = e.target.files[0];
-    if (file) {
-        // Show preview
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            imagePreview.src = event.target.result;
-            imagePreview.classList.remove('hidden');
-            previewPlaceholder.classList.add('hidden');
-            identifyImageBtn.disabled = false;
-        };
-        reader.readAsDataURL(file);
-    } else {
-        imagePreview.classList.add('hidden');
-        previewPlaceholder.classList.remove('hidden');
-        identifyImageBtn.disabled = true;
-    }
-}
+    const filter = card.dataset.filter;
+    const title = card.dataset.title;
 
-async function handleImageUpload(e) {
-    e.preventDefault();
+    // 1. Update State
+    currentCollectionCategory = filter;
+    currentSearchQuery = null; // Clear search query to avoid confusion
+    currentPage = 1;
 
-    if (!currentUser) {
-        alert("Authentication required.");
-        return;
-    }
-
-    const file = imageFileInput.files[0];
-    if (!file) return;
-
-    // UI State: Start Processing
-    identifyImageBtn.disabled = true;
-    const originalBtnText = identifyImageBtn.textContent;
-    uploadStatus.classList.remove('hidden');
-    uploadMessage.textContent = 'Step 1 of 4: Uploading image to storage...';
-
-    let imageUrl = null;
-    let plantData = null;
-    let identifiedName = null;
-    let trefleData = null;
-
-    try {
-        // 1. UPLOAD IMAGE TO FIREBASE STORAGE
-        imageUrl = await uploadPlantImage(file, currentUser.uid);
-        uploadMessage.textContent = 'Step 2 of 4: Analyzing image with AI...';
-
-        // 2. IDENTIFY PLANT VIA GEMINI VISION
-        identifiedName = await fetchImageIdentification(imageUrl);
-
-        // FIX: safely handle if identifiedName is null (API failure) or Unknown
-        if (!identifiedName || identifiedName.scientific_name === 'Unknown') {
-            const debugInfo = identifiedName ? identifiedName.scientific_name : "API Error / Null Response";
-            throw new Error(`AI could not identify the plant. Result: ${debugInfo}`);
-        }
-
-        const scientificName = identifiedName.scientific_name;
-        uploadMessage.textContent = `Step 3 of 4: Identified as "${scientificName}". Searching database...`;
-
-        // 3. SEARCH TREFLE (using scientific name for highest accuracy)
-        const trefleSearch = await searchNativePlants(scientificName, 1);
-        
-        if (trefleSearch.data.length === 0) {
-             throw new Error("Could not find detailed data on Trefle after AI identification.");
-        }
-
-        // Use the slug of the first result to get full details
-        const plantSlug = trefleSearch.data[0].slug;
-        trefleData = await getPlantDetails(plantSlug);
-
-        if (!trefleData) {
-            throw new Error("Trefle details not found.");
-        }
-        
-        // Inject the image URL from storage since Trefle doesn't have it
-        trefleData.image_url = imageUrl;
-        
-        // 4. AUGMENT DATA WITH GEMINI
-        uploadMessage.textContent = 'Step 4 of 4: Augmenting care plan and hazards with AI...';
-        const geminiData = await fetchAugmentedPlantData(trefleData);
-
-        // 5. MERGE AND SAVE TO GARDEN
-        plantData = mergePlantData(trefleData, geminiData);
-        // Ensure new saves have the image URL included in the final object
-        plantData.image_url = imageUrl; 
-        plantData.qa_history = []; // Initialize history
-        
-        const docId = await savePlantToGarden(currentUser.uid, plantData);
-
-        // Success!
-        closeImageUploadModal();
-        alert(`Success! Plant "${plantData.common_name}" has been identified and saved to your garden.`);
-        // Reload the garden view if currently open
-        if (!gardenView.classList.contains('hidden')) {
-             loadGardenPlants();
-        }
-
-    } catch (error) {
-        console.error("Image Identification Workflow Failed:", error);
-        uploadMessage.textContent = `Error: ${error.message}. Please try a different photo.`;
-        uploadMessage.classList.add('text-red-400');
-        uploadMessage.classList.remove('text-green-400');
-
-    } finally {
-        identifyImageBtn.textContent = originalBtnText;
-        identifyImageBtn.disabled = false;
-    }
-}
-
-
-// --- Q&A AND MODAL FUNCTIONS ---
-
-async function handleScientificLookup() {
-    const commonName = searchInput.value.trim();
-
-    if (commonName.length === 0) {
-        alert("Please enter a common plant name (e.g., Sea Grape Tree) into the search box first.");
-        return;
-    }
+    // 2. Update UI
+    collectionsContainer.classList.add('hidden');
+    galleryHeader.classList.remove('hidden');
+    galleryTitle.textContent = title;
     
-    // UI Feedback
-    const originalText = scientificLookupBtn.textContent;
-    scientificLookupBtn.disabled = true;
-    scientificLookupBtn.textContent = 'AI Looking Up...';
-    searchInput.disabled = true;
-
-    try {
-        const scientificName = await fetchScientificNameLookup(commonName);
-
-        if (scientificName && scientificName.toLowerCase().includes('error') === false) {
-            alert(`AI Suggestion for "${commonName}":\n\n${scientificName}\n\nPaste this name into the search box and press Enter for a more accurate Trefle search!`);
-            
-            // Optionally populate the search box for the user
-            searchInput.value = scientificName; 
-        } else {
-            alert(`Sorry, the AI could not reliably find the scientific name for "${commonName}". Please try a more specific common name.`);
-        }
-    } catch (error) {
-        console.error("Scientific Lookup Error:", error);
-        alert("An unexpected error occurred during AI lookup.");
-    } finally {
-        // Restore UI state
-        scientificLookupBtn.textContent = originalText;
-        scientificLookupBtn.disabled = false;
-        searchInput.disabled = false;
-        searchInput.focus();
-    }
+    // 3. Fetch Data
+    fetchAndRenderPlants();
 }
 
+function returnToCollections() {
+    // Clear State
+    currentCollectionCategory = null;
+    currentSearchQuery = null;
+    currentPage = 1;
+    searchInput.value = '';
 
-function setupCareQuestionForm(history) {
-    // 1. Remove previous listeners to prevent multiple execution
-    careQuestionForm.removeEventListener('submit', handleCustomCareQuestion);
-    careQuestionInput.removeEventListener('input', toggleQuestionSubmitButton);
-
-    // 2. Add new listeners (must be done after modalContent is updated)
-    careQuestionForm.addEventListener('submit', handleCustomCareQuestion);
-    careQuestionInput.addEventListener('input', toggleQuestionSubmitButton);
-
-    // 3. Reset Q&A input/loader state
-    careQuestionInput.value = '';
-    careQuestionSubmit.disabled = true;
-    careQuestionInput.disabled = false;
-    careResponseLoader.classList.add('hidden');
+    // Update UI
+    galleryHeader.classList.add('hidden');
+    paginationContainer.classList.add('hidden');
+    plantGallery.innerHTML = ''; // Clear gallery
     
-    // 4. Render or reset history text
-    if (history && history.length > 0) {
-        renderQaHistory(history);
-    } else {
-        careResponseText.textContent = 'Submit a question above to get customized AI care advice.';
-        careResponseText.classList.remove('text-red-400');
-        careResponseText.classList.remove('hidden');
-    }
-
-    // 5. Check auth state to control form interaction
-    if (!currentUser) {
-        careQuestionSubmit.disabled = true;
-        careQuestionInput.disabled = true;
-        careResponseText.textContent = 'Sign in to enable custom care questions.';
-    }
-
-    careQuestionSection.classList.remove('hidden');
+    collectionsContainer.classList.remove('hidden');
 }
 
-/**
- * Toggles the submit button based on the input field content.
- */
-function toggleQuestionSubmitButton() {
-    careQuestionSubmit.disabled = careQuestionInput.value.trim().length === 0;
-}
 
-/**
- * Handles the submission of the API key modal.
- */
+// --- EXISTING FUNCTIONS UPDATED ---
+
 async function handleApiKeySubmit(e) {
     e.preventDefault();
     const submitButton = document.getElementById('api-key-submit');
@@ -452,6 +347,9 @@ async function handleApiKeySubmit(e) {
 
         modalBackdrop.classList.add('hidden');
         console.log("API keys set and Firebase initialized. App is live.");
+        
+        // NEW: Show collections immediately after login
+        collectionsContainer.classList.remove('hidden');
 
     } catch (error) {
         console.error("Error during API key submission:", error);
@@ -461,97 +359,91 @@ async function handleApiKeySubmit(e) {
     }
 }
 
-/**
- * Renders the saved Q&A history into the response container.
- * @param {Array<object>} history - Array of {question, answer} objects.
- */
-function renderQaHistory(history) {
-    if (!history || history.length === 0) {
-        careResponseText.textContent = 'Submit a question above to get customized AI care advice.';
-        careResponseText.classList.remove('hidden');
+function handleSearchSubmit(e) {
+    e.preventDefault();
+    const query = searchInput.value.trim();
+
+    if (query === currentSearchQuery) {
         return;
     }
-    
-    // Clear the response text content
-    careResponseText.innerHTML = '';
-    careResponseText.classList.remove('hidden');
 
-    const historyHtml = history.map(item => `
-        <div class="mb-4 pb-4 border-b border-gray-600 last:border-b-0">
-            <p class="text-base font-semibold text-white mb-2">Q: ${item.question}</p>
-            <p class="text-sm text-gray-300 whitespace-pre-wrap">${item.answer.replace(/\n/g, '<br>')}</p>
-        </div>
-    `).join('');
+    // Reset states
+    currentSearchQuery = query;
+    currentCollectionCategory = null; // Clear collection if user searches manually
+    currentPage = 1;
+    currentLinks = null;
+    currentMeta = null;
 
-    careResponseText.innerHTML = historyHtml;
+    // UI Updates for Search Mode
+    collectionsContainer.classList.add('hidden');
+    galleryHeader.classList.remove('hidden');
+    galleryTitle.textContent = `Search Results: "${query}"`;
+    backToCollectionsBtn.classList.remove('hidden'); // Allow going back to home
+
+    console.log(`Global searching for: ${currentSearchQuery}`);
+    fetchAndRenderPlants();
 }
 
-/**
- * Handles the submission of a custom care question to Gemini.
- */
-async function handleCustomCareQuestion(e) {
-    e.preventDefault();
-
-    if (!currentUser || !currentModalPlant) {
-        careResponseText.textContent = 'Error: Please sign in to ask custom questions.';
-        careResponseText.classList.add('text-red-400');
-        careResponseText.classList.remove('hidden');
-        return;
-    }
-
-    const question = careQuestionInput.value.trim();
-    if (question.length === 0) return;
-
-    // UI Feedback: Disable input/button, show loader
-    careQuestionInput.disabled = true;
-    careQuestionSubmit.disabled = true;
-    const originalSubmitText = careQuestionSubmit.textContent;
-    careQuestionSubmit.textContent = 'Getting Advice...';
-    
-    // Clear current text and show loader
-    careResponseText.classList.add('hidden');
-    careResponseLoader.classList.remove('hidden');
+async function fetchAndRenderPlants() {
+    loader.classList.remove('hidden');
+    plantGallery.innerHTML = '';
+    paginationContainer.classList.add('hidden');
 
     try {
-        const responseText = await fetchCustomCareAdvice(currentModalPlant, question);
-        
-        // 1. Save to state for persistence
-        if (!currentModalPlant.qa_history) {
-            currentModalPlant.qa_history = [];
-        }
-        currentModalPlant.qa_history.push({ 
-            question: question, 
-            answer: responseText 
-        });
+        let results = { data: [], links: {}, meta: {} };
 
-        // 2. Render all history
-        renderQaHistory(currentModalPlant.qa_history);
-        careResponseText.classList.remove('text-red-400');
-        
-        // 3. Auto-save if the plant is already saved to Firestore
-        if (currentModalPlant.docId) {
-            await savePlantToGarden(currentUser.uid, currentModalPlant, currentModalPlant.docId);
-            console.log(`Auto-saved Q&A history for ${currentModalPlant.slug}`);
+        if (currentCollectionCategory) {
+            // Case 1: Fetching a Florida Native Collection
+            console.log(`Fetching collection: ${currentCollectionCategory}, page ${currentPage}`);
+            results = await getFloridaNativePlants(currentCollectionCategory, currentPage);
+        } else if (currentSearchQuery) {
+            // Case 2: Standard Search
+            console.log(`Searching: ${currentSearchQuery}, page ${currentPage}`);
+            results = await searchNativePlants(currentSearchQuery, currentPage);
+        } else {
+            // Case 3: Empty state (shouldn't really happen with new collections logic, but safe fallback)
+            plantGallery.innerHTML = '<div class="col-span-full text-center py-10"><p class="text-gray-300">Select a collection or search to view plants.</p></div>';
+            loader.classList.add('hidden');
+            return;
         }
+        
+        currentLinks = results.links;
+        currentMeta = results.meta;
+
+        renderPlantGallery(results.data, plantGallery); 
+        renderPagination(results.links, results.meta);
 
     } catch (error) {
-        console.error("Custom care question failed:", error);
-        careResponseText.innerHTML = `
-            <p class="text-red-400">Error: Could not get advice. ${error.message}</p>
-            <p class="text-gray-400 mt-2">Previous Q&A history remains available.</p>
-        `;
-        careResponseText.classList.remove('hidden');
+        console.error(error);
+        plantGallery.innerHTML = '<div class="col-span-full text-center py-10"><p class="text-red-400">Could not load plants. Check console for errors.</p></div>';
     } finally {
-        // Restore UI state
-        careResponseLoader.classList.add('hidden');
-        careQuestionInput.disabled = false;
-        careQuestionSubmit.textContent = originalSubmitText;
-        // Keep submit button disabled if input is still empty, enabled otherwise
-        careQuestionSubmit.disabled = careQuestionInput.value.trim().length === 0;
-        careQuestionInput.value = ''; // Clear the input after submission
+        loader.classList.add('hidden');
     }
 }
 
+function showDiscoveryView() {
+    gardenView.classList.add('hidden');
+    document.getElementById('discovery-view').classList.remove('hidden');
+    
+    // Logic to decide what to show in discovery view
+    if (!currentSearchQuery && !currentCollectionCategory) {
+        collectionsContainer.classList.remove('hidden');
+        galleryHeader.classList.add('hidden');
+        plantGallery.innerHTML = ''; // Clear any old results
+    } else {
+        // If we had a search or collection active, keep showing it
+        collectionsContainer.classList.add('hidden');
+        galleryHeader.classList.remove('hidden');
+    }
+}
+
+// --- VIEW TOGGLING & AUTH (UNCHANGED MOSTLY) ---
+
+function showGardenView() {
+    document.getElementById('discovery-view').classList.add('hidden');
+    gardenView.classList.remove('hidden');
+    loadGardenPlants(); 
+}
 
 // --- Auth Functions ---
 async function handleGoogleSignIn() {
@@ -571,7 +463,7 @@ async function handleGoogleSignOut() {
 }
 
 function updateAuthState(user) {
-    currentUser = user; // Update global state
+    currentUser = user; 
     
     if (user) {
         signInBtn.classList.add('hidden');
@@ -579,16 +471,12 @@ function updateAuthState(user) {
         userInfo.classList.add('flex');
         userName.textContent = user.displayName;
         userPhoto.src = user.photoURL;
-        // Enable garden button
         myGardenBtn.classList.remove('hidden');
         
-        // Enable Q&A form elements if modal is open
         if (plantDetailModal.classList.contains('hidden') === false) {
              careQuestionInput.disabled = false;
-             // Only enable submit button if there's text
              careQuestionSubmit.disabled = careQuestionInput.value.trim().length === 0;
              if (careResponseText.textContent === 'Sign in to enable custom care questions.') {
-                // Re-render history or reset to placeholder if no history exists
                 setupCareQuestionForm(currentModalPlant.qa_history); 
              }
         }
@@ -599,11 +487,9 @@ function updateAuthState(user) {
         userInfo.classList.remove('flex');
         userName.textContent = '';
         userPhoto.src = '';
-        // Reset views
         showDiscoveryView();
         myGardenBtn.classList.add('hidden');
         
-        // Disable Q&A form elements if modal is open
         if (plantDetailModal.classList.contains('hidden') === false) {
             careQuestionSubmit.disabled = true;
             careQuestionInput.disabled = true;
@@ -612,100 +498,269 @@ function updateAuthState(user) {
     }
 }
 
-// --- View Toggling ---
 
-function showGardenView() {
-    document.getElementById('discovery-view').classList.add('hidden');
-    gardenView.classList.remove('hidden');
-    loadGardenPlants(); // Fetch data
+// --- IMAGE UPLOAD FUNCTIONS (Unchanged) ---
+
+function openImageUploadModal() {
+    if (!currentUser) {
+        alert("Please sign in with Google to use the Plant Identification feature.");
+        return;
+    }
+    imageUploadModal.classList.remove('hidden');
+    imageUploadForm.reset();
+    imagePreview.classList.add('hidden');
+    previewPlaceholder.classList.remove('hidden');
+    identifyImageBtn.disabled = true;
+    uploadStatus.classList.add('hidden');
 }
 
-function showDiscoveryView() {
-    gardenView.classList.add('hidden');
-    document.getElementById('discovery-view').classList.remove('hidden');
+function closeImageUploadModal() {
+    imageUploadModal.classList.add('hidden');
 }
 
-// --- Search & Filtering ---
+function handleImageFileChange(e) {
+    const file = e.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            imagePreview.src = event.target.result;
+            imagePreview.classList.remove('hidden');
+            previewPlaceholder.classList.add('hidden');
+            identifyImageBtn.disabled = false;
+        };
+        reader.readAsDataURL(file);
+    } else {
+        imagePreview.classList.add('hidden');
+        previewPlaceholder.classList.remove('hidden');
+        identifyImageBtn.disabled = true;
+    }
+}
 
-function handleSearchSubmit(e) {
+async function handleImageUpload(e) {
     e.preventDefault();
-    const query = searchInput.value.trim();
 
-    if (query === currentSearchQuery) {
+    if (!currentUser) {
+        alert("Authentication required.");
         return;
     }
 
-    currentSearchQuery = query;
-    currentPage = 1;
-    currentLinks = null;
-    currentMeta = null;
+    const file = imageFileInput.files[0];
+    if (!file) return;
 
-    console.log(`Global searching for: ${currentSearchQuery}`);
-    fetchAndRenderPlants();
-}
+    identifyImageBtn.disabled = true;
+    const originalBtnText = identifyImageBtn.textContent;
+    uploadStatus.classList.remove('hidden');
+    uploadMessage.textContent = 'Step 1 of 4: Uploading image to storage...';
 
-async function fetchAndRenderPlants() {
-    loader.classList.remove('hidden');
-    plantGallery.innerHTML = '';
-    paginationContainer.classList.add('hidden');
+    let imageUrl = null;
+    let plantData = null;
+    let identifiedName = null;
+    let trefleData = null;
 
     try {
-        let results = { data: [], links: {}, meta: {} };
+        imageUrl = await uploadPlantImage(file, currentUser.uid);
+        uploadMessage.textContent = 'Step 2 of 4: Analyzing image with AI...';
 
-        if (currentSearchQuery) {
-            results = await searchNativePlants(currentSearchQuery, currentPage);
-            console.log(`Found ${results.data.length} plants for query "${currentSearchQuery}", page ${currentPage}.`);
-        } else {
-            // INITIAL STATE - Updated visual
-            plantGallery.innerHTML = '<div class="col-span-full text-center py-10"><p class="text-gray-300 text-lg">Enter a search term above to begin your botanical journey.</p></div>';
-            loader.classList.add('hidden');
-            return;
+        identifiedName = await fetchImageIdentification(imageUrl);
+
+        if (!identifiedName || identifiedName.scientific_name === 'Unknown') {
+            const debugInfo = identifiedName ? identifiedName.scientific_name : "API Error / Null Response";
+            throw new Error(`AI could not identify the plant. Result: ${debugInfo}`);
+        }
+
+        const scientificName = identifiedName.scientific_name;
+        uploadMessage.textContent = `Step 3 of 4: Identified as "${scientificName}". Searching database...`;
+
+        const trefleSearch = await searchNativePlants(scientificName, 1);
+        
+        if (trefleSearch.data.length === 0) {
+             throw new Error("Could not find detailed data on Trefle after AI identification.");
+        }
+
+        const plantSlug = trefleSearch.data[0].slug;
+        trefleData = await getPlantDetails(plantSlug);
+
+        if (!trefleData) {
+            throw new Error("Trefle details not found.");
         }
         
-        currentLinks = results.links;
-        currentMeta = results.meta;
+        trefleData.image_url = imageUrl;
+        
+        uploadMessage.textContent = 'Step 4 of 4: Augmenting care plan and hazards with AI...';
+        const geminiData = await fetchAugmentedPlantData(trefleData);
 
-        renderPlantGallery(results.data, plantGallery); // Render to main gallery
-        renderPagination(results.links, results.meta);
+        plantData = mergePlantData(trefleData, geminiData);
+        plantData.image_url = imageUrl; 
+        plantData.qa_history = []; 
+        
+        const docId = await savePlantToGarden(currentUser.uid, plantData);
+
+        closeImageUploadModal();
+        alert(`Success! Plant "${plantData.common_name}" has been identified and saved to your garden.`);
+        if (!gardenView.classList.contains('hidden')) {
+             loadGardenPlants();
+        }
 
     } catch (error) {
-        console.error(error);
-        plantGallery.innerHTML = '<div class="col-span-full text-center py-10"><p class="text-red-400">Could not load plants. Check console for errors.</p></div>';
+        console.error("Image Identification Workflow Failed:", error);
+        uploadMessage.textContent = `Error: ${error.message}. Please try a different photo.`;
+        uploadMessage.classList.add('text-red-400');
+        uploadMessage.classList.remove('text-green-400');
+
     } finally {
-        loader.classList.add('hidden');
+        identifyImageBtn.textContent = originalBtnText;
+        identifyImageBtn.disabled = false;
     }
 }
 
-// --- Garden Logic ---
 
-async function loadGardenPlants() {
-    if (!currentUser) return;
+// --- Q&A AND MODAL FUNCTIONS (Unchanged) ---
+
+async function handleScientificLookup() {
+    const commonName = searchInput.value.trim();
+
+    if (commonName.length === 0) {
+        alert("Please enter a common plant name (e.g., Sea Grape Tree) into the search box first.");
+        return;
+    }
     
-    gardenLoader.classList.remove('hidden');
-    gardenGallery.innerHTML = '';
-    gardenEmptyState.classList.add('hidden');
-    
-    // Reset view to Gallery by default on load
-    switchGardenMode('gallery');
+    const originalText = scientificLookupBtn.textContent;
+    scientificLookupBtn.disabled = true;
+    scientificLookupBtn.textContent = 'AI Looking Up...';
+    searchInput.disabled = true;
 
     try {
-        const savedPlants = await getGardenPlants(currentUser.uid);
-        myGardenCache = savedPlants; // Cache for analytics switching
-        
-        if (savedPlants.length === 0) {
-            gardenEmptyState.classList.remove('hidden');
+        const scientificName = await fetchScientificNameLookup(commonName);
+
+        if (scientificName && scientificName.toLowerCase().includes('error') === false) {
+            alert(`AI Suggestion for "${commonName}":\n\n${scientificName}\n\nPaste this name into the search box and press Enter for a more accurate Trefle search!`);
+            searchInput.value = scientificName; 
         } else {
-            renderPlantGallery(savedPlants, gardenGallery);
+            alert(`Sorry, the AI could not reliably find the scientific name for "${commonName}". Please try a more specific common name.`);
         }
     } catch (error) {
-        console.error("Error loading garden:", error);
-        gardenGallery.innerHTML = '<p class="text-red-400">Failed to load garden.</p>';
+        console.error("Scientific Lookup Error:", error);
+        alert("An unexpected error occurred during AI lookup.");
     } finally {
-        gardenLoader.classList.add('hidden');
+        scientificLookupBtn.textContent = originalText;
+        scientificLookupBtn.disabled = false;
+        searchInput.disabled = false;
+        searchInput.focus();
     }
 }
 
-// --- NEW GARDEN ANALYTICS FUNCTIONS ---
+
+function setupCareQuestionForm(history) {
+    careQuestionForm.removeEventListener('submit', handleCustomCareQuestion);
+    careQuestionInput.removeEventListener('input', toggleQuestionSubmitButton);
+
+    careQuestionForm.addEventListener('submit', handleCustomCareQuestion);
+    careQuestionInput.addEventListener('input', toggleQuestionSubmitButton);
+
+    careQuestionInput.value = '';
+    careQuestionSubmit.disabled = true;
+    careQuestionInput.disabled = false;
+    careResponseLoader.classList.add('hidden');
+    
+    if (history && history.length > 0) {
+        renderQaHistory(history);
+    } else {
+        careResponseText.textContent = 'Submit a question above to get customized AI care advice.';
+        careResponseText.classList.remove('text-red-400');
+        careResponseText.classList.remove('hidden');
+    }
+
+    if (!currentUser) {
+        careQuestionSubmit.disabled = true;
+        careQuestionInput.disabled = true;
+        careResponseText.textContent = 'Sign in to enable custom care questions.';
+    }
+
+    careQuestionSection.classList.remove('hidden');
+}
+
+function toggleQuestionSubmitButton() {
+    careQuestionSubmit.disabled = careQuestionInput.value.trim().length === 0;
+}
+
+function renderQaHistory(history) {
+    if (!history || history.length === 0) {
+        careResponseText.textContent = 'Submit a question above to get customized AI care advice.';
+        careResponseText.classList.remove('hidden');
+        return;
+    }
+    
+    careResponseText.innerHTML = '';
+    careResponseText.classList.remove('hidden');
+
+    const historyHtml = history.map(item => `
+        <div class="mb-4 pb-4 border-b border-gray-600 last:border-b-0">
+            <p class="text-base font-semibold text-white mb-2">Q: ${item.question}</p>
+            <p class="text-sm text-gray-300 whitespace-pre-wrap">${item.answer.replace(/\n/g, '<br>')}</p>
+        </div>
+    `).join('');
+
+    careResponseText.innerHTML = historyHtml;
+}
+
+async function handleCustomCareQuestion(e) {
+    e.preventDefault();
+
+    if (!currentUser || !currentModalPlant) {
+        careResponseText.textContent = 'Error: Please sign in to ask custom questions.';
+        careResponseText.classList.add('text-red-400');
+        careResponseText.classList.remove('hidden');
+        return;
+    }
+
+    const question = careQuestionInput.value.trim();
+    if (question.length === 0) return;
+
+    careQuestionInput.disabled = true;
+    careQuestionSubmit.disabled = true;
+    const originalSubmitText = careQuestionSubmit.textContent;
+    careQuestionSubmit.textContent = 'Getting Advice...';
+    
+    careResponseText.classList.add('hidden');
+    careResponseLoader.classList.remove('hidden');
+
+    try {
+        const responseText = await fetchCustomCareAdvice(currentModalPlant, question);
+        
+        if (!currentModalPlant.qa_history) {
+            currentModalPlant.qa_history = [];
+        }
+        currentModalPlant.qa_history.push({ 
+            question: question, 
+            answer: responseText 
+        });
+
+        renderQaHistory(currentModalPlant.qa_history);
+        careResponseText.classList.remove('text-red-400');
+        
+        if (currentModalPlant.docId) {
+            await savePlantToGarden(currentUser.uid, currentModalPlant, currentModalPlant.docId);
+            console.log(`Auto-saved Q&A history for ${currentModalPlant.slug}`);
+        }
+
+    } catch (error) {
+        console.error("Custom care question failed:", error);
+        careResponseText.innerHTML = `
+            <p class="text-red-400">Error: Could not get advice. ${error.message}</p>
+            <p class="text-gray-400 mt-2">Previous Q&A history remains available.</p>
+        `;
+        careResponseText.classList.remove('hidden');
+    } finally {
+        careResponseLoader.classList.add('hidden');
+        careQuestionInput.disabled = false;
+        careQuestionSubmit.textContent = originalSubmitText;
+        careQuestionSubmit.disabled = careQuestionInput.value.trim().length === 0;
+        careQuestionInput.value = ''; 
+    }
+}
+
+
+// --- Garden Analytics Logic (Unchanged) ---
 
 function switchGardenMode(mode) {
     if (mode === 'gallery') {
@@ -732,15 +787,12 @@ function renderAnalyticsView(plants) {
 
     gardenAnalytics.innerHTML = '';
 
-    // --- 1. TEMPERATURE SENSITIVITY (Updated for Florida Climate) ---
+    const coldHardy = [];       
+    const coldSensitive = [];   
+    const coldIntolerant = [];  
     
-    // Arrays for different risk categories
-    const coldHardy = [];       // < 32F
-    const coldSensitive = [];   // 32F - 40F
-    const coldIntolerant = [];  // > 40F
-    
-    const heatSensitive = [];   // < 90F (needs afternoon shade/extra water)
-    const heatTolerant = [];    // >= 90F (thrives in FL summer)
+    const heatSensitive = [];   
+    const heatTolerant = [];    
 
     plants.forEach(p => {
         const minTemp = parseInt(p.min_winter_temp_f);
@@ -748,19 +800,16 @@ function renderAnalyticsView(plants) {
         
         const plantObj = { name: p.common_name, slug: p.slug, min: p.min_winter_temp_f, max: p.max_summer_temp_f };
 
-        // Cold Logic
         if (!isNaN(minTemp)) {
             if (minTemp < 32) {
                 coldHardy.push(plantObj);
             } else if (minTemp >= 32 && minTemp <= 40) {
                 coldSensitive.push(plantObj);
             } else {
-                // > 40 degrees
                 coldIntolerant.push(plantObj);
             }
         }
 
-        // Heat Logic
         if (!isNaN(maxTemp)) {
             if (maxTemp < 90) {
                 heatSensitive.push(plantObj);
@@ -770,7 +819,6 @@ function renderAnalyticsView(plants) {
         }
     });
 
-    // Helper to generate list items
     const generateList = (list) => {
         if (list.length === 0) return '<p class="text-gray-500 italic text-sm">None</p>';
         return list.map(p => `
@@ -837,7 +885,6 @@ function renderAnalyticsView(plants) {
         </div>
     `;
 
-    // --- 2. FERTILIZER GROUPS ---
     const fertilizerGroups = {};
     plants.forEach(p => {
         const info = (p.fertilizer_info || "").toLowerCase();
@@ -870,7 +917,6 @@ function renderAnalyticsView(plants) {
         </div>
     `;
 
-    // --- 3. WATERING SCHEDULE ---
     const waterGroups = { 'Low': [], 'Medium': [], 'High': [] };
     plants.forEach(p => {
         const w = (p.watering || "").toLowerCase();
@@ -911,6 +957,7 @@ function renderAnalyticsView(plants) {
     gardenAnalytics.innerHTML = tempHtml + waterHtml + fertilizerHtml;
 }
 
+
 // --- Pagination & Gallery Rendering ---
 
 function handlePrevClick() {
@@ -942,9 +989,6 @@ function renderPagination(links, meta) {
     paginationContainer.classList.remove('hidden');
 }
 
-/**
- * Generic render function for any gallery container
- */
 function renderPlantGallery(plants, container) {
     container.innerHTML = '';
     if (plants.length === 0 && container === plantGallery) {
@@ -954,12 +998,10 @@ function renderPlantGallery(plants, container) {
 
     plants.forEach(plant => {
         const card = document.createElement('div');
-        // UPDATED CLASS: glass-panel, rounded-xl, hover-glow
         card.className = 'plant-card glass-panel rounded-xl overflow-hidden cursor-pointer transition-transform hover:scale-105 hover-glow';
         card.dataset.slug = plant.slug;
         card.dataset.name = plant.common_name;
 
-        // UPDATED IMAGE CLASS: fixed height h-48 for smaller/more uniform cards
         card.innerHTML = `
             <img src="${plant.image_url}" alt="${plant.common_name}" class="w-full h-48 object-cover">
             <div class="p-3">
@@ -971,7 +1013,8 @@ function renderPlantGallery(plants, container) {
     });
 }
 
-// --- Modal Functions ---
+
+// --- Modal Functions (Unchanged) ---
 
 function isValueMissing(value) {
     return value === null || value === undefined || value === 'N/A' || value === '';
@@ -983,7 +1026,7 @@ function mergePlantData(trefleData, geminiData) {
         scientific_name: trefleData.scientific_name,
         common_name: trefleData.common_name,
         edible: trefleData.edible,
-        slug: trefleData.slug, // Ensure slug is preserved
+        slug: trefleData.slug, 
         distributions: trefleData.distributions,
 
         family_common_name: !isValueMissing(trefleData.family_common_name) ? trefleData.family_common_name : 
@@ -1014,45 +1057,35 @@ function mergePlantData(trefleData, geminiData) {
         
         care_plan: geminiData.care_plan,
 
-        // --- NEW ENVIRONMENTAL & HAZARD FIELDS ---
         pests_and_diseases: geminiData.pests_and_diseases,
         min_winter_temp_f: geminiData.min_winter_temp_f,
         max_summer_temp_f: geminiData.max_summer_temp_f,
         frost_sensitivity: geminiData.frost_sensitivity,
 
-        // --- NEW MAINTENANCE & SAFETY FIELDS ---
         fertilizer_info: geminiData.fertilizer_info,
         pruning_season: geminiData.pruning_season,
         propagation_methods: geminiData.propagation_methods,
         toxicity_info: geminiData.toxicity_info
-        // --- END NEW FIELDS ---
     };
 
     return finalData;
 }
 
-// --- NEW UPDATE PHOTO FUNCTION ---
 async function handleUpdatePhoto(e) {
     const file = e.target.files[0];
     if (!file || !currentModalPlant || !currentUser) return;
 
-    // UI Feedback
     const originalText = updateImageBtn.textContent;
     updateImageBtn.disabled = true;
     updateImageBtn.textContent = 'Uploading...';
 
     try {
-        // 1. Upload new image
         const newImageUrl = await uploadPlantImage(file, currentUser.uid);
         
-        // 2. Update local state
         currentModalPlant.image_url = newImageUrl;
 
-        // 3. Update Firestore
-        // We ensure we pass the existing docId to update, not create
         await savePlantToGarden(currentUser.uid, currentModalPlant, currentModalPlant.docId);
 
-        // 4. Update DOM immediately
         const modalImg = modalContent.querySelector('img');
         if (modalImg) {
             modalImg.src = newImageUrl;
@@ -1066,15 +1099,13 @@ async function handleUpdatePhoto(e) {
     } finally {
         updateImageBtn.disabled = false;
         updateImageBtn.textContent = originalText;
-        updateImageInput.value = ''; // Reset input to allow re-selection of same file if needed
+        updateImageInput.value = ''; 
     }
 }
 
-// --- NEW REFRESH FUNCTION ---
 async function handleRefreshData() {
     if (!currentModalPlant || !currentModalPlant.docId || !currentUser) return;
 
-    // UI Feedback
     const originalText = refreshPlantBtn.innerHTML;
     refreshPlantBtn.disabled = true;
     refreshPlantBtn.innerHTML = '↻ Updating...';
@@ -1082,44 +1113,32 @@ async function handleRefreshData() {
     try {
         console.log(`Refreshing data for ${currentModalPlant.slug}...`);
         
-        // 1. Fetch fresh Trefle Data
         const trefleData = await getPlantDetails(currentModalPlant.slug);
         if (!trefleData) throw new Error("Could not fetch fresh Trefle data.");
 
-        // 2. Fetch fresh Gemini Data
         const geminiData = await fetchAugmentedPlantData(trefleData);
 
-        // 3. Merge
         const freshPlantData = mergePlantData(trefleData, geminiData);
 
-        // 4. Restore Persistence & User State
         freshPlantData.docId = currentModalPlant.docId;
         freshPlantData.qa_history = currentModalPlant.qa_history || [];
         
-        // --- PRESERVE CUSTOM IMAGE LOGIC ---
-        // If the OLD image was a custom upload (contains 'firebasestorage'), keep it.
-        // Trefle data would try to overwrite it with the stock image otherwise.
         if (currentModalPlant.image_url && currentModalPlant.image_url.includes('firebasestorage')) {
             freshPlantData.image_url = currentModalPlant.image_url;
         } else if (!freshPlantData.image_url && currentModalPlant.image_url) {
-            // Fallback: If fresh data has NO image, but we had one, keep the old one.
             freshPlantData.image_url = currentModalPlant.image_url;
         }
 
-        // 5. Update Firestore
         await savePlantToGarden(currentUser.uid, freshPlantData, freshPlantData.docId);
 
-        // 6. Update Global State
         currentModalPlant = freshPlantData;
 
-        // 7. Re-render Modal
         const articleHtml = createPlantDetailHtml(currentModalPlant);
         modalContent.innerHTML = articleHtml;
         modalTitle.textContent = currentModalPlant.common_name || currentModalPlant.scientific_name;
 
-        // 8. Re-append Q&A Section
-        const qaSectionClone = careQuestionSection; // Reference to the global element
-        careQuestionSection.classList.remove('hidden'); // Ensure it's visible
+        const qaSectionClone = careQuestionSection; 
+        careQuestionSection.classList.remove('hidden'); 
         modalContent.appendChild(qaSectionClone);
         setupCareQuestionForm(currentModalPlant.qa_history);
 
@@ -1134,9 +1153,6 @@ async function handleRefreshData() {
     }
 }
 
-/**
- * NEW: Delegated handler for analytics items
- */
 function handleAnalyticsItemClick(e) {
     const target = e.target.closest('.analytics-plant-link');
     if (!target) return;
@@ -1146,9 +1162,6 @@ function handleAnalyticsItemClick(e) {
     openPlantModal(slug, name);
 }
 
-/**
- * Delegated handler for gallery cards
- */
 function handlePlantCardClick(e) {
     const card = e.target.closest('.plant-card');
     if (!card) return;
@@ -1158,9 +1171,6 @@ function handlePlantCardClick(e) {
     openPlantModal(slug, name);
 }
 
-/**
- * REFACTORED: Unified function to open the modal for any plant slug
- */
 async function openPlantModal(slug, name) {
     plantDetailModal.classList.remove('hidden');
     modalContent.classList.add('hidden');
@@ -1168,21 +1178,14 @@ async function openPlantModal(slug, name) {
     modalTitle.textContent = name || "Loading...";
     modalLoader.querySelector('p').textContent = 'Loading plant details...';
     
-    // Default: Hide Refresh & Update Image buttons until we confirm it's a saved plant
     refreshPlantBtn.classList.add('hidden');
     updateImageBtn.classList.add('hidden');
 
-    // --- Q&A Management START: Extract and prepare the form element ---
-    // Clone the static Q&A form element
     const qaSectionClone = careQuestionSection.cloneNode(true);
-    // Hide it immediately until data is loaded
     careQuestionSection.classList.add('hidden'); 
     
-    // Clear modal content (removes dynamic content)
     modalContent.innerHTML = '';
-    // --- Q&A Management END ---
 
-    // Reset Save Button
     savePlantBtn.classList.add('hidden');
     savePlantBtn.textContent = 'Save';
     savePlantBtn.classList.remove('bg-red-600', 'hover:bg-red-700');
@@ -1191,79 +1194,64 @@ async function openPlantModal(slug, name) {
     try {
         let isSaved = false;
         
-        // --- 1. Fast Path: Check if already saved with full data ---
         if (currentUser) {
             modalLoader.querySelector('p').textContent = 'Checking your garden...';
-            // getSavedPlant now returns { plantData, docId }
             const savedResult = await getSavedPlant(currentUser.uid, slug);
             
-            // If we have the plant AND it has a care_plan, we know it's the full Augmented version
             if (savedResult.plantData && savedResult.plantData.care_plan) {
                 console.log("Loaded from Garden (Skipped APIs)");
                 currentModalPlant = { ...savedResult.plantData, docId: savedResult.docId };
                 
-                // Render immediately
                 const articleHtml = createPlantDetailHtml(currentModalPlant);
                 modalTitle.textContent = currentModalPlant.common_name || currentModalPlant.scientific_name;
                 modalContent.innerHTML = articleHtml;
                 
-                // Update button to "Remove" state
                 updateSaveButtonState(true);
                 savePlantBtn.classList.remove('hidden');
-                refreshPlantBtn.classList.remove('hidden'); // SHOW REFRESH BUTTON
-                updateImageBtn.classList.remove('hidden');  // SHOW UPDATE PHOTO BUTTON
+                refreshPlantBtn.classList.remove('hidden'); 
+                updateImageBtn.classList.remove('hidden'); 
                 
-                // --- Q&A Management: Re-append and set up ---
                 modalContent.appendChild(qaSectionClone);
                 setupCareQuestionForm(currentModalPlant.qa_history);
                 
-                // Skip the rest of the function
                 modalLoader.classList.add('hidden');
                 modalContent.classList.remove('hidden');
                 modalContentContainer.scrollTop = 0;
                 return;
             }
             
-            // If found but partial data (legacy save), or not found, update status boolean
             if (savedResult.plantData) isSaved = true;
         }
 
-        // --- 2. Slow Path: Fetch from APIs ---
         if (currentUser) {
              updateSaveButtonState(isSaved);
              savePlantBtn.classList.remove('hidden');
         }
 
-        // Get base data from Trefle
         modalLoader.querySelector('p').textContent = 'Fetching data from Trefle...';
         const trefleData = await getPlantDetails(slug);
         if (!trefleData) {
             throw new Error("Could not fetch plant details.");
         }
 
-        // Augment data with Gemini
         modalLoader.querySelector('p').textContent = 'Augmenting data with AI...';
         const geminiData = await fetchAugmentedPlantData(trefleData);
 
-        // Merge Data
         currentModalPlant = mergePlantData(trefleData, geminiData);
-        // Initialize history for a newly fetched plant
         currentModalPlant.qa_history = [];
 
-        // Render
         const articleHtml = createPlantDetailHtml(currentModalPlant);
         
         modalTitle.textContent = currentModalPlant.common_name || currentModalPlant.scientific_name;
         modalContent.innerHTML = articleHtml;
         
-        // --- Q&A Management: Re-append and set up ---
         modalContent.appendChild(qaSectionClone);
         setupCareQuestionForm(currentModalPlant.qa_history);
 
     } catch (error) {
         console.error(error);
         modalContent.innerHTML = `<p class="text-red-400">Sorry, an error occurred: ${error.message}</p>`;
-        careQuestionSection.classList.add('hidden'); // Ensure it stays hidden on error
+        careQuestionSection.classList.add('hidden'); 
     } finally {
         modalLoader.classList.add('hidden');
         modalContent.classList.remove('hidden');
@@ -1287,8 +1275,6 @@ function updateSaveButtonState(isSaved) {
 }
 
 async function handleSaveToggle() {
-    // Note: Since currentModalPlant now holds the potentially updated qa_history AND docId, 
-    // saving the whole object handles persistence automatically.
     if (!currentUser || !currentModalPlant) return;
     
     const action = savePlantBtn.dataset.action;
@@ -1299,19 +1285,16 @@ async function handleSaveToggle() {
     try {
         if (action === 'save') {
             const newDocId = await savePlantToGarden(currentUser.uid, currentModalPlant, currentModalPlant.docId);
-            // Ensure the docId is stored if it was a new save
             currentModalPlant.docId = newDocId; 
             updateSaveButtonState(true);
-            refreshPlantBtn.classList.remove('hidden'); // Show refresh button after saving
-            updateImageBtn.classList.remove('hidden');  // Show update photo button
+            refreshPlantBtn.classList.remove('hidden'); 
+            updateImageBtn.classList.remove('hidden');  
         } else {
             await removePlantFromGarden(currentUser.uid, currentModalPlant.slug);
-            // Clear docId and reset state after removal
             currentModalPlant.docId = null;
             updateSaveButtonState(false);
-            refreshPlantBtn.classList.add('hidden'); // Hide refresh button
-            updateImageBtn.classList.add('hidden');  // Hide update photo button
-            // If we are in garden view, reload the list to reflect removal
+            refreshPlantBtn.classList.add('hidden'); 
+            updateImageBtn.classList.add('hidden'); 
             if (!gardenView.classList.contains('hidden')) {
                 loadGardenPlants();
             }
@@ -1340,7 +1323,6 @@ function createPlantDetailHtml(plantData) {
             .join(', ');
     }
 
-    // --- UPDATED: Rich HTML Layout with Split View for Dense Information ---
     return `
         <div class="flex flex-col lg:flex-row gap-8 mb-8">
             <div class="w-full lg:w-1/3 flex-shrink-0">
@@ -1473,7 +1455,6 @@ function closeModal() {
     modalTitle.textContent = 'Plant Details';
     currentModalPlant = null;
     
-    // --- Q&A Management: Hide and reset the form ---
     careQuestionSection.classList.add('hidden');
     careQuestionInput.value = '';
     careQuestionSubmit.disabled = true;
