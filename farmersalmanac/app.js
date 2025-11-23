@@ -47,6 +47,9 @@ let identifyPlantBtn, imageUploadModal, imageModalCloseBtn, imageUploadForm,
 // --- NEW Refresh & Update Image Variables ---
 let refreshPlantBtn, updateImageBtn, updateImageInput;
 
+// --- NEW Analytics Variables ---
+let viewGalleryBtn, viewAnalyticsBtn, gardenAnalytics;
+
 // --- App State ---
 let currentSearchQuery = null;
 let currentPage = 1;
@@ -54,6 +57,7 @@ let currentLinks = null;
 let currentMeta = null;
 let currentUser = null; // Track the logged-in user
 let currentModalPlant = null; // Track data for the currently open modal
+let myGardenCache = []; // Store garden plants for analytics switching
 
 /**
  * Main function to initialize the application
@@ -108,6 +112,9 @@ function main() {
         gardenLoader = document.getElementById('garden-loader');
         gardenGallery = document.getElementById('garden-gallery');
         gardenEmptyState = document.getElementById('garden-empty-state');
+        gardenAnalytics = document.getElementById('garden-analytics'); // NEW
+        viewGalleryBtn = document.getElementById('view-gallery-btn'); // NEW
+        viewAnalyticsBtn = document.getElementById('view-analytics-btn'); // NEW
         
         // --- Q&A DOM Assignments ---
         careQuestionSection = document.getElementById('care-question-section');
@@ -183,6 +190,10 @@ function addEventListeners() {
     imageModalCloseBtn.addEventListener('click', closeImageUploadModal);
     imageUploadForm.addEventListener('submit', handleImageUpload);
     imageFileInput.addEventListener('change', handleImageFileChange);
+
+    // --- NEW ANALYTICS LISTENERS ---
+    viewGalleryBtn.addEventListener('click', () => switchGardenMode('gallery'));
+    viewAnalyticsBtn.addEventListener('click', () => switchGardenMode('analytics'));
 }
 
 // --- NEW IMAGE UPLOAD FUNCTIONS ---
@@ -670,9 +681,13 @@ async function loadGardenPlants() {
     gardenLoader.classList.remove('hidden');
     gardenGallery.innerHTML = '';
     gardenEmptyState.classList.add('hidden');
+    
+    // Reset view to Gallery by default on load
+    switchGardenMode('gallery');
 
     try {
         const savedPlants = await getGardenPlants(currentUser.uid);
+        myGardenCache = savedPlants; // Cache for analytics switching
         
         if (savedPlants.length === 0) {
             gardenEmptyState.classList.remove('hidden');
@@ -685,6 +700,130 @@ async function loadGardenPlants() {
     } finally {
         gardenLoader.classList.add('hidden');
     }
+}
+
+// --- NEW GARDEN ANALYTICS FUNCTIONS ---
+
+function switchGardenMode(mode) {
+    if (mode === 'gallery') {
+        gardenGallery.classList.remove('hidden');
+        gardenAnalytics.classList.add('hidden');
+        viewGalleryBtn.classList.add('bg-green-600', 'text-white');
+        viewGalleryBtn.classList.remove('text-gray-300');
+        viewAnalyticsBtn.classList.remove('bg-green-600', 'text-white');
+        viewAnalyticsBtn.classList.add('text-gray-300');
+    } else {
+        gardenGallery.classList.add('hidden');
+        gardenAnalytics.classList.remove('hidden');
+        viewAnalyticsBtn.classList.add('bg-green-600', 'text-white');
+        viewAnalyticsBtn.classList.remove('text-gray-300');
+        viewGalleryBtn.classList.remove('bg-green-600', 'text-white');
+        viewGalleryBtn.classList.add('text-gray-300');
+        
+        renderAnalyticsView(myGardenCache);
+    }
+}
+
+function renderAnalyticsView(plants) {
+    if(!plants || plants.length === 0) return;
+
+    gardenAnalytics.innerHTML = '';
+
+    // 1. FROST RISK REPORT
+    const frostSensitive = plants.filter(p => {
+        const minTemp = parseInt(p.min_winter_temp_f);
+        return !isNaN(minTemp) && minTemp > 32;
+    });
+
+    const frostHtml = `
+        <div class="glass-panel p-6 rounded-xl border border-red-500/30">
+            <h3 class="text-xl font-bold text-red-400 mb-4 flex items-center">
+                <span class="mr-2">❄️</span> Frost Risk (Need Protection &lt; 32°F)
+            </h3>
+            ${frostSensitive.length > 0 ? `
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    ${frostSensitive.map(p => `
+                        <div class="flex justify-between items-center bg-gray-900/40 p-3 rounded-lg">
+                            <span class="font-medium text-white">${p.common_name}</span>
+                            <span class="text-red-300 text-sm">Min: ${p.min_winter_temp_f}°F</span>
+                        </div>
+                    `).join('')}
+                </div>
+            ` : '<p class="text-gray-400">No highly sensitive plants found.</p>'}
+        </div>
+    `;
+
+    // 2. FERTILIZER GROUPS
+    const fertilizerGroups = {};
+    plants.forEach(p => {
+        const info = (p.fertilizer_info || "").toLowerCase();
+        let group = "General / Other";
+        if (info.includes("acid")) group = "Acid Loving (Azalea/Camellia)";
+        else if (info.includes("palm") || info.includes("citrus")) group = "Palms & Citrus";
+        else if (info.includes("succulent") || info.includes("cactus")) group = "Succulents & Cacti";
+        else if (info.includes("orchid")) group = "Orchids";
+        else if (info.includes("balanced") || info.includes("10-10-10")) group = "Balanced Feeders";
+        
+        if (!fertilizerGroups[group]) fertilizerGroups[group] = [];
+        fertilizerGroups[group].push(p.common_name);
+    });
+
+    const fertilizerHtml = `
+        <div class="glass-panel p-6 rounded-xl border border-green-500/30">
+            <h3 class="text-xl font-bold text-green-400 mb-4 flex items-center">
+                <span class="mr-2">🧪</span> Fertilizer Groups
+            </h3>
+            <div class="space-y-4">
+                ${Object.entries(fertilizerGroups).map(([group, plantNames]) => `
+                    <div>
+                        <h4 class="text-sm uppercase text-gray-400 font-bold mb-2">${group}</h4>
+                        <div class="flex flex-wrap gap-2">
+                            ${plantNames.map(name => `<span class="px-2 py-1 bg-gray-800 rounded text-sm text-gray-200 border border-gray-600">${name}</span>`).join('')}
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+    `;
+
+    // 3. WATERING SCHEDULE
+    const waterGroups = { 'Low': [], 'Medium': [], 'High': [] };
+    plants.forEach(p => {
+        const w = (p.watering || "").toLowerCase();
+        if (w.includes("low") || w.includes("minimum")) waterGroups['Low'].push(p.common_name);
+        else if (w.includes("high") || w.includes("frequent")) waterGroups['High'].push(p.common_name);
+        else waterGroups['Medium'].push(p.common_name);
+    });
+
+    const waterHtml = `
+        <div class="glass-panel p-6 rounded-xl border border-blue-500/30">
+            <h3 class="text-xl font-bold text-blue-400 mb-4 flex items-center">
+                <span class="mr-2">💧</span> Watering Needs
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                    <h4 class="text-blue-200 font-bold mb-3 border-b border-blue-500/30 pb-1">Low / Dry</h4>
+                    <ul class="space-y-1 text-sm text-gray-300">
+                        ${waterGroups['Low'].map(n => `<li>• ${n}</li>`).join('') || '<li class="text-gray-500 italic">None</li>'}
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-blue-300 font-bold mb-3 border-b border-blue-500/30 pb-1">Medium</h4>
+                    <ul class="space-y-1 text-sm text-gray-300">
+                         ${waterGroups['Medium'].map(n => `<li>• ${n}</li>`).join('') || '<li class="text-gray-500 italic">None</li>'}
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-blue-400 font-bold mb-3 border-b border-blue-500/30 pb-1">High / Wet</h4>
+                    <ul class="space-y-1 text-sm text-gray-300">
+                         ${waterGroups['High'].map(n => `<li>• ${n}</li>`).join('') || '<li class="text-gray-500 italic">None</li>'}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    `;
+
+    gardenAnalytics.innerHTML = frostHtml + waterHtml + fertilizerHtml;
 }
 
 // --- Pagination & Gallery Rendering ---
@@ -1097,7 +1236,7 @@ function createPlantDetailHtml(plantData) {
 
     // --- Rich HTML Layout ---
     return `
-        <img src="${get(plantData.image_url)}" alt="${get(plantData.common_name)}" class="w-full rounded-lg shadow-lg mb-8 max-h-[50vh] object-cover">
+        <img src="${get(plantData.image_url)}" alt="${get(plantData.common_name)}" class="max-h-[70vh] w-auto mx-auto rounded-lg shadow-lg mb-8 object-cover">
         
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
             
