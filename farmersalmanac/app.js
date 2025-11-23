@@ -45,8 +45,8 @@ let identifyPlantBtn, imageUploadModal, imageModalCloseBtn, imageUploadForm,
     imageFileInput, imagePreviewContainer, imagePreview, previewPlaceholder,
     uploadStatus, uploadMessage, identifyImageBtn;
 
-// --- NEW Refresh Button Variable ---
-let refreshPlantBtn;
+// --- NEW Refresh & Update Image Variables ---
+let refreshPlantBtn, updateImageBtn, updateImageInput;
 
 // --- App State ---
 let currentSearchQuery = null;
@@ -92,8 +92,11 @@ function main() {
         modalContentContainer = document.getElementById('modal-content-container');
         modalLoader = document.getElementById('modal-loader');
         modalContent = document.getElementById('modal-content');
+        
         savePlantBtn = document.getElementById('save-plant-btn');
-        refreshPlantBtn = document.getElementById('refresh-plant-btn'); // Assigned here
+        refreshPlantBtn = document.getElementById('refresh-plant-btn');
+        updateImageBtn = document.getElementById('update-image-btn');
+        updateImageInput = document.getElementById('update-image-input');
 
         paginationContainer = document.getElementById('pagination-container');
         prevBtn = document.getElementById('prev-btn');
@@ -170,7 +173,11 @@ function addEventListeners() {
         }
     });
     savePlantBtn.addEventListener('click', handleSaveToggle);
-    refreshPlantBtn.addEventListener('click', handleRefreshData); // Listener added
+    refreshPlantBtn.addEventListener('click', handleRefreshData);
+    
+    // Update Photo Listeners
+    updateImageBtn.addEventListener('click', () => updateImageInput.click());
+    updateImageInput.addEventListener('change', handleUpdatePhoto);
 
     // --- NEW IMAGE UPLOAD LISTENERS ---
     identifyPlantBtn.addEventListener('click', openImageUploadModal);
@@ -798,6 +805,45 @@ function mergePlantData(trefleData, geminiData) {
     return finalData;
 }
 
+// --- NEW UPDATE PHOTO FUNCTION ---
+async function handleUpdatePhoto(e) {
+    const file = e.target.files[0];
+    if (!file || !currentModalPlant || !currentUser) return;
+
+    // UI Feedback
+    const originalText = updateImageBtn.textContent;
+    updateImageBtn.disabled = true;
+    updateImageBtn.textContent = 'Uploading...';
+
+    try {
+        // 1. Upload new image
+        const newImageUrl = await uploadPlantImage(file, currentUser.uid);
+        
+        // 2. Update local state
+        currentModalPlant.image_url = newImageUrl;
+
+        // 3. Update Firestore
+        // We ensure we pass the existing docId to update, not create
+        await savePlantToGarden(currentUser.uid, currentModalPlant, currentModalPlant.docId);
+
+        // 4. Update DOM immediately
+        const modalImg = modalContent.querySelector('img');
+        if (modalImg) {
+            modalImg.src = newImageUrl;
+        }
+
+        alert("Photo updated successfully!");
+
+    } catch (error) {
+        console.error("Update photo failed:", error);
+        alert(`Failed to update photo: ${error.message}`);
+    } finally {
+        updateImageBtn.disabled = false;
+        updateImageBtn.textContent = originalText;
+        updateImageInput.value = ''; // Reset input to allow re-selection of same file if needed
+    }
+}
+
 // --- NEW REFRESH FUNCTION ---
 async function handleRefreshData() {
     if (!currentModalPlant || !currentModalPlant.docId || !currentUser) return;
@@ -807,10 +853,6 @@ async function handleRefreshData() {
     refreshPlantBtn.disabled = true;
     refreshPlantBtn.innerHTML = '↻ Updating...';
 
-    // Before wiping content, save the Q&A section element (it's global)
-    // We don't need to explicitly detach it because createPlantDetailHtml generates string,
-    // and we re-append the qaSectionClone afterwards anyway.
-    
     try {
         console.log(`Refreshing data for ${currentModalPlant.slug}...`);
         
@@ -828,8 +870,13 @@ async function handleRefreshData() {
         freshPlantData.docId = currentModalPlant.docId;
         freshPlantData.qa_history = currentModalPlant.qa_history || [];
         
-        // Keep existing custom image if Trefle returns none (e.g., custom upload)
-        if (!freshPlantData.image_url && currentModalPlant.image_url) {
+        // --- PRESERVE CUSTOM IMAGE LOGIC ---
+        // If the OLD image was a custom upload (contains 'firebasestorage'), keep it.
+        // Trefle data would try to overwrite it with the stock image otherwise.
+        if (currentModalPlant.image_url && currentModalPlant.image_url.includes('firebasestorage')) {
+            freshPlantData.image_url = currentModalPlant.image_url;
+        } else if (!freshPlantData.image_url && currentModalPlant.image_url) {
+            // Fallback: If fresh data has NO image, but we had one, keep the old one.
             freshPlantData.image_url = currentModalPlant.image_url;
         }
 
@@ -874,8 +921,9 @@ async function handlePlantCardClick(e) {
     modalTitle.textContent = name || "Loading...";
     modalLoader.querySelector('p').textContent = 'Loading plant details...';
     
-    // Default: Hide Refresh button until we confirm it's a saved plant
+    // Default: Hide Refresh & Update Image buttons until we confirm it's a saved plant
     refreshPlantBtn.classList.add('hidden');
+    updateImageBtn.classList.add('hidden');
 
     // --- Q&A Management START: Extract and prepare the form element ---
     // Clone the static Q&A form element
@@ -916,6 +964,7 @@ async function handlePlantCardClick(e) {
                 updateSaveButtonState(true);
                 savePlantBtn.classList.remove('hidden');
                 refreshPlantBtn.classList.remove('hidden'); // SHOW REFRESH BUTTON
+                updateImageBtn.classList.remove('hidden');  // SHOW UPDATE PHOTO BUTTON
                 
                 // --- Q&A Management: Re-append and set up ---
                 modalContent.appendChild(qaSectionClone);
@@ -936,9 +985,6 @@ async function handlePlantCardClick(e) {
         if (currentUser) {
              updateSaveButtonState(isSaved);
              savePlantBtn.classList.remove('hidden');
-             // If it was legacy saved (isSaved=true), we show refresh? 
-             // Ideally no, because this flow is about to fetch fresh data anyway.
-             // If they save THIS new data, it becomes up to date.
         }
 
         // Get base data from Trefle
@@ -1010,12 +1056,14 @@ async function handleSaveToggle() {
             currentModalPlant.docId = newDocId; 
             updateSaveButtonState(true);
             refreshPlantBtn.classList.remove('hidden'); // Show refresh button after saving
+            updateImageBtn.classList.remove('hidden');  // Show update photo button
         } else {
             await removePlantFromGarden(currentUser.uid, currentModalPlant.slug);
             // Clear docId and reset state after removal
             currentModalPlant.docId = null;
             updateSaveButtonState(false);
-            refreshPlantBtn.classList.add('hidden'); // Hide refresh button after removing
+            refreshPlantBtn.classList.add('hidden'); // Hide refresh button
+            updateImageBtn.classList.add('hidden');  // Hide update photo button
             // If we are in garden view, reload the list to reflect removal
             if (!gardenView.classList.contains('hidden')) {
                 loadGardenPlants();
