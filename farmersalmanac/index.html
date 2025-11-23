@@ -126,6 +126,12 @@
             <div class="flex justify-between items-center p-4 border-b border-gray-700">
                 <h2 id="modal-title" class="text-2xl font-bold text-white truncate mr-4">Plant Details</h2>
                 <div class="flex items-center">
+                    <input type="file" id="update-image-input" class="hidden" accept="image/jpeg, image/png">
+
+                    <button id="update-image-btn" class="hidden mr-2 px-3 py-1 rounded bg-purple-600 text-white font-medium hover:bg-purple-700 transition-colors" title="Upload new photo">
+                        📸 Photo
+                    </button>
+                    
                     <button id="refresh-plant-btn" class="hidden mr-2 px-4 py-1 rounded bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors" title="Update data from AI">
                         ↻ Refresh
                     </button>
