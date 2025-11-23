@@ -732,31 +732,112 @@ function renderAnalyticsView(plants) {
 
     gardenAnalytics.innerHTML = '';
 
-    // 1. FROST RISK REPORT
-    const frostSensitive = plants.filter(p => {
+    // --- 1. TEMPERATURE SENSITIVITY (Updated for Florida Climate) ---
+    
+    // Arrays for different risk categories
+    const coldHardy = [];       // < 32F
+    const coldSensitive = [];   // 32F - 40F
+    const coldIntolerant = [];  // > 40F
+    
+    const heatSensitive = [];   // < 90F (needs afternoon shade/extra water)
+    const heatTolerant = [];    // >= 90F (thrives in FL summer)
+
+    plants.forEach(p => {
         const minTemp = parseInt(p.min_winter_temp_f);
-        return !isNaN(minTemp) && minTemp > 32;
+        const maxTemp = parseInt(p.max_summer_temp_f);
+        
+        const plantObj = { name: p.common_name, slug: p.slug, min: p.min_winter_temp_f, max: p.max_summer_temp_f };
+
+        // Cold Logic
+        if (!isNaN(minTemp)) {
+            if (minTemp < 32) {
+                coldHardy.push(plantObj);
+            } else if (minTemp >= 32 && minTemp <= 40) {
+                coldSensitive.push(plantObj);
+            } else {
+                // > 40 degrees
+                coldIntolerant.push(plantObj);
+            }
+        }
+
+        // Heat Logic
+        if (!isNaN(maxTemp)) {
+            if (maxTemp < 90) {
+                heatSensitive.push(plantObj);
+            } else {
+                heatTolerant.push(plantObj);
+            }
+        }
     });
 
-    const frostHtml = `
-        <div class="glass-panel p-6 rounded-xl border border-red-500/30">
-            <h3 class="text-xl font-bold text-red-400 mb-4 flex items-center">
-                <span class="mr-2">❄️</span> Frost Risk (Need Protection &lt; 32°F)
+    // Helper to generate list items
+    const generateList = (list) => {
+        if (list.length === 0) return '<p class="text-gray-500 italic text-sm">None</p>';
+        return list.map(p => `
+            <div class="analytics-plant-link flex justify-between items-center py-1 border-b border-white/5 last:border-0 cursor-pointer hover:bg-white/5 px-2 rounded transition-colors" data-slug="${p.slug}" data-name="${p.name}">
+                <span class="text-gray-300 hover:text-white text-sm truncate pr-2">${p.name}</span>
+                <span class="text-xs font-mono text-gray-500 whitespace-nowrap">${p.min || p.max}°F</span>
+            </div>
+        `).join('');
+    };
+
+    const tempHtml = `
+        <div class="glass-panel p-6 rounded-xl border border-orange-500/30">
+            <h3 class="text-xl font-bold text-orange-300 mb-6 flex items-center">
+                <span class="mr-2">🌡️</span> Temperature Sensitivity (Florida Guide)
             </h3>
-            ${frostSensitive.length > 0 ? `
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    ${frostSensitive.map(p => `
-                        <div class="analytics-plant-link flex justify-between items-center bg-gray-900/40 p-3 rounded-lg cursor-pointer hover:bg-white/5 transition-colors" data-slug="${p.slug}" data-name="${p.common_name}">
-                            <span class="font-medium text-green-300 underline decoration-dotted hover:text-green-200">${p.common_name}</span>
-                            <span class="text-red-300 text-sm">Min: ${p.min_winter_temp_f}°F</span>
+            
+            <div class="mb-8">
+                <h4 class="text-blue-300 font-bold mb-3 border-b border-blue-500/30 pb-2 flex items-center">
+                    ❄️ Cold Tolerance
+                </h4>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                        <h5 class="text-sm font-semibold text-green-400 mb-2">Hardy (< 32°F)</h5>
+                        <div class="bg-gray-900/30 rounded-lg p-2 max-h-48 overflow-y-auto">
+                            ${generateList(coldHardy)}
                         </div>
-                    `).join('')}
+                    </div>
+                    <div>
+                        <h5 class="text-sm font-semibold text-yellow-400 mb-2">Frost Risk (32-40°F)</h5>
+                        <div class="bg-gray-900/30 rounded-lg p-2 max-h-48 overflow-y-auto border border-yellow-500/20">
+                            ${generateList(coldSensitive)}
+                        </div>
+                    </div>
+                    <div>
+                        <h5 class="text-sm font-semibold text-red-400 mb-2">Cold Intolerant (> 40°F)</h5>
+                        <div class="bg-gray-900/30 rounded-lg p-2 max-h-48 overflow-y-auto border border-red-500/20">
+                            ${generateList(coldIntolerant)}
+                        </div>
+                    </div>
                 </div>
-            ` : '<p class="text-gray-400">No highly sensitive plants found.</p>'}
+            </div>
+
+            <div>
+                <h4 class="text-orange-400 font-bold mb-3 border-b border-orange-500/30 pb-2 flex items-center">
+                    ☀️ Heat Tolerance
+                </h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <h5 class="text-sm font-semibold text-red-300 mb-2">Heat Sensitive (< 90°F)</h5>
+                        <p class="text-xs text-gray-500 mb-2">Needs afternoon shade or extra water.</p>
+                        <div class="bg-gray-900/30 rounded-lg p-2 max-h-48 overflow-y-auto">
+                             ${generateList(heatSensitive)}
+                        </div>
+                    </div>
+                    <div>
+                        <h5 class="text-sm font-semibold text-green-400 mb-2">Heat Tolerant (90°F+)</h5>
+                        <p class="text-xs text-gray-500 mb-2">Thrives in Florida summers.</p>
+                        <div class="bg-gray-900/30 rounded-lg p-2 max-h-48 overflow-y-auto">
+                             ${generateList(heatTolerant)}
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     `;
 
-    // 2. FERTILIZER GROUPS
+    // --- 2. FERTILIZER GROUPS ---
     const fertilizerGroups = {};
     plants.forEach(p => {
         const info = (p.fertilizer_info || "").toLowerCase();
@@ -768,7 +849,6 @@ function renderAnalyticsView(plants) {
         else if (info.includes("balanced") || info.includes("10-10-10")) group = "Balanced Feeders";
         
         if (!fertilizerGroups[group]) fertilizerGroups[group] = [];
-        // CHANGED: Push object instead of string string
         fertilizerGroups[group].push({ name: p.common_name, slug: p.slug });
     });
 
@@ -790,11 +870,10 @@ function renderAnalyticsView(plants) {
         </div>
     `;
 
-    // 3. WATERING SCHEDULE
+    // --- 3. WATERING SCHEDULE ---
     const waterGroups = { 'Low': [], 'Medium': [], 'High': [] };
     plants.forEach(p => {
         const w = (p.watering || "").toLowerCase();
-        // CHANGED: Push object instead of string
         const plantObj = { name: p.common_name, slug: p.slug };
         if (w.includes("low") || w.includes("minimum")) waterGroups['Low'].push(plantObj);
         else if (w.includes("high") || w.includes("frequent")) waterGroups['High'].push(plantObj);
@@ -829,7 +908,7 @@ function renderAnalyticsView(plants) {
         </div>
     `;
 
-    gardenAnalytics.innerHTML = frostHtml + waterHtml + fertilizerHtml;
+    gardenAnalytics.innerHTML = tempHtml + waterHtml + fertilizerHtml;
 }
 
 // --- Pagination & Gallery Rendering ---
