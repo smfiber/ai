@@ -45,6 +45,9 @@ let identifyPlantBtn, imageUploadModal, imageModalCloseBtn, imageUploadForm,
     imageFileInput, imagePreviewContainer, imagePreview, previewPlaceholder,
     uploadStatus, uploadMessage, identifyImageBtn;
 
+// --- NEW Refresh Button Variable ---
+let refreshPlantBtn;
+
 // --- App State ---
 let currentSearchQuery = null;
 let currentPage = 1;
@@ -90,6 +93,7 @@ function main() {
         modalLoader = document.getElementById('modal-loader');
         modalContent = document.getElementById('modal-content');
         savePlantBtn = document.getElementById('save-plant-btn');
+        refreshPlantBtn = document.getElementById('refresh-plant-btn'); // Assigned here
 
         paginationContainer = document.getElementById('pagination-container');
         prevBtn = document.getElementById('prev-btn');
@@ -166,6 +170,7 @@ function addEventListeners() {
         }
     });
     savePlantBtn.addEventListener('click', handleSaveToggle);
+    refreshPlantBtn.addEventListener('click', handleRefreshData); // Listener added
 
     // --- NEW IMAGE UPLOAD LISTENERS ---
     identifyPlantBtn.addEventListener('click', openImageUploadModal);
@@ -793,6 +798,69 @@ function mergePlantData(trefleData, geminiData) {
     return finalData;
 }
 
+// --- NEW REFRESH FUNCTION ---
+async function handleRefreshData() {
+    if (!currentModalPlant || !currentModalPlant.docId || !currentUser) return;
+
+    // UI Feedback
+    const originalText = refreshPlantBtn.innerHTML;
+    refreshPlantBtn.disabled = true;
+    refreshPlantBtn.innerHTML = '↻ Updating...';
+
+    // Before wiping content, save the Q&A section element (it's global)
+    // We don't need to explicitly detach it because createPlantDetailHtml generates string,
+    // and we re-append the qaSectionClone afterwards anyway.
+    
+    try {
+        console.log(`Refreshing data for ${currentModalPlant.slug}...`);
+        
+        // 1. Fetch fresh Trefle Data
+        const trefleData = await getPlantDetails(currentModalPlant.slug);
+        if (!trefleData) throw new Error("Could not fetch fresh Trefle data.");
+
+        // 2. Fetch fresh Gemini Data
+        const geminiData = await fetchAugmentedPlantData(trefleData);
+
+        // 3. Merge
+        const freshPlantData = mergePlantData(trefleData, geminiData);
+
+        // 4. Restore Persistence & User State
+        freshPlantData.docId = currentModalPlant.docId;
+        freshPlantData.qa_history = currentModalPlant.qa_history || [];
+        
+        // Keep existing custom image if Trefle returns none (e.g., custom upload)
+        if (!freshPlantData.image_url && currentModalPlant.image_url) {
+            freshPlantData.image_url = currentModalPlant.image_url;
+        }
+
+        // 5. Update Firestore
+        await savePlantToGarden(currentUser.uid, freshPlantData, freshPlantData.docId);
+
+        // 6. Update Global State
+        currentModalPlant = freshPlantData;
+
+        // 7. Re-render Modal
+        const articleHtml = createPlantDetailHtml(currentModalPlant);
+        modalContent.innerHTML = articleHtml;
+        modalTitle.textContent = currentModalPlant.common_name || currentModalPlant.scientific_name;
+
+        // 8. Re-append Q&A Section
+        const qaSectionClone = careQuestionSection; // Reference to the global element
+        careQuestionSection.classList.remove('hidden'); // Ensure it's visible
+        modalContent.appendChild(qaSectionClone);
+        setupCareQuestionForm(currentModalPlant.qa_history);
+
+        alert("Plant data refreshed and saved successfully!");
+
+    } catch (error) {
+        console.error("Refresh failed:", error);
+        alert(`Failed to refresh data: ${error.message}`);
+    } finally {
+        refreshPlantBtn.disabled = false;
+        refreshPlantBtn.innerHTML = originalText;
+    }
+}
+
 async function handlePlantCardClick(e) {
     const card = e.target.closest('.plant-card');
     if (!card) return;
@@ -806,6 +874,9 @@ async function handlePlantCardClick(e) {
     modalTitle.textContent = name || "Loading...";
     modalLoader.querySelector('p').textContent = 'Loading plant details...';
     
+    // Default: Hide Refresh button until we confirm it's a saved plant
+    refreshPlantBtn.classList.add('hidden');
+
     // --- Q&A Management START: Extract and prepare the form element ---
     // Clone the static Q&A form element
     const qaSectionClone = careQuestionSection.cloneNode(true);
@@ -844,6 +915,7 @@ async function handlePlantCardClick(e) {
                 // Update button to "Remove" state
                 updateSaveButtonState(true);
                 savePlantBtn.classList.remove('hidden');
+                refreshPlantBtn.classList.remove('hidden'); // SHOW REFRESH BUTTON
                 
                 // --- Q&A Management: Re-append and set up ---
                 modalContent.appendChild(qaSectionClone);
@@ -864,6 +936,9 @@ async function handlePlantCardClick(e) {
         if (currentUser) {
              updateSaveButtonState(isSaved);
              savePlantBtn.classList.remove('hidden');
+             // If it was legacy saved (isSaved=true), we show refresh? 
+             // Ideally no, because this flow is about to fetch fresh data anyway.
+             // If they save THIS new data, it becomes up to date.
         }
 
         // Get base data from Trefle
@@ -934,11 +1009,13 @@ async function handleSaveToggle() {
             // Ensure the docId is stored if it was a new save
             currentModalPlant.docId = newDocId; 
             updateSaveButtonState(true);
+            refreshPlantBtn.classList.remove('hidden'); // Show refresh button after saving
         } else {
             await removePlantFromGarden(currentUser.uid, currentModalPlant.slug);
             // Clear docId and reset state after removal
             currentModalPlant.docId = null;
             updateSaveButtonState(false);
+            refreshPlantBtn.classList.add('hidden'); // Hide refresh button after removing
             // If we are in garden view, reload the list to reflect removal
             if (!gardenView.classList.contains('hidden')) {
                 loadGardenPlants();
