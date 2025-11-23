@@ -18,6 +18,9 @@ let collection, addDoc, deleteDoc, doc, query, where, getDocs, setDoc;
 // Storage functions
 let getStorage, ref, uploadBytes, getDownloadURL; 
 
+// --- Cache for Trefle Zone IDs ---
+let floridaZoneId = null;
+
 /**
  * Dynamically imports Firebase modules and initializes the app.
  * This is called by app.js *after* the config is provided.
@@ -275,15 +278,39 @@ export async function getGardenPlants(userId) {
 
 // --- Trefle API Functions ---
 
-// NEW FUNCTION: Native Florida Plants
+// NEW FUNCTION: Native Florida Plants with Dynamic ID Lookup
 export async function getFloridaNativePlants(category, page) {
     if (!configStore.trefleApiKey) {
         console.error("Trefle API Key is missing.");
         return { data: [], links: {}, meta: {} };
     }
 
-    // Base URL for Florida distribution
-    let trefleUrl = `https://trefle.io/api/v1/distributions/florida/plants?page=${page}&token=${configStore.trefleApiKey}`;
+    // 1. Resolve Florida Zone ID if not cached
+    if (!floridaZoneId) {
+        console.log("Resolving Florida Zone ID...");
+        const searchUrl = `https://trefle.io/api/v1/distributions/search?q=florida&token=${configStore.trefleApiKey}`;
+        const proxySearch = `https://corsproxy.io/?${encodeURIComponent(searchUrl)}`;
+        
+        try {
+            const res = await fetch(proxySearch);
+            if (!res.ok) throw new Error("Failed to search distribution zones.");
+            const data = await res.json();
+            
+            // Assume the first result for "Florida" is correct (Standard Trefle behavior)
+            if (data.data && data.data.length > 0) {
+                floridaZoneId = data.data[0].id;
+                console.log(`Florida Zone ID resolved: ${floridaZoneId}`);
+            } else {
+                throw new Error("Florida distribution zone not found.");
+            }
+        } catch (err) {
+            console.error("Error resolving Zone ID:", err);
+            return { data: [], links: {}, meta: {} };
+        }
+    }
+
+    // 2. Build URL using the resolved ID
+    let trefleUrl = `https://trefle.io/api/v1/distributions/${floridaZoneId}/plants?page=${page}&token=${configStore.trefleApiKey}`;
 
     // Map user-friendly category to Trefle 'growth_form'
     switch (category) {
