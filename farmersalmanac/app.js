@@ -735,8 +735,9 @@ function renderPlantGallery(plants, container) {
         card.dataset.slug = plant.slug;
         card.dataset.name = plant.common_name;
 
+        // UPDATED IMAGE CLASS: aspect-[3/4] for portrait photos
         card.innerHTML = `
-            <img src="${plant.image_url}" alt="${plant.common_name}" class="w-full h-48 object-cover">
+            <img src="${plant.image_url}" alt="${plant.common_name}" class="w-full aspect-[3/4] object-cover">
             <div class="p-4">
                 <h3 class="text-xl font-semibold text-white drop-shadow-sm">${plant.common_name}</h3>
                 <p class="text-gray-300 text-sm italic">${plant.scientific_name}</p>
