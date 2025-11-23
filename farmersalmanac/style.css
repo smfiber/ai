@@ -8,8 +8,34 @@
     display: none !important;
 }
 
-body {
-    /* Base font settings handled by Tailwind */
+/* --- New Immersive Background --- */
+.bg-botanical {
+    /* Dark moody fern background from Unsplash with a heavy dark overlay for text readability */
+    background-image: 
+        linear-gradient(to bottom, rgba(17, 24, 39, 0.85), rgba(17, 24, 39, 0.90)),
+        url('https://images.unsplash.com/photo-1483794344563-d27a8d18014e?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+}
+
+/* --- Glassmorphism Utility --- */
+.glass-panel {
+    background: rgba(31, 41, 55, 0.7); /* Gray-800 with opacity */
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px); /* Safari support */
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* --- Hover Glow Effect --- */
+.hover-glow {
+    transition: all 0.3s ease;
+}
+
+.hover-glow:hover {
+    box-shadow: 0 0 20px rgba(74, 222, 128, 0.3); /* Green-400 soft glow */
+    border-color: rgba(74, 222, 128, 0.5);
 }
 
 /* --- Loading Spinner --- */
@@ -39,7 +65,7 @@ body {
 }
 
 #modal-content-container::-webkit-scrollbar-track {
-    background: theme('colors.gray.800'); 
+    background: rgba(31, 41, 55, 0.5); 
 }
 
 #modal-content-container::-webkit-scrollbar-thumb {
