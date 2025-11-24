@@ -102,18 +102,18 @@ const FLORIDA_COLLECTIONS = [
 // --- Data: Edible Collections Definitions ---
 const EDIBLE_COLLECTIONS = [
     {
-        id: 'vegetables',
-        title: 'Vegetable Patch',
-        subtitle: 'Crops & Kitchen Staples',
-        image: 'https://images.unsplash.com/photo-1595855709915-4deb3be88406?auto=format&fit=crop&w=600&q=80',
-        filter: 'vegetables'
+        id: 'peppers',
+        title: 'Peppers',
+        subtitle: 'Hot & Sweet Varieties',
+        image: 'https://images.unsplash.com/photo-1588252303782-cb80119abd6d?auto=format&fit=crop&w=600&q=80',
+        query: 'pepper'
     },
     {
-        id: 'edible',
-        title: 'All Edibles',
-        subtitle: 'Fruits, Herbs & Foraging',
-        image: 'https://images.unsplash.com/photo-1615485290382-441e4d049cb5?auto=format&fit=crop&w=600&q=80',
-        filter: 'edible'
+        id: 'lettuce',
+        title: 'Lettuce',
+        subtitle: 'Crisp & Fresh Greens',
+        image: 'https://images.unsplash.com/photo-1622206151226-18ca2c9ab4a1?auto=format&fit=crop&w=600&q=80',
+        query: 'lettuce'
     }
 ];
 
@@ -297,7 +297,7 @@ function renderCollections() {
 
 function renderEdibleCollections() {
     vegetablesGrid.innerHTML = EDIBLE_COLLECTIONS.map(col => `
-        <div class="collection-card glass-panel rounded-xl overflow-hidden cursor-pointer hover:scale-105 hover-glow transition-transform group" data-filter="${col.filter}" data-title="${col.title}">
+        <div class="collection-card glass-panel rounded-xl overflow-hidden cursor-pointer hover:scale-105 hover-glow transition-transform group" data-query="${col.query}" data-title="${col.title}">
             <div class="h-32 w-full overflow-hidden relative">
                 <div class="absolute inset-0 bg-black/30 group-hover:bg-black/10 transition-colors z-10"></div>
                 <img src="${col.image}" alt="${col.title}" class="w-full h-full object-cover">
@@ -315,12 +315,20 @@ function handleCollectionCardClick(e) {
     if (!card) return;
 
     const filter = card.dataset.filter;
+    const query = card.dataset.query;
     const title = card.dataset.title;
 
     // 1. Update State
-    currentCollectionCategory = filter;
-    currentSearchQuery = null; // Clear search query to avoid confusion
     currentPage = 1;
+
+    // Check if this is a Query-based collection (e.g. Peppers) or a Filter-based one (e.g. Trees)
+    if (query) {
+        currentSearchQuery = query;
+        currentCollectionCategory = null; // Clear category so api.js uses the search function
+    } else {
+        currentCollectionCategory = filter;
+        currentSearchQuery = null; // Clear search query to avoid confusion
+    }
 
     // 2. Update UI
     collectionsContainer.classList.add('hidden');
@@ -1030,7 +1038,7 @@ function renderPagination(links, meta) {
     }
 
     const totalPlants = meta.total;
-    const perPage = 20;
+    const perPage = 18; // UPDATED to 18
     const totalPages = Math.ceil(totalPlants / perPage);
 
     pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
