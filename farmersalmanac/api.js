@@ -344,7 +344,7 @@ export async function getEdiblePlants(category, page) {
     }
 
     // Fetch 50 items to buffer for filtering, then slice to 18
-    let trefleUrl = `https://trefle.io/api/v1/species?page=${page}&limit=50&token=${configStore.trefleApiKey}`;
+    let trefleUrl = `https://trefle.io/api/v1/species?page=${page}&limit=54&token=${configStore.trefleApiKey}`;
 
     // Append filters
     if (category === 'vegetables') {
@@ -402,7 +402,7 @@ export async function getFloridaNativePlants(category, page) {
 
     // 2. Build URL using the resolved ID
     // Fetch 50 to buffer
-    let trefleUrl = `https://trefle.io/api/v1/distributions/${floridaZoneId}/plants?page=${page}&limit=50&token=${configStore.trefleApiKey}`;
+    let trefleUrl = `https://trefle.io/api/v1/distributions/${floridaZoneId}/plants?page=${page}&limit=54&token=${configStore.trefleApiKey}`;
 
     switch (category) {
         case 'trees':
@@ -449,7 +449,7 @@ export async function getNativePlants(speciesType, page) {
     }
     
     // Fetch 50 to buffer
-    const trefleUrl = `https://trefle.io/api/v1/species?filter[growth_form]=${speciesType}&page=${page}&limit=50&token=${configStore.trefleApiKey}`;
+    const trefleUrl = `https://trefle.io/api/v1/species?filter[growth_form]=${speciesType}&page=${page}&limit=54&token=${configStore.trefleApiKey}`;
     
     const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(trefleUrl)}`;
 
@@ -476,7 +476,7 @@ export async function searchNativePlants(query, page) {
     }
 
     // Fetch 50 to buffer
-    const trefleUrl = `https://trefle.io/api/v1/species/search?q=${query}&page=${page}&limit=50&token=${configStore.trefleApiKey}`;
+    const trefleUrl = `https://trefle.io/api/v1/species/search?q=${query}&page=${page}&limit=54&token=${configStore.trefleApiKey}`;
     
     const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(trefleUrl)}`;
 
