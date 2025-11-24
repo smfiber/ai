@@ -268,8 +268,9 @@ function addEventListeners() {
     plantGallery.addEventListener('click', handlePlantCardClick);
     gardenGallery.addEventListener('click', handlePlantCardClick);
     collectionsGrid.addEventListener('click', handleCollectionCardClick);
-    vegetablesGrid.addEventListener('click', handleCollectionCardClick); 
-    vegetablesGrid.addEventListener('click', handleEdibleActionClick); // NEW for CRUD buttons
+    
+    // UPDATED: Single handler for vegetables grid to manage priorities (Add vs Edit vs View)
+    vegetablesGrid.addEventListener('click', handleVegetablesGridClick); 
 
     // Analytics clicks
     gardenAnalytics.addEventListener('click', handleAnalyticsItemClick);
@@ -374,12 +375,44 @@ function renderEdibleCollections() {
     vegetablesGrid.innerHTML = defaultsHtml + customHtml + addBtnHtml;
 }
 
-function handleCollectionCardClick(e) {
-    // Prevent triggering if clicking edit/delete buttons
-    if (e.target.closest('.edit-collection-btn') || e.target.closest('.delete-collection-btn') || e.target.closest('#add-collection-btn')) {
+// UPDATED: Consolidated handler to manage priorities
+function handleVegetablesGridClick(e) {
+    // 1. Check for Add Collection Button FIRST
+    if (e.target.closest('#add-collection-btn')) {
+        openCollectionModal();
         return;
     }
 
+    // 2. Check for Edit Collection Button
+    const editBtn = e.target.closest('.edit-collection-btn');
+    if (editBtn) {
+        e.stopPropagation(); 
+        const { id, title, query, image } = editBtn.dataset;
+        openCollectionModal({ id, title, query, image });
+        return;
+    }
+
+    // 3. Check for Delete Collection Button
+    const deleteBtn = e.target.closest('.delete-collection-btn');
+    if (deleteBtn) {
+        e.stopPropagation();
+        const { id, title } = deleteBtn.dataset;
+        if (confirm(`Are you sure you want to delete the collection "${title}"?`)) {
+            deleteUserCollection(currentUser.uid, id).then(() => {
+                loadUserCollections(); 
+            });
+        }
+        return;
+    }
+
+    // 4. Finally, Check if it's a Card Click (Navigation)
+    // Only proceed if we haven't clicked one of the buttons above
+    if (e.target.closest('.collection-card')) {
+        handleCollectionCardClick(e);
+    }
+}
+
+function handleCollectionCardClick(e) {
     const card = e.target.closest('.collection-card');
     if (!card) return;
 
@@ -411,36 +444,6 @@ function handleCollectionCardClick(e) {
 
 
 // --- CRUD FUNCTIONS FOR COLLECTIONS ---
-
-function handleEdibleActionClick(e) {
-    // Handle Add Button
-    if (e.target.closest('#add-collection-btn')) {
-        openCollectionModal();
-        return;
-    }
-
-    // Handle Edit Button
-    const editBtn = e.target.closest('.edit-collection-btn');
-    if (editBtn) {
-        e.stopPropagation(); 
-        const { id, title, query, image } = editBtn.dataset;
-        openCollectionModal({ id, title, query, image });
-        return;
-    }
-
-    // Handle Delete Button
-    const deleteBtn = e.target.closest('.delete-collection-btn');
-    if (deleteBtn) {
-        e.stopPropagation();
-        const { id, title } = deleteBtn.dataset;
-        if (confirm(`Are you sure you want to delete the collection "${title}"?`)) {
-            deleteUserCollection(currentUser.uid, id).then(() => {
-                loadUserCollections(); 
-            });
-        }
-        return;
-    }
-}
 
 function openCollectionModal(data = null) {
     collectionModal.classList.remove('hidden');
