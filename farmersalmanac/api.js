@@ -278,7 +278,40 @@ export async function getGardenPlants(userId) {
 
 // --- Trefle API Functions ---
 
-// NEW FUNCTION: Native Florida Plants with Dynamic ID Lookup
+// NEW FUNCTION: Edible & Vegetable Plants (Global, not limited to Florida)
+export async function getEdiblePlants(category, page) {
+    if (!configStore.trefleApiKey) {
+        console.error("Trefle API Key is missing.");
+        return { data: [], links: {}, meta: {} };
+    }
+
+    // Base Species URL
+    let trefleUrl = `https://trefle.io/api/v1/species?page=${page}&token=${configStore.trefleApiKey}`;
+
+    // Append filters
+    if (category === 'vegetables') {
+        trefleUrl += '&filter[vegetable]=true';
+    } else if (category === 'edible') {
+        trefleUrl += '&filter[edible]=true';
+    }
+    
+    const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(trefleUrl)}`;
+
+    try {
+        const response = await fetch(proxyUrl);
+        if (!response.ok) {
+            throw new Error(`Trefle API error (via proxy): ${response.statusText}`);
+        }
+        const data = await response.json();
+        const filteredData = data.data.filter(plant => plant.common_name && plant.image_url);
+        
+        return { data: filteredData, links: data.links, meta: data.meta };
+    } catch (error) {
+        console.error("Error fetching edible plants:", error);
+        return { data: [], links: {}, meta: {} };
+    }
+}
+
 export async function getFloridaNativePlants(category, page) {
     if (!configStore.trefleApiKey) {
         console.error("Trefle API Key is missing.");
@@ -296,7 +329,6 @@ export async function getFloridaNativePlants(category, page) {
             if (!res.ok) throw new Error("Failed to search distribution zones.");
             const data = await res.json();
             
-            // Assume the first result for "Florida" is correct (Standard Trefle behavior)
             if (data.data && data.data.length > 0) {
                 floridaZoneId = data.data[0].id;
                 console.log(`Florida Zone ID resolved: ${floridaZoneId}`);
@@ -312,7 +344,6 @@ export async function getFloridaNativePlants(category, page) {
     // 2. Build URL using the resolved ID
     let trefleUrl = `https://trefle.io/api/v1/distributions/${floridaZoneId}/plants?page=${page}&token=${configStore.trefleApiKey}`;
 
-    // Map user-friendly category to Trefle 'growth_form'
     switch (category) {
         case 'trees':
             trefleUrl += '&filter[growth_form]=Tree';
@@ -321,7 +352,6 @@ export async function getFloridaNativePlants(category, page) {
             trefleUrl += '&filter[growth_form]=Shrub';
             break;
         case 'wildflowers':
-            // 'Forb' is the botanical term for herbaceous flowering plants
             trefleUrl += '&filter[growth_form]=Forb'; 
             break;
         case 'ferns':
@@ -331,11 +361,9 @@ export async function getFloridaNativePlants(category, page) {
             trefleUrl += '&filter[growth_form]=Vine';
             break;
         default:
-            // If 'all' or unknown, no extra filter is applied
             break;
     }
     
-    // Use CORS Proxy
     const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(trefleUrl)}`;
 
     try {
@@ -344,7 +372,6 @@ export async function getFloridaNativePlants(category, page) {
             throw new Error(`Trefle API error (via proxy): ${response.statusText}`);
         }
         const data = await response.json();
-        // Filter out results without images/names for a better UI experience
         const filteredData = data.data.filter(plant => plant.common_name && plant.image_url);
         
         return { data: filteredData, links: data.links, meta: data.meta };
@@ -529,11 +556,6 @@ export async function fetchAugmentedPlantData(plantData) {
     }
 }
 
-/**
- * Identifies a plant from an image URL using Gemini Vision.
- * @param {string} imageUrl - Public URL of the image to analyze.
- * @returns {Promise<{scientific_name: string, common_name: string}|null>} Structured identification data.
- */
 export async function fetchImageIdentification(imageUrl) {
     if (!configStore.geminiApiKey) {
         console.error("Gemini API Key is missing. Skipping image identification.");
@@ -541,14 +563,12 @@ export async function fetchImageIdentification(imageUrl) {
     }
 
     try {
-        // Fetch the image from the URL and convert to Base64
         const imageResponse = await fetch(imageUrl);
         if (!imageResponse.ok) {
             throw new Error(`Failed to fetch image from storage: ${imageResponse.statusText}`);
         }
         const blob = await imageResponse.blob();
         
-        // Convert Blob to Base64 string (strip the data:image/jpeg;base64, prefix)
         const base64Data = await new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onloadend = () => {
@@ -579,7 +599,6 @@ export async function fetchImageIdentification(imageUrl) {
                     parts: [{ text: prompt }]
                 },
                 {
-                    // Image part using Base64 data
                     parts: [{
                         inlineData: {
                             mimeType: blob.type || 'image/jpeg', 
