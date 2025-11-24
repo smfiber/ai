@@ -70,6 +70,7 @@ let collectionModal, collectionModalTitle, collectionModalCloseBtn, collectionFo
 // --- App State ---
 let currentSearchQuery = null;
 let currentCollectionCategory = null; // Track active collection
+let isEdibleFilterActive = false; // NEW: Track if we should filter by vegetable
 let currentPage = 1;
 let currentLinks = null;
 let currentMeta = null;
@@ -452,8 +453,16 @@ function handleCollectionCardClick(e) {
     const filter = card.dataset.filter;
     const query = card.dataset.query;
     const title = card.dataset.title;
+    
+    // NEW: Check if this click originated from the vegetables grid
+    // If so, we enable the vegetable filter for the API search
+    if (card.closest('#vegetables-grid')) {
+        isEdibleFilterActive = true;
+    } else {
+        isEdibleFilterActive = false;
+    }
 
-    console.log(`Navigating to collection: ${title} (Query: ${query}, Filter: ${filter})`);
+    console.log(`Navigating to collection: ${title} (Query: ${query}, Filter: ${filter}, Edible: ${isEdibleFilterActive})`);
 
     // 1. Update State
     currentPage = 1;
@@ -486,6 +495,7 @@ function returnToCollections() {
     plantGallery.innerHTML = ''; // Clear the gallery
     currentSearchQuery = null;
     currentCollectionCategory = null;
+    isEdibleFilterActive = false; // Reset filter
 }
 
 
@@ -669,6 +679,7 @@ function handleSearchSubmit(e) {
     // Reset states
     currentSearchQuery = query;
     currentCollectionCategory = null; 
+    isEdibleFilterActive = false; // Reset filter for global search
     currentPage = 1;
     currentLinks = null;
     currentMeta = null;
@@ -703,8 +714,10 @@ async function fetchAndRenderPlants() {
             results = await getFloridaNativePlants(currentCollectionCategory, currentPage);
 
         } else if (currentSearchQuery) {
-            console.log(`Searching: ${currentSearchQuery}, page ${currentPage}`);
-            results = await searchNativePlants(currentSearchQuery, currentPage);
+            console.log(`Searching: ${currentSearchQuery}, page ${currentPage}, EdibleFilter: ${isEdibleFilterActive}`);
+            // NEW: Apply filter if active
+            const filters = isEdibleFilterActive ? { vegetable: true } : {};
+            results = await searchNativePlants(currentSearchQuery, currentPage, filters);
         } else {
             plantGallery.innerHTML = '<div class="col-span-full text-center py-10"><p class="text-gray-300">Select a collection or search to view plants.</p></div>';
             loader.classList.add('hidden');
