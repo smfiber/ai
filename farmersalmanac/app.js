@@ -337,21 +337,33 @@ function renderCollections() {
 }
 
 function renderEdibleCollections() {
-    // 1. Render hardcoded defaults
-    const defaultsHtml = EDIBLE_COLLECTIONS.map(col => `
-        <div class="collection-card glass-panel rounded-xl overflow-hidden cursor-pointer hover:scale-105 hover-glow transition-transform group" data-query="${col.query}" data-title="${col.title}">
+    // 1. Separate custom collections that OVERRIDE defaults from purely new ones.
+    const customIds = new Set(customCollections.map(c => c.id));
+    
+    // 2. Render Defaults (Only those NOT overridden by a custom collection with the same ID)
+    const defaultsHtml = EDIBLE_COLLECTIONS.filter(def => !customIds.has(def.id)).map(col => `
+        <div class="collection-card glass-panel rounded-xl overflow-hidden cursor-pointer hover:scale-105 hover-glow transition-transform group relative" data-query="${col.query}" data-title="${col.title}">
             <div class="h-32 w-full overflow-hidden relative">
                 <div class="absolute inset-0 bg-black/30 group-hover:bg-black/10 transition-colors z-10"></div>
                 <img src="${col.image}" alt="${col.title}" class="w-full h-full object-cover">
+                
+                ${currentUser ? `
+                <div class="absolute top-2 right-2 z-20 flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                     <button class="edit-collection-btn bg-blue-600 p-1.5 rounded text-white hover:bg-blue-500" 
+                        data-id="${col.id}" data-title="${col.title}" data-query="${col.query}" data-image="${col.image}" title="Customize this collection">
+                        ✎
+                     </button>
+                </div>
+                ` : ''}
             </div>
             <div class="p-4">
                 <h3 class="text-lg font-bold text-white group-hover:text-green-400 transition-colors">${col.title}</h3>
-                <p class="text-sm text-gray-400">${col.subtitle}</p>
+                <p class="text-sm text-gray-400">${col.subtitle} (Default)</p>
             </div>
         </div>
     `).join('');
 
-    // 2. Render User Custom Collections
+    // 3. Render User Custom Collections (This includes "overridden" defaults)
     const customHtml = customCollections.map(col => `
         <div class="collection-card glass-panel rounded-xl overflow-hidden cursor-pointer hover:scale-105 hover-glow transition-transform group relative" data-query="${col.query}" data-title="${col.title}">
             <div class="h-32 w-full overflow-hidden relative">
@@ -376,7 +388,7 @@ function renderEdibleCollections() {
         </div>
     `).join('');
 
-    // 3. Render Add New Button (If User Logged In)
+    // 4. Render Add New Button (If User Logged In)
     let addBtnHtml = '';
     if (currentUser) {
         addBtnHtml = `
