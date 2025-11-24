@@ -24,7 +24,11 @@ import {
     fetchImageIdentification,
     // Collection Functions
     getFloridaNativePlants,
-    getEdiblePlants
+    getEdiblePlants,
+    // NEW Collection CRUD
+    saveUserCollection,
+    getUserCollections,
+    deleteUserCollection
 } from './api.js';
 
 // --- Global DOM Element Variables ---
@@ -55,7 +59,11 @@ let viewGalleryBtn, viewAnalyticsBtn, gardenAnalytics;
 
 // --- Collections Variables ---
 let collectionsContainer, collectionsGrid, galleryHeader, galleryTitle, backToCollectionsBtn;
-let vegetablesContainer, vegetablesGrid; // NEW
+let vegetablesContainer, vegetablesGrid; 
+
+// --- NEW Collection CRUD DOM Variables ---
+let collectionModal, collectionModalTitle, collectionModalCloseBtn, collectionForm, 
+    collectionIdInput, collectionTitleInput, collectionQueryInput, collectionImageInput, saveCollectionBtn;
 
 // --- App State ---
 let currentSearchQuery = null;
@@ -66,6 +74,7 @@ let currentMeta = null;
 let currentUser = null; // Track the logged-in user
 let currentModalPlant = null; // Track data for the currently open modal
 let myGardenCache = []; // Store garden plants for analytics switching
+let customCollections = []; // Store user-created collections
 
 // --- Data: Florida Collections Definitions ---
 const FLORIDA_COLLECTIONS = [
@@ -148,7 +157,7 @@ function main() {
         collectionsContainer = document.getElementById('collections-container');
         collectionsGrid = document.getElementById('collections-grid');
         
-        // NEW: Edible View Elements
+        // Edible View Elements
         vegetablesContainer = document.getElementById('vegetables-container');
         vegetablesGrid = document.getElementById('vegetables-grid');
 
@@ -209,6 +218,17 @@ function main() {
         uploadMessage = document.getElementById('upload-message');
         identifyImageBtn = document.getElementById('identify-image-btn');
 
+        // --- NEW Collection CRUD DOM Assignments ---
+        collectionModal = document.getElementById('collection-modal');
+        collectionModalTitle = document.getElementById('collection-modal-title');
+        collectionModalCloseBtn = document.getElementById('collection-modal-close-btn');
+        collectionForm = document.getElementById('collection-form');
+        collectionIdInput = document.getElementById('collection-id');
+        collectionTitleInput = document.getElementById('collection-title');
+        collectionQueryInput = document.getElementById('collection-query');
+        collectionImageInput = document.getElementById('collection-image');
+        saveCollectionBtn = document.getElementById('save-collection-btn');
+
 
         // 3. Add all event listeners (Initial setup)
         addEventListeners();
@@ -218,7 +238,7 @@ function main() {
         
         // Initial State: Render Collections (hidden until keys are set, but good to have ready)
         renderCollections();
-        renderEdibleCollections(); // NEW
+        renderEdibleCollections(); 
         
         // Initial setup for the Q&A section which is loaded but not active
         careQuestionSection.classList.add('hidden');
@@ -248,7 +268,8 @@ function addEventListeners() {
     plantGallery.addEventListener('click', handlePlantCardClick);
     gardenGallery.addEventListener('click', handlePlantCardClick);
     collectionsGrid.addEventListener('click', handleCollectionCardClick);
-    vegetablesGrid.addEventListener('click', handleCollectionCardClick); // NEW: Reusing the same handler
+    vegetablesGrid.addEventListener('click', handleCollectionCardClick); 
+    vegetablesGrid.addEventListener('click', handleEdibleActionClick); // NEW for CRUD buttons
 
     // Analytics clicks
     gardenAnalytics.addEventListener('click', handleAnalyticsItemClick);
@@ -276,6 +297,10 @@ function addEventListeners() {
     // --- NEW ANALYTICS LISTENERS ---
     viewGalleryBtn.addEventListener('click', () => switchGardenMode('gallery'));
     viewAnalyticsBtn.addEventListener('click', () => switchGardenMode('analytics'));
+
+    // --- NEW COLLECTION CRUD LISTENERS ---
+    collectionModalCloseBtn.addEventListener('click', closeCollectionModal);
+    collectionForm.addEventListener('submit', handleSaveCollection);
 }
 
 // --- COLLECTIONS FUNCTIONS ---
@@ -296,7 +321,8 @@ function renderCollections() {
 }
 
 function renderEdibleCollections() {
-    vegetablesGrid.innerHTML = EDIBLE_COLLECTIONS.map(col => `
+    // 1. Render hardcoded defaults
+    const defaultsHtml = EDIBLE_COLLECTIONS.map(col => `
         <div class="collection-card glass-panel rounded-xl overflow-hidden cursor-pointer hover:scale-105 hover-glow transition-transform group" data-query="${col.query}" data-title="${col.title}">
             <div class="h-32 w-full overflow-hidden relative">
                 <div class="absolute inset-0 bg-black/30 group-hover:bg-black/10 transition-colors z-10"></div>
@@ -308,9 +334,52 @@ function renderEdibleCollections() {
             </div>
         </div>
     `).join('');
+
+    // 2. Render User Custom Collections
+    const customHtml = customCollections.map(col => `
+        <div class="collection-card glass-panel rounded-xl overflow-hidden cursor-pointer hover:scale-105 hover-glow transition-transform group relative" data-query="${col.query}" data-title="${col.title}">
+            <div class="h-32 w-full overflow-hidden relative">
+                <div class="absolute inset-0 bg-black/30 group-hover:bg-black/10 transition-colors z-10"></div>
+                <img src="${col.image}" alt="${col.title}" class="w-full h-full object-cover">
+                
+                <div class="absolute top-2 right-2 z-20 flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                     <button class="edit-collection-btn bg-blue-600 p-1.5 rounded text-white hover:bg-blue-500" 
+                        data-id="${col.id}" data-title="${col.title}" data-query="${col.query}" data-image="${col.image}">
+                        ✎
+                     </button>
+                     <button class="delete-collection-btn bg-red-600 p-1.5 rounded text-white hover:bg-red-500" 
+                        data-id="${col.id}" data-title="${col.title}">
+                        ×
+                     </button>
+                </div>
+            </div>
+            <div class="p-4">
+                <h3 class="text-lg font-bold text-white group-hover:text-green-400 transition-colors">${col.title}</h3>
+                <p class="text-sm text-gray-400">Custom Collection</p>
+            </div>
+        </div>
+    `).join('');
+
+    // 3. Render Add New Button (If User Logged In)
+    let addBtnHtml = '';
+    if (currentUser) {
+        addBtnHtml = `
+            <div id="add-collection-btn" class="glass-panel rounded-xl overflow-hidden cursor-pointer hover:scale-105 hover-glow transition-transform flex flex-col items-center justify-center min-h-[200px] border-2 border-dashed border-gray-600 hover:border-green-500 group">
+                <div class="text-5xl text-gray-600 group-hover:text-green-500 mb-2 transition-colors">+</div>
+                <span class="text-gray-400 font-medium group-hover:text-green-400 transition-colors">Add Collection</span>
+            </div>
+        `;
+    }
+
+    vegetablesGrid.innerHTML = defaultsHtml + customHtml + addBtnHtml;
 }
 
 function handleCollectionCardClick(e) {
+    // Prevent triggering if clicking edit/delete buttons
+    if (e.target.closest('.edit-collection-btn') || e.target.closest('.delete-collection-btn') || e.target.closest('#add-collection-btn')) {
+        return;
+    }
+
     const card = e.target.closest('.collection-card');
     if (!card) return;
 
@@ -324,15 +393,15 @@ function handleCollectionCardClick(e) {
     // Check if this is a Query-based collection (e.g. Peppers) or a Filter-based one (e.g. Trees)
     if (query) {
         currentSearchQuery = query;
-        currentCollectionCategory = null; // Clear category so api.js uses the search function
+        currentCollectionCategory = null; 
     } else {
         currentCollectionCategory = filter;
-        currentSearchQuery = null; // Clear search query to avoid confusion
+        currentSearchQuery = null; 
     }
 
     // 2. Update UI
     collectionsContainer.classList.add('hidden');
-    vegetablesContainer.classList.add('hidden'); // NEW
+    vegetablesContainer.classList.add('hidden'); 
     galleryHeader.classList.remove('hidden');
     galleryTitle.textContent = title;
     
@@ -340,20 +409,101 @@ function handleCollectionCardClick(e) {
     fetchAndRenderPlants();
 }
 
-function returnToCollections() {
-    // Clear State
-    currentCollectionCategory = null;
-    currentSearchQuery = null;
-    currentPage = 1;
-    searchInput.value = '';
 
-    // Update UI
-    galleryHeader.classList.add('hidden');
-    paginationContainer.classList.add('hidden');
-    plantGallery.innerHTML = ''; // Clear gallery
-    
-    collectionsContainer.classList.remove('hidden');
-    vegetablesContainer.classList.remove('hidden'); // NEW
+// --- CRUD FUNCTIONS FOR COLLECTIONS ---
+
+function handleEdibleActionClick(e) {
+    // Handle Add Button
+    if (e.target.closest('#add-collection-btn')) {
+        openCollectionModal();
+        return;
+    }
+
+    // Handle Edit Button
+    const editBtn = e.target.closest('.edit-collection-btn');
+    if (editBtn) {
+        e.stopPropagation(); 
+        const { id, title, query, image } = editBtn.dataset;
+        openCollectionModal({ id, title, query, image });
+        return;
+    }
+
+    // Handle Delete Button
+    const deleteBtn = e.target.closest('.delete-collection-btn');
+    if (deleteBtn) {
+        e.stopPropagation();
+        const { id, title } = deleteBtn.dataset;
+        if (confirm(`Are you sure you want to delete the collection "${title}"?`)) {
+            deleteUserCollection(currentUser.uid, id).then(() => {
+                loadUserCollections(); 
+            });
+        }
+        return;
+    }
+}
+
+function openCollectionModal(data = null) {
+    collectionModal.classList.remove('hidden');
+    if (data) {
+        // Edit Mode
+        collectionModalTitle.textContent = 'Edit Collection';
+        collectionIdInput.value = data.id;
+        collectionTitleInput.value = data.title;
+        collectionQueryInput.value = data.query;
+        collectionImageInput.value = data.image;
+    } else {
+        // Create Mode
+        collectionModalTitle.textContent = 'Add Collection';
+        collectionForm.reset();
+        collectionIdInput.value = '';
+    }
+}
+
+function closeCollectionModal() {
+    collectionModal.classList.add('hidden');
+}
+
+async function handleSaveCollection(e) {
+    e.preventDefault();
+    if (!currentUser) return;
+
+    const submitBtn = saveCollectionBtn;
+    const originalText = submitBtn.textContent;
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Saving...';
+
+    const data = {
+        id: collectionIdInput.value || null,
+        title: collectionTitleInput.value.trim(),
+        query: collectionQueryInput.value.trim(),
+        image: collectionImageInput.value.trim()
+    };
+
+    try {
+        await saveUserCollection(currentUser.uid, data);
+        closeCollectionModal();
+        await loadUserCollections(); 
+    } catch (error) {
+        console.error("Failed to save collection:", error);
+        alert("Error saving collection.");
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+    }
+}
+
+async function loadUserCollections() {
+    if (!currentUser) {
+        customCollections = [];
+    } else {
+        try {
+            customCollections = await getUserCollections(currentUser.uid);
+        } catch (error) {
+            console.error("Error loading user collections:", error);
+            customCollections = [];
+        }
+    }
+    renderEdibleCollections();
 }
 
 
@@ -402,7 +552,7 @@ async function handleApiKeySubmit(e) {
         
         // Show collections immediately after login
         collectionsContainer.classList.remove('hidden');
-        vegetablesContainer.classList.remove('hidden'); // NEW
+        vegetablesContainer.classList.remove('hidden'); 
 
     } catch (error) {
         console.error("Error during API key submission:", error);
@@ -429,7 +579,7 @@ function handleSearchSubmit(e) {
 
     // UI Updates for Search Mode
     collectionsContainer.classList.add('hidden');
-    vegetablesContainer.classList.add('hidden'); // NEW
+    vegetablesContainer.classList.add('hidden'); 
     galleryHeader.classList.remove('hidden');
     galleryTitle.textContent = `Search Results: "${query}"`;
     backToCollectionsBtn.classList.remove('hidden'); 
@@ -486,12 +636,12 @@ function showDiscoveryView() {
     // Logic to decide what to show in discovery view
     if (!currentSearchQuery && !currentCollectionCategory) {
         collectionsContainer.classList.remove('hidden');
-        vegetablesContainer.classList.remove('hidden'); // NEW
+        vegetablesContainer.classList.remove('hidden'); 
         galleryHeader.classList.add('hidden');
         plantGallery.innerHTML = ''; 
     } else {
         collectionsContainer.classList.add('hidden');
-        vegetablesContainer.classList.add('hidden'); // NEW
+        vegetablesContainer.classList.add('hidden'); 
         galleryHeader.classList.remove('hidden');
     }
 }
@@ -532,6 +682,8 @@ function updateAuthState(user) {
         userPhoto.src = user.photoURL;
         myGardenBtn.classList.remove('hidden');
         
+        loadUserCollections(); // Load custom collections on login
+
         if (plantDetailModal.classList.contains('hidden') === false) {
              careQuestionInput.disabled = false;
              careQuestionSubmit.disabled = careQuestionInput.value.trim().length === 0;
@@ -549,6 +701,9 @@ function updateAuthState(user) {
         showDiscoveryView();
         myGardenBtn.classList.add('hidden');
         
+        customCollections = []; // Clear custom collections
+        renderEdibleCollections();
+
         if (plantDetailModal.classList.contains('hidden') === false) {
             careQuestionSubmit.disabled = true;
             careQuestionInput.disabled = true;
