@@ -22,8 +22,9 @@ import {
     // NEW Image Functions
     uploadPlantImage, 
     fetchImageIdentification,
-    // NEW Collection Function
-    getFloridaNativePlants
+    // Collection Functions
+    getFloridaNativePlants,
+    getEdiblePlants
 } from './api.js';
 
 // --- Global DOM Element Variables ---
@@ -52,8 +53,9 @@ let refreshPlantBtn, updateImageBtn, updateImageInput;
 // --- NEW Analytics Variables ---
 let viewGalleryBtn, viewAnalyticsBtn, gardenAnalytics;
 
-// --- NEW Collections Variables ---
+// --- Collections Variables ---
 let collectionsContainer, collectionsGrid, galleryHeader, galleryTitle, backToCollectionsBtn;
+let vegetablesContainer, vegetablesGrid; // NEW
 
 // --- App State ---
 let currentSearchQuery = null;
@@ -97,6 +99,24 @@ const FLORIDA_COLLECTIONS = [
     }
 ];
 
+// --- Data: Edible Collections Definitions ---
+const EDIBLE_COLLECTIONS = [
+    {
+        id: 'vegetables',
+        title: 'Vegetable Patch',
+        subtitle: 'Crops & Kitchen Staples',
+        image: 'https://images.unsplash.com/photo-1595855709915-4deb3be88406?auto=format&fit=crop&w=600&q=80',
+        filter: 'vegetables'
+    },
+    {
+        id: 'edible',
+        title: 'All Edibles',
+        subtitle: 'Fruits, Herbs & Foraging',
+        image: 'https://images.unsplash.com/photo-1615485290382-441e4d049cb5?auto=format&fit=crop&w=600&q=80',
+        filter: 'edible'
+    }
+];
+
 
 /**
  * Main function to initialize the application
@@ -127,6 +147,11 @@ function main() {
         // Discovery View Elements
         collectionsContainer = document.getElementById('collections-container');
         collectionsGrid = document.getElementById('collections-grid');
+        
+        // NEW: Edible View Elements
+        vegetablesContainer = document.getElementById('vegetables-container');
+        vegetablesGrid = document.getElementById('vegetables-grid');
+
         galleryHeader = document.getElementById('gallery-header');
         galleryTitle = document.getElementById('gallery-title');
         backToCollectionsBtn = document.getElementById('back-to-collections-btn');
@@ -193,6 +218,7 @@ function main() {
         
         // Initial State: Render Collections (hidden until keys are set, but good to have ready)
         renderCollections();
+        renderEdibleCollections(); // NEW
         
         // Initial setup for the Q&A section which is loaded but not active
         careQuestionSection.classList.add('hidden');
@@ -221,7 +247,8 @@ function addEventListeners() {
     // Delegated Clicks
     plantGallery.addEventListener('click', handlePlantCardClick);
     gardenGallery.addEventListener('click', handlePlantCardClick);
-    collectionsGrid.addEventListener('click', handleCollectionCardClick); // NEW
+    collectionsGrid.addEventListener('click', handleCollectionCardClick);
+    vegetablesGrid.addEventListener('click', handleCollectionCardClick); // NEW: Reusing the same handler
 
     // Analytics clicks
     gardenAnalytics.addEventListener('click', handleAnalyticsItemClick);
@@ -251,10 +278,25 @@ function addEventListeners() {
     viewAnalyticsBtn.addEventListener('click', () => switchGardenMode('analytics'));
 }
 
-// --- COLLECTIONS FUNCTIONS (NEW) ---
+// --- COLLECTIONS FUNCTIONS ---
 
 function renderCollections() {
     collectionsGrid.innerHTML = FLORIDA_COLLECTIONS.map(col => `
+        <div class="collection-card glass-panel rounded-xl overflow-hidden cursor-pointer hover:scale-105 hover-glow transition-transform group" data-filter="${col.filter}" data-title="${col.title}">
+            <div class="h-32 w-full overflow-hidden relative">
+                <div class="absolute inset-0 bg-black/30 group-hover:bg-black/10 transition-colors z-10"></div>
+                <img src="${col.image}" alt="${col.title}" class="w-full h-full object-cover">
+            </div>
+            <div class="p-4">
+                <h3 class="text-lg font-bold text-white group-hover:text-green-400 transition-colors">${col.title}</h3>
+                <p class="text-sm text-gray-400">${col.subtitle}</p>
+            </div>
+        </div>
+    `).join('');
+}
+
+function renderEdibleCollections() {
+    vegetablesGrid.innerHTML = EDIBLE_COLLECTIONS.map(col => `
         <div class="collection-card glass-panel rounded-xl overflow-hidden cursor-pointer hover:scale-105 hover-glow transition-transform group" data-filter="${col.filter}" data-title="${col.title}">
             <div class="h-32 w-full overflow-hidden relative">
                 <div class="absolute inset-0 bg-black/30 group-hover:bg-black/10 transition-colors z-10"></div>
@@ -282,6 +324,7 @@ function handleCollectionCardClick(e) {
 
     // 2. Update UI
     collectionsContainer.classList.add('hidden');
+    vegetablesContainer.classList.add('hidden'); // NEW
     galleryHeader.classList.remove('hidden');
     galleryTitle.textContent = title;
     
@@ -302,6 +345,7 @@ function returnToCollections() {
     plantGallery.innerHTML = ''; // Clear gallery
     
     collectionsContainer.classList.remove('hidden');
+    vegetablesContainer.classList.remove('hidden'); // NEW
 }
 
 
@@ -348,8 +392,9 @@ async function handleApiKeySubmit(e) {
         modalBackdrop.classList.add('hidden');
         console.log("API keys set and Firebase initialized. App is live.");
         
-        // NEW: Show collections immediately after login
+        // Show collections immediately after login
         collectionsContainer.classList.remove('hidden');
+        vegetablesContainer.classList.remove('hidden'); // NEW
 
     } catch (error) {
         console.error("Error during API key submission:", error);
@@ -369,16 +414,17 @@ function handleSearchSubmit(e) {
 
     // Reset states
     currentSearchQuery = query;
-    currentCollectionCategory = null; // Clear collection if user searches manually
+    currentCollectionCategory = null; 
     currentPage = 1;
     currentLinks = null;
     currentMeta = null;
 
     // UI Updates for Search Mode
     collectionsContainer.classList.add('hidden');
+    vegetablesContainer.classList.add('hidden'); // NEW
     galleryHeader.classList.remove('hidden');
     galleryTitle.textContent = `Search Results: "${query}"`;
-    backToCollectionsBtn.classList.remove('hidden'); // Allow going back to home
+    backToCollectionsBtn.classList.remove('hidden'); 
 
     console.log(`Global searching for: ${currentSearchQuery}`);
     fetchAndRenderPlants();
@@ -392,16 +438,20 @@ async function fetchAndRenderPlants() {
     try {
         let results = { data: [], links: {}, meta: {} };
 
-        if (currentCollectionCategory) {
-            // Case 1: Fetching a Florida Native Collection
-            console.log(`Fetching collection: ${currentCollectionCategory}, page ${currentPage}`);
+        // ROUTING LOGIC UPDATED
+        if (currentCollectionCategory === 'vegetables' || currentCollectionCategory === 'edible') {
+            console.log(`Fetching EDIBLE collection: ${currentCollectionCategory}, page ${currentPage}`);
+            results = await getEdiblePlants(currentCollectionCategory, currentPage);
+
+        } else if (currentCollectionCategory) {
+            // Assume Florida Native collection
+            console.log(`Fetching FLORIDA collection: ${currentCollectionCategory}, page ${currentPage}`);
             results = await getFloridaNativePlants(currentCollectionCategory, currentPage);
+
         } else if (currentSearchQuery) {
-            // Case 2: Standard Search
             console.log(`Searching: ${currentSearchQuery}, page ${currentPage}`);
             results = await searchNativePlants(currentSearchQuery, currentPage);
         } else {
-            // Case 3: Empty state (shouldn't really happen with new collections logic, but safe fallback)
             plantGallery.innerHTML = '<div class="col-span-full text-center py-10"><p class="text-gray-300">Select a collection or search to view plants.</p></div>';
             loader.classList.add('hidden');
             return;
@@ -428,11 +478,12 @@ function showDiscoveryView() {
     // Logic to decide what to show in discovery view
     if (!currentSearchQuery && !currentCollectionCategory) {
         collectionsContainer.classList.remove('hidden');
+        vegetablesContainer.classList.remove('hidden'); // NEW
         galleryHeader.classList.add('hidden');
-        plantGallery.innerHTML = ''; // Clear any old results
+        plantGallery.innerHTML = ''; 
     } else {
-        // If we had a search or collection active, keep showing it
         collectionsContainer.classList.add('hidden');
+        vegetablesContainer.classList.add('hidden'); // NEW
         galleryHeader.classList.remove('hidden');
     }
 }
