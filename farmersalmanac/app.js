@@ -63,7 +63,9 @@ let vegetablesContainer, vegetablesGrid;
 
 // --- NEW Collection CRUD DOM Variables ---
 let collectionModal, collectionModalTitle, collectionModalCloseBtn, collectionForm, 
-    collectionIdInput, collectionTitleInput, collectionQueryInput, collectionImageInput, saveCollectionBtn;
+    collectionIdInput, collectionTitleInput, collectionQueryInput, saveCollectionBtn,
+    // New Image Upload fields for Collections
+    collectionFileInput, collectionImagePreview, collectionPreviewPlaceholder, collectionImageUrlInput;
 
 // --- App State ---
 let currentSearchQuery = null;
@@ -226,8 +228,13 @@ function main() {
         collectionIdInput = document.getElementById('collection-id');
         collectionTitleInput = document.getElementById('collection-title');
         collectionQueryInput = document.getElementById('collection-query');
-        collectionImageInput = document.getElementById('collection-image');
         saveCollectionBtn = document.getElementById('save-collection-btn');
+        
+        // Collection Image Upload Fields
+        collectionFileInput = document.getElementById('collection-file-input');
+        collectionImagePreview = document.getElementById('collection-image-preview');
+        collectionPreviewPlaceholder = document.getElementById('collection-preview-placeholder');
+        collectionImageUrlInput = document.getElementById('collection-image-url');
 
 
         // 3. Add all event listeners (Initial setup)
@@ -309,6 +316,7 @@ function addEventListeners() {
     // --- NEW COLLECTION CRUD LISTENERS ---
     collectionModalCloseBtn.addEventListener('click', closeCollectionModal);
     collectionForm.addEventListener('submit', handleSaveCollection);
+    collectionFileInput.addEventListener('change', handleCollectionFileChange);
 }
 
 // --- COLLECTIONS FUNCTIONS ---
@@ -477,18 +485,33 @@ function openCollectionModal(data = null) {
         return;
     }
     collectionModal.classList.remove('hidden');
+    collectionForm.reset();
+    
+    // Reset file input and preview
+    collectionFileInput.value = '';
+
     if (data) {
         // Edit Mode
         collectionModalTitle.textContent = 'Edit Collection';
         collectionIdInput.value = data.id;
         collectionTitleInput.value = data.title;
         collectionQueryInput.value = data.query;
-        collectionImageInput.value = data.image;
+        collectionImageUrlInput.value = data.image; // Store existing URL
+        
+        // Show Existing Image
+        collectionImagePreview.src = data.image;
+        collectionImagePreview.classList.remove('hidden');
+        collectionPreviewPlaceholder.classList.add('hidden');
     } else {
         // Create Mode
         collectionModalTitle.textContent = 'Add Collection';
-        collectionForm.reset();
         collectionIdInput.value = '';
+        collectionImageUrlInput.value = '';
+        
+        // Reset Preview
+        collectionImagePreview.src = '';
+        collectionImagePreview.classList.add('hidden');
+        collectionPreviewPlaceholder.classList.remove('hidden');
     }
 }
 
@@ -496,29 +519,57 @@ function closeCollectionModal() {
     collectionModal.classList.add('hidden');
 }
 
+function handleCollectionFileChange(e) {
+    const file = e.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            collectionImagePreview.src = event.target.result;
+            collectionImagePreview.classList.remove('hidden');
+            collectionPreviewPlaceholder.classList.add('hidden');
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
 async function handleSaveCollection(e) {
     e.preventDefault();
     if (!currentUser) return;
 
+    const file = collectionFileInput.files[0];
+    const existingImage = collectionImageUrlInput.value;
+
+    if (!file && !existingImage) {
+        alert("Please select an image for this collection.");
+        return;
+    }
+
     const submitBtn = saveCollectionBtn;
     const originalText = submitBtn.textContent;
     submitBtn.disabled = true;
-    submitBtn.textContent = 'Saving...';
-
-    const data = {
-        id: collectionIdInput.value || null,
-        title: collectionTitleInput.value.trim(),
-        query: collectionQueryInput.value.trim(),
-        image: collectionImageInput.value.trim()
-    };
+    submitBtn.textContent = 'Uploading...';
 
     try {
+        let imageUrl = existingImage;
+
+        // If a new file is selected, upload it first
+        if (file) {
+            imageUrl = await uploadPlantImage(file, currentUser.uid);
+        }
+
+        const data = {
+            id: collectionIdInput.value || null,
+            title: collectionTitleInput.value.trim(),
+            query: collectionQueryInput.value.trim(),
+            image: imageUrl
+        };
+
         await saveUserCollection(currentUser.uid, data);
         closeCollectionModal();
         await loadUserCollections(); 
     } catch (error) {
         console.error("Failed to save collection:", error);
-        alert("Error saving collection.");
+        alert(`Error saving collection: ${error.message}`);
     } finally {
         submitBtn.disabled = false;
         submitBtn.textContent = originalText;
