@@ -275,6 +275,64 @@ export async function getGardenPlants(userId) {
     }
 }
 
+// --- USER COLLECTIONS FUNCTIONS (CRUD) ---
+
+export async function saveUserCollection(userId, collectionData) {
+    if (!db) return;
+    try {
+        const dataToSave = {
+            title: collectionData.title,
+            query: collectionData.query,
+            image: collectionData.image,
+            uid: userId,
+            updated_at: Date.now()
+        };
+
+        if (collectionData.id) {
+            // Update existing
+            await setDoc(doc(db, "user_collections", collectionData.id), dataToSave, { merge: true });
+            return collectionData.id;
+        } else {
+            // Create new
+            const docRef = await addDoc(collection(db, "user_collections"), dataToSave);
+            return docRef.id;
+        }
+    } catch (error) {
+        console.error("Error saving collection:", error);
+        throw error;
+    }
+}
+
+export async function getUserCollections(userId) {
+    if (!db) return [];
+    try {
+        const q = query(
+            collection(db, "user_collections"),
+            where("uid", "==", userId)
+        );
+        const snapshot = await getDocs(q);
+        const collections = [];
+        snapshot.forEach(doc => {
+            collections.push({ ...doc.data(), id: doc.id });
+        });
+        return collections;
+    } catch (error) {
+        console.error("Error fetching user collections:", error);
+        return [];
+    }
+}
+
+export async function deleteUserCollection(userId, collectionId) {
+    if (!db) return;
+    try {
+        await deleteDoc(doc(db, "user_collections", collectionId));
+        console.log(`Deleted collection ${collectionId}`);
+    } catch (error) {
+        console.error("Error deleting collection:", error);
+        throw error;
+    }
+}
+
 
 // --- Trefle API Functions ---
 
@@ -285,8 +343,8 @@ export async function getEdiblePlants(category, page) {
         return { data: [], links: {}, meta: {} };
     }
 
-    // Base Species URL
-    let trefleUrl = `https://trefle.io/api/v1/species?page=${page}&limit=18&token=${configStore.trefleApiKey}`;
+    // Fetch 50 items to buffer for filtering, then slice to 18
+    let trefleUrl = `https://trefle.io/api/v1/species?page=${page}&limit=50&token=${configStore.trefleApiKey}`;
 
     // Append filters
     if (category === 'vegetables') {
@@ -305,7 +363,8 @@ export async function getEdiblePlants(category, page) {
         const data = await response.json();
         const filteredData = data.data.filter(plant => plant.common_name && plant.image_url);
         
-        return { data: filteredData, links: data.links, meta: data.meta };
+        // Explicitly slice to 18 to fix pagination "rando" counts
+        return { data: filteredData.slice(0, 18), links: data.links, meta: data.meta };
     } catch (error) {
         console.error("Error fetching edible plants:", error);
         return { data: [], links: {}, meta: {} };
@@ -342,7 +401,8 @@ export async function getFloridaNativePlants(category, page) {
     }
 
     // 2. Build URL using the resolved ID
-    let trefleUrl = `https://trefle.io/api/v1/distributions/${floridaZoneId}/plants?page=${page}&limit=18&token=${configStore.trefleApiKey}`;
+    // Fetch 50 to buffer
+    let trefleUrl = `https://trefle.io/api/v1/distributions/${floridaZoneId}/plants?page=${page}&limit=50&token=${configStore.trefleApiKey}`;
 
     switch (category) {
         case 'trees':
@@ -374,7 +434,8 @@ export async function getFloridaNativePlants(category, page) {
         const data = await response.json();
         const filteredData = data.data.filter(plant => plant.common_name && plant.image_url);
         
-        return { data: filteredData, links: data.links, meta: data.meta };
+        // Slice to 18
+        return { data: filteredData.slice(0, 18), links: data.links, meta: data.meta };
     } catch (error) {
         console.error("Error fetching Florida native plants:", error);
         return { data: [], links: {}, meta: {} };
@@ -387,7 +448,8 @@ export async function getNativePlants(speciesType, page) {
         return { data: [], links: {}, meta: {} };
     }
     
-    const trefleUrl = `https://trefle.io/api/v1/species?filter[growth_form]=${speciesType}&page=${page}&limit=18&token=${configStore.trefleApiKey}`;
+    // Fetch 50 to buffer
+    const trefleUrl = `https://trefle.io/api/v1/species?filter[growth_form]=${speciesType}&page=${page}&limit=50&token=${configStore.trefleApiKey}`;
     
     const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(trefleUrl)}`;
 
@@ -399,7 +461,8 @@ export async function getNativePlants(speciesType, page) {
         const data = await response.json();
         const filteredData = data.data.filter(plant => plant.common_name && plant.image_url);
         
-        return { data: filteredData, links: data.links, meta: data.meta };
+        // Slice to 18
+        return { data: filteredData.slice(0, 18), links: data.links, meta: data.meta };
     } catch (error) {
         console.error("Error fetching native plants:", error);
         return { data: [], links: {}, meta: {} };
@@ -412,7 +475,8 @@ export async function searchNativePlants(query, page) {
         return { data: [], links: {}, meta: {} };
     }
 
-    const trefleUrl = `https://trefle.io/api/v1/species/search?q=${query}&page=${page}&limit=18&token=${configStore.trefleApiKey}`;
+    // Fetch 50 to buffer
+    const trefleUrl = `https://trefle.io/api/v1/species/search?q=${query}&page=${page}&limit=50&token=${configStore.trefleApiKey}`;
     
     const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(trefleUrl)}`;
 
@@ -424,7 +488,8 @@ export async function searchNativePlants(query, page) {
         const data = await response.json();
         const filteredData = data.data.filter(plant => plant.common_name && plant.image_url);
         
-        return { data: filteredData, links: data.links, meta: data.meta };
+        // Slice to 18
+        return { data: filteredData.slice(0, 18), links: data.links, meta: data.meta };
     } catch (error) {
         console.error("Error searching native plants:", error);
         return { data: [], links: {}, meta: {} };
