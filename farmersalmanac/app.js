@@ -249,6 +249,8 @@ function main() {
  * Groups all event listeners for clean initialization
  */
 function addEventListeners() {
+    console.log("Attaching event listeners...");
+
     apiKeyForm.addEventListener('submit', handleApiKeySubmit);
     signInBtn.addEventListener('click', handleGoogleSignIn);
     signOutBtn.addEventListener('click', handleGoogleSignOut);
@@ -270,7 +272,12 @@ function addEventListeners() {
     collectionsGrid.addEventListener('click', handleCollectionCardClick);
     
     // UPDATED: Single handler for vegetables grid to manage priorities (Add vs Edit vs View)
-    vegetablesGrid.addEventListener('click', handleVegetablesGridClick); 
+    if (vegetablesGrid) {
+        vegetablesGrid.addEventListener('click', handleVegetablesGridClick);
+        console.log("Vegetables Grid listener attached.");
+    } else {
+        console.error("Vegetables Grid element missing.");
+    }
 
     // Analytics clicks
     gardenAnalytics.addEventListener('click', handleAnalyticsItemClick);
@@ -377,8 +384,11 @@ function renderEdibleCollections() {
 
 // UPDATED: Consolidated handler to manage priorities
 function handleVegetablesGridClick(e) {
+    console.log("Vegetables Grid Clicked:", e.target);
+
     // 1. Check for Add Collection Button FIRST
     if (e.target.closest('#add-collection-btn')) {
+        console.log("Add Collection Clicked");
         openCollectionModal();
         return;
     }
@@ -386,6 +396,7 @@ function handleVegetablesGridClick(e) {
     // 2. Check for Edit Collection Button
     const editBtn = e.target.closest('.edit-collection-btn');
     if (editBtn) {
+        console.log("Edit Collection Clicked");
         e.stopPropagation(); 
         const { id, title, query, image } = editBtn.dataset;
         openCollectionModal({ id, title, query, image });
@@ -395,6 +406,7 @@ function handleVegetablesGridClick(e) {
     // 3. Check for Delete Collection Button
     const deleteBtn = e.target.closest('.delete-collection-btn');
     if (deleteBtn) {
+        console.log("Delete Collection Clicked");
         e.stopPropagation();
         const { id, title } = deleteBtn.dataset;
         if (confirm(`Are you sure you want to delete the collection "${title}"?`)) {
@@ -408,6 +420,7 @@ function handleVegetablesGridClick(e) {
     // 4. Finally, Check if it's a Card Click (Navigation)
     // Only proceed if we haven't clicked one of the buttons above
     if (e.target.closest('.collection-card')) {
+        console.log("Collection Card Clicked");
         handleCollectionCardClick(e);
     }
 }
@@ -419,6 +432,8 @@ function handleCollectionCardClick(e) {
     const filter = card.dataset.filter;
     const query = card.dataset.query;
     const title = card.dataset.title;
+
+    console.log(`Navigating to collection: ${title} (Query: ${query}, Filter: ${filter})`);
 
     // 1. Update State
     currentPage = 1;
@@ -437,15 +452,30 @@ function handleCollectionCardClick(e) {
     vegetablesContainer.classList.add('hidden'); 
     galleryHeader.classList.remove('hidden');
     galleryTitle.textContent = title;
+    backToCollectionsBtn.classList.remove('hidden'); // Ensure back button is visible
     
     // 3. Fetch Data
     fetchAndRenderPlants();
+}
+
+function returnToCollections() {
+    console.log("Returning to collections view");
+    collectionsContainer.classList.remove('hidden');
+    vegetablesContainer.classList.remove('hidden'); 
+    galleryHeader.classList.add('hidden');
+    plantGallery.innerHTML = ''; // Clear the gallery
+    currentSearchQuery = null;
+    currentCollectionCategory = null;
 }
 
 
 // --- CRUD FUNCTIONS FOR COLLECTIONS ---
 
 function openCollectionModal(data = null) {
+    if (!collectionModal) {
+        console.error("Collection Modal element missing");
+        return;
+    }
     collectionModal.classList.remove('hidden');
     if (data) {
         // Edit Mode
