@@ -469,15 +469,23 @@ export async function getNativePlants(speciesType, page) {
     }
 }
 
-export async function searchNativePlants(query, page) {
+export async function searchNativePlants(query, page, filters = {}) {
     if (!configStore.trefleApiKey) {
         console.error("Trefle API Key is missing.");
         return { data: [], links: {}, meta: {} };
     }
 
     // Fetch 50 to buffer
-    const trefleUrl = `https://trefle.io/api/v1/species/search?q=${query}&page=${page}&limit=54&token=${configStore.trefleApiKey}`;
+    let trefleUrl = `https://trefle.io/api/v1/species/search?q=${query}&page=${page}&limit=54&token=${configStore.trefleApiKey}`;
     
+    // NEW: Apply optional filters
+    if (filters.vegetable) {
+        trefleUrl += '&filter[vegetable]=true';
+    }
+    if (filters.edible) {
+        trefleUrl += '&filter[edible]=true';
+    }
+
     const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(trefleUrl)}`;
 
     try {
