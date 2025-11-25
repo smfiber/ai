@@ -533,6 +533,15 @@ function extractJsonFromGeminiResponse(text) {
     const jsonStart = text.indexOf('{');
     const jsonEnd = text.lastIndexOf('}');
     
+    // Check for Array notation if object notation fails, or if prompt requested list
+    const arrayStart = text.indexOf('[');
+    const arrayEnd = text.lastIndexOf(']');
+
+    if (arrayStart !== -1 && arrayEnd !== -1 && (jsonStart === -1 || arrayStart < jsonStart)) {
+         const jsonText = text.substring(arrayStart, arrayEnd + 1);
+         return JSON.parse(jsonText);
+    }
+    
     if (jsonStart === -1 || jsonEnd === -1) {
         throw new Error("Could not find JSON in Gemini's response.");
     }
@@ -799,5 +808,61 @@ export async function fetchScientificNameLookup(commonName) {
     } catch (error) {
         console.error("Error fetching scientific name with Gemini:", error);
         return null; 
+    }
+}
+
+// NEW FUNCTION: Collection Suggestions
+export async function fetchCollectionSuggestions(query) {
+    if (!configStore.geminiApiKey) {
+        console.error("Gemini API Key is missing.");
+        return [];
+    }
+
+    const prompt = `
+        You are an expert gardener. The user is exploring a collection based on the term: "${query}".
+
+        Please provide a list of 6 distinct, popular, or interesting varieties/species related to this term that a home gardener might want to grow. 
+        
+        Provide specific Scientific Names (e.g., 'Solanum lycopersicum') and Common Names.
+        
+        Respond ONLY with a valid JSON array of objects. Do not use markdown.
+        
+        [
+            { "common_name": "Beefsteak Tomato", "scientific_name": "Solanum lycopersicum" },
+            { "common_name": "Roma Tomato", "scientific_name": "Solanum lycopersicum" }
+        ]
+    `;
+
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=${configStore.geminiApiKey}`;
+
+    const requestBody = {
+        contents: [{
+            parts: [{ text: prompt }]
+        }]
+    };
+
+    try {
+        const response = await fetch(geminiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestBody)
+        });
+
+        if (!response.ok) {
+            throw new Error(`Gemini API error: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        const rawText = data.candidates[0].content.parts[0].text;
+        const suggestions = extractJsonFromGeminiResponse(rawText);
+        
+        console.log("Gemini collection suggestions:", suggestions);
+        return suggestions;
+
+    } catch (error) {
+        console.error("Error fetching collection suggestions:", error);
+        return [];
     }
 }
