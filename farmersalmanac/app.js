@@ -19,6 +19,7 @@ import {
     getSavedPlant,
     fetchCustomCareAdvice,
     fetchScientificNameLookup,
+    fetchCollectionSuggestions, // NEW IMPORT
     // NEW Image Functions
     uploadPlantImage, 
     fetchImageIdentification,
@@ -45,6 +46,9 @@ let careQuestionSection, careQuestionForm, careQuestionInput, careQuestionSubmit
     careResponseContainer, careResponseText, careResponseLoader;
 
 let scientificLookupBtn; 
+
+// --- NEW AI Suggestions Variables ---
+let aiSuggestionsContainer, aiSuggestionsList, aiSuggestionsLoader;
 
 // --- NEW Image Upload DOM Variables ---
 let identifyPlantBtn, imageUploadModal, imageModalCloseBtn, imageUploadForm,
@@ -171,6 +175,11 @@ function main() {
         plantGalleryContainer = document.getElementById('plant-gallery-container');
         plantGallery = document.getElementById('plant-gallery');
         loader = document.getElementById('loader');
+
+        // AI Suggestions Elements
+        aiSuggestionsContainer = document.getElementById('ai-suggestions-container');
+        aiSuggestionsList = document.getElementById('ai-suggestions-list');
+        aiSuggestionsLoader = document.getElementById('ai-suggestions-loader');
 
         plantDetailModal = document.getElementById('plant-detail-modal');
         modalTitle = document.getElementById('modal-title');
@@ -454,15 +463,10 @@ function handleCollectionCardClick(e) {
     const query = card.dataset.query;
     const title = card.dataset.title;
     
-    // NEW: Check if this click originated from the vegetables grid
-    // If so, we enable the vegetable filter for the API search
-    if (card.closest('#vegetables-grid')) {
-        isEdibleFilterActive = true;
-    } else {
-        isEdibleFilterActive = false;
-    }
+    // UPDATED: Always ensure filter is false to prevent hiding results like "tomato"
+    isEdibleFilterActive = false;
 
-    console.log(`Navigating to collection: ${title} (Query: ${query}, Filter: ${filter}, Edible: ${isEdibleFilterActive})`);
+    console.log(`Navigating to collection: ${title} (Query: ${query}, Filter: ${filter})`);
 
     // 1. Update State
     currentPage = 1;
@@ -481,10 +485,73 @@ function handleCollectionCardClick(e) {
     vegetablesContainer.classList.add('hidden'); 
     galleryHeader.classList.remove('hidden');
     galleryTitle.textContent = title;
-    backToCollectionsBtn.classList.remove('hidden'); // Ensure back button is visible
+    backToCollectionsBtn.classList.remove('hidden'); 
     
     // 3. Fetch Data
     fetchAndRenderPlants();
+
+    // 4. NEW: Load AI Suggestions (if it's a query-based collection)
+    if (currentSearchQuery) {
+        loadCollectionSuggestions(currentSearchQuery);
+    } else {
+        // Hide container for Florida collections if not needed, or we could support it later
+        aiSuggestionsContainer.classList.add('hidden');
+    }
+}
+
+// NEW: Function to load AI suggestions
+async function loadCollectionSuggestions(query) {
+    aiSuggestionsContainer.classList.remove('hidden');
+    aiSuggestionsList.innerHTML = '';
+    aiSuggestionsLoader.classList.remove('hidden');
+
+    try {
+        const suggestions = await fetchCollectionSuggestions(query);
+        aiSuggestionsLoader.classList.add('hidden');
+        
+        if (!suggestions || suggestions.length === 0) {
+            aiSuggestionsContainer.classList.add('hidden');
+            return;
+        }
+
+        suggestions.forEach(plant => {
+            const btn = document.createElement('button');
+            btn.className = "px-3 py-1 bg-gray-800 border border-green-500/50 rounded-full text-sm text-green-300 hover:bg-green-600 hover:text-white transition-colors cursor-pointer flex-shrink-0";
+            btn.textContent = plant.common_name;
+            btn.onclick = () => handleSuggestionClick(btn, plant);
+            aiSuggestionsList.appendChild(btn);
+        });
+    } catch (e) {
+        console.error("Error loading suggestions:", e);
+        aiSuggestionsContainer.classList.add('hidden');
+    }
+}
+
+// NEW: Handle clicking a suggestion chip
+async function handleSuggestionClick(btn, plant) {
+    const originalText = btn.textContent;
+    btn.textContent = "Loading...";
+    btn.classList.add('animate-pulse');
+    btn.disabled = true;
+    
+    try {
+        // Search Trefle for strict scientific name to get the slug
+        const searchResult = await searchNativePlants(plant.scientific_name, 1);
+        if (searchResult.data && searchResult.data.length > 0) {
+            const slug = searchResult.data[0].slug;
+            // Open Modal directly
+            openPlantModal(slug, plant.common_name);
+        } else {
+            alert(`Could not find "${plant.common_name}" (${plant.scientific_name}) in the database.`);
+        }
+    } catch (e) {
+        console.error(e);
+        alert("Error fetching plant details.");
+    } finally {
+        btn.textContent = originalText;
+        btn.classList.remove('animate-pulse');
+        btn.disabled = false;
+    }
 }
 
 function returnToCollections() {
@@ -493,6 +560,11 @@ function returnToCollections() {
     vegetablesContainer.classList.remove('hidden'); 
     galleryHeader.classList.add('hidden');
     plantGallery.innerHTML = ''; // Clear the gallery
+    
+    // Hide AI suggestions
+    aiSuggestionsContainer.classList.add('hidden');
+    aiSuggestionsList.innerHTML = '';
+
     currentSearchQuery = null;
     currentCollectionCategory = null;
     isEdibleFilterActive = false; // Reset filter
@@ -690,6 +762,9 @@ function handleSearchSubmit(e) {
     galleryHeader.classList.remove('hidden');
     galleryTitle.textContent = `Search Results: "${query}"`;
     backToCollectionsBtn.classList.remove('hidden'); 
+    
+    // Hide AI Suggestions on global search
+    aiSuggestionsContainer.classList.add('hidden');
 
     console.log(`Global searching for: ${currentSearchQuery}`);
     fetchAndRenderPlants();
@@ -748,6 +823,7 @@ function showDiscoveryView() {
         vegetablesContainer.classList.remove('hidden'); 
         galleryHeader.classList.add('hidden');
         plantGallery.innerHTML = ''; 
+        aiSuggestionsContainer.classList.add('hidden');
     } else {
         collectionsContainer.classList.add('hidden');
         vegetablesContainer.classList.add('hidden'); 
