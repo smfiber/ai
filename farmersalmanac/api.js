@@ -821,15 +821,16 @@ export async function fetchCollectionSuggestions(query) {
     const prompt = `
         You are an expert gardener. The user is exploring a collection based on the term: "${query}".
 
-        Please provide a list of 6 distinct, popular, or interesting varieties/species related to this term that a home gardener might want to grow. 
+        Please provide a list of exactly 30 distinct, popular, or interesting varieties/species related to this term that a home gardener might want to grow. 
         
-        Provide specific Scientific Names (e.g., 'Solanum lycopersicum') and Common Names.
+        Ensure you provide specific Scientific Names (e.g., 'Solanum lycopersicum') and Common Names.
         
         Respond ONLY with a valid JSON array of objects. Do not use markdown.
         
         [
             { "common_name": "Beefsteak Tomato", "scientific_name": "Solanum lycopersicum" },
-            { "common_name": "Roma Tomato", "scientific_name": "Solanum lycopersicum" }
+            { "common_name": "Roma Tomato", "scientific_name": "Solanum lycopersicum" },
+            ...
         ]
     `;
 
