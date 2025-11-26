@@ -499,13 +499,32 @@ function handleCollectionCardClick(e) {
     }
 }
 
-// NEW: Function to load AI suggestions
+// Helper to safely get properties regardless of casing (common_name, CommonName, commonName)
+function getSafeProperty(obj, keys) {
+    for (const key of keys) {
+        if (obj[key] !== undefined && obj[key] !== null) {
+            return obj[key];
+        }
+    }
+    // Case-insensitive fallback
+    const lowerKeys = keys.map(k => k.toLowerCase().replace(/_/g, '').replace(/\s/g, ''));
+    for (const prop in obj) {
+        const lowerProp = prop.toLowerCase().replace(/_/g, '').replace(/\s/g, '');
+        if (lowerKeys.includes(lowerProp)) {
+            return obj[prop];
+        }
+    }
+    return "Unknown";
+}
+
+// NEW: Function to load AI suggestions with 3-column table/list layout
 async function loadCollectionSuggestions(query) {
     aiSuggestionsContainer.classList.remove('hidden');
     aiSuggestionsList.innerHTML = '';
     aiSuggestionsLoader.classList.remove('hidden');
 
     try {
+        // Now fetches ~30 items
         const suggestions = await fetchCollectionSuggestions(query);
         aiSuggestionsLoader.classList.add('hidden');
         
@@ -514,33 +533,88 @@ async function loadCollectionSuggestions(query) {
             return;
         }
 
-        suggestions.forEach(plant => {
-            const btn = document.createElement('button');
-            btn.className = "px-3 py-1 bg-gray-800 border border-green-500/50 rounded-full text-sm text-green-300 hover:bg-green-600 hover:text-white transition-colors cursor-pointer flex-shrink-0";
-            btn.textContent = plant.common_name;
-            btn.onclick = () => handleSuggestionClick(btn, plant);
-            aiSuggestionsList.appendChild(btn);
+        console.log("Detailed Suggestion Data:", suggestions[0]); // DEBUG: Check keys
+
+        // Ensure visibility and layout
+        aiSuggestionsList.classList.remove('hidden'); // Force remove hidden
+        aiSuggestionsList.className = "grid grid-cols-1 md:grid-cols-3 gap-6 w-full";
+        
+        // Chunk array into 3 columns
+        const chunkSize = Math.ceil(suggestions.length / 3);
+        const columns = [
+            suggestions.slice(0, chunkSize),
+            suggestions.slice(chunkSize, chunkSize * 2),
+            suggestions.slice(chunkSize * 2)
+        ];
+
+        columns.forEach(colItems => {
+            const colDiv = document.createElement('div');
+            colDiv.className = "flex flex-col space-y-1";
+            
+            colItems.forEach(plant => {
+                const row = document.createElement('div');
+                row.className = "flex justify-between items-center py-2 px-3 bg-gray-800 border-b border-gray-700 hover:bg-gray-700 cursor-pointer transition-colors rounded hover:text-green-300";
+                
+                // Robust key extraction
+                const common = getSafeProperty(plant, ['common_name', 'Common Name', 'CommonName', 'commonName']);
+                const scientific = getSafeProperty(plant, ['scientific_name', 'Scientific Name', 'ScientificName', 'scientificName']);
+
+                // Content: Common Name (Bold) + Scientific (Italic)
+                row.innerHTML = `
+                    <span class="font-bold text-sm text-gray-200 truncate pr-2">${common}</span>
+                    <span class="text-xs text-gray-400 italic font-mono truncate">${scientific}</span>
+                `;
+                
+                // Store standard keys for click handler
+                const plantData = { common_name: common, scientific_name: scientific };
+                row.onclick = () => handleSuggestionClick(row, plantData);
+                colDiv.appendChild(row);
+            });
+            
+            aiSuggestionsList.appendChild(colDiv);
         });
+
     } catch (e) {
         console.error("Error loading suggestions:", e);
         aiSuggestionsContainer.classList.add('hidden');
     }
 }
 
-// NEW: Handle clicking a suggestion chip
-async function handleSuggestionClick(btn, plant) {
-    const originalText = btn.textContent;
-    btn.textContent = "Loading...";
-    btn.classList.add('animate-pulse');
-    btn.disabled = true;
+// NEW: Handle clicking a suggestion with stricter matching logic
+async function handleSuggestionClick(rowElement, plant) {
+    // Visual feedback
+    const originalHtml = rowElement.innerHTML;
+    rowElement.innerHTML = `<span class="text-green-400 font-bold animate-pulse">Loading...</span>`;
+    rowElement.style.pointerEvents = 'none';
     
     try {
-        // Search Trefle for strict scientific name to get the slug
+        // Search Trefle for the scientific name
+        // We use the scientific name for the query to be as specific as possible
         const searchResult = await searchNativePlants(plant.scientific_name, 1);
+        
+        let targetSlug = null;
+        
+        // Logic: Scan results for a scientific name match to avoid "Spinach" taking over "Strawberry Spinach"
         if (searchResult.data && searchResult.data.length > 0) {
-            const slug = searchResult.data[0].slug;
+            
+            // 1. Try to find Exact Match of Scientific Name
+            const match = searchResult.data.find(p => 
+                p.scientific_name.toLowerCase() === plant.scientific_name.toLowerCase()
+            );
+
+            if (match) {
+                targetSlug = match.slug;
+            } else {
+                // 2. Fallback: If no exact match, but results exist, take the first one 
+                // (better than nothing, but we warn in console)
+                console.warn(`Exact match not found for ${plant.scientific_name}. Using closest result: ${searchResult.data[0].scientific_name}`);
+                targetSlug = searchResult.data[0].slug;
+            }
+        }
+
+        if (targetSlug) {
             // Open Modal directly
-            openPlantModal(slug, plant.common_name);
+            openPlantModal(targetSlug, plant.common_name);
         } else {
             alert(`Could not find "${plant.common_name}" (${plant.scientific_name}) in the database.`);
         }
@@ -548,9 +622,8 @@ async function handleSuggestionClick(btn, plant) {
         console.error(e);
         alert("Error fetching plant details.");
     } finally {
-        btn.textContent = originalText;
-        btn.classList.remove('animate-pulse');
-        btn.disabled = false;
+        rowElement.innerHTML = originalHtml;
+        rowElement.style.pointerEvents = 'auto';
     }
 }
 
@@ -564,6 +637,7 @@ function returnToCollections() {
     // Hide AI suggestions
     aiSuggestionsContainer.classList.add('hidden');
     aiSuggestionsList.innerHTML = '';
+    aiSuggestionsList.className = ""; // Reset class
 
     currentSearchQuery = null;
     currentCollectionCategory = null;
