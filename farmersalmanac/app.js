@@ -580,41 +580,43 @@ async function loadCollectionSuggestions(query) {
     }
 }
 
-// NEW: Handle clicking a suggestion with stricter matching logic
+// NEW: Handle clicking a suggestion with stricter matching logic AND Fallback to Common Name search
 async function handleSuggestionClick(rowElement, plant) {
-    // Visual feedback
     const originalHtml = rowElement.innerHTML;
     rowElement.innerHTML = `<span class="text-green-400 font-bold animate-pulse">Loading...</span>`;
     rowElement.style.pointerEvents = 'none';
     
     try {
-        // Search Trefle for the scientific name
-        // We use the scientific name for the query to be as specific as possible
-        const searchResult = await searchNativePlants(plant.scientific_name, 1);
-        
         let targetSlug = null;
-        
-        // Logic: Scan results for a scientific name match to avoid "Spinach" taking over "Strawberry Spinach"
-        if (searchResult.data && searchResult.data.length > 0) {
-            
-            // 1. Try to find Exact Match of Scientific Name
-            const match = searchResult.data.find(p => 
-                p.scientific_name.toLowerCase() === plant.scientific_name.toLowerCase()
-            );
 
-            if (match) {
-                targetSlug = match.slug;
-            } else {
-                // 2. Fallback: If no exact match, but results exist, take the first one 
-                // (better than nothing, but we warn in console)
-                console.warn(`Exact match not found for ${plant.scientific_name}. Using closest result: ${searchResult.data[0].scientific_name}`);
-                targetSlug = searchResult.data[0].slug;
+        // STRATEGY 1: Search by Specific Common Name First (e.g., "Beefsteak Tomato")
+        // This attempts to find if Trefle actually has the specific variety.
+        console.log(`Attempting search by common name: ${plant.common_name}`);
+        const commonSearch = await searchNativePlants(plant.common_name, 1);
+        
+        if (commonSearch.data && commonSearch.data.length > 0) {
+            console.log("Found match via common name.");
+            targetSlug = commonSearch.data[0].slug;
+        } else {
+            // STRATEGY 2: Fallback to Scientific Name (e.g., "Solanum lycopersicum")
+            // This is necessary because heirloom varieties often don't have their own species entries.
+            console.log("Common name failed. Fallback to scientific: " + plant.scientific_name);
+            const sciSearch = await searchNativePlants(plant.scientific_name, 1);
+            
+            if (sciSearch.data && sciSearch.data.length > 0) {
+                // Try to find exact scientific match
+                const match = sciSearch.data.find(p => 
+                    p.scientific_name.toLowerCase() === plant.scientific_name.toLowerCase()
+                );
+                targetSlug = match ? match.slug : sciSearch.data[0].slug;
             }
         }
 
         if (targetSlug) {
-            // Open Modal directly
-            openPlantModal(targetSlug, plant.common_name);
+            // CRITICAL: We pass the *Specific Common Name* (e.g., "Beefsteak Tomato") to the modal.
+            // This forces the Modal to overwrite the generic name "Tomato" with "Beefsteak Tomato"
+            // and tells Gemini to generate care instructions for the VARIETY, not the species.
+            openPlantModal(targetSlug, plant.common_name); // Pass Common Name as override
         } else {
             alert(`Could not find "${plant.common_name}" (${plant.scientific_name}) in the database.`);
         }
@@ -1644,11 +1646,11 @@ function handlePlantCardClick(e) {
     openPlantModal(slug, name);
 }
 
-async function openPlantModal(slug, name) {
+async function openPlantModal(slug, name, specificCommonName = null) {
     plantDetailModal.classList.remove('hidden');
     modalContent.classList.add('hidden');
     modalLoader.classList.remove('hidden');
-    modalTitle.textContent = name || "Loading...";
+    modalTitle.textContent = specificCommonName || name || "Loading..."; // UPDATED: Use specific name if available
     modalLoader.querySelector('p').textContent = 'Loading plant details...';
     
     refreshPlantBtn.classList.add('hidden');
@@ -1671,6 +1673,7 @@ async function openPlantModal(slug, name) {
             modalLoader.querySelector('p').textContent = 'Checking your garden...';
             const savedResult = await getSavedPlant(currentUser.uid, slug);
             
+            // NOTE: If saved, we load the saved data. If you saved it as "Beefsteak" previously, it will load as "Beefsteak".
             if (savedResult.plantData && savedResult.plantData.care_plan) {
                 console.log("Loaded from Garden (Skipped APIs)");
                 currentModalPlant = { ...savedResult.plantData, docId: savedResult.docId };
@@ -1705,6 +1708,12 @@ async function openPlantModal(slug, name) {
         const trefleData = await getPlantDetails(slug);
         if (!trefleData) {
             throw new Error("Could not fetch plant details.");
+        }
+
+        // NEW LOGIC: Overwrite Common Name if specific one provided
+        if (specificCommonName && specificCommonName !== trefleData.common_name) {
+            console.log(`Overriding generic name "${trefleData.common_name}" with specific "${specificCommonName}"`);
+            trefleData.common_name = specificCommonName;
         }
 
         modalLoader.querySelector('p').textContent = 'Augmenting data with AI...';
