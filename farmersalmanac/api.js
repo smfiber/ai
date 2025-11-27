@@ -576,6 +576,7 @@ export async function fetchAugmentedPlantData(plantData) {
         - Minimum Winter Temperature: The lowest temperature (in Fahrenheit) the plant can survive.
         - Maximum Summer Temperature: The highest temperature (in Fahrenheit) the plant can tolerate.
         - Frost Sensitivity: Describe its tolerance level (e.g., "High tolerance, very hardy", "Moderate sensitivity, protect from hard frost", "Zero tolerance").
+        - Fun Facts & History: Elaborate on where this plant comes from, its cultural significance in those native regions, and any interesting trivia.
         
         - Fertilizer Recommendation: Type and frequency (e.g., "Balanced 10-10-10 monthly").
         - Pruning Season: Best time to prune (e.g., "Late Winter").
@@ -597,6 +598,7 @@ export async function fetchAugmentedPlantData(plantData) {
           "min_winter_temp_f": "...",
           "max_summer_temp_f": "...",
           "frost_sensitivity": "...",
+          "fun_facts": "...",
           "fertilizer_info": "...",
           "pruning_season": "...",
           "propagation_methods": "...",
