@@ -519,12 +519,16 @@ function getSafeProperty(obj, keys) {
 
 // NEW: Function to load AI suggestions with 3-column table/list layout
 async function loadCollectionSuggestions(query) {
+    // 1. UI BLOCKING START: Prevent race conditions
+    document.body.style.pointerEvents = 'none';
+    document.body.style.cursor = 'wait';
+
     aiSuggestionsContainer.classList.remove('hidden');
     aiSuggestionsList.innerHTML = '';
     aiSuggestionsLoader.classList.remove('hidden');
 
     try {
-        // Now fetches ~30 items
+        // Now fetches ~60 items, sorted A-Z
         const suggestions = await fetchCollectionSuggestions(query);
         aiSuggestionsLoader.classList.add('hidden');
         
@@ -577,6 +581,10 @@ async function loadCollectionSuggestions(query) {
     } catch (e) {
         console.error("Error loading suggestions:", e);
         aiSuggestionsContainer.classList.add('hidden');
+    } finally {
+        // 2. UI UNBLOCKING: Restore user interaction
+        document.body.style.pointerEvents = 'auto';
+        document.body.style.cursor = 'default';
     }
 }
 
@@ -613,10 +621,10 @@ async function handleSuggestionClick(rowElement, plant) {
         }
 
         if (targetSlug) {
-            // CRITICAL: We pass the *Specific Common Name* (e.g., "Beefsteak Tomato") to the modal.
-            // This forces the Modal to overwrite the generic name "Tomato" with "Beefsteak Tomato"
+            // CRITICAL: We pass the *Specific Common Name* (e.g., "Ajo Rojo") as the 3rd argument (override).
+            // This forces the Modal to overwrite the generic name "Garlic" with "Ajo Rojo"
             // and tells Gemini to generate care instructions for the VARIETY, not the species.
-            openPlantModal(targetSlug, plant.common_name); // Pass Common Name as override
+            openPlantModal(targetSlug, null, plant.common_name); 
         } else {
             alert(`Could not find "${plant.common_name}" (${plant.scientific_name}) in the database.`);
         }
