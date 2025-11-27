@@ -1,6 +1,8 @@
 /*
  * API.JS
- * Updated to filter for Kingdom Animalia (No Viruses/Plants)
+ * Updated:
+ * 1. Separated Collections ("user_expeditions")
+ * 2. Fixed Search to ensure Images (Occurrence API)
  */
 
 import { configStore } from './config.js';
@@ -72,8 +74,10 @@ export async function uploadSpecimenImage(file, userId) {
     return await getDownloadURL(snap.ref);
 }
 
-// --- Firestore (Preserved) ---
+// --- Firestore: Saved Specimens (Preserved) ---
+// This collection is already unique ("saved_specimens") so it won't conflict with "digital_gardener"
 const DB_COLLECTION = "saved_specimens"; 
+
 export async function saveSpecimen(userId, specimen, docId = null) {
     if (!db) return;
     const data = { ...specimen }; delete data.docId;
@@ -102,28 +106,37 @@ export async function getSavedSpecimens(userId) {
     return list;
 }
 
-// --- Collections CRUD (Preserved) ---
+// --- Firestore: Custom Collections (UPDATED) ---
+// Changed from "user_collections" to "user_expeditions" to prevent overlap with the Garden App
+
+const EXPEDITIONS_COLLECTION = "user_expeditions";
+
 export async function saveUserCollection(userId, c) {
     if (!db) return;
     const d = { title: c.title, query: c.query, image: c.image, uid: userId, updated_at: Date.now() };
-    if (c.id) { await setDoc(doc(db, "user_collections", c.id), d, { merge: true }); return c.id; }
-    else { const ref = await addDoc(collection(db, "user_collections"), d); return ref.id; }
+    if (c.id) { await setDoc(doc(db, EXPEDITIONS_COLLECTION, c.id), d, { merge: true }); return c.id; }
+    else { const ref = await addDoc(collection(db, EXPEDITIONS_COLLECTION), d); return ref.id; }
 }
+
 export async function getUserCollections(userId) {
     if (!db) return [];
-    const q = query(collection(db, "user_collections"), where("uid", "==", userId));
+    // We now query the NEW collection
+    const q = query(collection(db, EXPEDITIONS_COLLECTION), where("uid", "==", userId));
     const snap = await getDocs(q);
     const list = [];
     snap.forEach(d => list.push({ ...d.data(), id: d.id }));
     return list;
 }
-export async function deleteUserCollection(userId, id) { if (db) await deleteDoc(doc(db, "user_collections", id)); }
+
+export async function deleteUserCollection(userId, id) { 
+    if (db) await deleteDoc(doc(db, EXPEDITIONS_COLLECTION, id)); 
+}
 
 
 // --- GBIF API (Updated) ---
 
 function mapGbifRecord(record) {
-    // Better image logic
+    // Occurrence records hold images in 'media'
     const imageObj = record.media ? record.media.find(m => m.type === 'StillImage') : null;
     let imageUrl = imageObj ? imageObj.identifier : null;
     if (!imageUrl && imageObj && imageObj.references) imageUrl = imageObj.references;
@@ -156,6 +169,7 @@ export async function getCategorySpecimens(classKey, page) {
         const cleanData = data.results
             .map(mapGbifRecord)
             .filter(item => {
+                // strict filters for high quality gallery
                 if (!item.image_url) return false;
                 if (seen.has(item.scientific_name)) return false;
                 seen.add(item.scientific_name);
@@ -173,23 +187,26 @@ export async function searchSpecimens(query, page) {
     const limit = 20;
     const offset = (page - 1) * limit;
     
-    // UPDATED: Added kingdomKey=1 to filter out viruses, bacteria, plants
-    const url = `https://api.gbif.org/v1/species/search?q=${query}&rank=SPECIES&kingdomKey=1&limit=${limit}&offset=${offset}`;
+    // UPDATED: Now using OCCURRENCE search instead of Species search.
+    // This allows us to enforce "mediaType=StillImage", guaranteeing photos.
+    // q={query} performs a full-text search on the records.
+    const url = `https://api.gbif.org/v1/occurrence/search?q=${query}&kingdomKey=1&mediaType=StillImage&limit=${limit}&offset=${offset}`;
 
     try {
         const response = await fetch(url);
         if (!response.ok) throw new Error(`GBIF Error: ${response.status}`);
         const data = await response.json();
 
-        // Map what we have. Images are often missing in Species search, handled in UI.
-        const cleanData = data.results.map(record => ({
-            slug: record.key.toString(),
-            scientific_name: record.scientificName,
-            common_name: record.vernacularName || record.scientificName,
-            image_url: null, 
-            family: record.family,
-            kingdom: record.kingdom
-        }));
+        const seen = new Set();
+        const cleanData = data.results
+            .map(mapGbifRecord) // Use the same mapper as categories
+            .filter(item => {
+                if (!item.image_url) return false;
+                // Deduplicate: If we get 10 records of "Panthera leo", only show the first one
+                if (seen.has(item.scientific_name)) return false;
+                seen.add(item.scientific_name);
+                return true;
+            });
         
         return { data: cleanData, meta: { total: data.count, endOfRecords: data.endOfRecords } };
     } catch (error) {
@@ -200,6 +217,7 @@ export async function searchSpecimens(query, page) {
 
 export async function getSpecimenDetails(key) {
     try {
+        // We still use Species API for details as it has better taxonomy data
         const response = await fetch(`https://api.gbif.org/v1/species/${key}`);
         if (!response.ok) throw new Error("Specimen not found");
         const data = await response.json();
@@ -213,7 +231,7 @@ export async function getSpecimenDetails(key) {
             order: data.order,
             family: data.family,
             genus: data.genus,
-            image_url: null
+            image_url: null // We rely on the gallery image or placeholder here
         };
     } catch (error) {
         console.error("Details Error:", error);
@@ -269,7 +287,7 @@ export async function fetchCollectionSuggestions(query) {
     } catch (e) { return []; }
 }
 
-export async function fetchImageIdentification(url) { /* Preserved logic */ return null; }
+export async function fetchImageIdentification(url) { return null; }
 export async function fetchCustomCareAdvice(s, q) {
     if (!configStore.geminiApiKey) return "Key missing";
     try {
