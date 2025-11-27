@@ -2,7 +2,7 @@
  * API.JS
  * This file handles all external communication:
  * - Firebase Initialization & Auth
- * - Trefle API calls (with Proxy Redundancy)
+ * - Trefle API calls (with Proxy Redundancy & Validation)
  * - Gemini API calls
  * - Firestore Database calls
  * - Firebase Storage calls
@@ -334,11 +334,12 @@ export async function deleteUserCollection(userId, collectionId) {
 }
 
 
-// --- Trefle API Functions (With Proxy Redundancy) ---
+// --- Trefle API Functions (With Proxy Redundancy & Validation) ---
 
 /**
  * Helper function to fetch data through a proxy with redundancy.
  * Tries corsproxy.io first, falls back to allorigins.win.
+ * CRITICAL: Validates that the response is actually JSON before returning.
  */
 async function fetchWithProxy(targetUrl) {
     // List of proxies to try in order
@@ -355,17 +356,34 @@ async function fetchWithProxy(targetUrl) {
             console.log(`Fetching via proxy: ${proxyUrl}`);
             const response = await fetch(proxyUrl);
             
-            // If the proxy returns a server error (500+), consider it a failure and try next
-            // Note: 404s might be valid Trefle responses, so we return those.
-            if (!response.ok && response.status >= 500) {
-                throw new Error(`Proxy returned status ${response.status}`);
+            // 1. Check HTTP Status
+            // Trefle returns 404 for "not found", which is valid JSON. 
+            // We only consider 500+ (Server Errors) as proxy/upstream failures.
+            if (response.status >= 500) {
+                throw new Error(`Proxy/Server returned status ${response.status}`);
+            }
+
+            // 2. Validate JSON Content
+            // We clone the response because reading the body consumes it.
+            const clone = response.clone();
+            try {
+                const text = await clone.text();
+                if (!text || text.trim() === "") {
+                    throw new Error("Empty response body");
+                }
+                JSON.parse(text); // This is the crucial check
+            } catch (jsonErr) {
+                // If it's not valid JSON (e.g. HTML error page or empty), fail this strategy
+                throw new Error(`Invalid JSON received: ${jsonErr.message}`);
             }
             
+            // If we get here, response is safe to use
             return response;
+
         } catch (error) {
-            console.warn(`Proxy strategy failed: ${proxyUrl}`, error);
+            console.warn(`Proxy strategy failed (${proxyUrl}):`, error);
             lastError = error;
-            // Continue to next strategy
+            // Continue loop to try next strategy
         }
     }
 
