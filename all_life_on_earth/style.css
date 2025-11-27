@@ -1,0 +1,82 @@
+/*
+ * STYLE.CSS
+ * Custom styles for the "Life Explorer" SPA.
+ */
+
+/* FAILSAFE: Ensure hidden elements stay hidden */
+.hidden {
+    display: none !important;
+}
+
+/* --- New Immersive Background --- */
+.bg-wildlife {
+    /* Dark misty forest background */
+    background-image: 
+        linear-gradient(to bottom, rgba(17, 24, 39, 0.85), rgba(17, 24, 39, 0.95)),
+        url('https://images.unsplash.com/photo-1448375240586-dfd8f379331f?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+}
+
+/* --- Glassmorphism Utility --- */
+.glass-panel {
+    background: rgba(31, 41, 55, 0.7); /* Gray-800 with opacity */
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px); /* Safari support */
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* --- Hover Glow Effect --- */
+.hover-glow {
+    transition: all 0.3s ease;
+}
+
+.hover-glow:hover {
+    box-shadow: 0 0 20px rgba(74, 222, 128, 0.3); /* Green-400 soft glow */
+    border-color: rgba(74, 222, 128, 0.5);
+}
+
+/* --- Loading Spinner --- */
+#loader::after, #modal-loader::after, #sanctuary-loader::after, #ai-suggestions-loader::after {
+    content: '';
+    display: inline-block;
+    width: 2rem;
+    height: 2rem;
+    border: 4px solid theme('colors.gray.600');
+    border-top-color: theme('colors.green.400');
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-left: 1rem;
+    vertical-align: middle;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* --- Custom Scrollbar for Modal Content --- */
+#modal-content-container::-webkit-scrollbar {
+    width: 8px;
+}
+
+#modal-content-container::-webkit-scrollbar-track {
+    background: rgba(31, 41, 55, 0.5); 
+}
+
+#modal-content-container::-webkit-scrollbar-thumb {
+    background: theme('colors.gray.600'); 
+    border-radius: 4px;
+}
+
+#modal-content-container::-webkit-scrollbar-thumb:hover {
+    background: theme('colors.gray.500'); 
+}
+
+/* Make the modal close button bigger/easier to hit */
+#modal-close-btn, #image-modal-close-btn, #collection-modal-close-btn {
+    @apply text-3xl font-bold leading-none px-2 text-gray-400 hover:text-white transition-colors;
+}
