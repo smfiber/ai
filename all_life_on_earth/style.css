@@ -3,16 +3,26 @@
  * Custom styles for the "Life Explorer" SPA.
  */
 
+/* Import a nice rounded font for a friendly, nature vibe */
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap');
+
 /* FAILSAFE: Ensure hidden elements stay hidden */
 .hidden {
     display: none !important;
 }
 
+body {
+    font-family: 'Nunito', sans-serif;
+}
+
 /* --- New Immersive Background --- */
 .bg-wildlife {
+    /* CRITICAL FIX: Fallback color if image fails */
+    background-color: #111827; 
+    
     /* Dark misty forest background */
     background-image: 
-        linear-gradient(to bottom, rgba(17, 24, 39, 0.85), rgba(17, 24, 39, 0.95)),
+        linear-gradient(to bottom, rgba(17, 24, 39, 0.75), rgba(17, 24, 39, 0.95)),
         url('https://images.unsplash.com/photo-1448375240586-dfd8f379331f?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80');
     background-size: cover;
     background-position: center;
@@ -22,40 +32,61 @@
 
 /* --- Glassmorphism Utility --- */
 .glass-panel {
-    background: rgba(31, 41, 55, 0.7); /* Gray-800 with opacity */
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px); /* Safari support */
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    /* Slightly more opaque for better readability */
+    background: rgba(31, 41, 55, 0.6); 
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    
+    /* crisp border */
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
 }
 
 /* --- Hover Glow Effect --- */
 .hover-glow {
-    transition: all 0.3s ease;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .hover-glow:hover {
-    box-shadow: 0 0 20px rgba(74, 222, 128, 0.3); /* Green-400 soft glow */
-    border-color: rgba(74, 222, 128, 0.5);
+    transform: translateY(-4px); /* Lift up slightly */
+    box-shadow: 0 10px 25px -5px rgba(74, 222, 128, 0.4); /* Green glow */
+    border-color: rgba(74, 222, 128, 0.6);
+}
+
+/* --- Card Image Container --- */
+/* Ensures images inside cards look unified */
+.card-image-wrapper {
+    position: relative;
+    overflow: hidden;
+}
+
+.card-image-wrapper::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 50%;
+    background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+    pointer-events: none;
 }
 
 /* --- Loading Spinner --- */
 #loader::after, #modal-loader::after, #sanctuary-loader::after, #ai-suggestions-loader::after {
     content: '';
     display: inline-block;
-    width: 2rem;
-    height: 2rem;
-    border: 4px solid theme('colors.gray.600');
-    border-top-color: theme('colors.green.400');
+    width: 2.5rem;
+    height: 2.5rem;
+    border: 4px solid rgba(255,255,255,0.1);
+    border-top-color: #4ade80; /* Green-400 */
     border-radius: 50%;
     animation: spin 1s linear infinite;
-    margin-left: 1rem;
-    vertical-align: middle;
+    display: block;
+    margin: 0 auto;
 }
 
 @keyframes spin {
-    to {
-        transform: rotate(360deg);
-    }
+    to { transform: rotate(360deg); }
 }
 
 /* --- Custom Scrollbar for Modal Content --- */
@@ -65,15 +96,16 @@
 
 #modal-content-container::-webkit-scrollbar-track {
     background: rgba(31, 41, 55, 0.5); 
+    border-radius: 4px;
 }
 
 #modal-content-container::-webkit-scrollbar-thumb {
-    background: theme('colors.gray.600'); 
+    background: #4b5563; 
     border-radius: 4px;
 }
 
 #modal-content-container::-webkit-scrollbar-thumb:hover {
-    background: theme('colors.gray.500'); 
+    background: #6b7280; 
 }
 
 /* Make the modal close button bigger/easier to hit */
