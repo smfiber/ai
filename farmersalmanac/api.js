@@ -821,7 +821,9 @@ export async function fetchCollectionSuggestions(query) {
     const prompt = `
         You are an expert gardener. The user is exploring a collection based on the term: "${query}".
 
-        Please provide a list of exactly 60 distinct, popular, or interesting varieties/species related to this term that a home gardener might want to grow. 
+        Please provide a **comprehensive** list of distinct, popular, or interesting varieties/species related to this term that a home gardener might want to grow. 
+        
+        Aim for as many as possible (up to 150) to provide a complete A-Z view.
         
         Ensure you provide specific Scientific Names (e.g., 'Solanum lycopersicum') and Common Names.
         
