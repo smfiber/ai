@@ -2,7 +2,7 @@
  * API.JS
  * This file handles all external communication:
  * - Firebase Initialization & Auth
- * - Trefle API calls
+ * - Trefle API calls (with Proxy Redundancy)
  * - Gemini API calls
  * - Firestore Database calls
  * - Firebase Storage calls
@@ -334,7 +334,45 @@ export async function deleteUserCollection(userId, collectionId) {
 }
 
 
-// --- Trefle API Functions ---
+// --- Trefle API Functions (With Proxy Redundancy) ---
+
+/**
+ * Helper function to fetch data through a proxy with redundancy.
+ * Tries corsproxy.io first, falls back to allorigins.win.
+ */
+async function fetchWithProxy(targetUrl) {
+    // List of proxies to try in order
+    const strategies = [
+        (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+        (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`
+    ];
+
+    let lastError = null;
+
+    for (const strategy of strategies) {
+        const proxyUrl = strategy(targetUrl);
+        try {
+            console.log(`Fetching via proxy: ${proxyUrl}`);
+            const response = await fetch(proxyUrl);
+            
+            // If the proxy returns a server error (500+), consider it a failure and try next
+            // Note: 404s might be valid Trefle responses, so we return those.
+            if (!response.ok && response.status >= 500) {
+                throw new Error(`Proxy returned status ${response.status}`);
+            }
+            
+            return response;
+        } catch (error) {
+            console.warn(`Proxy strategy failed: ${proxyUrl}`, error);
+            lastError = error;
+            // Continue to next strategy
+        }
+    }
+
+    // If we get here, all strategies failed
+    throw lastError || new Error("All proxy strategies failed.");
+}
+
 
 // NEW FUNCTION: Edible & Vegetable Plants (Global, not limited to Florida)
 export async function getEdiblePlants(category, page) {
@@ -353,10 +391,8 @@ export async function getEdiblePlants(category, page) {
         trefleUrl += '&filter[edible]=true';
     }
     
-    const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(trefleUrl)}`;
-
     try {
-        const response = await fetch(proxyUrl);
+        const response = await fetchWithProxy(trefleUrl);
         if (!response.ok) {
             throw new Error(`Trefle API error (via proxy): ${response.statusText}`);
         }
@@ -381,10 +417,9 @@ export async function getFloridaNativePlants(category, page) {
     if (!floridaZoneId) {
         console.log("Resolving Florida Zone ID...");
         const searchUrl = `https://trefle.io/api/v1/distributions/search?q=florida&token=${configStore.trefleApiKey}`;
-        const proxySearch = `https://corsproxy.io/?${encodeURIComponent(searchUrl)}`;
         
         try {
-            const res = await fetch(proxySearch);
+            const res = await fetchWithProxy(searchUrl);
             if (!res.ok) throw new Error("Failed to search distribution zones.");
             const data = await res.json();
             
@@ -424,10 +459,8 @@ export async function getFloridaNativePlants(category, page) {
             break;
     }
     
-    const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(trefleUrl)}`;
-
     try {
-        const response = await fetch(proxyUrl);
+        const response = await fetchWithProxy(trefleUrl);
         if (!response.ok) {
             throw new Error(`Trefle API error (via proxy): ${response.statusText}`);
         }
@@ -451,10 +484,8 @@ export async function getNativePlants(speciesType, page) {
     // Fetch 50 to buffer
     const trefleUrl = `https://trefle.io/api/v1/species?filter[growth_form]=${speciesType}&page=${page}&limit=54&token=${configStore.trefleApiKey}`;
     
-    const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(trefleUrl)}`;
-
     try {
-        const response = await fetch(proxyUrl);
+        const response = await fetchWithProxy(trefleUrl);
         if (!response.ok) {
             throw new Error(`Trefle API error (via proxy): ${response.statusText}`);
         }
@@ -486,10 +517,8 @@ export async function searchNativePlants(query, page, filters = {}) {
         trefleUrl += '&filter[edible]=true';
     }
 
-    const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(trefleUrl)}`;
-
     try {
-        const response = await fetch(proxyUrl);
+        const response = await fetchWithProxy(trefleUrl);
         if (!response.ok) {
             throw new Error(`Trefle API error (via proxy): ${response.statusText}`);
         }
@@ -512,10 +541,8 @@ export async function getPlantDetails(plantSlug) {
 
     const trefleUrl = `https://trefle.io/api/v1/species/${plantSlug}?token=${configStore.trefleApiKey}`;
     
-    const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(trefleUrl)}`;
-
     try {
-        const response = await fetch(proxyUrl);
+        const response = await fetchWithProxy(trefleUrl);
         if (!response.ok) {
             throw new Error(`Trefle API error (via proxy): ${response.statusText}`);
         }
