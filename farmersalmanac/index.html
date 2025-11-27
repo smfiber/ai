@@ -7,7 +7,7 @@
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>🌿</text></svg>">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="style.css">
-    <script type_to_remove="module">
+    <script type="module">
         // This is a placeholder to show where firebase would be imported if this were a bundled app.
     </script>
 </head>
@@ -106,22 +106,23 @@
                         <button id="back-to-collections-btn" class="text-green-400 hover:text-white text-sm font-medium transition-colors">&larr; Back to Collections</button>
                     </div>
 
-                    <div id="ai-suggestions-container" class="hidden mb-6">
+                    <div id="loader" class="hidden text-center py-10">
+                        <p class="text-lg text-green-400 font-medium drop-shadow-md">Loading plants...</p>
+                    </div>
+                    <div id="plant-gallery" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-6">
+                        </div>
+
+                    <div id="ai-suggestions-container" class="hidden mb-6 mt-10 pt-10 border-t border-gray-700/50">
                         <h3 class="text-sm uppercase tracking-wider text-green-400 font-bold mb-3 flex items-center">
                             <span class="mr-2">✨</span> Gemini Curated Varieties
                         </h3>
                         <div id="ai-suggestions-list" class="hidden">
                             </div>
                         <div id="ai-suggestions-loader" class="hidden text-sm text-gray-400 animate-pulse mt-2">
-                            Asking Gemini for top recommendations...
+                            Asking Gemini for top recommendations (A-Z)...
                         </div>
                     </div>
 
-                    <div id="loader" class="hidden text-center py-10">
-                        <p class="text-lg text-green-400 font-medium drop-shadow-md">Loading plants...</p>
-                    </div>
-                    <div id="plant-gallery" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-6">
-                        </div>
                 </div>
 
                 <div id="pagination-container" class="hidden flex justify-between items-center mt-8 pt-6 border-t border-gray-700/50">
