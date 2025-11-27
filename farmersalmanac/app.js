@@ -19,7 +19,7 @@ import {
     getSavedPlant,
     fetchCustomCareAdvice,
     fetchScientificNameLookup,
-    fetchCollectionSuggestions, // NEW IMPORT
+    fetchCollectionSuggestions,
     // NEW Image Functions
     uploadPlantImage, 
     fetchImageIdentification,
@@ -1551,9 +1551,6 @@ function mergePlantData(trefleData, geminiData) {
         max_summer_temp_f: geminiData.max_summer_temp_f,
         frost_sensitivity: geminiData.frost_sensitivity,
 
-        // NEW FIELD MERGED
-        fun_facts: geminiData.fun_facts,
-
         fertilizer_info: geminiData.fertilizer_info,
         pruning_season: geminiData.pruning_season,
         propagation_methods: geminiData.propagation_methods,
@@ -1726,6 +1723,29 @@ async function openPlantModal(slug, name, specificCommonName = null) {
         if (!trefleData) {
             throw new Error("Could not fetch plant details.");
         }
+
+        // --- NEW CODE START ---
+        // IMAGE REFINEMENT ATTEMPT
+        // If we have a specific name override (e.g., "Ajo Rojo") but fetched generic species data,
+        // let's try one more targeted search just to see if we can find a better image for that specific variety.
+        if (specificCommonName && specificCommonName !== trefleData.common_name) {
+            console.log(`Attempting to find specific image for variety: "${specificCommonName}"...`);
+            try {
+                // Perform a lightweight search just for the image
+                const varietySearch = await searchNativePlants(specificCommonName, 1);
+                // If we found a match AND it has an image URL
+                if (varietySearch.data && varietySearch.data.length > 0 && varietySearch.data[0].image_url) {
+                    console.log("Found specific variety image. Overriding generic species image.");
+                    trefleData.image_url = varietySearch.data[0].image_url;
+                } else {
+                    console.log("No specific image found. Keeping generic species image.");
+                }
+            } catch (imgErr) {
+                console.warn("Image refinement search failed (non-critical):", imgErr);
+                // Swallow error, just stick with the generic image
+            }
+        }
+        // --- NEW CODE END ---
 
         // NEW LOGIC: Overwrite Common Name if specific one provided
         if (specificCommonName && specificCommonName !== trefleData.common_name) {
@@ -1935,13 +1955,6 @@ function createPlantDetailHtml(plantData) {
                 <span class="mr-2">🐞</span> Pests & Diseases
             </h3>
             <p class="text-gray-200 leading-relaxed whitespace-pre-wrap m-0">${get(plantData.pests_and_diseases, 'No specific pest information available.')}</p>
-        </div>
-
-        <div class="bg-yellow-900/40 backdrop-blur-sm border-l-4 border-yellow-500 p-6 rounded-r-xl mb-8 shadow-lg">
-            <h3 class="flex items-center text-xl font-bold text-white mb-3 drop-shadow-md">
-                <span class="mr-2">📜</span> Fun Facts & History
-            </h3>
-            <p class="text-gray-200 leading-relaxed whitespace-pre-wrap m-0">${get(plantData.fun_facts, 'No historical data available.')}</p>
         </div>
 
         <div class="bg-gray-800/60 backdrop-blur-sm p-6 rounded-xl border border-white/10">
