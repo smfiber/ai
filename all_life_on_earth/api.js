@@ -1,13 +1,14 @@
 /*
  * API.JS
- * Updated:
- * 1. Separated Collections ("user_expeditions")
- * 2. Fixed Search to ensure Images (Occurrence API)
+ * Final Version
+ * - Isolated "user_expeditions" collection
+ * - Occurrence Search (Guarantees Images)
+ * - Smart Details Lookup (Handles Name vs ID)
  */
 
 import { configStore } from './config.js';
 
-// --- Firebase Imports (Preserved) ---
+// --- Firebase Imports ---
 let app, auth, db, storage; 
 let GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut;
 let collection, addDoc, deleteDoc, doc, query, where, getDocs, setDoc; 
@@ -57,7 +58,7 @@ export async function initFirebase() {
     }
 }
 
-// --- Auth & Storage (Preserved) ---
+// --- Auth & Storage ---
 export async function signInWithGoogle() {
     if (!auth) return;
     const provider = new GoogleAuthProvider();
@@ -74,8 +75,8 @@ export async function uploadSpecimenImage(file, userId) {
     return await getDownloadURL(snap.ref);
 }
 
-// --- Firestore: Saved Specimens (Preserved) ---
-// This collection is already unique ("saved_specimens") so it won't conflict with "digital_gardener"
+// --- Firestore: Saved Specimens ---
+// This collection ("saved_specimens") is already separate from "digital_gardener".
 const DB_COLLECTION = "saved_specimens"; 
 
 export async function saveSpecimen(userId, specimen, docId = null) {
@@ -106,9 +107,8 @@ export async function getSavedSpecimens(userId) {
     return list;
 }
 
-// --- Firestore: Custom Collections (UPDATED) ---
-// Changed from "user_collections" to "user_expeditions" to prevent overlap with the Garden App
-
+// --- Firestore: Custom Expeditions (ISOLATED) ---
+// We renamed this to "user_expeditions" to protect your Vegetable data.
 const EXPEDITIONS_COLLECTION = "user_expeditions";
 
 export async function saveUserCollection(userId, c) {
@@ -120,7 +120,6 @@ export async function saveUserCollection(userId, c) {
 
 export async function getUserCollections(userId) {
     if (!db) return [];
-    // We now query the NEW collection
     const q = query(collection(db, EXPEDITIONS_COLLECTION), where("uid", "==", userId));
     const snap = await getDocs(q);
     const list = [];
@@ -132,11 +131,10 @@ export async function deleteUserCollection(userId, id) {
     if (db) await deleteDoc(doc(db, EXPEDITIONS_COLLECTION, id)); 
 }
 
-
-// --- GBIF API (Updated) ---
+// --- GBIF API (The Engine) ---
 
 function mapGbifRecord(record) {
-    // Occurrence records hold images in 'media'
+    // GBIF Occurrence images are in the 'media' array
     const imageObj = record.media ? record.media.find(m => m.type === 'StillImage') : null;
     let imageUrl = imageObj ? imageObj.identifier : null;
     if (!imageUrl && imageObj && imageObj.references) imageUrl = imageObj.references;
@@ -157,7 +155,7 @@ function mapGbifRecord(record) {
 export async function getCategorySpecimens(classKey, page) {
     const limit = 20;
     const offset = (page - 1) * limit;
-    // kingdomKey=1 ensures animals
+    // kingdomKey=1 (Animals), mediaType=StillImage (Has Photo)
     const url = `https://api.gbif.org/v1/occurrence/search?classKey=${classKey}&kingdomKey=1&mediaType=StillImage&limit=${limit}&offset=${offset}`;
 
     try {
@@ -169,7 +167,6 @@ export async function getCategorySpecimens(classKey, page) {
         const cleanData = data.results
             .map(mapGbifRecord)
             .filter(item => {
-                // strict filters for high quality gallery
                 if (!item.image_url) return false;
                 if (seen.has(item.scientific_name)) return false;
                 seen.add(item.scientific_name);
@@ -187,9 +184,7 @@ export async function searchSpecimens(query, page) {
     const limit = 20;
     const offset = (page - 1) * limit;
     
-    // UPDATED: Now using OCCURRENCE search instead of Species search.
-    // This allows us to enforce "mediaType=StillImage", guaranteeing photos.
-    // q={query} performs a full-text search on the records.
+    // UPDATED: Use Occurrence Search to guarantee images.
     const url = `https://api.gbif.org/v1/occurrence/search?q=${query}&kingdomKey=1&mediaType=StillImage&limit=${limit}&offset=${offset}`;
 
     try {
@@ -199,10 +194,10 @@ export async function searchSpecimens(query, page) {
 
         const seen = new Set();
         const cleanData = data.results
-            .map(mapGbifRecord) // Use the same mapper as categories
+            .map(mapGbifRecord) 
             .filter(item => {
                 if (!item.image_url) return false;
-                // Deduplicate: If we get 10 records of "Panthera leo", only show the first one
+                // Deduplicate repeats of same animal
                 if (seen.has(item.scientific_name)) return false;
                 seen.add(item.scientific_name);
                 return true;
@@ -215,12 +210,31 @@ export async function searchSpecimens(query, page) {
     }
 }
 
-export async function getSpecimenDetails(key) {
+/**
+ * SMART LOOKUP: Handles both IDs (from grid) and Scientific Names (from Gemini).
+ */
+export async function getSpecimenDetails(keyOrName) {
     try {
-        // We still use Species API for details as it has better taxonomy data
+        let key = keyOrName;
+
+        // If input is a String (e.g. "Panthera leo"), find the ID first
+        if (isNaN(keyOrName)) {
+            const matchRes = await fetch(`https://api.gbif.org/v1/species/match?name=${keyOrName}&kingdom=Animalia`);
+            if (!matchRes.ok) throw new Error("Match failed");
+            const matchData = await matchRes.json();
+            
+            if (matchData.usageKey) {
+                key = matchData.usageKey;
+            } else {
+                throw new Error("Species not found in GBIF Backbone");
+            }
+        }
+
+        // Fetch Details using the ID
         const response = await fetch(`https://api.gbif.org/v1/species/${key}`);
-        if (!response.ok) throw new Error("Specimen not found");
+        if (!response.ok) throw new Error("Specimen details not found");
         const data = await response.json();
+        
         return {
             slug: data.key.toString(),
             scientific_name: data.scientificName,
@@ -231,7 +245,7 @@ export async function getSpecimenDetails(key) {
             order: data.order,
             family: data.family,
             genus: data.genus,
-            image_url: null // We rely on the gallery image or placeholder here
+            image_url: null // Details API rarely has images; we rely on gallery/placeholder
         };
     } catch (error) {
         console.error("Details Error:", error);
@@ -239,7 +253,8 @@ export async function getSpecimenDetails(key) {
     }
 }
 
-// --- Gemini Functions (Preserved) ---
+// --- Gemini Functions ---
+
 function extractJson(text) {
     const s = text.indexOf('{'); const e = text.lastIndexOf('}');
     if (s === -1 || e === -1) {
