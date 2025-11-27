@@ -528,7 +528,7 @@ async function loadCollectionSuggestions(query) {
     aiSuggestionsLoader.classList.remove('hidden');
 
     try {
-        // Now fetches ~60 items, sorted A-Z
+        // Now fetches ~150+ items, sorted A-Z
         const suggestions = await fetchCollectionSuggestions(query);
         aiSuggestionsLoader.classList.add('hidden');
         
@@ -537,7 +537,13 @@ async function loadCollectionSuggestions(query) {
             return;
         }
 
-        console.log("Detailed Suggestion Data:", suggestions[0]); // DEBUG: Check keys
+        console.log("Detailed Suggestion Data:", suggestions[0]); 
+
+        // UPDATED: Dynamically update the header count
+        const header = aiSuggestionsContainer.querySelector('h3');
+        if (header) {
+            header.innerHTML = `<span class="mr-2">✨</span> Gemini Curated Varieties (${suggestions.length} Found)`;
+        }
 
         // Ensure visibility and layout
         aiSuggestionsList.classList.remove('hidden'); // Force remove hidden
@@ -1545,6 +1551,9 @@ function mergePlantData(trefleData, geminiData) {
         max_summer_temp_f: geminiData.max_summer_temp_f,
         frost_sensitivity: geminiData.frost_sensitivity,
 
+        // NEW FIELD MERGED
+        fun_facts: geminiData.fun_facts,
+
         fertilizer_info: geminiData.fertilizer_info,
         pruning_season: geminiData.pruning_season,
         propagation_methods: geminiData.propagation_methods,
@@ -1926,6 +1935,13 @@ function createPlantDetailHtml(plantData) {
                 <span class="mr-2">🐞</span> Pests & Diseases
             </h3>
             <p class="text-gray-200 leading-relaxed whitespace-pre-wrap m-0">${get(plantData.pests_and_diseases, 'No specific pest information available.')}</p>
+        </div>
+
+        <div class="bg-yellow-900/40 backdrop-blur-sm border-l-4 border-yellow-500 p-6 rounded-r-xl mb-8 shadow-lg">
+            <h3 class="flex items-center text-xl font-bold text-white mb-3 drop-shadow-md">
+                <span class="mr-2">📜</span> Fun Facts & History
+            </h3>
+            <p class="text-gray-200 leading-relaxed whitespace-pre-wrap m-0">${get(plantData.fun_facts, 'No historical data available.')}</p>
         </div>
 
         <div class="bg-gray-800/60 backdrop-blur-sm p-6 rounded-xl border border-white/10">
