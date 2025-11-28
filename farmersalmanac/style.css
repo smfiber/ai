@@ -81,3 +81,42 @@
 #modal-close-btn {
     @apply text-3xl font-bold leading-none px-2 text-gray-400 hover:text-white transition-colors;
 }
+
+/* --- Plant Card Badges (New) --- */
+.plant-card {
+    position: relative; /* Ensure absolute children position relative to the card */
+}
+
+.plant-card .badge-container {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    display: flex;
+    gap: 0.25rem;
+    z-index: 20;
+}
+
+.plant-badge {
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+    border-radius: 9999px;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    font-weight: bold;
+    color: white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    border: 1px solid rgba(255,255,255,0.2);
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.badge-garden {
+    background-color: rgba(22, 163, 74, 0.8); /* Green-600 */
+    border-color: rgba(74, 222, 128, 0.5);
+}
+
+.badge-bookmark {
+    background-color: rgba(147, 51, 234, 0.8); /* Purple-600 */
+    border-color: rgba(192, 132, 252, 0.5);
+}
