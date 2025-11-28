@@ -164,11 +164,11 @@ function addEventListeners() {
     searchForm.addEventListener('submit', handleSearchSubmit);
     scientificLookupBtn.addEventListener('click', handleScientificLookup);
     
-    // Pagination Listeners (FIXED)
+    // Pagination Listeners
     prevBtn.addEventListener('click', handlePrevClick);
     nextBtn.addEventListener('click', handleNextClick);
 
-    // Gallery Click Listeners (FIXED)
+    // Gallery Click Listeners
     specimenGallery.addEventListener('click', handleSpecimenCardClick);
     sanctuaryGallery.addEventListener('click', handleSpecimenCardClick);
     collectionsGrid.addEventListener('click', handleCollectionCardClick);
@@ -446,6 +446,9 @@ async function openSpecimenModal(slug, name) {
                 setupCareQuestionForm(currentModalSpecimen.qa_history);
                 modalLoader.classList.add('hidden');
                 modalContent.classList.remove('hidden');
+                
+                // Add Gallery Listeners (For Saved Specimens)
+                setupGalleryListeners();
                 return;
             }
             if (savedResult.data) isSaved = true;
@@ -470,6 +473,10 @@ async function openSpecimenModal(slug, name) {
 
         modalTitle.textContent = currentModalSpecimen.common_name;
         modalContent.innerHTML = createSpecimenDetailHtml(currentModalSpecimen);
+        
+        // Add Gallery Listeners (For New Specimens)
+        setupGalleryListeners();
+
         modalContent.appendChild(qaSectionClone);
         setupCareQuestionForm(currentModalSpecimen.qa_history);
 
@@ -483,6 +490,28 @@ async function openSpecimenModal(slug, name) {
     }
 }
 
+function setupGalleryListeners() {
+    const mainImg = document.getElementById('main-specimen-image');
+    const thumbs = modalContent.querySelectorAll('.gallery-thumb');
+    
+    if (mainImg && thumbs.length > 0) {
+        thumbs.forEach(thumb => {
+            thumb.addEventListener('click', () => {
+                // Update Main Image
+                const newSrc = thumb.src;
+                mainImg.src = newSrc;
+                
+                // Update Active State
+                thumbs.forEach(t => t.classList.remove('ring-2', 'ring-green-400', 'opacity-100'));
+                thumbs.forEach(t => t.classList.add('opacity-70'));
+                
+                thumb.classList.remove('opacity-70');
+                thumb.classList.add('ring-2', 'ring-green-400', 'opacity-100');
+            });
+        });
+    }
+}
+
 function createSpecimenDetailHtml(data) {
     const get = (v, d = 'N/A') => (v === null || v === undefined || v === '') ? d : v;
     const funFacts = Array.isArray(data.fun_facts) 
@@ -490,12 +519,26 @@ function createSpecimenDetailHtml(data) {
         : '<li class="text-gray-500 italic">No facts available.</li>';
     const image = data.image_url || 'https://placehold.co/400x400/374151/FFFFFF?text=No+Image';
 
+    // Gallery HTML Generation
+    const galleryHtml = (data.gallery_images && data.gallery_images.length > 1) 
+       ? `<div class="flex gap-2 overflow-x-auto pb-2 mt-4 custom-scrollbar">
+            ${data.gallery_images.map((img, idx) => `
+                <img src="${img}" 
+                     class="gallery-thumb h-20 w-20 object-cover rounded-lg cursor-pointer transition-all ${idx===0 ? 'ring-2 ring-green-400 opacity-100' : 'opacity-70 hover:opacity-100'}" 
+                     alt="Thumbnail">
+            `).join('')}
+          </div>` 
+       : '';
+
     return `
         <div class="flex flex-col lg:flex-row gap-8 mb-8">
-            <div class="w-full lg:w-1/3 flex-shrink-0 card-image-wrapper rounded-xl">
-                <img src="${image}" alt="${get(data.common_name)}" 
-                     class="w-full rounded-xl shadow-lg object-cover bg-gray-900/50"
-                     onerror="this.onerror=null;this.src='https://placehold.co/400x400/374151/FFFFFF?text=No+Image';">
+            <div class="w-full lg:w-1/3 flex-shrink-0">
+                <div class="card-image-wrapper rounded-xl overflow-hidden shadow-lg bg-gray-900/50">
+                    <img id="main-specimen-image" src="${image}" alt="${get(data.common_name)}" 
+                         class="w-full h-auto object-cover"
+                         onerror="this.onerror=null;this.src='https://placehold.co/400x400/374151/FFFFFF?text=No+Image';">
+                </div>
+                ${galleryHtml}
             </div>
 
             <div class="w-full lg:w-2/3 grid grid-cols-1 md:grid-cols-2 gap-6 content-start">
@@ -593,6 +636,7 @@ async function handleRefreshData() {
         await saveSpecimen(currentUser.uid, freshData, freshData.docId);
         currentModalSpecimen = freshData;
         modalContent.innerHTML = createSpecimenDetailHtml(currentModalSpecimen);
+        setupGalleryListeners();
         const qaSectionClone = careQuestionSection;
         careQuestionSection.classList.remove('hidden');
         modalContent.appendChild(qaSectionClone);
