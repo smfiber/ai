@@ -1,7 +1,3 @@
-{
-type: uploaded file
-fileName: api.js
-fullContent:
 /*
  * API.JS
  * This file handles all external communication:
@@ -1086,5 +1082,4 @@ export async function fetchCollectionSuggestions(query) {
         console.error("Error fetching collection suggestions:", error);
         return [];
     }
-}
 }
