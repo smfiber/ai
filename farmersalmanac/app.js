@@ -19,7 +19,7 @@ import {
     getSavedPlant,
     fetchCustomCareAdvice,
     fetchScientificNameLookup,
-    fetchCollectionSuggestions,
+    fetchCollectionSuggestions, // NEW IMPORT
     // NEW Image Functions
     uploadPlantImage, 
     fetchImageIdentification,
@@ -1551,6 +1551,9 @@ function mergePlantData(trefleData, geminiData) {
         max_summer_temp_f: geminiData.max_summer_temp_f,
         frost_sensitivity: geminiData.frost_sensitivity,
 
+        // NEW FIELD MERGED
+        fun_facts: geminiData.fun_facts,
+
         fertilizer_info: geminiData.fertilizer_info,
         pruning_season: geminiData.pruning_season,
         propagation_methods: geminiData.propagation_methods,
@@ -1955,6 +1958,13 @@ function createPlantDetailHtml(plantData) {
                 <span class="mr-2">🐞</span> Pests & Diseases
             </h3>
             <p class="text-gray-200 leading-relaxed whitespace-pre-wrap m-0">${get(plantData.pests_and_diseases, 'No specific pest information available.')}</p>
+        </div>
+
+        <div class="bg-yellow-900/40 backdrop-blur-sm border-l-4 border-yellow-500 p-6 rounded-r-xl mb-8 shadow-lg">
+            <h3 class="flex items-center text-xl font-bold text-white mb-3 drop-shadow-md">
+                <span class="mr-2">📜</span> Fun Facts & History
+            </h3>
+            <p class="text-gray-200 leading-relaxed whitespace-pre-wrap m-0">${get(plantData.fun_facts, 'No historical data available.')}</p>
         </div>
 
         <div class="bg-gray-800/60 backdrop-blur-sm p-6 rounded-xl border border-white/10">
