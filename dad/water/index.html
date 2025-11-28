@@ -1,0 +1,351 @@
+import React, { useState, useEffect } from 'react';
+import { 
+  Droplets, 
+  Activity, 
+  Pill, 
+  GlassWater, 
+  Flame, 
+  CheckCircle, 
+  AlertCircle,
+  ThumbsUp,
+  Clock,
+  Menu,
+  X
+} from 'lucide-react';
+
+const HydrationApp = () => {
+  const [waterCount, setWaterCount] = useState(0);
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [activeSection, setActiveSection] = useState('home');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Simple animation trigger when goal is reached
+  useEffect(() => {
+    if (waterCount > 0 && waterCount % 8 === 0) {
+      setShowConfetti(true);
+      setTimeout(() => setShowConfetti(false), 3000);
+    }
+  }, [waterCount]);
+
+  const navigation = [
+    { id: 'home', label: 'Home' },
+    { id: 'body', label: 'Your Body' },
+    { id: 'metamucil', label: ' The Fiber Factor' },
+    { id: 'tips', label: 'Easy Tips' },
+    { id: 'tracker', label: 'Tracker' },
+  ];
+
+  const handleNavClick = (id) => {
+    setActiveSection(id);
+    setMobileMenuOpen(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-50 font-sans text-slate-800">
+      {/* Navigation */}
+      <nav className="fixed top-0 w-full bg-blue-600 text-white shadow-lg z-50">
+        <div className="max-w-4xl mx-auto px-4">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center gap-2 font-bold text-xl">
+              <Droplets className="h-6 w-6 text-blue-200" />
+              <span>HydroHealth 70+</span>
+            </div>
+            
+            {/* Desktop Nav */}
+            <div className="hidden md:flex space-x-6">
+              {navigation.map((item) => (
+                <button
+                  key={item.id}
+                  onClick={() => handleNavClick(item.id)}
+                  className={`px-3 py-2 rounded-md transition-colors ${
+                    activeSection === item.id 
+                      ? 'bg-blue-700 font-semibold' 
+                      : 'hover:bg-blue-500'
+                  }`}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Mobile Menu Button */}
+            <div className="md:hidden">
+              <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+                {mobileMenuOpen ? <X /> : <Menu />}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile Nav Dropdown */}
+        {mobileMenuOpen && (
+          <div className="md:hidden bg-blue-700 px-2 pt-2 pb-3 space-y-1">
+            {navigation.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => handleNavClick(item.id)}
+                className="block w-full text-left px-3 py-2 rounded-md text-base font-medium hover:bg-blue-600"
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+        )}
+      </nav>
+
+      {/* Main Content Container */}
+      <main className="pt-20 pb-12 px-4 max-w-3xl mx-auto space-y-12">
+
+        {/* SECTION: HERO */}
+        {activeSection === 'home' && (
+          <div className="space-y-8 animate-fade-in">
+            <div className="bg-gradient-to-br from-blue-500 to-cyan-400 rounded-3xl p-8 text-white shadow-xl text-center">
+              <h1 className="text-3xl md:text-5xl font-bold mb-4">
+                Water is Your Best Medicine
+              </h1>
+              <p className="text-xl md:text-2xl opacity-90 leading-relaxed">
+                Dad, drinking water isn't just about thirst. It's the engine oil that keeps your diabetes managed and your digestion running smooth.
+              </p>
+              <button 
+                onClick={() => handleNavClick('body')}
+                className="mt-8 bg-white text-blue-600 px-8 py-3 rounded-full font-bold shadow-lg hover:bg-blue-50 transition-transform transform hover:scale-105"
+              >
+                Learn Why It Matters
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-white p-6 rounded-2xl shadow-md border-l-4 border-orange-400 flex items-start gap-4">
+                <div className="bg-orange-100 p-3 rounded-full">
+                  <Activity className="text-orange-600 h-6 w-6" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-lg">Did you know?</h3>
+                  <p className="text-slate-600">As we age, our "thirst sensor" gets weaker. You might need water even if you don't feel thirsty!</p>
+                </div>
+              </div>
+              <div className="bg-white p-6 rounded-2xl shadow-md border-l-4 border-green-400 flex items-start gap-4">
+                <div className="bg-green-100 p-3 rounded-full">
+                  <ThumbsUp className="text-green-600 h-6 w-6" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-lg">The Goal</h3>
+                  <p className="text-slate-600">Small sips, often. We aren't looking for a gallon at once, just steady hydration.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* SECTION: BODY & CONDITIONS */}
+        {activeSection === 'body' && (
+          <div className="space-y-6 animate-fade-in">
+            <h2 className="text-3xl font-bold text-blue-900 text-center mb-6">Why Your System Needs It</h2>
+            
+            {/* Condition: Diabetes */}
+            <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+              <div className="bg-indigo-100 p-4 border-b border-indigo-200 flex items-center gap-3">
+                <Activity className="text-indigo-600 h-8 w-8" />
+                <h3 className="text-xl font-bold text-indigo-900">Diabetes Control</h3>
+              </div>
+              <div className="p-6">
+                <p className="text-lg text-slate-700 mb-4">
+                  When blood sugar is high, your body tries to flush the excess sugar out through urine. This uses up a <strong>lot</strong> of water.
+                </p>
+                <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100">
+                  <p className="font-semibold text-indigo-800">
+                    💧 The Benefit: Drinking water rehydrates the blood, which can actually help lower blood glucose concentration and help your kidneys work less hard.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Condition: Diverticulitis */}
+            <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+              <div className="bg-rose-100 p-4 border-b border-rose-200 flex items-center gap-3">
+                <Flame className="text-rose-600 h-8 w-8" />
+                <h3 className="text-xl font-bold text-rose-900">Diverticulitis & Bloating</h3>
+              </div>
+              <div className="p-6">
+                <p className="text-lg text-slate-700 mb-4">
+                  The colon needs water to keep things moving. When you are dehydrated, the body pulls water <em>out</em> of the colon, making things harder and irritating diverticula pockets.
+                </p>
+                <div className="bg-rose-50 p-4 rounded-xl border border-rose-100">
+                  <p className="font-semibold text-rose-800">
+                    💧 The Benefit: Water keeps stool soft, preventing the pressure that causes diverticulitis flare-ups and that heavy, bloated feeling.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* SECTION: METAMUCIL SPECIAL */}
+        {activeSection === 'metamucil' && (
+          <div className="space-y-8 animate-fade-in">
+             <div className="bg-amber-50 border-2 border-amber-200 rounded-3xl p-6 shadow-xl relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-4 opacity-10">
+                  <Pill size={120} />
+                </div>
+                
+                <h2 className="text-2xl md:text-3xl font-bold text-amber-900 mb-4 flex items-center gap-3">
+                  <AlertCircle className="text-amber-600" />
+                  The Metamucil Trap
+                </h2>
+                
+                <p className="text-lg text-amber-900 font-medium mb-6">
+                  Dad, this is the most important part. You are taking Metamucil (fiber) to help digestion, but fiber acts like a <strong>dry sponge</strong>.
+                </p>
+
+                <div className="grid md:grid-cols-2 gap-6">
+                  {/* Scenario A */}
+                  <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                    <h4 className="font-bold text-slate-500 mb-2">Fiber + No Water</h4>
+                    <div className="h-32 bg-slate-200 rounded-lg flex items-center justify-center mb-3">
+                      <div className="w-16 h-16 bg-amber-700 rounded-sm shadow-inner flex items-center justify-center text-white font-bold text-xs">BRICK</div>
+                    </div>
+                    <p className="text-sm text-slate-600">
+                      Without water, fiber turns into a hard "concrete" in your gut. This causes <strong>more bloating</strong> and constipation.
+                    </p>
+                  </div>
+
+                  {/* Scenario B */}
+                  <div className="bg-white p-5 rounded-xl shadow-sm border-2 border-blue-400">
+                    <h4 className="font-bold text-blue-600 mb-2">Fiber + Water</h4>
+                    <div className="h-32 bg-blue-50 rounded-lg flex items-center justify-center mb-3 relative overflow-hidden">
+                       <div className="absolute inset-0 bg-blue-200 opacity-20 animate-pulse"></div>
+                       <div className="w-20 h-20 bg-amber-400 rounded-full blur-md opacity-80"></div>
+                       <span className="relative z-10 font-bold text-blue-800">Soft Gel</span>
+                    </div>
+                    <p className="text-sm text-slate-600">
+                      With water, fiber expands into a soft, slippery gel. This sweeps your system clean and reduces pressure.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-6 bg-amber-100 p-4 rounded-lg text-center">
+                  <p className="font-bold text-amber-800">
+                    Rule of Thumb: For every spoon of Metamucil, drink TWO glasses of water.
+                  </p>
+                </div>
+             </div>
+          </div>
+        )}
+
+        {/* SECTION: TIPS */}
+        {activeSection === 'tips' && (
+          <div className="space-y-6 animate-fade-in">
+            <h2 className="text-3xl font-bold text-blue-900 text-center mb-6">How to Drink More (Without Trying)</h2>
+            
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="bg-white p-6 rounded-2xl shadow-md hover:shadow-lg transition-shadow">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="bg-yellow-100 p-2 rounded-lg">
+                    <span className="text-2xl">🍋</span>
+                  </div>
+                  <h3 className="font-bold text-lg">Flavor it Up</h3>
+                </div>
+                <p className="text-slate-600">Plain water can be boring. Add a slice of <strong>lemon, cucumber, or a few berries</strong>. It makes it feel like a treat rather than a chore.</p>
+              </div>
+
+              <div className="bg-white p-6 rounded-2xl shadow-md hover:shadow-lg transition-shadow">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="bg-blue-100 p-2 rounded-lg">
+                    <Clock className="text-blue-600" />
+                  </div>
+                  <h3 className="font-bold text-lg">The "Pill Trigger"</h3>
+                </div>
+                <p className="text-slate-600">You already take medicine daily. Make it a rule: <strong>Take pills with a full 8oz glass</strong>, not just a sip.</p>
+              </div>
+
+              <div className="bg-white p-6 rounded-2xl shadow-md hover:shadow-lg transition-shadow">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="bg-purple-100 p-2 rounded-lg">
+                    <span className="text-2xl">🍵</span>
+                  </div>
+                  <h3 className="font-bold text-lg">Temperature Matters</h3>
+                </div>
+                <p className="text-slate-600">Ice water can be harsh on sensitive teeth or stomachs. Try room temperature water or warm herbal tea (no caffeine).</p>
+              </div>
+
+              <div className="bg-white p-6 rounded-2xl shadow-md hover:shadow-lg transition-shadow">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="bg-teal-100 p-2 rounded-lg">
+                    <span className="text-2xl">🥣</span>
+                  </div>
+                  <h3 className="font-bold text-lg">Eat Your Water</h3>
+                </div>
+                <p className="text-slate-600">Foods like <strong>Watermelon, Cucumber, Soups, and Jell-O</strong> count towards your hydration! Eat them often.</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* SECTION: TRACKER */}
+        {activeSection === 'tracker' && (
+          <div className="space-y-8 animate-fade-in text-center">
+            <h2 className="text-3xl font-bold text-blue-900 mb-2">Daily Hydration Tracker</h2>
+            <p className="text-slate-600 mb-8">Click the cup every time you finish a glass!</p>
+
+            <div className="relative inline-block group">
+              <button 
+                onClick={() => setWaterCount(waterCount + 1)}
+                className="relative z-10 bg-blue-500 hover:bg-blue-600 active:scale-95 transition-all text-white p-8 rounded-full shadow-2xl"
+              >
+                <GlassWater size={64} />
+              </button>
+              {/* Ripple effect rings */}
+              <div className="absolute top-0 left-0 w-full h-full rounded-full bg-blue-400 opacity-20 animate-ping"></div>
+            </div>
+
+            <div className="mt-8 bg-white p-8 rounded-3xl shadow-lg max-w-sm mx-auto">
+              <div className="text-5xl font-bold text-blue-600 mb-2">{waterCount}</div>
+              <div className="text-gray-500 uppercase tracking-wide font-semibold text-sm">Glasses Today</div>
+              
+              <div className="mt-6 flex justify-center gap-2">
+                {[...Array(8)].map((_, i) => (
+                  <div 
+                    key={i} 
+                    className={`h-3 w-3 rounded-full transition-all duration-500 ${
+                      i < waterCount ? 'bg-blue-500 scale-110' : 'bg-slate-200'
+                    }`}
+                  />
+                ))}
+              </div>
+              <p className="mt-4 text-xs text-slate-400">Target: 8 glasses</p>
+              
+              {waterCount > 0 && (
+                <button 
+                  onClick={() => setWaterCount(0)}
+                  className="mt-6 text-sm text-red-400 hover:text-red-600 underline"
+                >
+                  Reset Counter
+                </button>
+              )}
+            </div>
+            
+            {showConfetti && (
+               <div className="fixed inset-0 pointer-events-none flex items-center justify-center z-50">
+                 <div className="bg-green-500 text-white px-8 py-4 rounded-full shadow-2xl text-xl font-bold animate-bounce">
+                   🎉 Great Job, Dad! Keep it up!
+                 </div>
+               </div>
+            )}
+          </div>
+        )}
+
+      </main>
+
+      {/* Footer */}
+      <footer className="bg-slate-800 text-slate-300 py-8 text-center">
+        <div className="max-w-2xl mx-auto px-4">
+          <p className="mb-2 text-lg">❤️ Made with love for you.</p>
+          <p className="text-sm opacity-60">Remember to consult Dr. Smith about specific fluid limits if your legs swell.</p>
+        </div>
+      </footer>
+    </div>
+  );
+};
+
+export default HydrationApp;
