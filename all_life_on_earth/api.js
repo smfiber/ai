@@ -1,9 +1,7 @@
 /*
  * API.JS
- * Final Version - "Smart Search" & "Species Gallery" Update
- * - Filters for Living/Wild Specimens (HumanObservation)
- * - Resolves Search Terms to Taxonomy IDs before searching
- * - Fetches Media Gallery for Specimen Details
+ * Final Version - "Smart Search" Fix
+ * - Added URL Encoding to prevent multi-word searches (like "grey wolf") from breaking.
  */
 
 import { configStore } from './config.js';
@@ -181,11 +179,13 @@ export async function searchSpecimens(queryText, page) {
     const limit = 20;
     const offset = (page - 1) * limit;
     
-    let searchParam = `q=${queryText}`;
+    // FIX: Encode the query text for the fallback search
+    let searchParam = `q=${encodeURIComponent(queryText)}`;
 
     // Smart Search: Resolve Species ID
     try {
-        const matchRes = await fetch(`https://api.gbif.org/v1/species/match?name=${queryText}&kingdom=Animalia`);
+        // FIX: Encode the query text for the match API
+        const matchRes = await fetch(`https://api.gbif.org/v1/species/match?name=${encodeURIComponent(queryText)}&kingdom=Animalia`);
         if (matchRes.ok) {
             const matchData = await matchRes.json();
             if (matchData.usageKey && matchData.matchType !== 'NONE') {
@@ -229,9 +229,9 @@ export async function getSpecimenDetails(keyOrName) {
     try {
         let key = keyOrName;
 
-        // 1. Resolve Name to Key if needed
+        // 1. Resolve Name to Key if needed (Encoded)
         if (isNaN(keyOrName)) {
-            const matchRes = await fetch(`https://api.gbif.org/v1/species/match?name=${keyOrName}&kingdom=Animalia`);
+            const matchRes = await fetch(`https://api.gbif.org/v1/species/match?name=${encodeURIComponent(keyOrName)}&kingdom=Animalia`);
             if (!matchRes.ok) throw new Error("Match failed");
             const matchData = await matchRes.json();
             
@@ -243,7 +243,6 @@ export async function getSpecimenDetails(keyOrName) {
         }
 
         // 2. Parallel Fetch: Details + Media Gallery
-        // We limit media to 12 images to keep it snappy
         const [detailsRes, mediaRes] = await Promise.all([
             fetch(`https://api.gbif.org/v1/species/${key}`),
             fetch(`https://api.gbif.org/v1/species/${key}/media?type=StillImage&limit=12`)
@@ -255,7 +254,6 @@ export async function getSpecimenDetails(keyOrName) {
         let mediaData = { results: [] };
         if (mediaRes.ok) mediaData = await mediaRes.json();
         
-        // Extract plain image URLs
         const gallery = mediaData.results ? mediaData.results.map(m => m.identifier) : [];
 
         return {
@@ -268,7 +266,6 @@ export async function getSpecimenDetails(keyOrName) {
             order: data.order,
             family: data.family,
             genus: data.genus,
-            // If gallery exists, use the first image as main, otherwise null
             image_url: gallery.length > 0 ? gallery[0] : null, 
             gallery_images: gallery 
         };
