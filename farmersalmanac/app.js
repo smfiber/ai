@@ -19,7 +19,7 @@ import {
     getSavedPlant,
     fetchCustomCareAdvice,
     fetchScientificNameLookup,
-    fetchCollectionSuggestions, // NEW IMPORT
+    fetchCollectionSuggestions,
     // NEW Image Functions
     uploadPlantImage, 
     fetchImageIdentification,
@@ -29,7 +29,10 @@ import {
     // NEW Collection CRUD
     saveUserCollection,
     getUserCollections,
-    deleteUserCollection
+    deleteUserCollection,
+    // NEW AI Cache Functions
+    getStoredSuggestions,
+    saveStoredSuggestions
 } from './api.js';
 
 // --- Global DOM Element Variables ---
@@ -299,6 +302,13 @@ function addEventListeners() {
     // Analytics clicks
     gardenAnalytics.addEventListener('click', handleAnalyticsItemClick);
     
+    // Listener for AI Suggestions Regeneration (Delegated)
+    aiSuggestionsContainer.addEventListener('click', (e) => {
+        if (e.target.closest('.regenerate-btn')) {
+            handleRegenerateSuggestions();
+        }
+    });
+
     // Modal listeners
     modalCloseBtn.addEventListener('click', closeModal);
     plantDetailModal.addEventListener('click', (e) => {
@@ -517,8 +527,14 @@ function getSafeProperty(obj, keys) {
     return "Unknown";
 }
 
+function handleRegenerateSuggestions() {
+    if (currentSearchQuery) {
+        loadCollectionSuggestions(currentSearchQuery, true); // forceRefresh = true
+    }
+}
+
 // NEW: Function to load AI suggestions with 3-column table/list layout
-async function loadCollectionSuggestions(query) {
+async function loadCollectionSuggestions(query, forceRefresh = false) {
     // 1. UI BLOCKING START: Prevent race conditions
     document.body.style.pointerEvents = 'none';
     document.body.style.cursor = 'wait';
@@ -526,10 +542,35 @@ async function loadCollectionSuggestions(query) {
     aiSuggestionsContainer.classList.remove('hidden');
     aiSuggestionsList.innerHTML = '';
     aiSuggestionsLoader.classList.remove('hidden');
+    
+    // Reset Header Text while loading
+    const header = aiSuggestionsContainer.querySelector('h3');
+    if (header) {
+        header.innerHTML = `<span class="mr-2">✨</span> Gemini Curated Varieties (Loading...)`;
+    }
 
     try {
-        // Now fetches ~150+ items, sorted A-Z
-        const suggestions = await fetchCollectionSuggestions(query);
+        let suggestions = null;
+
+        // 1. Try CACHE first (unless forced)
+        if (currentUser && !forceRefresh) {
+            console.log("Checking AI Cache...");
+            suggestions = await getStoredSuggestions(currentUser.uid, query);
+        }
+
+        // 2. If no cache, fetch from Gemini
+        if (!suggestions) {
+            console.log("Fetching new suggestions from Gemini...");
+            // Now fetches ~150+ items, sorted A-Z
+            suggestions = await fetchCollectionSuggestions(query);
+            
+            // 3. Save to Cache
+            if (suggestions && suggestions.length > 0 && currentUser) {
+                console.log("Saving new suggestions to Cache...");
+                await saveStoredSuggestions(currentUser.uid, query, suggestions);
+            }
+        }
+        
         aiSuggestionsLoader.classList.add('hidden');
         
         if (!suggestions || suggestions.length === 0) {
@@ -539,10 +580,16 @@ async function loadCollectionSuggestions(query) {
 
         console.log("Detailed Suggestion Data:", suggestions[0]); 
 
-        // UPDATED: Dynamically update the header count
-        const header = aiSuggestionsContainer.querySelector('h3');
+        // UPDATED: Dynamically update the header count + Add Regenerate Button
         if (header) {
-            header.innerHTML = `<span class="mr-2">✨</span> Gemini Curated Varieties (${suggestions.length} Found)`;
+            header.innerHTML = `
+                <div class="flex items-center justify-between w-full">
+                    <span class="flex items-center"><span class="mr-2">✨</span> Gemini Curated Varieties (${suggestions.length} Found)</span>
+                    <button class="regenerate-btn text-xs bg-gray-700 hover:bg-gray-600 text-gray-300 px-2 py-1 rounded transition-colors ml-4" title="Force Refresh from AI">
+                        ↻ Regenerate
+                    </button>
+                </div>
+            `;
         }
 
         // Ensure visibility and layout
