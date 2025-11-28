@@ -1648,6 +1648,7 @@ function mergePlantData(trefleData, geminiData) {
 
         // NEW FIELD MERGED
         fun_facts: geminiData.fun_facts,
+        cultivar_origin: geminiData.cultivar_origin,
 
         fertilizer_info: geminiData.fertilizer_info,
         pruning_season: geminiData.pruning_season,
@@ -2128,11 +2129,14 @@ function createPlantDetailHtml(plantData) {
 
         <div class="bg-gray-800/60 backdrop-blur-sm p-6 rounded-xl border border-white/10">
             <h3 class="flex items-center text-xl font-bold text-white mb-3 drop-shadow-md">
-                <span class="mr-2">🗺️</span> Native Distributions
+                <span class="mr-2">🗺️</span> Origin & Distribution
             </h3>
-            <p class="text-gray-300 text-sm leading-relaxed">
-                ${distributionText}
-            </p>
+            <div class="text-gray-300 text-sm leading-relaxed">
+                ${plantData.cultivar_origin && plantData.cultivar_origin !== 'N/A' ? 
+                    `<p class="mb-2"><strong class="text-green-400">Cultivar Origin:</strong> ${plantData.cultivar_origin}</p>` 
+                    : ''}
+                <p><strong class="text-gray-400">Species Native Range:</strong> ${distributionText}</p>
+            </div>
         </div>
     `;
 }
