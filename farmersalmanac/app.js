@@ -929,6 +929,39 @@ function showGardenView() {
     loadGardenPlants(); 
 }
 
+// --- RESTORED: Load Garden Plants Function ---
+async function loadGardenPlants() {
+    if (!currentUser) return;
+    
+    gardenLoader.classList.remove('hidden');
+    gardenGallery.innerHTML = '';
+    gardenEmptyState.classList.add('hidden');
+    gardenAnalytics.classList.add('hidden');
+    gardenGallery.classList.remove('hidden'); // Ensure gallery is visible by default
+
+    // Reset view buttons
+    viewGalleryBtn.classList.add('bg-green-600', 'text-white');
+    viewGalleryBtn.classList.remove('text-gray-300');
+    viewAnalyticsBtn.classList.remove('bg-green-600', 'text-white');
+    viewAnalyticsBtn.classList.add('text-gray-300');
+
+    try {
+        const plants = await getGardenPlants(currentUser.uid);
+        myGardenCache = plants; // Cache for analytics
+
+        if (plants.length === 0) {
+            gardenEmptyState.classList.remove('hidden');
+        } else {
+            renderPlantGallery(plants, gardenGallery);
+        }
+    } catch (error) {
+        console.error("Error loading garden:", error);
+        gardenGallery.innerHTML = '<p class="text-red-400 text-center col-span-full">Failed to load garden plants.</p>';
+    } finally {
+        gardenLoader.classList.add('hidden');
+    }
+}
+
 // --- Auth Functions ---
 async function handleGoogleSignIn() {
     try {
