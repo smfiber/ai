@@ -1,7 +1,7 @@
 /*
  * APP.JS
  * The Controller for the "Life Explorer" SPA.
- * Connects the UI to the GBIF/Gemini Engine.
+ * Final Fix: "Ask the Zoologist" Button Targeting
  */
 
 import { setApiKeys } from './config.js';
@@ -273,12 +273,10 @@ function renderSpecimenGallery(specimens, container) {
         card.dataset.slug = specimen.slug;
         card.dataset.name = specimen.common_name;
 
-        // Image URL or Fallback logic handled in HTML via onerror
         const displayImage = specimen.image_url || '';
 
         card.innerHTML = `
             <div class="card-image-container group-hover:scale-105 transition-transform duration-700 relative">
-                
                 <img src="${displayImage}" 
                      alt="${specimen.common_name}" 
                      loading="lazy"
@@ -286,14 +284,12 @@ function renderSpecimenGallery(specimens, container) {
                      onload="this.style.opacity=1"
                      onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden');"
                 >
-                
                 <div class="hidden absolute inset-0 flex items-center justify-center bg-gray-800 card-image-placeholder">
                     <div class="text-center opacity-30">
                         <span class="text-5xl">🐾</span>
                         <p class="text-xs mt-2 text-gray-400">No Photo</p>
                     </div>
                 </div>
-
                 <div class="card-text-overlay">
                     <h3 class="text-lg font-bold text-white leading-tight drop-shadow-md truncate">${specimen.common_name}</h3>
                     <p class="text-green-400 text-xs italic mt-1 font-medium truncate">${specimen.scientific_name}</p>
@@ -433,6 +429,8 @@ async function openSpecimenModal(slug, name) {
     updateImageBtn.classList.add('hidden');
     modalContent.innerHTML = '';
     const qaSectionClone = careQuestionSection.cloneNode(true);
+    qaSectionClone.classList.remove('hidden'); // Ensure clone is visible
+
     careQuestionSection.classList.add('hidden'); 
     saveSpecimenBtn.classList.add('hidden');
     saveSpecimenBtn.textContent = 'Save to Sanctuary';
@@ -456,8 +454,6 @@ async function openSpecimenModal(slug, name) {
                 setupCareQuestionForm(currentModalSpecimen.qa_history);
                 modalLoader.classList.add('hidden');
                 modalContent.classList.remove('hidden');
-                
-                // Add Gallery Listeners (For Saved Specimens)
                 setupGalleryListeners();
                 return;
             }
@@ -484,7 +480,6 @@ async function openSpecimenModal(slug, name) {
         modalTitle.textContent = currentModalSpecimen.common_name;
         modalContent.innerHTML = createSpecimenDetailHtml(currentModalSpecimen);
         
-        // Add Gallery Listeners (For New Specimens)
         setupGalleryListeners();
 
         modalContent.appendChild(qaSectionClone);
@@ -507,14 +502,10 @@ function setupGalleryListeners() {
     if (mainImg && thumbs.length > 0) {
         thumbs.forEach(thumb => {
             thumb.addEventListener('click', () => {
-                // Update Main Image
                 const newSrc = thumb.src;
                 mainImg.src = newSrc;
-                
-                // Update Active State
                 thumbs.forEach(t => t.classList.remove('ring-2', 'ring-green-400', 'opacity-100'));
                 thumbs.forEach(t => t.classList.add('opacity-70'));
-                
                 thumb.classList.remove('opacity-70');
                 thumb.classList.add('ring-2', 'ring-green-400', 'opacity-100');
             });
@@ -529,7 +520,6 @@ function createSpecimenDetailHtml(data) {
         : '<li class="text-gray-500 italic">No facts available.</li>';
     const image = data.image_url || 'https://placehold.co/400x400/374151/FFFFFF?text=No+Image';
 
-    // Gallery HTML Generation
     const galleryHtml = (data.gallery_images && data.gallery_images.length > 1) 
        ? `<div class="flex gap-2 overflow-x-auto pb-2 mt-4 custom-scrollbar">
             ${data.gallery_images.map((img, idx) => `
@@ -603,6 +593,57 @@ function createSpecimenDetailHtml(data) {
 }
 
 // --- UTILS ---
+
+function setupCareQuestionForm(history) {
+    // FIX: Scoped Selection within the specific modal instance
+    const form = modalContent.querySelector('#care-question-form');
+    const input = modalContent.querySelector('#care-question-input');
+    const btn = modalContent.querySelector('#care-question-submit');
+    const loader = modalContent.querySelector('#care-response-loader');
+    const responseText = modalContent.querySelector('#care-response-text');
+
+    if (!form || !input || !btn) return;
+
+    input.value = '';
+    
+    // Check initial state
+    btn.disabled = true;
+
+    // UX: Enable button only when there is text
+    input.oninput = () => {
+         btn.disabled = input.value.trim().length === 0;
+    };
+
+    form.onsubmit = async (e) => {
+        e.preventDefault();
+        const question = input.value.trim();
+        if (!question) return;
+
+        btn.disabled = true; // Disable while thinking
+        if (loader) loader.classList.remove('hidden'); 
+        if (responseText) responseText.classList.add('hidden');
+
+        const ans = await fetchCustomCareAdvice(currentModalSpecimen, question);
+        
+        if (loader) loader.classList.add('hidden'); 
+        if (responseText) {
+            responseText.textContent = ans; 
+            responseText.classList.remove('hidden');
+        }
+        
+        btn.disabled = false; // Re-enable
+
+        if(!currentModalSpecimen.qa_history) currentModalSpecimen.qa_history = [];
+        currentModalSpecimen.qa_history.push({question: question, answer: ans});
+        
+        if(currentModalSpecimen.docId) await saveSpecimen(currentUser.uid, currentModalSpecimen, currentModalSpecimen.docId);
+    };
+    
+    if(history && history.length && responseText) {
+        responseText.innerHTML = history.map(h => `<b>Q: ${h.question}</b><br>${h.answer}<hr class="my-2 border-gray-600">`).join('');
+        responseText.classList.remove('hidden');
+    }
+}
 
 async function handleSaveToggle() {
     if (!currentUser || !currentModalSpecimen) return;
@@ -776,22 +817,6 @@ async function loadUserCollections() {
 }
 function closeModal() { specimenDetailModal.classList.add('hidden'); currentModalSpecimen = null; }
 
-function setupCareQuestionForm(history) {
-    careQuestionInput.value = ''; careQuestionSubmit.disabled = false;
-    careQuestionForm.onsubmit = async (e) => {
-        e.preventDefault();
-        careResponseLoader.classList.remove('hidden'); careResponseText.classList.add('hidden');
-        const ans = await fetchCustomCareAdvice(currentModalSpecimen, careQuestionInput.value);
-        careResponseLoader.classList.add('hidden'); careResponseText.textContent = ans; careResponseText.classList.remove('hidden');
-        if(!currentModalSpecimen.qa_history) currentModalSpecimen.qa_history = [];
-        currentModalSpecimen.qa_history.push({question: careQuestionInput.value, answer: ans});
-        if(currentModalSpecimen.docId) await saveSpecimen(currentUser.uid, currentModalSpecimen, currentModalSpecimen.docId);
-    };
-    if(history && history.length) {
-        careResponseText.innerHTML = history.map(h => `<b>Q: ${h.question}</b><br>${h.answer}<hr class="my-2 border-gray-600">`).join('');
-        careResponseText.classList.remove('hidden');
-    }
-}
 function handleUpdatePhoto() { /* logic */ }
 
 main();
