@@ -1,7 +1,8 @@
 /*
  * API.JS
- * Final Version - "Smart Search" Fix
- * - Added URL Encoding to prevent multi-word searches (like "grey wolf") from breaking.
+ * Final Version - "Smart Search" v3 (Fuzzy Logic)
+ * - Uses species/search (Better for Common Names)
+ * - Wraps fallback text searches in quotes for precision
  */
 
 import { configStore } from './config.js';
@@ -150,7 +151,6 @@ function mapGbifRecord(record) {
 export async function getCategorySpecimens(classKey, page) {
     const limit = 20;
     const offset = (page - 1) * limit;
-    // Human Observation for living animals
     const url = `https://api.gbif.org/v1/occurrence/search?classKey=${classKey}&kingdomKey=1&mediaType=StillImage&basisOfRecord=HUMAN_OBSERVATION&limit=${limit}&offset=${offset}`;
 
     try {
@@ -179,25 +179,30 @@ export async function searchSpecimens(queryText, page) {
     const limit = 20;
     const offset = (page - 1) * limit;
     
-    // FIX: Encode the query text for the fallback search
-    let searchParam = `q=${encodeURIComponent(queryText)}`;
+    // Default Fallback: Phrase search (Quotes) to prevent partial matching
+    // "grey wolf" -> searches exact phrase, not "grey" AND "wolf"
+    let searchParam = `q="${encodeURIComponent(queryText)}"`;
 
-    // Smart Search: Resolve Species ID
+    // SMART SEARCH V3: Fuzzy Search for Common Names
     try {
-        // FIX: Encode the query text for the match API
-        const matchRes = await fetch(`https://api.gbif.org/v1/species/match?name=${encodeURIComponent(queryText)}&kingdom=Animalia`);
+        const fuzzyUrl = `https://api.gbif.org/v1/species/search?q=${encodeURIComponent(queryText)}&rank=SPECIES&status=ACCEPTED&limit=5`;
+        const matchRes = await fetch(fuzzyUrl);
+        
         if (matchRes.ok) {
             const matchData = await matchRes.json();
-            if (matchData.usageKey && matchData.matchType !== 'NONE') {
-                searchParam = `taxonKey=${matchData.usageKey}`;
-                console.log(`Smart Search: Resolved "${queryText}" to ID ${matchData.usageKey} (${matchData.scientificName})`);
+            // Find the first result that is actually an Animal
+            const bestMatch = matchData.results.find(r => r.kingdom === 'Animalia');
+            
+            if (bestMatch && bestMatch.key) {
+                searchParam = `taxonKey=${bestMatch.key}`;
+                console.log(`Smart Search: Resolved "${queryText}" to ID ${bestMatch.key} (${bestMatch.scientificName})`);
             }
         }
     } catch (e) {
         console.warn("Smart search resolution failed, falling back to text match.");
     }
 
-    // Human Observation
+    // Search Occurrences
     const url = `https://api.gbif.org/v1/occurrence/search?${searchParam}&kingdomKey=1&mediaType=StillImage&basisOfRecord=HUMAN_OBSERVATION&limit=${limit}&offset=${offset}`;
 
     try {
@@ -222,21 +227,21 @@ export async function searchSpecimens(queryText, page) {
     }
 }
 
-/**
- * UPDATED: Fetches Details AND a Media Gallery
- */
 export async function getSpecimenDetails(keyOrName) {
     try {
         let key = keyOrName;
 
-        // 1. Resolve Name to Key if needed (Encoded)
+        // 1. Resolve Name to Key if needed (Using Fuzzy Search)
         if (isNaN(keyOrName)) {
-            const matchRes = await fetch(`https://api.gbif.org/v1/species/match?name=${encodeURIComponent(keyOrName)}&kingdom=Animalia`);
+            const fuzzyUrl = `https://api.gbif.org/v1/species/search?q=${encodeURIComponent(keyOrName)}&rank=SPECIES&status=ACCEPTED&limit=1`;
+            const matchRes = await fetch(fuzzyUrl);
+            
             if (!matchRes.ok) throw new Error("Match failed");
             const matchData = await matchRes.json();
             
-            if (matchData.usageKey) {
-                key = matchData.usageKey;
+            const bestMatch = matchData.results.find(r => r.kingdom === 'Animalia');
+            if (bestMatch) {
+                key = bestMatch.key;
             } else {
                 throw new Error("Species not found in GBIF Backbone");
             }
