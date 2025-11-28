@@ -269,25 +269,35 @@ function renderSpecimenGallery(specimens, container) {
 
     specimens.forEach(specimen => {
         const card = document.createElement('div');
-        card.className = 'specimen-card glass-panel rounded-xl overflow-hidden cursor-pointer transition-transform hover:scale-105 hover-glow';
+        card.className = 'specimen-card glass-panel rounded-xl overflow-hidden cursor-pointer';
         card.dataset.slug = specimen.slug;
         card.dataset.name = specimen.common_name;
 
-        // Better placeholder
-        const placeholder = 'https://placehold.co/400x300/374151/FFFFFF?text=No+Image';
-        const displayImage = specimen.image_url || placeholder;
+        // Image URL or Fallback logic handled in HTML via onerror
+        const displayImage = specimen.image_url || '';
 
         card.innerHTML = `
-            <div class="w-full h-48 card-image-wrapper">
+            <div class="card-image-container group-hover:scale-105 transition-transform duration-700 relative">
+                
                 <img src="${displayImage}" 
                      alt="${specimen.common_name}" 
-                     class="w-full h-full object-cover"
-                     onerror="this.onerror=null;this.src='${placeholder}';"
+                     loading="lazy"
+                     class="w-full h-full object-cover transition-opacity duration-300"
+                     onload="this.style.opacity=1"
+                     onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden');"
                 >
-            </div>
-            <div class="p-3">
-                <h3 class="text-lg font-semibold text-white drop-shadow-sm truncate">${specimen.common_name}</h3>
-                <p class="text-gray-400 text-xs italic truncate">${specimen.scientific_name}</p>
+                
+                <div class="hidden absolute inset-0 flex items-center justify-center bg-gray-800 card-image-placeholder">
+                    <div class="text-center opacity-30">
+                        <span class="text-5xl">🐾</span>
+                        <p class="text-xs mt-2 text-gray-400">No Photo</p>
+                    </div>
+                </div>
+
+                <div class="card-text-overlay">
+                    <h3 class="text-lg font-bold text-white leading-tight drop-shadow-md truncate">${specimen.common_name}</h3>
+                    <p class="text-green-400 text-xs italic mt-1 font-medium truncate">${specimen.scientific_name}</p>
+                </div>
             </div>
         `;
         container.appendChild(card);
