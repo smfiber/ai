@@ -1,8 +1,8 @@
 /*
  * API.JS
- * Final Version - "Smart Search" v3 (Fuzzy Logic)
- * - Uses species/search (Better for Common Names)
- * - Wraps fallback text searches in quotes for precision
+ * Final Version - "Smart Search" v4
+ * - Removes 'rank=SPECIES' constraint (Allows searching "Eagle", "Beetle", etc.)
+ * - Cleans Scientific Names (Strips "Linnaeus, 1758") for better UI
  */
 
 import { configStore } from './config.js';
@@ -130,15 +130,36 @@ export async function deleteUserCollection(userId, id) {
 
 // --- GBIF API (The Engine) ---
 
+// Helper to strip "Linnaeus, 1758" from scientific names
+function cleanScientificName(name) {
+    if (!name) return "Unknown";
+    // Regex to keep only the first two words (Genus species) if possible
+    // or just remove the author part (anything after the second word usually)
+    // Simple approach: Remove parenthesis and digits (years)
+    // A better approach for display:
+    const parts = name.split(' ');
+    if (parts.length >= 2) {
+        return `${parts[0]} ${parts[1]}`;
+    }
+    return name;
+}
+
 function mapGbifRecord(record) {
     const imageObj = record.media ? record.media.find(m => m.type === 'StillImage') : null;
     let imageUrl = imageObj ? imageObj.identifier : null;
     if (!imageUrl && imageObj && imageObj.references) imageUrl = imageObj.references;
 
+    // Use Vernacular (Common) name if available.
+    // If NOT, use the Scientific name but CLEAN IT (remove authors/years).
+    let displayName = record.vernacularName;
+    if (!displayName) {
+        displayName = cleanScientificName(record.scientificName);
+    }
+
     return {
         slug: (record.speciesKey || record.key).toString(), 
-        scientific_name: record.scientificName,
-        common_name: record.vernacularName || record.scientificName, 
+        scientific_name: record.scientificName, // Keep full name for subtitle
+        common_name: displayName, 
         image_url: imageUrl,
         family: record.family,
         order: record.order,
@@ -179,21 +200,23 @@ export async function searchSpecimens(queryText, page) {
     const limit = 20;
     const offset = (page - 1) * limit;
     
-    // Default Fallback: Phrase search (Quotes) to prevent partial matching
-    // "grey wolf" -> searches exact phrase, not "grey" AND "wolf"
+    // Default Fallback: Text search
     let searchParam = `q="${encodeURIComponent(queryText)}"`;
 
-    // SMART SEARCH V3: Fuzzy Search for Common Names
+    // SMART SEARCH V4: Broad Fuzzy Search
+    // Removed "rank=SPECIES" so "Eagle" can match Family "Accipitridae"
     try {
-        const fuzzyUrl = `https://api.gbif.org/v1/species/search?q=${encodeURIComponent(queryText)}&rank=SPECIES&status=ACCEPTED&limit=5`;
+        const fuzzyUrl = `https://api.gbif.org/v1/species/search?q=${encodeURIComponent(queryText)}&status=ACCEPTED&limit=5`;
         const matchRes = await fetch(fuzzyUrl);
         
         if (matchRes.ok) {
             const matchData = await matchRes.json();
-            // Find the first result that is actually an Animal
+            // Find the first result that is an Animal
             const bestMatch = matchData.results.find(r => r.kingdom === 'Animalia');
             
             if (bestMatch && bestMatch.key) {
+                // If we found a Family, Genus, or Species, search by that Key.
+                // This eliminates Raccoons when searching "Eagle" (which maps to Family Accipitridae)
                 searchParam = `taxonKey=${bestMatch.key}`;
                 console.log(`Smart Search: Resolved "${queryText}" to ID ${bestMatch.key} (${bestMatch.scientificName})`);
             }
@@ -202,7 +225,6 @@ export async function searchSpecimens(queryText, page) {
         console.warn("Smart search resolution failed, falling back to text match.");
     }
 
-    // Search Occurrences
     const url = `https://api.gbif.org/v1/occurrence/search?${searchParam}&kingdomKey=1&mediaType=StillImage&basisOfRecord=HUMAN_OBSERVATION&limit=${limit}&offset=${offset}`;
 
     try {
@@ -231,7 +253,6 @@ export async function getSpecimenDetails(keyOrName) {
     try {
         let key = keyOrName;
 
-        // 1. Resolve Name to Key if needed (Using Fuzzy Search)
         if (isNaN(keyOrName)) {
             const fuzzyUrl = `https://api.gbif.org/v1/species/search?q=${encodeURIComponent(keyOrName)}&rank=SPECIES&status=ACCEPTED&limit=1`;
             const matchRes = await fetch(fuzzyUrl);
@@ -247,7 +268,6 @@ export async function getSpecimenDetails(keyOrName) {
             }
         }
 
-        // 2. Parallel Fetch: Details + Media Gallery
         const [detailsRes, mediaRes] = await Promise.all([
             fetch(`https://api.gbif.org/v1/species/${key}`),
             fetch(`https://api.gbif.org/v1/species/${key}/media?type=StillImage&limit=12`)
