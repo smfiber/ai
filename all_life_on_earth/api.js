@@ -1,9 +1,8 @@
 /*
  * API.JS
- * Final Version
- * - Isolated "user_expeditions" collection
- * - Occurrence Search (Guarantees Images)
- * - Smart Details Lookup (Handles Name vs ID)
+ * Final Version - "Smart Search" Update
+ * - Filters for Living/Wild Specimens (HumanObservation)
+ * - Resolves Search Terms to Taxonomy IDs before searching
  */
 
 import { configStore } from './config.js';
@@ -76,7 +75,6 @@ export async function uploadSpecimenImage(file, userId) {
 }
 
 // --- Firestore: Saved Specimens ---
-// This collection ("saved_specimens") is already separate from "digital_gardener".
 const DB_COLLECTION = "saved_specimens"; 
 
 export async function saveSpecimen(userId, specimen, docId = null) {
@@ -107,8 +105,7 @@ export async function getSavedSpecimens(userId) {
     return list;
 }
 
-// --- Firestore: Custom Expeditions (ISOLATED) ---
-// We renamed this to "user_expeditions" to protect your Vegetable data.
+// --- Firestore: Custom Expeditions ---
 const EXPEDITIONS_COLLECTION = "user_expeditions";
 
 export async function saveUserCollection(userId, c) {
@@ -134,7 +131,6 @@ export async function deleteUserCollection(userId, id) {
 // --- GBIF API (The Engine) ---
 
 function mapGbifRecord(record) {
-    // GBIF Occurrence images are in the 'media' array
     const imageObj = record.media ? record.media.find(m => m.type === 'StillImage') : null;
     let imageUrl = imageObj ? imageObj.identifier : null;
     if (!imageUrl && imageObj && imageObj.references) imageUrl = imageObj.references;
@@ -155,8 +151,8 @@ function mapGbifRecord(record) {
 export async function getCategorySpecimens(classKey, page) {
     const limit = 20;
     const offset = (page - 1) * limit;
-    // kingdomKey=1 (Animals), mediaType=StillImage (Has Photo)
-    const url = `https://api.gbif.org/v1/occurrence/search?classKey=${classKey}&kingdomKey=1&mediaType=StillImage&limit=${limit}&offset=${offset}`;
+    // ADDED: basisOfRecord=HUMAN_OBSERVATION (Filters out museum drawers)
+    const url = `https://api.gbif.org/v1/occurrence/search?classKey=${classKey}&kingdomKey=1&mediaType=StillImage&basisOfRecord=HUMAN_OBSERVATION&limit=${limit}&offset=${offset}`;
 
     try {
         const response = await fetch(url);
@@ -180,12 +176,31 @@ export async function getCategorySpecimens(classKey, page) {
     }
 }
 
-export async function searchSpecimens(query, page) {
+export async function searchSpecimens(queryText, page) {
     const limit = 20;
     const offset = (page - 1) * limit;
     
-    // UPDATED: Use Occurrence Search to guarantee images.
-    const url = `https://api.gbif.org/v1/occurrence/search?q=${query}&kingdomKey=1&mediaType=StillImage&limit=${limit}&offset=${offset}`;
+    let searchParam = `q=${queryText}`;
+
+    // SMART SEARCH STEP:
+    // If this is a text search, try to resolve it to a Species ID first.
+    // This fixes the "Cat" -> "Catfish" issue.
+    try {
+        const matchRes = await fetch(`https://api.gbif.org/v1/species/match?name=${queryText}&kingdom=Animalia`);
+        if (matchRes.ok) {
+            const matchData = await matchRes.json();
+            // If we found a confident match, search by Key, not string
+            if (matchData.usageKey && matchData.matchType !== 'NONE') {
+                searchParam = `taxonKey=${matchData.usageKey}`;
+                console.log(`Smart Search: Resolved "${queryText}" to ID ${matchData.usageKey} (${matchData.scientificName})`);
+            }
+        }
+    } catch (e) {
+        console.warn("Smart search resolution failed, falling back to text match.");
+    }
+
+    // UPDATED: Added basisOfRecord=HUMAN_OBSERVATION
+    const url = `https://api.gbif.org/v1/occurrence/search?${searchParam}&kingdomKey=1&mediaType=StillImage&basisOfRecord=HUMAN_OBSERVATION&limit=${limit}&offset=${offset}`;
 
     try {
         const response = await fetch(url);
@@ -197,7 +212,6 @@ export async function searchSpecimens(query, page) {
             .map(mapGbifRecord) 
             .filter(item => {
                 if (!item.image_url) return false;
-                // Deduplicate repeats of same animal
                 if (seen.has(item.scientific_name)) return false;
                 seen.add(item.scientific_name);
                 return true;
@@ -217,7 +231,6 @@ export async function getSpecimenDetails(keyOrName) {
     try {
         let key = keyOrName;
 
-        // If input is a String (e.g. "Panthera leo"), find the ID first
         if (isNaN(keyOrName)) {
             const matchRes = await fetch(`https://api.gbif.org/v1/species/match?name=${keyOrName}&kingdom=Animalia`);
             if (!matchRes.ok) throw new Error("Match failed");
@@ -230,7 +243,6 @@ export async function getSpecimenDetails(keyOrName) {
             }
         }
 
-        // Fetch Details using the ID
         const response = await fetch(`https://api.gbif.org/v1/species/${key}`);
         if (!response.ok) throw new Error("Specimen details not found");
         const data = await response.json();
@@ -245,7 +257,7 @@ export async function getSpecimenDetails(keyOrName) {
             order: data.order,
             family: data.family,
             genus: data.genus,
-            image_url: null // Details API rarely has images; we rely on gallery/placeholder
+            image_url: null 
         };
     } catch (error) {
         console.error("Details Error:", error);
