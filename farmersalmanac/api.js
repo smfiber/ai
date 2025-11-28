@@ -787,6 +787,7 @@ export async function fetchAugmentedPlantData(plantData) {
         - Maximum Summer Temperature: The highest temperature (in Fahrenheit) the plant can tolerate.
         - Frost Sensitivity: Describe its tolerance level (e.g., "High tolerance, very hardy", "Moderate sensitivity, protect from hard frost", "Zero tolerance").
         - Fun Facts & History: Elaborate on where this plant comes from, its cultural significance in those native regions, and any interesting trivia.
+        - Cultivar Origin: If this is a specific variety (e.g., 'Phillips' garlic), state its historical origin (e.g., 'Phillips, Maine'). If wild/generic, use 'N/A'.
         
         - Fertilizer Recommendation: Type and frequency (e.g., "Balanced 10-10-10 monthly").
         - Pruning Season: Best time to prune (e.g., "Late Winter").
@@ -809,6 +810,7 @@ export async function fetchAugmentedPlantData(plantData) {
           "max_summer_temp_f": "...",
           "frost_sensitivity": "...",
           "fun_facts": "...",
+          "cultivar_origin": "...",
           "fertilizer_info": "...",
           "pruning_season": "...",
           "propagation_methods": "...",
