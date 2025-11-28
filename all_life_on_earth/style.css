@@ -53,22 +53,44 @@ body {
     border-color: rgba(74, 222, 128, 0.6);
 }
 
-/* --- Card Image Container --- */
-/* Ensures images inside cards look unified */
-.card-image-wrapper {
-    position: relative;
-    overflow: hidden;
+/* --- Specimen Card Grid Improvements --- */
+
+/* Ensures cards are uniform height */
+.specimen-card {
+    display: flex;
+    flex-direction: column;
 }
 
-.card-image-wrapper::after {
-    content: '';
+/* Fixed Aspect Ratio Container for Images (Square) */
+.card-image-container {
+    position: relative;
+    width: 100%;
+    padding-top: 100%; /* 1:1 Square Aspect Ratio */
+    background-color: #1f2937; /* bg-gray-800 */
+}
+
+/* Ensures the image or placeholder fills the square container */
+.card-image-container img,
+.card-image-placeholder {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Improved Gradient Overlay for Text Readability */
+.card-text-overlay {
     position: absolute;
     bottom: 0;
     left: 0;
     right: 0;
-    height: 50%;
-    background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
-    pointer-events: none;
+    /* Stronger, taller gradient from black to transparent */
+    background: linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.5) 60%, transparent 100%);
+    padding: 1rem;
+    padding-top: 3rem; /* Give space for the gradient fade */
+    pointer-events: none; /* Let clicks pass through to the card */
 }
 
 /* --- Loading Spinner --- */
