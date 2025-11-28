@@ -2154,5 +2154,3 @@ function closeModal() {
 
 // --- Run the app ---
 main();
-
-}
