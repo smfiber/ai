@@ -1,8 +1,8 @@
 /*
  * API.JS
- * Final Version - "Smart Search" v4
- * - Removes 'rank=SPECIES' constraint (Allows searching "Eagle", "Beetle", etc.)
- * - Cleans Scientific Names (Strips "Linnaeus, 1758") for better UI
+ * Final Version - "High Quality Gallery" Update
+ * - Modal now fetches images from Occurrence Search (iNaturalist) instead of Species API
+ * - Guarantees high-quality nature photos for the detail view
  */
 
 import { configStore } from './config.js';
@@ -130,13 +130,8 @@ export async function deleteUserCollection(userId, id) {
 
 // --- GBIF API (The Engine) ---
 
-// Helper to strip "Linnaeus, 1758" from scientific names
 function cleanScientificName(name) {
     if (!name) return "Unknown";
-    // Regex to keep only the first two words (Genus species) if possible
-    // or just remove the author part (anything after the second word usually)
-    // Simple approach: Remove parenthesis and digits (years)
-    // A better approach for display:
     const parts = name.split(' ');
     if (parts.length >= 2) {
         return `${parts[0]} ${parts[1]}`;
@@ -149,8 +144,6 @@ function mapGbifRecord(record) {
     let imageUrl = imageObj ? imageObj.identifier : null;
     if (!imageUrl && imageObj && imageObj.references) imageUrl = imageObj.references;
 
-    // Use Vernacular (Common) name if available.
-    // If NOT, use the Scientific name but CLEAN IT (remove authors/years).
     let displayName = record.vernacularName;
     if (!displayName) {
         displayName = cleanScientificName(record.scientificName);
@@ -158,7 +151,7 @@ function mapGbifRecord(record) {
 
     return {
         slug: (record.speciesKey || record.key).toString(), 
-        scientific_name: record.scientificName, // Keep full name for subtitle
+        scientific_name: record.scientificName,
         common_name: displayName, 
         image_url: imageUrl,
         family: record.family,
@@ -200,23 +193,17 @@ export async function searchSpecimens(queryText, page) {
     const limit = 20;
     const offset = (page - 1) * limit;
     
-    // Default Fallback: Text search
     let searchParam = `q="${encodeURIComponent(queryText)}"`;
 
-    // SMART SEARCH V4: Broad Fuzzy Search
-    // Removed "rank=SPECIES" so "Eagle" can match Family "Accipitridae"
     try {
         const fuzzyUrl = `https://api.gbif.org/v1/species/search?q=${encodeURIComponent(queryText)}&status=ACCEPTED&limit=5`;
         const matchRes = await fetch(fuzzyUrl);
         
         if (matchRes.ok) {
             const matchData = await matchRes.json();
-            // Find the first result that is an Animal
             const bestMatch = matchData.results.find(r => r.kingdom === 'Animalia');
             
             if (bestMatch && bestMatch.key) {
-                // If we found a Family, Genus, or Species, search by that Key.
-                // This eliminates Raccoons when searching "Eagle" (which maps to Family Accipitridae)
                 searchParam = `taxonKey=${bestMatch.key}`;
                 console.log(`Smart Search: Resolved "${queryText}" to ID ${bestMatch.key} (${bestMatch.scientificName})`);
             }
@@ -268,18 +255,26 @@ export async function getSpecimenDetails(keyOrName) {
             }
         }
 
-        const [detailsRes, mediaRes] = await Promise.all([
+        // UPDATED LOGIC: Fetch Text Details AND High-Quality Occurrence Images
+        const [detailsRes, imagesRes] = await Promise.all([
             fetch(`https://api.gbif.org/v1/species/${key}`),
-            fetch(`https://api.gbif.org/v1/species/${key}/media?type=StillImage&limit=12`)
+            // Fetch 8 'Human Observation' images for this specific taxon
+            fetch(`https://api.gbif.org/v1/occurrence/search?taxonKey=${key}&mediaType=StillImage&basisOfRecord=HUMAN_OBSERVATION&limit=8`)
         ]);
 
         if (!detailsRes.ok) throw new Error("Specimen details not found");
         
         const data = await detailsRes.json();
-        let mediaData = { results: [] };
-        if (mediaRes.ok) mediaData = await mediaRes.json();
+        let imageData = { results: [] };
+        if (imagesRes.ok) imageData = await imagesRes.json();
         
-        const gallery = mediaData.results ? mediaData.results.map(m => m.identifier) : [];
+        // Extract images from occurrence records
+        const gallery = imageData.results
+            .map(record => {
+                const img = record.media ? record.media.find(m => m.type === 'StillImage') : null;
+                return img ? img.identifier : null;
+            })
+            .filter(url => url !== null);
 
         return {
             slug: data.key.toString(),
