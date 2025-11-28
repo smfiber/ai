@@ -14,7 +14,7 @@ import { configStore } from './config.js';
 let app, auth, db, storage; 
 let GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut;
 // Firestore functions
-let collection, addDoc, deleteDoc, doc, query, where, getDocs, setDoc, getDoc; // Added getDoc
+let collection, addDoc, deleteDoc, doc, query, where, getDocs, setDoc, getDoc; 
 // Storage functions
 let getStorage, ref, uploadBytes, getDownloadURL; 
 
@@ -56,7 +56,7 @@ export async function initFirebase() {
         where = w;
         getDocs = gd;
         setDoc = setD;
-        getDoc = getD; // Assign new import
+        getDoc = getD;
 
         // Assign Storage variables
         getStorage = StorageModules.getStorage;
@@ -275,6 +275,98 @@ export async function getGardenPlants(userId) {
         return [];
     }
 }
+
+// --- BOOKMARKS FUNCTIONS (NEW) ---
+
+export async function savePlantToBookmarks(userId, plant, docId = null) {
+    if (!db) return;
+    
+    // Clean up temporary docId property
+    const plantToSave = { ...plant };
+    delete plantToSave.docId;
+
+    try {
+        if (docId) {
+            await setDoc(doc(db, "user_bookmarks", docId), {
+                ...plantToSave,
+                uid: userId,
+                saved_at: Date.now()
+            });
+            return docId;
+        } else {
+            const docRef = await addDoc(collection(db, "user_bookmarks"), {
+                ...plantToSave, 
+                uid: userId,
+                saved_at: Date.now()
+            });
+            console.log(`Saved ${plant.common_name} to bookmarks.`);
+            return docRef.id;
+        }
+    } catch (error) {
+        console.error("Error saving bookmark:", error);
+        throw error;
+    }
+}
+
+export async function removePlantFromBookmarks(userId, plantSlug) {
+    if (!db) return;
+    try {
+        const q = query(
+            collection(db, "user_bookmarks"), 
+            where("uid", "==", userId),
+            where("slug", "==", plantSlug)
+        );
+        const snapshot = await getDocs(q);
+        const deletePromises = snapshot.docs.map(document => 
+            deleteDoc(doc(db, "user_bookmarks", document.id))
+        );
+        await Promise.all(deletePromises);
+        console.log(`Removed ${plantSlug} from bookmarks.`);
+    } catch (error) {
+        console.error("Error removing bookmark:", error);
+        throw error;
+    }
+}
+
+export async function getBookmarkPlants(userId) {
+    if (!db) return [];
+    try {
+        const q = query(
+            collection(db, "user_bookmarks"), 
+            where("uid", "==", userId)
+        );
+        const snapshot = await getDocs(q);
+        const plants = [];
+        snapshot.forEach(doc => {
+            plants.push({ ...doc.data(), docId: doc.id });
+        });
+        return plants;
+    } catch (error) {
+        console.error("Error fetching bookmarks:", error);
+        return [];
+    }
+}
+
+export async function getSavedBookmark(userId, plantSlug) {
+    if (!db) return { plantData: null, docId: null };
+    try {
+        const q = query(
+            collection(db, "user_bookmarks"), 
+            where("uid", "==", userId),
+            where("slug", "==", plantSlug)
+        );
+        const snapshot = await getDocs(q);
+        if (!snapshot.empty) {
+            const doc = snapshot.docs[0];
+            return { plantData: doc.data(), docId: doc.id };
+        }
+        return { plantData: null, docId: null };
+    } catch (error) {
+        console.error("Error fetching bookmark details:", error);
+        return { plantData: null, docId: null };
+    }
+}
+
 
 // --- USER COLLECTIONS FUNCTIONS (CRUD) ---
 
