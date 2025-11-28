@@ -14,7 +14,7 @@ import { configStore } from './config.js';
 let app, auth, db, storage; 
 let GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut;
 // Firestore functions
-let collection, addDoc, deleteDoc, doc, query, where, getDocs, setDoc; 
+let collection, addDoc, deleteDoc, doc, query, where, getDocs, setDoc, getDoc; // Added getDoc
 // Storage functions
 let getStorage, ref, uploadBytes, getDownloadURL; 
 
@@ -37,7 +37,7 @@ export async function initFirebase() {
         // Dynamically import the Firebase modules
         const { initializeApp } = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js');
         const { getAuth, GoogleAuthProvider: GAuthProvider, signInWithPopup: siwp, onAuthStateChanged: oasc, setPersistence, browserSessionPersistence, signOut: so } = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js');
-        const { getFirestore, collection: col, addDoc: ad, deleteDoc: dd, doc: d, query: q, where: w, getDocs: gd, setDoc: setD } = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js');
+        const { getFirestore, collection: col, addDoc: ad, deleteDoc: dd, doc: d, query: q, where: w, getDocs: gd, setDoc: setD, getDoc: getD } = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js');
         // Dynamically import Storage modules
         const StorageModules = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js');
         
@@ -56,6 +56,7 @@ export async function initFirebase() {
         where = w;
         getDocs = gd;
         setDoc = setD;
+        getDoc = getD; // Assign new import
 
         // Assign Storage variables
         getStorage = StorageModules.getStorage;
@@ -330,6 +331,50 @@ export async function deleteUserCollection(userId, collectionId) {
     } catch (error) {
         console.error("Error deleting collection:", error);
         throw error;
+    }
+}
+
+// --- NEW: AI Suggestion Caching ---
+
+function getCacheId(userId, queryTerm) {
+    // Sanitize query to be safe for ID (alphanumeric only + underscores)
+    const cleanQuery = queryTerm.toLowerCase().replace(/[^a-z0-9]/g, '_');
+    return `${userId}_${cleanQuery}`;
+}
+
+export async function getStoredSuggestions(userId, queryTerm) {
+    if (!db) return null;
+    try {
+        const cacheId = getCacheId(userId, queryTerm);
+        const docRef = doc(db, "ai_search_cache", cacheId);
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+            console.log(`Cache HIT for ${queryTerm}`);
+            return docSnap.data().suggestions;
+        } else {
+            console.log(`Cache MISS for ${queryTerm}`);
+            return null;
+        }
+    } catch (error) {
+        console.error("Error fetching suggestion cache:", error);
+        return null;
+    }
+}
+
+export async function saveStoredSuggestions(userId, queryTerm, suggestions) {
+    if (!db) return;
+    try {
+        const cacheId = getCacheId(userId, queryTerm);
+        await setDoc(doc(db, "ai_search_cache", cacheId), {
+            uid: userId,
+            query: queryTerm.toLowerCase(),
+            suggestions: suggestions,
+            updated_at: Date.now()
+        });
+        console.log(`Saved cache for ${queryTerm}`);
+    } catch (error) {
+        console.error("Error saving suggestion cache:", error);
     }
 }
 
