@@ -1,3 +1,7 @@
+{
+type: uploaded file
+fileName: api.js
+fullContent:
 /*
  * API.JS
  * This file handles all external communication:
@@ -223,14 +227,16 @@ export async function removePlantFromGarden(userId, plantSlug) {
 
 /**
  * Retrieves the FULL saved plant data for a specific slug.
- * Used to skip API calls if the data is already in Firestore.
+ * Now supports distinct varieties via specificCommonName.
  * @param {string} userId 
  * @param {string} plantSlug 
+ * @param {string|null} specificCommonName - If provided, looks for exact match on common name.
  * @returns {Promise<{plantData: object|null, docId: string|null}>} The plant data and its Firestore ID.
  */
-export async function getSavedPlant(userId, plantSlug) {
+export async function getSavedPlant(userId, plantSlug, specificCommonName = null) {
     if (!db) return { plantData: null, docId: null };
     try {
+        // 1. Fetch ALL saved plants with this slug (e.g. all 'allium-sativum')
         const q = query(
             collection(db, "digital_gardener"), 
             where("uid", "==", userId),
@@ -239,7 +245,23 @@ export async function getSavedPlant(userId, plantSlug) {
         const snapshot = await getDocs(q);
         
         if (!snapshot.empty) {
-            // Return the data AND the document ID of the first match
+            // 2. If a specific variety name is requested (e.g., "Ajo Rojo")
+            if (specificCommonName) {
+                const targetName = specificCommonName.trim().toLowerCase();
+                const match = snapshot.docs.find(d => {
+                    const data = d.data();
+                    return data.common_name && data.common_name.trim().toLowerCase() === targetName;
+                });
+                
+                if (match) {
+                     return { plantData: match.data(), docId: match.id };
+                }
+                // If specific name requested but not found, return null (treat as new entry)
+                return { plantData: null, docId: null };
+            }
+
+            // 3. If no specific name requested, fallback to the first one found
+            // (This maintains compatibility for generic lookups)
             const doc = snapshot.docs[0];
             return { plantData: doc.data(), docId: doc.id };
         }
@@ -347,7 +369,7 @@ export async function getBookmarkPlants(userId) {
     }
 }
 
-export async function getSavedBookmark(userId, plantSlug) {
+export async function getSavedBookmark(userId, plantSlug, specificCommonName = null) {
     if (!db) return { plantData: null, docId: null };
     try {
         const q = query(
@@ -357,6 +379,16 @@ export async function getSavedBookmark(userId, plantSlug) {
         );
         const snapshot = await getDocs(q);
         if (!snapshot.empty) {
+            if (specificCommonName) {
+                const targetName = specificCommonName.trim().toLowerCase();
+                const match = snapshot.docs.find(d => {
+                    const data = d.data();
+                    return data.common_name && data.common_name.trim().toLowerCase() === targetName;
+                });
+                if (match) return { plantData: match.data(), docId: match.id };
+                return { plantData: null, docId: null };
+            }
+
             const doc = snapshot.docs[0];
             return { plantData: doc.data(), docId: doc.id };
         }
@@ -1054,4 +1086,5 @@ export async function fetchCollectionSuggestions(query) {
         console.error("Error fetching collection suggestions:", error);
         return [];
     }
+}
 }
