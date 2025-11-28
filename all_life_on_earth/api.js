@@ -1,8 +1,9 @@
 /*
  * API.JS
- * Final Version - "Smart Search" Update
+ * Final Version - "Smart Search" & "Species Gallery" Update
  * - Filters for Living/Wild Specimens (HumanObservation)
  * - Resolves Search Terms to Taxonomy IDs before searching
+ * - Fetches Media Gallery for Specimen Details
  */
 
 import { configStore } from './config.js';
@@ -151,7 +152,7 @@ function mapGbifRecord(record) {
 export async function getCategorySpecimens(classKey, page) {
     const limit = 20;
     const offset = (page - 1) * limit;
-    // ADDED: basisOfRecord=HUMAN_OBSERVATION (Filters out museum drawers)
+    // Human Observation for living animals
     const url = `https://api.gbif.org/v1/occurrence/search?classKey=${classKey}&kingdomKey=1&mediaType=StillImage&basisOfRecord=HUMAN_OBSERVATION&limit=${limit}&offset=${offset}`;
 
     try {
@@ -182,14 +183,11 @@ export async function searchSpecimens(queryText, page) {
     
     let searchParam = `q=${queryText}`;
 
-    // SMART SEARCH STEP:
-    // If this is a text search, try to resolve it to a Species ID first.
-    // This fixes the "Cat" -> "Catfish" issue.
+    // Smart Search: Resolve Species ID
     try {
         const matchRes = await fetch(`https://api.gbif.org/v1/species/match?name=${queryText}&kingdom=Animalia`);
         if (matchRes.ok) {
             const matchData = await matchRes.json();
-            // If we found a confident match, search by Key, not string
             if (matchData.usageKey && matchData.matchType !== 'NONE') {
                 searchParam = `taxonKey=${matchData.usageKey}`;
                 console.log(`Smart Search: Resolved "${queryText}" to ID ${matchData.usageKey} (${matchData.scientificName})`);
@@ -199,7 +197,7 @@ export async function searchSpecimens(queryText, page) {
         console.warn("Smart search resolution failed, falling back to text match.");
     }
 
-    // UPDATED: Added basisOfRecord=HUMAN_OBSERVATION
+    // Human Observation
     const url = `https://api.gbif.org/v1/occurrence/search?${searchParam}&kingdomKey=1&mediaType=StillImage&basisOfRecord=HUMAN_OBSERVATION&limit=${limit}&offset=${offset}`;
 
     try {
@@ -225,12 +223,13 @@ export async function searchSpecimens(queryText, page) {
 }
 
 /**
- * SMART LOOKUP: Handles both IDs (from grid) and Scientific Names (from Gemini).
+ * UPDATED: Fetches Details AND a Media Gallery
  */
 export async function getSpecimenDetails(keyOrName) {
     try {
         let key = keyOrName;
 
+        // 1. Resolve Name to Key if needed
         if (isNaN(keyOrName)) {
             const matchRes = await fetch(`https://api.gbif.org/v1/species/match?name=${keyOrName}&kingdom=Animalia`);
             if (!matchRes.ok) throw new Error("Match failed");
@@ -243,10 +242,22 @@ export async function getSpecimenDetails(keyOrName) {
             }
         }
 
-        const response = await fetch(`https://api.gbif.org/v1/species/${key}`);
-        if (!response.ok) throw new Error("Specimen details not found");
-        const data = await response.json();
+        // 2. Parallel Fetch: Details + Media Gallery
+        // We limit media to 12 images to keep it snappy
+        const [detailsRes, mediaRes] = await Promise.all([
+            fetch(`https://api.gbif.org/v1/species/${key}`),
+            fetch(`https://api.gbif.org/v1/species/${key}/media?type=StillImage&limit=12`)
+        ]);
+
+        if (!detailsRes.ok) throw new Error("Specimen details not found");
         
+        const data = await detailsRes.json();
+        let mediaData = { results: [] };
+        if (mediaRes.ok) mediaData = await mediaRes.json();
+        
+        // Extract plain image URLs
+        const gallery = mediaData.results ? mediaData.results.map(m => m.identifier) : [];
+
         return {
             slug: data.key.toString(),
             scientific_name: data.scientificName,
@@ -257,7 +268,9 @@ export async function getSpecimenDetails(keyOrName) {
             order: data.order,
             family: data.family,
             genus: data.genus,
-            image_url: null 
+            // If gallery exists, use the first image as main, otherwise null
+            image_url: gallery.length > 0 ? gallery[0] : null, 
+            gallery_images: gallery 
         };
     } catch (error) {
         console.error("Details Error:", error);
