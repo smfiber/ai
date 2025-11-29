@@ -1,8 +1,8 @@
 /*
  * API.JS
- * Final Version - "Catalog First" Architecture
- * - Search: Hits Species API first to get a clean list of animals.
- * - Hydration: Fetches 1 high-quality Human Observation photo for each result.
+ * Final Version - "Match & Dedup" Architecture
+ * - Prioritizes Taxon Match (Eagle -> Accipitridae) to avoid Author matches.
+ * - Searches Observations (Real photos) but Deduplicates them to create a Species Catalog.
  */
 
 import { configStore } from './config.js';
@@ -139,7 +139,6 @@ function cleanScientificName(name) {
     return name;
 }
 
-// Mappers
 function mapGbifRecord(record) {
     const imageObj = record.media ? record.media.find(m => m.type === 'StillImage') : null;
     let imageUrl = imageObj ? imageObj.identifier : null;
@@ -163,39 +162,21 @@ function mapGbifRecord(record) {
     };
 }
 
-function mapGbifSpecies(species, imageUrl) {
-    return {
-        slug: species.key.toString(),
-        scientific_name: species.scientificName,
-        common_name: species.vernacularName || cleanScientificName(species.scientificName),
-        image_url: imageUrl, // Injected via Hydration
-        family: species.family,
-        order: species.order,
-        class: species.class,
-        phylum: species.phylum,
-        kingdom: species.kingdom
-    };
-}
-
-// Helper: Fetch 1 High-Quality Image for a Taxon Key
-async function getOneImageForTaxon(key) {
-    try {
-        const url = `https://api.gbif.org/v1/occurrence/search?taxonKey=${key}&mediaType=StillImage&basisOfRecord=HUMAN_OBSERVATION&limit=1`;
-        const res = await fetch(url);
-        if(!res.ok) return null;
-        const data = await res.json();
-        if(data.results && data.results.length > 0) {
-            const rec = data.results[0];
-            const img = rec.media ? rec.media.find(m => m.type === 'StillImage') : null;
-            return img ? img.identifier : null;
+// Helper: Deduplicates a list of occurrences by their Species Key.
+// Returns a unique list where each species appears only once.
+function dedupBySpecies(records) {
+    const unique = new Map();
+    records.forEach(r => {
+        // Only keep if we have a valid species ID and it's new
+        if (r.slug && !unique.has(r.slug)) {
+            unique.set(r.slug, r);
         }
-        return null;
-    } catch(e) { return null; }
+    });
+    return Array.from(unique.values());
 }
 
 export async function getCategorySpecimens(classKey, page) {
-    // Categories act as a filter on observations directly (browsing)
-    const limit = 20;
+    const limit = 50; // Fetch more to allow for deduping
     const offset = (page - 1) * limit;
     const url = `https://api.gbif.org/v1/occurrence/search?classKey=${classKey}&kingdomKey=1&mediaType=StillImage&basisOfRecord=HUMAN_OBSERVATION&limit=${limit}&offset=${offset}`;
 
@@ -204,54 +185,65 @@ export async function getCategorySpecimens(classKey, page) {
         if (!response.ok) throw new Error(`GBIF Error: ${response.status}`);
         const data = await response.json();
         
-        const seen = new Set();
-        const cleanData = data.results
+        const mapped = data.results
             .map(mapGbifRecord)
-            .filter(item => {
-                if (!item.image_url) return false;
-                if (seen.has(item.scientific_name)) return false;
-                seen.add(item.scientific_name);
-                return true;
-            });
+            .filter(item => item.image_url); // Ensure images
 
-        return { data: cleanData, meta: { total: data.count, endOfRecords: data.endOfRecords } };
+        return { 
+            data: dedupBySpecies(mapped), 
+            meta: { total: data.count, endOfRecords: data.endOfRecords } 
+        };
     } catch (error) {
         console.error("GBIF Fetch Error:", error);
         return { data: [], meta: {} };
     }
 }
 
-// REWRITTEN: CATALOG FIRST SEARCH
 export async function searchSpecimens(queryText, page) {
-    const limit = 20;
+    const limit = 50; // Fetch more to ensure we find unique species
     const offset = (page - 1) * limit;
+    
+    // Default: Use Taxon ID if found, otherwise Text
+    let searchParam = `q="${encodeURIComponent(queryText)}"`;
 
     try {
-        // STEP 1: Search the Catalog (Species API)
-        // We look for species matching the text (e.g., "Eagle")
-        const speciesUrl = `https://api.gbif.org/v1/species/search?q=${encodeURIComponent(queryText)}&rank=SPECIES&status=ACCEPTED&limit=${limit}&offset=${offset}`;
-        const speciesRes = await fetch(speciesUrl);
-        if (!speciesRes.ok) throw new Error(`GBIF Species Error: ${speciesRes.status}`);
-        const speciesData = await speciesRes.json();
+        // STEP 1: Strict/Fuzzy Match to find the Animal ID
+        // (This finds "Accipitridae" for "Eagle", avoiding "Michael Eagle")
+        const matchUrl = `https://api.gbif.org/v1/species/match?name=${encodeURIComponent(queryText)}&kingdom=Animalia`;
+        const matchRes = await fetch(matchUrl);
+        
+        if (matchRes.ok) {
+            const matchData = await matchRes.json();
+            // Confidence check: matchType must be EXACT or FUZZY (not NONE)
+            if (matchData.usageKey && matchData.matchType !== 'NONE') {
+                searchParam = `taxonKey=${matchData.usageKey}`;
+                console.log(`Smart Search: Resolved "${queryText}" to ID ${matchData.usageKey} (${matchData.scientificName})`);
+            }
+        }
+    } catch (e) {
+        console.warn("Smart search resolution failed, falling back to text match.");
+    }
 
-        // STEP 2: Hydrate with Photos (Parallel Requests)
-        // For each species found, we fetch the best "Human Observation" photo
-        const hydratedResults = await Promise.all(
-            speciesData.results
-                .filter(s => s.kingdom === 'Animalia') // Ensure it's an animal
-                .map(async (species) => {
-                    const imageUrl = await getOneImageForTaxon(species.key);
-                    return mapGbifSpecies(species, imageUrl);
-                })
-        );
+    // STEP 2: Search for Living Observations (Photos)
+    const url = `https://api.gbif.org/v1/occurrence/search?${searchParam}&kingdomKey=1&mediaType=StillImage&basisOfRecord=HUMAN_OBSERVATION&limit=${limit}&offset=${offset}`;
 
-        // Filter out items that have no image (optional, but cleaner UI)
-        // or keep them if you want to show the Species even without a photo.
-        // Let's keep them, as the UI now handles "No Photo" gracefully.
+    try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`GBIF Error: ${response.status}`);
+        const data = await response.json();
+
+        // STEP 3: Map and Deduplicate
+        // We might get 20 photos of the same Bald Eagle species.
+        // We want a catalog: 1 card per Species.
+        const mapped = data.results
+            .map(mapGbifRecord)
+            .filter(item => item.image_url);
+
+        const uniqueSpecies = dedupBySpecies(mapped);
         
         return { 
-            data: hydratedResults, 
-            meta: { total: speciesData.count, endOfRecords: speciesData.endOfRecords } 
+            data: uniqueSpecies, 
+            meta: { total: data.count, endOfRecords: data.endOfRecords } 
         };
 
     } catch (error) {
@@ -265,21 +257,20 @@ export async function getSpecimenDetails(keyOrName) {
         let key = keyOrName;
 
         if (isNaN(keyOrName)) {
-            const fuzzyUrl = `https://api.gbif.org/v1/species/search?q=${encodeURIComponent(keyOrName)}&rank=SPECIES&status=ACCEPTED&limit=1`;
-            const matchRes = await fetch(fuzzyUrl);
-            
+            // Re-resolve name to ID if passed a string
+            const matchUrl = `https://api.gbif.org/v1/species/match?name=${encodeURIComponent(keyOrName)}&kingdom=Animalia`;
+            const matchRes = await fetch(matchUrl);
             if (!matchRes.ok) throw new Error("Match failed");
             const matchData = await matchRes.json();
             
-            const bestMatch = matchData.results.find(r => r.kingdom === 'Animalia');
-            if (bestMatch) {
-                key = bestMatch.key;
+            if (matchData.usageKey) {
+                key = matchData.usageKey;
             } else {
-                throw new Error("Species not found in GBIF Backbone");
+                throw new Error("Species not found");
             }
         }
 
-        // Details + High Quality Gallery
+        // Details + High Quality Gallery (Human Observation)
         const [detailsRes, imagesRes] = await Promise.all([
             fetch(`https://api.gbif.org/v1/species/${key}`),
             fetch(`https://api.gbif.org/v1/occurrence/search?taxonKey=${key}&mediaType=StillImage&basisOfRecord=HUMAN_OBSERVATION&limit=8`)
