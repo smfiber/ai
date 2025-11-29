@@ -683,18 +683,26 @@ async function handleSuggestionClick(rowElement, plant) {
     
     try {
         let targetSlug = null;
-        const commonSearch = await searchNativePlants(plant.common_name, 1);
         
-        if (commonSearch.data && commonSearch.data.length > 0) {
-            targetSlug = commonSearch.data[0].slug;
-        } else {
-            const sciSearch = await searchNativePlants(plant.scientific_name, 1);
-            if (sciSearch.data && sciSearch.data.length > 0) {
-                const match = sciSearch.data.find(p => 
-                    p.scientific_name.toLowerCase() === plant.scientific_name.toLowerCase()
-                );
-                targetSlug = match ? match.slug : sciSearch.data[0].slug;
-            }
+        // --- PRIORITY SWITCH: Search by Scientific Name FIRST ---
+        // This ensures distinct varieties (like "Better Boy" tomato) map to the correct species (Solanum lycopersicum)
+        // rather than accidental keyword matches (like "Better Boy" -> "Pentalinon luteum").
+        
+        const sciSearch = await searchNativePlants(plant.scientific_name, 1);
+        if (sciSearch.data && sciSearch.data.length > 0) {
+            // Try to find exact scientific name match
+            const match = sciSearch.data.find(p => 
+                p.scientific_name.toLowerCase() === plant.scientific_name.toLowerCase()
+            );
+            targetSlug = match ? match.slug : sciSearch.data[0].slug;
+        }
+
+        // Fallback: If scientific search failed, try common name
+        if (!targetSlug) {
+             const commonSearch = await searchNativePlants(plant.common_name, 1);
+             if (commonSearch.data && commonSearch.data.length > 0) {
+                targetSlug = commonSearch.data[0].slug;
+             }
         }
 
         if (targetSlug) {
@@ -1605,11 +1613,18 @@ function isValueMissing(value) {
 }
 
 function mergePlantData(trefleData, geminiData) {
+    // --- EDIBLE STATUS RESOLUTION ---
+    // If Gemini explicitly says "true", trust it over Trefle's "false/null".
+    let edibleStatus = trefleData.edible;
+    if (geminiData.is_edible === true) {
+        edibleStatus = true;
+    }
+
     const finalData = {
         image_url: trefleData.image_url,
         scientific_name: trefleData.scientific_name,
         common_name: trefleData.common_name,
-        edible: trefleData.edible,
+        edible: edibleStatus, // Use the resolved status
         slug: trefleData.slug, 
         distributions: trefleData.distributions,
 
