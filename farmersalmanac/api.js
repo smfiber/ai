@@ -793,6 +793,7 @@ export async function fetchAugmentedPlantData(plantData) {
         - Pruning Season: Best time to prune (e.g., "Late Winter").
         - Propagation Methods: Common ways to reproduce (e.g., "Stem cuttings, seeds").
         - Toxicity Info: Safety for humans and pets (e.g., "Toxic to cats if ingested").
+        - Is Edible: Boolean (true/false). Does this plant produce parts generally considered safe and common for human consumption?
 
         Respond with ONLY a valid JSON object matching this structure. Do not use markdown.
         {
@@ -814,7 +815,8 @@ export async function fetchAugmentedPlantData(plantData) {
           "fertilizer_info": "...",
           "pruning_season": "...",
           "propagation_methods": "...",
-          "toxicity_info": "..."
+          "toxicity_info": "...",
+          "is_edible": true
         }
     `;
 
