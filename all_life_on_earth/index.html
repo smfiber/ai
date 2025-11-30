@@ -330,6 +330,18 @@
         </div>
     </div>
 
+    <div id="lightbox-modal" class="hidden fixed inset-0 z-[60] bg-black/90 backdrop-blur-md flex items-center justify-center p-4">
+        <button id="lightbox-close-btn" class="absolute top-6 right-6 text-white/50 hover:text-white text-5xl leading-none transition-colors">&times;</button>
+        <div class="max-w-7xl max-h-full w-full h-full flex items-center justify-center overflow-hidden">
+            <img id="lightbox-image" src="" alt="Full Screen" class="hidden max-w-full max-h-full object-contain rounded-lg shadow-2xl">
+            
+            <div id="lightbox-placeholder" class="text-center text-gray-500">
+                <span class="text-6xl block mb-4">🔍</span>
+                <p class="text-xl">No High-Res Image Available</p>
+            </div>
+        </div>
+    </div>
+
     <script src="config.js" type="module"></script>
     <script src="api.js" type="module"></script>
     <script src="app.js" type="module"></script>
