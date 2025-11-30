@@ -4,6 +4,7 @@
  * Updated: Handles Gemini "Text Slugs" correctly to prevent duplicates.
  * Fixed: Caching now works correctly (fixed API Partial Update bug).
  * New: Edit Field Guides (Title, Search Term, Image).
+ * New: Client-Side Thumbnails & Full-Res Lightbox Logic.
  */
 
 import { setApiKeys } from './config.js';
@@ -619,7 +620,8 @@ function setupGalleryListeners() {
     if (mainImg) {
         mainImg.style.cursor = 'zoom-in';
         mainImg.addEventListener('click', () => {
-            openLightbox(mainImg.src);
+            // Use the Data Attribute for Full Res if available, otherwise fallback to src
+            openLightbox(mainImg.dataset.fullRes || mainImg.src);
         });
     }
     
@@ -646,6 +648,9 @@ function createSpecimenDetailHtml(data) {
     // Use placeholder if image_url is missing
     const hasImage = !!data.image_url;
     const image = hasImage ? data.image_url : 'https://placehold.co/400x400/374151/FFFFFF?text=No+Photo';
+    
+    // Logic for Full Res data attribute
+    const fullRes = data.original_image_url || data.image_url;
 
     const galleryHtml = (data.gallery_images && data.gallery_images.length > 1) 
        ? `<div class="flex gap-2 overflow-x-auto pb-2 mt-4 custom-scrollbar">
@@ -661,7 +666,10 @@ function createSpecimenDetailHtml(data) {
         <div class="flex flex-col lg:flex-row gap-8 mb-8">
             <div class="w-full lg:w-1/3 flex-shrink-0">
                 <div class="card-image-wrapper rounded-xl overflow-hidden shadow-lg bg-gray-900/50">
-                    <img id="main-specimen-image" src="${image}" alt="${get(data.common_name)}" 
+                    <img id="main-specimen-image" 
+                         src="${image}" 
+                         data-full-res="${fullRes}" 
+                         alt="${get(data.common_name)}" 
                          class="w-full h-auto object-cover"
                          onerror="this.onerror=null;this.src='https://placehold.co/400x400/374151/FFFFFF?text=No+Image';">
                 </div>
@@ -811,11 +819,13 @@ async function handleRefreshData() {
         const geminiData = await fetchAugmentedSpecimenData(gbifData);
         // Preserve image_url if we have one locally, otherwise null
         const preservedImage = currentModalSpecimen.image_url;
+        const preservedOriginal = currentModalSpecimen.original_image_url; // Preserve original too
         
         const freshData = { 
             ...gbifData, 
             ...geminiData, 
-            image_url: preservedImage || gbifData.image_url, // gbifData.image_url is null now
+            image_url: preservedImage || gbifData.image_url, 
+            original_image_url: preservedOriginal,
             docId: currentModalSpecimen.docId, 
             qa_history: currentModalSpecimen.qa_history 
         };
@@ -923,14 +933,42 @@ async function handleImageUpload(e) {
     uploadStatus.classList.remove('hidden');
     uploadMessage.textContent = 'Uploading & Identifying...';
     try {
-        const url = await uploadSpecimenImage(imageFileInput.files[0], currentUser.uid);
-        const result = await fetchImageIdentification(url); 
+        const { original, thumb } = await uploadSpecimenImage(imageFileInput.files[0], currentUser.uid);
+        const result = await fetchImageIdentification(original); 
+        
+        // Use thumb for display, keep original for lightbox
+        const imageToSave = thumb;
+        
         if (result && result.scientific_name !== 'Unknown') {
             uploadMessage.textContent = `Found: ${result.common_name}`;
             const gbifResult = await searchSpecimens(result.scientific_name, 1);
             if (gbifResult.data.length > 0) {
-                openSpecimenModal(gbifResult.data[0].slug, result.common_name);
+                // Open modal with the found data, but INJECT our uploaded images
+                const foundSpecimen = gbifResult.data[0];
+                
+                // Manually set the images on the modal state before opening
+                // We will rely on the modal opening logic, then update the image there?
+                // Actually, openSpecimenModal fetches fresh data. 
+                // We need a way to pass the uploaded image to it.
+                // Simplified approach: Open it, then user sees the standard image, 
+                // but we really want our uploaded one.
+                
+                // Better approach: Open modal, then immediately "patch" the currentModalSpecimen with our upload
+                await openSpecimenModal(foundSpecimen.slug, result.common_name);
+                
+                // Patch the current global state with our uploaded photo
+                currentModalSpecimen.image_url = thumb;
+                currentModalSpecimen.original_image_url = original;
+                
+                // Re-render the image part of the modal
+                const mainImg = document.getElementById('main-specimen-image');
+                if(mainImg) {
+                    mainImg.src = thumb;
+                    mainImg.dataset.fullRes = original;
+                }
+                
                 closeImageUploadModal();
+                alert("Identified! Don't forget to click 'Save to Sanctuary' to keep your photo.");
             } else { alert("Identified as " + result.common_name + ", but not found in GBIF."); }
         } else { throw new Error("Could not identify."); }
     } catch (err) { uploadMessage.textContent = 'Error: ' + err.message; }
@@ -1007,15 +1045,19 @@ async function handleUpdatePhoto() {
     try {
         if (!currentUser) throw new Error("Please sign in to upload photos.");
         
-        // Upload
-        const url = await uploadSpecimenImage(file, currentUser.uid);
+        // Upload (Returns Object now)
+        const { original, thumb } = await uploadSpecimenImage(file, currentUser.uid);
         
         // Update Local State
-        currentModalSpecimen.image_url = url;
+        currentModalSpecimen.image_url = thumb; // Use thumbnail for display
+        currentModalSpecimen.original_image_url = original; // Keep original for lightbox
         
         // Update DOM
         const mainImg = document.getElementById('main-specimen-image');
-        if (mainImg) mainImg.src = url;
+        if (mainImg) {
+            mainImg.src = thumb;
+            mainImg.dataset.fullRes = original;
+        }
         
         // Auto-save if it's already a saved specimen
         if (currentModalSpecimen.docId) {
