@@ -42,6 +42,7 @@ import {
     // NEW Calendar Functions
     addCalendarEvent,
     getPlantEvents,
+    getAllUserEvents, // NEW Import
     deleteCalendarEvent
 } from './api.js';
 
@@ -86,6 +87,9 @@ let collectionModal, collectionModalTitle, collectionModalCloseBtn, collectionFo
 
 // --- NEW Lightbox Variables ---
 let lightboxOverlay, lightboxImage, lightboxCloseBtn;
+
+// --- NEW Master Calendar Variables ---
+let viewCalendarBtn, masterCalendarView, backToGardenBtn, masterCalendarContainer, masterCalendarLoader, masterCalendarEmpty;
 
 // --- App State ---
 let currentSearchQuery = null;
@@ -211,7 +215,7 @@ function main() {
         modalContent = document.getElementById('modal-content');
         
         savePlantBtn = document.getElementById('save-plant-btn');
-        bookmarkPlantBtn = document.getElementById('bookmark-plant-btn'); // New Button
+        bookmarkPlantBtn = document.getElementById('bookmark-plant-btn'); 
 
         refreshPlantBtn = document.getElementById('refresh-plant-btn');
         updateImageBtn = document.getElementById('update-image-btn');
@@ -231,6 +235,14 @@ function main() {
         gardenAnalytics = document.getElementById('garden-analytics'); 
         viewGalleryBtn = document.getElementById('view-gallery-btn'); 
         viewAnalyticsBtn = document.getElementById('view-analytics-btn'); 
+        
+        // --- Master Calendar DOM Assignments ---
+        viewCalendarBtn = document.getElementById('view-calendar-btn');
+        masterCalendarView = document.getElementById('master-calendar-view');
+        backToGardenBtn = document.getElementById('back-to-garden-btn');
+        masterCalendarContainer = document.getElementById('master-calendar-container');
+        masterCalendarLoader = document.getElementById('master-calendar-loader');
+        masterCalendarEmpty = document.getElementById('master-calendar-empty');
         
         // --- Q&A DOM Assignments ---
         careQuestionSection = document.getElementById('care-question-section');
@@ -359,9 +371,15 @@ function addEventListeners() {
     imageUploadForm.addEventListener('submit', handleImageUpload);
     imageFileInput.addEventListener('change', handleImageFileChange);
 
-    // --- NEW ANALYTICS LISTENERS ---
+    // --- NEW ANALYTICS & CALENDAR LISTENERS ---
     viewGalleryBtn.addEventListener('click', () => switchGardenMode('gallery'));
     viewAnalyticsBtn.addEventListener('click', () => switchGardenMode('analytics'));
+    viewCalendarBtn.addEventListener('click', showMasterCalendar); // NEW
+    backToGardenBtn.addEventListener('click', () => {
+        masterCalendarView.classList.add('hidden');
+        gardenView.classList.remove('hidden');
+        loadGardenPlants();
+    });
 
     // --- NEW COLLECTION CRUD LISTENERS ---
     collectionModalCloseBtn.addEventListener('click', closeCollectionModal);
@@ -994,6 +1012,7 @@ async function fetchAndRenderPlants() {
 
 function showDiscoveryView() {
     gardenView.classList.add('hidden');
+    masterCalendarView.classList.add('hidden'); // NEW
     document.getElementById('discovery-view').classList.remove('hidden');
     
     if (!currentSearchQuery && !currentCollectionCategory) {
@@ -1011,6 +1030,7 @@ function showDiscoveryView() {
 
 function showGardenView() {
     document.getElementById('discovery-view').classList.add('hidden');
+    masterCalendarView.classList.add('hidden'); // NEW
     gardenView.classList.remove('hidden');
     loadGardenPlants(); 
 }
@@ -1028,6 +1048,8 @@ async function loadGardenPlants() {
     viewGalleryBtn.classList.remove('text-gray-300');
     viewAnalyticsBtn.classList.remove('bg-green-600', 'text-white');
     viewAnalyticsBtn.classList.add('text-gray-300');
+    viewCalendarBtn.classList.remove('bg-green-600', 'text-white'); // NEW
+    viewCalendarBtn.classList.add('text-gray-300');
 
     try {
         const plants = await getGardenPlants(currentUser.uid);
@@ -1376,6 +1398,8 @@ function switchGardenMode(mode) {
         viewGalleryBtn.classList.remove('text-gray-300');
         viewAnalyticsBtn.classList.remove('bg-green-600', 'text-white');
         viewAnalyticsBtn.classList.add('text-gray-300');
+        viewCalendarBtn.classList.remove('bg-green-600', 'text-white'); // NEW
+        viewCalendarBtn.classList.add('text-gray-300');
     } else {
         gardenGallery.classList.add('hidden');
         gardenAnalytics.classList.remove('hidden');
@@ -1383,6 +1407,8 @@ function switchGardenMode(mode) {
         viewAnalyticsBtn.classList.remove('text-gray-300');
         viewGalleryBtn.classList.remove('bg-green-600', 'text-white');
         viewGalleryBtn.classList.add('text-gray-300');
+        viewCalendarBtn.classList.remove('bg-green-600', 'text-white'); // NEW
+        viewCalendarBtn.classList.add('text-gray-300');
         
         renderAnalyticsView(myGardenCache);
     }
@@ -2093,6 +2119,8 @@ async function setupCalendarEvents() {
 
     const taskDateInput = document.getElementById('task-date');
     const taskTypeSelect = document.getElementById('task-type');
+    const taskFreqSelect = document.getElementById('task-recurrence-freq');
+    const taskIntervalInput = document.getElementById('task-recurrence-interval');
     const addTaskBtn = document.getElementById('add-task-btn');
     const taskListContainer = document.getElementById('task-list-container');
     const taskLoader = document.getElementById('task-loader');
@@ -2107,16 +2135,21 @@ async function setupCalendarEvents() {
     addTaskBtn.addEventListener('click', async () => {
         const dateVal = taskDateInput.value;
         const typeVal = taskTypeSelect.value;
+        const freqVal = taskFreqSelect.value;
+        const intervalVal = parseInt(taskIntervalInput.value) || 1;
         
         if(!dateVal) return;
         
         addTaskBtn.disabled = true;
         addTaskBtn.textContent = '...';
         
+        const recurrence = (freqVal === 'none') ? null : { frequency: freqVal, interval: intervalVal };
+
         try {
             await addCalendarEvent(currentUser.uid, currentModalPlant.docId, currentModalPlant.common_name, {
                 type: typeVal,
-                date: dateVal
+                date: dateVal,
+                recurrence: recurrence
             });
             await refreshTaskList();
         } catch (e) {
@@ -2161,10 +2194,15 @@ async function setupCalendarEvents() {
             
             switch(evt.eventType) {
                 case 'Water': icon = '💧'; color = 'text-blue-300'; break;
-                case 'Fertilize': icon = '💩'; color = 'text-yellow-600'; break; // or brown if tailwind config allowed
+                case 'Fertilize': icon = '💩'; color = 'text-yellow-600'; break;
                 case 'Prune': icon = '✂️'; color = 'text-orange-400'; break;
                 case 'Harvest': icon = '🧺'; color = 'text-green-400'; break;
                 case 'Pest Control': icon = '🐛'; color = 'text-red-400'; break;
+            }
+
+            let recurrenceText = '';
+            if (evt.recurrence) {
+                recurrenceText = `<span class="text-xs bg-gray-700 px-1 rounded ml-2">🔄 ${evt.recurrence.interval > 1 ? `Every ${evt.recurrence.interval} ` : ''}${evt.recurrence.frequency}</span>`;
             }
 
             return `
@@ -2173,6 +2211,7 @@ async function setupCalendarEvents() {
                         <span>${icon}</span>
                         <span class="font-medium ${color} text-sm">${evt.eventType}</span>
                         <span class="text-gray-400 text-xs">on ${evt.date}</span>
+                        ${recurrenceText}
                     </div>
                     <button class="delete-task-btn text-gray-500 hover:text-red-400 px-2 font-bold" data-id="${evt.id}">×</button>
                 </div>
@@ -2180,6 +2219,167 @@ async function setupCalendarEvents() {
         }).join('');
     }
 }
+
+// --- NEW MASTER CALENDAR FUNCTIONS ---
+
+async function showMasterCalendar() {
+    if (!currentUser) return;
+
+    gardenView.classList.add('hidden');
+    masterCalendarView.classList.remove('hidden');
+    
+    viewGalleryBtn.classList.remove('bg-green-600', 'text-white');
+    viewGalleryBtn.classList.add('text-gray-300');
+    viewAnalyticsBtn.classList.remove('bg-green-600', 'text-white');
+    viewAnalyticsBtn.classList.add('text-gray-300');
+    viewCalendarBtn.classList.add('bg-green-600', 'text-white');
+    viewCalendarBtn.classList.remove('text-gray-300');
+
+    masterCalendarContainer.innerHTML = '';
+    masterCalendarLoader.classList.remove('hidden');
+    masterCalendarEmpty.classList.add('hidden');
+
+    try {
+        const events = await getAllUserEvents(currentUser.uid);
+        
+        if (events.length === 0) {
+            masterCalendarEmpty.classList.remove('hidden');
+            masterCalendarLoader.classList.add('hidden');
+            return;
+        }
+
+        const expandedEvents = expandRecurringEvents(events, 90); // Next 90 days
+        renderMasterCalendar(expandedEvents);
+
+    } catch (error) {
+        console.error("Error loading master calendar:", error);
+        masterCalendarContainer.innerHTML = '<p class="text-red-400 text-center">Failed to load calendar.</p>';
+    } finally {
+        masterCalendarLoader.classList.add('hidden');
+    }
+}
+
+function expandRecurringEvents(events, daysLimit) {
+    const expanded = [];
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    
+    const limitDate = new Date();
+    limitDate.setDate(today.getDate() + daysLimit);
+
+    events.forEach(evt => {
+        const startDate = new Date(evt.date);
+        // Fix timezone offset issue manually to keep yyyy-mm-dd string integrity if needed,
+        // but for simple comparison:
+        startDate.setHours(0,0,0,0); 
+
+        // Add the base event first (if it's in the future or today)
+        if (startDate >= today && startDate <= limitDate) {
+            expanded.push({ ...evt, dateObj: startDate });
+        } else if (startDate < today && !evt.recurrence) {
+            // Past single event: ignore for upcoming agenda
+        }
+
+        // Handle Recurrence
+        if (evt.recurrence) {
+            let nextDate = new Date(startDate);
+            const { frequency, interval } = evt.recurrence;
+            
+            // Loop until we pass the limit date
+            while (true) {
+                // Advance Date
+                if (frequency === 'daily') {
+                    nextDate.setDate(nextDate.getDate() + interval);
+                } else if (frequency === 'weekly') {
+                    nextDate.setDate(nextDate.getDate() + (7 * interval));
+                } else if (frequency === 'monthly') {
+                    nextDate.setMonth(nextDate.getMonth() + interval);
+                } else if (frequency === 'yearly') {
+                    nextDate.setFullYear(nextDate.getFullYear() + interval);
+                }
+
+                if (nextDate > limitDate) break;
+
+                // Only add if it's in the future window (>= today)
+                if (nextDate >= today) {
+                    expanded.push({
+                        ...evt,
+                        date: nextDate.toISOString().split('T')[0], // Update string date
+                        dateObj: new Date(nextDate),
+                        isRecurringInstance: true
+                    });
+                }
+            }
+        }
+    });
+
+    // Sort by Date
+    return expanded.sort((a, b) => a.dateObj - b.dateObj);
+}
+
+function renderMasterCalendar(events) {
+    if (events.length === 0) {
+        masterCalendarEmpty.classList.remove('hidden');
+        return;
+    }
+
+    // Group by Date String
+    const grouped = {};
+    events.forEach(evt => {
+        if (!grouped[evt.date]) grouped[evt.date] = [];
+        grouped[evt.date].push(evt);
+    });
+
+    const dates = Object.keys(grouped).sort();
+    const todayStr = new Date().toISOString().split('T')[0];
+    
+    // Helper for "Tomorrow"
+    const tmrw = new Date();
+    tmrw.setDate(tmrw.getDate() + 1);
+    const tmrwStr = tmrw.toISOString().split('T')[0];
+
+    masterCalendarContainer.innerHTML = dates.map(dateStr => {
+        const dayEvents = grouped[dateStr];
+        
+        let headerLabel = new Date(dateStr).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
+        if (dateStr === todayStr) headerLabel = `<span class="text-green-400 font-bold">Today</span> (${headerLabel})`;
+        else if (dateStr === tmrwStr) headerLabel = `<span class="text-blue-300 font-bold">Tomorrow</span> (${headerLabel})`;
+
+        const itemsHtml = dayEvents.map(evt => {
+             let icon = '📅';
+             let color = 'text-gray-300';
+             switch(evt.eventType) {
+                case 'Water': icon = '💧'; color = 'text-blue-300'; break;
+                case 'Fertilize': icon = '💩'; color = 'text-yellow-600'; break;
+                case 'Prune': icon = '✂️'; color = 'text-orange-400'; break;
+                case 'Harvest': icon = '🧺'; color = 'text-green-400'; break;
+                case 'Pest Control': icon = '🐛'; color = 'text-red-400'; break;
+            }
+            
+            return `
+                <div class="flex items-center justify-between bg-gray-800/50 p-3 rounded-lg border border-white/5 hover:bg-gray-700/50 transition-colors">
+                    <div class="flex items-center gap-3">
+                        <span class="text-xl">${icon}</span>
+                        <div>
+                            <p class="font-bold text-gray-200">${evt.plantName}</p>
+                            <p class="text-sm ${color}">${evt.eventType} ${evt.isRecurringInstance ? '<span class="text-xs text-gray-500 ml-1">🔄</span>' : ''}</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        return `
+            <div class="mb-6">
+                <h3 class="text-lg font-medium text-gray-400 border-b border-gray-700 pb-2 mb-3">${headerLabel}</h3>
+                <div class="space-y-2">
+                    ${itemsHtml}
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
 
 function createPlantDetailHtml(plantData) {
     const get = (value, defaultValue = 'N/A') => {
@@ -2215,17 +2415,33 @@ function createPlantDetailHtml(plantData) {
                     <span class="mr-2">📅</span> Garden Tasks
                 </h3>
                 
-                <div class="flex flex-wrap gap-2 mb-4 p-2 bg-gray-900/30 rounded-lg">
-                    <input type="date" id="task-date" class="bg-gray-700 text-white text-sm rounded px-2 py-1 border border-gray-600 focus:ring-green-500 focus:border-green-500">
-                    <select id="task-type" class="bg-gray-700 text-white text-sm rounded px-2 py-1 border border-gray-600 focus:ring-green-500 focus:border-green-500 flex-1">
-                        <option value="Water">💧 Water</option>
-                        <option value="Fertilize">💩 Fertilize</option>
-                        <option value="Prune">✂️ Prune</option>
-                        <option value="Harvest">🧺 Harvest</option>
-                        <option value="Pest Control">🐛 Pest Control</option>
-                        <option value="Other">📝 Other</option>
-                    </select>
-                    <button id="add-task-btn" class="bg-green-600 hover:bg-green-700 text-white text-sm font-bold px-3 py-1 rounded shadow transition-colors">Add</button>
+                <div class="mb-4 p-3 bg-gray-900/30 rounded-lg space-y-3">
+                    <div class="flex flex-wrap gap-2">
+                        <input type="date" id="task-date" class="bg-gray-700 text-white text-sm rounded px-2 py-1 border border-gray-600 focus:ring-green-500 focus:border-green-500">
+                        <select id="task-type" class="bg-gray-700 text-white text-sm rounded px-2 py-1 border border-gray-600 focus:ring-green-500 focus:border-green-500 flex-1">
+                            <option value="Water">💧 Water</option>
+                            <option value="Fertilize">💩 Fertilize</option>
+                            <option value="Prune">✂️ Prune</option>
+                            <option value="Harvest">🧺 Harvest</option>
+                            <option value="Pest Control">🐛 Pest Control</option>
+                            <option value="Other">📝 Other</option>
+                        </select>
+                    </div>
+                    
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs text-gray-400">Repeat:</span>
+                        <select id="task-recurrence-freq" class="bg-gray-700 text-white text-xs rounded px-2 py-1 border border-gray-600 focus:ring-green-500 focus:border-green-500">
+                            <option value="none">None</option>
+                            <option value="daily">Daily</option>
+                            <option value="weekly">Weekly</option>
+                            <option value="monthly">Monthly</option>
+                            <option value="yearly">Yearly</option>
+                        </select>
+                        <span class="text-xs text-gray-400">Every:</span>
+                        <input type="number" id="task-recurrence-interval" value="1" min="1" max="52" class="w-12 bg-gray-700 text-white text-xs rounded px-2 py-1 border border-gray-600 focus:ring-green-500 focus:border-green-500 text-center">
+                        
+                        <button id="add-task-btn" class="ml-auto bg-green-600 hover:bg-green-700 text-white text-sm font-bold px-4 py-1 rounded shadow transition-colors">Add</button>
+                    </div>
                 </div>
 
                 <div class="relative min-h-[50px]">
