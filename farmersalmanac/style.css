@@ -77,6 +77,33 @@
     background: theme('colors.gray.500'); 
 }
 
+/* --- Custom Scrollbar for Task List (NEW) --- */
+#task-list-container::-webkit-scrollbar {
+    width: 4px; /* Thinner for the small list */
+}
+
+#task-list-container::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.2); 
+}
+
+#task-list-container::-webkit-scrollbar-thumb {
+    background: theme('colors.gray.600'); 
+    border-radius: 2px;
+}
+
+/* --- Dark Mode Date Picker Support (NEW) --- */
+/* Inverts the calendar icon color so it is visible on dark backgrounds */
+::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+    cursor: pointer;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+}
+
+::-webkit-calendar-picker-indicator:hover {
+    opacity: 1;
+}
+
 /* Make the modal close button bigger/easier to hit */
 #modal-close-btn {
     @apply text-3xl font-bold leading-none px-2 text-gray-400 hover:text-white transition-colors;
