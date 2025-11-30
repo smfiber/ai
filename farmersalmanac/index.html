@@ -150,6 +150,7 @@
                         <div class="glass-panel rounded-lg p-1 flex">
                             <button id="view-gallery-btn" class="px-4 py-1 rounded-md bg-green-600 text-white font-medium shadow-sm transition-colors">Gallery</button>
                             <button id="view-analytics-btn" class="px-4 py-1 rounded-md text-gray-300 hover:text-white font-medium transition-colors">📊 Analytics</button>
+                            <button id="view-calendar-btn" class="px-4 py-1 rounded-md text-gray-300 hover:text-white font-medium transition-colors">📅 Calendar</button>
                         </div>
 
                         <button id="back-to-search-btn" class="text-green-400 hover:text-green-300 font-medium transition-colors drop-shadow-sm">&larr; Back to Search</button>
@@ -169,6 +170,26 @@
                 <div id="garden-empty-state" class="hidden text-center py-10 text-gray-400">
                     <div class="glass-panel inline-block p-6 rounded-xl">
                         <p id="empty-state-text">Your garden is empty. Go find and save some plants!</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="master-calendar-view" class="hidden">
+                <div class="flex flex-col md:flex-row justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-white drop-shadow-md mb-4 md:mb-0">Master Garden Calendar</h2>
+                    <button id="back-to-garden-btn" class="text-green-400 hover:text-green-300 font-medium transition-colors drop-shadow-sm">&larr; Back to Plants</button>
+                </div>
+                
+                <div id="master-calendar-loader" class="hidden text-center py-10">
+                    <p class="text-lg text-green-400 font-medium drop-shadow-md">Syncing tasks across all plants...</p>
+                </div>
+
+                <div id="master-calendar-container" class="space-y-6 max-w-4xl mx-auto">
+                    </div>
+                
+                <div id="master-calendar-empty" class="hidden text-center py-10 text-gray-400">
+                     <div class="glass-panel inline-block p-6 rounded-xl">
+                        <p>No upcoming tasks found. Go to your plants to schedule watering or scheduled care!</p>
                     </div>
                 </div>
             </div>
