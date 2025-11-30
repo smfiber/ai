@@ -1,10 +1,8 @@
 /*
  * API.JS
  * Final Version - "Gemini Search Engine"
- * - Search: Uses Gemini Generative AI to create curated lists of animals (fixes the "Author Name" bug).
- * - Details: Uses GBIF for strict taxonomy data when a specific animal is selected.
- * - Categories: Uses GBIF + Gemini Translator for browsing by class.
- * - Caching: Field Guide results are stored in Firestore to reduce API calls.
+ * - Fixes Caching Bug (Partial Updates)
+ * - Adds Edit Functionality support
  */
 
 import { configStore } from './config.js';
@@ -112,15 +110,23 @@ const EXPEDITIONS_COLLECTION = "user_expeditions";
 
 export async function saveUserCollection(userId, c) {
     if (!db) return;
-    const d = { title: c.title, query: c.query, image: c.image, uid: userId, updated_at: Date.now() };
     
-    // UPDATED: If 'results' are passed (for caching), include them in the save
-    if (c.results) {
-        d.results = c.results;
-    }
+    // CRITICAL FIX: Only add fields that are actually present to avoid overwriting with undefined
+    const d = { updated_at: Date.now(), uid: userId };
+    
+    if (c.title !== undefined) d.title = c.title;
+    if (c.query !== undefined) d.query = c.query;
+    if (c.image !== undefined) d.image = c.image;
+    if (c.results !== undefined) d.results = c.results; // This allows saving JUST the cache
 
-    if (c.id) { await setDoc(doc(db, EXPEDITIONS_COLLECTION, c.id), d, { merge: true }); return c.id; }
-    else { const ref = await addDoc(collection(db, EXPEDITIONS_COLLECTION), d); return ref.id; }
+    if (c.id) { 
+        // Merge true ensures we update only the fields in 'd'
+        await setDoc(doc(db, EXPEDITIONS_COLLECTION, c.id), d, { merge: true }); 
+        return c.id; 
+    } else { 
+        const ref = await addDoc(collection(db, EXPEDITIONS_COLLECTION), d); 
+        return ref.id; 
+    }
 }
 
 export async function getUserCollections(userId) {
@@ -128,7 +134,6 @@ export async function getUserCollections(userId) {
     const q = query(collection(db, EXPEDITIONS_COLLECTION), where("uid", "==", userId));
     const snap = await getDocs(q);
     const list = [];
-    // We include all data, including cached 'results' if they exist
     snap.forEach(d => list.push({ ...d.data(), id: d.id }));
     return list;
 }
