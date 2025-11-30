@@ -1,7 +1,3 @@
-{
-type: uploaded file
-fileName: app.js
-fullContent:
 /*
  * APP.JS
  * This file handles all the DOM manipulation and user interaction.
@@ -2220,5 +2216,3 @@ function closeModal() {
 
 // --- Run the app ---
 main();
-
-}
