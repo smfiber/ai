@@ -42,7 +42,7 @@ import {
     // NEW Calendar Functions
     addCalendarEvent,
     getPlantEvents,
-    getAllUserEvents, // NEW Import
+    getAllUserEvents, 
     deleteCalendarEvent
 } from './api.js';
 
@@ -102,6 +102,7 @@ let currentUser = null; // Track the logged-in user
 let currentModalPlant = null; // Track data for the currently open modal
 let myGardenCache = []; // Store garden plants for analytics switching
 let customCollections = []; // Store user-created collections
+let currentCalendarDate = new Date(); // Track currently viewed month in Master Calendar
 
 // --- REGISTRY STATE (For Visual Badges) ---
 // Keys format: "slug::common_name" (lowercase)
@@ -374,11 +375,20 @@ function addEventListeners() {
     // --- NEW ANALYTICS & CALENDAR LISTENERS ---
     viewGalleryBtn.addEventListener('click', () => switchGardenMode('gallery'));
     viewAnalyticsBtn.addEventListener('click', () => switchGardenMode('analytics'));
-    viewCalendarBtn.addEventListener('click', showMasterCalendar); // NEW
+    viewCalendarBtn.addEventListener('click', showMasterCalendar); 
     backToGardenBtn.addEventListener('click', () => {
         masterCalendarView.classList.add('hidden');
         gardenView.classList.remove('hidden');
         loadGardenPlants();
+    });
+
+    // Calendar Navigation Delegation
+    masterCalendarContainer.addEventListener('click', (e) => {
+        if (e.target.closest('.calendar-prev-btn')) {
+            changeCalendarMonth(-1);
+        } else if (e.target.closest('.calendar-next-btn')) {
+            changeCalendarMonth(1);
+        }
     });
 
     // --- NEW COLLECTION CRUD LISTENERS ---
@@ -2222,6 +2232,20 @@ async function setupCalendarEvents() {
 
 // --- NEW MASTER CALENDAR FUNCTIONS ---
 
+// Helper to reliably parse "YYYY-MM-DD" as local time, preventing UTC offset shifts.
+function parseLocalDate(dateStr) {
+    if (!dateStr) return new Date();
+    const [y, m, d] = dateStr.split('-').map(Number);
+    return new Date(y, m - 1, d); // Months are 0-indexed
+}
+
+function getLocalDateString(dateObj) {
+    const y = dateObj.getFullYear();
+    const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const d = String(dateObj.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+}
+
 async function showMasterCalendar() {
     if (!currentUser) return;
 
@@ -2235,6 +2259,9 @@ async function showMasterCalendar() {
     viewCalendarBtn.classList.add('bg-green-600', 'text-white');
     viewCalendarBtn.classList.remove('text-gray-300');
 
+    // Default to current month if first load, else preserve state
+    if (!currentCalendarDate) currentCalendarDate = new Date();
+
     masterCalendarContainer.innerHTML = '';
     masterCalendarLoader.classList.remove('hidden');
     masterCalendarEmpty.classList.add('hidden');
@@ -2242,14 +2269,18 @@ async function showMasterCalendar() {
     try {
         const events = await getAllUserEvents(currentUser.uid);
         
-        if (events.length === 0) {
-            masterCalendarEmpty.classList.remove('hidden');
-            masterCalendarLoader.classList.add('hidden');
-            return;
-        }
-
-        const expandedEvents = expandRecurringEvents(events, 90); // Next 90 days
-        renderMasterCalendar(expandedEvents);
+        // Expand events for the CURRENT view window (month) plus some buffer
+        // We calculate first day of current view month and last day
+        const viewYear = currentCalendarDate.getFullYear();
+        const viewMonth = currentCalendarDate.getMonth();
+        
+        const firstDayOfMonth = new Date(viewYear, viewMonth, 1);
+        const lastDayOfMonth = new Date(viewYear, viewMonth + 1, 0);
+        
+        // Pass the range to expander to ensure we get recurring events for this specific month
+        const expandedEvents = expandRecurringEvents(events, firstDayOfMonth, lastDayOfMonth);
+        
+        renderMasterCalendarGrid(expandedEvents);
 
     } catch (error) {
         console.error("Error loading master calendar:", error);
@@ -2259,125 +2290,146 @@ async function showMasterCalendar() {
     }
 }
 
-function expandRecurringEvents(events, daysLimit) {
+function changeCalendarMonth(offset) {
+    currentCalendarDate.setMonth(currentCalendarDate.getMonth() + offset);
+    showMasterCalendar(); // Re-render
+}
+
+function expandRecurringEvents(events, startDateWindow, endDateWindow) {
     const expanded = [];
-    const today = new Date();
-    today.setHours(0,0,0,0);
     
-    const limitDate = new Date();
-    limitDate.setDate(today.getDate() + daysLimit);
+    // Ensure window times are strictly compared without time drift
+    const startWindowTime = startDateWindow.getTime();
+    const endWindowTime = endDateWindow.getTime();
 
     events.forEach(evt => {
-        const startDate = new Date(evt.date);
-        // Fix timezone offset issue manually to keep yyyy-mm-dd string integrity if needed,
-        // but for simple comparison:
-        startDate.setHours(0,0,0,0); 
-
-        // Add the base event first (if it's in the future or today)
-        if (startDate >= today && startDate <= limitDate) {
-            expanded.push({ ...evt, dateObj: startDate });
-        } else if (startDate < today && !evt.recurrence) {
-            // Past single event: ignore for upcoming agenda
+        // Use custom parser to fix off-by-one errors from UTC conversion
+        const originalDate = parseLocalDate(evt.date);
+        
+        // If it's a single event, check if it falls in window
+        if (!evt.recurrence) {
+            if (originalDate >= startDateWindow && originalDate <= endDateWindow) {
+                expanded.push({ ...evt, dateObj: originalDate, dateString: evt.date });
+            }
+            return;
         }
 
         // Handle Recurrence
-        if (evt.recurrence) {
-            let nextDate = new Date(startDate);
-            const { frequency, interval } = evt.recurrence;
-            
-            // Loop until we pass the limit date
-            while (true) {
-                // Advance Date
-                if (frequency === 'daily') {
-                    nextDate.setDate(nextDate.getDate() + interval);
-                } else if (frequency === 'weekly') {
-                    nextDate.setDate(nextDate.getDate() + (7 * interval));
-                } else if (frequency === 'monthly') {
-                    nextDate.setMonth(nextDate.getMonth() + interval);
-                } else if (frequency === 'yearly') {
-                    nextDate.setFullYear(nextDate.getFullYear() + interval);
-                }
+        // We must start from the original date and loop until we pass the end window
+        let nextDate = new Date(originalDate);
+        const { frequency, interval } = evt.recurrence;
+        
+        // Optimization: If original date is far in past, jump closer to window? 
+        // For simple yearly/monthly/weekly, iterative is safer for correctness unless optimized carefully.
+        // Given typically < 100 events, iteration is fine.
+        
+        // Loop limit safety
+        let safetyCount = 0;
+        
+        while (safetyCount < 1000) {
+            if (nextDate > endDateWindow) break;
 
-                if (nextDate > limitDate) break;
-
-                // Only add if it's in the future window (>= today)
-                if (nextDate >= today) {
-                    expanded.push({
-                        ...evt,
-                        date: nextDate.toISOString().split('T')[0], // Update string date
-                        dateObj: new Date(nextDate),
-                        isRecurringInstance: true
-                    });
-                }
+            // If date is within window, add it
+            if (nextDate >= startDateWindow) {
+                expanded.push({
+                    ...evt,
+                    dateString: getLocalDateString(nextDate),
+                    dateObj: new Date(nextDate),
+                    isRecurringInstance: true
+                });
             }
+
+            // Advance Date logic
+            if (frequency === 'daily') {
+                nextDate.setDate(nextDate.getDate() + interval);
+            } else if (frequency === 'weekly') {
+                nextDate.setDate(nextDate.getDate() + (7 * interval));
+            } else if (frequency === 'monthly') {
+                nextDate.setMonth(nextDate.getMonth() + interval);
+            } else if (frequency === 'yearly') {
+                nextDate.setFullYear(nextDate.getFullYear() + interval);
+            }
+            
+            safetyCount++;
         }
     });
 
-    // Sort by Date
-    return expanded.sort((a, b) => a.dateObj - b.dateObj);
+    return expanded;
 }
 
-function renderMasterCalendar(events) {
-    if (events.length === 0) {
-        masterCalendarEmpty.classList.remove('hidden');
-        return;
-    }
+function renderMasterCalendarGrid(events) {
+    const year = currentCalendarDate.getFullYear();
+    const month = currentCalendarDate.getMonth();
+    
+    const monthNames = ["January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"
+    ];
 
-    // Group by Date String
-    const grouped = {};
-    events.forEach(evt => {
-        if (!grouped[evt.date]) grouped[evt.date] = [];
-        grouped[evt.date].push(evt);
+    // Calculate grid specifics
+    const firstDayIndex = new Date(year, month, 1).getDay(); // 0 = Sunday
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    
+    // Group events by YYYY-MM-DD
+    const eventsByDate = {};
+    events.forEach(e => {
+        if (!eventsByDate[e.dateString]) eventsByDate[e.dateString] = [];
+        eventsByDate[e.dateString].push(e);
     });
 
-    const dates = Object.keys(grouped).sort();
-    const todayStr = new Date().toISOString().split('T')[0];
-    
-    // Helper for "Tomorrow"
-    const tmrw = new Date();
-    tmrw.setDate(tmrw.getDate() + 1);
-    const tmrwStr = tmrw.toISOString().split('T')[0];
+    let gridHtml = `
+        <div class="flex justify-between items-center mb-6 px-4">
+            <button class="calendar-prev-btn bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors">&larr; Prev</button>
+            <h2 class="text-2xl font-bold text-white">${monthNames[month]} ${year}</h2>
+            <button class="calendar-next-btn bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors">Next &rarr;</button>
+        </div>
 
-    masterCalendarContainer.innerHTML = dates.map(dateStr => {
-        const dayEvents = grouped[dateStr];
+        <div class="grid grid-cols-7 gap-1 md:gap-2 text-center text-gray-400 font-bold mb-2">
+            <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+        </div>
+
+        <div class="grid grid-cols-7 gap-1 md:gap-2 auto-rows-fr">
+    `;
+
+    // Empty cells for days before the 1st
+    for (let i = 0; i < firstDayIndex; i++) {
+        gridHtml += `<div class="bg-transparent min-h-[100px] md:min-h-[120px]"></div>`;
+    }
+
+    // Days of the month
+    for (let day = 1; day <= daysInMonth; day++) {
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const dayEvents = eventsByDate[dateStr] || [];
         
-        let headerLabel = new Date(dateStr).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
-        if (dateStr === todayStr) headerLabel = `<span class="text-green-400 font-bold">Today</span> (${headerLabel})`;
-        else if (dateStr === tmrwStr) headerLabel = `<span class="text-blue-300 font-bold">Tomorrow</span> (${headerLabel})`;
+        // Check if today
+        const todayStr = getLocalDateString(new Date());
+        const isToday = (dateStr === todayStr);
 
-        const itemsHtml = dayEvents.map(evt => {
-             let icon = '📅';
-             let color = 'text-gray-300';
-             switch(evt.eventType) {
-                case 'Water': icon = '💧'; color = 'text-blue-300'; break;
-                case 'Fertilize': icon = '💩'; color = 'text-yellow-600'; break;
-                case 'Prune': icon = '✂️'; color = 'text-orange-400'; break;
-                case 'Harvest': icon = '🧺'; color = 'text-green-400'; break;
-                case 'Pest Control': icon = '🐛'; color = 'text-red-400'; break;
-            }
-            
-            return `
-                <div class="flex items-center justify-between bg-gray-800/50 p-3 rounded-lg border border-white/5 hover:bg-gray-700/50 transition-colors">
-                    <div class="flex items-center gap-3">
-                        <span class="text-xl">${icon}</span>
-                        <div>
-                            <p class="font-bold text-gray-200">${evt.plantName}</p>
-                            <p class="text-sm ${color}">${evt.eventType} ${evt.isRecurringInstance ? '<span class="text-xs text-gray-500 ml-1">🔄</span>' : ''}</p>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }).join('');
+        gridHtml += `
+            <div class="bg-gray-800/50 border ${isToday ? 'border-green-500 bg-gray-800' : 'border-white/5'} rounded-lg p-2 flex flex-col min-h-[100px] md:min-h-[120px] relative overflow-hidden group hover:border-white/20 transition-colors">
+                <span class="text-right text-sm font-mono mb-1 ${isToday ? 'text-green-400 font-bold' : 'text-gray-500'}">${day}</span>
+                
+                <div class="flex flex-col gap-1 overflow-y-auto custom-scrollbar flex-1">
+                    ${dayEvents.slice(0, 3).map(evt => {
+                         let color = 'bg-gray-700 text-gray-300';
+                         if (evt.eventType === 'Water') color = 'bg-blue-900/50 text-blue-200 border border-blue-800/50';
+                         else if (evt.eventType === 'Fertilize') color = 'bg-yellow-900/50 text-yellow-200 border border-yellow-800/50';
+                         else if (evt.eventType === 'Harvest') color = 'bg-green-900/50 text-green-200 border border-green-800/50';
 
-        return `
-            <div class="mb-6">
-                <h3 class="text-lg font-medium text-gray-400 border-b border-gray-700 pb-2 mb-3">${headerLabel}</h3>
-                <div class="space-y-2">
-                    ${itemsHtml}
+                         return `
+                            <div class="text-xs truncate px-1 py-0.5 rounded ${color}" title="${evt.eventType}: ${evt.plantName}">
+                                ${evt.plantName}
+                            </div>
+                         `;
+                    }).join('')}
+                    
+                    ${dayEvents.length > 3 ? `<span class="text-xs text-center text-gray-500 italic">+${dayEvents.length - 3} more</span>` : ''}
                 </div>
             </div>
         `;
-    }).join('');
+    }
+
+    gridHtml += `</div>`;
+    masterCalendarContainer.innerHTML = gridHtml;
 }
 
 
