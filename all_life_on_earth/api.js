@@ -3,6 +3,7 @@
  * Final Version - "Gemini Search Engine"
  * - Fixes Caching Bug (Partial Updates)
  * - Adds Edit Functionality support
+ * - Adds Client-Side Thumbnail Generation (Bandwidth Optimization)
  */
 
 import { configStore } from './config.js';
@@ -66,12 +67,70 @@ export async function signInWithGoogle() {
 }
 export async function signOutUser() { if (auth) await signOut(auth); }
 
+/**
+ * Helper to resize image client-side before upload.
+ * Max Width: 600px, Quality: 0.7 JPEG
+ */
+function createThumbnail(file, maxWidth = 600, quality = 0.7) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (event) => {
+            const img = new Image();
+            img.src = event.target.result;
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
+
+                if (width > maxWidth) {
+                    height = (height * maxWidth) / width;
+                    width = maxWidth;
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+
+                canvas.toBlob((blob) => {
+                    resolve(blob);
+                }, 'image/jpeg', quality);
+            };
+            img.onerror = (e) => reject(e);
+        };
+        reader.onerror = (e) => reject(e);
+    });
+}
+
 export async function uploadSpecimenImage(file, userId) {
     if (!storage) throw new Error("Storage not init");
-    const path = `users/${userId}/specimens/${Date.now()}-${file.name}`;
-    const sRef = ref(storage, path);
-    const snap = await uploadBytes(sRef, file);
-    return await getDownloadURL(snap.ref);
+    
+    // 1. Generate path base
+    const timestamp = Date.now();
+    const originalPath = `users/${userId}/specimens/${timestamp}-${file.name}`;
+    const thumbPath = `users/${userId}/specimens/${timestamp}-${file.name}_thumb`;
+
+    // 2. Create Thumbnail Blob
+    const thumbBlob = await createThumbnail(file);
+
+    // 3. Create Refs
+    const originalRef = ref(storage, originalPath);
+    const thumbRef = ref(storage, thumbPath);
+
+    // 4. Upload Both (Parallel)
+    const [originalSnap, thumbSnap] = await Promise.all([
+        uploadBytes(originalRef, file),
+        uploadBytes(thumbRef, thumbBlob)
+    ]);
+
+    // 5. Get URLs
+    const [originalUrl, thumbUrl] = await Promise.all([
+        getDownloadURL(originalSnap.ref),
+        getDownloadURL(thumbSnap.ref)
+    ]);
+
+    return { original: originalUrl, thumb: thumbUrl };
 }
 
 // --- Firestore: Saved Specimens ---
