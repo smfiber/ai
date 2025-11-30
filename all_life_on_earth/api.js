@@ -3,6 +3,7 @@
  * Final Version - "Smart Match & Strict Animal Filter"
  * - Implements 'species/match' to prioritize the most likely species (e.g. Wolf -> Canis lupus).
  * - Fixes Kingdom filtering using 'highertaxonKey=1' to exclude plants.
+ * - Forces the Common Name display to match the user's search query for the best result.
  */
 
 import { configStore } from './config.js';
@@ -201,10 +202,13 @@ export async function searchSpecimens(queryText, page) {
                 // If we found a confident match that is a SPECIES or SUBSPECIES
                 if (matchData.usageKey && matchData.matchType !== 'NONE' && (matchData.rank === 'SPECIES' || matchData.rank === 'SUBSPECIES')) {
                     smartMatchResult = mapGbifRecord(matchData);
-                    // Force the common name if the API match result vernacular is missing but we queried it
+                    
+                    // FIX: Force readable name to match User Query if API vernacular is missing
                     if (!smartMatchResult.common_name || smartMatchResult.common_name === smartMatchResult.scientific_name) {
-                         // The match API often doesn't return vernacularName, so we might default to the scientific
-                         // OR we can leave it. But this ensures the "Best" result is grabbed.
+                         const titleCase = queryText.split(' ')
+                            .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+                            .join(' ');
+                         smartMatchResult.common_name = titleCase;
                     }
                 }
             }
