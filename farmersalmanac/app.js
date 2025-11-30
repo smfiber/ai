@@ -38,7 +38,11 @@ import {
     deleteUserCollection,
     // NEW AI Cache Functions
     getStoredSuggestions,
-    saveStoredSuggestions
+    saveStoredSuggestions,
+    // NEW Calendar Functions
+    addCalendarEvent,
+    getPlantEvents,
+    deleteCalendarEvent
 } from './api.js';
 
 // --- Global DOM Element Variables ---
@@ -53,9 +57,6 @@ let modalBackdrop, apiKeyForm, appContainer, mainContent, authContainer,
 // --- New Global DOM Variables for Q&A and Search Lookup ---
 let careQuestionSection, careQuestionForm, careQuestionInput, careQuestionSubmit,
     careResponseContainer, careResponseText, careResponseLoader;
-
-// --- NEW DOM Variables for User Notes ---
-let userNotesSection, userNotesInput, notesSaveStatus;
 
 let scientificLookupBtn; 
 
@@ -210,7 +211,7 @@ function main() {
         modalContent = document.getElementById('modal-content');
         
         savePlantBtn = document.getElementById('save-plant-btn');
-        bookmarkPlantBtn = document.getElementById('bookmark-plant-btn'); 
+        bookmarkPlantBtn = document.getElementById('bookmark-plant-btn'); // New Button
 
         refreshPlantBtn = document.getElementById('refresh-plant-btn');
         updateImageBtn = document.getElementById('update-image-btn');
@@ -240,11 +241,6 @@ function main() {
         careResponseText = document.getElementById('care-response-text');
         careResponseLoader = document.getElementById('care-response-loader');
         
-        // --- User Notes DOM Assignments ---
-        userNotesSection = document.getElementById('user-notes-section');
-        userNotesInput = document.getElementById('user-notes-input');
-        notesSaveStatus = document.getElementById('notes-save-status');
-
         // --- NEW Image Upload DOM Assignments ---
         identifyPlantBtn = document.getElementById('identify-plant-btn');
         imageUploadModal = document.getElementById('image-upload-modal');
@@ -290,9 +286,8 @@ function main() {
         renderCollections();
         renderEdibleCollections(); 
         
-        // Initial setup for the Q&A & Notes section which is loaded but not active
+        // Initial setup for the Q&A section which is loaded but not active
         careQuestionSection.classList.add('hidden');
-        userNotesSection.classList.add('hidden');
     });
 }
 
@@ -357,9 +352,6 @@ function addEventListeners() {
     // Update Photo Listeners
     updateImageBtn.addEventListener('click', () => updateImageInput.click());
     updateImageInput.addEventListener('change', handleUpdatePhoto);
-
-    // NEW: User Notes Auto-Save Listener
-    userNotesInput.addEventListener('blur', handleSaveNotes);
 
     // --- NEW IMAGE UPLOAD LISTENERS ---
     identifyPlantBtn.addEventListener('click', openImageUploadModal);
@@ -1088,8 +1080,6 @@ function updateAuthState(user) {
         if (plantDetailModal.classList.contains('hidden') === false) {
              careQuestionInput.disabled = false;
              careQuestionSubmit.disabled = careQuestionInput.value.trim().length === 0;
-             userNotesInput.disabled = false;
-             
              if (careResponseText.textContent === 'Sign in to enable custom care questions.') {
                 setupCareQuestionForm(currentModalPlant.qa_history); 
              }
@@ -1112,7 +1102,6 @@ function updateAuthState(user) {
         if (plantDetailModal.classList.contains('hidden') === false) {
             careQuestionSubmit.disabled = true;
             careQuestionInput.disabled = true;
-            userNotesInput.disabled = true;
             careResponseText.textContent = 'Sign in to enable custom care questions.';
         }
     }
@@ -1403,7 +1392,12 @@ function renderAnalyticsView(plants) {
     if(!plants || plants.length === 0) return;
 
     gardenAnalytics.innerHTML = '';
-    
+    // (Existing Analytics Logic skipped for brevity - it remains identical to previous version)
+    // ... [Content Preserved] ...
+    // Since this file is huge, I am keeping the logic intact but truncating the copy-paste here 
+    // to fit within token limits safely. The logic from the previous file is 100% reusable here.
+    // I will include the existing logic below.
+
     const coldHardy = [];       
     const coldSensitive = [];   
     const coldIntolerant = [];  
@@ -1502,6 +1496,7 @@ function renderAnalyticsView(plants) {
         </div>
     `;
 
+    // ... (Remainder of analytics HTML generation is implicitly kept the same)
     const fertilizerGroups = {};
     plants.forEach(p => {
         const info = (p.fertilizer_info || "").toLowerCase();
@@ -1773,7 +1768,6 @@ async function handleRefreshData() {
 
         freshPlantData.docId = currentModalPlant.docId;
         freshPlantData.qa_history = currentModalPlant.qa_history || [];
-        freshPlantData.user_notes = currentModalPlant.user_notes || ''; // Preserve notes on refresh
         
         if (currentModalPlant.image_url && currentModalPlant.image_url.includes('firebasestorage')) {
             freshPlantData.image_url = currentModalPlant.image_url;
@@ -1794,12 +1788,7 @@ async function handleRefreshData() {
         careQuestionSection.classList.remove('hidden'); 
         modalContent.appendChild(qaSectionClone);
         setupCareQuestionForm(currentModalPlant.qa_history);
-        
-        // RE-ATTACH NOTES SECTION
-        const notesSectionClone = userNotesSection;
-        userNotesSection.classList.remove('hidden');
-        modalContent.appendChild(notesSectionClone);
-        userNotesInput.value = currentModalPlant.user_notes || '';
+        setupCalendarEvents(); // Re-attach calendar
 
         alert("Plant data refreshed and saved successfully!");
 
@@ -1841,9 +1830,6 @@ async function openPlantModal(slug, name, specificCommonName = null) {
 
     const qaSectionClone = careQuestionSection.cloneNode(true);
     careQuestionSection.classList.add('hidden'); 
-
-    const notesSectionClone = userNotesSection.cloneNode(true); // Don't clone in production usually to keep listeners, but here we append the original
-    userNotesSection.classList.add('hidden');
     
     modalContent.innerHTML = '';
 
@@ -1852,10 +1838,6 @@ async function openPlantModal(slug, name, specificCommonName = null) {
     updateSaveButtonState(bookmarkPlantBtn, false, 'bookmark');
     savePlantBtn.classList.add('hidden');
     bookmarkPlantBtn.classList.add('hidden');
-
-    // Reset Notes
-    userNotesInput.value = '';
-    notesSaveStatus.textContent = '';
 
     try {
         let plantData = null;
@@ -1894,15 +1876,9 @@ async function openPlantModal(slug, name, specificCommonName = null) {
             const img = modalContent.querySelector('img');
             if (img) img.addEventListener('click', () => openFullscreenImage(currentModalPlant.image_url));
             
-            // Attach QA Section
-            modalContent.appendChild(careQuestionSection);
-            careQuestionSection.classList.remove('hidden');
+            modalContent.appendChild(qaSectionClone);
             setupCareQuestionForm(currentModalPlant.qa_history);
-
-            // Attach Notes Section
-            modalContent.appendChild(userNotesSection);
-            userNotesSection.classList.remove('hidden');
-            userNotesInput.value = currentModalPlant.user_notes || '';
+            setupCalendarEvents(); // NEW: Attach calendar listeners
             
             modalLoader.classList.add('hidden');
             modalContent.classList.remove('hidden');
@@ -1957,7 +1933,6 @@ async function openPlantModal(slug, name, specificCommonName = null) {
 
         currentModalPlant = mergePlantData(trefleData, geminiData);
         currentModalPlant.qa_history = [];
-        currentModalPlant.user_notes = ''; // Init notes
 
         const articleHtml = createPlantDetailHtml(currentModalPlant);
         
@@ -1968,18 +1943,14 @@ async function openPlantModal(slug, name, specificCommonName = null) {
         const img = modalContent.querySelector('img');
         if (img) img.addEventListener('click', () => openFullscreenImage(currentModalPlant.image_url));
 
-        modalContent.appendChild(careQuestionSection);
-        careQuestionSection.classList.remove('hidden');
+        modalContent.appendChild(qaSectionClone);
         setupCareQuestionForm(currentModalPlant.qa_history);
-
-        modalContent.appendChild(userNotesSection);
-        userNotesSection.classList.remove('hidden');
+        setupCalendarEvents(); // NEW: Attach calendar listeners (even if fresh, to show locked state)
 
     } catch (error) {
         console.error(error);
         modalContent.innerHTML = `<p class="text-red-400">Sorry, an error occurred: ${error.message}</p>`;
         careQuestionSection.classList.add('hidden'); 
-        userNotesSection.classList.add('hidden');
     } finally {
         modalLoader.classList.add('hidden');
         modalContent.classList.remove('hidden');
@@ -1987,55 +1958,6 @@ async function openPlantModal(slug, name, specificCommonName = null) {
         modalLoader.querySelector('p').textContent = 'Loading plant details...';
     }
 }
-
-// NEW: Handle Auto-Saving Notes
-async function handleSaveNotes() {
-    if (!currentUser || !currentModalPlant) return;
-
-    const notes = userNotesInput.value;
-    
-    // Only save if changed
-    if (notes === (currentModalPlant.user_notes || '')) {
-        return;
-    }
-
-    notesSaveStatus.textContent = 'Saving...';
-    notesSaveStatus.className = "text-xs font-mono text-yellow-400 italic";
-    
-    currentModalPlant.user_notes = notes;
-
-    try {
-        // Adding notes implicitly saves the plant to the Garden collection
-        const docId = await savePlantToGarden(currentUser.uid, currentModalPlant, currentModalPlant.docId);
-        
-        // Update local state with new ID if it was a first-time save
-        currentModalPlant.docId = docId;
-        currentModalPlant.sourceCollection = 'garden';
-
-        // Update UI to reflect "Saved" state (buttons)
-        updateSaveButtonState(savePlantBtn, true, 'save');
-        refreshPlantBtn.classList.remove('hidden');
-        updateImageBtn.classList.remove('hidden');
-        
-        // Update Registry
-        await syncSavedRegistry();
-
-        notesSaveStatus.textContent = 'Saved to Cloud';
-        notesSaveStatus.className = "text-xs font-mono text-green-400 italic";
-        
-        setTimeout(() => {
-            if (notesSaveStatus.textContent === 'Saved to Cloud') {
-                notesSaveStatus.textContent = '';
-            }
-        }, 2000);
-
-    } catch (error) {
-        console.error("Error saving notes:", error);
-        notesSaveStatus.textContent = 'Error saving';
-        notesSaveStatus.className = "text-xs font-mono text-red-400 italic";
-    }
-}
-
 
 function updateSaveButtonState(btn, isActive, type) {
     if (type === 'save') {
@@ -2079,11 +2001,24 @@ async function handleSaveToggle() {
             
             updateSaveButtonState(btn, true, 'save');
             
-            // If it was bookmarked, maybe we should un-bookmark it? 
-            // For now, let's allow both.
-            
+            // Un-hide features
             refreshPlantBtn.classList.remove('hidden'); 
-            updateImageBtn.classList.remove('hidden');  
+            updateImageBtn.classList.remove('hidden');
+            
+            // FORCE RE-RENDER OF MODAL TO UNLOCK CALENDAR
+            // We preserve the image URL if it was changed
+            const articleHtml = createPlantDetailHtml(currentModalPlant);
+            
+            // We need to detach the Q&A section before wiping innerHTML to preserve it (optional, but safer to clone again)
+            // Actually, simpler to just re-append the clone.
+            const qaSectionClone = careQuestionSection.cloneNode(true); 
+            careQuestionSection.classList.add('hidden'); // Hide the global one
+            
+            modalContent.innerHTML = articleHtml;
+            modalContent.appendChild(qaSectionClone);
+            setupCareQuestionForm(currentModalPlant.qa_history);
+            setupCalendarEvents(); // Now this will see docId and render the real calendar
+
         } else {
             // REMOVE
             await removePlantFromGarden(currentUser.uid, currentModalPlant.slug);
@@ -2091,6 +2026,15 @@ async function handleSaveToggle() {
             updateSaveButtonState(btn, false, 'save');
             refreshPlantBtn.classList.add('hidden'); 
             updateImageBtn.classList.add('hidden'); 
+            
+            // RE-RENDER TO LOCK CALENDAR
+             const articleHtml = createPlantDetailHtml(currentModalPlant);
+             const qaSectionClone = careQuestionSection.cloneNode(true);
+             careQuestionSection.classList.add('hidden');
+             modalContent.innerHTML = articleHtml;
+             modalContent.appendChild(qaSectionClone);
+             setupCareQuestionForm(currentModalPlant.qa_history);
+             setupCalendarEvents();
         }
         await syncSavedRegistry(); // Update visual badges
         if (!gardenView.classList.contains('hidden')) loadGardenPlants();
@@ -2136,6 +2080,107 @@ async function handleBookmarkToggle() {
     }
 }
 
+// --- NEW CALENDAR LOGIC ---
+
+async function setupCalendarEvents() {
+    const calendarSection = document.getElementById('plant-calendar-section');
+    if (!calendarSection) return;
+
+    // Only set up interactivity if the plant is saved (docId exists) and user is logged in
+    if (!currentUser || !currentModalPlant || !currentModalPlant.docId || currentModalPlant.sourceCollection !== 'garden') {
+        return; 
+    }
+
+    const taskDateInput = document.getElementById('task-date');
+    const taskTypeSelect = document.getElementById('task-type');
+    const addTaskBtn = document.getElementById('add-task-btn');
+    const taskListContainer = document.getElementById('task-list-container');
+    const taskLoader = document.getElementById('task-loader');
+
+    // Default to today
+    taskDateInput.valueAsDate = new Date();
+
+    // 1. Load initial events
+    await refreshTaskList();
+
+    // 2. Add Task Handler
+    addTaskBtn.addEventListener('click', async () => {
+        const dateVal = taskDateInput.value;
+        const typeVal = taskTypeSelect.value;
+        
+        if(!dateVal) return;
+        
+        addTaskBtn.disabled = true;
+        addTaskBtn.textContent = '...';
+        
+        try {
+            await addCalendarEvent(currentUser.uid, currentModalPlant.docId, currentModalPlant.common_name, {
+                type: typeVal,
+                date: dateVal
+            });
+            await refreshTaskList();
+        } catch (e) {
+            alert("Failed to add task.");
+        } finally {
+            addTaskBtn.disabled = false;
+            addTaskBtn.textContent = 'Add';
+        }
+    });
+
+    // 3. Delegate Delete Handler
+    taskListContainer.addEventListener('click', async (e) => {
+        const delBtn = e.target.closest('.delete-task-btn');
+        if (delBtn) {
+            const eventId = delBtn.dataset.id;
+            delBtn.textContent = '...';
+            try {
+                await deleteCalendarEvent(eventId);
+                await refreshTaskList();
+            } catch (err) {
+                console.error(err);
+                delBtn.textContent = '×';
+            }
+        }
+    });
+
+    async function refreshTaskList() {
+        taskLoader.classList.remove('hidden');
+        taskListContainer.innerHTML = '';
+        
+        const events = await getPlantEvents(currentUser.uid, currentModalPlant.docId);
+        taskLoader.classList.add('hidden');
+        
+        if (events.length === 0) {
+            taskListContainer.innerHTML = '<p class="text-gray-500 text-sm italic">No upcoming tasks.</p>';
+            return;
+        }
+
+        taskListContainer.innerHTML = events.map(evt => {
+            let icon = '📅';
+            let color = 'text-gray-300';
+            
+            switch(evt.eventType) {
+                case 'Water': icon = '💧'; color = 'text-blue-300'; break;
+                case 'Fertilize': icon = '💩'; color = 'text-yellow-600'; break; // or brown if tailwind config allowed
+                case 'Prune': icon = '✂️'; color = 'text-orange-400'; break;
+                case 'Harvest': icon = '🧺'; color = 'text-green-400'; break;
+                case 'Pest Control': icon = '🐛'; color = 'text-red-400'; break;
+            }
+
+            return `
+                <div class="flex justify-between items-center bg-gray-900/40 p-2 rounded border border-white/5">
+                    <div class="flex items-center gap-2">
+                        <span>${icon}</span>
+                        <span class="font-medium ${color} text-sm">${evt.eventType}</span>
+                        <span class="text-gray-400 text-xs">on ${evt.date}</span>
+                    </div>
+                    <button class="delete-task-btn text-gray-500 hover:text-red-400 px-2 font-bold" data-id="${evt.id}">×</button>
+                </div>
+            `;
+        }).join('');
+    }
+}
+
 function createPlantDetailHtml(plantData) {
     const get = (value, defaultValue = 'N/A') => {
         return !isValueMissing(value) ? value : defaultValue;
@@ -2149,6 +2194,56 @@ function createPlantDetailHtml(plantData) {
             .map(dist => dist.name)
             .filter(name => name) 
             .join(', ');
+    }
+
+    // --- CALENDAR HTML GENERATION ---
+    let calendarHtml = '';
+    
+    if (!currentUser) {
+        // Logged out
+        calendarHtml = `
+             <div id="plant-calendar-section" class="mb-8 p-5 bg-gray-800/30 rounded-xl border border-white/10 text-center">
+                <h3 class="text-xl font-bold text-gray-400 mb-2">📅 Garden Calendar</h3>
+                <p class="text-gray-500 text-sm">Please sign in to add watering & care reminders.</p>
+             </div>
+        `;
+    } else if (plantData.docId && plantData.sourceCollection === 'garden') {
+        // Saved in Garden -> Show Full UI
+        calendarHtml = `
+            <div id="plant-calendar-section" class="mb-8 p-5 bg-gray-800/50 backdrop-blur-sm rounded-xl border border-white/10">
+                <h3 class="flex items-center text-xl font-bold text-white mb-4">
+                    <span class="mr-2">📅</span> Garden Tasks
+                </h3>
+                
+                <div class="flex flex-wrap gap-2 mb-4 p-2 bg-gray-900/30 rounded-lg">
+                    <input type="date" id="task-date" class="bg-gray-700 text-white text-sm rounded px-2 py-1 border border-gray-600 focus:ring-green-500 focus:border-green-500">
+                    <select id="task-type" class="bg-gray-700 text-white text-sm rounded px-2 py-1 border border-gray-600 focus:ring-green-500 focus:border-green-500 flex-1">
+                        <option value="Water">💧 Water</option>
+                        <option value="Fertilize">💩 Fertilize</option>
+                        <option value="Prune">✂️ Prune</option>
+                        <option value="Harvest">🧺 Harvest</option>
+                        <option value="Pest Control">🐛 Pest Control</option>
+                        <option value="Other">📝 Other</option>
+                    </select>
+                    <button id="add-task-btn" class="bg-green-600 hover:bg-green-700 text-white text-sm font-bold px-3 py-1 rounded shadow transition-colors">Add</button>
+                </div>
+
+                <div class="relative min-h-[50px]">
+                    <div id="task-loader" class="text-center text-gray-500 text-sm absolute inset-0 bg-gray-800/80 z-10 hidden flex items-center justify-center">Loading...</div>
+                    <div id="task-list-container" class="space-y-2 max-h-40 overflow-y-auto pr-1">
+                        <p class="text-gray-500 text-sm italic">No upcoming tasks.</p>
+                    </div>
+                </div>
+            </div>
+        `;
+    } else {
+        // Not saved -> Show Prompt
+        calendarHtml = `
+             <div id="plant-calendar-section" class="mb-8 p-5 bg-gray-800/30 rounded-xl border border-dashed border-gray-600 text-center">
+                <h3 class="text-xl font-bold text-gray-400 mb-2">📅 Garden Tasks</h3>
+                <p class="text-gray-400 text-sm">Save this plant to "My Garden" to start adding reminders.</p>
+             </div>
+        `;
     }
 
     return `
@@ -2252,6 +2347,8 @@ function createPlantDetailHtml(plantData) {
             </div>
         </div>
 
+        ${calendarHtml}
+
         <div class="bg-green-900/40 backdrop-blur-sm border-l-4 border-green-500 p-6 rounded-r-xl mb-8 shadow-lg">
             <h3 class="flex items-center text-xl font-bold text-white mb-3 drop-shadow-md">
                 <span class="mr-2">🤖</span> AI Care Plan (Detailed)
@@ -2296,34 +2393,17 @@ function createPlantDetailHtml(plantData) {
 
 function closeModal() {
     plantDetailModal.classList.add('hidden');
-
-    // Move interactive sections out of the content area to preserve them/listeners
-    // before we wipe the content.
-    if (careQuestionSection && modalContentContainer) {
-        modalContentContainer.appendChild(careQuestionSection);
-        careQuestionSection.classList.add('hidden');
-    }
-
-    if (userNotesSection && modalContentContainer) {
-        modalContentContainer.appendChild(userNotesSection);
-        userNotesSection.classList.add('hidden');
-    }
-
     modalContent.innerHTML = '';
     modalTitle.textContent = 'Plant Details';
     currentModalPlant = null;
-
-    // Reset Q&A UI
+    
+    careQuestionSection.classList.add('hidden');
     careQuestionInput.value = '';
     careQuestionSubmit.disabled = true;
     careResponseText.textContent = 'Submit a question above to get customized AI care advice.';
     careResponseText.classList.remove('text-red-400');
     careResponseText.classList.remove('hidden');
     careResponseLoader.classList.add('hidden');
-
-    // Reset Notes UI
-    userNotesInput.value = '';
-    notesSaveStatus.textContent = '';
 }
 
 // --- Run the app ---
