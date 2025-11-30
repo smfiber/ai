@@ -1,7 +1,7 @@
 /*
  * APP.JS
  * The Controller for the "Life Explorer" SPA.
- * Updated: Manual Image Uploads & Fixed Search Rendering
+ * Updated: Handles Gemini "Text Slugs" correctly to prevent duplicates.
  */
 
 import { setApiKeys } from './config.js';
@@ -444,11 +444,26 @@ async function openSpecimenModal(slug, name) {
     saveSpecimenBtn.classList.add('bg-green-600');
 
     try {
+        let gbifData = null;
         let isSaved = false;
+        let resolvedSlug = slug;
+
+        // CRITICAL FIX: If slug is NOT a number (e.g. "Canis lupus" from Gemini Search),
+        // we must resolve it to a numeric ID *before* checking if it is saved.
+        if (isNaN(slug)) {
+             modalLoader.querySelector('p').textContent = 'Identifying species ID...';
+             // This fetch will call the Match API and get the numeric key
+             gbifData = await getSpecimenDetails(slug);
+             if (gbifData) resolvedSlug = gbifData.slug; // Now "5219173"
+        }
+
+        // Now we can check sanctuary using the correct ID
         if (currentUser) {
             modalLoader.querySelector('p').textContent = 'Checking sanctuary...';
-            const savedResult = await getSavedSpecimen(currentUser.uid, slug);
+            const savedResult = await getSavedSpecimen(currentUser.uid, resolvedSlug);
+            
             if (savedResult.data && savedResult.data.diet) {
+                // IT IS SAVED: Load local data
                 currentModalSpecimen = { ...savedResult.data, docId: savedResult.docId };
                 modalTitle.textContent = currentModalSpecimen.common_name;
                 modalContent.innerHTML = createSpecimenDetailHtml(currentModalSpecimen);
@@ -470,14 +485,19 @@ async function openSpecimenModal(slug, name) {
              saveSpecimenBtn.classList.remove('hidden');
         }
 
-        modalLoader.querySelector('p').textContent = 'Fetching GBIF Taxonomy...';
-        const gbifData = await getSpecimenDetails(slug);
+        // If we haven't fetched GBIF data yet (slug was numeric), fetch now
+        if (!gbifData) {
+            modalLoader.querySelector('p').textContent = 'Fetching GBIF Taxonomy...';
+            gbifData = await getSpecimenDetails(resolvedSlug);
+        }
+        
         if (!gbifData) throw new Error("Could not fetch specimen details.");
 
         modalLoader.querySelector('p').textContent = 'Consulting the Zoologist (AI)...';
         const geminiData = await fetchAugmentedSpecimenData(gbifData);
 
         currentModalSpecimen = { ...gbifData, ...geminiData, qa_history: [] };
+        // Ensure name consistency
         if (name && currentModalSpecimen.common_name === currentModalSpecimen.scientific_name) {
             currentModalSpecimen.common_name = name;
         }
