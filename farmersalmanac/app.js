@@ -1,3 +1,7 @@
+{
+type: uploaded file
+fileName: app.js
+fullContent:
 /*
  * APP.JS
  * This file handles all the DOM manipulation and user interaction.
@@ -79,6 +83,9 @@ let collectionModal, collectionModalTitle, collectionModalCloseBtn, collectionFo
     collectionIdInput, collectionTitleInput, collectionQueryInput, saveCollectionBtn,
     // New Image Upload fields for Collections
     collectionFileInput, collectionImagePreview, collectionPreviewPlaceholder, collectionImageUrlInput;
+
+// --- NEW Lightbox Variables ---
+let lightboxOverlay, lightboxImage, lightboxCloseBtn;
 
 // --- App State ---
 let currentSearchQuery = null;
@@ -263,6 +270,11 @@ function main() {
         collectionPreviewPlaceholder = document.getElementById('collection-preview-placeholder');
         collectionImageUrlInput = document.getElementById('collection-image-url');
 
+        // --- NEW Lightbox DOM Assignments ---
+        lightboxOverlay = document.getElementById('lightbox-overlay');
+        lightboxImage = document.getElementById('lightbox-image');
+        lightboxCloseBtn = document.getElementById('lightbox-close-btn');
+
 
         // 3. Add all event listeners (Initial setup)
         addEventListeners();
@@ -355,6 +367,29 @@ function addEventListeners() {
     collectionModalCloseBtn.addEventListener('click', closeCollectionModal);
     collectionForm.addEventListener('submit', handleSaveCollection);
     collectionFileInput.addEventListener('change', handleCollectionFileChange);
+
+    // --- NEW LIGHTBOX LISTENERS ---
+    lightboxCloseBtn.addEventListener('click', closeFullscreenImage);
+    lightboxOverlay.addEventListener('click', (e) => {
+        if (e.target === lightboxOverlay) {
+            closeFullscreenImage();
+        }
+    });
+}
+
+// --- LIGHTBOX FUNCTIONS ---
+
+function openFullscreenImage(imageUrl) {
+    if (!imageUrl) return;
+    lightboxImage.src = imageUrl;
+    lightboxOverlay.classList.remove('hidden');
+    document.body.style.overflow = 'hidden'; // Prevent background scrolling
+}
+
+function closeFullscreenImage() {
+    lightboxOverlay.classList.add('hidden');
+    lightboxImage.src = '';
+    document.body.style.overflow = ''; // Restore scrolling
 }
 
 // --- REGISTRY SYNC FUNCTION ---
@@ -1742,6 +1777,10 @@ async function handleRefreshData() {
         modalContent.innerHTML = articleHtml;
         modalTitle.textContent = currentModalPlant.common_name || currentModalPlant.scientific_name;
 
+        // RE-ATTACH LIGHTBOX LISTENER
+        const img = modalContent.querySelector('img');
+        if (img) img.addEventListener('click', () => openFullscreenImage(currentModalPlant.image_url));
+
         const qaSectionClone = careQuestionSection; 
         careQuestionSection.classList.remove('hidden'); 
         modalContent.appendChild(qaSectionClone);
@@ -1829,6 +1868,10 @@ async function openPlantModal(slug, name, specificCommonName = null) {
             modalTitle.textContent = currentModalPlant.common_name || currentModalPlant.scientific_name;
             modalContent.innerHTML = articleHtml;
             
+            // ATTACH LIGHTBOX LISTENER (Cache path)
+            const img = modalContent.querySelector('img');
+            if (img) img.addEventListener('click', () => openFullscreenImage(currentModalPlant.image_url));
+            
             modalContent.appendChild(qaSectionClone);
             setupCareQuestionForm(currentModalPlant.qa_history);
             
@@ -1891,6 +1934,10 @@ async function openPlantModal(slug, name, specificCommonName = null) {
         modalTitle.textContent = currentModalPlant.common_name || currentModalPlant.scientific_name;
         modalContent.innerHTML = articleHtml;
         
+        // ATTACH LIGHTBOX LISTENER (Fetch path)
+        const img = modalContent.querySelector('img');
+        if (img) img.addEventListener('click', () => openFullscreenImage(currentModalPlant.image_url));
+
         modalContent.appendChild(qaSectionClone);
         setupCareQuestionForm(currentModalPlant.qa_history);
 
@@ -2023,7 +2070,7 @@ function createPlantDetailHtml(plantData) {
     return `
         <div class="flex flex-col lg:flex-row gap-8 mb-8">
             <div class="w-full lg:w-1/3 flex-shrink-0">
-                <img src="${get(plantData.image_url)}" alt="${get(plantData.common_name)}" class="w-full rounded-xl shadow-lg object-cover bg-gray-900/50">
+                <img src="${get(plantData.image_url)}" alt="${get(plantData.common_name)}" class="w-full rounded-xl shadow-lg object-cover bg-gray-900/50 cursor-zoom-in hover:opacity-90 transition-opacity" title="Click to view full screen">
             </div>
 
             <div class="w-full lg:w-2/3 grid grid-cols-1 md:grid-cols-2 gap-6 content-start">
@@ -2173,3 +2220,5 @@ function closeModal() {
 
 // --- Run the app ---
 main();
+
+}
