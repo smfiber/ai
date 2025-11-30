@@ -1,9 +1,9 @@
 /*
  * API.JS
- * Final Version - "Smart Match & Strict Animal Filter"
- * - Implements 'species/match' to prioritize the most likely species (e.g. Wolf -> Canis lupus).
- * - Fixes Kingdom filtering using 'highertaxonKey=1' to exclude plants.
- * - Forces the Common Name display to match the user's search query for the best result.
+ * Final Version - "Gemini Translator"
+ * - GBIF provides the raw data.
+ * - Gemini sanitizes the list by converting Scientific Names to readable Common Names in batch.
+ * - No image fetching from APIs (User uploads manually).
  */
 
 import { configStore } from './config.js';
@@ -141,6 +141,8 @@ function cleanScientificName(name) {
 }
 
 function mapGbifRecord(record) {
+    // We initially set common_name to vernacularName or scientificName.
+    // This will likely be overwritten by Gemini later.
     let displayName = record.vernacularName;
     if (!displayName) {
         displayName = cleanScientificName(record.scientificName);
@@ -159,11 +161,57 @@ function mapGbifRecord(record) {
     };
 }
 
+// --- NEW: Gemini Batch Augmentation ---
+async function augmentListWithGemini(records) {
+    if (!configStore.geminiApiKey || records.length === 0) return records;
+
+    // Create a list of names to send
+    const namesList = records.map(r => r.scientific_name);
+    
+    // Construct Prompt
+    const prompt = `
+    You are a translator for a biology database.
+    I will provide a list of Scientific Names.
+    Your job is to provide the most common, recognizable English Common Name for each.
+    
+    Rules:
+    1. If it is a specific animal (e.g. Canis lupus), return "Gray Wolf".
+    2. If it is obscure (e.g. Vilpianus spec), return the Family or Order common name (e.g. "Spider Wasp" or "Beetle").
+    3. Return ONLY a valid JSON object mapping the Scientific Name to the Common Name.
+    4. Format: { "Scientific Name": "Common Name", ... }
+    
+    List:
+    ${JSON.stringify(namesList)}
+    `;
+
+    try {
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=${configStore.geminiApiKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+        });
+
+        const d = await res.json();
+        const responseText = d.candidates[0].content.parts[0].text;
+        const mapping = extractJson(responseText);
+
+        // Apply the mapping back to the records
+        return records.map(record => {
+            if (mapping[record.scientific_name]) {
+                return { ...record, common_name: mapping[record.scientific_name] };
+            }
+            return record;
+        });
+
+    } catch (error) {
+        console.error("Gemini Augmentation Failed:", error);
+        return records; // Fallback to original list
+    }
+}
+
 export async function getCategorySpecimens(classKey, page) {
-    const limit = 50;
+    const limit = 20; // Reduced limit to ensure Gemini processes quickly
     const offset = (page - 1) * limit;
-    // kingdom=Animalia is handled by higherTaxonKey for species search sometimes, 
-    // but classKey implies taxonomy. We'll stick to classKey here.
     const url = `https://api.gbif.org/v1/species/search?classKey=${classKey}&rank=SPECIES&status=ACCEPTED&limit=${limit}&offset=${offset}`;
 
     try {
@@ -171,7 +219,10 @@ export async function getCategorySpecimens(classKey, page) {
         if (!response.ok) throw new Error(`GBIF Error: ${response.status}`);
         const data = await response.json();
         
-        const mapped = data.results.map(mapGbifRecord);
+        let mapped = data.results.map(mapGbifRecord);
+
+        // AUGMENT WITH GEMINI
+        mapped = await augmentListWithGemini(mapped);
 
         return { 
             data: mapped, 
@@ -184,37 +235,25 @@ export async function getCategorySpecimens(classKey, page) {
 }
 
 export async function searchSpecimens(queryText, page) {
-    const limit = 50;
+    const limit = 20; // Reduced limit for Gemini speed
     const offset = (page - 1) * limit;
-    
-    // 1. highertaxonKey=1 ENSURES we only get Animals (no plants).
-    // 2. We will run a "Smart Match" first to find the exact species.
     
     try {
         let smartMatchResult = null;
 
-        // Step A: Try to find a direct species match (e.g. "Wolf" -> "Canis lupus")
+        // Step A: Best Match
         if (page === 1) {
             const matchUrl = `https://api.gbif.org/v1/species/match?name=${encodeURIComponent(queryText)}&kingdom=Animalia`;
             const matchRes = await fetch(matchUrl);
             if (matchRes.ok) {
                 const matchData = await matchRes.json();
-                // If we found a confident match that is a SPECIES or SUBSPECIES
                 if (matchData.usageKey && matchData.matchType !== 'NONE' && (matchData.rank === 'SPECIES' || matchData.rank === 'SUBSPECIES')) {
                     smartMatchResult = mapGbifRecord(matchData);
-                    
-                    // FIX: Force readable name to match User Query if API vernacular is missing
-                    if (!smartMatchResult.common_name || smartMatchResult.common_name === smartMatchResult.scientific_name) {
-                         const titleCase = queryText.split(' ')
-                            .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-                            .join(' ');
-                         smartMatchResult.common_name = titleCase;
-                    }
                 }
             }
         }
 
-        // Step B: Perform the broad search (Strictly Animals)
+        // Step B: Broad Search
         const searchUrl = `https://api.gbif.org/v1/species/search?q=${encodeURIComponent(queryText)}&rank=SPECIES&highertaxonKey=1&status=ACCEPTED&limit=${limit}&offset=${offset}`;
         const response = await fetch(searchUrl);
         if (!response.ok) throw new Error(`GBIF Error: ${response.status}`);
@@ -222,13 +261,14 @@ export async function searchSpecimens(queryText, page) {
 
         let mapped = data.results.map(mapGbifRecord);
 
-        // Step C: Prepend Smart Match if it exists and isn't already in the list
         if (smartMatchResult) {
-            // Remove it from list if it exists to avoid duplicates
             mapped = mapped.filter(item => item.slug !== smartMatchResult.slug);
-            // Add to top
             mapped.unshift(smartMatchResult);
         }
+
+        // AUGMENT WITH GEMINI
+        // This will fix "Vilpianus spec" -> "Spider Wasp"
+        mapped = await augmentListWithGemini(mapped);
         
         return { 
             data: mapped, 
