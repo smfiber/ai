@@ -147,3 +147,21 @@
     background-color: rgba(147, 51, 234, 0.8); /* Purple-600 */
     border-color: rgba(192, 132, 252, 0.5);
 }
+
+/* --- Custom Scrollbar for Grid Calendar Cells (NEW) --- */
+.custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #4b5563; /* gray-600 */
+    border-radius: 2px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #6b7280; /* gray-500 */
+}
