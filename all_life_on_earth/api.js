@@ -1,8 +1,8 @@
 /*
  * API.JS
- * Final Version - "Match & Dedup" Architecture
- * - Prioritizes Taxon Match (Eagle -> Accipitridae) to avoid Author matches.
- * - Searches Observations (Real photos) but Deduplicates them to create a Species Catalog.
+ * Final Version - "Species Search & No Images" Architecture
+ * - Uses GBIF species/search for accurate common name matching.
+ * - Image fetching from API has been removed as per request.
  */
 
 import { configStore } from './config.js';
@@ -140,9 +140,7 @@ function cleanScientificName(name) {
 }
 
 function mapGbifRecord(record) {
-    const imageObj = record.media ? record.media.find(m => m.type === 'StillImage') : null;
-    let imageUrl = imageObj ? imageObj.identifier : null;
-    if (!imageUrl && imageObj && imageObj.references) imageUrl = imageObj.references;
+    // Image fetch logic removed as per request.
 
     let displayName = record.vernacularName;
     if (!displayName) {
@@ -150,10 +148,10 @@ function mapGbifRecord(record) {
     }
 
     return {
-        slug: (record.speciesKey || record.key).toString(), 
+        slug: (record.key).toString(), 
         scientific_name: record.scientificName,
         common_name: displayName, 
-        image_url: imageUrl,
+        image_url: null, // No image from API
         family: record.family,
         order: record.order,
         class: record.class,
@@ -162,35 +160,21 @@ function mapGbifRecord(record) {
     };
 }
 
-// Helper: Deduplicates a list of occurrences by their Species Key.
-// Returns a unique list where each species appears only once.
-function dedupBySpecies(records) {
-    const unique = new Map();
-    records.forEach(r => {
-        // Only keep if we have a valid species ID and it's new
-        if (r.slug && !unique.has(r.slug)) {
-            unique.set(r.slug, r);
-        }
-    });
-    return Array.from(unique.values());
-}
-
 export async function getCategorySpecimens(classKey, page) {
-    const limit = 50; // Fetch more to allow for deduping
+    const limit = 50;
     const offset = (page - 1) * limit;
-    const url = `https://api.gbif.org/v1/occurrence/search?classKey=${classKey}&kingdomKey=1&mediaType=StillImage&basisOfRecord=HUMAN_OBSERVATION&limit=${limit}&offset=${offset}`;
+    // Switched to species/search
+    const url = `https://api.gbif.org/v1/species/search?classKey=${classKey}&rank=SPECIES&kingdom=Animalia&limit=${limit}&offset=${offset}`;
 
     try {
         const response = await fetch(url);
         if (!response.ok) throw new Error(`GBIF Error: ${response.status}`);
         const data = await response.json();
         
-        const mapped = data.results
-            .map(mapGbifRecord)
-            .filter(item => item.image_url); // Ensure images
+        const mapped = data.results.map(mapGbifRecord);
 
         return { 
-            data: dedupBySpecies(mapped), 
+            data: mapped, 
             meta: { total: data.count, endOfRecords: data.endOfRecords } 
         };
     } catch (error) {
@@ -200,49 +184,21 @@ export async function getCategorySpecimens(classKey, page) {
 }
 
 export async function searchSpecimens(queryText, page) {
-    const limit = 50; // Fetch more to ensure we find unique species
+    const limit = 50;
     const offset = (page - 1) * limit;
     
-    // Default: Use Taxon ID if found, otherwise Text
-    let searchParam = `q="${encodeURIComponent(queryText)}"`;
-
-    try {
-        // STEP 1: Strict/Fuzzy Match to find the Animal ID
-        // (This finds "Accipitridae" for "Eagle", avoiding "Michael Eagle")
-        const matchUrl = `https://api.gbif.org/v1/species/match?name=${encodeURIComponent(queryText)}&kingdom=Animalia`;
-        const matchRes = await fetch(matchUrl);
-        
-        if (matchRes.ok) {
-            const matchData = await matchRes.json();
-            // Confidence check: matchType must be EXACT or FUZZY (not NONE)
-            if (matchData.usageKey && matchData.matchType !== 'NONE') {
-                searchParam = `taxonKey=${matchData.usageKey}`;
-                console.log(`Smart Search: Resolved "${queryText}" to ID ${matchData.usageKey} (${matchData.scientificName})`);
-            }
-        }
-    } catch (e) {
-        console.warn("Smart search resolution failed, falling back to text match.");
-    }
-
-    // STEP 2: Search for Living Observations (Photos)
-    const url = `https://api.gbif.org/v1/occurrence/search?${searchParam}&kingdomKey=1&mediaType=StillImage&basisOfRecord=HUMAN_OBSERVATION&limit=${limit}&offset=${offset}`;
+    // Switched to species/search for better common name matching
+    const url = `https://api.gbif.org/v1/species/search?q=${encodeURIComponent(queryText)}&rank=SPECIES&kingdom=Animalia&limit=${limit}&offset=${offset}`;
 
     try {
         const response = await fetch(url);
         if (!response.ok) throw new Error(`GBIF Error: ${response.status}`);
         const data = await response.json();
 
-        // STEP 3: Map and Deduplicate
-        // We might get 20 photos of the same Bald Eagle species.
-        // We want a catalog: 1 card per Species.
-        const mapped = data.results
-            .map(mapGbifRecord)
-            .filter(item => item.image_url);
-
-        const uniqueSpecies = dedupBySpecies(mapped);
+        const mapped = data.results.map(mapGbifRecord);
         
         return { 
-            data: uniqueSpecies, 
+            data: mapped, 
             meta: { total: data.count, endOfRecords: data.endOfRecords } 
         };
 
@@ -270,24 +226,12 @@ export async function getSpecimenDetails(keyOrName) {
             }
         }
 
-        // Details + High Quality Gallery (Human Observation)
-        const [detailsRes, imagesRes] = await Promise.all([
-            fetch(`https://api.gbif.org/v1/species/${key}`),
-            fetch(`https://api.gbif.org/v1/occurrence/search?taxonKey=${key}&mediaType=StillImage&basisOfRecord=HUMAN_OBSERVATION&limit=8`)
-        ]);
+        // Fetch details only, no images
+        const detailsRes = await fetch(`https://api.gbif.org/v1/species/${key}`);
 
         if (!detailsRes.ok) throw new Error("Specimen details not found");
         
         const data = await detailsRes.json();
-        let imageData = { results: [] };
-        if (imagesRes.ok) imageData = await imagesRes.json();
-        
-        const gallery = imageData.results
-            .map(record => {
-                const img = record.media ? record.media.find(m => m.type === 'StillImage') : null;
-                return img ? img.identifier : null;
-            })
-            .filter(url => url !== null);
 
         return {
             slug: data.key.toString(),
@@ -299,8 +243,8 @@ export async function getSpecimenDetails(keyOrName) {
             order: data.order,
             family: data.family,
             genus: data.genus,
-            image_url: gallery.length > 0 ? gallery[0] : null, 
-            gallery_images: gallery 
+            image_url: null, 
+            gallery_images: [] 
         };
     } catch (error) {
         console.error("Details Error:", error);
