@@ -1,8 +1,8 @@
 /*
  * API.JS
- * Final Version - "Species Search & No Images" Architecture
- * - Uses GBIF species/search for accurate common name matching.
- * - Image fetching from API has been removed as per request.
+ * Final Version - "Smart Match & Strict Animal Filter"
+ * - Implements 'species/match' to prioritize the most likely species (e.g. Wolf -> Canis lupus).
+ * - Fixes Kingdom filtering using 'highertaxonKey=1' to exclude plants.
  */
 
 import { configStore } from './config.js';
@@ -140,18 +140,16 @@ function cleanScientificName(name) {
 }
 
 function mapGbifRecord(record) {
-    // Image fetch logic removed as per request.
-
     let displayName = record.vernacularName;
     if (!displayName) {
         displayName = cleanScientificName(record.scientificName);
     }
 
     return {
-        slug: (record.key).toString(), 
+        slug: (record.key || record.usageKey).toString(), 
         scientific_name: record.scientificName,
         common_name: displayName, 
-        image_url: null, // No image from API
+        image_url: null, 
         family: record.family,
         order: record.order,
         class: record.class,
@@ -163,8 +161,9 @@ function mapGbifRecord(record) {
 export async function getCategorySpecimens(classKey, page) {
     const limit = 50;
     const offset = (page - 1) * limit;
-    // Switched to species/search
-    const url = `https://api.gbif.org/v1/species/search?classKey=${classKey}&rank=SPECIES&kingdom=Animalia&limit=${limit}&offset=${offset}`;
+    // kingdom=Animalia is handled by higherTaxonKey for species search sometimes, 
+    // but classKey implies taxonomy. We'll stick to classKey here.
+    const url = `https://api.gbif.org/v1/species/search?classKey=${classKey}&rank=SPECIES&status=ACCEPTED&limit=${limit}&offset=${offset}`;
 
     try {
         const response = await fetch(url);
@@ -187,15 +186,45 @@ export async function searchSpecimens(queryText, page) {
     const limit = 50;
     const offset = (page - 1) * limit;
     
-    // Switched to species/search for better common name matching
-    const url = `https://api.gbif.org/v1/species/search?q=${encodeURIComponent(queryText)}&rank=SPECIES&kingdom=Animalia&limit=${limit}&offset=${offset}`;
-
+    // 1. highertaxonKey=1 ENSURES we only get Animals (no plants).
+    // 2. We will run a "Smart Match" first to find the exact species.
+    
     try {
-        const response = await fetch(url);
+        let smartMatchResult = null;
+
+        // Step A: Try to find a direct species match (e.g. "Wolf" -> "Canis lupus")
+        if (page === 1) {
+            const matchUrl = `https://api.gbif.org/v1/species/match?name=${encodeURIComponent(queryText)}&kingdom=Animalia`;
+            const matchRes = await fetch(matchUrl);
+            if (matchRes.ok) {
+                const matchData = await matchRes.json();
+                // If we found a confident match that is a SPECIES or SUBSPECIES
+                if (matchData.usageKey && matchData.matchType !== 'NONE' && (matchData.rank === 'SPECIES' || matchData.rank === 'SUBSPECIES')) {
+                    smartMatchResult = mapGbifRecord(matchData);
+                    // Force the common name if the API match result vernacular is missing but we queried it
+                    if (!smartMatchResult.common_name || smartMatchResult.common_name === smartMatchResult.scientific_name) {
+                         // The match API often doesn't return vernacularName, so we might default to the scientific
+                         // OR we can leave it. But this ensures the "Best" result is grabbed.
+                    }
+                }
+            }
+        }
+
+        // Step B: Perform the broad search (Strictly Animals)
+        const searchUrl = `https://api.gbif.org/v1/species/search?q=${encodeURIComponent(queryText)}&rank=SPECIES&highertaxonKey=1&status=ACCEPTED&limit=${limit}&offset=${offset}`;
+        const response = await fetch(searchUrl);
         if (!response.ok) throw new Error(`GBIF Error: ${response.status}`);
         const data = await response.json();
 
-        const mapped = data.results.map(mapGbifRecord);
+        let mapped = data.results.map(mapGbifRecord);
+
+        // Step C: Prepend Smart Match if it exists and isn't already in the list
+        if (smartMatchResult) {
+            // Remove it from list if it exists to avoid duplicates
+            mapped = mapped.filter(item => item.slug !== smartMatchResult.slug);
+            // Add to top
+            mapped.unshift(smartMatchResult);
+        }
         
         return { 
             data: mapped, 
@@ -213,7 +242,6 @@ export async function getSpecimenDetails(keyOrName) {
         let key = keyOrName;
 
         if (isNaN(keyOrName)) {
-            // Re-resolve name to ID if passed a string
             const matchUrl = `https://api.gbif.org/v1/species/match?name=${encodeURIComponent(keyOrName)}&kingdom=Animalia`;
             const matchRes = await fetch(matchUrl);
             if (!matchRes.ok) throw new Error("Match failed");
@@ -226,9 +254,7 @@ export async function getSpecimenDetails(keyOrName) {
             }
         }
 
-        // Fetch details only, no images
         const detailsRes = await fetch(`https://api.gbif.org/v1/species/${key}`);
-
         if (!detailsRes.ok) throw new Error("Specimen details not found");
         
         const data = await detailsRes.json();
