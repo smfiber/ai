@@ -249,7 +249,9 @@ export async function getCategorySpecimens(classKey, page) {
     // We keep the Gemini Augmenter here to make those lists readable.
     const limit = 20;
     const offset = (page - 1) * limit;
-    const url = `https://api.gbif.org/v1/species/search?classKey=${classKey}&rank=SPECIES&status=ACCEPTED&limit=${limit}&offset=${offset}`;
+    
+    // UPDATED: Use taxonKey + kingdomKey=1 to enforce Animal Kingdom only (bans Archaea/Plants)
+    const url = `https://api.gbif.org/v1/species/search?taxonKey=${classKey}&kingdomKey=1&rank=SPECIES&status=ACCEPTED&limit=${limit}&offset=${offset}`;
 
     try {
         const response = await fetch(url);
