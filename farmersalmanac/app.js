@@ -1699,7 +1699,10 @@ function mergePlantData(trefleData, geminiData) {
         fertilizer_info: geminiData.fertilizer_info,
         pruning_season: geminiData.pruning_season,
         propagation_methods: geminiData.propagation_methods,
-        toxicity_info: geminiData.toxicity_info
+        toxicity_info: geminiData.toxicity_info,
+
+        // NEW WILDLIFE FIELD
+        wildlife_attractant: geminiData.wildlife_attractant
     };
 
     return finalData;
@@ -2176,6 +2179,13 @@ function createPlantDetailHtml(plantData) {
                 <span class="mr-2">🐞</span> Pests & Diseases
             </h3>
             <p class="text-gray-200 leading-relaxed whitespace-pre-wrap m-0">${get(plantData.pests_and_diseases, 'No specific pest information available.')}</p>
+        </div>
+
+        <div class="bg-teal-900/40 backdrop-blur-sm border-l-4 border-teal-500 p-6 rounded-r-xl mb-8 shadow-lg">
+            <h3 class="flex items-center text-xl font-bold text-white mb-3 drop-shadow-md">
+                <span class="mr-2">🦋</span> Wildlife & Ecology
+            </h3>
+            <p class="text-gray-200 leading-relaxed whitespace-pre-wrap m-0">${get(plantData.wildlife_attractant, 'No specific wildlife information available.')}</p>
         </div>
 
         <div class="bg-yellow-900/40 backdrop-blur-sm border-l-4 border-yellow-500 p-6 rounded-r-xl mb-8 shadow-lg">
