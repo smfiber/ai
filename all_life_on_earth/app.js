@@ -6,6 +6,7 @@
  * Fixed: Removed invalid escape characters from template literals.
  * Updated: Changed Predator text color to Orange.
  * New: Added Lightbox functionality (Toggle Container Pattern).
+ * New: Caching implemented for Field Guides.
  */
 
 import { setApiKeys } from './config.js';
@@ -282,7 +283,7 @@ function renderCollections() {
 function renderCustomCollections() {
     if (!customCollectionsGrid) return;
     const customHtml = customCollections.map(col => `
-        <div class="collection-card glass-panel rounded-xl overflow-hidden cursor-pointer hover:scale-105 hover-glow transition-transform group relative" data-query="${col.query}" data-title="${col.title}">
+        <div class="collection-card glass-panel rounded-xl overflow-hidden cursor-pointer hover:scale-105 hover-glow transition-transform group relative" data-id="${col.id}" data-query="${col.query}" data-title="${col.title}">
             <div class="h-32 w-full overflow-hidden card-image-wrapper">
                 <img src="${col.image}" alt="${col.title}" class="w-full h-full object-cover">
                 <div class="absolute top-2 right-2 z-20 flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -291,7 +292,7 @@ function renderCustomCollections() {
             </div>
             <div class="p-4">
                 <h3 class="text-lg font-bold text-white group-hover:text-green-400 transition-colors">${col.title}</h3>
-                <p class="text-sm text-gray-400">Custom Search</p>
+                <p class="text-sm text-gray-400">Field Guide</p>
             </div>
         </div>
     `).join('');
@@ -301,7 +302,7 @@ function renderCustomCollections() {
         addBtnHtml = `
             <div id="add-collection-btn" class="glass-panel rounded-xl overflow-hidden cursor-pointer hover:scale-105 hover-glow transition-transform flex flex-col items-center justify-center min-h-[200px] border-2 border-dashed border-gray-600 hover:border-green-500 group">
                 <div class="text-5xl text-gray-600 group-hover:text-green-500 mb-2 transition-colors">+</div>
-                <span class="text-gray-400 font-medium group-hover:text-green-400 transition-colors">Add Search</span>
+                <span class="text-gray-400 font-medium group-hover:text-green-400 transition-colors">Create Guide</span>
             </div>
         `;
     }
@@ -409,7 +410,7 @@ function handleCollectionCardClick(e) {
     fetchAndRenderSpecimens();
 }
 
-function handleCustomCollectionsGridClick(e) {
+async function handleCustomCollectionsGridClick(e) {
     if (e.target.closest('#add-collection-btn')) {
         openCollectionModal();
         return;
@@ -423,10 +424,14 @@ function handleCustomCollectionsGridClick(e) {
         }
         return;
     }
+    
     const card = e.target.closest('.collection-card');
     if (card) {
+        const id = card.dataset.id; // Get unique DB ID
         const query = card.dataset.query;
         const title = card.dataset.title;
+        
+        // 1. UI Setup
         currentPage = 1;
         currentSearchQuery = query;
         currentCollectionKey = null;
@@ -435,7 +440,44 @@ function handleCustomCollectionsGridClick(e) {
         galleryHeader.classList.remove('hidden');
         galleryTitle.textContent = title;
         backToCollectionsBtn.classList.remove('hidden');
-        fetchAndRenderSpecimens();
+        
+        // 2. CACHING STRATEGY
+        // Find the full collection object in memory to check for 'results'
+        const collection = customCollections.find(c => c.id === id);
+        
+        if (collection && collection.results && collection.results.length > 0) {
+            // CACHE HIT: Render immediately, skip API
+            console.log("Loading from Cache:", title);
+            renderSpecimenGallery(collection.results, specimenGallery);
+            renderPagination({ total: collection.results.length, endOfRecords: true });
+        } else {
+            // CACHE MISS: Fetch API, then Save
+            console.log("Cache Miss. Fetching API:", title);
+            loader.classList.remove('hidden');
+            
+            try {
+                // Fetch
+                const results = await searchSpecimens(query, 1);
+                
+                // Render
+                renderSpecimenGallery(results.data, specimenGallery);
+                renderPagination(results.meta);
+                
+                // Cache (Save to Firestore)
+                if (results.data.length > 0) {
+                     await saveUserCollection(currentUser.uid, { id: id, results: results.data });
+                     // Update local memory so we don't refetch if user comes back without reloading
+                     collection.results = results.data;
+                }
+            } catch(e) {
+                console.error(e);
+            } finally {
+                loader.classList.add('hidden');
+            }
+        }
+        
+        // Load Suggestions (always fresh or cached separately?) 
+        // For now, let's keep suggestions fresh as they are lightweight
         loadCollectionSuggestions(query);
     }
 }
