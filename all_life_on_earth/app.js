@@ -3,6 +3,7 @@
  * The Controller for the "Life Explorer" SPA.
  * Updated: Handles Gemini "Text Slugs" correctly to prevent duplicates.
  * Fixed: Added safety checks for Event Listeners to prevent null crashes.
+ * Fixed: Removed invalid escape characters from template literals.
  */
 
 import { setApiKeys } from './config.js';
@@ -223,44 +224,44 @@ function handleSpecimenCardClick(e) {
 
 function renderCollections() {
     if (!collectionsGrid) return;
-    collectionsGrid.innerHTML = ANIMAL_COLLECTIONS.map(col => \`
-        <div class="collection-card glass-panel rounded-xl overflow-hidden cursor-pointer hover:scale-105 hover-glow transition-transform group" data-key="\${col.key}" data-title="\${col.title}">
+    collectionsGrid.innerHTML = ANIMAL_COLLECTIONS.map(col => `
+        <div class="collection-card glass-panel rounded-xl overflow-hidden cursor-pointer hover:scale-105 hover-glow transition-transform group" data-key="${col.key}" data-title="${col.title}">
             <div class="h-32 w-full overflow-hidden card-image-wrapper">
-                <img src="\${col.image}" alt="\${col.title}" class="w-full h-full object-cover">
+                <img src="${col.image}" alt="${col.title}" class="w-full h-full object-cover">
             </div>
             <div class="p-4">
-                <h3 class="text-lg font-bold text-white group-hover:text-green-400 transition-colors">\${col.title}</h3>
-                <p class="text-sm text-gray-400">\${col.subtitle}</p>
+                <h3 class="text-lg font-bold text-white group-hover:text-green-400 transition-colors">${col.title}</h3>
+                <p class="text-sm text-gray-400">${col.subtitle}</p>
             </div>
         </div>
-    \`).join('');
+    `).join('');
 }
 
 function renderCustomCollections() {
     if (!customCollectionsGrid) return;
-    const customHtml = customCollections.map(col => \`
-        <div class="collection-card glass-panel rounded-xl overflow-hidden cursor-pointer hover:scale-105 hover-glow transition-transform group relative" data-query="\${col.query}" data-title="\${col.title}">
+    const customHtml = customCollections.map(col => `
+        <div class="collection-card glass-panel rounded-xl overflow-hidden cursor-pointer hover:scale-105 hover-glow transition-transform group relative" data-query="${col.query}" data-title="${col.title}">
             <div class="h-32 w-full overflow-hidden card-image-wrapper">
-                <img src="\${col.image}" alt="\${col.title}" class="w-full h-full object-cover">
+                <img src="${col.image}" alt="${col.title}" class="w-full h-full object-cover">
                 <div class="absolute top-2 right-2 z-20 flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                     <button class="delete-collection-btn bg-red-600 p-1.5 rounded text-white hover:bg-red-500" data-id="\${col.id}" data-title="\${col.title}">×</button>
+                     <button class="delete-collection-btn bg-red-600 p-1.5 rounded text-white hover:bg-red-500" data-id="${col.id}" data-title="${col.title}">×</button>
                 </div>
             </div>
             <div class="p-4">
-                <h3 class="text-lg font-bold text-white group-hover:text-green-400 transition-colors">\${col.title}</h3>
+                <h3 class="text-lg font-bold text-white group-hover:text-green-400 transition-colors">${col.title}</h3>
                 <p class="text-sm text-gray-400">Custom Search</p>
             </div>
         </div>
-    \`).join('');
+    `).join('');
 
     let addBtnHtml = '';
     if (currentUser) {
-        addBtnHtml = \`
+        addBtnHtml = `
             <div id="add-collection-btn" class="glass-panel rounded-xl overflow-hidden cursor-pointer hover:scale-105 hover-glow transition-transform flex flex-col items-center justify-center min-h-[200px] border-2 border-dashed border-gray-600 hover:border-green-500 group">
                 <div class="text-5xl text-gray-600 group-hover:text-green-500 mb-2 transition-colors">+</div>
                 <span class="text-gray-400 font-medium group-hover:text-green-400 transition-colors">Add Search</span>
             </div>
-        \`;
+        `;
     }
 
     customCollectionsGrid.innerHTML = customHtml + addBtnHtml;
@@ -282,27 +283,27 @@ function renderSpecimenGallery(specimens, container) {
         // Check if we actually have an image URL
         const hasImage = !!specimen.image_url;
 
-        card.innerHTML = \`
+        card.innerHTML = `
             <div class="card-image-container group-hover:scale-105 transition-transform duration-700 relative">
-                <img src="\${hasImage ? specimen.image_url : ''}" 
-                     alt="\${specimen.common_name}" 
+                <img src="${hasImage ? specimen.image_url : ''}" 
+                     alt="${specimen.common_name}" 
                      loading="lazy"
-                     class="w-full h-full object-cover transition-opacity duration-300 \${hasImage ? '' : 'hidden'}"
+                     class="w-full h-full object-cover transition-opacity duration-300 ${hasImage ? '' : 'hidden'}"
                      onload="this.style.opacity=1"
                      onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden');"
                 >
-                <div class="\${hasImage ? 'hidden' : ''} absolute inset-0 flex items-center justify-center bg-gray-800 card-image-placeholder">
+                <div class="${hasImage ? 'hidden' : ''} absolute inset-0 flex items-center justify-center bg-gray-800 card-image-placeholder">
                     <div class="text-center opacity-30">
                         <span class="text-5xl">🐾</span>
                         <p class="text-xs mt-2 text-gray-400">No Photo</p>
                     </div>
                 </div>
                 <div class="card-text-overlay">
-                    <h3 class="text-lg font-bold text-white leading-tight drop-shadow-md truncate">\${specimen.common_name}</h3>
-                    <p class="text-green-400 text-xs italic mt-1 font-medium truncate">\${specimen.scientific_name}</p>
+                    <h3 class="text-lg font-bold text-white leading-tight drop-shadow-md truncate">${specimen.common_name}</h3>
+                    <p class="text-green-400 text-xs italic mt-1 font-medium truncate">${specimen.scientific_name}</p>
                 </div>
             </div>
-        \`;
+        `;
         container.appendChild(card);
     });
 }
@@ -316,7 +317,7 @@ function renderPagination(meta) {
         nextBtn.disabled = false;
     }
     prevBtn.disabled = currentPage === 1;
-    pageInfo.textContent = \`Page \${currentPage}\`;
+    pageInfo.textContent = `Page ${currentPage}`;
 }
 
 // --- FETCHING & LOGIC ---
@@ -375,7 +376,7 @@ function handleCustomCollectionsGridClick(e) {
     if (deleteBtn) {
         e.stopPropagation();
         const { id, title } = deleteBtn.dataset;
-        if (confirm(\`Delete "\${title}"?\`)) {
+        if (confirm(`Delete "${title}"?`)) {
             deleteUserCollection(currentUser.uid, id).then(loadUserCollections);
         }
         return;
@@ -407,7 +408,7 @@ function handleSearchSubmit(e) {
     collectionsContainer.classList.add('hidden');
     customCollectionsContainer.classList.add('hidden');
     galleryHeader.classList.remove('hidden');
-    galleryTitle.textContent = \`Search: "\${query}"\`;
+    galleryTitle.textContent = `Search: "${query}"`;
     backToCollectionsBtn.classList.remove('hidden');
     fetchAndRenderSpecimens();
 }
@@ -518,7 +519,7 @@ async function openSpecimenModal(slug, name) {
 
     } catch (error) {
         console.error(error);
-        modalContent.innerHTML = \`<p class="text-red-400">Error: \${error.message}</p>\`;
+        modalContent.innerHTML = `<p class="text-red-400">Error: ${error.message}</p>`;
     } finally {
         modalLoader.classList.add('hidden');
         modalContent.classList.remove('hidden');
@@ -547,7 +548,7 @@ function setupGalleryListeners() {
 function createSpecimenDetailHtml(data) {
     const get = (v, d = 'N/A') => (v === null || v === undefined || v === '') ? d : v;
     const funFacts = Array.isArray(data.fun_facts) 
-        ? data.fun_facts.map(f => \`<li class="text-gray-300 text-sm mb-1">• \${f}</li>\`).join('') 
+        ? data.fun_facts.map(f => `<li class="text-gray-300 text-sm mb-1">• ${f}</li>`).join('') 
         : '<li class="text-gray-500 italic">No facts available.</li>';
     
     // Use placeholder if image_url is missing
@@ -555,36 +556,36 @@ function createSpecimenDetailHtml(data) {
     const image = hasImage ? data.image_url : 'https://placehold.co/400x400/374151/FFFFFF?text=No+Photo';
 
     const galleryHtml = (data.gallery_images && data.gallery_images.length > 1) 
-       ? \`<div class="flex gap-2 overflow-x-auto pb-2 mt-4 custom-scrollbar">
-            \${data.gallery_images.map((img, idx) => \`
-                <img src="\${img}" 
-                     class="gallery-thumb h-20 w-20 object-cover rounded-lg cursor-pointer transition-all \${idx===0 ? 'ring-2 ring-green-400 opacity-100' : 'opacity-70 hover:opacity-100'}" 
+       ? `<div class="flex gap-2 overflow-x-auto pb-2 mt-4 custom-scrollbar">
+            ${data.gallery_images.map((img, idx) => `
+                <img src="${img}" 
+                     class="gallery-thumb h-20 w-20 object-cover rounded-lg cursor-pointer transition-all ${idx===0 ? 'ring-2 ring-green-400 opacity-100' : 'opacity-70 hover:opacity-100'}" 
                      alt="Thumbnail">
-            \`).join('')}
-          </div>\` 
+            `).join('')}
+          </div>` 
        : '';
 
-    return \`
+    return `
         <div class="flex flex-col lg:flex-row gap-8 mb-8">
             <div class="w-full lg:w-1/3 flex-shrink-0">
                 <div class="card-image-wrapper rounded-xl overflow-hidden shadow-lg bg-gray-900/50">
-                    <img id="main-specimen-image" src="\${image}" alt="\${get(data.common_name)}" 
+                    <img id="main-specimen-image" src="${image}" alt="${get(data.common_name)}" 
                          class="w-full h-auto object-cover"
                          onerror="this.onerror=null;this.src='https://placehold.co/400x400/374151/FFFFFF?text=No+Image';">
                 </div>
-                \${galleryHtml}
+                ${galleryHtml}
             </div>
 
             <div class="w-full lg:w-2/3 grid grid-cols-1 md:grid-cols-2 gap-6 content-start">
                 <div class="md:col-span-2 flex justify-between items-center bg-gray-800/50 p-4 rounded-xl border border-white/10">
                     <div>
-                        <h3 class="text-xl font-bold text-green-400">\${get(data.common_name)}</h3>
-                        <p class="text-gray-400 italic">\${get(data.scientific_name)}</p>
+                        <h3 class="text-xl font-bold text-green-400">${get(data.common_name)}</h3>
+                        <p class="text-gray-400 italic">${get(data.scientific_name)}</p>
                     </div>
                     <div class="text-right">
                         <span class="block text-xs text-gray-500 uppercase">Conservation Status</span>
                         <span class="inline-block px-3 py-1 rounded-full text-sm font-bold bg-gray-700 text-white border border-gray-600">
-                            \${get(data.conservation_status)}
+                            ${get(data.conservation_status)}
                         </span>
                     </div>
                 </div>
@@ -592,25 +593,25 @@ function createSpecimenDetailHtml(data) {
                 <div class="bg-gray-800/50 p-5 rounded-xl border border-white/10">
                     <h3 class="text-lg font-bold text-orange-400 mb-3 border-b border-gray-600 pb-1">Biological Profile</h3>
                     <ul class="space-y-2 text-sm">
-                        <li class="flex justify-between"><span class="text-gray-400">Class</span> <span class="text-gray-200">\${get(data.class)}</span></li>
-                        <li class="flex justify-between"><span class="text-gray-400">Order</span> <span class="text-gray-200">\${get(data.order)}</span></li>
-                        <li class="flex justify-between"><span class="text-gray-400">Family</span> <span class="text-gray-200">\${get(data.family)}</span></li>
-                        <li class="flex justify-between mt-2 pt-2 border-t border-gray-700"><span class="text-gray-400">Lifespan</span> <span class="text-green-300">\${get(data.lifespan)}</span></li>
+                        <li class="flex justify-between"><span class="text-gray-400">Class</span> <span class="text-gray-200">${get(data.class)}</span></li>
+                        <li class="flex justify-between"><span class="text-gray-400">Order</span> <span class="text-gray-200">${get(data.order)}</span></li>
+                        <li class="flex justify-between"><span class="text-gray-400">Family</span> <span class="text-gray-200">${get(data.family)}</span></li>
+                        <li class="flex justify-between mt-2 pt-2 border-t border-gray-700"><span class="text-gray-400">Lifespan</span> <span class="text-green-300">${get(data.lifespan)}</span></li>
                     </ul>
                 </div>
 
                 <div class="bg-gray-800/50 p-5 rounded-xl border border-white/10">
                     <h3 class="text-lg font-bold text-blue-400 mb-3 border-b border-gray-600 pb-1">Ecology</h3>
                     <div class="space-y-3 text-sm">
-                        <div><span class="block text-gray-400 text-xs">Diet</span><span class="text-gray-200">\${get(data.diet)}</span></div>
-                        <div><span class="block text-gray-400 text-xs">Habitat</span><span class="text-gray-200">\${get(data.habitat)}</span></div>
-                        <div><span class="block text-gray-400 text-xs">Predators</span><span class="text-red-300">\${get(data.predators)}</span></div>
+                        <div><span class="block text-gray-400 text-xs">Diet</span><span class="text-gray-200">${get(data.diet)}</span></div>
+                        <div><span class="block text-gray-400 text-xs">Habitat</span><span class="text-gray-200">${get(data.habitat)}</span></div>
+                        <div><span class="block text-gray-400 text-xs">Predators</span><span class="text-red-300">${get(data.predators)}</span></div>
                     </div>
                 </div>
 
                 <div class="md:col-span-2 bg-gray-800/50 p-5 rounded-xl border border-white/10">
                     <h3 class="text-lg font-bold text-white mb-2">Physical Characteristics</h3>
-                    <p class="text-gray-300 text-sm leading-relaxed">\${get(data.physical_characteristics)}</p>
+                    <p class="text-gray-300 text-sm leading-relaxed">${get(data.physical_characteristics)}</p>
                 </div>
             </div>
         </div>
@@ -620,10 +621,10 @@ function createSpecimenDetailHtml(data) {
                 <span class="mr-2">💡</span> Did You Know?
             </h3>
             <ul class="list-none space-y-2">
-                \${funFacts}
+                ${funFacts}
             </ul>
         </div>
-    \`;
+    `;
 }
 
 // --- UTILS ---
@@ -673,7 +674,7 @@ function setupCareQuestionForm(history) {
     };
     
     if(history && history.length && responseText) {
-        responseText.innerHTML = history.map(h => \`<b>Q: \${h.question}</b><br>\${h.answer}<hr class="my-2 border-gray-600">\`).join('');
+        responseText.innerHTML = history.map(h => `<b>Q: ${h.question}</b><br>${h.answer}<hr class="my-2 border-gray-600">`).join('');
         responseText.classList.remove('hidden');
     }
 }
@@ -751,7 +752,7 @@ async function loadCollectionSuggestions(query) {
         suggestions.forEach(s => {
             const div = document.createElement('div');
             div.className = "p-2 bg-gray-800 border border-gray-700 rounded cursor-pointer hover:bg-gray-700";
-            div.innerHTML = \`<span class="font-bold text-gray-200">\${s.common_name}</span> <span class="text-xs text-gray-500 block">\${s.scientific_name}</span>\`;
+            div.innerHTML = `<span class="font-bold text-gray-200">${s.common_name}</span> <span class="text-xs text-gray-500 block">${s.scientific_name}</span>`;
             div.onclick = () => openSpecimenModal(s.scientific_name, s.common_name);
             aiSuggestionsList.appendChild(div);
         });
@@ -833,7 +834,7 @@ async function handleImageUpload(e) {
         const url = await uploadSpecimenImage(imageFileInput.files[0], currentUser.uid);
         const result = await fetchImageIdentification(url); 
         if (result && result.scientific_name !== 'Unknown') {
-            uploadMessage.textContent = \`Found: \${result.common_name}\`;
+            uploadMessage.textContent = `Found: ${result.common_name}`;
             const gbifResult = await searchSpecimens(result.scientific_name, 1);
             if (gbifResult.data.length > 0) {
                 openSpecimenModal(gbifResult.data[0].slug, result.common_name);
