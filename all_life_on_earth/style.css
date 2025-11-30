@@ -1,6 +1,7 @@
 /*
  * STYLE.CSS
  * Custom styles for the "Life Explorer" SPA.
+ * Updated for "No-Image" Default State & Better Readability
  */
 
 /* Import a nice rounded font for a friendly, nature vibe */
@@ -86,10 +87,10 @@ body {
     bottom: 0;
     left: 0;
     right: 0;
-    /* Stronger, taller gradient from black to transparent */
-    background: linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.5) 60%, transparent 100%);
+    /* Stronger, taller gradient from black to transparent for better contrast against placeholders */
+    background: linear-gradient(to top, rgba(0,0,0,0.98) 0%, rgba(0,0,0,0.8) 40%, transparent 100%);
     padding: 1rem;
-    padding-top: 3rem; /* Give space for the gradient fade */
+    padding-top: 4rem; /* Give space for the gradient fade */
     pointer-events: none; /* Let clicks pass through to the card */
 }
 
@@ -133,4 +134,16 @@ body {
 /* Make the modal close button bigger/easier to hit */
 #modal-close-btn, #image-modal-close-btn, #collection-modal-close-btn {
     @apply text-3xl font-bold leading-none px-2 text-gray-400 hover:text-white transition-colors;
+}
+
+/* Utility for text truncation on cards */
+.truncate {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Animation for the Refresh Button */
+.rotate-center {
+    animation: spin 1s linear infinite;
 }
