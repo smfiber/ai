@@ -1,3 +1,7 @@
+{
+type: uploaded file
+fileName: index.html
+fullContent:
 <!DOCTYPE html>
 <html lang="en" class="h-full">
 <head>
@@ -303,6 +307,11 @@
                 </button>
             </form>
         </div>
+    </div>
+
+    <div id="lightbox-overlay" class="hidden fixed inset-0 z-50 bg-black/95 flex items-center justify-center cursor-zoom-out p-4 backdrop-blur-sm">
+        <img id="lightbox-image" src="" alt="Fullscreen View" class="max-h-[90vh] max-w-full object-contain rounded-lg shadow-2xl">
+        <button id="lightbox-close-btn" class="absolute top-4 right-4 text-white/70 hover:text-white text-5xl leading-none drop-shadow-lg">&times;</button>
     </div>
 
     <script src="config.js" type="module"></script>
