@@ -1,11 +1,4 @@
-/*
- * API.JS
- * Final Version - "Gemini Search Engine"
- * - Search: Uses Gemini Generative AI to create curated lists of animals (fixes the "Author Name" bug).
- * - Details: Uses GBIF for strict taxonomy data when a specific animal is selected.
- * - Categories: Uses GBIF + Gemini Translator for browsing by class.
- */
-
+// --- * API.JS
 import { configStore } from './config.js';
 
 // --- Firebase Imports ---
@@ -69,7 +62,7 @@ export async function signOutUser() { if (auth) await signOut(auth); }
 
 export async function uploadSpecimenImage(file, userId) {
     if (!storage) throw new Error("Storage not init");
-    const path = `users/${userId}/specimens/${Date.now()}-${file.name}`;
+    const path = \`users/\${userId}/specimens/\${Date.now()}-\${file.name}\`;
     const sRef = ref(storage, path);
     const snap = await uploadBytes(sRef, file);
     return await getDownloadURL(snap.ref);
@@ -135,7 +128,7 @@ function cleanScientificName(name) {
     if (!name) return "Unknown";
     const parts = name.split(' ');
     if (parts.length >= 2) {
-        return `${parts[0]} ${parts[1]}`;
+        return \`\${parts[0]} \${parts[1]}\`;
     }
     return name;
 }
@@ -162,13 +155,40 @@ function mapGbifRecord(record) {
 // --- Gemini Functions ---
 
 function extractJson(text) {
-    const s = text.indexOf('{'); const e = text.lastIndexOf('}');
-    if (s === -1 || e === -1) {
-        const as = text.indexOf('['); const ae = text.lastIndexOf(']');
-        if (as !== -1 && ae !== -1) return JSON.parse(text.substring(as, ae + 1));
-        throw new Error("No JSON found");
+    // Correctly identify if the JSON is an Object or an Array to prevent parsing errors
+    const firstOpenBrace = text.indexOf('{');
+    const firstOpenBracket = text.indexOf('[');
+
+    let startIdx = -1;
+    let endIdx = -1;
+    let mode = ''; // 'object' or 'array'
+
+    // Determine if we are looking for an Array or an Object based on which comes first
+    if (firstOpenBrace !== -1 && firstOpenBracket !== -1) {
+        if (firstOpenBracket < firstOpenBrace) {
+            mode = 'array';
+        } else {
+            mode = 'object';
+        }
+    } else if (firstOpenBracket !== -1) {
+        mode = 'array';
+    } else if (firstOpenBrace !== -1) {
+        mode = 'object';
+    } else {
+        throw new Error("No JSON structure found in response");
     }
-    return JSON.parse(text.substring(s, e + 1));
+
+    if (mode === 'array') {
+        startIdx = firstOpenBracket;
+        endIdx = text.lastIndexOf(']');
+    } else {
+        startIdx = firstOpenBrace;
+        endIdx = text.lastIndexOf('}');
+    }
+
+    if (startIdx === -1 || endIdx === -1) throw new Error("Incomplete JSON structure");
+    
+    return JSON.parse(text.substring(startIdx, endIdx + 1));
 }
 
 async function augmentListWithGemini(records) {
@@ -176,7 +196,7 @@ async function augmentListWithGemini(records) {
 
     const namesList = records.map(r => r.scientific_name);
     
-    const prompt = `
+    const prompt = \`
     You are a translator for a biology database.
     I will provide a list of Scientific Names.
     Your job is to provide the most common, recognizable English Common Name for each.
@@ -188,11 +208,11 @@ async function augmentListWithGemini(records) {
     4. Format: { "Scientific Name": "Common Name", ... }
     
     List:
-    ${JSON.stringify(namesList)}
-    `;
+    \${JSON.stringify(namesList)}
+    \`;
 
     try {
-        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=${configStore.geminiApiKey}`, {
+        const res = await fetch(\`https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=\${configStore.geminiApiKey}\`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
@@ -222,11 +242,11 @@ export async function getCategorySpecimens(classKey, page) {
     // We keep the Gemini Augmenter here to make those lists readable.
     const limit = 20;
     const offset = (page - 1) * limit;
-    const url = `https://api.gbif.org/v1/species/search?classKey=${classKey}&rank=SPECIES&status=ACCEPTED&limit=${limit}&offset=${offset}`;
+    const url = \`https://api.gbif.org/v1/species/search?classKey=\${classKey}&rank=SPECIES&status=ACCEPTED&limit=\${limit}&offset=\${offset}\`;
 
     try {
         const response = await fetch(url);
-        if (!response.ok) throw new Error(`GBIF Error: ${response.status}`);
+        if (!response.ok) throw new Error(\`GBIF Error: \${response.status}\`);
         const data = await response.json();
         
         let mapped = data.results.map(mapGbifRecord);
@@ -255,8 +275,8 @@ export async function searchSpecimens(queryText, page) {
         return { data: [], meta: { total: 20, endOfRecords: true } };
     }
 
-    const prompt = `
-    List 20 distinct animal species related to "${queryText}".
+    const prompt = \`
+    List 20 distinct animal species related to "\${queryText}".
     
     Rules:
     1. Return ONLY animals (mammals, birds, reptiles, amphibians, fish, insects). NO plants or fungi.
@@ -268,10 +288,10 @@ export async function searchSpecimens(queryText, page) {
       { "common_name": "Gray Wolf", "scientific_name": "Canis lupus" },
       ...
     ]
-    `;
+    \`;
 
     try {
-        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=${configStore.geminiApiKey}`, {
+        const res = await fetch(\`https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=\${configStore.geminiApiKey}\`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
@@ -314,7 +334,7 @@ export async function getSpecimenDetails(keyOrName) {
         // If the slug is NOT a number (i.e. it came from Gemini Search like "Canis lupus"),
         // we must first resolve it to a GBIF ID using the Match API.
         if (isNaN(keyOrName)) {
-            const matchUrl = `https://api.gbif.org/v1/species/match?name=${encodeURIComponent(keyOrName)}&kingdom=Animalia`;
+            const matchUrl = \`https://api.gbif.org/v1/species/match?name=\${encodeURIComponent(keyOrName)}&kingdom=Animalia\`;
             const matchRes = await fetch(matchUrl);
             if (!matchRes.ok) throw new Error("Match failed");
             const matchData = await matchRes.json();
@@ -326,7 +346,7 @@ export async function getSpecimenDetails(keyOrName) {
             }
         }
 
-        const detailsRes = await fetch(`https://api.gbif.org/v1/species/${key}`);
+        const detailsRes = await fetch(\`https://api.gbif.org/v1/species/\${key}\`);
         if (!detailsRes.ok) throw new Error("Specimen details not found");
         
         const data = await detailsRes.json();
@@ -354,9 +374,9 @@ export async function getSpecimenDetails(keyOrName) {
 
 export async function fetchAugmentedSpecimenData(specimen) {
     if (!configStore.geminiApiKey) return {}; 
-    const prompt = `You are a zoologist. Animal: "${specimen.scientific_name}" (${specimen.common_name}). Provide JSON: { "common_name": "...", "diet": "...", "habitat": "...", "lifespan": "...", "conservation_status": "...", "physical_characteristics": "...", "fun_facts": ["...", "...", "..."], "predators": "...", "behavior": "..." }`;
+    const prompt = \`You are a zoologist. Animal: "\${specimen.scientific_name}" (\${specimen.common_name}). Provide JSON: { "common_name": "...", "diet": "...", "habitat": "...", "lifespan": "...", "conservation_status": "...", "physical_characteristics": "...", "fun_facts": ["...", "...", "..."], "predators": "...", "behavior": "..." }\`;
     try {
-        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=${configStore.geminiApiKey}`, {
+        const res = await fetch(\`https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=\${configStore.geminiApiKey}\`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
         });
@@ -368,9 +388,9 @@ export async function fetchAugmentedSpecimenData(specimen) {
 export async function fetchScientificNameLookup(common) {
     if (!configStore.geminiApiKey) return null;
     try {
-        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=${configStore.geminiApiKey}`, {
+        const res = await fetch(\`https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=\${configStore.geminiApiKey}\`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ contents: [{ parts: [{ text: `Zoologist. Scientific name for "${common}"? ONLY the name.` }] }] })
+            body: JSON.stringify({ contents: [{ parts: [{ text: \`Zoologist. Scientific name for "\${common}"? ONLY the name.\` }] }] })
         });
         const d = await res.json();
         return d.candidates[0].content.parts[0].text.trim();
@@ -380,9 +400,9 @@ export async function fetchScientificNameLookup(common) {
 export async function fetchCollectionSuggestions(query) {
     if (!configStore.geminiApiKey) return [];
     try {
-        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=${configStore.geminiApiKey}`, {
+        const res = await fetch(\`https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=\${configStore.geminiApiKey}\`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ contents: [{ parts: [{ text: `List 30 animals related to "${query}". Sorted A-Z. JSON Array: [{"common_name": "...", "scientific_name": "..."}, ...]` }] }] })
+            body: JSON.stringify({ contents: [{ parts: [{ text: \`List 30 animals related to "\${query}". Sorted A-Z. JSON Array: [{"common_name": "...", "scientific_name": "..."}, ...]\` }] }] })
         });
         const d = await res.json();
         return extractJson(d.candidates[0].content.parts[0].text);
@@ -393,9 +413,9 @@ export async function fetchImageIdentification(url) { return null; }
 export async function fetchCustomCareAdvice(s, q) {
     if (!configStore.geminiApiKey) return "Key missing";
     try {
-        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=${configStore.geminiApiKey}`, {
+        const res = await fetch(\`https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=\${configStore.geminiApiKey}\`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ contents: [{ parts: [{ text: `Zoologist. Animal: ${s.common_name}. User asks: "${q}". Answer in 2 paragraphs.` }] }] })
+            body: JSON.stringify({ contents: [{ parts: [{ text: \`Zoologist. Animal: \${s.common_name}. User asks: "\${q}". Answer in 2 paragraphs.\` }] }] })
         });
         const d = await res.json();
         return d.candidates[0].content.parts[0].text;
