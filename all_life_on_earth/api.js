@@ -4,6 +4,7 @@
  * - Search: Uses Gemini Generative AI to create curated lists of animals (fixes the "Author Name" bug).
  * - Details: Uses GBIF for strict taxonomy data when a specific animal is selected.
  * - Categories: Uses GBIF + Gemini Translator for browsing by class.
+ * - Caching: Field Guide results are stored in Firestore to reduce API calls.
  */
 
 import { configStore } from './config.js';
@@ -106,12 +107,18 @@ export async function getSavedSpecimens(userId) {
     return list;
 }
 
-// --- Firestore: Custom Expeditions ---
+// --- Firestore: Custom Field Guides (Expeditions) ---
 const EXPEDITIONS_COLLECTION = "user_expeditions";
 
 export async function saveUserCollection(userId, c) {
     if (!db) return;
     const d = { title: c.title, query: c.query, image: c.image, uid: userId, updated_at: Date.now() };
+    
+    // UPDATED: If 'results' are passed (for caching), include them in the save
+    if (c.results) {
+        d.results = c.results;
+    }
+
     if (c.id) { await setDoc(doc(db, EXPEDITIONS_COLLECTION, c.id), d, { merge: true }); return c.id; }
     else { const ref = await addDoc(collection(db, EXPEDITIONS_COLLECTION), d); return ref.id; }
 }
@@ -121,6 +128,7 @@ export async function getUserCollections(userId) {
     const q = query(collection(db, EXPEDITIONS_COLLECTION), where("uid", "==", userId));
     const snap = await getDocs(q);
     const list = [];
+    // We include all data, including cached 'results' if they exist
     snap.forEach(d => list.push({ ...d.data(), id: d.id }));
     return list;
 }
@@ -162,15 +170,13 @@ function mapGbifRecord(record) {
 // --- Gemini Functions ---
 
 function extractJson(text) {
-    // Correctly identify if the JSON is an Object or an Array to prevent parsing errors
     const firstOpenBrace = text.indexOf('{');
     const firstOpenBracket = text.indexOf('[');
 
     let startIdx = -1;
     let endIdx = -1;
-    let mode = ''; // 'object' or 'array'
+    let mode = ''; 
 
-    // Determine if we are looking for an Array or an Object based on which comes first
     if (firstOpenBrace !== -1 && firstOpenBracket !== -1) {
         if (firstOpenBracket < firstOpenBrace) {
             mode = 'array';
@@ -245,12 +251,9 @@ async function augmentListWithGemini(records) {
 // --- CORE SEARCH LOGIC ---
 
 export async function getCategorySpecimens(classKey, page) {
-    // Categories still use GBIF directly because 'classKey' is a GBIF concept.
-    // We keep the Gemini Augmenter here to make those lists readable.
     const limit = 20;
     const offset = (page - 1) * limit;
     
-    // UPDATED: Use taxonKey + kingdomKey=1 to enforce Animal Kingdom only (bans Archaea/Plants)
     const url = `https://api.gbif.org/v1/species/search?taxonKey=${classKey}&kingdomKey=1&rank=SPECIES&status=ACCEPTED&limit=${limit}&offset=${offset}`;
 
     try {
@@ -274,12 +277,10 @@ export async function getCategorySpecimens(classKey, page) {
 }
 
 export async function searchSpecimens(queryText, page) {
-    // REFACTORED: Now uses Gemini directly as the Search Engine
     if (!configStore.geminiApiKey) {
         return { data: [], meta: { total: 0, endOfRecords: true } };
     }
 
-    // Only allow page 1 for AI search (pagination is complex with generated content)
     if (page > 1) {
         return { data: [], meta: { total: 20, endOfRecords: true } };
     }
@@ -310,15 +311,11 @@ export async function searchSpecimens(queryText, page) {
         const text = d.candidates[0].content.parts[0].text;
         const results = extractJson(text);
 
-        // Map Gemini results to our App's format
-        // Note: we use scientific_name as the slug because we don't have a GBIF Key.
-        // The getSpecimenDetails function is designed to handle this by looking it up.
         const mapped = results.map(item => ({
             slug: item.scientific_name, 
             scientific_name: item.scientific_name,
             common_name: item.common_name,
-            image_url: null, // No image initially
-            // Fillers to match shape
+            image_url: null, 
             family: "Unknown",
             order: "Unknown", 
             class: "Unknown"
@@ -339,9 +336,6 @@ export async function getSpecimenDetails(keyOrName) {
     try {
         let key = keyOrName;
 
-        // Smart Detail Lookup:
-        // If the slug is NOT a number (i.e. it came from Gemini Search like "Canis lupus"),
-        // we must first resolve it to a GBIF ID using the Match API.
         if (isNaN(keyOrName)) {
             const matchUrl = `https://api.gbif.org/v1/species/match?name=${encodeURIComponent(keyOrName)}&kingdom=Animalia`;
             const matchRes = await fetch(matchUrl);
