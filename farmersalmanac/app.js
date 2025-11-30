@@ -54,6 +54,9 @@ let modalBackdrop, apiKeyForm, appContainer, mainContent, authContainer,
 let careQuestionSection, careQuestionForm, careQuestionInput, careQuestionSubmit,
     careResponseContainer, careResponseText, careResponseLoader;
 
+// --- NEW DOM Variables for User Notes ---
+let userNotesSection, userNotesInput, notesSaveStatus;
+
 let scientificLookupBtn; 
 
 // --- NEW AI Suggestions Variables ---
@@ -207,7 +210,7 @@ function main() {
         modalContent = document.getElementById('modal-content');
         
         savePlantBtn = document.getElementById('save-plant-btn');
-        bookmarkPlantBtn = document.getElementById('bookmark-plant-btn'); // New Button
+        bookmarkPlantBtn = document.getElementById('bookmark-plant-btn'); 
 
         refreshPlantBtn = document.getElementById('refresh-plant-btn');
         updateImageBtn = document.getElementById('update-image-btn');
@@ -237,6 +240,11 @@ function main() {
         careResponseText = document.getElementById('care-response-text');
         careResponseLoader = document.getElementById('care-response-loader');
         
+        // --- User Notes DOM Assignments ---
+        userNotesSection = document.getElementById('user-notes-section');
+        userNotesInput = document.getElementById('user-notes-input');
+        notesSaveStatus = document.getElementById('notes-save-status');
+
         // --- NEW Image Upload DOM Assignments ---
         identifyPlantBtn = document.getElementById('identify-plant-btn');
         imageUploadModal = document.getElementById('image-upload-modal');
@@ -282,8 +290,9 @@ function main() {
         renderCollections();
         renderEdibleCollections(); 
         
-        // Initial setup for the Q&A section which is loaded but not active
+        // Initial setup for the Q&A & Notes section which is loaded but not active
         careQuestionSection.classList.add('hidden');
+        userNotesSection.classList.add('hidden');
     });
 }
 
@@ -348,6 +357,9 @@ function addEventListeners() {
     // Update Photo Listeners
     updateImageBtn.addEventListener('click', () => updateImageInput.click());
     updateImageInput.addEventListener('change', handleUpdatePhoto);
+
+    // NEW: User Notes Auto-Save Listener
+    userNotesInput.addEventListener('blur', handleSaveNotes);
 
     // --- NEW IMAGE UPLOAD LISTENERS ---
     identifyPlantBtn.addEventListener('click', openImageUploadModal);
@@ -1076,6 +1088,8 @@ function updateAuthState(user) {
         if (plantDetailModal.classList.contains('hidden') === false) {
              careQuestionInput.disabled = false;
              careQuestionSubmit.disabled = careQuestionInput.value.trim().length === 0;
+             userNotesInput.disabled = false;
+             
              if (careResponseText.textContent === 'Sign in to enable custom care questions.') {
                 setupCareQuestionForm(currentModalPlant.qa_history); 
              }
@@ -1098,6 +1112,7 @@ function updateAuthState(user) {
         if (plantDetailModal.classList.contains('hidden') === false) {
             careQuestionSubmit.disabled = true;
             careQuestionInput.disabled = true;
+            userNotesInput.disabled = true;
             careResponseText.textContent = 'Sign in to enable custom care questions.';
         }
     }
@@ -1388,12 +1403,7 @@ function renderAnalyticsView(plants) {
     if(!plants || plants.length === 0) return;
 
     gardenAnalytics.innerHTML = '';
-    // (Existing Analytics Logic skipped for brevity - it remains identical to previous version)
-    // ... [Content Preserved] ...
-    // Since this file is huge, I am keeping the logic intact but truncating the copy-paste here 
-    // to fit within token limits safely. The logic from the previous file is 100% reusable here.
-    // I will include the existing logic below.
-
+    
     const coldHardy = [];       
     const coldSensitive = [];   
     const coldIntolerant = [];  
@@ -1492,7 +1502,6 @@ function renderAnalyticsView(plants) {
         </div>
     `;
 
-    // ... (Remainder of analytics HTML generation is implicitly kept the same)
     const fertilizerGroups = {};
     plants.forEach(p => {
         const info = (p.fertilizer_info || "").toLowerCase();
@@ -1764,6 +1773,7 @@ async function handleRefreshData() {
 
         freshPlantData.docId = currentModalPlant.docId;
         freshPlantData.qa_history = currentModalPlant.qa_history || [];
+        freshPlantData.user_notes = currentModalPlant.user_notes || ''; // Preserve notes on refresh
         
         if (currentModalPlant.image_url && currentModalPlant.image_url.includes('firebasestorage')) {
             freshPlantData.image_url = currentModalPlant.image_url;
@@ -1784,6 +1794,12 @@ async function handleRefreshData() {
         careQuestionSection.classList.remove('hidden'); 
         modalContent.appendChild(qaSectionClone);
         setupCareQuestionForm(currentModalPlant.qa_history);
+        
+        // RE-ATTACH NOTES SECTION
+        const notesSectionClone = userNotesSection;
+        userNotesSection.classList.remove('hidden');
+        modalContent.appendChild(notesSectionClone);
+        userNotesInput.value = currentModalPlant.user_notes || '';
 
         alert("Plant data refreshed and saved successfully!");
 
@@ -1825,6 +1841,9 @@ async function openPlantModal(slug, name, specificCommonName = null) {
 
     const qaSectionClone = careQuestionSection.cloneNode(true);
     careQuestionSection.classList.add('hidden'); 
+
+    const notesSectionClone = userNotesSection.cloneNode(true); // Don't clone in production usually to keep listeners, but here we append the original
+    userNotesSection.classList.add('hidden');
     
     modalContent.innerHTML = '';
 
@@ -1833,6 +1852,10 @@ async function openPlantModal(slug, name, specificCommonName = null) {
     updateSaveButtonState(bookmarkPlantBtn, false, 'bookmark');
     savePlantBtn.classList.add('hidden');
     bookmarkPlantBtn.classList.add('hidden');
+
+    // Reset Notes
+    userNotesInput.value = '';
+    notesSaveStatus.textContent = '';
 
     try {
         let plantData = null;
@@ -1871,8 +1894,15 @@ async function openPlantModal(slug, name, specificCommonName = null) {
             const img = modalContent.querySelector('img');
             if (img) img.addEventListener('click', () => openFullscreenImage(currentModalPlant.image_url));
             
-            modalContent.appendChild(qaSectionClone);
+            // Attach QA Section
+            modalContent.appendChild(careQuestionSection);
+            careQuestionSection.classList.remove('hidden');
             setupCareQuestionForm(currentModalPlant.qa_history);
+
+            // Attach Notes Section
+            modalContent.appendChild(userNotesSection);
+            userNotesSection.classList.remove('hidden');
+            userNotesInput.value = currentModalPlant.user_notes || '';
             
             modalLoader.classList.add('hidden');
             modalContent.classList.remove('hidden');
@@ -1927,6 +1957,7 @@ async function openPlantModal(slug, name, specificCommonName = null) {
 
         currentModalPlant = mergePlantData(trefleData, geminiData);
         currentModalPlant.qa_history = [];
+        currentModalPlant.user_notes = ''; // Init notes
 
         const articleHtml = createPlantDetailHtml(currentModalPlant);
         
@@ -1937,13 +1968,18 @@ async function openPlantModal(slug, name, specificCommonName = null) {
         const img = modalContent.querySelector('img');
         if (img) img.addEventListener('click', () => openFullscreenImage(currentModalPlant.image_url));
 
-        modalContent.appendChild(qaSectionClone);
+        modalContent.appendChild(careQuestionSection);
+        careQuestionSection.classList.remove('hidden');
         setupCareQuestionForm(currentModalPlant.qa_history);
+
+        modalContent.appendChild(userNotesSection);
+        userNotesSection.classList.remove('hidden');
 
     } catch (error) {
         console.error(error);
         modalContent.innerHTML = `<p class="text-red-400">Sorry, an error occurred: ${error.message}</p>`;
         careQuestionSection.classList.add('hidden'); 
+        userNotesSection.classList.add('hidden');
     } finally {
         modalLoader.classList.add('hidden');
         modalContent.classList.remove('hidden');
@@ -1951,6 +1987,55 @@ async function openPlantModal(slug, name, specificCommonName = null) {
         modalLoader.querySelector('p').textContent = 'Loading plant details...';
     }
 }
+
+// NEW: Handle Auto-Saving Notes
+async function handleSaveNotes() {
+    if (!currentUser || !currentModalPlant) return;
+
+    const notes = userNotesInput.value;
+    
+    // Only save if changed
+    if (notes === (currentModalPlant.user_notes || '')) {
+        return;
+    }
+
+    notesSaveStatus.textContent = 'Saving...';
+    notesSaveStatus.className = "text-xs font-mono text-yellow-400 italic";
+    
+    currentModalPlant.user_notes = notes;
+
+    try {
+        // Adding notes implicitly saves the plant to the Garden collection
+        const docId = await savePlantToGarden(currentUser.uid, currentModalPlant, currentModalPlant.docId);
+        
+        // Update local state with new ID if it was a first-time save
+        currentModalPlant.docId = docId;
+        currentModalPlant.sourceCollection = 'garden';
+
+        // Update UI to reflect "Saved" state (buttons)
+        updateSaveButtonState(savePlantBtn, true, 'save');
+        refreshPlantBtn.classList.remove('hidden');
+        updateImageBtn.classList.remove('hidden');
+        
+        // Update Registry
+        await syncSavedRegistry();
+
+        notesSaveStatus.textContent = 'Saved to Cloud';
+        notesSaveStatus.className = "text-xs font-mono text-green-400 italic";
+        
+        setTimeout(() => {
+            if (notesSaveStatus.textContent === 'Saved to Cloud') {
+                notesSaveStatus.textContent = '';
+            }
+        }, 2000);
+
+    } catch (error) {
+        console.error("Error saving notes:", error);
+        notesSaveStatus.textContent = 'Error saving';
+        notesSaveStatus.className = "text-xs font-mono text-red-400 italic";
+    }
+}
+
 
 function updateSaveButtonState(btn, isActive, type) {
     if (type === 'save') {
@@ -2211,17 +2296,34 @@ function createPlantDetailHtml(plantData) {
 
 function closeModal() {
     plantDetailModal.classList.add('hidden');
+
+    // Move interactive sections out of the content area to preserve them/listeners
+    // before we wipe the content.
+    if (careQuestionSection && modalContentContainer) {
+        modalContentContainer.appendChild(careQuestionSection);
+        careQuestionSection.classList.add('hidden');
+    }
+
+    if (userNotesSection && modalContentContainer) {
+        modalContentContainer.appendChild(userNotesSection);
+        userNotesSection.classList.add('hidden');
+    }
+
     modalContent.innerHTML = '';
     modalTitle.textContent = 'Plant Details';
     currentModalPlant = null;
-    
-    careQuestionSection.classList.add('hidden');
+
+    // Reset Q&A UI
     careQuestionInput.value = '';
     careQuestionSubmit.disabled = true;
     careResponseText.textContent = 'Submit a question above to get customized AI care advice.';
     careResponseText.classList.remove('text-red-400');
     careResponseText.classList.remove('hidden');
     careResponseLoader.classList.add('hidden');
+
+    // Reset Notes UI
+    userNotesInput.value = '';
+    notesSaveStatus.textContent = '';
 }
 
 // --- Run the app ---
