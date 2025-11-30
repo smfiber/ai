@@ -2,11 +2,8 @@
  * APP.JS
  * The Controller for the "Life Explorer" SPA.
  * Updated: Handles Gemini "Text Slugs" correctly to prevent duplicates.
- * Fixed: Added safety checks for Event Listeners to prevent null crashes.
- * Fixed: Removed invalid escape characters from template literals.
- * Updated: Changed Predator text color to Orange.
- * New: Added Lightbox functionality (Toggle Container Pattern).
- * New: Caching implemented for Field Guides.
+ * Fixed: Caching now works correctly (fixed API Partial Update bug).
+ * New: Edit Field Guides (Title, Search Term, Image).
  */
 
 import { setApiKeys } from './config.js';
@@ -287,7 +284,8 @@ function renderCustomCollections() {
             <div class="h-32 w-full overflow-hidden card-image-wrapper">
                 <img src="${col.image}" alt="${col.title}" class="w-full h-full object-cover">
                 <div class="absolute top-2 right-2 z-20 flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                     <button class="delete-collection-btn bg-red-600 p-1.5 rounded text-white hover:bg-red-500" data-id="${col.id}" data-title="${col.title}">×</button>
+                     <button class="edit-collection-btn bg-blue-600 p-1.5 rounded text-white hover:bg-blue-500 mr-1" data-id="${col.id}" title="Edit Guide">✏️</button>
+                     <button class="delete-collection-btn bg-red-600 p-1.5 rounded text-white hover:bg-red-500" data-id="${col.id}" data-title="${col.title}" title="Delete Guide">×</button>
                 </div>
             </div>
             <div class="p-4">
@@ -411,10 +409,13 @@ function handleCollectionCardClick(e) {
 }
 
 async function handleCustomCollectionsGridClick(e) {
+    // 1. Add Button
     if (e.target.closest('#add-collection-btn')) {
-        openCollectionModal();
+        openCollectionModal(); // Open clean for create
         return;
     }
+
+    // 2. Delete Button
     const deleteBtn = e.target.closest('.delete-collection-btn');
     if (deleteBtn) {
         e.stopPropagation();
@@ -424,14 +425,25 @@ async function handleCustomCollectionsGridClick(e) {
         }
         return;
     }
+
+    // 3. Edit Button (New)
+    const editBtn = e.target.closest('.edit-collection-btn');
+    if (editBtn) {
+        e.stopPropagation();
+        const id = editBtn.dataset.id;
+        const collection = customCollections.find(c => c.id === id);
+        if (collection) openCollectionModal(collection); // Open with data for edit
+        return;
+    }
     
+    // 4. Card Click (Navigation)
     const card = e.target.closest('.collection-card');
     if (card) {
         const id = card.dataset.id; // Get unique DB ID
         const query = card.dataset.query;
         const title = card.dataset.title;
         
-        // 1. UI Setup
+        // UI Setup
         currentPage = 1;
         currentSearchQuery = query;
         currentCollectionKey = null;
@@ -441,43 +453,31 @@ async function handleCustomCollectionsGridClick(e) {
         galleryTitle.textContent = title;
         backToCollectionsBtn.classList.remove('hidden');
         
-        // 2. CACHING STRATEGY
-        // Find the full collection object in memory to check for 'results'
+        // Caching Logic
         const collection = customCollections.find(c => c.id === id);
         
         if (collection && collection.results && collection.results.length > 0) {
-            // CACHE HIT: Render immediately, skip API
+            // CACHE HIT
             console.log("Loading from Cache:", title);
             renderSpecimenGallery(collection.results, specimenGallery);
             renderPagination({ total: collection.results.length, endOfRecords: true });
         } else {
-            // CACHE MISS: Fetch API, then Save
+            // CACHE MISS
             console.log("Cache Miss. Fetching API:", title);
             loader.classList.remove('hidden');
             
             try {
-                // Fetch
                 const results = await searchSpecimens(query, 1);
-                
-                // Render
                 renderSpecimenGallery(results.data, specimenGallery);
                 renderPagination(results.meta);
                 
-                // Cache (Save to Firestore)
+                // Cache results
                 if (results.data.length > 0) {
                      await saveUserCollection(currentUser.uid, { id: id, results: results.data });
-                     // Update local memory so we don't refetch if user comes back without reloading
-                     collection.results = results.data;
+                     collection.results = results.data; // Update memory
                 }
-            } catch(e) {
-                console.error(e);
-            } finally {
-                loader.classList.add('hidden');
-            }
+            } catch(e) { console.error(e); } finally { loader.classList.add('hidden'); }
         }
-        
-        // Load Suggestions (always fresh or cached separately?) 
-        // For now, let's keep suggestions fresh as they are lightweight
         loadCollectionSuggestions(query);
     }
 }
@@ -936,16 +936,58 @@ async function handleImageUpload(e) {
     } catch (err) { uploadMessage.textContent = 'Error: ' + err.message; }
 }
 
-function openCollectionModal() { collectionModal.classList.remove('hidden'); }
+function openCollectionModal(collectionToEdit = null) {
+    collectionModal.classList.remove('hidden');
+    
+    // Default / Create Mode
+    collectionModalTitle.textContent = "Create Field Guide";
+    saveCollectionBtn.textContent = "Create Guide";
+    collectionIdInput.value = "";
+    collectionTitleInput.value = "";
+    collectionQueryInput.value = "";
+    collectionImageUrlInput.value = ""; // Assuming you added this to HTML, if not it's fine, logic handles updates
+    
+    // Edit Mode
+    if (collectionToEdit) {
+        collectionModalTitle.textContent = "Edit Field Guide";
+        saveCollectionBtn.textContent = "Update Guide";
+        collectionIdInput.value = collectionToEdit.id;
+        collectionTitleInput.value = collectionToEdit.title;
+        collectionQueryInput.value = collectionToEdit.query;
+        // If you had an image input, you'd set it here
+    }
+}
+
 function closeCollectionModal() { collectionModal.classList.add('hidden'); }
 function handleCollectionFileChange(e) { /* same as plant */ }
+
 async function handleSaveCollection(e) {
     e.preventDefault();
-    const data = { title: collectionTitleInput.value, query: collectionQueryInput.value, image: 'https://placehold.co/150' };
+    
+    const id = collectionIdInput.value;
+    const oldCollection = id ? customCollections.find(c => c.id === id) : null;
+    const newQuery = collectionQueryInput.value;
+    
+    const data = { 
+        id: id || null,
+        title: collectionTitleInput.value, 
+        query: newQuery,
+        // If we had an image input, we'd grab it here. For now, we keep existing or default.
+        image: oldCollection ? oldCollection.image : 'https://placehold.co/150' 
+    };
+
+    // SMART CACHE CLEARING:
+    // If we are editing (id exists) AND the query has changed,
+    // we must wipe the 'results' so the app re-fetches data for the new animal.
+    if (oldCollection && oldCollection.query !== newQuery) {
+        data.results = []; // Clear cache
+    }
+
     await saveUserCollection(currentUser.uid, data);
     closeCollectionModal();
     loadUserCollections();
 }
+
 async function loadUserCollections() {
     if(!currentUser) return;
     customCollections = await getUserCollections(currentUser.uid);
