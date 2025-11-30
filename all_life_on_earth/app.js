@@ -1,7 +1,7 @@
 /*
  * APP.JS
  * The Controller for the "Life Explorer" SPA.
- * Final Fix: "Ask the Zoologist" Button Targeting
+ * Updated: Manual Image Uploads & Fixed Search Rendering
  */
 
 import { setApiKeys } from './config.js';
@@ -273,18 +273,19 @@ function renderSpecimenGallery(specimens, container) {
         card.dataset.slug = specimen.slug;
         card.dataset.name = specimen.common_name;
 
-        const displayImage = specimen.image_url || '';
+        // Check if we actually have an image URL
+        const hasImage = !!specimen.image_url;
 
         card.innerHTML = `
             <div class="card-image-container group-hover:scale-105 transition-transform duration-700 relative">
-                <img src="${displayImage}" 
+                <img src="${hasImage ? specimen.image_url : ''}" 
                      alt="${specimen.common_name}" 
                      loading="lazy"
-                     class="w-full h-full object-cover transition-opacity duration-300"
+                     class="w-full h-full object-cover transition-opacity duration-300 ${hasImage ? '' : 'hidden'}"
                      onload="this.style.opacity=1"
                      onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden');"
                 >
-                <div class="hidden absolute inset-0 flex items-center justify-center bg-gray-800 card-image-placeholder">
+                <div class="${hasImage ? 'hidden' : ''} absolute inset-0 flex items-center justify-center bg-gray-800 card-image-placeholder">
                     <div class="text-center opacity-30">
                         <span class="text-5xl">🐾</span>
                         <p class="text-xs mt-2 text-gray-400">No Photo</p>
@@ -425,11 +426,16 @@ async function openSpecimenModal(slug, name) {
     modalContent.classList.add('hidden');
     modalLoader.classList.remove('hidden');
     modalTitle.textContent = name || "Loading...";
+    
+    // Default hidden, will show if saved OR always for manual upload
     refreshSpecimenBtn.classList.add('hidden');
-    updateImageBtn.classList.add('hidden');
+    
+    // Always show the update image button so user can manual upload
+    updateImageBtn.classList.remove('hidden'); 
+    
     modalContent.innerHTML = '';
     const qaSectionClone = careQuestionSection.cloneNode(true);
-    qaSectionClone.classList.remove('hidden'); // Ensure clone is visible
+    qaSectionClone.classList.remove('hidden'); 
 
     careQuestionSection.classList.add('hidden'); 
     saveSpecimenBtn.classList.add('hidden');
@@ -449,7 +455,6 @@ async function openSpecimenModal(slug, name) {
                 updateSaveButtonState(true);
                 saveSpecimenBtn.classList.remove('hidden');
                 refreshSpecimenBtn.classList.remove('hidden'); 
-                updateImageBtn.classList.remove('hidden'); 
                 modalContent.appendChild(qaSectionClone);
                 setupCareQuestionForm(currentModalSpecimen.qa_history);
                 modalLoader.classList.add('hidden');
@@ -518,7 +523,10 @@ function createSpecimenDetailHtml(data) {
     const funFacts = Array.isArray(data.fun_facts) 
         ? data.fun_facts.map(f => `<li class="text-gray-300 text-sm mb-1">• ${f}</li>`).join('') 
         : '<li class="text-gray-500 italic">No facts available.</li>';
-    const image = data.image_url || 'https://placehold.co/400x400/374151/FFFFFF?text=No+Image';
+    
+    // Use placeholder if image_url is missing
+    const hasImage = !!data.image_url;
+    const image = hasImage ? data.image_url : 'https://placehold.co/400x400/374151/FFFFFF?text=No+Photo';
 
     const galleryHtml = (data.gallery_images && data.gallery_images.length > 1) 
        ? `<div class="flex gap-2 overflow-x-auto pb-2 mt-4 custom-scrollbar">
@@ -595,7 +603,6 @@ function createSpecimenDetailHtml(data) {
 // --- UTILS ---
 
 function setupCareQuestionForm(history) {
-    // FIX: Scoped Selection within the specific modal instance
     const form = modalContent.querySelector('#care-question-form');
     const input = modalContent.querySelector('#care-question-input');
     const btn = modalContent.querySelector('#care-question-submit');
@@ -683,7 +690,17 @@ async function handleRefreshData() {
     try {
         const gbifData = await getSpecimenDetails(currentModalSpecimen.slug);
         const geminiData = await fetchAugmentedSpecimenData(gbifData);
-        const freshData = { ...gbifData, ...geminiData, docId: currentModalSpecimen.docId, qa_history: currentModalSpecimen.qa_history };
+        // Preserve image_url if we have one locally, otherwise null
+        const preservedImage = currentModalSpecimen.image_url;
+        
+        const freshData = { 
+            ...gbifData, 
+            ...geminiData, 
+            image_url: preservedImage || gbifData.image_url, // gbifData.image_url is null now
+            docId: currentModalSpecimen.docId, 
+            qa_history: currentModalSpecimen.qa_history 
+        };
+        
         await saveSpecimen(currentUser.uid, freshData, freshData.docId);
         currentModalSpecimen = freshData;
         modalContent.innerHTML = createSpecimenDetailHtml(currentModalSpecimen);
@@ -817,6 +834,45 @@ async function loadUserCollections() {
 }
 function closeModal() { specimenDetailModal.classList.add('hidden'); currentModalSpecimen = null; }
 
-function handleUpdatePhoto() { /* logic */ }
+async function handleUpdatePhoto() {
+    if (!updateImageInput.files || !updateImageInput.files[0]) return;
+    const file = updateImageInput.files[0];
+    
+    // Visual feedback
+    const originalText = updateImageBtn.innerHTML;
+    updateImageBtn.innerHTML = '⏳';
+    updateImageBtn.disabled = true;
+
+    try {
+        if (!currentUser) throw new Error("Please sign in to upload photos.");
+        
+        // Upload
+        const url = await uploadSpecimenImage(file, currentUser.uid);
+        
+        // Update Local State
+        currentModalSpecimen.image_url = url;
+        
+        // Update DOM
+        const mainImg = document.getElementById('main-specimen-image');
+        if (mainImg) mainImg.src = url;
+        
+        // Auto-save if it's already a saved specimen
+        if (currentModalSpecimen.docId) {
+             await saveSpecimen(currentUser.uid, currentModalSpecimen, currentModalSpecimen.docId);
+             alert("Photo uploaded and saved!");
+        } else {
+             // If not saved yet, just let them know it's ready to be saved
+             alert("Photo uploaded! Click 'Save to Sanctuary' to keep it.");
+        }
+
+    } catch (e) {
+        console.error(e);
+        alert("Upload failed: " + e.message);
+    } finally {
+        updateImageBtn.innerHTML = '📷'; // Reset icon
+        updateImageBtn.disabled = false;
+        updateImageInput.value = ''; // Clear input
+    }
+}
 
 main();
