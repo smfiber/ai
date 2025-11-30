@@ -465,6 +465,7 @@ export async function addCalendarEvent(userId, plantDocId, plantName, eventData)
             plantName: plantName,
             eventType: eventData.type,
             date: eventData.date, 
+            recurrence: eventData.recurrence || null, // { frequency: 'weekly', interval: 2 }
             created_at: Date.now()
         });
         console.log(`Event added: ${docRef.id}`);
@@ -489,10 +490,29 @@ export async function getPlantEvents(userId, plantDocId) {
             events.push({ ...doc.data(), id: doc.id });
         });
         
-        // Client-side sort to avoid requiring composite indexes immediately for every user
+        // Client-side sort
         return events.sort((a, b) => new Date(a.date) - new Date(b.date));
     } catch (error) {
         console.error("Error fetching events:", error);
+        return [];
+    }
+}
+
+export async function getAllUserEvents(userId) {
+    if (!db) return [];
+    try {
+        const q = query(
+            collection(db, "user_calendar_events"),
+            where("uid", "==", userId)
+        );
+        const snapshot = await getDocs(q);
+        const events = [];
+        snapshot.forEach(doc => {
+            events.push({ ...doc.data(), id: doc.id });
+        });
+        return events;
+    } catch (error) {
+        console.error("Error fetching all user events:", error);
         return [];
     }
 }
