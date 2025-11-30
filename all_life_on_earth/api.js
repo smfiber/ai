@@ -1,9 +1,9 @@
 /*
  * API.JS
- * Final Version - "Gemini Translator"
- * - GBIF provides the raw data.
- * - Gemini sanitizes the list by converting Scientific Names to readable Common Names in batch.
- * - No image fetching from APIs (User uploads manually).
+ * Final Version - "Gemini Search Engine"
+ * - Search: Uses Gemini Generative AI to create curated lists of animals (fixes the "Author Name" bug).
+ * - Details: Uses GBIF for strict taxonomy data when a specific animal is selected.
+ * - Categories: Uses GBIF + Gemini Translator for browsing by class.
  */
 
 import { configStore } from './config.js';
@@ -129,7 +129,7 @@ export async function deleteUserCollection(userId, id) {
     if (db) await deleteDoc(doc(db, EXPEDITIONS_COLLECTION, id)); 
 }
 
-// --- GBIF API (The Engine) ---
+// --- GBIF API Helpers ---
 
 function cleanScientificName(name) {
     if (!name) return "Unknown";
@@ -141,8 +141,6 @@ function cleanScientificName(name) {
 }
 
 function mapGbifRecord(record) {
-    // We initially set common_name to vernacularName or scientificName.
-    // This will likely be overwritten by Gemini later.
     let displayName = record.vernacularName;
     if (!displayName) {
         displayName = cleanScientificName(record.scientificName);
@@ -161,14 +159,23 @@ function mapGbifRecord(record) {
     };
 }
 
-// --- NEW: Gemini Batch Augmentation ---
+// --- Gemini Functions ---
+
+function extractJson(text) {
+    const s = text.indexOf('{'); const e = text.lastIndexOf('}');
+    if (s === -1 || e === -1) {
+        const as = text.indexOf('['); const ae = text.lastIndexOf(']');
+        if (as !== -1 && ae !== -1) return JSON.parse(text.substring(as, ae + 1));
+        throw new Error("No JSON found");
+    }
+    return JSON.parse(text.substring(s, e + 1));
+}
+
 async function augmentListWithGemini(records) {
     if (!configStore.geminiApiKey || records.length === 0) return records;
 
-    // Create a list of names to send
     const namesList = records.map(r => r.scientific_name);
     
-    // Construct Prompt
     const prompt = `
     You are a translator for a biology database.
     I will provide a list of Scientific Names.
@@ -195,7 +202,6 @@ async function augmentListWithGemini(records) {
         const responseText = d.candidates[0].content.parts[0].text;
         const mapping = extractJson(responseText);
 
-        // Apply the mapping back to the records
         return records.map(record => {
             if (mapping[record.scientific_name]) {
                 return { ...record, common_name: mapping[record.scientific_name] };
@@ -205,12 +211,16 @@ async function augmentListWithGemini(records) {
 
     } catch (error) {
         console.error("Gemini Augmentation Failed:", error);
-        return records; // Fallback to original list
+        return records;
     }
 }
 
+// --- CORE SEARCH LOGIC ---
+
 export async function getCategorySpecimens(classKey, page) {
-    const limit = 20; // Reduced limit to ensure Gemini processes quickly
+    // Categories still use GBIF directly because 'classKey' is a GBIF concept.
+    // We keep the Gemini Augmenter here to make those lists readable.
+    const limit = 20;
     const offset = (page - 1) * limit;
     const url = `https://api.gbif.org/v1/species/search?classKey=${classKey}&rank=SPECIES&status=ACCEPTED&limit=${limit}&offset=${offset}`;
 
@@ -221,7 +231,7 @@ export async function getCategorySpecimens(classKey, page) {
         
         let mapped = data.results.map(mapGbifRecord);
 
-        // AUGMENT WITH GEMINI
+        // Augment categories to make them readable
         mapped = await augmentListWithGemini(mapped);
 
         return { 
@@ -235,48 +245,63 @@ export async function getCategorySpecimens(classKey, page) {
 }
 
 export async function searchSpecimens(queryText, page) {
-    const limit = 20; // Reduced limit for Gemini speed
-    const offset = (page - 1) * limit;
+    // REFACTORED: Now uses Gemini directly as the Search Engine
+    if (!configStore.geminiApiKey) {
+        return { data: [], meta: { total: 0, endOfRecords: true } };
+    }
+
+    // Only allow page 1 for AI search (pagination is complex with generated content)
+    if (page > 1) {
+        return { data: [], meta: { total: 20, endOfRecords: true } };
+    }
+
+    const prompt = `
+    List 20 distinct animal species related to "${queryText}".
     
+    Rules:
+    1. Return ONLY animals (mammals, birds, reptiles, amphibians, fish, insects). NO plants or fungi.
+    2. Provide the "common_name" and "scientific_name".
+    3. Return a valid JSON Array.
+    
+    Format:
+    [
+      { "common_name": "Gray Wolf", "scientific_name": "Canis lupus" },
+      ...
+    ]
+    `;
+
     try {
-        let smartMatchResult = null;
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=${configStore.geminiApiKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+        });
 
-        // Step A: Best Match
-        if (page === 1) {
-            const matchUrl = `https://api.gbif.org/v1/species/match?name=${encodeURIComponent(queryText)}&kingdom=Animalia`;
-            const matchRes = await fetch(matchUrl);
-            if (matchRes.ok) {
-                const matchData = await matchRes.json();
-                if (matchData.usageKey && matchData.matchType !== 'NONE' && (matchData.rank === 'SPECIES' || matchData.rank === 'SUBSPECIES')) {
-                    smartMatchResult = mapGbifRecord(matchData);
-                }
-            }
-        }
+        const d = await res.json();
+        const text = d.candidates[0].content.parts[0].text;
+        const results = extractJson(text);
 
-        // Step B: Broad Search
-        const searchUrl = `https://api.gbif.org/v1/species/search?q=${encodeURIComponent(queryText)}&rank=SPECIES&highertaxonKey=1&status=ACCEPTED&limit=${limit}&offset=${offset}`;
-        const response = await fetch(searchUrl);
-        if (!response.ok) throw new Error(`GBIF Error: ${response.status}`);
-        const data = await response.json();
+        // Map Gemini results to our App's format
+        // Note: we use scientific_name as the slug because we don't have a GBIF Key.
+        // The getSpecimenDetails function is designed to handle this by looking it up.
+        const mapped = results.map(item => ({
+            slug: item.scientific_name, 
+            scientific_name: item.scientific_name,
+            common_name: item.common_name,
+            image_url: null, // No image initially
+            // Fillers to match shape
+            family: "Unknown",
+            order: "Unknown", 
+            class: "Unknown"
+        }));
 
-        let mapped = data.results.map(mapGbifRecord);
-
-        if (smartMatchResult) {
-            mapped = mapped.filter(item => item.slug !== smartMatchResult.slug);
-            mapped.unshift(smartMatchResult);
-        }
-
-        // AUGMENT WITH GEMINI
-        // This will fix "Vilpianus spec" -> "Spider Wasp"
-        mapped = await augmentListWithGemini(mapped);
-        
         return { 
             data: mapped, 
-            meta: { total: data.count, endOfRecords: data.endOfRecords } 
+            meta: { total: results.length, endOfRecords: true } 
         };
 
     } catch (error) {
-        console.error("GBIF Search Error:", error);
+        console.error("Gemini Search Error:", error);
         return { data: [], meta: {} };
     }
 }
@@ -285,6 +310,9 @@ export async function getSpecimenDetails(keyOrName) {
     try {
         let key = keyOrName;
 
+        // Smart Detail Lookup:
+        // If the slug is NOT a number (i.e. it came from Gemini Search like "Canis lupus"),
+        // we must first resolve it to a GBIF ID using the Match API.
         if (isNaN(keyOrName)) {
             const matchUrl = `https://api.gbif.org/v1/species/match?name=${encodeURIComponent(keyOrName)}&kingdom=Animalia`;
             const matchRes = await fetch(matchUrl);
@@ -294,7 +322,7 @@ export async function getSpecimenDetails(keyOrName) {
             if (matchData.usageKey) {
                 key = matchData.usageKey;
             } else {
-                throw new Error("Species not found");
+                throw new Error("Species not found in GBIF");
             }
         }
 
@@ -322,17 +350,7 @@ export async function getSpecimenDetails(keyOrName) {
     }
 }
 
-// --- Gemini Functions ---
-
-function extractJson(text) {
-    const s = text.indexOf('{'); const e = text.lastIndexOf('}');
-    if (s === -1 || e === -1) {
-        const as = text.indexOf('['); const ae = text.lastIndexOf(']');
-        if (as !== -1 && ae !== -1) return JSON.parse(text.substring(as, ae + 1));
-        throw new Error("No JSON found");
-    }
-    return JSON.parse(text.substring(s, e + 1));
-}
+// --- Gemini Augmented Data ---
 
 export async function fetchAugmentedSpecimenData(specimen) {
     if (!configStore.geminiApiKey) return {}; 
