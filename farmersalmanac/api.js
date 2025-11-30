@@ -794,6 +794,7 @@ export async function fetchAugmentedPlantData(plantData) {
         - Propagation Methods: Common ways to reproduce (e.g., "Stem cuttings, seeds").
         - Toxicity Info: Safety for humans and pets (e.g., "Toxic to cats if ingested").
         - Is Edible: Boolean (true/false). Does this plant produce parts generally considered safe and common for human consumption?
+        - Wildlife & Ecology: Describe if this plant attracts birds (e.g., for berries/seeds), pollinators (bees, butterflies), or other wildlife. Mention specific animals if possible.
 
         Respond with ONLY a valid JSON object matching this structure. Do not use markdown.
         {
@@ -816,7 +817,8 @@ export async function fetchAugmentedPlantData(plantData) {
           "pruning_season": "...",
           "propagation_methods": "...",
           "toxicity_info": "...",
-          "is_edible": true
+          "is_edible": true,
+          "wildlife_attractant": "..."
         }
     `;
 
