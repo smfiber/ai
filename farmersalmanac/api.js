@@ -454,6 +454,61 @@ export async function deleteUserCollection(userId, collectionId) {
     }
 }
 
+// --- NEW: CALENDAR EVENT FUNCTIONS ---
+
+export async function addCalendarEvent(userId, plantDocId, plantName, eventData) {
+    if (!db) return;
+    try {
+        const docRef = await addDoc(collection(db, "user_calendar_events"), {
+            uid: userId,
+            plantId: plantDocId,
+            plantName: plantName,
+            eventType: eventData.type,
+            date: eventData.date, 
+            created_at: Date.now()
+        });
+        console.log(`Event added: ${docRef.id}`);
+        return docRef.id;
+    } catch (error) {
+        console.error("Error adding event:", error);
+        throw error;
+    }
+}
+
+export async function getPlantEvents(userId, plantDocId) {
+    if (!db) return [];
+    try {
+        const q = query(
+            collection(db, "user_calendar_events"),
+            where("uid", "==", userId),
+            where("plantId", "==", plantDocId)
+        );
+        const snapshot = await getDocs(q);
+        const events = [];
+        snapshot.forEach(doc => {
+            events.push({ ...doc.data(), id: doc.id });
+        });
+        
+        // Client-side sort to avoid requiring composite indexes immediately for every user
+        return events.sort((a, b) => new Date(a.date) - new Date(b.date));
+    } catch (error) {
+        console.error("Error fetching events:", error);
+        return [];
+    }
+}
+
+export async function deleteCalendarEvent(eventId) {
+    if (!db) return;
+    try {
+        await deleteDoc(doc(db, "user_calendar_events", eventId));
+        console.log(`Event deleted: ${eventId}`);
+    } catch (error) {
+        console.error("Error deleting event:", error);
+        throw error;
+    }
+}
+
+
 // --- NEW: AI Suggestion Caching ---
 
 function getCacheId(userId, queryTerm) {
