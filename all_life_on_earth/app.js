@@ -4,6 +4,8 @@
  * Updated: Handles Gemini "Text Slugs" correctly to prevent duplicates.
  * Fixed: Added safety checks for Event Listeners to prevent null crashes.
  * Fixed: Removed invalid escape characters from template literals.
+ * Updated: Changed Predator text color to Orange.
+ * New: Added Lightbox functionality (Toggle Container Pattern).
  */
 
 import { setApiKeys } from './config.js';
@@ -48,7 +50,9 @@ let modalBackdrop, apiKeyForm, appContainer, mainContent, authContainer,
     customCollectionsContainer, customCollectionsGrid,
     collectionModal, collectionModalTitle, collectionModalCloseBtn, collectionForm, 
     collectionIdInput, collectionTitleInput, collectionQueryInput, saveCollectionBtn,
-    collectionFileInput, collectionImagePreview, collectionPreviewPlaceholder, collectionImageUrlInput;
+    collectionFileInput, collectionImagePreview, collectionPreviewPlaceholder, collectionImageUrlInput,
+    // Lightbox Variables
+    lightboxModal, lightboxImage, lightboxPlaceholder, lightboxCloseBtn;
 
 // --- State ---
 let currentSearchQuery = null;
@@ -154,6 +158,11 @@ function assignDomElements() {
     collectionImagePreview = document.getElementById('collection-image-preview');
     collectionPreviewPlaceholder = document.getElementById('collection-preview-placeholder');
     collectionImageUrlInput = document.getElementById('collection-image-url');
+    // Lightbox assignments
+    lightboxModal = document.getElementById('lightbox-modal');
+    lightboxImage = document.getElementById('lightbox-image');
+    lightboxPlaceholder = document.getElementById('lightbox-placeholder');
+    lightboxCloseBtn = document.getElementById('lightbox-close-btn');
 }
 
 function addEventListeners() {
@@ -197,6 +206,39 @@ function addEventListeners() {
     if (collectionModalCloseBtn) collectionModalCloseBtn.addEventListener('click', closeCollectionModal);
     if (collectionForm) collectionForm.addEventListener('submit', handleSaveCollection);
     if (collectionFileInput) collectionFileInput.addEventListener('change', handleCollectionFileChange);
+
+    // Lightbox Listeners
+    if (lightboxCloseBtn) lightboxCloseBtn.addEventListener('click', closeLightbox);
+    if (lightboxModal) {
+        lightboxModal.addEventListener('click', (e) => {
+            if (e.target === lightboxModal) closeLightbox();
+        });
+    }
+}
+
+// --- LIGHTBOX FUNCTIONS ---
+function openLightbox(src) {
+    if (!lightboxModal) return;
+    
+    lightboxModal.classList.remove('hidden');
+    
+    // Check if real image (not empty, not placeholder)
+    // We assume if it contains 'placehold.co' it's a placeholder
+    const isPlaceholder = !src || src.includes('placehold.co') || src === 'null';
+
+    if (!isPlaceholder) {
+        lightboxImage.src = src;
+        lightboxImage.classList.remove('hidden');
+        lightboxPlaceholder.classList.add('hidden');
+    } else {
+        lightboxImage.classList.add('hidden');
+        lightboxPlaceholder.classList.remove('hidden');
+    }
+}
+
+function closeLightbox() {
+    if (lightboxModal) lightboxModal.classList.add('hidden');
+    if (lightboxImage) lightboxImage.src = ''; // Cleanup
 }
 
 // --- NAVIGATION HANDLERS ---
@@ -531,6 +573,14 @@ function setupGalleryListeners() {
     const mainImg = document.getElementById('main-specimen-image');
     const thumbs = modalContent.querySelectorAll('.gallery-thumb');
     
+    // Lightbox Trigger (New)
+    if (mainImg) {
+        mainImg.style.cursor = 'zoom-in';
+        mainImg.addEventListener('click', () => {
+            openLightbox(mainImg.src);
+        });
+    }
+    
     if (mainImg && thumbs.length > 0) {
         thumbs.forEach(thumb => {
             thumb.addEventListener('click', () => {
@@ -605,7 +655,7 @@ function createSpecimenDetailHtml(data) {
                     <div class="space-y-3 text-sm">
                         <div><span class="block text-gray-400 text-xs">Diet</span><span class="text-gray-200">${get(data.diet)}</span></div>
                         <div><span class="block text-gray-400 text-xs">Habitat</span><span class="text-gray-200">${get(data.habitat)}</span></div>
-                        <div><span class="block text-gray-400 text-xs">Predators</span><span class="text-red-300">${get(data.predators)}</span></div>
+                        <div><span class="block text-gray-400 text-xs">Predators</span><span class="text-orange-300">${get(data.predators)}</span></div>
                     </div>
                 </div>
 
