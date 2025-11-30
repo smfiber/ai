@@ -124,7 +124,7 @@
 
                 <div id="custom-collections-container" class="mb-12 hidden transition-opacity duration-500">
                      <h2 class="text-2xl font-bold text-white mb-6 flex items-center">
-                        <span class="mr-3 text-3xl">🔭</span> My Expeditions
+                        <span class="mr-3 text-3xl">🔭</span> My Field Guides
                     </h2>
                     <div id="custom-collections-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                         </div>
@@ -305,7 +305,7 @@
     <div id="collection-modal" class="hidden fixed inset-0 z-50 bg-gray-900/90 backdrop-blur-sm flex items-center justify-center p-4">
         <div class="glass-panel text-gray-200 rounded-2xl shadow-2xl p-8 w-full max-w-md border border-gray-600">
             <div class="flex justify-between items-center mb-6">
-                <h2 id="collection-modal-title" class="text-2xl font-bold text-white">Add Expedition</h2>
+                <h2 id="collection-modal-title" class="text-2xl font-bold text-white">Create Field Guide</h2>
                 <button id="collection-modal-close-btn" class="text-gray-400 hover:text-white text-3xl leading-none">&times;</button>
             </div>
 
@@ -313,18 +313,18 @@
                 <input type="hidden" id="collection-id">
                 
                 <div>
-                    <label for="collection-title" class="block text-sm font-medium text-gray-300 mb-1">Title</label>
-                    <input type="text" id="collection-title" required class="w-full bg-gray-800 border border-gray-600 text-white rounded-lg px-4 py-2 focus:ring-green-500 focus:border-green-500" placeholder="e.g., Big Cats">
+                    <label for="collection-title" class="block text-sm font-medium text-gray-300 mb-1">Guide Title</label>
+                    <input type="text" id="collection-title" required class="w-full bg-gray-800 border border-gray-600 text-white rounded-lg px-4 py-2 focus:ring-green-500 focus:border-green-500" placeholder="e.g., Birds of Prey">
                 </div>
 
                 <div>
-                    <label for="collection-query" class="block text-sm font-medium text-gray-300 mb-1">Scientific Search Term</label>
-                    <input type="text" id="collection-query" required class="w-full bg-gray-800 border border-gray-600 text-white rounded-lg px-4 py-2 focus:ring-green-500 focus:border-green-500" placeholder="e.g., Panthera">
-                    <p class="text-xs text-gray-500 mt-1">This term is sent to the database API.</p>
+                    <label for="collection-query" class="block text-sm font-medium text-gray-300 mb-1">Taxonomic Family or Theme</label>
+                    <input type="text" id="collection-query" required class="w-full bg-gray-800 border border-gray-600 text-white rounded-lg px-4 py-2 focus:ring-green-500 focus:border-green-500" placeholder="e.g., Accipitridae">
+                    <p class="text-xs text-gray-500 mt-1">Defines the search term for this guide.</p>
                 </div>
 
                 <button type="submit" id="save-collection-btn" class="w-full bg-green-600 text-white py-3 px-4 rounded-xl font-bold shadow-lg hover:bg-green-500 transition-all">
-                    Start Expedition
+                    Create Guide
                 </button>
             </form>
         </div>
