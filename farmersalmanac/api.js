@@ -125,23 +125,87 @@ export async function signOutUser() {
 // --- Firebase Storage Functions ---
 
 /**
- * Uploads a plant image file to Firebase Storage.
+ * Internal helper to resize image to max-width 600px and compress to JPEG 0.7.
+ * @param {File} file 
+ * @returns {Promise<File>} Resized file object
+ */
+async function createThumbnail(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const MAX_WIDTH = 600;
+                let width = img.width;
+                let height = img.height;
+
+                if (width > MAX_WIDTH) {
+                    height *= MAX_WIDTH / width;
+                    width = MAX_WIDTH;
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+
+                canvas.toBlob((blob) => {
+                    if (blob) {
+                        // Create a new File object with the same name (modified type)
+                        resolve(new File([blob], file.name, {
+                            type: 'image/jpeg',
+                            lastModified: Date.now()
+                        }));
+                    } else {
+                        reject(new Error("Canvas to Blob failed"));
+                    }
+                }, 'image/jpeg', 0.7); // 70% quality
+            };
+            img.onerror = (err) => reject(err);
+            img.src = e.target.result;
+        };
+        reader.onerror = (err) => reject(err);
+        reader.readAsDataURL(file);
+    });
+}
+
+/**
+ * Uploads a plant image file to Firebase Storage (Original + Thumbnail).
  * @param {File} file - The file object to upload.
  * @param {string} userId - The Firebase User UID.
- * @returns {Promise<string>} The public download URL for the image.
+ * @returns {Promise<{original: string, thumb: string}>} The public download URLs.
  */
 export async function uploadPlantImage(file, userId) {
     if (!storage) throw new Error("Firebase Storage not initialized.");
 
-    // Create a unique file path: users/<uid>/<timestamp>-<filename>
-    const filePath = `users/${userId}/${Date.now()}-${file.name}`;
-    const storageRef = ref(storage, filePath);
+    // 1. Generate Thumbnail
+    const thumbFile = await createThumbnail(file);
+
+    // 2. Create Paths
+    const timestamp = Date.now();
+    const originalPath = `users/${userId}/${timestamp}-${file.name}`;
+    const thumbPath = `users/${userId}/${timestamp}-thumb-${file.name}`;
+
+    const originalRef = ref(storage, originalPath);
+    const thumbRef = ref(storage, thumbPath);
 
     try {
-        const snapshot = await uploadBytes(storageRef, file);
-        const downloadURL = await getDownloadURL(snapshot.ref);
-        console.log("Image uploaded successfully:", downloadURL);
-        return downloadURL;
+        // 3. Upload both in parallel
+        const [originalSnapshot, thumbSnapshot] = await Promise.all([
+            uploadBytes(originalRef, file),
+            uploadBytes(thumbRef, thumbFile)
+        ]);
+
+        // 4. Get URLs
+        const [originalUrl, thumbUrl] = await Promise.all([
+            getDownloadURL(originalSnapshot.ref),
+            getDownloadURL(thumbSnapshot.ref)
+        ]);
+        
+        console.log("Images uploaded successfully:", { original: originalUrl, thumb: thumbUrl });
+        return { original: originalUrl, thumb: thumbUrl };
+
     } catch (error) {
         console.error("Error uploading image:", error);
         throw error;
