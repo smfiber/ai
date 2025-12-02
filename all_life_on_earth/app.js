@@ -1,9 +1,10 @@
 /*
  * APP.JS
  * The Controller for the "Life Explorer" SPA.
- * Updated: "Zoologist Mode" Layout.
- * Updated: Folder Management (Create, Move, Delete, Filter).
- * Updated: Fixed Predators text truncation.
+ * Updated: Simplified Layout (Sanctuary is Home).
+ * - Removed "Explore by Class" and "Field Guides".
+ * - Search replaces view temporarily.
+ * - Preserves Folder Management & Zoologist Mode.
  */
 
 import { setApiKeys } from './config.js';
@@ -11,7 +12,6 @@ import {
     initFirebase, 
     signInWithGoogle, 
     signOutUser,
-    getCategorySpecimens,
     searchSpecimens,
     getSpecimenDetails,
     fetchAugmentedSpecimenData,
@@ -24,9 +24,6 @@ import {
     getSavedSpecimens,
     getSavedSpecimen,
     uploadSpecimenImage,
-    saveUserCollection,
-    getUserCollections,
-    deleteUserCollection,
     // Folder Imports
     createFolder,
     getUserFolders,
@@ -36,56 +33,39 @@ import {
 
 // --- DOM Variables ---
 let modalBackdrop, apiKeyForm, appContainer, mainContent, authContainer,
-    signInBtn, signOutBtn, userInfo, userName, userPhoto, mySanctuaryBtn, 
-    searchForm, searchInput, specimenGalleryContainer, specimenGallery, loader,
-    paginationContainer, prevBtn, nextBtn, pageInfo,
-    specimenDetailModal, modalTitle, modalCloseBtn, modalContentContainer,
-    modalLoader, modalContent, saveSpecimenBtn,
-    sanctuaryView, backToSearchBtn, sanctuaryLoader, sanctuaryGallery, sanctuaryEmptyState,
-    careQuestionSection, careQuestionForm, careQuestionInput, careQuestionSubmit,
-    careResponseContainer, careResponseText, careResponseLoader, scientificLookupBtn,
+    signInBtn, signOutBtn, userInfo, userName, userPhoto, 
+    searchForm, searchInput, 
+    // Views
+    sanctuaryView, searchResultsView, 
+    // Search Gallery
+    specimenGallery, loader, paginationContainer, prevBtn, nextBtn, pageInfo, galleryHeader, galleryTitle, backToSanctuaryBtn,
+    // Sanctuary Elements
+    sanctuaryLoader, sanctuaryGallery, sanctuaryEmptyState, createFolderBtn, foldersSection, foldersGallery, folderBackBtn, sanctuaryTitle, sanctuarySubtitle,
+    // AI & Modals
+    specimenDetailModal, modalTitle, modalCloseBtn, modalContentContainer, modalLoader, modalContent, saveSpecimenBtn, refreshSpecimenBtn, updateImageBtn, updateImageInput,
+    careQuestionSection, careQuestionForm, careQuestionInput, careQuestionSubmit, careResponseContainer, careResponseText, careResponseLoader, scientificLookupBtn,
     aiSuggestionsContainer, aiSuggestionsList, aiSuggestionsLoader,
-    identifySpecimenBtn, imageUploadModal, imageModalCloseBtn, imageUploadForm,
-    imageFileInput, imagePreviewContainer, imagePreview, previewPlaceholder,
-    uploadStatus, uploadMessage, identifyImageBtn,
-    refreshSpecimenBtn, updateImageBtn, updateImageInput,
-    collectionsContainer, collectionsGrid, galleryHeader, galleryTitle, backToCollectionsBtn,
-    customCollectionsContainer, customCollectionsGrid,
-    collectionModal, collectionModalTitle, collectionModalCloseBtn, collectionForm, 
-    collectionIdInput, collectionTitleInput, collectionQueryInput, saveCollectionBtn,
-    collectionFileInput, collectionImagePreview, collectionPreviewPlaceholder, collectionImageUrlInput,
-    // Lightbox Variables
+    identifySpecimenBtn, imageUploadModal, imageModalCloseBtn, imageUploadForm, imageFileInput, imagePreviewContainer, imagePreview, previewPlaceholder, uploadStatus, uploadMessage, identifyImageBtn,
+    // Lightbox
     lightboxModal, lightboxImage, lightboxPlaceholder, lightboxCloseBtn,
-    // Folder Variables
-    createFolderBtn, foldersSection, foldersGallery, folderBackBtn, sanctuaryTitle, sanctuarySubtitle,
+    // Folders
     moveModal, moveModalCloseBtn, moveFolderSelect, confirmMoveBtn;
 
 // --- State ---
 let currentSearchQuery = null;
-let currentCollectionKey = null;
 let currentPage = 1;
 let currentMeta = null;
 let currentUser = null; 
 let currentModalSpecimen = null; 
-let customCollections = []; 
 let userFolders = [];
 let currentFolderId = null; // null = root (unsorted)
 let specimenToMoveId = null; // Track which animal is being moved
-
-const ANIMAL_COLLECTIONS = [
-    { id: 359, title: 'Mammals', subtitle: 'Warm-blooded vertebrates', image: 'https://images.unsplash.com/photo-1557050543-4d5f4e07ef46?auto=format&fit=crop&w=600&q=80', key: 359 },
-    { id: 212, title: 'Birds', subtitle: 'Feathered friends', image: 'https://images.unsplash.com/photo-1444464666168-49d633b86797?auto=format&fit=crop&w=600&q=80', key: 212 },
-    { id: 358, title: 'Reptiles', subtitle: 'Scaly & cold-blooded', image: 'https://images.unsplash.com/photo-1533743983669-94fa5c4338ec?auto=format&fit=crop&w=600&q=80', key: 358 },
-    { id: 131, title: 'Amphibians', subtitle: 'Frogs & Salamanders', image: 'https://images.unsplash.com/photo-1599488615731-7e5c2823ff28?auto=format&fit=crop&w=600&q=80', key: 131 }
-];
 
 function main() {
     document.addEventListener('DOMContentLoaded', () => {
         assignDomElements();
         addEventListeners();
         console.log("Life Explorer ready.");
-        renderCollections();
-        renderCustomCollections(); 
         if (careQuestionSection) careQuestionSection.classList.add('hidden');
     });
 }
@@ -101,23 +81,42 @@ function assignDomElements() {
     userInfo = document.getElementById('user-info');
     userName = document.getElementById('user-name');
     userPhoto = document.getElementById('user-photo');
-    mySanctuaryBtn = document.getElementById('my-sanctuary-btn'); 
+    
+    // Search & Views
     searchForm = document.getElementById('search-form');
     searchInput = document.getElementById('search-input');
     scientificLookupBtn = document.getElementById('scientific-lookup-btn');
-    collectionsContainer = document.getElementById('collections-container');
-    collectionsGrid = document.getElementById('collections-grid');
-    customCollectionsContainer = document.getElementById('custom-collections-container');
-    customCollectionsGrid = document.getElementById('custom-collections-grid');
-    galleryHeader = document.getElementById('gallery-header');
-    galleryTitle = document.getElementById('gallery-title');
-    backToCollectionsBtn = document.getElementById('back-to-collections-btn');
-    specimenGalleryContainer = document.getElementById('specimen-gallery-container');
+    sanctuaryView = document.getElementById('sanctuary-view');
+    searchResultsView = document.getElementById('search-results-view');
+    
+    // Search Gallery Elements
     specimenGallery = document.getElementById('specimen-gallery');
     loader = document.getElementById('loader');
+    galleryHeader = document.getElementById('gallery-header');
+    galleryTitle = document.getElementById('gallery-title');
+    backToSanctuaryBtn = document.getElementById('back-to-collections-btn'); // Renamed ID in HTML? No, kept same ID "back-to-collections-btn" but reused for sanctuary
+    paginationContainer = document.getElementById('pagination-container');
+    prevBtn = document.getElementById('prev-btn');
+    nextBtn = document.getElementById('next-btn');
+    pageInfo = document.getElementById('page-info');
+    
+    // Sanctuary Elements
+    sanctuaryLoader = document.getElementById('sanctuary-loader');
+    sanctuaryGallery = document.getElementById('sanctuary-gallery');
+    sanctuaryEmptyState = document.getElementById('sanctuary-empty-state');
+    createFolderBtn = document.getElementById('create-folder-btn');
+    foldersSection = document.getElementById('folders-section');
+    foldersGallery = document.getElementById('folders-gallery');
+    folderBackBtn = document.getElementById('folder-back-btn');
+    sanctuaryTitle = document.getElementById('sanctuary-title');
+    sanctuarySubtitle = document.getElementById('sanctuary-subtitle');
+
+    // AI Suggestions
     aiSuggestionsContainer = document.getElementById('ai-suggestions-container');
     aiSuggestionsList = document.getElementById('ai-suggestions-list');
     aiSuggestionsLoader = document.getElementById('ai-suggestions-loader');
+
+    // Modal Elements
     specimenDetailModal = document.getElementById('specimen-detail-modal');
     modalTitle = document.getElementById('modal-title');
     modalCloseBtn = document.getElementById('modal-close-btn');
@@ -128,15 +127,8 @@ function assignDomElements() {
     refreshSpecimenBtn = document.getElementById('refresh-specimen-btn');
     updateImageBtn = document.getElementById('update-image-btn');
     updateImageInput = document.getElementById('update-image-input');
-    paginationContainer = document.getElementById('pagination-container');
-    prevBtn = document.getElementById('prev-btn');
-    nextBtn = document.getElementById('next-btn');
-    pageInfo = document.getElementById('page-info');
-    sanctuaryView = document.getElementById('sanctuary-view');
-    backToSearchBtn = document.getElementById('back-to-search-btn');
-    sanctuaryLoader = document.getElementById('sanctuary-loader');
-    sanctuaryGallery = document.getElementById('sanctuary-gallery');
-    sanctuaryEmptyState = document.getElementById('sanctuary-empty-state');
+    
+    // Care Chat
     careQuestionSection = document.getElementById('care-question-section');
     careQuestionForm = document.getElementById('care-question-form');
     careQuestionInput = document.getElementById('care-question-input');
@@ -144,6 +136,8 @@ function assignDomElements() {
     careResponseContainer = document.getElementById('care-response-container');
     careResponseText = document.getElementById('care-response-text');
     careResponseLoader = document.getElementById('care-response-loader');
+
+    // Image Upload
     identifySpecimenBtn = document.getElementById('identify-specimen-btn');
     imageUploadModal = document.getElementById('image-upload-modal');
     imageModalCloseBtn = document.getElementById('image-modal-close-btn');
@@ -155,30 +149,14 @@ function assignDomElements() {
     uploadStatus = document.getElementById('upload-status');
     uploadMessage = document.getElementById('upload-message');
     identifyImageBtn = document.getElementById('identify-image-btn');
-    collectionModal = document.getElementById('collection-modal');
-    collectionModalTitle = document.getElementById('collection-modal-title');
-    collectionModalCloseBtn = document.getElementById('collection-modal-close-btn');
-    collectionForm = document.getElementById('collection-form');
-    collectionIdInput = document.getElementById('collection-id');
-    collectionTitleInput = document.getElementById('collection-title');
-    collectionQueryInput = document.getElementById('collection-query');
-    saveCollectionBtn = document.getElementById('save-collection-btn');
-    collectionFileInput = document.getElementById('collection-file-input');
-    collectionImagePreview = document.getElementById('collection-image-preview');
-    collectionPreviewPlaceholder = document.getElementById('collection-preview-placeholder');
-    collectionImageUrlInput = document.getElementById('collection-image-url');
-    // Lightbox assignments
+
+    // Lightbox
     lightboxModal = document.getElementById('lightbox-modal');
     lightboxImage = document.getElementById('lightbox-image');
     lightboxPlaceholder = document.getElementById('lightbox-placeholder');
     lightboxCloseBtn = document.getElementById('lightbox-close-btn');
-    // Folder Assignments
-    createFolderBtn = document.getElementById('create-folder-btn');
-    foldersSection = document.getElementById('folders-section');
-    foldersGallery = document.getElementById('folders-gallery');
-    folderBackBtn = document.getElementById('folder-back-btn');
-    sanctuaryTitle = document.getElementById('sanctuary-title');
-    sanctuarySubtitle = document.getElementById('sanctuary-subtitle');
+    
+    // Move Modal
     moveModal = document.getElementById('move-modal');
     moveModalCloseBtn = document.getElementById('move-modal-close-btn');
     moveFolderSelect = document.getElementById('move-folder-select');
@@ -189,28 +167,22 @@ function addEventListeners() {
     if (apiKeyForm) apiKeyForm.addEventListener('submit', handleApiKeySubmit);
     if (signInBtn) signInBtn.addEventListener('click', handleGoogleSignIn);
     if (signOutBtn) signOutBtn.addEventListener('click', handleGoogleSignOut);
-    if (mySanctuaryBtn) mySanctuaryBtn.addEventListener('click', showSanctuaryView);
-    if (backToSearchBtn) backToSearchBtn.addEventListener('click', showDiscoveryView);
-    if (backToCollectionsBtn) backToCollectionsBtn.addEventListener('click', returnToCollections);
+    
+    if (backToSanctuaryBtn) backToSanctuaryBtn.addEventListener('click', returnToSanctuary);
     if (searchForm) searchForm.addEventListener('submit', handleSearchSubmit);
     if (scientificLookupBtn) scientificLookupBtn.addEventListener('click', handleScientificLookup);
     
-    // Pagination Listeners
+    // Pagination
     if (prevBtn) prevBtn.addEventListener('click', handlePrevClick);
     if (nextBtn) nextBtn.addEventListener('click', handleNextClick);
 
-    // Gallery Click Listeners (Delegation)
+    // Gallery Click (Search Results)
     if (specimenGallery) specimenGallery.addEventListener('click', handleSpecimenCardClick);
     
-    // Sanctuary Gallery Delegation (Handles Click AND Move Button)
+    // Sanctuary Click (View + Move)
     if (sanctuaryGallery) sanctuaryGallery.addEventListener('click', handleSanctuaryGridClick);
     
-    if (collectionsGrid) collectionsGrid.addEventListener('click', handleCollectionCardClick);
-    
-    if (customCollectionsGrid) {
-        customCollectionsGrid.addEventListener('click', handleCustomCollectionsGridClick);
-    }
-
+    // Modal & Details
     if (modalCloseBtn) modalCloseBtn.addEventListener('click', closeModal);
     if (specimenDetailModal) {
         specimenDetailModal.addEventListener('click', (e) => {
@@ -221,15 +193,14 @@ function addEventListeners() {
     if (refreshSpecimenBtn) refreshSpecimenBtn.addEventListener('click', handleRefreshData);
     if (updateImageBtn && updateImageInput) updateImageBtn.addEventListener('click', () => updateImageInput.click());
     if (updateImageInput) updateImageInput.addEventListener('change', handleUpdatePhoto);
+    
+    // Image Upload
     if (identifySpecimenBtn) identifySpecimenBtn.addEventListener('click', openImageUploadModal);
     if (imageModalCloseBtn) imageModalCloseBtn.addEventListener('click', closeImageUploadModal);
     if (imageUploadForm) imageUploadForm.addEventListener('submit', handleImageUpload);
     if (imageFileInput) imageFileInput.addEventListener('change', handleImageFileChange);
-    if (collectionModalCloseBtn) collectionModalCloseBtn.addEventListener('click', closeCollectionModal);
-    if (collectionForm) collectionForm.addEventListener('submit', handleSaveCollection);
-    if (collectionFileInput) collectionFileInput.addEventListener('change', handleCollectionFileChange);
 
-    // Lightbox Listeners
+    // Lightbox
     if (lightboxCloseBtn) lightboxCloseBtn.addEventListener('click', closeLightbox);
     if (lightboxModal) {
         lightboxModal.addEventListener('click', (e) => {
@@ -237,7 +208,7 @@ function addEventListeners() {
         });
     }
     
-    // Folder Listeners
+    // Folders
     if (createFolderBtn) createFolderBtn.addEventListener('click', handleCreateFolder);
     if (folderBackBtn) folderBackBtn.addEventListener('click', () => {
         currentFolderId = null;
@@ -273,17 +244,13 @@ function closeLightbox() {
 async function handleCreateFolder() {
     const name = prompt("Enter folder name (e.g., 'Big Cats'):");
     if (!name || !name.trim()) return;
-    
     try {
         await createFolder(currentUser.uid, name.trim());
-        loadSanctuarySpecimens(); // Refresh view
-    } catch (e) {
-        alert("Could not create folder: " + e.message);
-    }
+        loadSanctuarySpecimens();
+    } catch (e) { alert("Could not create folder: " + e.message); }
 }
 
 function handleFolderClick(e) {
-    // 1. Delete Folder
     const deleteBtn = e.target.closest('.delete-folder-btn');
     if (deleteBtn) {
         e.stopPropagation();
@@ -293,8 +260,6 @@ function handleFolderClick(e) {
         }
         return;
     }
-
-    // 2. Open Folder
     const card = e.target.closest('.folder-card');
     if (card) {
         currentFolderId = card.dataset.id;
@@ -303,17 +268,14 @@ function handleFolderClick(e) {
 }
 
 function handleSanctuaryGridClick(e) {
-    // 1. Check if Move Button was clicked
     const moveBtn = e.target.closest('.move-specimen-btn');
     if (moveBtn) {
-        e.stopPropagation(); // Stop card from opening
+        e.stopPropagation();
         const card = moveBtn.closest('.specimen-card');
-        specimenToMoveId = card.dataset.docid; // Get the Firestore ID
+        specimenToMoveId = card.dataset.docid; 
         openMoveModal();
         return;
     }
-
-    // 2. Otherwise, treat as normal card click (Open Modal)
     handleSpecimenCardClick(e);
 }
 
@@ -324,7 +286,6 @@ function openMoveModal() {
         const option = document.createElement('option');
         option.value = f.id;
         option.textContent = f.name;
-        // Pre-select if currently in this folder
         if (f.id === currentFolderId) option.selected = true;
         moveFolderSelect.appendChild(option);
     });
@@ -332,18 +293,15 @@ function openMoveModal() {
 
 async function executeMoveSpecimen() {
     if (!specimenToMoveId) return;
-    
-    const folderId = moveFolderSelect.value || null; // Convert empty string to null
+    const folderId = moveFolderSelect.value || null;
     confirmMoveBtn.innerText = "Moving...";
     confirmMoveBtn.disabled = true;
-    
     try {
         await moveSpecimenToFolder(currentUser.uid, specimenToMoveId, folderId);
         moveModal.classList.add('hidden');
-        loadSanctuarySpecimens(); // Refresh grid
-    } catch (e) {
-        alert("Move failed: " + e.message);
-    } finally {
+        loadSanctuarySpecimens();
+    } catch (e) { alert("Move failed: " + e.message); } 
+    finally {
         confirmMoveBtn.innerText = "Move Specimen";
         confirmMoveBtn.disabled = false;
         specimenToMoveId = null;
@@ -360,7 +318,7 @@ function renderFolders(folders) {
     `).join('');
 }
 
-// --- RENDER FUNCTIONS (SPECIMEN GALLERY) ---
+// --- RENDER FUNCTIONS (GALLERY) ---
 
 function renderSpecimenGallery(specimens, container) {
     container.innerHTML = '';
@@ -374,12 +332,9 @@ function renderSpecimenGallery(specimens, container) {
         card.className = 'specimen-card glass-panel rounded-xl overflow-hidden cursor-pointer';
         card.dataset.slug = specimen.slug;
         card.dataset.name = specimen.common_name;
-        // Needed for move logic:
         if (specimen.docId) card.dataset.docid = specimen.docId;
 
         const hasImage = !!specimen.image_url;
-
-        // Condition to show Move Button: Only if we are in Sanctuary view (container is sanctuaryGallery)
         const showMoveBtn = (container === sanctuaryGallery);
 
         card.innerHTML = `
@@ -397,20 +352,12 @@ function renderSpecimenGallery(specimens, container) {
                         <p class="text-xs mt-2 text-gray-400">No Photo</p>
                     </div>
                 </div>
-                
-                ${showMoveBtn ? `
-                <div class="absolute top-2 right-2 z-10">
-                    <button class="move-specimen-btn bg-gray-900/80 hover:bg-indigo-600 text-white p-2 rounded-lg backdrop-blur-sm transition-colors shadow-lg border border-white/10" title="Move to Folder">
-                        📁
-                    </button>
-                </div>` : ''}
-
+                ${showMoveBtn ? `<div class="absolute top-2 right-2 z-10"><button class="move-specimen-btn bg-gray-900/80 hover:bg-indigo-600 text-white p-2 rounded-lg backdrop-blur-sm transition-colors shadow-lg border border-white/10" title="Move to Folder">📁</button></div>` : ''}
                 <div class="card-text-overlay">
                     <h3 class="text-lg font-bold text-white leading-tight drop-shadow-md truncate">${specimen.common_name}</h3>
                     <p class="text-green-400 text-xs mt-1 font-medium truncate">${specimen.scientific_name}</p>
                 </div>
-            </div>
-        `;
+            </div>`;
         container.appendChild(card);
     });
 }
@@ -427,126 +374,45 @@ function renderPagination(meta) {
     pageInfo.textContent = `Page ${currentPage}`;
 }
 
-// --- FETCHING & LOGIC ---
+// --- SEARCH LOGIC ---
 
 async function fetchAndRenderSpecimens() {
     loader.classList.remove('hidden');
     specimenGallery.innerHTML = '';
     paginationContainer.classList.add('hidden');
-
     try {
-        let results = { data: [], meta: {} };
-
-        if (currentCollectionKey) {
-            results = await getCategorySpecimens(currentCollectionKey, currentPage);
-        } else if (currentSearchQuery) {
-            results = await searchSpecimens(currentSearchQuery, currentPage);
-        }
-        
+        const results = await searchSpecimens(currentSearchQuery, currentPage);
         currentMeta = results.meta;
         renderSpecimenGallery(results.data, specimenGallery);
         renderPagination(results.meta);
-
     } catch (error) {
-        console.error(error);
         specimenGallery.innerHTML = '<div class="col-span-full text-center py-10"><p class="text-red-400">Error loading specimens.</p></div>';
-    } finally {
-        loader.classList.add('hidden');
-    }
-}
-
-function handleCollectionCardClick(e) {
-    const card = e.target.closest('.collection-card');
-    if (!card) return;
-    const key = card.dataset.key; 
-    const title = card.dataset.title;
-
-    currentPage = 1;
-    currentCollectionKey = key;
-    currentSearchQuery = null;
-
-    collectionsContainer.classList.add('hidden');
-    customCollectionsContainer.classList.add('hidden');
-    galleryHeader.classList.remove('hidden');
-    galleryTitle.textContent = title;
-    backToCollectionsBtn.classList.remove('hidden');
-    
-    fetchAndRenderSpecimens();
-}
-
-async function handleCustomCollectionsGridClick(e) {
-    if (e.target.closest('#add-collection-btn')) {
-        openCollectionModal(); 
-        return;
-    }
-    const deleteBtn = e.target.closest('.delete-collection-btn');
-    if (deleteBtn) {
-        e.stopPropagation();
-        const { id, title } = deleteBtn.dataset;
-        if (confirm(`Delete "${title}"?`)) {
-            deleteUserCollection(currentUser.uid, id).then(loadUserCollections);
-        }
-        return;
-    }
-    const editBtn = e.target.closest('.edit-collection-btn');
-    if (editBtn) {
-        e.stopPropagation();
-        const id = editBtn.dataset.id;
-        const collection = customCollections.find(c => c.id === id);
-        if (collection) openCollectionModal(collection);
-        return;
-    }
-    const card = e.target.closest('.collection-card');
-    if (card) {
-        const id = card.dataset.id; 
-        const query = card.dataset.query;
-        const title = card.dataset.title;
-        
-        currentPage = 1;
-        currentSearchQuery = query;
-        currentCollectionKey = null;
-        collectionsContainer.classList.add('hidden');
-        customCollectionsContainer.classList.add('hidden');
-        galleryHeader.classList.remove('hidden');
-        galleryTitle.textContent = title;
-        backToCollectionsBtn.classList.remove('hidden');
-        
-        const collection = customCollections.find(c => c.id === id);
-        
-        if (collection && collection.results && collection.results.length > 0) {
-            console.log("Loading from Cache:", title);
-            renderSpecimenGallery(collection.results, specimenGallery);
-            renderPagination({ total: collection.results.length, endOfRecords: true });
-        } else {
-            console.log("Cache Miss. Fetching API:", title);
-            loader.classList.remove('hidden');
-            try {
-                const results = await searchSpecimens(query, 1);
-                renderSpecimenGallery(results.data, specimenGallery);
-                renderPagination(results.meta);
-                if (results.data.length > 0) {
-                     await saveUserCollection(currentUser.uid, { id: id, results: results.data });
-                     collection.results = results.data; 
-                }
-            } catch(e) { console.error(e); } finally { loader.classList.add('hidden'); }
-        }
-        loadCollectionSuggestions(query);
-    }
+    } finally { loader.classList.add('hidden'); }
 }
 
 function handleSearchSubmit(e) {
     e.preventDefault();
     const query = searchInput.value.trim();
-    if (query === currentSearchQuery) return;
+    if (query === currentSearchQuery && !searchResultsView.classList.contains('hidden')) return;
+    
     currentSearchQuery = query;
-    currentCollectionKey = null;
     currentPage = 1;
-    collectionsContainer.classList.add('hidden');
-    customCollectionsContainer.classList.add('hidden');
-    galleryHeader.classList.remove('hidden');
-    galleryTitle.textContent = `Search: "${query}"`;
-    backToCollectionsBtn.classList.remove('hidden');
+    
+    // Switch Views
+    sanctuaryView.classList.add('hidden');
+    searchResultsView.classList.remove('hidden');
+    
     fetchAndRenderSpecimens();
+    loadCollectionSuggestions(query);
+}
+
+function returnToSanctuary() {
+    searchResultsView.classList.add('hidden');
+    sanctuaryView.classList.remove('hidden');
+    specimenGallery.innerHTML = ''; // Clear search results to save memory
+    aiSuggestionsContainer.classList.add('hidden');
+    currentSearchQuery = null;
+    searchInput.value = ''; // Optional: clear bar
 }
 
 async function handleScientificLookup() {
@@ -562,8 +428,54 @@ async function handleScientificLookup() {
     }
 }
 
-// --- MODAL & DETAILS ---
-// ... (Previous modal code reused, simplified for brevity as logic is unchanged)
+// --- SANCTUARY LOAD LOGIC ---
+
+async function loadSanctuarySpecimens() {
+    sanctuaryLoader.classList.remove('hidden');
+    sanctuaryGallery.innerHTML = '';
+    foldersGallery.innerHTML = '';
+    
+    const [specimens, folders] = await Promise.all([
+        getSavedSpecimens(currentUser.uid),
+        getUserFolders(currentUser.uid)
+    ]);
+    userFolders = folders; 
+    sanctuaryLoader.classList.add('hidden');
+
+    if (currentFolderId) {
+        const folder = folders.find(f => f.id === currentFolderId);
+        sanctuaryTitle.textContent = folder ? folder.name : "Unknown Folder";
+        sanctuarySubtitle.textContent = "Folder Collection";
+        folderBackBtn.classList.remove('hidden');
+        foldersSection.classList.add('hidden'); 
+        createFolderBtn.classList.add('hidden'); 
+        
+        const filtered = specimens.filter(s => s.folderId === currentFolderId);
+        if (filtered.length === 0) sanctuaryEmptyState.classList.remove('hidden');
+        else {
+            sanctuaryEmptyState.classList.add('hidden');
+            renderSpecimenGallery(filtered, sanctuaryGallery);
+        }
+    } else {
+        sanctuaryTitle.textContent = "My Sanctuary";
+        sanctuarySubtitle.textContent = "Your collection of saved specimens";
+        folderBackBtn.classList.add('hidden');
+        foldersSection.classList.remove('hidden');
+        createFolderBtn.classList.remove('hidden');
+        
+        renderFolders(folders);
+        
+        const unsorted = specimens.filter(s => !s.folderId);
+        if (unsorted.length === 0 && folders.length === 0) {
+            sanctuaryEmptyState.classList.remove('hidden');
+        } else {
+            sanctuaryEmptyState.classList.add('hidden');
+            renderSpecimenGallery(unsorted, sanctuaryGallery);
+        }
+    }
+}
+
+// --- MODAL & DETAILS --- (Simplified reuse)
 function handleSpecimenCardClick(e) {
     const card = e.target.closest('.specimen-card');
     if (!card) return;
@@ -571,7 +483,6 @@ function handleSpecimenCardClick(e) {
     openSpecimenModal(slug, name);
 }
 
-// --- NAVIGATION HANDLERS ---
 function handlePrevClick() { if (currentPage > 1) { currentPage--; fetchAndRenderSpecimens(); } }
 function handleNextClick() { currentPage++; fetchAndRenderSpecimens(); }
 
@@ -624,7 +535,6 @@ async function openSpecimenModal(slug, name) {
             }
             if (savedResult.data) isSaved = true;
         }
-
         if (currentUser) {
              updateSaveButtonState(isSaved);
              saveSpecimenBtn.classList.remove('hidden');
@@ -635,8 +545,6 @@ async function openSpecimenModal(slug, name) {
             gbifData = await getSpecimenDetails(resolvedSlug);
         }
         
-        if (!gbifData) throw new Error("Could not fetch specimen details.");
-
         modalLoader.querySelector('p').textContent = 'Consulting the Zoologist (AI)...';
         const geminiData = await fetchAugmentedSpecimenData(gbifData);
 
@@ -774,6 +682,7 @@ async function handleSaveToggle() {
             currentModalSpecimen.docId = null;
             updateSaveButtonState(false);
             refreshSpecimenBtn.classList.add('hidden');
+            // If viewing sanctuary, removing item should refresh list
             if (!sanctuaryView.classList.contains('hidden')) loadSanctuarySpecimens();
         }
     } catch (e) { console.error(e); alert("Action failed."); } finally { saveSpecimenBtn.disabled = false; }
@@ -831,80 +740,7 @@ async function loadCollectionSuggestions(query) {
     } else { aiSuggestionsContainer.classList.add('hidden'); }
 }
 
-function showSanctuaryView() {
-    document.getElementById('discovery-view').classList.add('hidden');
-    sanctuaryView.classList.remove('hidden');
-    currentFolderId = null; // Reset to root
-    loadSanctuarySpecimens();
-}
-
-function showDiscoveryView() {
-    sanctuaryView.classList.add('hidden');
-    document.getElementById('discovery-view').classList.remove('hidden');
-}
-
-function returnToCollections() {
-    collectionsContainer.classList.remove('hidden');
-    customCollectionsContainer.classList.remove('hidden');
-    galleryHeader.classList.add('hidden');
-    specimenGallery.innerHTML = '';
-    aiSuggestionsContainer.classList.add('hidden');
-}
-
-// --- UPDATED: Sanctuary Load Logic with Folders ---
-async function loadSanctuarySpecimens() {
-    sanctuaryLoader.classList.remove('hidden');
-    sanctuaryGallery.innerHTML = '';
-    foldersGallery.innerHTML = '';
-    
-    // Fetch data in parallel
-    const [specimens, folders] = await Promise.all([
-        getSavedSpecimens(currentUser.uid),
-        getUserFolders(currentUser.uid)
-    ]);
-    
-    userFolders = folders; // Update local state
-    sanctuaryLoader.classList.add('hidden');
-
-    if (currentFolderId) {
-        // --- Folder View ---
-        const folder = folders.find(f => f.id === currentFolderId);
-        sanctuaryTitle.textContent = folder ? folder.name : "Unknown Folder";
-        sanctuarySubtitle.textContent = "Folder Collection";
-        folderBackBtn.classList.remove('hidden');
-        foldersSection.classList.add('hidden'); // Hide folders grid
-        createFolderBtn.classList.add('hidden'); // Cannot create nested folders
-        
-        const filtered = specimens.filter(s => s.folderId === currentFolderId);
-        
-        if (filtered.length === 0) sanctuaryEmptyState.classList.remove('hidden');
-        else {
-            sanctuaryEmptyState.classList.add('hidden');
-            renderSpecimenGallery(filtered, sanctuaryGallery);
-        }
-
-    } else {
-        // --- Root View ---
-        sanctuaryTitle.textContent = "My Sanctuary";
-        sanctuarySubtitle.textContent = "Your collection of saved specimens";
-        folderBackBtn.classList.add('hidden');
-        foldersSection.classList.remove('hidden');
-        createFolderBtn.classList.remove('hidden');
-        
-        renderFolders(folders);
-        
-        // Show "Unsorted" (null or undefined folderId)
-        const unsorted = specimens.filter(s => !s.folderId);
-        
-        if (unsorted.length === 0 && folders.length === 0) {
-            sanctuaryEmptyState.classList.remove('hidden');
-        } else {
-            sanctuaryEmptyState.classList.add('hidden');
-            renderSpecimenGallery(unsorted, sanctuaryGallery);
-        }
-    }
-}
-
+// --- CORE INIT LOGIC ---
 async function handleGoogleSignIn() { await signInWithGoogle(); }
 async function handleGoogleSignOut() { await signOutUser(); }
 
@@ -918,19 +754,20 @@ function handleApiKeySubmit(e) {
                 currentUser = user;
                 if (user) {
                     signInBtn.classList.add('hidden'); userInfo.classList.remove('hidden'); userInfo.classList.add('flex');
-                    userName.textContent = user.displayName; userPhoto.src = user.photoURL; mySanctuaryBtn.classList.remove('hidden');
-                    loadUserCollections();
+                    userName.textContent = user.displayName; userPhoto.src = user.photoURL; 
+                    loadSanctuarySpecimens();
                 } else {
                     signInBtn.classList.remove('hidden'); userInfo.classList.add('hidden'); userInfo.classList.remove('flex');
-                    mySanctuaryBtn.classList.add('hidden'); showDiscoveryView();
+                    // When signed out, show empty sanctuary state
+                    loadSanctuarySpecimens();
                 }
             });
             modalBackdrop.classList.add('hidden');
-            collectionsContainer.classList.remove('hidden'); customCollectionsContainer.classList.remove('hidden');
         });
     } catch (e) { alert("Init failed: " + e.message); }
 }
 
+// --- IMAGE UPLOAD LOGIC ---
 function openImageUploadModal() { imageUploadModal.classList.remove('hidden'); }
 function closeImageUploadModal() { imageUploadModal.classList.add('hidden'); }
 function handleImageFileChange(e) {
@@ -948,10 +785,7 @@ async function handleImageUpload(e) {
     try {
         const { original, thumb } = await uploadSpecimenImage(imageFileInput.files[0], currentUser.uid);
         const result = await fetchImageIdentification(original); 
-        
-        // Use thumb for display, keep original for lightbox
         const imageToSave = thumb;
-        
         if (result && result.scientific_name !== 'Unknown') {
             uploadMessage.textContent = `Found: ${result.common_name}`;
             const gbifResult = await searchSpecimens(result.scientific_name, 1);
@@ -972,65 +806,16 @@ async function handleImageUpload(e) {
     } catch (err) { uploadMessage.textContent = 'Error: ' + err.message; }
 }
 
-function openCollectionModal(collectionToEdit = null) {
-    collectionModal.classList.remove('hidden');
-    collectionModalTitle.textContent = "Create Field Guide";
-    saveCollectionBtn.textContent = "Create Guide";
-    collectionIdInput.value = "";
-    collectionTitleInput.value = "";
-    collectionQueryInput.value = "";
-    collectionImageUrlInput.value = ""; 
-    
-    if (collectionToEdit) {
-        collectionModalTitle.textContent = "Edit Field Guide";
-        saveCollectionBtn.textContent = "Update Guide";
-        collectionIdInput.value = collectionToEdit.id;
-        collectionTitleInput.value = collectionToEdit.title;
-        collectionQueryInput.value = collectionToEdit.query;
-    }
-}
-
-function closeCollectionModal() { collectionModal.classList.add('hidden'); }
-function handleCollectionFileChange(e) { /* same as plant */ }
-
-async function handleSaveCollection(e) {
-    e.preventDefault();
-    const id = collectionIdInput.value;
-    const oldCollection = id ? customCollections.find(c => c.id === id) : null;
-    const newQuery = collectionQueryInput.value;
-    const data = { 
-        id: id || null,
-        title: collectionTitleInput.value, 
-        query: newQuery,
-        image: oldCollection ? oldCollection.image : 'https://placehold.co/150' 
-    };
-    if (oldCollection && oldCollection.query !== newQuery) {
-        data.results = []; // Clear cache
-    }
-    await saveUserCollection(currentUser.uid, data);
-    closeCollectionModal();
-    loadUserCollections();
-}
-
-async function loadUserCollections() {
-    if(!currentUser) return;
-    customCollections = await getUserCollections(currentUser.uid);
-    renderCustomCollections();
-}
-function closeModal() { specimenDetailModal.classList.add('hidden'); currentModalSpecimen = null; }
-
 async function handleUpdatePhoto() {
     if (!updateImageInput.files || !updateImageInput.files[0]) return;
     const file = updateImageInput.files[0];
-    const originalText = updateImageBtn.innerHTML;
     updateImageBtn.innerHTML = '⏳';
     updateImageBtn.disabled = true;
-
     try {
         if (!currentUser) throw new Error("Please sign in to upload photos.");
         const { original, thumb } = await uploadSpecimenImage(file, currentUser.uid);
-        currentModalSpecimen.image_url = thumb; // Use thumbnail for display
-        currentModalSpecimen.original_image_url = original; // Keep original for lightbox
+        currentModalSpecimen.image_url = thumb; 
+        currentModalSpecimen.original_image_url = original;
         const mainImg = document.getElementById('main-specimen-image');
         if (mainImg) {
             mainImg.src = thumb;
@@ -1048,8 +833,9 @@ async function handleUpdatePhoto() {
     } finally {
         updateImageBtn.innerHTML = '📷'; // Reset icon
         updateImageBtn.disabled = false;
-        updateImageInput.value = ''; // Clear input
+        updateImageInput.value = ''; 
     }
 }
+function closeModal() { specimenDetailModal.classList.add('hidden'); currentModalSpecimen = null; }
 
 main();
