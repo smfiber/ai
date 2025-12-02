@@ -1,19 +1,38 @@
 /*
  * STYLE.CSS
  * Custom styles for the "Life Explorer" SPA.
- * Updated for "No-Image" Default State & Better Readability
+ * Updated: "Zoologist Mode" - No Italics & Better Readability
  */
 
 /* Import a nice rounded font for a friendly, nature vibe */
 @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap');
 
-/* FAILSAFE: Ensure hidden elements stay hidden */
-.hidden {
-    display: none !important;
+/* --- TYPOGRAPHY OVERHAUL --- */
+
+/* 1. GLOBAL NO-ITALICS RULE */
+/* As requested, strictly force normal font style everywhere */
+*, *::before, *::after {
+    font-style: normal !important;
 }
 
 body {
     font-family: 'Nunito', sans-serif;
+    /* Improved text rendering for long-form content */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* 2. READABILITY FOR LONG TEXT */
+/* For the new detailed Zoologist paragraphs */
+.zoologist-text p {
+    line-height: 1.75;
+    margin-bottom: 1.5rem;
+    color: #d1d5db; /* gray-300 */
+}
+
+/* FAILSAFE: Ensure hidden elements stay hidden */
+.hidden {
+    display: none !important;
 }
 
 /* --- New Immersive Background --- */
