@@ -1,10 +1,8 @@
 /*
  * APP.JS
  * The Controller for the "Life Explorer" SPA.
- * Updated: "Zoologist Mode" Layout - Field Guide Style.
- * - Renders deep analysis (Intro, Physical, Habitat, Behavior).
- * - Removes italics classes.
- * - Preserves caching and edit functionality.
+ * Updated: "Zoologist Mode" Layout.
+ * Updated: Folder Management (Create, Move, Delete, Filter).
  */
 
 import { setApiKeys } from './config.js';
@@ -27,7 +25,12 @@ import {
     uploadSpecimenImage,
     saveUserCollection,
     getUserCollections,
-    deleteUserCollection
+    deleteUserCollection,
+    // Folder Imports
+    createFolder,
+    getUserFolders,
+    deleteUserFolder,
+    moveSpecimenToFolder
 } from './api.js';
 
 // --- DOM Variables ---
@@ -51,7 +54,10 @@ let modalBackdrop, apiKeyForm, appContainer, mainContent, authContainer,
     collectionIdInput, collectionTitleInput, collectionQueryInput, saveCollectionBtn,
     collectionFileInput, collectionImagePreview, collectionPreviewPlaceholder, collectionImageUrlInput,
     // Lightbox Variables
-    lightboxModal, lightboxImage, lightboxPlaceholder, lightboxCloseBtn;
+    lightboxModal, lightboxImage, lightboxPlaceholder, lightboxCloseBtn,
+    // Folder Variables
+    createFolderBtn, foldersSection, foldersGallery, folderBackBtn, sanctuaryTitle, sanctuarySubtitle,
+    moveModal, moveModalCloseBtn, moveFolderSelect, confirmMoveBtn;
 
 // --- State ---
 let currentSearchQuery = null;
@@ -61,6 +67,9 @@ let currentMeta = null;
 let currentUser = null; 
 let currentModalSpecimen = null; 
 let customCollections = []; 
+let userFolders = [];
+let currentFolderId = null; // null = root (unsorted)
+let specimenToMoveId = null; // Track which animal is being moved
 
 const ANIMAL_COLLECTIONS = [
     { id: 359, title: 'Mammals', subtitle: 'Warm-blooded vertebrates', image: 'https://images.unsplash.com/photo-1557050543-4d5f4e07ef46?auto=format&fit=crop&w=600&q=80', key: 359 },
@@ -162,10 +171,20 @@ function assignDomElements() {
     lightboxImage = document.getElementById('lightbox-image');
     lightboxPlaceholder = document.getElementById('lightbox-placeholder');
     lightboxCloseBtn = document.getElementById('lightbox-close-btn');
+    // Folder Assignments
+    createFolderBtn = document.getElementById('create-folder-btn');
+    foldersSection = document.getElementById('folders-section');
+    foldersGallery = document.getElementById('folders-gallery');
+    folderBackBtn = document.getElementById('folder-back-btn');
+    sanctuaryTitle = document.getElementById('sanctuary-title');
+    sanctuarySubtitle = document.getElementById('sanctuary-subtitle');
+    moveModal = document.getElementById('move-modal');
+    moveModalCloseBtn = document.getElementById('move-modal-close-btn');
+    moveFolderSelect = document.getElementById('move-folder-select');
+    confirmMoveBtn = document.getElementById('confirm-move-btn');
 }
 
 function addEventListeners() {
-    // SAFEGUARD: All event listeners are now wrapped in checks to prevent null errors.
     if (apiKeyForm) apiKeyForm.addEventListener('submit', handleApiKeySubmit);
     if (signInBtn) signInBtn.addEventListener('click', handleGoogleSignIn);
     if (signOutBtn) signOutBtn.addEventListener('click', handleGoogleSignOut);
@@ -179,9 +198,12 @@ function addEventListeners() {
     if (prevBtn) prevBtn.addEventListener('click', handlePrevClick);
     if (nextBtn) nextBtn.addEventListener('click', handleNextClick);
 
-    // Gallery Click Listeners
+    // Gallery Click Listeners (Delegation)
     if (specimenGallery) specimenGallery.addEventListener('click', handleSpecimenCardClick);
-    if (sanctuaryGallery) sanctuaryGallery.addEventListener('click', handleSpecimenCardClick);
+    
+    // Sanctuary Gallery Delegation (Handles Click AND Move Button)
+    if (sanctuaryGallery) sanctuaryGallery.addEventListener('click', handleSanctuaryGridClick);
+    
     if (collectionsGrid) collectionsGrid.addEventListener('click', handleCollectionCardClick);
     
     if (customCollectionsGrid) {
@@ -213,17 +235,23 @@ function addEventListeners() {
             if (e.target === lightboxModal) closeLightbox();
         });
     }
+    
+    // Folder Listeners
+    if (createFolderBtn) createFolderBtn.addEventListener('click', handleCreateFolder);
+    if (folderBackBtn) folderBackBtn.addEventListener('click', () => {
+        currentFolderId = null;
+        loadSanctuarySpecimens();
+    });
+    if (foldersGallery) foldersGallery.addEventListener('click', handleFolderClick);
+    if (moveModalCloseBtn) moveModalCloseBtn.addEventListener('click', () => moveModal.classList.add('hidden'));
+    if (confirmMoveBtn) confirmMoveBtn.addEventListener('click', executeMoveSpecimen);
 }
 
 // --- LIGHTBOX FUNCTIONS ---
 function openLightbox(src) {
     if (!lightboxModal) return;
-    
     lightboxModal.classList.remove('hidden');
-    
-    // Check if real image (not empty, not placeholder)
     const isPlaceholder = !src || src.includes('placehold.co') || src === 'null';
-
     if (!isPlaceholder) {
         lightboxImage.src = src;
         lightboxImage.classList.remove('hidden');
@@ -236,77 +264,102 @@ function openLightbox(src) {
 
 function closeLightbox() {
     if (lightboxModal) lightboxModal.classList.add('hidden');
-    if (lightboxImage) lightboxImage.src = ''; // Cleanup
+    if (lightboxImage) lightboxImage.src = ''; 
 }
 
-// --- NAVIGATION HANDLERS ---
+// --- FOLDER LOGIC ---
 
-function handlePrevClick() {
-    if (currentPage > 1) {
-        currentPage--;
-        fetchAndRenderSpecimens();
+async function handleCreateFolder() {
+    const name = prompt("Enter folder name (e.g., 'Big Cats'):");
+    if (!name || !name.trim()) return;
+    
+    try {
+        await createFolder(currentUser.uid, name.trim());
+        loadSanctuarySpecimens(); // Refresh view
+    } catch (e) {
+        alert("Could not create folder: " + e.message);
     }
 }
 
-function handleNextClick() {
-    currentPage++;
-    fetchAndRenderSpecimens();
+function handleFolderClick(e) {
+    // 1. Delete Folder
+    const deleteBtn = e.target.closest('.delete-folder-btn');
+    if (deleteBtn) {
+        e.stopPropagation();
+        const folderId = deleteBtn.dataset.id;
+        if (confirm("Delete this folder? Animals inside will be moved to Unsorted.")) {
+            deleteUserFolder(currentUser.uid, folderId).then(loadSanctuarySpecimens);
+        }
+        return;
+    }
+
+    // 2. Open Folder
+    const card = e.target.closest('.folder-card');
+    if (card) {
+        currentFolderId = card.dataset.id;
+        loadSanctuarySpecimens();
+    }
 }
 
-function handleSpecimenCardClick(e) {
-    const card = e.target.closest('.specimen-card');
-    if (!card) return;
-    const { slug, name } = card.dataset;
-    openSpecimenModal(slug, name);
+function handleSanctuaryGridClick(e) {
+    // 1. Check if Move Button was clicked
+    const moveBtn = e.target.closest('.move-specimen-btn');
+    if (moveBtn) {
+        e.stopPropagation(); // Stop card from opening
+        const card = moveBtn.closest('.specimen-card');
+        specimenToMoveId = card.dataset.docid; // Get the Firestore ID
+        openMoveModal();
+        return;
+    }
+
+    // 2. Otherwise, treat as normal card click (Open Modal)
+    handleSpecimenCardClick(e);
 }
 
-// --- RENDER FUNCTIONS ---
+function openMoveModal() {
+    moveModal.classList.remove('hidden');
+    moveFolderSelect.innerHTML = '<option value="">(Unsorted)</option>';
+    userFolders.forEach(f => {
+        const option = document.createElement('option');
+        option.value = f.id;
+        option.textContent = f.name;
+        // Pre-select if currently in this folder
+        if (f.id === currentFolderId) option.selected = true;
+        moveFolderSelect.appendChild(option);
+    });
+}
 
-function renderCollections() {
-    if (!collectionsGrid) return;
-    collectionsGrid.innerHTML = ANIMAL_COLLECTIONS.map(col => `
-        <div class="collection-card glass-panel rounded-xl overflow-hidden cursor-pointer hover:scale-105 hover-glow transition-transform group" data-key="${col.key}" data-title="${col.title}">
-            <div class="h-32 w-full overflow-hidden card-image-wrapper">
-                <img src="${col.image}" alt="${col.title}" class="w-full h-full object-cover">
-            </div>
-            <div class="p-4">
-                <h3 class="text-lg font-bold text-white group-hover:text-green-400 transition-colors">${col.title}</h3>
-                <p class="text-sm text-gray-400">${col.subtitle}</p>
-            </div>
+async function executeMoveSpecimen() {
+    if (!specimenToMoveId) return;
+    
+    const folderId = moveFolderSelect.value || null; // Convert empty string to null
+    confirmMoveBtn.innerText = "Moving...";
+    confirmMoveBtn.disabled = true;
+    
+    try {
+        await moveSpecimenToFolder(currentUser.uid, specimenToMoveId, folderId);
+        moveModal.classList.add('hidden');
+        loadSanctuarySpecimens(); // Refresh grid
+    } catch (e) {
+        alert("Move failed: " + e.message);
+    } finally {
+        confirmMoveBtn.innerText = "Move Specimen";
+        confirmMoveBtn.disabled = false;
+        specimenToMoveId = null;
+    }
+}
+
+function renderFolders(folders) {
+    foldersGallery.innerHTML = folders.map(f => `
+        <div class="folder-card rounded-xl p-4 cursor-pointer relative group flex flex-col items-center justify-center h-32 transition-all" data-id="${f.id}">
+            <button class="delete-folder-btn absolute top-2 right-2 text-gray-400 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity p-1" data-id="${f.id}" title="Delete Folder">×</button>
+            <span class="text-4xl mb-2">📁</span>
+            <span class="text-white font-bold text-center truncate w-full px-2">${f.name}</span>
         </div>
     `).join('');
 }
 
-function renderCustomCollections() {
-    if (!customCollectionsGrid) return;
-    const customHtml = customCollections.map(col => `
-        <div class="collection-card glass-panel rounded-xl overflow-hidden cursor-pointer hover:scale-105 hover-glow transition-transform group relative" data-id="${col.id}" data-query="${col.query}" data-title="${col.title}">
-            <div class="h-32 w-full overflow-hidden card-image-wrapper">
-                <img src="${col.image}" alt="${col.title}" class="w-full h-full object-cover">
-                <div class="absolute top-2 right-2 z-20 flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                     <button class="edit-collection-btn bg-blue-600 p-1.5 rounded text-white hover:bg-blue-500 mr-1" data-id="${col.id}" title="Edit Guide">✏️</button>
-                     <button class="delete-collection-btn bg-red-600 p-1.5 rounded text-white hover:bg-red-500" data-id="${col.id}" data-title="${col.title}" title="Delete Guide">×</button>
-                </div>
-            </div>
-            <div class="p-4">
-                <h3 class="text-lg font-bold text-white group-hover:text-green-400 transition-colors">${col.title}</h3>
-                <p class="text-sm text-gray-400">Field Guide</p>
-            </div>
-        </div>
-    `).join('');
-
-    let addBtnHtml = '';
-    if (currentUser) {
-        addBtnHtml = `
-            <div id="add-collection-btn" class="glass-panel rounded-xl overflow-hidden cursor-pointer hover:scale-105 hover-glow transition-transform flex flex-col items-center justify-center min-h-[200px] border-2 border-dashed border-gray-600 hover:border-green-500 group">
-                <div class="text-5xl text-gray-600 group-hover:text-green-500 mb-2 transition-colors">+</div>
-                <span class="text-gray-400 font-medium group-hover:text-green-400 transition-colors">Create Guide</span>
-            </div>
-        `;
-    }
-
-    customCollectionsGrid.innerHTML = customHtml + addBtnHtml;
-}
+// --- RENDER FUNCTIONS (SPECIMEN GALLERY) ---
 
 function renderSpecimenGallery(specimens, container) {
     container.innerHTML = '';
@@ -320,9 +373,13 @@ function renderSpecimenGallery(specimens, container) {
         card.className = 'specimen-card glass-panel rounded-xl overflow-hidden cursor-pointer';
         card.dataset.slug = specimen.slug;
         card.dataset.name = specimen.common_name;
+        // Needed for move logic:
+        if (specimen.docId) card.dataset.docid = specimen.docId;
 
-        // Check if we actually have an image URL
         const hasImage = !!specimen.image_url;
+
+        // Condition to show Move Button: Only if we are in Sanctuary view (container is sanctuaryGallery)
+        const showMoveBtn = (container === sanctuaryGallery);
 
         card.innerHTML = `
             <div class="card-image-container group-hover:scale-105 transition-transform duration-700 relative">
@@ -339,6 +396,14 @@ function renderSpecimenGallery(specimens, container) {
                         <p class="text-xs mt-2 text-gray-400">No Photo</p>
                     </div>
                 </div>
+                
+                ${showMoveBtn ? `
+                <div class="absolute top-2 right-2 z-10">
+                    <button class="move-specimen-btn bg-gray-900/80 hover:bg-indigo-600 text-white p-2 rounded-lg backdrop-blur-sm transition-colors shadow-lg border border-white/10" title="Move to Folder">
+                        📁
+                    </button>
+                </div>` : ''}
+
                 <div class="card-text-overlay">
                     <h3 class="text-lg font-bold text-white leading-tight drop-shadow-md truncate">${specimen.common_name}</h3>
                     <p class="text-green-400 text-xs mt-1 font-medium truncate">${specimen.scientific_name}</p>
@@ -409,13 +474,10 @@ function handleCollectionCardClick(e) {
 }
 
 async function handleCustomCollectionsGridClick(e) {
-    // 1. Add Button
     if (e.target.closest('#add-collection-btn')) {
-        openCollectionModal(); // Open clean for create
+        openCollectionModal(); 
         return;
     }
-
-    // 2. Delete Button
     const deleteBtn = e.target.closest('.delete-collection-btn');
     if (deleteBtn) {
         e.stopPropagation();
@@ -425,25 +487,20 @@ async function handleCustomCollectionsGridClick(e) {
         }
         return;
     }
-
-    // 3. Edit Button (New)
     const editBtn = e.target.closest('.edit-collection-btn');
     if (editBtn) {
         e.stopPropagation();
         const id = editBtn.dataset.id;
         const collection = customCollections.find(c => c.id === id);
-        if (collection) openCollectionModal(collection); // Open with data for edit
+        if (collection) openCollectionModal(collection);
         return;
     }
-    
-    // 4. Card Click (Navigation)
     const card = e.target.closest('.collection-card');
     if (card) {
-        const id = card.dataset.id; // Get unique DB ID
+        const id = card.dataset.id; 
         const query = card.dataset.query;
         const title = card.dataset.title;
         
-        // UI Setup
         currentPage = 1;
         currentSearchQuery = query;
         currentCollectionKey = null;
@@ -453,28 +510,22 @@ async function handleCustomCollectionsGridClick(e) {
         galleryTitle.textContent = title;
         backToCollectionsBtn.classList.remove('hidden');
         
-        // Caching Logic
         const collection = customCollections.find(c => c.id === id);
         
         if (collection && collection.results && collection.results.length > 0) {
-            // CACHE HIT
             console.log("Loading from Cache:", title);
             renderSpecimenGallery(collection.results, specimenGallery);
             renderPagination({ total: collection.results.length, endOfRecords: true });
         } else {
-            // CACHE MISS
             console.log("Cache Miss. Fetching API:", title);
             loader.classList.remove('hidden');
-            
             try {
                 const results = await searchSpecimens(query, 1);
                 renderSpecimenGallery(results.data, specimenGallery);
                 renderPagination(results.meta);
-                
-                // Cache results
                 if (results.data.length > 0) {
                      await saveUserCollection(currentUser.uid, { id: id, results: results.data });
-                     collection.results = results.data; // Update memory
+                     collection.results = results.data; 
                 }
             } catch(e) { console.error(e); } finally { loader.classList.add('hidden'); }
         }
@@ -511,24 +562,31 @@ async function handleScientificLookup() {
 }
 
 // --- MODAL & DETAILS ---
+// ... (Previous modal code reused, simplified for brevity as logic is unchanged)
+function handleSpecimenCardClick(e) {
+    const card = e.target.closest('.specimen-card');
+    if (!card) return;
+    const { slug, name } = card.dataset;
+    openSpecimenModal(slug, name);
+}
+
+// --- NAVIGATION HANDLERS ---
+function handlePrevClick() { if (currentPage > 1) { currentPage--; fetchAndRenderSpecimens(); } }
+function handleNextClick() { currentPage++; fetchAndRenderSpecimens(); }
 
 async function openSpecimenModal(slug, name) {
     specimenDetailModal.classList.remove('hidden');
     modalContent.classList.add('hidden');
     modalLoader.classList.remove('hidden');
     modalTitle.textContent = name || "Loading...";
-    
-    // Default hidden, will show if saved OR always for manual upload
     refreshSpecimenBtn.classList.add('hidden');
-    
-    // Always show the update image button so user can manual upload
     updateImageBtn.classList.remove('hidden'); 
-    
     modalContent.innerHTML = '';
+    
     const qaSectionClone = careQuestionSection.cloneNode(true);
     qaSectionClone.classList.remove('hidden'); 
-
     careQuestionSection.classList.add('hidden'); 
+    
     saveSpecimenBtn.classList.add('hidden');
     saveSpecimenBtn.textContent = 'Save to Sanctuary';
     saveSpecimenBtn.classList.remove('bg-red-600');
@@ -550,7 +608,6 @@ async function openSpecimenModal(slug, name) {
             const savedResult = await getSavedSpecimen(currentUser.uid, resolvedSlug);
             
             if (savedResult.data && savedResult.data.diet) {
-                // IT IS SAVED: Load local data
                 currentModalSpecimen = { ...savedResult.data, docId: savedResult.docId };
                 modalTitle.textContent = currentModalSpecimen.common_name;
                 modalContent.innerHTML = createSpecimenDetailHtml(currentModalSpecimen);
@@ -589,9 +646,7 @@ async function openSpecimenModal(slug, name) {
 
         modalTitle.textContent = currentModalSpecimen.common_name;
         modalContent.innerHTML = createSpecimenDetailHtml(currentModalSpecimen);
-        
         setupGalleryListeners();
-
         modalContent.appendChild(qaSectionClone);
         setupCareQuestionForm(currentModalSpecimen.qa_history);
 
@@ -632,177 +687,71 @@ function setupGalleryListeners() {
 
 function createSpecimenDetailHtml(data) {
     const get = (v, d = 'N/A') => (v === null || v === undefined || v === '') ? d : v;
-    
-    // Check if we have the new "Zoologist" data
     const isZoologistMode = !!data.zoologist_intro;
-
-    const funFacts = Array.isArray(data.fun_facts) 
-        ? data.fun_facts.map(f => `<li class="text-gray-300 text-sm mb-1">• ${f}</li>`).join('') 
-        : '<li class="text-gray-500">No facts available.</li>';
-    
+    const funFacts = Array.isArray(data.fun_facts) ? data.fun_facts.map(f => `<li class="text-gray-300 text-sm mb-1">• ${f}</li>`).join('') : '<li class="text-gray-500">No facts available.</li>';
     const hasImage = !!data.image_url;
     const image = hasImage ? data.image_url : 'https://placehold.co/400x400/374151/FFFFFF?text=No+Photo';
     const fullRes = data.original_image_url || data.image_url;
+    const galleryHtml = (data.gallery_images && data.gallery_images.length > 1) ? `<div class="flex gap-2 overflow-x-auto pb-2 mt-4 custom-scrollbar">${data.gallery_images.map((img, idx) => `<img src="${img}" class="gallery-thumb h-20 w-20 object-cover rounded-lg cursor-pointer transition-all ${idx===0 ? 'ring-2 ring-green-400 opacity-100' : 'opacity-70 hover:opacity-100'}" alt="Thumbnail">`).join('')}</div>` : '';
 
-    const galleryHtml = (data.gallery_images && data.gallery_images.length > 1) 
-       ? `<div class="flex gap-2 overflow-x-auto pb-2 mt-4 custom-scrollbar">
-            ${data.gallery_images.map((img, idx) => `
-                <img src="${img}" 
-                     class="gallery-thumb h-20 w-20 object-cover rounded-lg cursor-pointer transition-all ${idx===0 ? 'ring-2 ring-green-400 opacity-100' : 'opacity-70 hover:opacity-100'}" 
-                     alt="Thumbnail">
-            `).join('')}
-          </div>` 
-       : '';
-
-    // MAIN ZOOLOGIST CONTENT
     let zoologistHtml = '';
-    
     if (isZoologistMode) {
         zoologistHtml = `
             <div class="zoologist-text space-y-8 mt-10 border-t border-gray-700 pt-8">
-                <div class="prose prose-invert max-w-none">
-                    <p class="text-lg text-gray-200 leading-relaxed font-medium">${get(data.zoologist_intro)}</p>
-                </div>
-                
+                <div class="prose prose-invert max-w-none"><p class="text-lg text-gray-200 leading-relaxed font-medium">${get(data.zoologist_intro)}</p></div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
-                    <div>
-                        <h3 class="text-2xl font-bold text-white mb-4 flex items-center">
-                            <span class="text-green-400 mr-3 text-lg">●</span> Physical Characteristics
-                        </h3>
-                        <p class="text-gray-300 leading-relaxed">${get(data.detailed_physical)}</p>
-                    </div>
-                    <div>
-                        <h3 class="text-2xl font-bold text-white mb-4 flex items-center">
-                            <span class="text-blue-400 mr-3 text-lg">●</span> Habitat & Distribution
-                        </h3>
-                        <p class="text-gray-300 leading-relaxed">${get(data.detailed_habitat)}</p>
-                    </div>
+                    <div><h3 class="text-2xl font-bold text-white mb-4 flex items-center"><span class="text-green-400 mr-3 text-lg">●</span> Physical Characteristics</h3><p class="text-gray-300 leading-relaxed">${get(data.detailed_physical)}</p></div>
+                    <div><h3 class="text-2xl font-bold text-white mb-4 flex items-center"><span class="text-blue-400 mr-3 text-lg">●</span> Habitat & Distribution</h3><p class="text-gray-300 leading-relaxed">${get(data.detailed_habitat)}</p></div>
                 </div>
-
-                <div class="bg-gray-800/30 p-6 rounded-2xl border border-white/5">
-                    <h3 class="text-2xl font-bold text-white mb-4 flex items-center">
-                         <span class="text-orange-400 mr-3 text-lg">●</span> Behavior & Life Cycle
-                    </h3>
-                    <p class="text-gray-300 leading-relaxed">${get(data.detailed_behavior)}</p>
-                </div>
-            </div>
-        `;
+                <div class="bg-gray-800/30 p-6 rounded-2xl border border-white/5"><h3 class="text-2xl font-bold text-white mb-4 flex items-center"><span class="text-orange-400 mr-3 text-lg">●</span> Behavior & Life Cycle</h3><p class="text-gray-300 leading-relaxed">${get(data.detailed_behavior)}</p></div>
+            </div>`;
     } else {
-        // Fallback for old data
-        zoologistHtml = `
-            <div class="bg-gray-800/50 p-6 rounded-xl border border-yellow-500/30 mt-6 text-center">
-                <p class="text-gray-300 mb-2">This specimen has legacy data.</p>
-                <p class="text-yellow-400 font-bold">Click the 🔄 Refresh button above to generate a full Field Guide report.</p>
-            </div>
-        `;
+        zoologistHtml = `<div class="bg-gray-800/50 p-6 rounded-xl border border-yellow-500/30 mt-6 text-center"><p class="text-gray-300 mb-2">This specimen has legacy data.</p><p class="text-yellow-400 font-bold">Click the 🔄 Refresh button above to generate a full Field Guide report.</p></div>`;
     }
 
     return `
         <div class="flex flex-col lg:flex-row gap-8 mb-8">
-            <div class="w-full lg:w-1/3 flex-shrink-0">
-                <div class="card-image-wrapper rounded-xl overflow-hidden shadow-lg bg-gray-900/50">
-                    <img id="main-specimen-image" 
-                         src="${image}" 
-                         data-full-res="${fullRes}" 
-                         alt="${get(data.common_name)}" 
-                         class="w-full h-auto object-cover"
-                         onerror="this.onerror=null;this.src='https://placehold.co/400x400/374151/FFFFFF?text=No+Image';">
-                </div>
-                ${galleryHtml}
-            </div>
-
+            <div class="w-full lg:w-1/3 flex-shrink-0"><div class="card-image-wrapper rounded-xl overflow-hidden shadow-lg bg-gray-900/50"><img id="main-specimen-image" src="${image}" data-full-res="${fullRes}" alt="${get(data.common_name)}" class="w-full h-auto object-cover" onerror="this.onerror=null;this.src='https://placehold.co/400x400/374151/FFFFFF?text=No+Image';"></div>${galleryHtml}</div>
             <div class="w-full lg:w-2/3">
-                 <div class="mb-6 border-b border-gray-700 pb-6">
-                    <h2 class="text-4xl font-bold text-white mb-2">${get(data.common_name)}</h2>
-                    <p class="text-xl text-gray-400 font-mono">${get(data.scientific_name)}</p>
-                    <div class="flex items-center mt-3 gap-3">
-                         <span class="inline-block px-3 py-1 rounded-full text-sm font-bold bg-gray-700 text-white border border-gray-600">
-                                ${get(data.conservation_status)}
-                        </span>
-                        <span class="text-xs text-gray-500 uppercase tracking-widest font-semibold">${get(data.class)} / ${get(data.order)}</span>
-                    </div>
-                 </div>
-
+                 <div class="mb-6 border-b border-gray-700 pb-6"><h2 class="text-4xl font-bold text-white mb-2">${get(data.common_name)}</h2><p class="text-xl text-gray-400 font-mono">${get(data.scientific_name)}</p><div class="flex items-center mt-3 gap-3"><span class="inline-block px-3 py-1 rounded-full text-sm font-bold bg-gray-700 text-white border border-gray-600">${get(data.conservation_status)}</span><span class="text-xs text-gray-500 uppercase tracking-widest font-semibold">${get(data.class)} / ${get(data.order)}</span></div></div>
                  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                     <div class="bg-gray-800/40 p-3 rounded-lg border border-white/5">
-                        <span class="text-gray-500 text-xs uppercase block mb-1">Diet</span>
-                        <span class="text-gray-200 font-bold text-sm block">${get(data.diet)}</span>
-                     </div>
-                     <div class="bg-gray-800/40 p-3 rounded-lg border border-white/5">
-                        <span class="text-gray-500 text-xs uppercase block mb-1">Lifespan</span>
-                        <span class="text-green-400 font-bold text-sm block">${get(data.lifespan)}</span>
-                     </div>
-                     <div class="bg-gray-800/40 p-3 rounded-lg border border-white/5">
-                        <span class="text-gray-500 text-xs uppercase block mb-1">Family</span>
-                        <span class="text-gray-200 text-sm block truncate" title="${get(data.family)}">${get(data.family)}</span>
-                     </div>
-                     <div class="bg-gray-800/40 p-3 rounded-lg border border-white/5">
-                        <span class="text-gray-500 text-xs uppercase block mb-1">Predators</span>
-                        <span class="text-orange-300 text-sm block truncate" title="${get(data.predators)}">${get(data.predators)}</span>
-                     </div>
+                     <div class="bg-gray-800/40 p-3 rounded-lg border border-white/5"><span class="text-gray-500 text-xs uppercase block mb-1">Diet</span><span class="text-gray-200 font-bold text-sm block">${get(data.diet)}</span></div>
+                     <div class="bg-gray-800/40 p-3 rounded-lg border border-white/5"><span class="text-gray-500 text-xs uppercase block mb-1">Lifespan</span><span class="text-green-400 font-bold text-sm block">${get(data.lifespan)}</span></div>
+                     <div class="bg-gray-800/40 p-3 rounded-lg border border-white/5"><span class="text-gray-500 text-xs uppercase block mb-1">Family</span><span class="text-gray-200 text-sm block truncate" title="${get(data.family)}">${get(data.family)}</span></div>
+                     <div class="bg-gray-800/40 p-3 rounded-lg border border-white/5"><span class="text-gray-500 text-xs uppercase block mb-1">Predators</span><span class="text-orange-300 text-sm block truncate" title="${get(data.predators)}">${get(data.predators)}</span></div>
                  </div>
-
-                 <div class="bg-indigo-900/20 border-l-4 border-indigo-500 p-4 rounded-r-lg">
-                    <h3 class="flex items-center text-sm font-bold text-indigo-300 mb-2 uppercase tracking-wide">
-                        Did You Know?
-                    </h3>
-                    <ul class="list-none space-y-1">
-                        ${funFacts}
-                    </ul>
-                </div>
+                 <div class="bg-indigo-900/20 border-l-4 border-indigo-500 p-4 rounded-r-lg"><h3 class="flex items-center text-sm font-bold text-indigo-300 mb-2 uppercase tracking-wide">Did You Know?</h3><ul class="list-none space-y-1">${funFacts}</ul></div>
             </div>
         </div>
-
-        ${zoologistHtml}
-    `;
+        ${zoologistHtml}`;
 }
 
 // --- UTILS ---
-
 function setupCareQuestionForm(history) {
     const form = modalContent.querySelector('#care-question-form');
     const input = modalContent.querySelector('#care-question-input');
     const btn = modalContent.querySelector('#care-question-submit');
     const loader = modalContent.querySelector('#care-response-loader');
     const responseText = modalContent.querySelector('#care-response-text');
-
     if (!form || !input || !btn) return;
-
     input.value = '';
-    
-    // Check initial state
     btn.disabled = true;
-
-    // UX: Enable button only when there is text
-    input.oninput = () => {
-         btn.disabled = input.value.trim().length === 0;
-    };
-
+    input.oninput = () => { btn.disabled = input.value.trim().length === 0; };
     form.onsubmit = async (e) => {
         e.preventDefault();
         const question = input.value.trim();
         if (!question) return;
-
-        btn.disabled = true; // Disable while thinking
+        btn.disabled = true; 
         if (loader) loader.classList.remove('hidden'); 
         if (responseText) responseText.classList.add('hidden');
-
         const ans = await fetchCustomCareAdvice(currentModalSpecimen, question);
-        
         if (loader) loader.classList.add('hidden'); 
-        if (responseText) {
-            responseText.textContent = ans; 
-            responseText.classList.remove('hidden');
-        }
-        
-        btn.disabled = false; // Re-enable
-
+        if (responseText) { responseText.textContent = ans; responseText.classList.remove('hidden'); }
+        btn.disabled = false; 
         if(!currentModalSpecimen.qa_history) currentModalSpecimen.qa_history = [];
         currentModalSpecimen.qa_history.push({question: question, answer: ans});
-        
         if(currentModalSpecimen.docId) await saveSpecimen(currentUser.uid, currentModalSpecimen, currentModalSpecimen.docId);
     };
-    
     if(history && history.length && responseText) {
         responseText.innerHTML = history.map(h => `<b>Q: ${h.question}</b><br>${h.answer}<hr class="my-2 border-gray-600">`).join('');
         responseText.classList.remove('hidden');
@@ -847,19 +796,9 @@ async function handleRefreshData() {
     try {
         const gbifData = await getSpecimenDetails(currentModalSpecimen.slug);
         const geminiData = await fetchAugmentedSpecimenData(gbifData);
-        // Preserve image_url if we have one locally, otherwise null
         const preservedImage = currentModalSpecimen.image_url;
-        const preservedOriginal = currentModalSpecimen.original_image_url; // Preserve original too
-        
-        const freshData = { 
-            ...gbifData, 
-            ...geminiData, 
-            image_url: preservedImage || gbifData.image_url, 
-            original_image_url: preservedOriginal,
-            docId: currentModalSpecimen.docId, 
-            qa_history: currentModalSpecimen.qa_history 
-        };
-        
+        const preservedOriginal = currentModalSpecimen.original_image_url;
+        const freshData = { ...gbifData, ...geminiData, image_url: preservedImage || gbifData.image_url, original_image_url: preservedOriginal, docId: currentModalSpecimen.docId, qa_history: currentModalSpecimen.qa_history };
         await saveSpecimen(currentUser.uid, freshData, freshData.docId);
         currentModalSpecimen = freshData;
         modalContent.innerHTML = createSpecimenDetailHtml(currentModalSpecimen);
@@ -894,6 +833,7 @@ async function loadCollectionSuggestions(query) {
 function showSanctuaryView() {
     document.getElementById('discovery-view').classList.add('hidden');
     sanctuaryView.classList.remove('hidden');
+    currentFolderId = null; // Reset to root
     loadSanctuarySpecimens();
 }
 
@@ -910,15 +850,57 @@ function returnToCollections() {
     aiSuggestionsContainer.classList.add('hidden');
 }
 
+// --- UPDATED: Sanctuary Load Logic with Folders ---
 async function loadSanctuarySpecimens() {
     sanctuaryLoader.classList.remove('hidden');
     sanctuaryGallery.innerHTML = '';
-    const specimens = await getSavedSpecimens(currentUser.uid);
+    foldersGallery.innerHTML = '';
+    
+    // Fetch data in parallel
+    const [specimens, folders] = await Promise.all([
+        getSavedSpecimens(currentUser.uid),
+        getUserFolders(currentUser.uid)
+    ]);
+    
+    userFolders = folders; // Update local state
     sanctuaryLoader.classList.add('hidden');
-    if (specimens.length === 0) sanctuaryEmptyState.classList.remove('hidden');
-    else {
-        sanctuaryEmptyState.classList.add('hidden');
-        renderSpecimenGallery(specimens, sanctuaryGallery);
+
+    if (currentFolderId) {
+        // --- Folder View ---
+        const folder = folders.find(f => f.id === currentFolderId);
+        sanctuaryTitle.textContent = folder ? folder.name : "Unknown Folder";
+        sanctuarySubtitle.textContent = "Folder Collection";
+        folderBackBtn.classList.remove('hidden');
+        foldersSection.classList.add('hidden'); // Hide folders grid
+        createFolderBtn.classList.add('hidden'); // Cannot create nested folders
+        
+        const filtered = specimens.filter(s => s.folderId === currentFolderId);
+        
+        if (filtered.length === 0) sanctuaryEmptyState.classList.remove('hidden');
+        else {
+            sanctuaryEmptyState.classList.add('hidden');
+            renderSpecimenGallery(filtered, sanctuaryGallery);
+        }
+
+    } else {
+        // --- Root View ---
+        sanctuaryTitle.textContent = "My Sanctuary";
+        sanctuarySubtitle.textContent = "Your collection of saved specimens";
+        folderBackBtn.classList.add('hidden');
+        foldersSection.classList.remove('hidden');
+        createFolderBtn.classList.remove('hidden');
+        
+        renderFolders(folders);
+        
+        // Show "Unsorted" (null or undefined folderId)
+        const unsorted = specimens.filter(s => !s.folderId);
+        
+        if (unsorted.length === 0 && folders.length === 0) {
+            sanctuaryEmptyState.classList.remove('hidden');
+        } else {
+            sanctuaryEmptyState.classList.add('hidden');
+            renderSpecimenGallery(unsorted, sanctuaryGallery);
+        }
     }
 }
 
@@ -973,22 +955,15 @@ async function handleImageUpload(e) {
             uploadMessage.textContent = `Found: ${result.common_name}`;
             const gbifResult = await searchSpecimens(result.scientific_name, 1);
             if (gbifResult.data.length > 0) {
-                // Open modal with the found data, but INJECT our uploaded images
                 const foundSpecimen = gbifResult.data[0];
-                
                 await openSpecimenModal(foundSpecimen.slug, result.common_name);
-                
-                // Patch the current global state with our uploaded photo
                 currentModalSpecimen.image_url = thumb;
                 currentModalSpecimen.original_image_url = original;
-                
-                // Re-render the image part of the modal
                 const mainImg = document.getElementById('main-specimen-image');
                 if(mainImg) {
                     mainImg.src = thumb;
                     mainImg.dataset.fullRes = original;
                 }
-                
                 closeImageUploadModal();
                 alert("Identified! Don't forget to click 'Save to Sanctuary' to keep your photo.");
             } else { alert("Identified as " + result.common_name + ", but not found in GBIF."); }
@@ -998,8 +973,6 @@ async function handleImageUpload(e) {
 
 function openCollectionModal(collectionToEdit = null) {
     collectionModal.classList.remove('hidden');
-    
-    // Default / Create Mode
     collectionModalTitle.textContent = "Create Field Guide";
     saveCollectionBtn.textContent = "Create Guide";
     collectionIdInput.value = "";
@@ -1007,7 +980,6 @@ function openCollectionModal(collectionToEdit = null) {
     collectionQueryInput.value = "";
     collectionImageUrlInput.value = ""; 
     
-    // Edit Mode
     if (collectionToEdit) {
         collectionModalTitle.textContent = "Edit Field Guide";
         saveCollectionBtn.textContent = "Update Guide";
@@ -1022,26 +994,18 @@ function handleCollectionFileChange(e) { /* same as plant */ }
 
 async function handleSaveCollection(e) {
     e.preventDefault();
-    
     const id = collectionIdInput.value;
     const oldCollection = id ? customCollections.find(c => c.id === id) : null;
     const newQuery = collectionQueryInput.value;
-    
     const data = { 
         id: id || null,
         title: collectionTitleInput.value, 
         query: newQuery,
-        // If we had an image input, we'd grab it here. For now, we keep existing or default.
         image: oldCollection ? oldCollection.image : 'https://placehold.co/150' 
     };
-
-    // SMART CACHE CLEARING:
-    // If we are editing (id exists) AND the query has changed,
-    // we must wipe the 'results' so the app re-fetches data for the new animal.
     if (oldCollection && oldCollection.query !== newQuery) {
         data.results = []; // Clear cache
     }
-
     await saveUserCollection(currentUser.uid, data);
     closeCollectionModal();
     loadUserCollections();
@@ -1057,38 +1021,26 @@ function closeModal() { specimenDetailModal.classList.add('hidden'); currentModa
 async function handleUpdatePhoto() {
     if (!updateImageInput.files || !updateImageInput.files[0]) return;
     const file = updateImageInput.files[0];
-    
-    // Visual feedback
     const originalText = updateImageBtn.innerHTML;
     updateImageBtn.innerHTML = '⏳';
     updateImageBtn.disabled = true;
 
     try {
         if (!currentUser) throw new Error("Please sign in to upload photos.");
-        
-        // Upload (Returns Object now)
         const { original, thumb } = await uploadSpecimenImage(file, currentUser.uid);
-        
-        // Update Local State
         currentModalSpecimen.image_url = thumb; // Use thumbnail for display
         currentModalSpecimen.original_image_url = original; // Keep original for lightbox
-        
-        // Update DOM
         const mainImg = document.getElementById('main-specimen-image');
         if (mainImg) {
             mainImg.src = thumb;
             mainImg.dataset.fullRes = original;
         }
-        
-        // Auto-save if it's already a saved specimen
         if (currentModalSpecimen.docId) {
              await saveSpecimen(currentUser.uid, currentModalSpecimen, currentModalSpecimen.docId);
              alert("Photo uploaded and saved!");
         } else {
-             // If not saved yet, just let them know it's ready to be saved
              alert("Photo uploaded! Click 'Save to Sanctuary' to keep it.");
         }
-
     } catch (e) {
         console.error(e);
         alert("Upload failed: " + e.message);
