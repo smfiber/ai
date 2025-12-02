@@ -1,9 +1,7 @@
 /*
  * APP.JS
  * The Controller for the "Life Explorer" SPA.
- * Updated: Fixes "renderCollections is not defined" error.
- * - Removes all zombie code related to the deleted "Explore by Class" feature.
- * - Ensures Sanctuary loads correctly on startup.
+ * Updated: Improved Folder Click Responsiveness & Error Handling
  */
 
 import { setApiKeys } from './config.js';
@@ -66,8 +64,6 @@ function main() {
         addEventListeners();
         console.log("Life Explorer ready.");
         
-        // REMOVED: renderCollections() and renderCustomCollections() calls caused the crash.
-        
         if (careQuestionSection) careQuestionSection.classList.add('hidden');
     });
 }
@@ -96,7 +92,7 @@ function assignDomElements() {
     loader = document.getElementById('loader');
     galleryHeader = document.getElementById('gallery-header');
     galleryTitle = document.getElementById('gallery-title');
-    backToSanctuaryBtn = document.getElementById('back-to-collections-btn'); // Reusing existing ID
+    backToSanctuaryBtn = document.getElementById('back-to-collections-btn'); 
     paginationContainer = document.getElementById('pagination-container');
     prevBtn = document.getElementById('prev-btn');
     nextBtn = document.getElementById('next-btn');
@@ -262,9 +258,15 @@ function handleFolderClick(e) {
         }
         return;
     }
+    
     const card = e.target.closest('.folder-card');
     if (card) {
+        // Immediate UI feedback
+        sanctuaryLoader.classList.remove('hidden');
+        foldersSection.classList.add('hidden');
+        
         currentFolderId = card.dataset.id;
+        console.log("Opening folder:", currentFolderId);
         loadSanctuarySpecimens();
     }
 }
@@ -315,7 +317,7 @@ function renderFolders(folders) {
         <div class="folder-card rounded-xl p-4 cursor-pointer relative group flex flex-col items-center justify-center h-32 transition-all" data-id="${f.id}">
             <button class="delete-folder-btn absolute top-2 right-2 text-gray-400 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity p-1" data-id="${f.id}" title="Delete Folder">×</button>
             <span class="text-4xl mb-2">📁</span>
-            <span class="text-white font-bold text-center truncate w-full px-2">${f.name}</span>
+            <span class="text-white font-bold text-center truncate w-full px-2 pointer-events-none">${f.name}</span>
         </div>
     `).join('');
 }
@@ -433,47 +435,53 @@ async function handleScientificLookup() {
 // --- SANCTUARY LOAD LOGIC ---
 
 async function loadSanctuarySpecimens() {
-    sanctuaryLoader.classList.remove('hidden');
-    sanctuaryGallery.innerHTML = '';
-    foldersGallery.innerHTML = '';
-    
-    const [specimens, folders] = await Promise.all([
-        getSavedSpecimens(currentUser.uid),
-        getUserFolders(currentUser.uid)
-    ]);
-    userFolders = folders; 
-    sanctuaryLoader.classList.add('hidden');
-
-    if (currentFolderId) {
-        const folder = folders.find(f => f.id === currentFolderId);
-        sanctuaryTitle.textContent = folder ? folder.name : "Unknown Folder";
-        sanctuarySubtitle.textContent = "Folder Collection";
-        folderBackBtn.classList.remove('hidden');
-        foldersSection.classList.add('hidden'); 
-        createFolderBtn.classList.add('hidden'); 
+    try {
+        sanctuaryLoader.classList.remove('hidden');
+        sanctuaryGallery.innerHTML = '';
+        if (!currentFolderId) foldersGallery.innerHTML = '';
         
-        const filtered = specimens.filter(s => s.folderId === currentFolderId);
-        if (filtered.length === 0) sanctuaryEmptyState.classList.remove('hidden');
-        else {
-            sanctuaryEmptyState.classList.add('hidden');
-            renderSpecimenGallery(filtered, sanctuaryGallery);
-        }
-    } else {
-        sanctuaryTitle.textContent = "My Sanctuary";
-        sanctuarySubtitle.textContent = "Your collection of saved specimens";
-        folderBackBtn.classList.add('hidden');
-        foldersSection.classList.remove('hidden');
-        createFolderBtn.classList.remove('hidden');
+        const [specimens, folders] = await Promise.all([
+            getSavedSpecimens(currentUser.uid),
+            getUserFolders(currentUser.uid)
+        ]);
+        userFolders = folders; 
         
-        renderFolders(folders);
-        
-        const unsorted = specimens.filter(s => !s.folderId);
-        if (unsorted.length === 0 && folders.length === 0) {
-            sanctuaryEmptyState.classList.remove('hidden');
+        if (currentFolderId) {
+            const folder = folders.find(f => f.id === currentFolderId);
+            sanctuaryTitle.textContent = folder ? folder.name : "Unknown Folder";
+            sanctuarySubtitle.textContent = "Folder Collection";
+            folderBackBtn.classList.remove('hidden');
+            foldersSection.classList.add('hidden'); 
+            createFolderBtn.classList.add('hidden'); 
+            
+            const filtered = specimens.filter(s => s.folderId === currentFolderId);
+            if (filtered.length === 0) sanctuaryEmptyState.classList.remove('hidden');
+            else {
+                sanctuaryEmptyState.classList.add('hidden');
+                renderSpecimenGallery(filtered, sanctuaryGallery);
+            }
         } else {
-            sanctuaryEmptyState.classList.add('hidden');
-            renderSpecimenGallery(unsorted, sanctuaryGallery);
+            sanctuaryTitle.textContent = "My Sanctuary";
+            sanctuarySubtitle.textContent = "Your collection of saved specimens";
+            folderBackBtn.classList.add('hidden');
+            foldersSection.classList.remove('hidden');
+            createFolderBtn.classList.remove('hidden');
+            
+            renderFolders(folders);
+            
+            const unsorted = specimens.filter(s => !s.folderId);
+            if (unsorted.length === 0 && folders.length === 0) {
+                sanctuaryEmptyState.classList.remove('hidden');
+            } else {
+                sanctuaryEmptyState.classList.add('hidden');
+                renderSpecimenGallery(unsorted, sanctuaryGallery);
+            }
         }
+    } catch (error) {
+        console.error("Failed to load sanctuary:", error);
+        sanctuaryGallery.innerHTML = `<div class="col-span-full text-center text-red-400">Error loading sanctuary data.</div>`;
+    } finally {
+        sanctuaryLoader.classList.add('hidden');
     }
 }
 
@@ -662,6 +670,158 @@ function handleApiKeySubmit(e) {
             modalBackdrop.classList.add('hidden');
         });
     } catch (e) { alert("Init failed: " + e.message); }
+}
+
+// --- SAVE / DELETE / QA LOGIC ---
+
+async function handleSaveToggle() {
+    if (!currentUser) return alert("Sign in to save.");
+    saveSpecimenBtn.disabled = true;
+    try {
+        if (saveSpecimenBtn.textContent === 'Saved') {
+            await removeSpecimen(currentUser.uid, currentModalSpecimen.slug);
+            updateSaveButtonState(false);
+        } else {
+            await saveSpecimen(currentUser.uid, currentModalSpecimen);
+            updateSaveButtonState(true);
+        }
+        loadSanctuarySpecimens();
+    } catch (e) { console.error(e); } finally { saveSpecimenBtn.disabled = false; }
+}
+
+function updateSaveButtonState(isSaved) {
+    if (isSaved) {
+        saveSpecimenBtn.textContent = 'Saved';
+        saveSpecimenBtn.classList.remove('bg-green-600');
+        saveSpecimenBtn.classList.add('bg-red-600');
+    } else {
+        saveSpecimenBtn.textContent = 'Save to Sanctuary';
+        saveSpecimenBtn.classList.remove('bg-red-600');
+        saveSpecimenBtn.classList.add('bg-green-600');
+    }
+}
+
+async function handleRefreshData() {
+    if (!confirm("Regenerate Field Guide with AI?")) return;
+    refreshSpecimenBtn.classList.add('rotate-center');
+    try {
+        const geminiData = await fetchAugmentedSpecimenData(currentModalSpecimen);
+        const updated = { ...currentModalSpecimen, ...geminiData };
+        if (updated.docId) {
+             await saveSpecimen(currentUser.uid, updated, updated.docId);
+        }
+        currentModalSpecimen = updated;
+        modalContent.innerHTML = createSpecimenDetailHtml(updated);
+        
+        // Re-attach QA section
+        const qaSectionClone = careQuestionSection.cloneNode(true); // Create fresh clone
+        qaSectionClone.classList.remove('hidden');
+        modalContent.appendChild(qaSectionClone);
+        
+        // Re-bind events for the new clone
+        // Note: The global careQuestionForm variable still points to the original hidden one in the DOM.
+        // We need to find the NEW form inside modalContent.
+        const newForm = modalContent.querySelector('#care-question-form');
+        if (newForm) {
+            newForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                handleCareQuestionSubmit(e, modalContent); // Pass context
+            });
+        }
+
+        setupGalleryListeners();
+    } catch (e) { alert("Refresh failed."); } 
+    finally { refreshSpecimenBtn.classList.remove('rotate-center'); }
+}
+
+function setupCareQuestionForm(history) {
+    // This is called when Modal OPENS. 
+    // The elements careQuestionForm etc are the ones CLONED into the modal.
+    // We need to attach the listener to the *visible* form inside modalContent.
+    
+    const visibleForm = modalContent.querySelector('#care-question-form');
+    if (!visibleForm) return;
+
+    // Remove old listeners (by cloning replacing)? 
+    // Easier to just attach a fresh one that delegates.
+    visibleForm.onsubmit = (e) => handleCareQuestionSubmit(e, modalContent);
+}
+
+async function handleCareQuestionSubmit(e, context) {
+    e.preventDefault();
+    const input = context.querySelector('#care-question-input');
+    const responseContainer = context.querySelector('#care-response-container');
+    const responseText = context.querySelector('#care-response-text');
+    const loader = context.querySelector('#care-response-loader');
+    const submitBtn = context.querySelector('#care-question-submit');
+
+    const q = input.value.trim();
+    if (!q) return;
+
+    responseText.classList.add('hidden');
+    loader.classList.remove('hidden');
+    submitBtn.disabled = true;
+
+    try {
+        const answer = await fetchCustomCareAdvice(currentModalSpecimen, q);
+        responseText.innerHTML = `<span class="text-indigo-300 font-bold">Q: ${q}</span><br><br>${answer}`;
+        
+        // Save QA to history if saved
+        if (currentModalSpecimen.docId) {
+            const entry = { q, a: answer, date: Date.now() };
+            const history = currentModalSpecimen.qa_history || [];
+            history.push(entry);
+            currentModalSpecimen.qa_history = history;
+            await saveSpecimen(currentUser.uid, currentModalSpecimen, currentModalSpecimen.docId);
+        }
+    } catch (err) {
+        responseText.textContent = "Zoologist is busy. Try again.";
+    } finally {
+        loader.classList.add('hidden');
+        responseText.classList.remove('hidden');
+        submitBtn.disabled = false;
+        input.value = '';
+    }
+}
+
+// --- AI SUGGESTIONS ---
+
+async function loadCollectionSuggestions(query) {
+    aiSuggestionsContainer.classList.remove('hidden');
+    aiSuggestionsList.classList.add('hidden');
+    aiSuggestionsLoader.classList.remove('hidden');
+    aiSuggestionsList.innerHTML = '';
+
+    try {
+        const suggestions = await fetchCollectionSuggestions(query);
+        aiSuggestionsLoader.classList.add('hidden');
+        aiSuggestionsList.classList.remove('hidden');
+        
+        if (suggestions.length === 0) {
+            aiSuggestionsContainer.classList.add('hidden');
+            return;
+        }
+
+        aiSuggestionsList.innerHTML = `
+            <div class="flex flex-wrap gap-2">
+                ${suggestions.map(s => `
+                    <button class="suggestion-btn px-3 py-1 bg-gray-700 hover:bg-green-600 rounded-full text-xs text-white transition-colors border border-gray-600" data-name="${s.common_name}">
+                        ${s.common_name}
+                    </button>
+                `).join('')}
+            </div>
+        `;
+        
+        aiSuggestionsList.querySelectorAll('.suggestion-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                searchInput.value = btn.dataset.name;
+                handleSearchSubmit({ preventDefault: () => {} });
+            });
+        });
+
+    } catch (e) {
+        aiSuggestionsContainer.classList.add('hidden');
+    }
 }
 
 // --- IMAGE UPLOAD LOGIC ---
