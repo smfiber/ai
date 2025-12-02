@@ -1,10 +1,10 @@
 /*
  * APP.JS
  * The Controller for the "Life Explorer" SPA.
- * Updated: Handles Gemini "Text Slugs" correctly to prevent duplicates.
- * Fixed: Caching now works correctly (fixed API Partial Update bug).
- * New: Edit Field Guides (Title, Search Term, Image).
- * New: Client-Side Thumbnails & Full-Res Lightbox Logic.
+ * Updated: "Zoologist Mode" Layout - Field Guide Style.
+ * - Renders deep analysis (Intro, Physical, Habitat, Behavior).
+ * - Removes italics classes.
+ * - Preserves caching and edit functionality.
  */
 
 import { setApiKeys } from './config.js';
@@ -222,7 +222,6 @@ function openLightbox(src) {
     lightboxModal.classList.remove('hidden');
     
     // Check if real image (not empty, not placeholder)
-    // We assume if it contains 'placehold.co' it's a placeholder
     const isPlaceholder = !src || src.includes('placehold.co') || src === 'null';
 
     if (!isPlaceholder) {
@@ -342,7 +341,7 @@ function renderSpecimenGallery(specimens, container) {
                 </div>
                 <div class="card-text-overlay">
                     <h3 class="text-lg font-bold text-white leading-tight drop-shadow-md truncate">${specimen.common_name}</h3>
-                    <p class="text-green-400 text-xs italic mt-1 font-medium truncate">${specimen.scientific_name}</p>
+                    <p class="text-green-400 text-xs mt-1 font-medium truncate">${specimen.scientific_name}</p>
                 </div>
             </div>
         `;
@@ -540,16 +539,12 @@ async function openSpecimenModal(slug, name) {
         let isSaved = false;
         let resolvedSlug = slug;
 
-        // CRITICAL FIX: If slug is NOT a number (e.g. "Canis lupus" from Gemini Search),
-        // we must resolve it to a numeric ID *before* checking if it is saved.
         if (isNaN(slug)) {
              modalLoader.querySelector('p').textContent = 'Identifying species ID...';
-             // This fetch will call the Match API and get the numeric key
              gbifData = await getSpecimenDetails(slug);
-             if (gbifData) resolvedSlug = gbifData.slug; // Now "5219173"
+             if (gbifData) resolvedSlug = gbifData.slug; 
         }
 
-        // Now we can check sanctuary using the correct ID
         if (currentUser) {
             modalLoader.querySelector('p').textContent = 'Checking sanctuary...';
             const savedResult = await getSavedSpecimen(currentUser.uid, resolvedSlug);
@@ -577,7 +572,6 @@ async function openSpecimenModal(slug, name) {
              saveSpecimenBtn.classList.remove('hidden');
         }
 
-        // If we haven't fetched GBIF data yet (slug was numeric), fetch now
         if (!gbifData) {
             modalLoader.querySelector('p').textContent = 'Fetching GBIF Taxonomy...';
             gbifData = await getSpecimenDetails(resolvedSlug);
@@ -589,7 +583,6 @@ async function openSpecimenModal(slug, name) {
         const geminiData = await fetchAugmentedSpecimenData(gbifData);
 
         currentModalSpecimen = { ...gbifData, ...geminiData, qa_history: [] };
-        // Ensure name consistency
         if (name && currentModalSpecimen.common_name === currentModalSpecimen.scientific_name) {
             currentModalSpecimen.common_name = name;
         }
@@ -616,11 +609,9 @@ function setupGalleryListeners() {
     const mainImg = document.getElementById('main-specimen-image');
     const thumbs = modalContent.querySelectorAll('.gallery-thumb');
     
-    // Lightbox Trigger (New)
     if (mainImg) {
         mainImg.style.cursor = 'zoom-in';
         mainImg.addEventListener('click', () => {
-            // Use the Data Attribute for Full Res if available, otherwise fallback to src
             openLightbox(mainImg.dataset.fullRes || mainImg.src);
         });
     }
@@ -641,15 +632,16 @@ function setupGalleryListeners() {
 
 function createSpecimenDetailHtml(data) {
     const get = (v, d = 'N/A') => (v === null || v === undefined || v === '') ? d : v;
+    
+    // Check if we have the new "Zoologist" data
+    const isZoologistMode = !!data.zoologist_intro;
+
     const funFacts = Array.isArray(data.fun_facts) 
         ? data.fun_facts.map(f => `<li class="text-gray-300 text-sm mb-1">• ${f}</li>`).join('') 
-        : '<li class="text-gray-500 italic">No facts available.</li>';
+        : '<li class="text-gray-500">No facts available.</li>';
     
-    // Use placeholder if image_url is missing
     const hasImage = !!data.image_url;
     const image = hasImage ? data.image_url : 'https://placehold.co/400x400/374151/FFFFFF?text=No+Photo';
-    
-    // Logic for Full Res data attribute
     const fullRes = data.original_image_url || data.image_url;
 
     const galleryHtml = (data.gallery_images && data.gallery_images.length > 1) 
@@ -661,6 +653,49 @@ function createSpecimenDetailHtml(data) {
             `).join('')}
           </div>` 
        : '';
+
+    // MAIN ZOOLOGIST CONTENT
+    let zoologistHtml = '';
+    
+    if (isZoologistMode) {
+        zoologistHtml = `
+            <div class="zoologist-text space-y-8 mt-10 border-t border-gray-700 pt-8">
+                <div class="prose prose-invert max-w-none">
+                    <p class="text-lg text-gray-200 leading-relaxed font-medium">${get(data.zoologist_intro)}</p>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
+                    <div>
+                        <h3 class="text-2xl font-bold text-white mb-4 flex items-center">
+                            <span class="text-green-400 mr-3 text-lg">●</span> Physical Characteristics
+                        </h3>
+                        <p class="text-gray-300 leading-relaxed">${get(data.detailed_physical)}</p>
+                    </div>
+                    <div>
+                        <h3 class="text-2xl font-bold text-white mb-4 flex items-center">
+                            <span class="text-blue-400 mr-3 text-lg">●</span> Habitat & Distribution
+                        </h3>
+                        <p class="text-gray-300 leading-relaxed">${get(data.detailed_habitat)}</p>
+                    </div>
+                </div>
+
+                <div class="bg-gray-800/30 p-6 rounded-2xl border border-white/5">
+                    <h3 class="text-2xl font-bold text-white mb-4 flex items-center">
+                         <span class="text-orange-400 mr-3 text-lg">●</span> Behavior & Life Cycle
+                    </h3>
+                    <p class="text-gray-300 leading-relaxed">${get(data.detailed_behavior)}</p>
+                </div>
+            </div>
+        `;
+    } else {
+        // Fallback for old data
+        zoologistHtml = `
+            <div class="bg-gray-800/50 p-6 rounded-xl border border-yellow-500/30 mt-6 text-center">
+                <p class="text-gray-300 mb-2">This specimen has legacy data.</p>
+                <p class="text-yellow-400 font-bold">Click the 🔄 Refresh button above to generate a full Field Guide report.</p>
+            </div>
+        `;
+    }
 
     return `
         <div class="flex flex-col lg:flex-row gap-8 mb-8">
@@ -676,54 +711,49 @@ function createSpecimenDetailHtml(data) {
                 ${galleryHtml}
             </div>
 
-            <div class="w-full lg:w-2/3 grid grid-cols-1 md:grid-cols-2 gap-6 content-start">
-                <div class="md:col-span-2 flex justify-between items-center bg-gray-800/50 p-4 rounded-xl border border-white/10">
-                    <div>
-                        <h3 class="text-xl font-bold text-green-400">${get(data.common_name)}</h3>
-                        <p class="text-gray-400 italic">${get(data.scientific_name)}</p>
-                    </div>
-                    <div class="text-right">
-                        <span class="block text-xs text-gray-500 uppercase">Conservation Status</span>
-                        <span class="inline-block px-3 py-1 rounded-full text-sm font-bold bg-gray-700 text-white border border-gray-600">
-                            ${get(data.conservation_status)}
+            <div class="w-full lg:w-2/3">
+                 <div class="mb-6 border-b border-gray-700 pb-6">
+                    <h2 class="text-4xl font-bold text-white mb-2">${get(data.common_name)}</h2>
+                    <p class="text-xl text-gray-400 font-mono">${get(data.scientific_name)}</p>
+                    <div class="flex items-center mt-3 gap-3">
+                         <span class="inline-block px-3 py-1 rounded-full text-sm font-bold bg-gray-700 text-white border border-gray-600">
+                                ${get(data.conservation_status)}
                         </span>
+                        <span class="text-xs text-gray-500 uppercase tracking-widest font-semibold">${get(data.class)} / ${get(data.order)}</span>
                     </div>
-                </div>
+                 </div>
 
-                <div class="bg-gray-800/50 p-5 rounded-xl border border-white/10">
-                    <h3 class="text-lg font-bold text-orange-400 mb-3 border-b border-gray-600 pb-1">Biological Profile</h3>
-                    <ul class="space-y-2 text-sm">
-                        <li class="flex justify-between"><span class="text-gray-400">Class</span> <span class="text-gray-200">${get(data.class)}</span></li>
-                        <li class="flex justify-between"><span class="text-gray-400">Order</span> <span class="text-gray-200">${get(data.order)}</span></li>
-                        <li class="flex justify-between"><span class="text-gray-400">Family</span> <span class="text-gray-200">${get(data.family)}</span></li>
-                        <li class="flex justify-between mt-2 pt-2 border-t border-gray-700"><span class="text-gray-400">Lifespan</span> <span class="text-green-300">${get(data.lifespan)}</span></li>
+                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                     <div class="bg-gray-800/40 p-3 rounded-lg border border-white/5">
+                        <span class="text-gray-500 text-xs uppercase block mb-1">Diet</span>
+                        <span class="text-gray-200 font-bold text-sm block">${get(data.diet)}</span>
+                     </div>
+                     <div class="bg-gray-800/40 p-3 rounded-lg border border-white/5">
+                        <span class="text-gray-500 text-xs uppercase block mb-1">Lifespan</span>
+                        <span class="text-green-400 font-bold text-sm block">${get(data.lifespan)}</span>
+                     </div>
+                     <div class="bg-gray-800/40 p-3 rounded-lg border border-white/5">
+                        <span class="text-gray-500 text-xs uppercase block mb-1">Family</span>
+                        <span class="text-gray-200 text-sm block truncate" title="${get(data.family)}">${get(data.family)}</span>
+                     </div>
+                     <div class="bg-gray-800/40 p-3 rounded-lg border border-white/5">
+                        <span class="text-gray-500 text-xs uppercase block mb-1">Predators</span>
+                        <span class="text-orange-300 text-sm block truncate" title="${get(data.predators)}">${get(data.predators)}</span>
+                     </div>
+                 </div>
+
+                 <div class="bg-indigo-900/20 border-l-4 border-indigo-500 p-4 rounded-r-lg">
+                    <h3 class="flex items-center text-sm font-bold text-indigo-300 mb-2 uppercase tracking-wide">
+                        Did You Know?
+                    </h3>
+                    <ul class="list-none space-y-1">
+                        ${funFacts}
                     </ul>
-                </div>
-
-                <div class="bg-gray-800/50 p-5 rounded-xl border border-white/10">
-                    <h3 class="text-lg font-bold text-blue-400 mb-3 border-b border-gray-600 pb-1">Ecology</h3>
-                    <div class="space-y-3 text-sm">
-                        <div><span class="block text-gray-400 text-xs">Diet</span><span class="text-gray-200">${get(data.diet)}</span></div>
-                        <div><span class="block text-gray-400 text-xs">Habitat</span><span class="text-gray-200">${get(data.habitat)}</span></div>
-                        <div><span class="block text-gray-400 text-xs">Predators</span><span class="text-orange-300">${get(data.predators)}</span></div>
-                    </div>
-                </div>
-
-                <div class="md:col-span-2 bg-gray-800/50 p-5 rounded-xl border border-white/10">
-                    <h3 class="text-lg font-bold text-white mb-2">Physical Characteristics</h3>
-                    <p class="text-gray-300 text-sm leading-relaxed">${get(data.physical_characteristics)}</p>
                 </div>
             </div>
         </div>
 
-        <div class="bg-indigo-900/30 backdrop-blur-sm border-l-4 border-indigo-500 p-6 rounded-r-xl mb-8 shadow-lg">
-            <h3 class="flex items-center text-xl font-bold text-white mb-3">
-                <span class="mr-2">💡</span> Did You Know?
-            </h3>
-            <ul class="list-none space-y-2">
-                ${funFacts}
-            </ul>
-        </div>
+        ${zoologistHtml}
     `;
 }
 
@@ -946,14 +976,6 @@ async function handleImageUpload(e) {
                 // Open modal with the found data, but INJECT our uploaded images
                 const foundSpecimen = gbifResult.data[0];
                 
-                // Manually set the images on the modal state before opening
-                // We will rely on the modal opening logic, then update the image there?
-                // Actually, openSpecimenModal fetches fresh data. 
-                // We need a way to pass the uploaded image to it.
-                // Simplified approach: Open it, then user sees the standard image, 
-                // but we really want our uploaded one.
-                
-                // Better approach: Open modal, then immediately "patch" the currentModalSpecimen with our upload
                 await openSpecimenModal(foundSpecimen.slug, result.common_name);
                 
                 // Patch the current global state with our uploaded photo
@@ -983,7 +1005,7 @@ function openCollectionModal(collectionToEdit = null) {
     collectionIdInput.value = "";
     collectionTitleInput.value = "";
     collectionQueryInput.value = "";
-    collectionImageUrlInput.value = ""; // Assuming you added this to HTML, if not it's fine, logic handles updates
+    collectionImageUrlInput.value = ""; 
     
     // Edit Mode
     if (collectionToEdit) {
@@ -992,7 +1014,6 @@ function openCollectionModal(collectionToEdit = null) {
         collectionIdInput.value = collectionToEdit.id;
         collectionTitleInput.value = collectionToEdit.title;
         collectionQueryInput.value = collectionToEdit.query;
-        // If you had an image input, you'd set it here
     }
 }
 
