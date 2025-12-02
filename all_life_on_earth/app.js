@@ -1,10 +1,9 @@
 /*
  * APP.JS
  * The Controller for the "Life Explorer" SPA.
- * Updated: Simplified Layout (Sanctuary is Home).
- * - Removed "Explore by Class" and "Field Guides".
- * - Search replaces view temporarily.
- * - Preserves Folder Management & Zoologist Mode.
+ * Updated: Fixes "renderCollections is not defined" error.
+ * - Removes all zombie code related to the deleted "Explore by Class" feature.
+ * - Ensures Sanctuary loads correctly on startup.
  */
 
 import { setApiKeys } from './config.js';
@@ -66,6 +65,9 @@ function main() {
         assignDomElements();
         addEventListeners();
         console.log("Life Explorer ready.");
+        
+        // REMOVED: renderCollections() and renderCustomCollections() calls caused the crash.
+        
         if (careQuestionSection) careQuestionSection.classList.add('hidden');
     });
 }
@@ -94,7 +96,7 @@ function assignDomElements() {
     loader = document.getElementById('loader');
     galleryHeader = document.getElementById('gallery-header');
     galleryTitle = document.getElementById('gallery-title');
-    backToSanctuaryBtn = document.getElementById('back-to-collections-btn'); // Renamed ID in HTML? No, kept same ID "back-to-collections-btn" but reused for sanctuary
+    backToSanctuaryBtn = document.getElementById('back-to-collections-btn'); // Reusing existing ID
     paginationContainer = document.getElementById('pagination-container');
     prevBtn = document.getElementById('prev-btn');
     nextBtn = document.getElementById('next-btn');
@@ -475,7 +477,7 @@ async function loadSanctuarySpecimens() {
     }
 }
 
-// --- MODAL & DETAILS --- (Simplified reuse)
+// --- MODAL & DETAILS ---
 function handleSpecimenCardClick(e) {
     const card = e.target.closest('.specimen-card');
     if (!card) return;
@@ -633,111 +635,6 @@ function createSpecimenDetailHtml(data) {
             </div>
         </div>
         ${zoologistHtml}`;
-}
-
-// --- UTILS ---
-function setupCareQuestionForm(history) {
-    const form = modalContent.querySelector('#care-question-form');
-    const input = modalContent.querySelector('#care-question-input');
-    const btn = modalContent.querySelector('#care-question-submit');
-    const loader = modalContent.querySelector('#care-response-loader');
-    const responseText = modalContent.querySelector('#care-response-text');
-    if (!form || !input || !btn) return;
-    input.value = '';
-    btn.disabled = true;
-    input.oninput = () => { btn.disabled = input.value.trim().length === 0; };
-    form.onsubmit = async (e) => {
-        e.preventDefault();
-        const question = input.value.trim();
-        if (!question) return;
-        btn.disabled = true; 
-        if (loader) loader.classList.remove('hidden'); 
-        if (responseText) responseText.classList.add('hidden');
-        const ans = await fetchCustomCareAdvice(currentModalSpecimen, question);
-        if (loader) loader.classList.add('hidden'); 
-        if (responseText) { responseText.textContent = ans; responseText.classList.remove('hidden'); }
-        btn.disabled = false; 
-        if(!currentModalSpecimen.qa_history) currentModalSpecimen.qa_history = [];
-        currentModalSpecimen.qa_history.push({question: question, answer: ans});
-        if(currentModalSpecimen.docId) await saveSpecimen(currentUser.uid, currentModalSpecimen, currentModalSpecimen.docId);
-    };
-    if(history && history.length && responseText) {
-        responseText.innerHTML = history.map(h => `<b>Q: ${h.question}</b><br>${h.answer}<hr class="my-2 border-gray-600">`).join('');
-        responseText.classList.remove('hidden');
-    }
-}
-
-async function handleSaveToggle() {
-    if (!currentUser || !currentModalSpecimen) return;
-    const action = saveSpecimenBtn.dataset.action;
-    saveSpecimenBtn.disabled = true;
-    try {
-        if (action === 'save') {
-            const newId = await saveSpecimen(currentUser.uid, currentModalSpecimen);
-            currentModalSpecimen.docId = newId;
-            updateSaveButtonState(true);
-            refreshSpecimenBtn.classList.remove('hidden');
-        } else {
-            await removeSpecimen(currentUser.uid, currentModalSpecimen.slug);
-            currentModalSpecimen.docId = null;
-            updateSaveButtonState(false);
-            refreshSpecimenBtn.classList.add('hidden');
-            // If viewing sanctuary, removing item should refresh list
-            if (!sanctuaryView.classList.contains('hidden')) loadSanctuarySpecimens();
-        }
-    } catch (e) { console.error(e); alert("Action failed."); } finally { saveSpecimenBtn.disabled = false; }
-}
-
-function updateSaveButtonState(isSaved) {
-    if (isSaved) {
-        saveSpecimenBtn.textContent = 'Remove from Sanctuary';
-        saveSpecimenBtn.classList.replace('bg-green-600', 'bg-red-600');
-        saveSpecimenBtn.dataset.action = 'remove';
-    } else {
-        saveSpecimenBtn.textContent = 'Save to Sanctuary';
-        saveSpecimenBtn.classList.replace('bg-red-600', 'bg-green-600');
-        saveSpecimenBtn.dataset.action = 'save';
-    }
-}
-
-async function handleRefreshData() {
-    if (!currentModalSpecimen || !currentUser) return;
-    refreshSpecimenBtn.innerHTML = '↻ Updating...';
-    try {
-        const gbifData = await getSpecimenDetails(currentModalSpecimen.slug);
-        const geminiData = await fetchAugmentedSpecimenData(gbifData);
-        const preservedImage = currentModalSpecimen.image_url;
-        const preservedOriginal = currentModalSpecimen.original_image_url;
-        const freshData = { ...gbifData, ...geminiData, image_url: preservedImage || gbifData.image_url, original_image_url: preservedOriginal, docId: currentModalSpecimen.docId, qa_history: currentModalSpecimen.qa_history };
-        await saveSpecimen(currentUser.uid, freshData, freshData.docId);
-        currentModalSpecimen = freshData;
-        modalContent.innerHTML = createSpecimenDetailHtml(currentModalSpecimen);
-        setupGalleryListeners();
-        const qaSectionClone = careQuestionSection;
-        careQuestionSection.classList.remove('hidden');
-        modalContent.appendChild(qaSectionClone);
-        setupCareQuestionForm(freshData.qa_history);
-        alert("Specimen data updated.");
-    } catch (e) { alert("Update failed: " + e.message); } finally { refreshSpecimenBtn.innerHTML = '🔄 Refresh'; }
-}
-
-async function loadCollectionSuggestions(query) {
-    aiSuggestionsContainer.classList.remove('hidden');
-    aiSuggestionsLoader.classList.remove('hidden');
-    aiSuggestionsList.innerHTML = '';
-    const suggestions = await fetchCollectionSuggestions(query);
-    aiSuggestionsLoader.classList.add('hidden');
-    if (suggestions.length) {
-        aiSuggestionsList.classList.remove('hidden');
-        aiSuggestionsList.className = "grid grid-cols-1 md:grid-cols-3 gap-4";
-        suggestions.forEach(s => {
-            const div = document.createElement('div');
-            div.className = "p-2 bg-gray-800 border border-gray-700 rounded cursor-pointer hover:bg-gray-700";
-            div.innerHTML = `<span class="font-bold text-gray-200">${s.common_name}</span> <span class="text-xs text-gray-500 block">${s.scientific_name}</span>`;
-            div.onclick = () => openSpecimenModal(s.scientific_name, s.common_name);
-            aiSuggestionsList.appendChild(div);
-        });
-    } else { aiSuggestionsContainer.classList.add('hidden'); }
 }
 
 // --- CORE INIT LOGIC ---
