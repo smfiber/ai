@@ -55,10 +55,6 @@
             </div>
             
             <nav class="flex items-center space-x-4">
-                <button id="my-sanctuary-btn" class="hidden text-green-400 hover:text-white font-medium transition-colors flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/5">
-                    <span>🌿</span> My Sanctuary
-                </button>
-
                 <div id="auth-container">
                     <button id="google-signin-btn" class="bg-blue-600 text-white font-medium py-2 px-5 rounded-full shadow-lg hover:bg-blue-500 transition-all">
                         Sign in
@@ -72,128 +68,59 @@
             </nav>
         </header>
 
-        <main id="main-content" class="flex-1">
+        <main id="main-content" class="flex-1 flex flex-col">
 
-            <div id="discovery-view" class="flex flex-col">
+            <div id="hero-section" class="text-center mb-10 mt-4 transition-all duration-500">
+                <h2 class="text-4xl md:text-5xl font-extrabold text-white mb-6 drop-shadow-xl">
+                    Discover the <span class="text-green-400">Wild</span>
+                </h2>
                 
-                <div id="hero-section" class="text-center mb-16 mt-8 md:mt-12 transition-all duration-500">
-                    <h2 class="text-4xl md:text-5xl font-extrabold text-white mb-6 drop-shadow-xl">
-                        Discover the <span class="text-green-400">Wild</span>
-                    </h2>
+                <form id="search-form" class="w-full max-w-2xl mx-auto relative group">
+                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <svg class="h-6 w-6 text-gray-400 group-focus-within:text-green-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                        </svg>
+                    </div>
+                    <input type="search" id="search-input" class="block w-full pl-12 pr-4 py-4 bg-gray-800/80 backdrop-blur-md border border-gray-600 rounded-2xl leading-5 text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent focus:bg-gray-800 transition-all shadow-xl text-lg" placeholder="Search for a species (e.g. Wolf, Eagle)...">
                     
-                    <form id="search-form" class="w-full max-w-2xl mx-auto relative group">
-                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                            <svg class="h-6 w-6 text-gray-400 group-focus-within:text-green-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                    <div class="absolute inset-y-0 right-0 pr-2 flex items-center space-x-2">
+                            <button type="button" id="scientific-lookup-btn" class="p-2 text-gray-400 hover:text-purple-400 transition-colors" title="AI Scientific Name Lookup">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
                             </svg>
-                        </div>
-                        <input type="search" id="search-input" class="block w-full pl-12 pr-4 py-4 bg-gray-800/80 backdrop-blur-md border border-gray-600 rounded-2xl leading-5 text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent focus:bg-gray-800 transition-all shadow-xl text-lg" placeholder="Search for a species (e.g. Wolf, Eagle)...">
-                        
-                        <div class="absolute inset-y-0 right-0 pr-2 flex items-center space-x-2">
-                             <button type="button" id="scientific-lookup-btn" class="p-2 text-gray-400 hover:text-purple-400 transition-colors" title="AI Scientific Name Lookup">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
-                                </svg>
-                             </button>
-                             <button type="button" id="identify-specimen-btn" class="p-2 text-gray-400 hover:text-green-400 transition-colors" title="Identify Photo">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                                </svg>
-                             </button>
-                        </div>
-                    </form>
-                    <div class="mt-4 flex justify-center items-center gap-2 text-xs text-gray-500 uppercase tracking-widest font-semibold">
-                        <span class="text-purple-400">✨ Powered by Gemini</span>
-                        <span>•</span>
-                        <span>GBIF Data</span>
-                        <span>•</span>
-                        <span>Manual Photo Uploads</span>
-                    </div>
-                </div>
-
-                <div id="collections-container" class="mb-12 hidden transition-opacity duration-500">
-                    <div class="flex items-center justify-between mb-6">
-                        <h2 class="text-2xl font-bold text-white flex items-center">
-                            <span class="mr-3 text-3xl">🦁</span> Explore by Class
-                        </h2>
-                    </div>
-                    <div id="collections-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                        </div>
-                </div>
-
-                <div id="custom-collections-container" class="mb-12 hidden transition-opacity duration-500">
-                     <h2 class="text-2xl font-bold text-white mb-6 flex items-center">
-                        <span class="mr-3 text-3xl">🔭</span> My Field Guides
-                    </h2>
-                    <div id="custom-collections-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                        </div>
-                </div>
-
-                <div id="specimen-gallery-container" class="flex-1 flex flex-col">
-                    
-                    <div id="gallery-header" class="hidden flex flex-col md:flex-row justify-between items-start md:items-center mb-8 border-b border-gray-700 pb-4">
-                        <div>
-                            <button id="back-to-collections-btn" class="text-green-400 hover:text-white text-sm font-medium transition-colors mb-2 inline-flex items-center">
-                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
-                                Back to Explorer
                             </button>
-                            <h2 id="gallery-title" class="text-3xl font-bold text-white">Search Results</h2>
-                        </div>
+                            <button type="button" id="identify-specimen-btn" class="p-2 text-gray-400 hover:text-green-400 transition-colors" title="Identify Photo">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                            </button>
                     </div>
-
-                    <div id="loader" class="hidden flex-1 flex flex-col items-center justify-center py-20">
-                        <div class="animate-pulse text-green-400 text-6xl mb-4">🐾</div>
-                        <p class="text-xl text-gray-300 font-medium">Tracking wildlife & translating names...</p>
-                    </div>
-                    
-                    <div id="specimen-gallery" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-6 pb-10">
-                        </div>
-
-                    <div id="ai-suggestions-container" class="hidden mb-12 bg-gray-800/40 rounded-xl p-6 border border-gray-700">
-                        <h3 class="text-sm uppercase tracking-wider text-green-400 font-bold mb-4 flex items-center">
-                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-                            Gemini Suggestions
-                        </h3>
-                        <div id="ai-suggestions-list" class="hidden"></div>
-                        <div id="ai-suggestions-loader" class="hidden flex items-center text-gray-400 animate-pulse">
-                            <div class="h-2 w-2 bg-gray-400 rounded-full mr-2"></div> Curating species list...
-                        </div>
-                    </div>
-
-                    <div id="pagination-container" class="hidden flex justify-center items-center mt-auto pt-8 border-t border-gray-800">
-                        <button id="prev-btn" class="flex items-center px-4 py-2 text-sm font-medium text-white bg-gray-800 rounded-lg hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
-                            Previous
-                        </button>
-                        <span id="page-info" class="mx-6 text-gray-400 font-mono">Page 1</span>
-                        <button id="next-btn" class="flex items-center px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
-                            Next
-                        </button>
-                    </div>
+                </form>
+                <div class="mt-4 flex justify-center items-center gap-2 text-xs text-gray-500 uppercase tracking-widest font-semibold">
+                    <span class="text-purple-400">✨ Powered by Gemini</span>
+                    <span>•</span>
+                    <span>GBIF Data</span>
+                    <span>•</span>
+                    <span>Manual Photo Uploads</span>
                 </div>
             </div>
 
-            <div id="sanctuary-view" class="hidden h-full flex flex-col">
-                <div class="flex flex-col md:flex-row justify-between items-center mb-8 border-b border-gray-700 pb-6">
-                    <div class="flex items-center">
+            <div id="sanctuary-view" class="flex-1 flex flex-col">
+                <div class="flex flex-col md:flex-row justify-between items-end mb-6 border-b border-gray-700 pb-4">
+                    <div class="flex items-center w-full md:w-auto">
                         <button id="folder-back-btn" class="hidden mr-4 p-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-white transition-colors">
                             ← Back
                         </button>
                         <div>
-                            <h2 id="sanctuary-title" class="text-3xl font-bold text-white mb-2">My Sanctuary</h2>
-                            <p id="sanctuary-subtitle" class="text-gray-400">Your collection of saved specimens</p>
+                            <h2 id="sanctuary-title" class="text-3xl font-bold text-white mb-1">My Sanctuary</h2>
+                            <p id="sanctuary-subtitle" class="text-gray-400 text-sm">Your collection of saved specimens</p>
                         </div>
                     </div>
                     
-                    <div class="flex space-x-3 mt-4 md:mt-0">
-                         <button id="create-folder-btn" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition-colors flex items-center shadow-lg">
-                            <span class="mr-2">📁</span> New Folder
-                        </button>
-                        <button id="back-to-search-btn" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-200 rounded-lg transition-colors flex items-center">
-                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                            Find More Animals
-                        </button>
-                    </div>
+                    <button id="create-folder-btn" class="mt-4 md:mt-0 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition-colors flex items-center shadow-lg font-medium text-sm">
+                        <span class="mr-2">📁</span> New Folder
+                    </button>
                 </div>
 
                 <div id="sanctuary-loader" class="hidden text-center py-20">
@@ -202,21 +129,60 @@
                 </div>
                 
                 <div id="folders-section" class="mb-8">
-                     <h3 id="folders-heading" class="text-sm uppercase tracking-wider text-gray-500 font-bold mb-4">Folders</h3>
-                     <div id="folders-gallery" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                     </div>
+                        <h3 id="folders-heading" class="text-xs uppercase tracking-wider text-gray-500 font-bold mb-4">Folders</h3>
+                        <div id="folders-gallery" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                        </div>
                 </div>
 
-                <h3 id="specimens-heading" class="text-sm uppercase tracking-wider text-gray-500 font-bold mb-4">Specimens</h3>
-                <div id="sanctuary-gallery" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-6">
+                <h3 id="specimens-heading" class="text-xs uppercase tracking-wider text-gray-500 font-bold mb-4">Specimens</h3>
+                <div id="sanctuary-gallery" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-6 pb-12">
                 </div>
 
-                <div id="sanctuary-empty-state" class="hidden flex-1 flex items-center justify-center">
-                    <div class="text-center p-10 bg-gray-800/30 rounded-2xl border-2 border-dashed border-gray-700 max-w-md">
+                <div id="sanctuary-empty-state" class="hidden flex-1 flex items-center justify-center py-10">
+                    <div class="text-center p-8 bg-gray-800/30 rounded-2xl border-2 border-dashed border-gray-700 max-w-md">
                         <span class="text-6xl mb-4 block opacity-50">🍃</span>
                         <h3 class="text-xl font-bold text-white mb-2">It's quiet here...</h3>
-                        <p class="text-gray-400">Your sanctuary is currently empty. Go explore the wild and save some animals!</p>
+                        <p class="text-gray-400 text-sm">Sign in to save animals to your personal sanctuary.</p>
                     </div>
+                </div>
+            </div>
+
+            <div id="search-results-view" class="hidden flex-1 flex flex-col">
+                <div id="gallery-header" class="flex items-center mb-6 border-b border-gray-700 pb-4">
+                    <button id="back-to-collections-btn" class="text-green-400 hover:text-white text-sm font-medium transition-colors inline-flex items-center mr-4">
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                        Back to Sanctuary
+                    </button>
+                    <h2 id="gallery-title" class="text-2xl font-bold text-white">Search Results</h2>
+                </div>
+
+                <div id="loader" class="hidden flex-1 flex flex-col items-center justify-center py-20">
+                    <div class="animate-pulse text-green-400 text-6xl mb-4">🐾</div>
+                    <p class="text-xl text-gray-300 font-medium">Tracking wildlife & translating names...</p>
+                </div>
+                
+                <div id="specimen-gallery" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-6 pb-10">
+                </div>
+
+                <div id="ai-suggestions-container" class="hidden mb-12 bg-gray-800/40 rounded-xl p-6 border border-gray-700 mt-8">
+                    <h3 class="text-sm uppercase tracking-wider text-green-400 font-bold mb-4 flex items-center">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                        Gemini Suggestions
+                    </h3>
+                    <div id="ai-suggestions-list" class="hidden"></div>
+                    <div id="ai-suggestions-loader" class="hidden flex items-center text-gray-400 animate-pulse">
+                        <div class="h-2 w-2 bg-gray-400 rounded-full mr-2"></div> Curating species list...
+                    </div>
+                </div>
+
+                <div id="pagination-container" class="hidden flex justify-center items-center mt-auto pt-8 border-t border-gray-800">
+                    <button id="prev-btn" class="flex items-center px-4 py-2 text-sm font-medium text-white bg-gray-800 rounded-lg hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                        Previous
+                    </button>
+                    <span id="page-info" class="mx-6 text-gray-400 font-mono">Page 1</span>
+                    <button id="next-btn" class="flex items-center px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                        Next
+                    </button>
                 </div>
             </div>
 
@@ -231,54 +197,32 @@
                 </div>
                 <div class="flex items-center space-x-2">
                     <input type="file" id="update-image-input" class="hidden" accept="image/jpeg, image/png">
-                    
-                    <button id="update-image-btn" class="hidden p-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-white transition-colors border border-gray-600" title="Upload Photo">
-                        📷
-                    </button>
-                    <button id="refresh-specimen-btn" class="hidden p-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-white transition-colors shadow-lg" title="Update data from AI">
-                        🔄
-                    </button>
-                    <button id="save-specimen-btn" class="hidden px-4 py-2 bg-green-600 hover:bg-green-500 rounded-lg text-white font-bold transition-colors shadow-lg">
-                        Save
-                    </button>
-                    <button id="modal-close-btn" class="ml-2 text-gray-400 hover:text-white transition-colors rounded-lg p-1 hover:bg-white/10">
-                        &times;
-                    </button>
+                    <button id="update-image-btn" class="hidden p-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-white transition-colors border border-gray-600" title="Upload Photo">📷</button>
+                    <button id="refresh-specimen-btn" class="hidden p-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-white transition-colors shadow-lg" title="Update data from AI">🔄</button>
+                    <button id="save-specimen-btn" class="hidden px-4 py-2 bg-green-600 hover:bg-green-500 rounded-lg text-white font-bold transition-colors shadow-lg">Save</button>
+                    <button id="modal-close-btn" class="ml-2 text-gray-400 hover:text-white transition-colors rounded-lg p-1 hover:bg-white/10">&times;</button>
                 </div>
             </div>
-            
             <div id="modal-content-container" class="p-6 md:p-8 overflow-y-auto">
                 <div id="modal-loader" class="hidden flex flex-col items-center justify-center py-20">
                     <div class="animate-bounce text-6xl mb-4">🧠</div>
                     <p class="text-xl text-green-400 font-medium">Consulting the Zoologist...</p>
                 </div>
-                <div id="modal-content" class="prose prose-invert prose-lg max-w-none">
-                    </div>
-                
+                <div id="modal-content" class="prose prose-invert prose-lg max-w-none"></div>
                 <div id="care-question-section" class="mt-12 pt-8 border-t border-white/10">
-                    <h3 class="flex items-center text-xl font-bold text-white mb-6">
-                        <span class="bg-indigo-600 p-2 rounded-lg mr-3 text-sm">AI</span> Ask the Zoologist
-                    </h3>
+                    <h3 class="flex items-center text-xl font-bold text-white mb-6"><span class="bg-indigo-600 p-2 rounded-lg mr-3 text-sm">AI</span> Ask the Zoologist</h3>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div class="md:col-span-2">
                             <div id="care-response-container" class="p-5 bg-gray-800/50 rounded-xl border border-white/5 min-h-[100px]">
-                                <p id="care-response-text" class="text-gray-300 italic">
-                                    "What does this animal eat?"<br>
-                                    "Is it dangerous to humans?"<br>
-                                    Submit a question to get an AI answer.
-                                </p>
-                                <div id="care-response-loader" class="hidden flex items-center text-green-400">
-                                    <div class="h-2 w-2 bg-green-400 rounded-full mr-2 animate-ping"></div> Thinking...
-                                </div>
+                                <p id="care-response-text" class="text-gray-300 italic">"What does this animal eat?"<br>Submit a question to get an AI answer.</p>
+                                <div id="care-response-loader" class="hidden flex items-center text-green-400"><div class="h-2 w-2 bg-green-400 rounded-full mr-2 animate-ping"></div> Thinking...</div>
                             </div>
                         </div>
                         <div>
                              <form id="care-question-form" class="flex flex-col h-full">
                                 <label for="care-question-input" class="sr-only">Your Question</label>
                                 <textarea id="care-question-input" name="question" rows="3" class="flex-1 w-full bg-gray-900/50 border border-gray-600 text-white rounded-xl px-4 py-3 mb-3 resize-none focus:ring-indigo-500 focus:border-indigo-500 transition-colors" placeholder="Type your question here..."></textarea>
-                                <button type="submit" id="care-question-submit" class="w-full bg-indigo-600 text-white py-3 px-4 rounded-xl font-bold hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all" disabled>
-                                    Ask
-                                </button>
+                                <button type="submit" id="care-question-submit" class="w-full bg-indigo-600 text-white py-3 px-4 rounded-xl font-bold hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all" disabled>Ask</button>
                             </form>
                         </div>
                     </div>
@@ -293,56 +237,19 @@
                 <h2 class="text-2xl font-bold text-white">📸 Identify Animal</h2>
                 <button id="image-modal-close-btn" class="text-gray-400 hover:text-white text-3xl leading-none">&times;</button>
             </div>
-            
             <form id="image-upload-form" class="space-y-6">
                 <div class="border-2 border-dashed border-gray-600 rounded-xl p-8 text-center hover:border-green-500 transition-colors cursor-pointer relative" onclick="document.getElementById('image-file-input').click()">
                     <input type="file" id="image-file-input" accept="image/jpeg, image/png" class="hidden">
-                    
                     <div id="preview-placeholder">
-                        <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
-                            <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                        </svg>
+                        <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48"><path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
                         <p class="mt-1 text-sm text-gray-400">Click to upload image</p>
                     </div>
-                    
                     <img id="image-preview" src="" alt="Preview" class="hidden max-h-48 mx-auto rounded-lg shadow-lg">
                 </div>
-
                 <div id="upload-status" class="hidden bg-gray-800 rounded-lg p-4 text-center">
                     <div class="animate-pulse text-green-400 font-medium mb-1" id="upload-message">Processing...</div>
                 </div>
-
-                <button type="submit" id="identify-image-btn" class="w-full bg-green-600 text-white py-3 px-4 rounded-xl font-bold shadow-lg hover:bg-green-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed" disabled>
-                    Identify Specimen
-                </button>
-            </form>
-        </div>
-    </div>
-
-    <div id="collection-modal" class="hidden fixed inset-0 z-50 bg-gray-900/90 backdrop-blur-sm flex items-center justify-center p-4">
-        <div class="glass-panel text-gray-200 rounded-2xl shadow-2xl p-8 w-full max-w-md border border-gray-600">
-            <div class="flex justify-between items-center mb-6">
-                <h2 id="collection-modal-title" class="text-2xl font-bold text-white">Create Field Guide</h2>
-                <button id="collection-modal-close-btn" class="text-gray-400 hover:text-white text-3xl leading-none">&times;</button>
-            </div>
-
-            <form id="collection-form" class="space-y-5">
-                <input type="hidden" id="collection-id">
-                
-                <div>
-                    <label for="collection-title" class="block text-sm font-medium text-gray-300 mb-1">Guide Title</label>
-                    <input type="text" id="collection-title" required class="w-full bg-gray-800 border border-gray-600 text-white rounded-lg px-4 py-2 focus:ring-green-500 focus:border-green-500" placeholder="e.g., Birds of Prey">
-                </div>
-
-                <div>
-                    <label for="collection-query" class="block text-sm font-medium text-gray-300 mb-1">Taxonomic Family or Theme</label>
-                    <input type="text" id="collection-query" required class="w-full bg-gray-800 border border-gray-600 text-white rounded-lg px-4 py-2 focus:ring-green-500 focus:border-green-500" placeholder="e.g., Accipitridae">
-                    <p class="text-xs text-gray-500 mt-1">Defines the search term for this guide.</p>
-                </div>
-
-                <button type="submit" id="save-collection-btn" class="w-full bg-green-600 text-white py-3 px-4 rounded-xl font-bold shadow-lg hover:bg-green-500 transition-all">
-                    Create Guide
-                </button>
+                <button type="submit" id="identify-image-btn" class="w-full bg-green-600 text-white py-3 px-4 rounded-xl font-bold shadow-lg hover:bg-green-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed" disabled>Identify Specimen</button>
             </form>
         </div>
     </div>
@@ -353,31 +260,25 @@
                 <h2 class="text-xl font-bold text-white">Move to Folder</h2>
                 <button id="move-modal-close-btn" class="text-gray-400 hover:text-white text-3xl leading-none">&times;</button>
             </div>
-
             <div class="space-y-4">
                 <div>
                     <label for="move-folder-select" class="block text-sm font-medium text-gray-300 mb-2">Select Destination</label>
                     <select id="move-folder-select" class="w-full bg-gray-800 border border-gray-600 text-white rounded-lg px-4 py-3 focus:ring-indigo-500 focus:border-indigo-500">
                         <option value="">(Unsorted)</option>
-                        </select>
+                    </select>
                 </div>
-                
-                <button id="confirm-move-btn" class="w-full bg-indigo-600 text-white py-3 px-4 rounded-xl font-bold shadow-lg hover:bg-indigo-500 transition-all">
-                    Move Specimen
-                </button>
+                <button id="confirm-move-btn" class="w-full bg-indigo-600 text-white py-3 px-4 rounded-xl font-bold shadow-lg hover:bg-indigo-500 transition-all">Move Specimen</button>
             </div>
         </div>
     </div>
+    
+    <div id="collection-modal" class="hidden"></div> 
 
     <div id="lightbox-modal" class="hidden fixed inset-0 z-[60] bg-black/90 backdrop-blur-md flex items-center justify-center p-4">
         <button id="lightbox-close-btn" class="absolute top-6 right-6 text-white/50 hover:text-white text-5xl leading-none transition-colors">&times;</button>
         <div class="max-w-7xl max-h-full w-full h-full flex items-center justify-center overflow-hidden">
             <img id="lightbox-image" src="" alt="Full Screen" class="hidden max-w-full max-h-full object-contain rounded-lg shadow-2xl">
-            
-            <div id="lightbox-placeholder" class="text-center text-gray-500">
-                <span class="text-6xl block mb-4">🔍</span>
-                <p class="text-xl">No High-Res Image Available</p>
-            </div>
+            <div id="lightbox-placeholder" class="text-center text-gray-500"><span class="text-6xl block mb-4">🔍</span><p class="text-xl">No High-Res Image Available</p></div>
         </div>
     </div>
 
