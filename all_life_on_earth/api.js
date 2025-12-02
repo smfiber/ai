@@ -5,6 +5,7 @@
  * - Adds Edit Functionality support
  * - Adds Client-Side Thumbnail Generation (Bandwidth Optimization)
  * - Updated: "Zoologist Mode" Prompt (Deep Analysis, No Italics)
+ * - Updated: Folder Management (Create, Move, Delete with Orphan Logic)
  */
 
 import { configStore } from './config.js';
@@ -12,7 +13,7 @@ import { configStore } from './config.js';
 // --- Firebase Imports ---
 let app, auth, db, storage; 
 let GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut;
-let collection, addDoc, deleteDoc, doc, query, where, getDocs, setDoc; 
+let collection, addDoc, deleteDoc, doc, query, where, getDocs, setDoc, writeBatch; 
 let getStorage, ref, uploadBytes, getDownloadURL; 
 
 export async function initFirebase() {
@@ -26,7 +27,7 @@ export async function initFirebase() {
     try {
         const { initializeApp } = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js');
         const { getAuth, GoogleAuthProvider: GAuthProvider, signInWithPopup: siwp, onAuthStateChanged: oasc, setPersistence, browserSessionPersistence, signOut: so } = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js');
-        const { getFirestore, collection: col, addDoc: ad, deleteDoc: dd, doc: d, query: q, where: w, getDocs: gd, setDoc: setD } = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js');
+        const { getFirestore, collection: col, addDoc: ad, deleteDoc: dd, doc: d, query: q, where: w, getDocs: gd, setDoc: setD, writeBatch: wb } = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js');
         const StorageModules = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js');
         
         GoogleAuthProvider = GAuthProvider;
@@ -41,6 +42,7 @@ export async function initFirebase() {
         where = w;
         getDocs = gd;
         setDoc = setD;
+        writeBatch = wb;
         getStorage = StorageModules.getStorage;
         ref = StorageModules.ref;
         uploadBytes = StorageModules.uploadBytes;
@@ -140,6 +142,7 @@ const DB_COLLECTION = "saved_specimens";
 export async function saveSpecimen(userId, specimen, docId = null) {
     if (!db) return;
     const data = { ...specimen }; delete data.docId;
+    // folderId is preserved if it exists in 'data'
     if (docId) { await setDoc(doc(db, DB_COLLECTION, docId), { ...data, uid: userId, saved_at: Date.now() }); return docId; }
     else { const ref = await addDoc(collection(db, DB_COLLECTION), { ...data, uid: userId, saved_at: Date.now() }); return ref.id; }
 }
@@ -163,6 +166,51 @@ export async function getSavedSpecimens(userId) {
     const list = [];
     snap.forEach(d => list.push({ ...d.data(), docId: d.id }));
     return list;
+}
+
+// --- Firestore: Folders ---
+const FOLDER_COLLECTION = "user_folders";
+
+export async function createFolder(userId, name) {
+    if (!db) return;
+    const ref = await addDoc(collection(db, FOLDER_COLLECTION), {
+        uid: userId,
+        name: name,
+        created_at: Date.now()
+    });
+    return { id: ref.id, name };
+}
+
+export async function getUserFolders(userId) {
+    if (!db) return [];
+    const q = query(collection(db, FOLDER_COLLECTION), where("uid", "==", userId));
+    const snap = await getDocs(q);
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}
+
+export async function deleteUserFolder(userId, folderId) {
+    if (!db) return;
+    
+    // 1. Delete the folder doc
+    await deleteDoc(doc(db, FOLDER_COLLECTION, folderId));
+
+    // 2. Orphan the specimens (Batch update) - prevent data loss
+    const q = query(collection(db, DB_COLLECTION), where("uid", "==", userId), where("folderId", "==", folderId));
+    const snap = await getDocs(q);
+    
+    if (!snap.empty) {
+        const batch = writeBatch(db);
+        snap.docs.forEach(d => {
+            batch.update(doc(db, DB_COLLECTION, d.id), { folderId: null });
+        });
+        await batch.commit();
+    }
+}
+
+export async function moveSpecimenToFolder(userId, specimenId, folderId) {
+    if (!db) return;
+    // folderId can be null to "remove" from folder
+    await setDoc(doc(db, DB_COLLECTION, specimenId), { folderId: folderId }, { merge: true });
 }
 
 // --- Firestore: Custom Field Guides (Expeditions) ---
