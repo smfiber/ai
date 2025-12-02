@@ -3,6 +3,7 @@
  * The Controller for the "Life Explorer" SPA.
  * Updated: "Zoologist Mode" Layout.
  * Updated: Folder Management (Create, Move, Delete, Filter).
+ * Updated: Fixed Predators text truncation.
  */
 
 import { setApiKeys } from './config.js';
@@ -718,7 +719,7 @@ function createSpecimenDetailHtml(data) {
                      <div class="bg-gray-800/40 p-3 rounded-lg border border-white/5"><span class="text-gray-500 text-xs uppercase block mb-1">Diet</span><span class="text-gray-200 font-bold text-sm block">${get(data.diet)}</span></div>
                      <div class="bg-gray-800/40 p-3 rounded-lg border border-white/5"><span class="text-gray-500 text-xs uppercase block mb-1">Lifespan</span><span class="text-green-400 font-bold text-sm block">${get(data.lifespan)}</span></div>
                      <div class="bg-gray-800/40 p-3 rounded-lg border border-white/5"><span class="text-gray-500 text-xs uppercase block mb-1">Family</span><span class="text-gray-200 text-sm block truncate" title="${get(data.family)}">${get(data.family)}</span></div>
-                     <div class="bg-gray-800/40 p-3 rounded-lg border border-white/5"><span class="text-gray-500 text-xs uppercase block mb-1">Predators</span><span class="text-orange-300 text-sm block truncate" title="${get(data.predators)}">${get(data.predators)}</span></div>
+                     <div class="bg-gray-800/40 p-3 rounded-lg border border-white/5"><span class="text-gray-500 text-xs uppercase block mb-1">Predators</span><span class="text-orange-300 text-sm block" title="${get(data.predators)}">${get(data.predators)}</span></div>
                  </div>
                  <div class="bg-indigo-900/20 border-l-4 border-indigo-500 p-4 rounded-r-lg"><h3 class="flex items-center text-sm font-bold text-indigo-300 mb-2 uppercase tracking-wide">Did You Know?</h3><ul class="list-none space-y-1">${funFacts}</ul></div>
             </div>
