@@ -2,6 +2,7 @@
  * STYLE.CSS
  * Custom styles for the "Life Explorer" SPA.
  * Updated: "Zoologist Mode" - No Italics & Better Readability
+ * Updated: Folder Card Styles
  */
 
 /* Import a nice rounded font for a friendly, nature vibe */
@@ -73,6 +74,19 @@ body {
     border-color: rgba(74, 222, 128, 0.6);
 }
 
+/* --- FOLDER CARD STYLES (NEW) --- */
+.folder-card {
+    /* distinct amber/yellow tint for folders */
+    background: rgba(251, 191, 36, 0.1); /* amber-400 at 10% */
+    border: 1px solid rgba(251, 191, 36, 0.3);
+}
+
+.folder-card:hover {
+    background: rgba(251, 191, 36, 0.2);
+    box-shadow: 0 10px 25px -5px rgba(251, 191, 36, 0.3);
+    border-color: rgba(251, 191, 36, 0.8);
+}
+
 /* --- Specimen Card Grid Improvements --- */
 
 /* Ensures cards are uniform height */
@@ -113,6 +127,11 @@ body {
     pointer-events: none; /* Let clicks pass through to the card */
 }
 
+/* Enable pointer events on buttons inside the card overlay */
+.card-text-overlay button {
+    pointer-events: auto;
+}
+
 /* --- Loading Spinner --- */
 #loader::after, #modal-loader::after, #sanctuary-loader::after, #ai-suggestions-loader::after {
     content: '';
@@ -151,7 +170,7 @@ body {
 }
 
 /* Make the modal close button bigger/easier to hit */
-#modal-close-btn, #image-modal-close-btn, #collection-modal-close-btn {
+#modal-close-btn, #image-modal-close-btn, #collection-modal-close-btn, #move-modal-close-btn {
     @apply text-3xl font-bold leading-none px-2 text-gray-400 hover:text-white transition-colors;
 }
 
