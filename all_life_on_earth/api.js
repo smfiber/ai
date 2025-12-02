@@ -4,6 +4,7 @@
  * - Fixes Caching Bug (Partial Updates)
  * - Adds Edit Functionality support
  * - Adds Client-Side Thumbnail Generation (Bandwidth Optimization)
+ * - Updated: "Zoologist Mode" Prompt (Deep Analysis, No Italics)
  */
 
 import { configStore } from './config.js';
@@ -441,7 +442,33 @@ export async function getSpecimenDetails(keyOrName) {
 
 export async function fetchAugmentedSpecimenData(specimen) {
     if (!configStore.geminiApiKey) return {}; 
-    const prompt = `You are a zoologist. Animal: "${specimen.scientific_name}" (${specimen.common_name}). Provide JSON: { "common_name": "...", "diet": "...", "habitat": "...", "lifespan": "...", "conservation_status": "...", "physical_characteristics": "...", "fun_facts": ["...", "...", "..."], "predators": "...", "behavior": "..." }`;
+    
+    const prompt = `
+    You are an expert Zoologist writing a comprehensive field guide.
+    Subject: "${specimen.scientific_name}" (${specimen.common_name}).
+    
+    Output a valid JSON object with the following structure (no markdown formatting, NO ITALICS):
+    {
+        "common_name": "Standard English Name",
+        "zoologist_intro": "A robust, detailed introduction (approx 100 words) describing the species, its significance, and general nature.",
+        "detailed_physical": "A comprehensive paragraph describing size, coloration, sexual dimorphism, and unique adaptations.",
+        "detailed_habitat": "A comprehensive paragraph describing geographic range, preferred terrain, and migration patterns.",
+        "detailed_behavior": "A comprehensive paragraph describing hunting/foraging strategies, social structure, mating rituals, and parenting.",
+        "diet": "Concise summary (e.g. 'Carnivore: Rabbits, squirrels') for sidebar use",
+        "habitat": "Concise summary (e.g. 'Mountains, cliffs') for sidebar use",
+        "lifespan": "Concise summary (e.g. '20-30 years') for sidebar use",
+        "conservation_status": "Concise status (e.g. 'Least Concern')",
+        "physical_characteristics": "Concise summary for sidebar use",
+        "predators": "Concise list of main predators",
+        "fun_facts": ["Fact 1", "Fact 2", "Fact 3"]
+    }
+    
+    RULES:
+    1. Do NOT use asterisks (*) or underscores (_) for formatting. Plain text only.
+    2. Be highly educational and detailed in the 'detailed_' fields.
+    3. Ensure the JSON is valid.
+    `;
+
     try {
         const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=${configStore.geminiApiKey}`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -482,7 +509,7 @@ export async function fetchCustomCareAdvice(s, q) {
     try {
         const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=${configStore.geminiApiKey}`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ contents: [{ parts: [{ text: `Zoologist. Animal: ${s.common_name}. User asks: "${q}". Answer in 2 paragraphs.` }] }] })
+            body: JSON.stringify({ contents: [{ parts: [{ text: `Zoologist. Animal: ${s.common_name}. User asks: "${q}". Answer in 2 paragraphs. NO italics.` }] }] })
         });
         const d = await res.json();
         return d.candidates[0].content.parts[0].text;
