@@ -2,9 +2,9 @@
  * APP.JS
  * The Controller for the "Life Explorer" SPA.
  * Updated: 
- * - FIX: Removed text truncation (full text now wraps).
- * - FEAT: Added Lightbox Navigation (Prev/Next arrows).
- * - FEAT: Improved Gallery to store/use separate Thumbnail vs Original URLs.
+ * - FIX: Increased font sizes for readability (text-lg for body, text-base for grid).
+ * - FIX: Prompts updated in API.JS to return simpler, friendly text.
+ * - FIX: Gallery Logic (Thumbnail vs Original) and Lightbox Nav preserved.
  */
 
 import { setApiKeys } from './config.js';
@@ -38,12 +38,12 @@ let userFolders = [];
 let currentFolderId = null; 
 let specimenToMoveId = null; 
 let currentCardType = 'field_guide'; 
-let currentLightboxIndex = 0; // Track which image is open
+let currentLightboxIndex = 0; 
 
 function main() {
     document.addEventListener('DOMContentLoaded', () => {
         assignDomElements();
-        injectLightboxControls(); // New helper to add nav buttons
+        injectLightboxControls(); 
         addEventListeners();
         console.log("Life Explorer ready.");
         if (careQuestionSection) careQuestionSection.classList.add('hidden');
@@ -137,17 +137,14 @@ function assignDomElements() {
     confirmMoveBtn = document.getElementById('confirm-move-btn');
 }
 
-// --- NEW: Inject Lightbox Arrows ---
 function injectLightboxControls() {
     if (lightboxModal && !document.getElementById('lightbox-prev-btn')) {
-        // Prev Button
         const prev = document.createElement('button');
         prev.id = 'lightbox-prev-btn';
         prev.innerHTML = '&#10094;'; 
         prev.className = 'absolute left-4 top-1/2 transform -translate-y-1/2 text-white/70 hover:text-white text-5xl font-bold p-4 hover:bg-black/30 rounded-full transition-all z-[70] cursor-pointer select-none';
         prev.onclick = (e) => { e.stopPropagation(); navigateLightbox(-1); };
         
-        // Next Button
         const next = document.createElement('button');
         next.id = 'lightbox-next-btn';
         next.innerHTML = '&#10095;'; 
@@ -199,7 +196,7 @@ function addEventListeners() {
     if (confirmMoveBtn) confirmMoveBtn.addEventListener('click', executeMoveSpecimen);
 }
 
-// --- HANDLERS (Auth, Grid, etc.) ---
+// --- HANDLERS ---
 
 async function handleApiKeySubmit(e) {
     e.preventDefault();
@@ -406,7 +403,7 @@ async function handleScientificLookup() {
     finally { scientificLookupBtn.classList.remove('animate-spin'); }
 }
 
-// --- UPDATED LIGHTBOX LOGIC ---
+// --- LIGHTBOX LOGIC ---
 
 function openLightbox(index) {
     if (!lightboxModal) return;
@@ -415,7 +412,6 @@ function openLightbox(index) {
     currentLightboxIndex = index;
     updateLightboxImage();
     
-    // Show buttons if more than 1 image
     const prevBtn = document.getElementById('lightbox-prev-btn');
     const nextBtn = document.getElementById('lightbox-next-btn');
     const hasMultiple = currentModalSpecimen.gallery_images.length > 1;
@@ -431,7 +427,6 @@ function openLightbox(index) {
 function navigateLightbox(direction) {
     const images = currentModalSpecimen.gallery_images;
     if (!images || images.length <= 1) return;
-    
     currentLightboxIndex = (currentLightboxIndex + direction + images.length) % images.length;
     updateLightboxImage();
 }
@@ -439,9 +434,7 @@ function navigateLightbox(direction) {
 function updateLightboxImage() {
     const images = currentModalSpecimen.gallery_images;
     const item = images[currentLightboxIndex];
-    // Check if item is object (new format) or string (old format)
     const src = (typeof item === 'object') ? item.original : item;
-    
     lightboxImage.src = src;
     lightboxImage.className = 'max-w-[95vw] max-h-[95vh] object-contain rounded shadow-2xl'; 
 }
@@ -468,7 +461,7 @@ function renderTabs() {
         const isActive = currentCardType === tab.id;
         btn.className = `px-4 py-2 rounded-t-lg font-bold text-sm transition-colors flex items-center gap-2 ${isActive ? 'bg-gray-700 text-white border-b-2 border-green-500' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`;
         btn.innerHTML = `<span>${tab.icon}</span> <span class="hidden sm:inline">${tab.label}</span>`;
-        btn.title = tab.tooltip; // Add Tooltip
+        btn.title = tab.tooltip; 
         btn.onclick = () => handleTabSwitch(tab.id);
         tabContainer.appendChild(btn);
     });
@@ -533,7 +526,6 @@ async function openSpecimenModal(slug, name) {
                 if (!currentModalSpecimen.cards) currentModalSpecimen.cards = {};
                 if (!currentModalSpecimen.gallery_images) currentModalSpecimen.gallery_images = [];
                 if (currentModalSpecimen.image_url && !currentModalSpecimen.gallery_images.length) {
-                    // Legacy Fix: Ensure image is in gallery if it exists
                     currentModalSpecimen.gallery_images.push(currentModalSpecimen.image_url);
                 }
                 
@@ -616,10 +608,10 @@ function createSpecimenDetailHtml(data) {
         
         if (data.zoologist_intro) {
             mainText = `
-                <p class="font-bold mb-2">Introduction</p><p class="mb-4">${get(data.zoologist_intro)}</p>
-                <p class="font-bold mb-2">Physical Characteristics</p><p class="mb-4">${get(data.detailed_physical)}</p>
-                <p class="font-bold mb-2">Habitat & Distribution</p><p class="mb-4">${get(data.detailed_habitat)}</p>
-                <p class="font-bold mb-2">Behavior & Life Cycle</p><p class="mb-4">${get(data.detailed_behavior)}</p>
+                <p class="font-bold mb-2 text-xl">Introduction</p><p class="mb-6">${get(data.zoologist_intro)}</p>
+                <p class="font-bold mb-2 text-xl">Physical Characteristics</p><p class="mb-6">${get(data.detailed_physical)}</p>
+                <p class="font-bold mb-2 text-xl">Habitat & Distribution</p><p class="mb-6">${get(data.detailed_habitat)}</p>
+                <p class="font-bold mb-2 text-xl">Behavior & Life Cycle</p><p class="mb-6">${get(data.detailed_behavior)}</p>
             `;
         } else {
             mainText = `<div class="bg-gray-800/50 p-6 rounded-xl border border-yellow-500/30 text-center"><p class="text-gray-300">Legacy data format.</p><p class="text-yellow-400 font-bold">Refresh to upgrade.</p></div>`;
@@ -635,16 +627,13 @@ function createSpecimenDetailHtml(data) {
 
     // --- MEDIA SECTION ---
     let galleryImages = data.gallery_images || [];
-    // Fallback: if no array but single image exists
     if (galleryImages.length === 0 && data.image_url) galleryImages = [data.image_url];
 
-    // Determine Main Display Image (First in gallery)
     let displayImage = 'https://placehold.co/400x400/374151/FFFFFF?text=No+Photo';
     let fullRes = displayImage;
 
     if (galleryImages.length > 0) {
         const first = galleryImages[0];
-        // Handle object vs string (legacy)
         displayImage = (typeof first === 'object') ? first.thumb : first;
         fullRes = (typeof first === 'object') ? first.original : first;
     }
@@ -675,62 +664,56 @@ function createSpecimenDetailHtml(data) {
 
     const mediaColumn = `<div class="w-full lg:w-1/3 flex-shrink-0">${videoHtml}${mainImageHtml}${galleryHtml}</div>`;
 
-    // --- CONTENT GENERATION (UNIFIED & TRUNCATION FIX) ---
-    // Removed 'truncate' from the value span
+    // --- CONTENT GENERATION (Increased Fonts, No Truncate) ---
     const gridHtml = Object.entries(gridData).map(([k, v]) => `
-        <div class="bg-gray-800/40 p-3 rounded-lg border border-white/5">
-            <span class="text-gray-500 text-xs uppercase block mb-1 tracking-wider">${k}</span>
-            <span class="text-gray-200 font-bold text-sm block">${v}</span> 
+        <div class="bg-gray-800/40 p-4 rounded-lg border border-white/5">
+            <span class="text-gray-400 text-sm uppercase block mb-1 tracking-wider">${k}</span>
+            <span class="text-gray-200 font-bold text-base block">${v}</span>
         </div>
     `).join('');
 
-    const insightsHtml = insights.map(i => `<li class="text-gray-300 text-sm mb-2 pl-2 border-l-2 border-green-500 leading-relaxed">${i}</li>`).join('');
+    const insightsHtml = insights.map(i => `<li class="text-gray-300 text-base mb-2 pl-2 border-l-2 border-green-500 leading-relaxed">${i}</li>`).join('');
 
     return `
     <div class="flex flex-col lg:flex-row gap-8 mb-8">
         ${mediaColumn}
         <div class="w-full lg:w-2/3">
              <div class="mb-6 border-b border-gray-700 pb-6">
-                <h2 class="text-4xl font-bold text-white mb-1">${title}</h2>
-                <p class="text-lg text-green-400 font-mono">${subtitle}</p>
+                <h2 class="text-5xl font-bold text-white mb-2">${title}</h2>
+                <p class="text-xl text-green-400 font-mono">${subtitle}</p>
              </div>
              
              <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                 ${gridHtml}
              </div>
 
-             <div class="bg-gray-800/30 p-5 rounded-2xl border border-white/5">
-                <h3 class="flex items-center text-xs font-bold text-indigo-400 mb-3 uppercase tracking-wide">
+             <div class="bg-gray-800/30 p-6 rounded-2xl border border-white/5">
+                <h3 class="flex items-center text-sm font-bold text-indigo-400 mb-4 uppercase tracking-wide">
                     <span class="mr-2">✨</span> Insights
                 </h3>
-                <ul class="list-none">${insightsHtml}</ul>
+                <ul class="list-none space-y-2">${insightsHtml}</ul>
              </div>
         </div>
     </div>
     <div class="w-full border-t border-gray-700 pt-8 animate-fade-in">
-        <div class="text-gray-300 leading-relaxed space-y-4 text-base">
+        <div class="text-gray-300 leading-loose space-y-6 text-lg">
             ${mainText}
         </div>
     </div>`;
 }
 
-// --- UPDATED DELETE IMAGE LOGIC ---
 async function handleDeleteImage(e, srcToDelete) {
     e.stopPropagation();
     if (!currentUser) return alert("Sign in required.");
     if (!confirm("Delete this photo? This cannot be undone.")) return;
     
     let images = currentModalSpecimen.gallery_images || [];
-    
-    // Filter out the image. Handle both object and string formats.
     images = images.filter(img => {
         const thumbUrl = (typeof img === 'object') ? img.thumb : img;
         return thumbUrl !== srcToDelete;
     });
-    
     currentModalSpecimen.gallery_images = images;
 
-    // Update Main Image logic
     const currentMainThumb = currentModalSpecimen.image_url;
     if (currentMainThumb === srcToDelete) {
         if (images.length > 0) {
@@ -814,7 +797,6 @@ function updateSaveButtonState(isSaved) {
     }
 }
 
-// --- UPDATED ADD IMAGE LOGIC ---
 async function handleAddImage() {
     if (!updateImageInput.files || !updateImageInput.files[0]) return;
     const file = updateImageInput.files[0];
@@ -825,10 +807,8 @@ async function handleAddImage() {
         const { original, thumb } = await uploadMedia(file, currentUser.uid);
         if (!currentModalSpecimen.gallery_images) currentModalSpecimen.gallery_images = [];
         
-        // PUSH OBJECT { thumb, original }
         currentModalSpecimen.gallery_images.push({ thumb, original });
         
-        // Update main pointer if needed
         if (!currentModalSpecimen.image_url) {
             currentModalSpecimen.image_url = thumb; 
             currentModalSpecimen.original_image_url = original; 
@@ -861,8 +841,6 @@ function setupGalleryListeners() {
     
     if (mainImg) {
         mainImg.addEventListener('click', () => {
-            // Find index of current main image in the gallery array
-            // This assumes the main image src matches one of the gallery thumbs
             let idx = 0;
             if(currentModalSpecimen.gallery_images) {
                 const currentSrc = mainImg.src;
@@ -881,15 +859,14 @@ function setupGalleryListeners() {
             thumb.addEventListener('click', (e) => {
                 if(e.target.closest('.delete-img-btn')) return; 
                 
-                const newSrc = thumb.dataset.fullRes || thumb.src; // Full res for lightbox
-                const thumbSrc = thumb.src; // Low res for main display
-                const idx = parseInt(thumb.dataset.index); // Get index for lightbox nav
+                const newSrc = thumb.dataset.fullRes || thumb.src; 
+                const thumbSrc = thumb.src; 
+                const idx = parseInt(thumb.dataset.index); 
 
                 if (mainImg) {
                     mainImg.src = thumbSrc; 
                     mainImg.dataset.fullRes = newSrc; 
                     
-                    // Update active border
                     thumbs.forEach(t => {
                         t.classList.remove('ring-2', 'ring-green-400', 'opacity-100');
                         t.classList.add('opacity-70');
@@ -897,7 +874,6 @@ function setupGalleryListeners() {
                     thumb.classList.remove('opacity-70');
                     thumb.classList.add('ring-2', 'ring-green-400', 'opacity-100');
                 } else {
-                    // Video is playing, open lightbox directly
                     openLightbox(idx);
                 }
             });
