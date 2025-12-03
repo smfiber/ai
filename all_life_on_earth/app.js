@@ -1,7 +1,7 @@
 /*
  * APP.JS
  * The Controller for the "Life Explorer" SPA.
- * Updated: Improved Folder Click Responsiveness & Error Handling
+ * Updated: Video Upload, Multi-Image Gallery, and Layout Refinements
  */
 
 import { setApiKeys } from './config.js';
@@ -20,7 +20,8 @@ import {
     removeSpecimen,
     getSavedSpecimens,
     getSavedSpecimen,
-    uploadSpecimenImage,
+    uploadMedia, // New Import
+    uploadSpecimenImage, // Compatibility
     // Folder Imports
     createFolder,
     getUserFolders,
@@ -39,7 +40,9 @@ let modalBackdrop, apiKeyForm, appContainer, mainContent, authContainer,
     // Sanctuary Elements
     sanctuaryLoader, sanctuaryGallery, sanctuaryEmptyState, createFolderBtn, foldersSection, foldersGallery, folderBackBtn, sanctuaryTitle, sanctuarySubtitle,
     // AI & Modals
-    specimenDetailModal, modalTitle, modalCloseBtn, modalContentContainer, modalLoader, modalContent, saveSpecimenBtn, refreshSpecimenBtn, updateImageBtn, updateImageInput,
+    specimenDetailModal, modalTitle, modalCloseBtn, modalContentContainer, modalLoader, modalContent, saveSpecimenBtn, refreshSpecimenBtn, 
+    updateImageBtn, updateImageInput, // Image Upload
+    uploadVideoBtn, uploadVideoInput, // Video Upload (NEW)
     careQuestionSection, careQuestionForm, careQuestionInput, careQuestionSubmit, careResponseContainer, careResponseText, careResponseLoader, scientificLookupBtn,
     aiSuggestionsContainer, aiSuggestionsList, aiSuggestionsLoader,
     identifySpecimenBtn, imageUploadModal, imageModalCloseBtn, imageUploadForm, imageFileInput, imagePreviewContainer, imagePreview, previewPlaceholder, uploadStatus, uploadMessage, identifyImageBtn,
@@ -123,8 +126,12 @@ function assignDomElements() {
     modalContent = document.getElementById('modal-content');
     saveSpecimenBtn = document.getElementById('save-specimen-btn');
     refreshSpecimenBtn = document.getElementById('refresh-specimen-btn');
+    
+    // Upload Elements
     updateImageBtn = document.getElementById('update-image-btn');
     updateImageInput = document.getElementById('update-image-input');
+    uploadVideoBtn = document.getElementById('upload-video-btn');
+    uploadVideoInput = document.getElementById('upload-video-input');
     
     // Care Chat
     careQuestionSection = document.getElementById('care-question-section');
@@ -135,7 +142,7 @@ function assignDomElements() {
     careResponseText = document.getElementById('care-response-text');
     careResponseLoader = document.getElementById('care-response-loader');
 
-    // Image Upload
+    // Image Upload (ID)
     identifySpecimenBtn = document.getElementById('identify-specimen-btn');
     imageUploadModal = document.getElementById('image-upload-modal');
     imageModalCloseBtn = document.getElementById('image-modal-close-btn');
@@ -189,10 +196,15 @@ function addEventListeners() {
     }
     if (saveSpecimenBtn) saveSpecimenBtn.addEventListener('click', handleSaveToggle);
     if (refreshSpecimenBtn) refreshSpecimenBtn.addEventListener('click', handleRefreshData);
-    if (updateImageBtn && updateImageInput) updateImageBtn.addEventListener('click', () => updateImageInput.click());
-    if (updateImageInput) updateImageInput.addEventListener('change', handleUpdatePhoto);
     
-    // Image Upload
+    // Media Upload Handlers
+    if (updateImageBtn && updateImageInput) updateImageBtn.addEventListener('click', () => updateImageInput.click());
+    if (updateImageInput) updateImageInput.addEventListener('change', handleAddImage); // Renamed handler
+    
+    if (uploadVideoBtn && uploadVideoInput) uploadVideoBtn.addEventListener('click', () => uploadVideoInput.click());
+    if (uploadVideoInput) uploadVideoInput.addEventListener('change', handleUploadVideo);
+
+    // Image Identify
     if (identifySpecimenBtn) identifySpecimenBtn.addEventListener('click', openImageUploadModal);
     if (imageModalCloseBtn) imageModalCloseBtn.addEventListener('click', closeImageUploadModal);
     if (imageUploadForm) imageUploadForm.addEventListener('submit', handleImageUpload);
@@ -261,12 +273,9 @@ function handleFolderClick(e) {
     
     const card = e.target.closest('.folder-card');
     if (card) {
-        // Immediate UI feedback
         sanctuaryLoader.classList.remove('hidden');
         foldersSection.classList.add('hidden');
-        
         currentFolderId = card.dataset.id;
-        console.log("Opening folder:", currentFolderId);
         loadSanctuarySpecimens();
     }
 }
@@ -502,7 +511,11 @@ async function openSpecimenModal(slug, name) {
     modalLoader.classList.remove('hidden');
     modalTitle.textContent = name || "Loading...";
     refreshSpecimenBtn.classList.add('hidden');
+    
+    // Enable upload buttons
     updateImageBtn.classList.remove('hidden'); 
+    uploadVideoBtn.classList.remove('hidden');
+
     modalContent.innerHTML = '';
     
     const qaSectionClone = careQuestionSection.cloneNode(true);
@@ -558,7 +571,14 @@ async function openSpecimenModal(slug, name) {
         modalLoader.querySelector('p').textContent = 'Consulting the Zoologist (AI)...';
         const geminiData = await fetchAugmentedSpecimenData(gbifData);
 
-        currentModalSpecimen = { ...gbifData, ...geminiData, qa_history: [] };
+        // Ensure gallery_images array exists
+        currentModalSpecimen = { ...gbifData, ...geminiData, qa_history: [], gallery_images: [] };
+        
+        // Init gallery with main image if exists
+        if (currentModalSpecimen.image_url) {
+            currentModalSpecimen.gallery_images.push(currentModalSpecimen.image_url);
+        }
+
         if (name && currentModalSpecimen.common_name === currentModalSpecimen.scientific_name) {
             currentModalSpecimen.common_name = name;
         }
@@ -590,14 +610,21 @@ function setupGalleryListeners() {
         });
     }
     
-    if (mainImg && thumbs.length > 0) {
+    if (thumbs.length > 0) {
         thumbs.forEach(thumb => {
             thumb.addEventListener('click', () => {
-                const newSrc = thumb.src;
-                mainImg.src = newSrc;
-                thumbs.forEach(t => t.classList.remove('ring-2', 'ring-green-400', 'opacity-100'));
-                thumbs.forEach(t => t.classList.add('opacity-70'));
-                thumb.classList.remove('opacity-70');
+                const newSrc = thumb.dataset.fullRes || thumb.src;
+                if (mainImg) {
+                    mainImg.src = newSrc;
+                    mainImg.dataset.fullRes = newSrc;
+                }
+                
+                // Active State Styling
+                thumbs.forEach(t => {
+                    t.classList.remove('ring-2', 'ring-green-400', 'opacity-100');
+                    t.classList.add('opacity-60');
+                });
+                thumb.classList.remove('opacity-60');
                 thumb.classList.add('ring-2', 'ring-green-400', 'opacity-100');
             });
         });
@@ -608,10 +635,28 @@ function createSpecimenDetailHtml(data) {
     const get = (v, d = 'N/A') => (v === null || v === undefined || v === '') ? d : v;
     const isZoologistMode = !!data.zoologist_intro;
     const funFacts = Array.isArray(data.fun_facts) ? data.fun_facts.map(f => `<li class="text-gray-300 text-sm mb-1">• ${f}</li>`).join('') : '<li class="text-gray-500">No facts available.</li>';
+    
     const hasImage = !!data.image_url;
     const image = hasImage ? data.image_url : 'https://placehold.co/400x400/374151/FFFFFF?text=No+Photo';
     const fullRes = data.original_image_url || data.image_url;
-    const galleryHtml = (data.gallery_images && data.gallery_images.length > 1) ? `<div class="flex gap-2 overflow-x-auto pb-2 mt-4 custom-scrollbar">${data.gallery_images.map((img, idx) => `<img src="${img}" class="gallery-thumb h-20 w-20 object-cover rounded-lg cursor-pointer transition-all ${idx===0 ? 'ring-2 ring-green-400 opacity-100' : 'opacity-70 hover:opacity-100'}" alt="Thumbnail">`).join('')}</div>` : '';
+    
+    // Gallery Logic
+    const galleryImages = data.gallery_images || (hasImage ? [image] : []);
+    const galleryHtml = (galleryImages.length > 0) ? 
+        `<div class="flex gap-3 overflow-x-auto pb-2 mt-4 custom-scrollbar">
+            ${galleryImages.map((img, idx) => `
+                <img src="${img}" 
+                     data-full-res="${img}" 
+                     class="gallery-thumb h-20 w-20 object-cover rounded-lg cursor-pointer transition-all border border-gray-600 ${idx===0 ? 'ring-2 ring-green-400 opacity-100' : 'opacity-60 hover:opacity-100'}" 
+                     alt="Thumbnail">
+            `).join('')}
+        </div>` : '';
+
+    // Video Logic
+    const videoHtml = data.video_url ? `
+        <div class="w-full aspect-video bg-black rounded-xl overflow-hidden shadow-lg mb-4 relative group">
+            <video src="${data.video_url}" controls class="w-full h-full object-contain"></video>
+        </div>` : '';
 
     let zoologistHtml = '';
     if (isZoologistMode) {
@@ -630,7 +675,13 @@ function createSpecimenDetailHtml(data) {
 
     return `
         <div class="flex flex-col lg:flex-row gap-8 mb-8">
-            <div class="w-full lg:w-1/3 flex-shrink-0"><div class="card-image-wrapper rounded-xl overflow-hidden shadow-lg bg-gray-900/50"><img id="main-specimen-image" src="${image}" data-full-res="${fullRes}" alt="${get(data.common_name)}" class="w-full h-auto object-cover" onerror="this.onerror=null;this.src='https://placehold.co/400x400/374151/FFFFFF?text=No+Image';"></div>${galleryHtml}</div>
+            <div class="w-full lg:w-1/3 flex-shrink-0">
+                ${videoHtml}
+                <div class="card-image-wrapper rounded-xl overflow-hidden shadow-lg bg-gray-900/50">
+                    <img id="main-specimen-image" src="${image}" data-full-res="${fullRes}" alt="${get(data.common_name)}" class="w-full h-auto object-cover" onerror="this.onerror=null;this.src='https://placehold.co/400x400/374151/FFFFFF?text=No+Image';">
+                </div>
+                ${galleryHtml}
+            </div>
             <div class="w-full lg:w-2/3">
                  <div class="mb-6 border-b border-gray-700 pb-6"><h2 class="text-4xl font-bold text-white mb-2">${get(data.common_name)}</h2><p class="text-xl text-gray-400 font-mono">${get(data.scientific_name)}</p><div class="flex items-center mt-3 gap-3"><span class="inline-block px-3 py-1 rounded-full text-sm font-bold bg-gray-700 text-white border border-gray-600">${get(data.conservation_status)}</span><span class="text-xs text-gray-500 uppercase tracking-widest font-semibold">${get(data.class)} / ${get(data.order)}</span></div></div>
                  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
@@ -663,7 +714,6 @@ function handleApiKeySubmit(e) {
                     loadSanctuarySpecimens();
                 } else {
                     signInBtn.classList.remove('hidden'); userInfo.classList.add('hidden'); userInfo.classList.remove('flex');
-                    // When signed out, show empty sanctuary state
                     loadSanctuarySpecimens();
                 }
             });
@@ -713,19 +763,15 @@ async function handleRefreshData() {
         currentModalSpecimen = updated;
         modalContent.innerHTML = createSpecimenDetailHtml(updated);
         
-        // Re-attach QA section
-        const qaSectionClone = careQuestionSection.cloneNode(true); // Create fresh clone
+        const qaSectionClone = careQuestionSection.cloneNode(true); 
         qaSectionClone.classList.remove('hidden');
         modalContent.appendChild(qaSectionClone);
         
-        // Re-bind events for the new clone
-        // Note: The global careQuestionForm variable still points to the original hidden one in the DOM.
-        // We need to find the NEW form inside modalContent.
         const newForm = modalContent.querySelector('#care-question-form');
         if (newForm) {
             newForm.addEventListener('submit', (e) => {
                 e.preventDefault();
-                handleCareQuestionSubmit(e, modalContent); // Pass context
+                handleCareQuestionSubmit(e, modalContent); 
             });
         }
 
@@ -735,15 +781,8 @@ async function handleRefreshData() {
 }
 
 function setupCareQuestionForm(history) {
-    // This is called when Modal OPENS. 
-    // The elements careQuestionForm etc are the ones CLONED into the modal.
-    // We need to attach the listener to the *visible* form inside modalContent.
-    
     const visibleForm = modalContent.querySelector('#care-question-form');
     if (!visibleForm) return;
-
-    // Remove old listeners (by cloning replacing)? 
-    // Easier to just attach a fresh one that delegates.
     visibleForm.onsubmit = (e) => handleCareQuestionSubmit(e, modalContent);
 }
 
@@ -766,7 +805,6 @@ async function handleCareQuestionSubmit(e, context) {
         const answer = await fetchCustomCareAdvice(currentModalSpecimen, q);
         responseText.innerHTML = `<span class="text-indigo-300 font-bold">Q: ${q}</span><br><br>${answer}`;
         
-        // Save QA to history if saved
         if (currentModalSpecimen.docId) {
             const entry = { q, a: answer, date: Date.now() };
             const history = currentModalSpecimen.qa_history || [];
@@ -840,17 +878,21 @@ async function handleImageUpload(e) {
     uploadStatus.classList.remove('hidden');
     uploadMessage.textContent = 'Uploading & Identifying...';
     try {
-        const { original, thumb } = await uploadSpecimenImage(imageFileInput.files[0], currentUser.uid);
+        const { original, thumb } = await uploadMedia(imageFileInput.files[0], currentUser.uid);
         const result = await fetchImageIdentification(original); 
-        const imageToSave = thumb;
+        
         if (result && result.scientific_name !== 'Unknown') {
             uploadMessage.textContent = `Found: ${result.common_name}`;
             const gbifResult = await searchSpecimens(result.scientific_name, 1);
             if (gbifResult.data.length > 0) {
                 const foundSpecimen = gbifResult.data[0];
                 await openSpecimenModal(foundSpecimen.slug, result.common_name);
+                
+                // Initialize gallery with this identified image
                 currentModalSpecimen.image_url = thumb;
                 currentModalSpecimen.original_image_url = original;
+                currentModalSpecimen.gallery_images = [thumb];
+                
                 const mainImg = document.getElementById('main-specimen-image');
                 if(mainImg) {
                     mainImg.src = thumb;
@@ -863,36 +905,82 @@ async function handleImageUpload(e) {
     } catch (err) { uploadMessage.textContent = 'Error: ' + err.message; }
 }
 
-async function handleUpdatePhoto() {
+async function handleAddImage() {
     if (!updateImageInput.files || !updateImageInput.files[0]) return;
     const file = updateImageInput.files[0];
     updateImageBtn.innerHTML = '⏳';
     updateImageBtn.disabled = true;
     try {
         if (!currentUser) throw new Error("Please sign in to upload photos.");
-        const { original, thumb } = await uploadSpecimenImage(file, currentUser.uid);
-        currentModalSpecimen.image_url = thumb; 
-        currentModalSpecimen.original_image_url = original;
-        const mainImg = document.getElementById('main-specimen-image');
-        if (mainImg) {
-            mainImg.src = thumb;
-            mainImg.dataset.fullRes = original;
+        const { original, thumb } = await uploadMedia(file, currentUser.uid);
+        
+        // Add to gallery
+        if (!currentModalSpecimen.gallery_images) currentModalSpecimen.gallery_images = [];
+        currentModalSpecimen.gallery_images.push(thumb);
+        
+        // If it's the first image, set as main
+        if (!currentModalSpecimen.image_url) {
+            currentModalSpecimen.image_url = thumb;
+            currentModalSpecimen.original_image_url = original;
         }
+
+        // Re-render only the media section or whole modal content? Whole modal easiest.
+        modalContent.innerHTML = createSpecimenDetailHtml(currentModalSpecimen);
+        
+        // Re-attach QA & Listeners
+        const qaSectionClone = careQuestionSection.cloneNode(true);
+        qaSectionClone.classList.remove('hidden');
+        modalContent.appendChild(qaSectionClone);
+        const newForm = modalContent.querySelector('#care-question-form');
+        if (newForm) newForm.onsubmit = (e) => handleCareQuestionSubmit(e, modalContent);
+        setupGalleryListeners();
+
         if (currentModalSpecimen.docId) {
              await saveSpecimen(currentUser.uid, currentModalSpecimen, currentModalSpecimen.docId);
-             alert("Photo uploaded and saved!");
-        } else {
-             alert("Photo uploaded! Click 'Save to Sanctuary' to keep it.");
         }
     } catch (e) {
         console.error(e);
         alert("Upload failed: " + e.message);
     } finally {
-        updateImageBtn.innerHTML = '📷'; // Reset icon
+        updateImageBtn.innerHTML = '📷 Add Image'; 
         updateImageBtn.disabled = false;
         updateImageInput.value = ''; 
     }
 }
+
+async function handleUploadVideo() {
+    if (!uploadVideoInput.files || !uploadVideoInput.files[0]) return;
+    const file = uploadVideoInput.files[0];
+    uploadVideoBtn.innerHTML = '⏳ Uploading...';
+    uploadVideoBtn.disabled = true;
+
+    try {
+        if (!currentUser) throw new Error("Please sign in to upload videos.");
+        const { url } = await uploadMedia(file, currentUser.uid);
+        
+        currentModalSpecimen.video_url = url;
+        
+        // Re-render
+        modalContent.innerHTML = createSpecimenDetailHtml(currentModalSpecimen);
+        const qaSectionClone = careQuestionSection.cloneNode(true);
+        qaSectionClone.classList.remove('hidden');
+        modalContent.appendChild(qaSectionClone);
+        const newForm = modalContent.querySelector('#care-question-form');
+        if (newForm) newForm.onsubmit = (e) => handleCareQuestionSubmit(e, modalContent);
+        setupGalleryListeners();
+
+        if (currentModalSpecimen.docId) {
+            await saveSpecimen(currentUser.uid, currentModalSpecimen, currentModalSpecimen.docId);
+        }
+    } catch (e) {
+        alert("Video Upload failed: " + e.message);
+    } finally {
+        uploadVideoBtn.innerHTML = '🎥 Upload Video';
+        uploadVideoBtn.disabled = false;
+        uploadVideoInput.value = '';
+    }
+}
+
 function closeModal() { specimenDetailModal.classList.add('hidden'); currentModalSpecimen = null; }
 
 main();
