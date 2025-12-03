@@ -2,8 +2,9 @@
  * APP.JS
  * The Controller for the "Life Explorer" SPA.
  * Updated: 
- * - FIX: Removed text truncation from data grid boxes to allow full text display.
- * - Maintained unified layout and tooltip logic.
+ * - FIX: Removed text truncation (full text now wraps).
+ * - FEAT: Added Lightbox Navigation (Prev/Next arrows).
+ * - FEAT: Improved Gallery to store/use separate Thumbnail vs Original URLs.
  */
 
 import { setApiKeys } from './config.js';
@@ -37,10 +38,12 @@ let userFolders = [];
 let currentFolderId = null; 
 let specimenToMoveId = null; 
 let currentCardType = 'field_guide'; 
+let currentLightboxIndex = 0; // Track which image is open
 
 function main() {
     document.addEventListener('DOMContentLoaded', () => {
         assignDomElements();
+        injectLightboxControls(); // New helper to add nav buttons
         addEventListeners();
         console.log("Life Explorer ready.");
         if (careQuestionSection) careQuestionSection.classList.add('hidden');
@@ -134,6 +137,28 @@ function assignDomElements() {
     confirmMoveBtn = document.getElementById('confirm-move-btn');
 }
 
+// --- NEW: Inject Lightbox Arrows ---
+function injectLightboxControls() {
+    if (lightboxModal && !document.getElementById('lightbox-prev-btn')) {
+        // Prev Button
+        const prev = document.createElement('button');
+        prev.id = 'lightbox-prev-btn';
+        prev.innerHTML = '&#10094;'; 
+        prev.className = 'absolute left-4 top-1/2 transform -translate-y-1/2 text-white/70 hover:text-white text-5xl font-bold p-4 hover:bg-black/30 rounded-full transition-all z-[70] cursor-pointer select-none';
+        prev.onclick = (e) => { e.stopPropagation(); navigateLightbox(-1); };
+        
+        // Next Button
+        const next = document.createElement('button');
+        next.id = 'lightbox-next-btn';
+        next.innerHTML = '&#10095;'; 
+        next.className = 'absolute right-4 top-1/2 transform -translate-y-1/2 text-white/70 hover:text-white text-5xl font-bold p-4 hover:bg-black/30 rounded-full transition-all z-[70] cursor-pointer select-none';
+        next.onclick = (e) => { e.stopPropagation(); navigateLightbox(1); };
+        
+        lightboxModal.appendChild(prev);
+        lightboxModal.appendChild(next);
+    }
+}
+
 function addEventListeners() {
     if (apiKeyForm) apiKeyForm.addEventListener('submit', handleApiKeySubmit);
     if (signInBtn) signInBtn.addEventListener('click', handleGoogleSignIn);
@@ -174,7 +199,7 @@ function addEventListeners() {
     if (confirmMoveBtn) confirmMoveBtn.addEventListener('click', executeMoveSpecimen);
 }
 
-// --- HANDLERS ---
+// --- HANDLERS (Auth, Grid, etc.) ---
 
 async function handleApiKeySubmit(e) {
     e.preventDefault();
@@ -381,14 +406,44 @@ async function handleScientificLookup() {
     finally { scientificLookupBtn.classList.remove('animate-spin'); }
 }
 
-// --- LIGHTBOX ---
-function openLightbox(src) {
+// --- UPDATED LIGHTBOX LOGIC ---
+
+function openLightbox(index) {
     if (!lightboxModal) return;
+    if (!currentModalSpecimen || !currentModalSpecimen.gallery_images) return;
+    
+    currentLightboxIndex = index;
+    updateLightboxImage();
+    
+    // Show buttons if more than 1 image
+    const prevBtn = document.getElementById('lightbox-prev-btn');
+    const nextBtn = document.getElementById('lightbox-next-btn');
+    const hasMultiple = currentModalSpecimen.gallery_images.length > 1;
+    
+    if(prevBtn) prevBtn.style.display = hasMultiple ? 'block' : 'none';
+    if(nextBtn) nextBtn.style.display = hasMultiple ? 'block' : 'none';
+
+    lightboxModal.classList.remove('hidden');
+    lightboxPlaceholder.classList.add('hidden');
+    lightboxImage.classList.remove('hidden');
+}
+
+function navigateLightbox(direction) {
+    const images = currentModalSpecimen.gallery_images;
+    if (!images || images.length <= 1) return;
+    
+    currentLightboxIndex = (currentLightboxIndex + direction + images.length) % images.length;
+    updateLightboxImage();
+}
+
+function updateLightboxImage() {
+    const images = currentModalSpecimen.gallery_images;
+    const item = images[currentLightboxIndex];
+    // Check if item is object (new format) or string (old format)
+    const src = (typeof item === 'object') ? item.original : item;
+    
     lightboxImage.src = src;
     lightboxImage.className = 'max-w-[95vw] max-h-[95vh] object-contain rounded shadow-2xl'; 
-    lightboxImage.classList.remove('hidden');
-    lightboxPlaceholder.classList.add('hidden');
-    lightboxModal.classList.remove('hidden');
 }
 
 function closeLightbox() {
@@ -477,8 +532,9 @@ async function openSpecimenModal(slug, name) {
                 currentModalSpecimen = { ...savedResult.data, docId: savedResult.docId };
                 if (!currentModalSpecimen.cards) currentModalSpecimen.cards = {};
                 if (!currentModalSpecimen.gallery_images) currentModalSpecimen.gallery_images = [];
-                if (currentModalSpecimen.image_url && !currentModalSpecimen.gallery_images.includes(currentModalSpecimen.image_url)) {
-                    currentModalSpecimen.gallery_images.unshift(currentModalSpecimen.image_url);
+                if (currentModalSpecimen.image_url && !currentModalSpecimen.gallery_images.length) {
+                    // Legacy Fix: Ensure image is in gallery if it exists
+                    currentModalSpecimen.gallery_images.push(currentModalSpecimen.image_url);
                 }
                 
                 modalTitle.textContent = currentModalSpecimen.common_name;
@@ -558,7 +614,6 @@ function createSpecimenDetailHtml(data) {
         };
         insights = Array.isArray(data.fun_facts) ? data.fun_facts : ["No facts available."];
         
-        // Combine legacy narrative fields if zoologist_intro exists
         if (data.zoologist_intro) {
             mainText = `
                 <p class="font-bold mb-2">Introduction</p><p class="mb-4">${get(data.zoologist_intro)}</p>
@@ -579,12 +634,20 @@ function createSpecimenDetailHtml(data) {
     }
 
     // --- MEDIA SECTION ---
-    const hasImage = !!data.image_url;
-    const displayImage = data.thumb_url || data.image_url || 'https://placehold.co/400x400/374151/FFFFFF?text=No+Photo';
-    const fullRes = data.original_image_url || data.image_url;
-    
     let galleryImages = data.gallery_images || [];
-    if (galleryImages.length === 0 && hasImage) galleryImages = [displayImage];
+    // Fallback: if no array but single image exists
+    if (galleryImages.length === 0 && data.image_url) galleryImages = [data.image_url];
+
+    // Determine Main Display Image (First in gallery)
+    let displayImage = 'https://placehold.co/400x400/374151/FFFFFF?text=No+Photo';
+    let fullRes = displayImage;
+
+    if (galleryImages.length > 0) {
+        const first = galleryImages[0];
+        // Handle object vs string (legacy)
+        displayImage = (typeof first === 'object') ? first.thumb : first;
+        fullRes = (typeof first === 'object') ? first.original : first;
+    }
 
     const videoHtml = data.video_url ? `
         <div class="w-full aspect-video bg-black rounded-xl overflow-hidden shadow-lg mb-4 relative group">
@@ -598,24 +661,26 @@ function createSpecimenDetailHtml(data) {
 
     const galleryHtml = (galleryImages.length > 0) ? 
         `<div class="flex gap-3 overflow-x-auto pb-2 custom-scrollbar">
-            ${galleryImages.map((img, idx) => {
-                const isActive = !data.video_url && (img === displayImage);
+            ${galleryImages.map((imgObj, idx) => {
+                const thumb = (typeof imgObj === 'object') ? imgObj.thumb : imgObj;
+                const orig = (typeof imgObj === 'object') ? imgObj.original : imgObj;
+                const isActive = !data.video_url && (thumb === displayImage);
                 return `
                 <div class="relative flex-shrink-0 group">
-                    <img src="${img}" data-full-res="${data.original_image_url || img}" class="gallery-thumb h-20 w-20 object-cover rounded-lg cursor-pointer transition-all border border-gray-600 ${isActive ? 'ring-2 ring-green-400 opacity-100' : 'opacity-70 hover:opacity-100'}" alt="Thumbnail">
-                    <button class="delete-img-btn absolute -top-1 -right-1 bg-red-600 hover:bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity shadow-sm" data-src="${img}" title="Delete Photo">&times;</button>
+                    <img src="${thumb}" data-full-res="${orig}" data-index="${idx}" class="gallery-thumb h-20 w-20 object-cover rounded-lg cursor-pointer transition-all border border-gray-600 ${isActive ? 'ring-2 ring-green-400 opacity-100' : 'opacity-70 hover:opacity-100'}" alt="Thumbnail">
+                    <button class="delete-img-btn absolute -top-1 -right-1 bg-red-600 hover:bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity shadow-sm" data-src="${thumb}" title="Delete Photo">&times;</button>
                 </div>`;
             }).join('')}
         </div>` : '';
 
     const mediaColumn = `<div class="w-full lg:w-1/3 flex-shrink-0">${videoHtml}${mainImageHtml}${galleryHtml}</div>`;
 
-    // --- CONTENT GENERATION (UNIFIED) ---
-    // FIX: Removed 'truncate' from the value span below
+    // --- CONTENT GENERATION (UNIFIED & TRUNCATION FIX) ---
+    // Removed 'truncate' from the value span
     const gridHtml = Object.entries(gridData).map(([k, v]) => `
         <div class="bg-gray-800/40 p-3 rounded-lg border border-white/5">
             <span class="text-gray-500 text-xs uppercase block mb-1 tracking-wider">${k}</span>
-            <span class="text-gray-200 font-bold text-sm block" title="${v}">${v}</span>
+            <span class="text-gray-200 font-bold text-sm block">${v}</span> 
         </div>
     `).join('');
 
@@ -649,19 +714,32 @@ function createSpecimenDetailHtml(data) {
     </div>`;
 }
 
+// --- UPDATED DELETE IMAGE LOGIC ---
 async function handleDeleteImage(e, srcToDelete) {
     e.stopPropagation();
     if (!currentUser) return alert("Sign in required.");
     if (!confirm("Delete this photo? This cannot be undone.")) return;
     
     let images = currentModalSpecimen.gallery_images || [];
-    images = images.filter(img => img !== srcToDelete);
+    
+    // Filter out the image. Handle both object and string formats.
+    images = images.filter(img => {
+        const thumbUrl = (typeof img === 'object') ? img.thumb : img;
+        return thumbUrl !== srcToDelete;
+    });
+    
     currentModalSpecimen.gallery_images = images;
 
-    if (currentModalSpecimen.image_url === srcToDelete) {
-        currentModalSpecimen.image_url = images.length > 0 ? images[0] : null;
-        if (currentModalSpecimen.original_image_url === srcToDelete) {
-             currentModalSpecimen.original_image_url = images.length > 0 ? images[0] : null;
+    // Update Main Image logic
+    const currentMainThumb = currentModalSpecimen.image_url;
+    if (currentMainThumb === srcToDelete) {
+        if (images.length > 0) {
+            const next = images[0];
+            currentModalSpecimen.image_url = (typeof next === 'object') ? next.thumb : next;
+            currentModalSpecimen.original_image_url = (typeof next === 'object') ? next.original : next;
+        } else {
+            currentModalSpecimen.image_url = null;
+            currentModalSpecimen.original_image_url = null;
         }
     }
 
@@ -736,6 +814,7 @@ function updateSaveButtonState(isSaved) {
     }
 }
 
+// --- UPDATED ADD IMAGE LOGIC ---
 async function handleAddImage() {
     if (!updateImageInput.files || !updateImageInput.files[0]) return;
     const file = updateImageInput.files[0];
@@ -745,11 +824,16 @@ async function handleAddImage() {
         if (!currentUser) throw new Error("Please sign in.");
         const { original, thumb } = await uploadMedia(file, currentUser.uid);
         if (!currentModalSpecimen.gallery_images) currentModalSpecimen.gallery_images = [];
-        currentModalSpecimen.gallery_images.push(thumb);
+        
+        // PUSH OBJECT { thumb, original }
+        currentModalSpecimen.gallery_images.push({ thumb, original });
+        
+        // Update main pointer if needed
         if (!currentModalSpecimen.image_url) {
             currentModalSpecimen.image_url = thumb; 
             currentModalSpecimen.original_image_url = original; 
         }
+        
         renderFullModalContent();
         if (currentModalSpecimen.docId) await saveSpecimen(currentUser.uid, currentModalSpecimen, currentModalSpecimen.docId);
     } catch (e) { alert("Upload failed: " + e.message); } 
@@ -777,7 +861,18 @@ function setupGalleryListeners() {
     
     if (mainImg) {
         mainImg.addEventListener('click', () => {
-            openLightbox(mainImg.dataset.fullRes || mainImg.src);
+            // Find index of current main image in the gallery array
+            // This assumes the main image src matches one of the gallery thumbs
+            let idx = 0;
+            if(currentModalSpecimen.gallery_images) {
+                const currentSrc = mainImg.src;
+                idx = currentModalSpecimen.gallery_images.findIndex(item => {
+                    const t = (typeof item === 'object') ? item.thumb : item;
+                    return t === currentSrc;
+                });
+                if (idx === -1) idx = 0;
+            }
+            openLightbox(idx);
         });
     }
     
@@ -785,10 +880,16 @@ function setupGalleryListeners() {
         thumbs.forEach(thumb => {
             thumb.addEventListener('click', (e) => {
                 if(e.target.closest('.delete-img-btn')) return; 
-                const newSrc = thumb.dataset.fullRes || thumb.src;
+                
+                const newSrc = thumb.dataset.fullRes || thumb.src; // Full res for lightbox
+                const thumbSrc = thumb.src; // Low res for main display
+                const idx = parseInt(thumb.dataset.index); // Get index for lightbox nav
+
                 if (mainImg) {
-                    mainImg.src = thumb.src; 
+                    mainImg.src = thumbSrc; 
                     mainImg.dataset.fullRes = newSrc; 
+                    
+                    // Update active border
                     thumbs.forEach(t => {
                         t.classList.remove('ring-2', 'ring-green-400', 'opacity-100');
                         t.classList.add('opacity-70');
@@ -796,7 +897,8 @@ function setupGalleryListeners() {
                     thumb.classList.remove('opacity-70');
                     thumb.classList.add('ring-2', 'ring-green-400', 'opacity-100');
                 } else {
-                    openLightbox(newSrc);
+                    // Video is playing, open lightbox directly
+                    openLightbox(idx);
                 }
             });
         });
@@ -930,9 +1032,12 @@ async function handleImageUpload(e) {
             if (gbifResult.data.length > 0) {
                 const foundSpecimen = gbifResult.data[0];
                 await openSpecimenModal(foundSpecimen.slug, result.common_name);
-                currentModalSpecimen.image_url = thumb;
-                currentModalSpecimen.original_image_url = original;
-                currentModalSpecimen.gallery_images = [thumb];
+                
+                // Store BOTH URLs in Object format
+                currentModalSpecimen.gallery_images = [{ thumb, original }];
+                currentModalSpecimen.image_url = thumb; 
+                currentModalSpecimen.original_image_url = original; 
+                
                 renderFullModalContent();
                 closeImageUploadModal();
                 alert("Identified! Don't forget to click 'Save to Sanctuary' to keep your photo.");
