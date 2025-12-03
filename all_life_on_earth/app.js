@@ -2,8 +2,8 @@
  * APP.JS
  * The Controller for the "Life Explorer" SPA.
  * Updated: 
- * - FEATURE: Added Manual Entry ("Field Journal") logic.
- * - Allows users to create custom cards which are then populated by AI.
+ * - BUG FIX: Manual entries now load correctly from the database.
+ * - LOGIC: 'manual-' slugs now bypass the GBIF lookup trigger.
  */
 
 import { setApiKeys } from './config.js';
@@ -445,13 +445,12 @@ async function handleManualEntrySubmit(e) {
     modalContent.innerHTML = '';
     
     // Build Skeleton Object
-    // Uses a unique timestamp-based slug to avoid collision with GBIF IDs
     const skeletonSpecimen = {
         slug: `manual-${Date.now()}`,
         common_name: common,
         scientific_name: sci,
         image_url: null,
-        kingdom: "Animalia", // Assumption
+        kingdom: "Animalia", 
         phylum: "Unknown",
         class: "Unknown",
         order: "Unknown",
@@ -463,12 +462,9 @@ async function handleManualEntrySubmit(e) {
     };
     
     try {
-        // Consult AI for content
         const geminiData = await fetchSpecimenCard(skeletonSpecimen, 'field_guide');
-        
         currentModalSpecimen = { ...skeletonSpecimen, ...geminiData };
         
-        // Setup Save Button (Manual entries are not saved yet)
         updateSaveButtonState(false);
         saveSpecimenBtn.classList.remove('hidden');
         refreshSpecimenBtn.classList.remove('hidden');
@@ -525,21 +521,15 @@ function openLightbox(index) {
     lightboxPlaceholder.classList.add('hidden');
     lightboxImage.classList.remove('hidden');
 
-    // Start slideshow
     startSlideshow();
 }
 
 function navigateLightbox(direction) {
-    // Reset the slideshow timer on interaction
     stopSlideshow();
-    
     const images = currentModalSpecimen.gallery_images;
     if (!images || images.length <= 1) return;
-    
     currentLightboxIndex = (currentLightboxIndex + direction + images.length) % images.length;
     updateLightboxImage();
-    
-    // Restart slideshow with fresh timer
     startSlideshow();
 }
 
@@ -552,7 +542,7 @@ function updateLightboxImage() {
 }
 
 function closeLightbox() {
-    stopSlideshow(); // Ensure timer stops
+    stopSlideshow(); 
     lightboxModal.classList.add('hidden');
     lightboxImage.src = '';
 }
@@ -624,9 +614,12 @@ async function openSpecimenModal(slug, name) {
     try {
         let gbifData = null;
         let isSaved = false;
+        // Detect if this is a manual entry slug (e.g. "manual-1738...")
+        const isManual = slug && slug.toString().startsWith('manual-');
         let resolvedSlug = slug;
 
-        if (!slug || isNaN(slug)) {
+        // ONLY perform GBIF lookup if it's NOT manual and slug is invalid/missing
+        if (!isManual && (!slug || isNaN(slug))) {
              modalLoader.querySelector('p').textContent = `Tracking ${name || 'specimen'}...`;
              gbifData = await getSpecimenDetails(slug || name);
              if (gbifData) resolvedSlug = gbifData.slug; 
@@ -634,9 +627,11 @@ async function openSpecimenModal(slug, name) {
 
         if (currentUser) {
             modalLoader.querySelector('p').textContent = 'Checking sanctuary...';
+            // Force database check for manual entries
             const savedResult = await getSavedSpecimen(currentUser.uid, resolvedSlug);
             
-            if (savedResult.data && savedResult.data.diet) {
+            // Allow loading if data exists (removed strict diet check to be safe)
+            if (savedResult.data) {
                 currentModalSpecimen = { ...savedResult.data, docId: savedResult.docId };
                 if (!currentModalSpecimen.cards) currentModalSpecimen.cards = {};
                 if (!currentModalSpecimen.gallery_images) currentModalSpecimen.gallery_images = [];
@@ -655,6 +650,12 @@ async function openSpecimenModal(slug, name) {
             }
             if (savedResult.data) isSaved = true;
         }
+
+        // If manual entry was NOT found in DB, we cannot proceed to GBIF
+        if (isManual) {
+            throw new Error("Manual entry not found in database.");
+        }
+
         if (currentUser) { updateSaveButtonState(isSaved); saveSpecimenBtn.classList.remove('hidden'); }
 
         if (!gbifData) {
