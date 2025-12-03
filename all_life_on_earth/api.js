@@ -2,8 +2,9 @@
  * API.JS
  * Final Version - "Gemini Search Engine"
  * Updated: 
- * - Rewrote GenAI Prompts to match new Unified UI Layout.
- * - Enforced 4-item grid structure in all prompts.
+ * - PROMPT OVERHAUL: Rewrote all prompts to use "8th Grade Reading Level".
+ * - Removed academic jargon (no "clades", "ecotones", "morphology").
+ * - Adopted a friendly, accessible "Nature Guide" persona.
  */
 
 import { configStore } from './config.js';
@@ -350,82 +351,86 @@ export async function getSpecimenDetails(keyOrName) {
     } catch (error) { console.error("Details Error:", error); return null; }
 }
 
-// --- UPDATED 5-CARD SYSTEM PROMPTS ---
+// --- UPDATED 5-CARD SYSTEM PROMPTS (SIMPLIFIED FOR GENERAL AUDIENCE) ---
 
 const PROMPTS = {
-    'field_guide': `You are an expert Zoologist writing a comprehensive field guide.
-    Output a valid JSON object with the following structure (no markdown formatting, NO ITALICS):
-    {
-        "zoologist_intro": "A robust, detailed introduction (approx 100 words) describing the species, its significance, and general nature.",
-        "detailed_physical": "A comprehensive paragraph describing size, coloration, sexual dimorphism, and unique adaptations.",
-        "detailed_habitat": "A comprehensive paragraph describing geographic range, preferred terrain, and migration patterns.",
-        "detailed_behavior": "A comprehensive paragraph describing hunting/foraging strategies, social structure, mating rituals, and parenting.",
-        "diet": "Concise summary",
-        "habitat": "Concise summary",
-        "lifespan": "Concise summary",
-        "conservation_status": "Concise status",
-        "physical_characteristics": "Concise summary",
-        "predators": "Concise list",
-        "fun_facts": ["Fact 1", "Fact 2", "Fact 3"]
-    }`,
-
-    'historian': `You are a Cultural Historian. Analyze the relationship between humans and this animal.
+    'field_guide': `You are a friendly Nature Guide writing a guide for a general audience (8th grade level).
+    Avoid complex biological jargon. Explain things simply.
     Output a valid JSON object:
     {
-        "title": "The Historian's View",
-        "subtitle": "Cultural Significance",
-        "main_text": "A rich, educational narrative (200 words) detailing the animal's role in human history, folklore, mythology, and art. Mention indigenous names or beliefs if applicable.",
-        "insights": ["Folklore Fact 1", "Historical Interaction", "Etymology Note"],
+        "zoologist_intro": "A fun, clear introduction (approx 100 words) describing the animal's personality and what makes it special. Use simple language.",
+        "detailed_physical": "Describe what it looks like. Mention size, colors, and unique features. Avoid technical terms like 'sexual dimorphism' - just say 'females are larger'.",
+        "detailed_habitat": "Where does it live? Describe its home and where travelers might see it.",
+        "detailed_behavior": "How does it act? Is it social? How does it hunt or find food? How does it raise its babies?",
+        "diet": "What it eats",
+        "habitat": "Where it lives",
+        "lifespan": "How long it lives",
+        "conservation_status": "Safe or Endangered?",
+        "physical_characteristics": "Short description",
+        "predators": "What eats it",
+        "fun_facts": ["Fun Fact 1", "Fun Fact 2", "Fun Fact 3"]
+    }`,
+
+    'historian': `You are a Cultural Storyteller. Tell us how humans have interacted with this animal throughout history.
+    Write for a general audience.
+    Output a valid JSON object:
+    {
+        "title": "Stories & Legends",
+        "subtitle": "Human Connections",
+        "main_text": "A fascinating story (200 words) about this animal in myths, legends, or history. How did ancient people view it? Is it a symbol of anything today?",
+        "insights": ["A cool legend", "A historical event", "What its name means"],
         "data_points": {
-            "Symbolism": "What it represents",
-            "First Described": "Year/Person",
-            "Mythology": "Associated myths",
-            "Cultural Status": "Revered/Feared/Hunted"
+            "Symbol Of": "e.g. Strength/Freedom",
+            "First Found": "When did we find it?",
+            "Legend": "Name of a myth",
+            "Status": "Loved or Feared?"
         }
     }`,
 
-    'evolutionist': `You are an Evolutionary Biologist. Analyze the lineage of this animal.
+    'evolutionist': `You are a Time Traveler looking at this animal's family tree.
+    Explain its history simply (no 'clades' or 'taxons').
     Output a valid JSON object:
     {
-        "title": "Evolutionary Origins",
-        "subtitle": "Deep Time Perspective",
-        "main_text": "A scientific narrative (200 words) explaining its fossil history, when it diverged from ancestors, and its specific evolutionary adaptations.",
-        "insights": ["Adaptation Insight 1", "Evolutionary Milestone", "Genetic Fact"],
+        "title": "Through Time",
+        "subtitle": "Ancient Ancestors",
+        "main_text": "A simple story (200 words) about where this animal came from millions of years ago. Who were its great-grandparents? Did it survive the Ice Age?",
+        "insights": ["A cool adaptation", "An ancient relative", "Survival skill"],
         "data_points": {
-            "Era": "When it appeared",
-            "Ancestor": "Direct ancestor",
-            "Closest Relative": "Living cousin",
-            "Clade": "Scientific grouping"
+            "Appeared": "How long ago?",
+            "Ancestor": "Ancient relative name",
+            "Cousin": "Closest living relative",
+            "Family Group": "Animal family name"
         }
     }`,
 
-    'ecologist': `You are a Systems Ecologist. Analyze the environmental role of this animal.
+    'ecologist': `You are a Nature Guardian. Explain this animal's job in the wild.
+    Use simple terms (avoid 'trophic levels' or 'biomass').
     Output a valid JSON object:
     {
-        "title": "Ecological Impact",
-        "subtitle": "Ecosystem Engineer",
-        "main_text": "A detailed analysis (200 words) of its niche. Is it a keystone species? What happens if it disappears? How does it shape its environment?",
-        "insights": ["Food Web Connection", "Habitat Impact", "Conservation Note"],
+        "title": "Job in Nature",
+        "subtitle": "The Circle of Life",
+        "main_text": "Explain why this animal is important to its home (200 words). Does it keep other animals in check? Does it help plants grow? What happens if it disappears?",
+        "insights": ["Who relies on it?", "A specific threat", "Why we need it"],
         "data_points": {
-            "Trophic Level": "e.g. Apex Predator",
-            "Keystone Status": "Yes/No & Why",
-            "Biome": "Primary habitat",
-            "Population Trend": "Increasing/Decreasing"
+            "Job Title": "e.g. Top Predator / Recycler",
+            "Important Because": "Why it matters",
+            "Home Type": "e.g. Forest / Ocean",
+            "Numbers": "Growing or Shrinking?"
         }
     }`,
 
-    'storyteller': `You are a Master Storyteller. Write a short, immersive narrative.
+    'storyteller': `You are a Master Storyteller. Write a short, exciting scene.
     Output a valid JSON object:
     {
         "title": "A Day in the Life",
-        "subtitle": "Immersive Narrative",
-        "main_text": "A vivid, sensory-rich story (200-300 words) written from the PERSPECTIVE of the animal (or 2nd person 'You are the...'). Focus on hunting, fleeing, or raising young. Use present tense.",
-        "insights": ["Sensory Detail", "Behavioral Insight", "Daily Routine"],
+        "subtitle": "An Adventure",
+        "main_text": "A vivid story (200-300 words) written from the ANIMAL'S point of view (or 'You are the...'). Make the reader feel the wind, water, or danger. Keep it exciting but easy to read.",
+        "insights": ["A sensory detail", "A survival habit", "Daily routine"],
         "data_points": {
-            "Mood": "e.g. Tense/Peaceful",
-            "Setting": "Specific location",
-            "Time of Day": "Morning/Night",
-            "Perspective": "First/Second Person"
+            "Mood": "e.g. Exciting / Calm",
+            "Location": "Where is the story?",
+            "Time": "Morning / Night",
+            "Viewpoint": "Through the animal's eyes"
         }
     }`
 };
@@ -486,7 +491,7 @@ export async function fetchCustomCareAdvice(s, q) {
     try {
         const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=${configStore.geminiApiKey}`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ contents: [{ parts: [{ text: `Zoologist. Animal: ${s.common_name}. User asks: "${q}". Answer in 2 paragraphs. NO italics.` }] }] })
+            body: JSON.stringify({ contents: [{ parts: [{ text: `You are a friendly nature guide. Animal: ${s.common_name}. Kid asks: "${q}". Answer simply in 2 paragraphs. NO italics.` }] }] })
         });
         const d = await res.json();
         return d.candidates[0].content.parts[0].text;
