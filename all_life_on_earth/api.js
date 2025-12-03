@@ -3,7 +3,7 @@
  * Final Version - "Gemini Search Engine"
  * Updated: 
  * - Added Video Support to uploadMedia
- * - Added 5-Card Perspective System (Prompts)
+ * - Added 5-Card Perspective System (Prompts & Logic)
  * - Full Code (No Truncation)
  */
 
