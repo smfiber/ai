@@ -1,11 +1,7 @@
 /*
  * API.JS
  * Final Version - "Gemini Search Engine"
- * - Fixes Caching Bug (Partial Updates)
- * - Adds Edit Functionality support
- * - Adds Client-Side Thumbnail Generation (Bandwidth Optimization)
- * - Updated: "Zoologist Mode" Prompt (Deep Analysis, No Italics)
- * - Updated: Folder Management (Create, Move, Delete with Orphan Logic)
+ * Updated: Media Upload Handling (Video Support + Gallery)
  */
 
 import { configStore } from './config.js';
@@ -106,34 +102,49 @@ function createThumbnail(file, maxWidth = 600, quality = 0.7) {
     });
 }
 
+// Renamed to generic "uploadMedia" but kept old name export for compatibility
 export async function uploadSpecimenImage(file, userId) {
+    return uploadMedia(file, userId);
+}
+
+export async function uploadMedia(file, userId) {
     if (!storage) throw new Error("Storage not init");
     
-    // 1. Generate path base
     const timestamp = Date.now();
+    
+    // Check if Video
+    if (file.type.startsWith('video/')) {
+        const videoPath = `users/${userId}/videos/${timestamp}-${file.name}`;
+        const videoRef = ref(storage, videoPath);
+        const snap = await uploadBytes(videoRef, file);
+        const url = await getDownloadURL(snap.ref);
+        return { type: 'video', url: url };
+    } 
+    
+    // Assume Image
     const originalPath = `users/${userId}/specimens/${timestamp}-${file.name}`;
     const thumbPath = `users/${userId}/specimens/${timestamp}-${file.name}_thumb`;
 
-    // 2. Create Thumbnail Blob
+    // Create Thumbnail Blob
     const thumbBlob = await createThumbnail(file);
 
-    // 3. Create Refs
+    // Create Refs
     const originalRef = ref(storage, originalPath);
     const thumbRef = ref(storage, thumbPath);
 
-    // 4. Upload Both (Parallel)
+    // Upload Both (Parallel)
     const [originalSnap, thumbSnap] = await Promise.all([
         uploadBytes(originalRef, file),
         uploadBytes(thumbRef, thumbBlob)
     ]);
 
-    // 5. Get URLs
+    // Get URLs
     const [originalUrl, thumbUrl] = await Promise.all([
         getDownloadURL(originalSnap.ref),
         getDownloadURL(thumbSnap.ref)
     ]);
 
-    return { original: originalUrl, thumb: thumbUrl };
+    return { type: 'image', original: originalUrl, thumb: thumbUrl };
 }
 
 // --- Firestore: Saved Specimens ---
@@ -142,7 +153,9 @@ const DB_COLLECTION = "saved_specimens";
 export async function saveSpecimen(userId, specimen, docId = null) {
     if (!db) return;
     const data = { ...specimen }; delete data.docId;
-    // folderId is preserved if it exists in 'data'
+    // Ensure arrays exist
+    if (!data.gallery_images) data.gallery_images = [];
+    
     if (docId) { await setDoc(doc(db, DB_COLLECTION, docId), { ...data, uid: userId, saved_at: Date.now() }); return docId; }
     else { const ref = await addDoc(collection(db, DB_COLLECTION), { ...data, uid: userId, saved_at: Date.now() }); return ref.id; }
 }
@@ -219,16 +232,14 @@ const EXPEDITIONS_COLLECTION = "user_expeditions";
 export async function saveUserCollection(userId, c) {
     if (!db) return;
     
-    // CRITICAL FIX: Only add fields that are actually present to avoid overwriting with undefined
     const d = { updated_at: Date.now(), uid: userId };
     
     if (c.title !== undefined) d.title = c.title;
     if (c.query !== undefined) d.query = c.query;
     if (c.image !== undefined) d.image = c.image;
-    if (c.results !== undefined) d.results = c.results; // This allows saving JUST the cache
+    if (c.results !== undefined) d.results = c.results; 
 
     if (c.id) { 
-        // Merge true ensures we update only the fields in 'd'
         await setDoc(doc(db, EXPEDITIONS_COLLECTION, c.id), d, { merge: true }); 
         return c.id; 
     } else { 
@@ -376,7 +387,6 @@ export async function getCategorySpecimens(classKey, page) {
         
         let mapped = data.results.map(mapGbifRecord);
 
-        // Augment categories to make them readable
         mapped = await augmentListWithGemini(mapped);
 
         return { 
