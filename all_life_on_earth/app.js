@@ -961,7 +961,7 @@ async function fetchAndRenderSpecimens() {
     loader.classList.remove('hidden'); specimenGallery.innerHTML = ''; 
     try {
         const results = await searchSpecimens(currentSearchQuery, currentPage);
-        currentMeta = results.meta;
+        // currentMeta removed
         renderSpecimenGallery(results.data, specimenGallery);
     } catch (error) { console.error(error); specimenGallery.innerHTML = '<p class="col-span-full text-center text-red-400">Error loading specimens.</p>'; } finally { loader.classList.add('hidden'); }
 }
