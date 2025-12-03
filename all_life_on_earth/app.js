@@ -2,8 +2,8 @@
  * APP.JS
  * The Controller for the "Life Explorer" SPA.
  * Updated: 
- * - UI FIX: Removed pagination (showing top 10 matches only).
- * - UI FIX: Removed 'truncate' from scientific names to allow text wrapping.
+ * - UI FIX: Removed pagination logic (matching index.html cleanup).
+ * - UI FIX: Removed 'truncate' from Common Name to fix "Przewalski's H..." cutoff.
  */
 
 import { setApiKeys } from './config.js';
@@ -29,8 +29,7 @@ let modalBackdrop, apiKeyForm, appContainer, mainContent, authContainer, signInB
 
 // --- State ---
 let currentSearchQuery = null;
-let currentPage = 1;
-let currentMeta = null;
+let currentPage = 1; // Kept for API compatibility, though UI pagination is removed
 let currentUser = null; 
 let currentModalSpecimen = null; 
 let userFolders = [];
@@ -980,13 +979,13 @@ function renderSpecimenGallery(specimens, container) {
         const hasImage = !!specimen.image_url;
         const showMoveBtn = (container === sanctuaryGallery);
         
-        // FIX: Remove 'truncate' from scientific name, add leading-tight for spacing.
+        // FIX: Remove 'truncate' from common name H3, add leading-tight for spacing.
         card.innerHTML = `
             <div class="relative w-full aspect-video bg-gray-800 group-hover:scale-105 transition-transform duration-700">
                 <img src="${hasImage ? specimen.image_url : ''}" class="w-full h-full object-cover transition-opacity duration-300 ${hasImage ? '' : 'hidden'}" onload="this.style.opacity=1" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden');">
                 <div class="${hasImage ? 'hidden' : ''} absolute inset-0 flex items-center justify-center bg-gray-800 card-image-placeholder"><div class="text-center opacity-30"><span class="text-5xl">🐾</span><p class="text-xs mt-2 text-gray-400">No Photo</p></div></div>
                 ${showMoveBtn ? `<div class="absolute top-2 right-2 z-10"><button class="move-specimen-btn bg-gray-900/80 hover:bg-indigo-600 text-white p-2 rounded-lg backdrop-blur-sm transition-colors shadow-lg border border-white/10">📁</button></div>` : ''}
-                <div class="card-text-overlay"><h3 class="text-lg font-bold text-white truncate">${specimen.common_name}</h3><p class="text-green-400 text-xs mt-1 leading-tight">${specimen.scientific_name}</p></div>
+                <div class="card-text-overlay"><h3 class="text-lg font-bold text-white leading-tight">${specimen.common_name}</h3><p class="text-green-400 text-xs mt-1 leading-tight">${specimen.scientific_name}</p></div>
             </div>`;
         container.appendChild(card);
     });
