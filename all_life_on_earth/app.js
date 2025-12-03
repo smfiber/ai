@@ -2,10 +2,9 @@
  * APP.JS
  * The Controller for the "Life Explorer" SPA.
  * Updated: 
- * - FEAT: Added Lightbox Navigation (Prev/Next buttons).
- * - FIX: Enforced 16:9 (Video) aspect ratio for Grid Cards (no longer square).
- * - FIX: Modal Main Image now displays full width/height (no cropping).
- * - FIX: Gallery logic fully supports Thumbnail vs Original URLs.
+ * - FIX: Added missing renderPagination to fix search error.
+ * - FIX: Gemini Suggestions now use 3-column grid (table style).
+ * - FIX: Gemini Suggestions now open modal directly.
  * - FEAT: Video Autoplay/Loop on initial modal open.
  */
 
@@ -510,7 +509,6 @@ async function openSpecimenModal(slug, name) {
     saveSpecimenBtn.classList.remove('bg-red-600');
     saveSpecimenBtn.classList.add('bg-green-600');
     
-    // Set Autoplay flag for initial load
     shouldAutoplayVideo = true;
 
     try {
@@ -518,9 +516,9 @@ async function openSpecimenModal(slug, name) {
         let isSaved = false;
         let resolvedSlug = slug;
 
-        if (isNaN(slug)) {
-             modalLoader.querySelector('p').textContent = 'Identifying species ID...';
-             gbifData = await getSpecimenDetails(slug);
+        if (!slug || isNaN(slug)) {
+             modalLoader.querySelector('p').textContent = `Tracking ${name || 'specimen'}...`;
+             gbifData = await getSpecimenDetails(slug || name);
              if (gbifData) resolvedSlug = gbifData.slug; 
         }
 
@@ -581,7 +579,6 @@ function renderFullModalContent() {
     contentDiv.innerHTML = createSpecimenDetailHtml(currentModalSpecimen);
     modalContent.appendChild(contentDiv);
     
-    // Reset Autoplay flag so subsequent renders (tabs, updates) don't autoplay
     shouldAutoplayVideo = false;
     
     const deleteBtns = contentDiv.querySelectorAll('.delete-img-btn');
@@ -654,7 +651,6 @@ function createSpecimenDetailHtml(data) {
             <video src="${data.video_url}" controls ${autoplayAttrs} class="w-full h-full object-contain"></video>
         </div>` : '';
 
-    // FIX: Removed object-cover, added w-full h-auto for natural aspect ratio
     const mainImageHtml = !data.video_url ? `
         <div class="rounded-xl overflow-hidden shadow-lg bg-gray-900/50 mb-4 group relative">
             <img id="main-specimen-image" src="${displayImage}" data-full-res="${fullRes}" alt="${title}" class="w-full h-auto rounded-xl cursor-zoom-in" onerror="this.onerror=null;this.src='https://placehold.co/400x400/374151/FFFFFF?text=No+Image';">
@@ -946,7 +942,27 @@ async function fetchAndRenderSpecimens() {
         currentMeta = results.meta;
         renderSpecimenGallery(results.data, specimenGallery);
         renderPagination(results.meta);
-    } catch (error) { specimenGallery.innerHTML = '<p class="col-span-full text-center text-red-400">Error loading specimens.</p>'; } finally { loader.classList.add('hidden'); }
+    } catch (error) { console.error(error); specimenGallery.innerHTML = '<p class="col-span-full text-center text-red-400">Error loading specimens.</p>'; } finally { loader.classList.add('hidden'); }
+}
+
+// Added missing renderPagination function
+function renderPagination(meta) {
+    if (!meta || meta.total === 0) {
+        paginationContainer.classList.add('hidden');
+        return;
+    }
+    
+    paginationContainer.classList.remove('hidden');
+    pageInfo.textContent = `Page ${currentPage}`;
+    
+    prevBtn.disabled = (currentPage === 1);
+    nextBtn.disabled = meta.endOfRecords;
+    
+    prevBtn.style.opacity = prevBtn.disabled ? '0.5' : '1';
+    nextBtn.style.opacity = nextBtn.disabled ? '0.5' : '1';
+    
+    prevBtn.style.cursor = prevBtn.disabled ? 'not-allowed' : 'pointer';
+    nextBtn.style.cursor = nextBtn.disabled ? 'not-allowed' : 'pointer';
 }
 
 function renderSpecimenGallery(specimens, container) {
@@ -988,14 +1004,26 @@ async function loadCollectionSuggestions(query) {
         aiSuggestionsLoader.classList.add('hidden');
         aiSuggestionsList.classList.remove('hidden');
         if (suggestions.length === 0) { aiSuggestionsContainer.classList.add('hidden'); return; }
-        aiSuggestionsList.innerHTML = `
-            <div class="flex flex-wrap gap-2">
-                ${suggestions.map(s => `
-                    <button class="suggestion-btn px-3 py-1 bg-gray-700 hover:bg-green-600 rounded-full text-xs text-white transition-colors border border-gray-600" data-name="${s.common_name}">${s.common_name}</button>
-                `).join('')}
-            </div>`;
-        aiSuggestionsList.querySelectorAll('.suggestion-btn').forEach(btn => {
-            btn.addEventListener('click', () => { searchInput.value = btn.dataset.name; handleSearchSubmit({ preventDefault: () => {} }); });
+        
+        // REVERT: Use a 3-column grid layout for suggestions
+        aiSuggestionsList.className = 'grid grid-cols-1 md:grid-cols-3 gap-4';
+        aiSuggestionsList.innerHTML = suggestions.map(s => `
+            <div class="bg-gray-800 hover:bg-gray-700 p-4 rounded-xl border border-gray-600 cursor-pointer transition-colors flex items-center group suggestion-card" data-name="${s.common_name}">
+                <div class="w-10 h-10 rounded-full bg-green-900/50 flex items-center justify-center text-green-400 mr-4 group-hover:bg-green-500 group-hover:text-white transition-colors font-bold text-lg">
+                    ${s.common_name.charAt(0)}
+                </div>
+                <div>
+                    <h4 class="font-bold text-white group-hover:text-green-300 transition-colors">${s.common_name}</h4>
+                    <p class="text-xs text-gray-400 italic">${s.scientific_name}</p>
+                </div>
+            </div>
+        `).join('');
+
+        aiSuggestionsList.querySelectorAll('.suggestion-card').forEach(btn => {
+            btn.addEventListener('click', () => { 
+                // CHANGED: Open modal directly instead of searching
+                openSpecimenModal(null, btn.dataset.name); 
+            });
         });
     } catch (e) { aiSuggestionsContainer.classList.add('hidden'); }
 }
