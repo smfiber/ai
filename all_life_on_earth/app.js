@@ -2,7 +2,8 @@
  * APP.JS
  * The Controller for the "Life Explorer" SPA.
  * Updated: 
- * - UI FIX: Added Manual Entry Logic ("Field Journaling").
+ * - FEATURE: Added Manual Entry ("Field Journal") logic.
+ * - Allows users to create custom cards which are then populated by AI.
  */
 
 import { setApiKeys } from './config.js';
