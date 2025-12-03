@@ -2,8 +2,8 @@
  * APP.JS
  * The Controller for the "Life Explorer" SPA.
  * Updated: 
- * - BUG FIX: Manual entries now load correctly from the database.
- * - LOGIC: 'manual-' slugs now bypass the GBIF lookup trigger.
+ * - UI ADDITION: Added Delete Button (Trash Can) to Sanctuary Cards.
+ * - LOGIC: Implemented direct deletion from the grid view.
  */
 
 import { setApiKeys } from './config.js';
@@ -359,6 +359,7 @@ function handleFolderClick(e) {
 }
 
 function handleSanctuaryGridClick(e) {
+    // 1. Check for Move Button Click
     const moveBtn = e.target.closest('.move-specimen-btn');
     if (moveBtn) {
         e.stopPropagation();
@@ -367,6 +368,25 @@ function handleSanctuaryGridClick(e) {
         openMoveModal();
         return;
     }
+
+    // 2. Check for Delete Button Click (NEW)
+    const deleteBtn = e.target.closest('.delete-specimen-btn');
+    if (deleteBtn) {
+        e.stopPropagation();
+        const card = deleteBtn.closest('.specimen-card');
+        const slug = card.dataset.slug;
+        const name = card.dataset.name;
+        
+        if(confirm(`Are you sure you want to remove "${name}" from your sanctuary?`)) {
+            // Optimistic UI removal? No, safer to wait for DB.
+            removeSpecimen(currentUser.uid, slug).then(() => {
+                loadSanctuarySpecimens();
+            }).catch(err => alert("Error removing: " + err.message));
+        }
+        return;
+    }
+
+    // 3. Otherwise, open the card
     handleSpecimenCardClick(e);
 }
 
@@ -1074,7 +1094,11 @@ function renderSpecimenGallery(specimens, container) {
             <div class="relative w-full aspect-video bg-gray-800 group-hover:scale-105 transition-transform duration-700">
                 <img src="${hasImage ? specimen.image_url : ''}" class="w-full h-full object-cover transition-opacity duration-300 ${hasImage ? '' : 'hidden'}" onload="this.style.opacity=1" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden');">
                 <div class="${hasImage ? 'hidden' : ''} absolute inset-0 flex items-center justify-center bg-gray-800 card-image-placeholder"><div class="text-center opacity-30"><span class="text-5xl">🐾</span><p class="text-xs mt-2 text-gray-400">No Photo</p></div></div>
-                ${showMoveBtn ? `<div class="absolute top-2 right-2 z-10"><button class="move-specimen-btn bg-gray-900/80 hover:bg-indigo-600 text-white p-2 rounded-lg backdrop-blur-sm transition-colors shadow-lg border border-white/10">📁</button></div>` : ''}
+                ${showMoveBtn ? `
+                <div class="absolute top-2 right-2 z-10 flex gap-2">
+                    <button class="move-specimen-btn bg-gray-900/80 hover:bg-indigo-600 text-white p-2 rounded-lg backdrop-blur-sm transition-colors shadow-lg border border-white/10" title="Move to Folder">📁</button>
+                    <button class="delete-specimen-btn bg-gray-900/80 hover:bg-red-600 text-white p-2 rounded-lg backdrop-blur-sm transition-colors shadow-lg border border-white/10" title="Delete Specimen">🗑️</button>
+                </div>` : ''}
                 <div class="card-text-overlay"><h3 class="text-lg font-bold text-white leading-tight">${specimen.common_name}</h3><p class="text-green-400 text-xs mt-1 leading-tight">${specimen.scientific_name}</p></div>
             </div>`;
         container.appendChild(card);
