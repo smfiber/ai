@@ -2,8 +2,8 @@
  * API.JS
  * Final Version - "Gemini Search Engine"
  * Updated: 
- * - SEARCH FIX: Prompt rewritten to enforce strict specific relevance (No Tigers when searching Lions).
- * - PERFORMANCE: Kept limit to 10 for speed.
+ * - PERFORMANCE: Switched Search to 'gemini-1.5-flash' for speed.
+ * - SEARCH FIX: Prompt rewritten to enforce strict specific relevance.
  */
 
 import { configStore } from './config.js';
@@ -306,8 +306,7 @@ export async function getCategorySpecimens(classKey, page) {
 export async function searchSpecimens(queryText, page) {
     if (!configStore.geminiApiKey) return { data: [], meta: { total: 0, endOfRecords: true } };
     
-    // UPDATED PROMPT: Strict Biological Specificity
-    // Instructions are designed to be fast (short text) and strict.
+    // UPDATED: Using gemini-1.5-flash for speed
     const prompt = `List EXACTLY 10 distinct animals that are strictly "${queryText}" or specific breeds/subspecies of "${queryText}".
     
     STRICT RULES:
@@ -318,7 +317,7 @@ export async function searchSpecimens(queryText, page) {
     3. FORMAT: [{ "common_name": "...", "scientific_name": "..." }]`;
 
     try {
-        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=${configStore.geminiApiKey}`, {
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${configStore.geminiApiKey}`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
         });
