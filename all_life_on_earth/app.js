@@ -2,7 +2,8 @@
  * APP.JS
  * The Controller for the "Life Explorer" SPA.
  * Updated: 
- * - FEAT: Added Slideshow to Lightbox (Auto-advance every 5 seconds).
+ * - OPTIMIZATION: Disabled "Gemini Suggestions" (bottom section) to reduce API usage and visual clutter.
+ * - PRESERVED: Slideshow functionality.
  */
 
 import { setApiKeys } from './config.js';
@@ -38,7 +39,7 @@ let specimenToMoveId = null;
 let currentCardType = 'field_guide'; 
 let currentLightboxIndex = 0; 
 let shouldAutoplayVideo = false;
-let slideshowInterval = null; // New state for slideshow timer
+let slideshowInterval = null; 
 
 function main() {
     document.addEventListener('DOMContentLoaded', () => {
@@ -958,7 +959,8 @@ function handleSearchSubmit(e) {
     if (query === currentSearchQuery && !searchResultsView.classList.contains('hidden')) return;
     currentSearchQuery = query; currentPage = 1;
     sanctuaryView.classList.add('hidden'); searchResultsView.classList.remove('hidden');
-    fetchAndRenderSpecimens(); loadCollectionSuggestions(query);
+    fetchAndRenderSpecimens(); 
+    // loadCollectionSuggestions(query); // REMOVED: Disabled per user request
 }
 
 async function fetchAndRenderSpecimens() {
