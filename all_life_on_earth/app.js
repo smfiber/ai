@@ -2,9 +2,10 @@
  * APP.JS
  * The Controller for the "Life Explorer" SPA.
  * Updated: 
- * - FIX: Changed Grid Images from Square (1:1) to Wide (16:9/Video) to fit photos.
- * - FIX: Changed Modal Thumbnails from Square to Auto-Width to prevent cropping.
- * - Retained all previous font size and prompt fixes.
+ * - FEAT: Added Lightbox Navigation (Prev/Next buttons).
+ * - FIX: Enforced 16:9 (Video) aspect ratio for Grid Cards (no longer square).
+ * - FIX: Modal Main Image now displays full width/height (no cropping).
+ * - FIX: Gallery logic fully supports Thumbnail vs Original URLs.
  */
 
 import { setApiKeys } from './config.js';
@@ -137,6 +138,7 @@ function assignDomElements() {
     confirmMoveBtn = document.getElementById('confirm-move-btn');
 }
 
+// --- LIGHTBOX NAVIGATION CONTROLS ---
 function injectLightboxControls() {
     if (lightboxModal && !document.getElementById('lightbox-prev-btn')) {
         const prev = document.createElement('button');
@@ -592,7 +594,7 @@ function renderFullModalContent() {
 function createSpecimenDetailHtml(data) {
     const get = (v, d = 'N/A') => (v === null || v === undefined || v === '') ? d : v;
     
-    // --- STANDARDIZE DATA FOR UNIFIED LAYOUT ---
+    // --- STANDARDIZE DATA ---
     let title, subtitle, gridData, insights, mainText;
 
     if (currentCardType === 'field_guide') {
@@ -643,12 +645,12 @@ function createSpecimenDetailHtml(data) {
             <video src="${data.video_url}" controls class="w-full h-full object-contain"></video>
         </div>` : '';
 
+    // FIX: Removed object-cover, added w-full h-auto for natural aspect ratio
     const mainImageHtml = !data.video_url ? `
-        <div class="card-image-wrapper rounded-xl overflow-hidden shadow-lg bg-gray-900/50 mb-4 group relative">
-            <img id="main-specimen-image" src="${displayImage}" data-full-res="${fullRes}" alt="${title}" class="w-full h-auto object-cover cursor-zoom-in" onerror="this.onerror=null;this.src='https://placehold.co/400x400/374151/FFFFFF?text=No+Image';">
+        <div class="rounded-xl overflow-hidden shadow-lg bg-gray-900/50 mb-4 group relative">
+            <img id="main-specimen-image" src="${displayImage}" data-full-res="${fullRes}" alt="${title}" class="w-full h-auto rounded-xl cursor-zoom-in" onerror="this.onerror=null;this.src='https://placehold.co/400x400/374151/FFFFFF?text=No+Image';">
         </div>` : '';
 
-    // FIX: Changed w-20 to w-auto, added object-contain
     const galleryHtml = (galleryImages.length > 0) ? 
         `<div class="flex gap-3 overflow-x-auto pb-2 custom-scrollbar">
             ${galleryImages.map((imgObj, idx) => {
@@ -799,7 +801,6 @@ function updateSaveButtonState(isSaved) {
     }
 }
 
-// --- UPDATED ADD IMAGE LOGIC ---
 async function handleAddImage() {
     if (!updateImageInput.files || !updateImageInput.files[0]) return;
     const file = updateImageInput.files[0];
@@ -951,6 +952,8 @@ function renderSpecimenGallery(specimens, container) {
         card.dataset.slug = specimen.slug; card.dataset.name = specimen.common_name; if (specimen.docId) card.dataset.docid = specimen.docId;
         const hasImage = !!specimen.image_url;
         const showMoveBtn = (container === sanctuaryGallery);
+        
+        // FIX: Grid now forced 16:9 with aspect-video
         card.innerHTML = `
             <div class="relative w-full aspect-video bg-gray-800 group-hover:scale-105 transition-transform duration-700">
                 <img src="${hasImage ? specimen.image_url : ''}" class="w-full h-full object-cover transition-opacity duration-300 ${hasImage ? '' : 'hidden'}" onload="this.style.opacity=1" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden');">
@@ -1012,7 +1015,6 @@ async function handleImageUpload(e) {
                 const foundSpecimen = gbifResult.data[0];
                 await openSpecimenModal(foundSpecimen.slug, result.common_name);
                 
-                // Store BOTH URLs in Object format
                 currentModalSpecimen.gallery_images = [{ thumb, original }];
                 currentModalSpecimen.image_url = thumb; 
                 currentModalSpecimen.original_image_url = original; 
