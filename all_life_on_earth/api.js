@@ -2,8 +2,8 @@
  * API.JS
  * Final Version - "Gemini Search Engine"
  * Updated: 
- * - SEARCH FIX: Increased result count from 20 to 100.
- * - SEARCH FIX: Refined prompt to exclude distant taxonomic relatives (e.g. Tapirs when searching for Horses).
+ * - PERFORMANCE: Enforced strict 10-item limit via JavaScript slice.
+ * - PROMPT: Changed instruction to "EXACTLY 10" to reduce generation time.
  */
 
 import { configStore } from './config.js';
@@ -307,11 +307,11 @@ export async function searchSpecimens(queryText, page) {
     if (!configStore.geminiApiKey) return { data: [], meta: { total: 0, endOfRecords: true } };
     
     // AI search does not support pagination in the traditional sense.
-    // We return 100 results on page 1, and consider that the end.
-    if (page > 1) return { data: [], meta: { total: 100, endOfRecords: true } };
+    // We return 10 results on page 1, and consider that the end.
+    if (page > 1) return { data: [], meta: { total: 10, endOfRecords: true } };
 
-    // UPDATED PROMPT: Request 100 items, and filter out distant taxonomic cousins.
-    const prompt = `List up to 100 distinct animal species that are strictly subtypes, breeds, or immediate wild relatives of "${queryText}". 
+    // UPDATED PROMPT: Request EXACTLY 10 items.
+    const prompt = `List EXACTLY 10 distinct animal species that are strictly subtypes, breeds, or immediate wild relatives of "${queryText}". 
     Rules: 
     1. Relevance: Include distinct breeds (e.g. 'Clydesdale'), subspecies, or very close relatives (e.g. Zebras for Horses). 
     2. Exclusion: Do NOT include distant taxonomic cousins. For example, if searching for 'Horse', do NOT include Rhinos or Tapirs. 
@@ -326,12 +326,16 @@ export async function searchSpecimens(queryText, page) {
         const d = await res.json();
         const text = d.candidates[0].content.parts[0].text;
         const results = extractJson(text);
-        const mapped = results.map(item => ({
+        
+        // HARD LIMIT ENFORCEMENT: Slice the array to max 10, regardless of what AI returns.
+        const limitedResults = results.slice(0, 10);
+        
+        const mapped = limitedResults.map(item => ({
             slug: item.scientific_name, scientific_name: item.scientific_name, common_name: item.common_name,
             image_url: null, family: "Unknown", order: "Unknown", class: "Unknown"
         }));
-        // Update meta total to match result length
-        return { data: mapped, meta: { total: results.length, endOfRecords: true } };
+        
+        return { data: mapped, meta: { total: mapped.length, endOfRecords: true } };
     } catch (error) {
         console.error("Gemini Search Error:", error);
         return { data: [], meta: {} };
