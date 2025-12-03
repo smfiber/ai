@@ -2,10 +2,8 @@
  * APP.JS
  * The Controller for the "Life Explorer" SPA.
  * Updated: 
- * - UI/UX Layout Overhaul (Split View + Full Width Narrative)
- * - Added "Delete Photo" functionality
- * - Fixed Lightbox sizing
- * - Restored all previous logic
+ * - FIX: Implemented thumbnail-for-display, original-for-lightbox logic.
+ * - FIX: Image uploads now correctly store both thumbnail and original URLs.
  */
 
 import { setApiKeys } from './config.js';
@@ -383,11 +381,10 @@ async function handleScientificLookup() {
     finally { scientificLookupBtn.classList.remove('animate-spin'); }
 }
 
-// --- LIGHTBOX FIX ---
+// --- LIGHTBOX ---
 function openLightbox(src) {
     if (!lightboxModal) return;
     lightboxImage.src = src;
-    // Force sizing classes to override defaults if necessary
     lightboxImage.className = 'max-w-[95vw] max-h-[95vh] object-contain rounded shadow-2xl'; 
     lightboxImage.classList.remove('hidden');
     lightboxPlaceholder.classList.add('hidden');
@@ -544,17 +541,17 @@ function renderFullModalContent() {
     setupGalleryListeners();
 }
 
-// --- UPDATED LAYOUT GENERATION ---
 function createSpecimenDetailHtml(data) {
     const get = (v, d = 'N/A') => (v === null || v === undefined || v === '') ? d : v;
     
     // Media
     const hasImage = !!data.image_url;
-    const image = hasImage ? data.image_url : 'https://placehold.co/400x400/374151/FFFFFF?text=No+Photo';
+    // Use thumbnail for display if available, otherwise fall back to image_url
+    const displayImage = data.thumb_url || data.image_url || 'https://placehold.co/400x400/374151/FFFFFF?text=No+Photo';
     const fullRes = data.original_image_url || data.image_url;
     
     let galleryImages = data.gallery_images || [];
-    if (galleryImages.length === 0 && hasImage) galleryImages = [image];
+    if (galleryImages.length === 0 && hasImage) galleryImages = [displayImage];
 
     const videoHtml = data.video_url ? `
         <div class="w-full aspect-video bg-black rounded-xl overflow-hidden shadow-lg mb-4 relative group">
@@ -563,17 +560,17 @@ function createSpecimenDetailHtml(data) {
 
     const mainImageHtml = !data.video_url ? `
         <div class="card-image-wrapper rounded-xl overflow-hidden shadow-lg bg-gray-900/50 mb-4 group relative">
-            <img id="main-specimen-image" src="${image}" data-full-res="${fullRes}" alt="${get(data.common_name)}" class="w-full h-auto object-cover cursor-zoom-in" onerror="this.onerror=null;this.src='https://placehold.co/400x400/374151/FFFFFF?text=No+Image';">
+            <img id="main-specimen-image" src="${displayImage}" data-full-res="${fullRes}" alt="${get(data.common_name)}" class="w-full h-auto object-cover cursor-zoom-in" onerror="this.onerror=null;this.src='https://placehold.co/400x400/374151/FFFFFF?text=No+Image';">
         </div>` : '';
 
     const galleryHtml = (galleryImages.length > 0) ? 
         `<div class="flex gap-3 overflow-x-auto pb-2 custom-scrollbar">
             ${galleryImages.map((img, idx) => {
-                const isActive = !data.video_url && (img === data.image_url);
+                const isActive = !data.video_url && (img === displayImage);
                 return `
                 <div class="relative flex-shrink-0 group">
                     <img src="${img}" 
-                         data-full-res="${img}" 
+                         data-full-res="${data.original_image_url}" 
                          class="gallery-thumb h-20 w-20 object-cover rounded-lg cursor-pointer transition-all border border-gray-600 ${isActive ? 'ring-2 ring-green-400 opacity-100' : 'opacity-70 hover:opacity-100'}" 
                          alt="Thumbnail">
                     <button class="delete-img-btn absolute -top-1 -right-1 bg-red-600 hover:bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity shadow-sm" data-src="${img}" title="Delete Photo">&times;</button>
@@ -588,7 +585,6 @@ function createSpecimenDetailHtml(data) {
             ${galleryHtml}
         </div>`;
 
-    // Content Split
     let headerAndStats = '';
     let narrativeText = '';
 
@@ -668,33 +664,32 @@ function createSpecimenDetailHtml(data) {
     </div>`;
 }
 
-// --- NEW FUNCTION: DELETE IMAGE ---
 async function handleDeleteImage(e, srcToDelete) {
     e.stopPropagation();
     if (!currentUser) return alert("Sign in required.");
     if (!confirm("Delete this photo? This cannot be undone.")) return;
     
-    // Remove from array
     let images = currentModalSpecimen.gallery_images || [];
     images = images.filter(img => img !== srcToDelete);
     currentModalSpecimen.gallery_images = images;
 
-    // Update main image if we deleted the current main one
     if (currentModalSpecimen.image_url === srcToDelete) {
         currentModalSpecimen.image_url = images.length > 0 ? images[0] : null;
-        currentModalSpecimen.original_image_url = images.length > 0 ? images[0] : null;
+        // Also update original_image_url if it matches
+        if (currentModalSpecimen.original_image_url === srcToDelete) {
+             currentModalSpecimen.original_image_url = images.length > 0 ? images[0] : null;
+        }
     }
 
-    // Save to Firestore
     if (currentModalSpecimen.docId) {
         try {
             await saveSpecimen(currentUser.uid, currentModalSpecimen, currentModalSpecimen.docId);
-            renderFullModalContent(); // Refresh UI
+            renderFullModalContent();
         } catch (err) {
             alert("Error deleting image: " + err.message);
         }
     } else {
-        renderFullModalContent(); // Just refresh UI for unsaved items
+        renderFullModalContent();
     }
 }
 
@@ -767,9 +762,10 @@ async function handleAddImage() {
         const { original, thumb } = await uploadMedia(file, currentUser.uid);
         if (!currentModalSpecimen.gallery_images) currentModalSpecimen.gallery_images = [];
         currentModalSpecimen.gallery_images.push(thumb);
+        // Store BOTH URLs
         if (!currentModalSpecimen.image_url) {
-            currentModalSpecimen.image_url = thumb;
-            currentModalSpecimen.original_image_url = original;
+            currentModalSpecimen.image_url = thumb; // Use thumb for display
+            currentModalSpecimen.original_image_url = original; // Keep original for lightbox
         }
         renderFullModalContent();
         if (currentModalSpecimen.docId) await saveSpecimen(currentUser.uid, currentModalSpecimen, currentModalSpecimen.docId);
@@ -798,6 +794,7 @@ function setupGalleryListeners() {
     
     if (mainImg) {
         mainImg.addEventListener('click', () => {
+            // Use data-full-res for lightbox
             openLightbox(mainImg.dataset.fullRes || mainImg.src);
         });
     }
@@ -805,11 +802,14 @@ function setupGalleryListeners() {
     if (thumbs.length > 0) {
         thumbs.forEach(thumb => {
             thumb.addEventListener('click', (e) => {
-                if(e.target.closest('.delete-img-btn')) return; // Ignore clicks on delete button
+                if(e.target.closest('.delete-img-btn')) return; 
+                // Get full-res URL
                 const newSrc = thumb.dataset.fullRes || thumb.src;
                 if (mainImg) {
-                    mainImg.src = newSrc;
-                    mainImg.dataset.fullRes = newSrc;
+                    // Update main image display (still using thumb for performance)
+                    mainImg.src = thumb.src; 
+                    // Update data-full-res for when main image is clicked
+                    mainImg.dataset.fullRes = newSrc; 
                     thumbs.forEach(t => {
                         t.classList.remove('ring-2', 'ring-green-400', 'opacity-100');
                         t.classList.add('opacity-70');
@@ -817,6 +817,7 @@ function setupGalleryListeners() {
                     thumb.classList.remove('opacity-70');
                     thumb.classList.add('ring-2', 'ring-green-400', 'opacity-100');
                 } else {
+                    // If video is playing, open lightbox directly with full-res
                     openLightbox(newSrc);
                 }
             });
@@ -951,9 +952,12 @@ async function handleImageUpload(e) {
             if (gbifResult.data.length > 0) {
                 const foundSpecimen = gbifResult.data[0];
                 await openSpecimenModal(foundSpecimen.slug, result.common_name);
-                currentModalSpecimen.image_url = thumb;
-                currentModalSpecimen.original_image_url = original;
+                
+                // Store BOTH URLs correctly
+                currentModalSpecimen.image_url = thumb; // Use thumb for display
+                currentModalSpecimen.original_image_url = original; // Keep original for lightbox
                 currentModalSpecimen.gallery_images = [thumb];
+                
                 renderFullModalContent();
                 closeImageUploadModal();
                 alert("Identified! Don't forget to click 'Save to Sanctuary' to keep your photo.");
