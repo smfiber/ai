@@ -2,8 +2,8 @@
  * APP.JS
  * The Controller for the "Life Explorer" SPA.
  * Updated: 
- * - OPTIMIZATION: Disabled "Gemini Suggestions" (bottom section) to reduce API usage and visual clutter.
- * - PRESERVED: Slideshow functionality.
+ * - UI FIX: Removed pagination (showing top 10 matches only).
+ * - UI FIX: Removed 'truncate' from scientific names to allow text wrapping.
  */
 
 import { setApiKeys } from './config.js';
@@ -17,7 +17,7 @@ import {
 
 // --- DOM Variables ---
 let modalBackdrop, apiKeyForm, appContainer, mainContent, authContainer, signInBtn, signOutBtn, userInfo, userName, userPhoto, 
-    searchForm, searchInput, sanctuaryView, searchResultsView, specimenGallery, loader, paginationContainer, prevBtn, nextBtn, pageInfo, galleryHeader, galleryTitle, backToSanctuaryBtn,
+    searchForm, searchInput, sanctuaryView, searchResultsView, specimenGallery, loader, galleryHeader, galleryTitle, backToSanctuaryBtn,
     sanctuaryLoader, sanctuaryGallery, sanctuaryEmptyState, createFolderBtn, foldersSection, foldersGallery, folderBackBtn, sanctuaryTitle, sanctuarySubtitle,
     specimenDetailModal, modalTitle, modalCloseBtn, modalContentContainer, modalLoader, modalContent, saveSpecimenBtn, refreshSpecimenBtn, 
     updateImageBtn, updateImageInput, uploadVideoBtn, uploadVideoInput,
@@ -74,10 +74,6 @@ function assignDomElements() {
     galleryHeader = document.getElementById('gallery-header');
     galleryTitle = document.getElementById('gallery-title');
     backToSanctuaryBtn = document.getElementById('back-to-collections-btn'); 
-    paginationContainer = document.getElementById('pagination-container');
-    prevBtn = document.getElementById('prev-btn');
-    nextBtn = document.getElementById('next-btn');
-    pageInfo = document.getElementById('page-info');
     
     sanctuaryLoader = document.getElementById('sanctuary-loader');
     sanctuaryGallery = document.getElementById('sanctuary-gallery');
@@ -165,8 +161,7 @@ function addEventListeners() {
     if (backToSanctuaryBtn) backToSanctuaryBtn.addEventListener('click', returnToSanctuary);
     if (searchForm) searchForm.addEventListener('submit', handleSearchSubmit);
     if (scientificLookupBtn) scientificLookupBtn.addEventListener('click', handleScientificLookup);
-    if (prevBtn) prevBtn.addEventListener('click', handlePrevClick);
-    if (nextBtn) nextBtn.addEventListener('click', handleNextClick);
+    
     if (specimenGallery) specimenGallery.addEventListener('click', handleSpecimenCardClick);
     if (sanctuaryGallery) sanctuaryGallery.addEventListener('click', handleSanctuaryGridClick);
     if (modalCloseBtn) modalCloseBtn.addEventListener('click', closeModal);
@@ -964,33 +959,12 @@ function handleSearchSubmit(e) {
 }
 
 async function fetchAndRenderSpecimens() {
-    loader.classList.remove('hidden'); specimenGallery.innerHTML = ''; paginationContainer.classList.add('hidden');
+    loader.classList.remove('hidden'); specimenGallery.innerHTML = ''; 
     try {
         const results = await searchSpecimens(currentSearchQuery, currentPage);
         currentMeta = results.meta;
         renderSpecimenGallery(results.data, specimenGallery);
-        renderPagination(results.meta);
     } catch (error) { console.error(error); specimenGallery.innerHTML = '<p class="col-span-full text-center text-red-400">Error loading specimens.</p>'; } finally { loader.classList.add('hidden'); }
-}
-
-// Added missing renderPagination function
-function renderPagination(meta) {
-    if (!meta || meta.total === 0) {
-        paginationContainer.classList.add('hidden');
-        return;
-    }
-    
-    paginationContainer.classList.remove('hidden');
-    pageInfo.textContent = `Page ${currentPage}`;
-    
-    prevBtn.disabled = (currentPage === 1);
-    nextBtn.disabled = meta.endOfRecords;
-    
-    prevBtn.style.opacity = prevBtn.disabled ? '0.5' : '1';
-    nextBtn.style.opacity = nextBtn.disabled ? '0.5' : '1';
-    
-    prevBtn.style.cursor = prevBtn.disabled ? 'not-allowed' : 'pointer';
-    nextBtn.style.cursor = nextBtn.disabled ? 'not-allowed' : 'pointer';
 }
 
 function renderSpecimenGallery(specimens, container) {
@@ -1006,20 +980,18 @@ function renderSpecimenGallery(specimens, container) {
         const hasImage = !!specimen.image_url;
         const showMoveBtn = (container === sanctuaryGallery);
         
-        // FIX: Grid now forced 16:9 with aspect-video
+        // FIX: Remove 'truncate' from scientific name, add leading-tight for spacing.
         card.innerHTML = `
             <div class="relative w-full aspect-video bg-gray-800 group-hover:scale-105 transition-transform duration-700">
                 <img src="${hasImage ? specimen.image_url : ''}" class="w-full h-full object-cover transition-opacity duration-300 ${hasImage ? '' : 'hidden'}" onload="this.style.opacity=1" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden');">
                 <div class="${hasImage ? 'hidden' : ''} absolute inset-0 flex items-center justify-center bg-gray-800 card-image-placeholder"><div class="text-center opacity-30"><span class="text-5xl">🐾</span><p class="text-xs mt-2 text-gray-400">No Photo</p></div></div>
                 ${showMoveBtn ? `<div class="absolute top-2 right-2 z-10"><button class="move-specimen-btn bg-gray-900/80 hover:bg-indigo-600 text-white p-2 rounded-lg backdrop-blur-sm transition-colors shadow-lg border border-white/10">📁</button></div>` : ''}
-                <div class="card-text-overlay"><h3 class="text-lg font-bold text-white truncate">${specimen.common_name}</h3><p class="text-green-400 text-xs mt-1 truncate">${specimen.scientific_name}</p></div>
+                <div class="card-text-overlay"><h3 class="text-lg font-bold text-white truncate">${specimen.common_name}</h3><p class="text-green-400 text-xs mt-1 leading-tight">${specimen.scientific_name}</p></div>
             </div>`;
         container.appendChild(card);
     });
 }
 
-function handlePrevClick() { if (currentPage > 1) { currentPage--; fetchAndRenderSpecimens(); } }
-function handleNextClick() { currentPage++; fetchAndRenderSpecimens(); }
 function returnToSanctuary() { searchResultsView.classList.add('hidden'); sanctuaryView.classList.remove('hidden'); specimenGallery.innerHTML = ''; currentSearchQuery = null; }
 
 async function loadCollectionSuggestions(query) {
