@@ -2,8 +2,8 @@
  * API.JS
  * Final Version - "Gemini Search Engine"
  * Updated: 
- * - PERFORMANCE: Enforced strict 10-item limit via JavaScript slice.
- * - PROMPT: Changed instruction to "EXACTLY 10" to reduce generation time.
+ * - SEARCH FIX: Prompt rewritten to enforce strict specific relevance (No Tigers when searching Lions).
+ * - PERFORMANCE: Kept limit to 10 for speed.
  */
 
 import { configStore } from './config.js';
@@ -306,17 +306,16 @@ export async function getCategorySpecimens(classKey, page) {
 export async function searchSpecimens(queryText, page) {
     if (!configStore.geminiApiKey) return { data: [], meta: { total: 0, endOfRecords: true } };
     
-    // AI search does not support pagination in the traditional sense.
-    // We return 10 results on page 1, and consider that the end.
-    if (page > 1) return { data: [], meta: { total: 10, endOfRecords: true } };
-
-    // UPDATED PROMPT: Request EXACTLY 10 items.
-    const prompt = `List EXACTLY 10 distinct animal species that are strictly subtypes, breeds, or immediate wild relatives of "${queryText}". 
-    Rules: 
-    1. Relevance: Include distinct breeds (e.g. 'Clydesdale'), subspecies, or very close relatives (e.g. Zebras for Horses). 
-    2. Exclusion: Do NOT include distant taxonomic cousins. For example, if searching for 'Horse', do NOT include Rhinos or Tapirs. 
-    3. Output: Valid JSON Array. 
-    4. Format: [{ "common_name": "Gray Wolf", "scientific_name": "Canis lupus" }, ...]`;
+    // UPDATED PROMPT: Strict Biological Specificity
+    // Instructions are designed to be fast (short text) and strict.
+    const prompt = `List EXACTLY 10 distinct animals that are strictly "${queryText}" or specific breeds/subspecies of "${queryText}".
+    
+    STRICT RULES:
+    1. MATCH TYPE ONLY: 
+       - If searching 'Lion', list distinct Lion populations (e.g. Asiatic Lion). DO NOT list Tigers, Leopards, or Jaguars.
+       - If searching 'Horse', list Horse breeds (e.g. Arabian) or wild horses. DO NOT list Zebras, Donkeys, or Rhinos.
+    2. JSON ONLY: Return a valid JSON Array.
+    3. FORMAT: [{ "common_name": "...", "scientific_name": "..." }]`;
 
     try {
         const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=${configStore.geminiApiKey}`, {
@@ -327,7 +326,7 @@ export async function searchSpecimens(queryText, page) {
         const text = d.candidates[0].content.parts[0].text;
         const results = extractJson(text);
         
-        // HARD LIMIT ENFORCEMENT: Slice the array to max 10, regardless of what AI returns.
+        // HARD LIMIT ENFORCEMENT
         const limitedResults = results.slice(0, 10);
         
         const mapped = limitedResults.map(item => ({
