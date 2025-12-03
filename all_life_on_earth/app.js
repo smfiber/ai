@@ -1,7 +1,10 @@
 /*
  * APP.JS
  * The Controller for the "Life Explorer" SPA.
- * Updated: 5-Card Perspective System (UI & Logic)
+ * Updated: 
+ * - 5-Card Perspective System (UI & Logic)
+ * - FIX: Video layout now correctly displays images as thumbnails.
+ * - Full Code (No Truncation)
  */
 
 import { setApiKeys } from './config.js';
@@ -174,7 +177,6 @@ function addEventListeners() {
 
 // --- TAB RENDERING ---
 function renderTabs() {
-    // Icons: Field Guide, Historian, Evolutionist, Ecologist, Storyteller
     const tabs = [
         { id: 'field_guide', icon: '📖', label: 'Field Guide' },
         { id: 'historian', icon: '🏺', label: 'History' },
@@ -208,7 +210,6 @@ async function handleTabSwitch(newType) {
     modalContent.classList.add('hidden');
     
     // Check if data exists
-    // Default 'field_guide' uses root keys. Others use 'cards' map.
     let hasData = false;
     if (newType === 'field_guide') {
         hasData = !!currentModalSpecimen.zoologist_intro;
@@ -261,13 +262,15 @@ async function openSpecimenModal(slug, name) {
             
             if (savedResult.data && savedResult.data.diet) {
                 currentModalSpecimen = { ...savedResult.data, docId: savedResult.docId };
-                // Ensure cards object
+                // Ensure cards object exists for legacy data
                 if (!currentModalSpecimen.cards) currentModalSpecimen.cards = {};
+                if (!currentModalSpecimen.gallery_images) currentModalSpecimen.gallery_images = [];
+                if (currentModalSpecimen.image_url && !currentModalSpecimen.gallery_images.includes(currentModalSpecimen.image_url)) {
+                    currentModalSpecimen.gallery_images.unshift(currentModalSpecimen.image_url);
+                }
                 
                 modalTitle.textContent = currentModalSpecimen.common_name;
-                
                 renderFullModalContent();
-                
                 updateSaveButtonState(true);
                 saveSpecimenBtn.classList.remove('hidden');
                 refreshSpecimenBtn.classList.remove('hidden'); 
@@ -339,29 +342,45 @@ function renderFullModalContent() {
 function createSpecimenDetailHtml(data) {
     const get = (v, d = 'N/A') => (v === null || v === undefined || v === '') ? d : v;
     
-    // --- MEDIA SECTION (Shared) ---
+    // --- MEDIA SECTION (FIXED LAYOUT) ---
     const hasImage = !!data.image_url;
     const image = hasImage ? data.image_url : 'https://placehold.co/400x400/374151/FFFFFF?text=No+Photo';
     const fullRes = data.original_image_url || data.image_url;
     
-    const galleryImages = data.gallery_images || (hasImage ? [image] : []);
-    const galleryHtml = (galleryImages.length > 0) ? 
-        `<div class="flex gap-3 overflow-x-auto pb-2 mt-4 custom-scrollbar">
-            ${galleryImages.map((img, idx) => `
-                <img src="${img}" data-full-res="${img}" class="gallery-thumb h-20 w-20 object-cover rounded-lg cursor-pointer transition-all border border-gray-600 ${idx===0 ? 'ring-2 ring-green-400 opacity-100' : 'opacity-60 hover:opacity-100'}" alt="Thumbnail">
-            `).join('')}
-        </div>` : '';
+    let galleryImages = data.gallery_images || [];
+    if (galleryImages.length === 0 && hasImage) {
+        galleryImages = [image];
+    }
+
     const videoHtml = data.video_url ? `
         <div class="w-full aspect-video bg-black rounded-xl overflow-hidden shadow-lg mb-4 relative group">
             <video src="${data.video_url}" controls class="w-full h-full object-contain"></video>
         </div>` : '';
 
+    // FIX: If video exists, main image is removed and rendered as a thumbnail instead.
+    const mainImageHtml = !data.video_url ? `
+        <div class="card-image-wrapper rounded-xl overflow-hidden shadow-lg bg-gray-900/50 mb-4">
+            <img id="main-specimen-image" src="${image}" data-full-res="${fullRes}" alt="${get(data.common_name)}" class="w-full h-auto object-cover cursor-zoom-in" onerror="this.onerror=null;this.src='https://placehold.co/400x400/374151/FFFFFF?text=No+Image';">
+        </div>` : '';
+
+    const galleryHtml = (galleryImages.length > 0) ? 
+        `<div class="flex gap-3 overflow-x-auto pb-2 custom-scrollbar">
+            ${galleryImages.map((img, idx) => {
+                // If there's a video, no image is "active" by default.
+                // If no video, the first image is active.
+                const isActive = !data.video_url && idx === 0;
+                return `
+                <img src="${img}" 
+                     data-full-res="${img}" 
+                     class="gallery-thumb h-20 w-20 object-cover rounded-lg cursor-pointer transition-all border border-gray-600 ${isActive ? 'ring-2 ring-green-400 opacity-100' : 'opacity-70 hover:opacity-100'}" 
+                     alt="Thumbnail">`;
+            }).join('')}
+        </div>` : '';
+
     const mediaColumn = `
         <div class="w-full lg:w-1/3 flex-shrink-0">
             ${videoHtml}
-            <div class="card-image-wrapper rounded-xl overflow-hidden shadow-lg bg-gray-900/50">
-                <img id="main-specimen-image" src="${image}" data-full-res="${fullRes}" alt="${get(data.common_name)}" class="w-full h-auto object-cover" onerror="this.onerror=null;this.src='https://placehold.co/400x400/374151/FFFFFF?text=No+Image';">
-            </div>
+            ${mainImageHtml}
             ${galleryHtml}
         </div>`;
 
@@ -473,7 +492,6 @@ async function handleRefreshData(isTabSwitch = false) {
 }
 
 // ... (Rest of existing functions: handleSaveToggle, handleCareQuestionSubmit, images, etc. remain unchanged) ...
-// Copied to ensure completeness:
 
 async function handleSaveToggle() {
     if (!currentUser) return alert("Sign in to save.");
@@ -501,8 +519,6 @@ function updateSaveButtonState(isSaved) {
         saveSpecimenBtn.classList.add('bg-green-600');
     }
 }
-
-// ... (Image/Video Upload logic remains identical to previous, just ensure it uses renderFullModalContent() instead of createSpecimenDetailHtml assignment)
 
 async function handleAddImage() {
     if (!updateImageInput.files || !updateImageInput.files[0]) return;
@@ -539,11 +555,79 @@ async function handleUploadVideo() {
     finally { uploadVideoBtn.innerHTML = '🎥 Upload Video'; uploadVideoBtn.disabled = false; uploadVideoInput.value = ''; }
 }
 
-// ... (Rest of existing search/lightbox logic, unchanged) ...
+function setupGalleryListeners() {
+    const mainImg = document.getElementById('main-specimen-image');
+    const thumbs = modalContent.querySelectorAll('.gallery-thumb');
+    
+    // If main image exists, click opens lightbox
+    if (mainImg) {
+        mainImg.addEventListener('click', () => {
+            openLightbox(mainImg.dataset.fullRes || mainImg.src);
+        });
+    }
+    
+    if (thumbs.length > 0) {
+        thumbs.forEach(thumb => {
+            thumb.addEventListener('click', () => {
+                const newSrc = thumb.dataset.fullRes || thumb.src;
+                
+                // If there is a main image (no video), swap it
+                if (mainImg) {
+                    mainImg.src = newSrc;
+                    mainImg.dataset.fullRes = newSrc;
+                    // Update active state for thumbs
+                    thumbs.forEach(t => {
+                        t.classList.remove('ring-2', 'ring-green-400', 'opacity-100');
+                        t.classList.add('opacity-70');
+                    });
+                    thumb.classList.remove('opacity-70');
+                    thumb.classList.add('ring-2', 'ring-green-400', 'opacity-100');
+                } else {
+                    // If no main image (video is playing), click opens lightbox directly
+                    openLightbox(newSrc);
+                }
+            });
+        });
+    }
+}
 
-// ... (Helper functions from previous version need to be present) ...
-// Search, Lightbox, Folders, etc. are implicitly included since I am outputting the full file logic concept, but for brevity, assume the standard helpers are here.
-// I will include the critical missing pieces to make this file complete.
+async function handleCareQuestionSubmit(e, context) {
+    e.preventDefault();
+    const input = context.querySelector('#care-question-input');
+    const responseContainer = context.querySelector('#care-response-container');
+    const responseText = context.querySelector('#care-response-text');
+    const loader = context.querySelector('#care-response-loader');
+    const submitBtn = context.querySelector('#care-question-submit');
+
+    const q = input.value.trim();
+    if (!q) return;
+
+    responseText.classList.add('hidden');
+    loader.classList.remove('hidden');
+    submitBtn.disabled = true;
+
+    try {
+        const answer = await fetchCustomCareAdvice(currentModalSpecimen, q);
+        responseText.innerHTML = `<span class="text-indigo-300 font-bold">Q: ${q}</span><br><br>${answer}`;
+        
+        if (currentModalSpecimen.docId) {
+            const entry = { q, a: answer, date: Date.now() };
+            const history = currentModalSpecimen.qa_history || [];
+            history.push(entry);
+            currentModalSpecimen.qa_history = history;
+            await saveSpecimen(currentUser.uid, currentModalSpecimen, currentModalSpecimen.docId);
+        }
+    } catch (err) {
+        responseText.textContent = "Zoologist is busy. Try again.";
+    } finally {
+        loader.classList.add('hidden');
+        responseText.classList.remove('hidden');
+        submitBtn.disabled = false;
+        input.value = '';
+    }
+}
+
+// --- SEARCH & OTHER HELPERS ---
 
 function handleSearchSubmit(e) {
     e.preventDefault();
@@ -561,11 +645,15 @@ async function fetchAndRenderSpecimens() {
         currentMeta = results.meta;
         renderSpecimenGallery(results.data, specimenGallery);
         renderPagination(results.meta);
-    } catch (error) { specimenGallery.innerHTML = '<p>Error.</p>'; } finally { loader.classList.add('hidden'); }
+    } catch (error) { specimenGallery.innerHTML = '<p class="col-span-full text-center text-red-400">Error loading specimens.</p>'; } finally { loader.classList.add('hidden'); }
 }
 
 function renderSpecimenGallery(specimens, container) {
     container.innerHTML = '';
+    if (specimens.length === 0) {
+        container.innerHTML = '<div class="col-span-full text-center py-10"><p class="text-gray-300">No specimens found.</p></div>';
+        return;
+    }
     specimens.forEach(specimen => {
         const card = document.createElement('div');
         card.className = 'specimen-card glass-panel rounded-xl overflow-hidden cursor-pointer';
@@ -583,23 +671,89 @@ function renderSpecimenGallery(specimens, container) {
     });
 }
 
-function setupGalleryListeners() {
-    const mainImg = document.getElementById('main-specimen-image');
-    const thumbs = modalContent.querySelectorAll('.gallery-thumb');
-    if (mainImg) mainImg.addEventListener('click', () => { openLightbox(mainImg.dataset.fullRes || mainImg.src); });
-    if (thumbs.length > 0) {
-        thumbs.forEach(thumb => {
-            thumb.addEventListener('click', () => {
-                const newSrc = thumb.dataset.fullRes || thumb.src;
-                if (mainImg) { mainImg.src = newSrc; mainImg.dataset.fullRes = newSrc; }
-                thumbs.forEach(t => { t.classList.remove('ring-2', 'ring-green-400', 'opacity-100'); t.classList.add('opacity-60'); });
-                thumb.classList.remove('opacity-60'); thumb.classList.add('ring-2', 'ring-green-400', 'opacity-100');
-            });
-        });
-    }
-}
 function handlePrevClick() { if (currentPage > 1) { currentPage--; fetchAndRenderSpecimens(); } }
 function handleNextClick() { currentPage++; fetchAndRenderSpecimens(); }
 function returnToSanctuary() { searchResultsView.classList.add('hidden'); sanctuaryView.classList.remove('hidden'); specimenGallery.innerHTML = ''; currentSearchQuery = null; }
+
+// --- AI SUGGESTIONS ---
+
+async function loadCollectionSuggestions(query) {
+    aiSuggestionsContainer.classList.remove('hidden');
+    aiSuggestionsList.classList.add('hidden');
+    aiSuggestionsLoader.classList.remove('hidden');
+    aiSuggestionsList.innerHTML = '';
+
+    try {
+        const suggestions = await fetchCollectionSuggestions(query);
+        aiSuggestionsLoader.classList.add('hidden');
+        aiSuggestionsList.classList.remove('hidden');
+        
+        if (suggestions.length === 0) {
+            aiSuggestionsContainer.classList.add('hidden');
+            return;
+        }
+
+        aiSuggestionsList.innerHTML = `
+            <div class="flex flex-wrap gap-2">
+                ${suggestions.map(s => `
+                    <button class="suggestion-btn px-3 py-1 bg-gray-700 hover:bg-green-600 rounded-full text-xs text-white transition-colors border border-gray-600" data-name="${s.common_name}">
+                        ${s.common_name}
+                    </button>
+                `).join('')}
+            </div>
+        `;
+        
+        aiSuggestionsList.querySelectorAll('.suggestion-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                searchInput.value = btn.dataset.name;
+                handleSearchSubmit({ preventDefault: () => {} });
+            });
+        });
+
+    } catch (e) {
+        aiSuggestionsContainer.classList.add('hidden');
+    }
+}
+
+// --- IMAGE UPLOAD (ID) ---
+function openImageUploadModal() { imageUploadModal.classList.remove('hidden'); }
+function closeImageUploadModal() { imageUploadModal.classList.add('hidden'); }
+function handleImageFileChange(e) {
+    const file = e.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = (ev) => { imagePreview.src = ev.target.result; imagePreview.classList.remove('hidden'); previewPlaceholder.classList.add('hidden'); identifyImageBtn.disabled = false; };
+        reader.readAsDataURL(file);
+    }
+}
+async function handleImageUpload(e) {
+    e.preventDefault();
+    uploadStatus.classList.remove('hidden');
+    uploadMessage.textContent = 'Uploading & Identifying...';
+    try {
+        const { original, thumb } = await uploadMedia(imageFileInput.files[0], currentUser.uid);
+        const result = await fetchImageIdentification(original); 
+        
+        if (result && result.scientific_name !== 'Unknown') {
+            uploadMessage.textContent = `Found: ${result.common_name}`;
+            const gbifResult = await searchSpecimens(result.scientific_name, 1);
+            if (gbifResult.data.length > 0) {
+                const foundSpecimen = gbifResult.data[0];
+                await openSpecimenModal(foundSpecimen.slug, result.common_name);
+                
+                // Initialize gallery with this identified image
+                currentModalSpecimen.image_url = thumb;
+                currentModalSpecimen.original_image_url = original;
+                currentModalSpecimen.gallery_images = [thumb];
+                
+                renderFullModalContent();
+                closeImageUploadModal();
+                alert("Identified! Don't forget to click 'Save to Sanctuary' to keep your photo.");
+            } else { alert("Identified as " + result.common_name + ", but not found in GBIF."); }
+        } else { throw new Error("Could not identify."); }
+    } catch (err) { uploadMessage.textContent = 'Error: ' + err.message; }
+}
+
+function closeModal() { specimenDetailModal.classList.add('hidden'); currentModalSpecimen = null; }
 
 main();
