@@ -1,13 +1,17 @@
 /*
  * APP.JS
  * The Controller for the "Life Explorer" SPA.
- * Updated: Restored missing handleApiKeySubmit and Auth/Sanctuary logic.
+ * Updated: 
+ * - UI/UX Layout Overhaul (Split View + Full Width Narrative)
+ * - Added "Delete Photo" functionality
+ * - Fixed Lightbox sizing
+ * - Restored all previous logic
  */
 
 import { setApiKeys } from './config.js';
 import { 
     initFirebase, signInWithGoogle, signOutUser, searchSpecimens, getSpecimenDetails,
-    fetchSpecimenCard, // NEW
+    fetchSpecimenCard, 
     fetchCustomCareAdvice, fetchScientificNameLookup, fetchCollectionSuggestions, fetchImageIdentification,
     saveSpecimen, removeSpecimen, getSavedSpecimens, getSavedSpecimen, uploadMedia,
     createFolder, getUserFolders, deleteUserFolder, moveSpecimenToFolder
@@ -34,7 +38,7 @@ let currentModalSpecimen = null;
 let userFolders = [];
 let currentFolderId = null; 
 let specimenToMoveId = null; 
-let currentCardType = 'field_guide'; // NEW: Track active tab
+let currentCardType = 'field_guide'; 
 
 function main() {
     document.addEventListener('DOMContentLoaded', () => {
@@ -172,7 +176,7 @@ function addEventListeners() {
     if (confirmMoveBtn) confirmMoveBtn.addEventListener('click', executeMoveSpecimen);
 }
 
-// --- MISSING HANDLERS RESTORED ---
+// --- HANDLERS ---
 
 async function handleApiKeySubmit(e) {
     e.preventDefault();
@@ -183,17 +187,8 @@ async function handleApiKeySubmit(e) {
 
     try {
         const firebaseConfig = JSON.parse(firebaseConfigStr);
-        
-        setApiKeys({
-            gemini: geminiKey,
-            googleClientId: clientId,
-            firebase: firebaseConfig
-        });
-
-        // Hide modal
+        setApiKeys({ gemini: geminiKey, googleClientId: clientId, firebase: firebaseConfig });
         modalBackdrop.classList.add('hidden');
-        
-        // Init Firebase
         const result = await initFirebase();
         if (result && result.auth) {
             result.onAuthStateChanged(result.auth, (user) => {
@@ -201,10 +196,7 @@ async function handleApiKeySubmit(e) {
                 updateAuthUI();
                 if (user) {
                     loadSanctuarySpecimens();
-                    getUserFolders(user.uid).then(folders => {
-                        userFolders = folders;
-                        renderFolders();
-                    });
+                    getUserFolders(user.uid).then(folders => { userFolders = folders; renderFolders(); });
                 } else {
                     sanctuaryGallery.innerHTML = '';
                     foldersGallery.innerHTML = '';
@@ -214,21 +206,15 @@ async function handleApiKeySubmit(e) {
         }
     } catch (error) {
         console.error(error);
-        alert('Error initializing: ' + error.message + '\nCheck console and JSON format.');
+        alert('Error initializing: ' + error.message);
     }
 }
 
 async function handleGoogleSignIn() {
     try {
         const user = await signInWithGoogle();
-        if (user) {
-            currentUser = user;
-            updateAuthUI();
-            loadSanctuarySpecimens();
-        }
-    } catch (e) {
-        console.error("Sign in error:", e);
-    }
+        if (user) { currentUser = user; updateAuthUI(); loadSanctuarySpecimens(); }
+    } catch (e) { console.error("Sign in error:", e); }
 }
 
 async function handleGoogleSignOut() {
@@ -263,7 +249,6 @@ async function loadSanctuarySpecimens() {
     sanctuaryGallery.innerHTML = '';
     sanctuaryEmptyState.classList.add('hidden');
 
-    // Update Headers based on Folder
     if (currentFolderId) {
         const folder = userFolders.find(f => f.id === currentFolderId);
         sanctuaryTitle.textContent = folder ? folder.name : 'Folder';
@@ -281,12 +266,9 @@ async function loadSanctuarySpecimens() {
 
     try {
         const specimens = await getSavedSpecimens(currentUser.uid);
-        
-        // Filter: If currentFolderId is null, show items where folderId is missing or null
-        // If currentFolderId is set, show items matching it
         const filtered = specimens.filter(s => {
             if (currentFolderId) return s.folderId === currentFolderId;
-            return !s.folderId; // Show root items
+            return !s.folderId;
         });
 
         if (filtered.length === 0) {
@@ -307,7 +289,6 @@ async function handleCreateFolder() {
     if (!currentUser) return alert("Sign in first.");
     const name = prompt("Folder Name:");
     if (!name) return;
-    
     try {
         await createFolder(currentUser.uid, name);
         userFolders = await getUserFolders(currentUser.uid);
@@ -318,7 +299,6 @@ async function handleCreateFolder() {
 function renderFolders() {
     if (!foldersGallery) return;
     foldersGallery.innerHTML = '';
-    
     userFolders.forEach(folder => {
         const div = document.createElement('div');
         div.className = 'folder-card p-4 rounded-xl cursor-pointer transition-all duration-300 relative group';
@@ -331,8 +311,6 @@ function renderFolders() {
                 <p class="text-xs text-gray-400 mt-1">Collection</p>
             </div>
         `;
-        
-        // Delete Handler
         div.querySelector('.delete-folder-btn').addEventListener('click', async (e) => {
             e.stopPropagation();
             if(confirm(`Delete folder "${folder.name}"? Items inside will be moved to main sanctuary.`)) {
@@ -342,21 +320,16 @@ function renderFolders() {
                 loadSanctuarySpecimens();
             }
         });
-
         foldersGallery.appendChild(div);
     });
 }
 
 function handleFolderClick(e) {
     const card = e.target.closest('.folder-card');
-    if (card) {
-        currentFolderId = card.dataset.id;
-        loadSanctuarySpecimens();
-    }
+    if (card) { currentFolderId = card.dataset.id; loadSanctuarySpecimens(); }
 }
 
 function handleSanctuaryGridClick(e) {
-    // Check if clicked move button
     const moveBtn = e.target.closest('.move-specimen-btn');
     if (moveBtn) {
         e.stopPropagation();
@@ -365,8 +338,6 @@ function handleSanctuaryGridClick(e) {
         openMoveModal();
         return;
     }
-    
-    // Normal card click
     handleSpecimenCardClick(e);
 }
 
@@ -375,8 +346,7 @@ function openMoveModal() {
     moveFolderSelect.innerHTML = '<option value="">(Unsorted)</option>';
     userFolders.forEach(f => {
         const opt = document.createElement('option');
-        opt.value = f.id;
-        opt.textContent = f.name;
+        opt.value = f.id; opt.textContent = f.name;
         moveFolderSelect.appendChild(opt);
     });
 }
@@ -384,19 +354,13 @@ function openMoveModal() {
 async function executeMoveSpecimen() {
     if (!specimenToMoveId) return;
     const folderId = moveFolderSelect.value || null;
-    confirmMoveBtn.disabled = true;
-    confirmMoveBtn.textContent = "Moving...";
-    
+    confirmMoveBtn.disabled = true; confirmMoveBtn.textContent = "Moving...";
     try {
         await moveSpecimenToFolder(currentUser.uid, specimenToMoveId, folderId);
         moveModal.classList.add('hidden');
-        loadSanctuarySpecimens(); // Refresh grid
-    } catch (e) {
-        alert("Move failed: " + e.message);
-    } finally {
-        confirmMoveBtn.disabled = false;
-        confirmMoveBtn.textContent = "Move Specimen";
-    }
+        loadSanctuarySpecimens();
+    } catch (e) { alert("Move failed: " + e.message); } 
+    finally { confirmMoveBtn.disabled = false; confirmMoveBtn.textContent = "Move Specimen"; }
 }
 
 function handleSpecimenCardClick(e) {
@@ -410,23 +374,21 @@ function handleSpecimenCardClick(e) {
 async function handleScientificLookup() {
     const common = searchInput.value.trim();
     if (!common) return alert("Enter a name first.");
-    
     scientificLookupBtn.classList.add('animate-spin');
     try {
         const sciName = await fetchScientificNameLookup(common);
-        if (sciName) {
-            searchInput.value = sciName;
-            handleSearchSubmit({ preventDefault: () => {} });
-        } else {
-            alert("Could not determine scientific name.");
-        }
+        if (sciName) { searchInput.value = sciName; handleSearchSubmit({ preventDefault: () => {} }); } 
+        else { alert("Could not determine scientific name."); }
     } catch (e) { console.error(e); }
     finally { scientificLookupBtn.classList.remove('animate-spin'); }
 }
 
+// --- LIGHTBOX FIX ---
 function openLightbox(src) {
     if (!lightboxModal) return;
     lightboxImage.src = src;
+    // Force sizing classes to override defaults if necessary
+    lightboxImage.className = 'max-w-[95vw] max-h-[95vh] object-contain rounded shadow-2xl'; 
     lightboxImage.classList.remove('hidden');
     lightboxPlaceholder.classList.add('hidden');
     lightboxModal.classList.remove('hidden');
@@ -436,7 +398,6 @@ function closeLightbox() {
     lightboxModal.classList.add('hidden');
     lightboxImage.src = '';
 }
-
 
 // --- TAB RENDERING ---
 function renderTabs() {
@@ -450,7 +411,6 @@ function renderTabs() {
 
     const tabContainer = document.createElement('div');
     tabContainer.className = 'flex flex-wrap gap-2 mb-6 border-b border-gray-700 pb-2';
-    
     tabs.forEach(tab => {
         const btn = document.createElement('button');
         const isActive = currentCardType === tab.id;
@@ -459,34 +419,26 @@ function renderTabs() {
         btn.onclick = () => handleTabSwitch(tab.id);
         tabContainer.appendChild(btn);
     });
-
     return tabContainer;
 }
 
 async function handleTabSwitch(newType) {
     if (currentCardType === newType) return;
     currentCardType = newType;
-    
-    // Refresh UI
     modalContent.innerHTML = '';
     modalLoader.classList.remove('hidden');
     modalContent.classList.add('hidden');
     
-    // Check if data exists
     let hasData = false;
-    if (newType === 'field_guide') {
-        hasData = !!currentModalSpecimen.zoologist_intro;
-    } else {
-        hasData = currentModalSpecimen.cards && currentModalSpecimen.cards[newType];
-    }
+    if (newType === 'field_guide') { hasData = !!currentModalSpecimen.zoologist_intro; } 
+    else { hasData = currentModalSpecimen.cards && currentModalSpecimen.cards[newType]; }
 
     if (hasData) {
         modalLoader.classList.add('hidden');
         modalContent.classList.remove('hidden');
-        renderFullModalContent(); // Re-render with new tab
+        renderFullModalContent();
     } else {
-        // Fetch new data
-        await handleRefreshData(true); // true = force fetch for new tab
+        await handleRefreshData(true);
     }
 }
 
@@ -500,7 +452,7 @@ async function openSpecimenModal(slug, name) {
     updateImageBtn.classList.remove('hidden'); 
     uploadVideoBtn.classList.remove('hidden');
     
-    currentCardType = 'field_guide'; // Reset to default
+    currentCardType = 'field_guide';
     modalContent.innerHTML = '';
     
     saveSpecimenBtn.classList.add('hidden');
@@ -525,7 +477,6 @@ async function openSpecimenModal(slug, name) {
             
             if (savedResult.data && savedResult.data.diet) {
                 currentModalSpecimen = { ...savedResult.data, docId: savedResult.docId };
-                // Ensure cards object exists for legacy data
                 if (!currentModalSpecimen.cards) currentModalSpecimen.cards = {};
                 if (!currentModalSpecimen.gallery_images) currentModalSpecimen.gallery_images = [];
                 if (currentModalSpecimen.image_url && !currentModalSpecimen.gallery_images.includes(currentModalSpecimen.image_url)) {
@@ -543,10 +494,7 @@ async function openSpecimenModal(slug, name) {
             }
             if (savedResult.data) isSaved = true;
         }
-        if (currentUser) {
-             updateSaveButtonState(isSaved);
-             saveSpecimenBtn.classList.remove('hidden');
-        }
+        if (currentUser) { updateSaveButtonState(isSaved); saveSpecimenBtn.classList.remove('hidden'); }
 
         if (!gbifData) {
             modalLoader.querySelector('p').textContent = 'Fetching GBIF Taxonomy...';
@@ -554,17 +502,11 @@ async function openSpecimenModal(slug, name) {
         }
         
         modalLoader.querySelector('p').textContent = 'Consulting the Zoologist (AI)...';
-        // Initial fetch is always field guide
         const geminiData = await fetchSpecimenCard(gbifData, 'field_guide');
 
         currentModalSpecimen = { ...gbifData, ...geminiData, qa_history: [], gallery_images: [], cards: {} };
-        
-        if (currentModalSpecimen.image_url) {
-            currentModalSpecimen.gallery_images.push(currentModalSpecimen.image_url);
-        }
-        if (name && currentModalSpecimen.common_name === currentModalSpecimen.scientific_name) {
-            currentModalSpecimen.common_name = name;
-        }
+        if (currentModalSpecimen.image_url) currentModalSpecimen.gallery_images.push(currentModalSpecimen.image_url);
+        if (name && currentModalSpecimen.common_name === currentModalSpecimen.scientific_name) currentModalSpecimen.common_name = name;
 
         modalTitle.textContent = currentModalSpecimen.common_name;
         renderFullModalContent();
@@ -581,16 +523,17 @@ async function openSpecimenModal(slug, name) {
 
 function renderFullModalContent() {
     modalContent.innerHTML = '';
-    
-    // 1. Render Tabs
     modalContent.appendChild(renderTabs());
-    
-    // 2. Render Media & Body
     const contentDiv = document.createElement('div');
     contentDiv.innerHTML = createSpecimenDetailHtml(currentModalSpecimen);
     modalContent.appendChild(contentDiv);
     
-    // 3. Render QA Section (re-attach)
+    // Attach delete listeners
+    const deleteBtns = contentDiv.querySelectorAll('.delete-img-btn');
+    deleteBtns.forEach(btn => {
+        btn.addEventListener('click', (e) => handleDeleteImage(e, btn.dataset.src));
+    });
+
     const qaSectionClone = careQuestionSection.cloneNode(true);
     qaSectionClone.classList.remove('hidden');
     modalContent.appendChild(qaSectionClone);
@@ -601,42 +544,40 @@ function renderFullModalContent() {
     setupGalleryListeners();
 }
 
-// Logic to render EITHER the Field Guide (Legacy) OR a Generic Card
+// --- UPDATED LAYOUT GENERATION ---
 function createSpecimenDetailHtml(data) {
     const get = (v, d = 'N/A') => (v === null || v === undefined || v === '') ? d : v;
     
-    // --- MEDIA SECTION (FIXED LAYOUT) ---
+    // Media
     const hasImage = !!data.image_url;
     const image = hasImage ? data.image_url : 'https://placehold.co/400x400/374151/FFFFFF?text=No+Photo';
     const fullRes = data.original_image_url || data.image_url;
     
     let galleryImages = data.gallery_images || [];
-    if (galleryImages.length === 0 && hasImage) {
-        galleryImages = [image];
-    }
+    if (galleryImages.length === 0 && hasImage) galleryImages = [image];
 
     const videoHtml = data.video_url ? `
         <div class="w-full aspect-video bg-black rounded-xl overflow-hidden shadow-lg mb-4 relative group">
             <video src="${data.video_url}" controls class="w-full h-full object-contain"></video>
         </div>` : '';
 
-    // FIX: If video exists, main image is removed and rendered as a thumbnail instead.
     const mainImageHtml = !data.video_url ? `
-        <div class="card-image-wrapper rounded-xl overflow-hidden shadow-lg bg-gray-900/50 mb-4">
+        <div class="card-image-wrapper rounded-xl overflow-hidden shadow-lg bg-gray-900/50 mb-4 group relative">
             <img id="main-specimen-image" src="${image}" data-full-res="${fullRes}" alt="${get(data.common_name)}" class="w-full h-auto object-cover cursor-zoom-in" onerror="this.onerror=null;this.src='https://placehold.co/400x400/374151/FFFFFF?text=No+Image';">
         </div>` : '';
 
     const galleryHtml = (galleryImages.length > 0) ? 
         `<div class="flex gap-3 overflow-x-auto pb-2 custom-scrollbar">
             ${galleryImages.map((img, idx) => {
-                // If there's a video, no image is "active" by default.
-                // If no video, the first image is active.
-                const isActive = !data.video_url && idx === 0;
+                const isActive = !data.video_url && (img === data.image_url);
                 return `
-                <img src="${img}" 
-                     data-full-res="${img}" 
-                     class="gallery-thumb h-20 w-20 object-cover rounded-lg cursor-pointer transition-all border border-gray-600 ${isActive ? 'ring-2 ring-green-400 opacity-100' : 'opacity-70 hover:opacity-100'}" 
-                     alt="Thumbnail">`;
+                <div class="relative flex-shrink-0 group">
+                    <img src="${img}" 
+                         data-full-res="${img}" 
+                         class="gallery-thumb h-20 w-20 object-cover rounded-lg cursor-pointer transition-all border border-gray-600 ${isActive ? 'ring-2 ring-green-400 opacity-100' : 'opacity-70 hover:opacity-100'}" 
+                         alt="Thumbnail">
+                    <button class="delete-img-btn absolute -top-1 -right-1 bg-red-600 hover:bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity shadow-sm" data-src="${img}" title="Delete Photo">&times;</button>
+                </div>`;
             }).join('')}
         </div>` : '';
 
@@ -647,18 +588,36 @@ function createSpecimenDetailHtml(data) {
             ${galleryHtml}
         </div>`;
 
-    // --- CARD CONTENT LOGIC ---
-    let cardBody = '';
-    
+    // Content Split
+    let headerAndStats = '';
+    let narrativeText = '';
+
     if (currentCardType === 'field_guide') {
-        // LEGACY / DEFAULT LAYOUT
-        const isZoologistMode = !!data.zoologist_intro;
         const funFacts = Array.isArray(data.fun_facts) ? data.fun_facts.map(f => `<li class="text-gray-300 text-sm mb-1">• ${f}</li>`).join('') : '<li class="text-gray-500">No facts available.</li>';
         
-        let zoologistHtml = '';
-        if (isZoologistMode) {
-            zoologistHtml = `
-                <div class="zoologist-text space-y-8 mt-10 border-t border-gray-700 pt-8">
+        headerAndStats = `
+             <div class="mb-6 border-b border-gray-700 pb-6">
+                <h2 class="text-4xl font-bold text-white mb-2">${get(data.common_name)}</h2>
+                <p class="text-xl text-gray-400 font-mono">${get(data.scientific_name)}</p>
+                <div class="flex items-center mt-3 gap-3">
+                    <span class="inline-block px-3 py-1 rounded-full text-sm font-bold bg-gray-700 text-white border border-gray-600">${get(data.conservation_status)}</span>
+                    <span class="text-xs text-gray-500 uppercase tracking-widest font-semibold">${get(data.class)} / ${get(data.order)}</span>
+                </div>
+             </div>
+             <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                 <div class="bg-gray-800/40 p-3 rounded-lg border border-white/5"><span class="text-gray-500 text-xs uppercase block mb-1">Diet</span><span class="text-gray-200 font-bold text-sm block">${get(data.diet)}</span></div>
+                 <div class="bg-gray-800/40 p-3 rounded-lg border border-white/5"><span class="text-gray-500 text-xs uppercase block mb-1">Lifespan</span><span class="text-green-400 font-bold text-sm block">${get(data.lifespan)}</span></div>
+                 <div class="bg-gray-800/40 p-3 rounded-lg border border-white/5"><span class="text-gray-500 text-xs uppercase block mb-1">Family</span><span class="text-gray-200 text-sm block truncate" title="${get(data.family)}">${get(data.family)}</span></div>
+                 <div class="bg-gray-800/40 p-3 rounded-lg border border-white/5"><span class="text-gray-500 text-xs uppercase block mb-1">Predators</span><span class="text-orange-300 text-sm block" title="${get(data.predators)}">${get(data.predators)}</span></div>
+             </div>
+             <div class="bg-indigo-900/20 border-l-4 border-indigo-500 p-4 rounded-r-lg">
+                <h3 class="flex items-center text-sm font-bold text-indigo-300 mb-2 uppercase tracking-wide">Did You Know?</h3>
+                <ul class="list-none space-y-1">${funFacts}</ul>
+             </div>`;
+
+        if (data.zoologist_intro) {
+            narrativeText = `
+                <div class="zoologist-text space-y-8 mt-4 border-t border-gray-700 pt-8 animate-fade-in">
                     <div class="prose prose-invert max-w-none"><p class="text-lg text-gray-200 leading-relaxed font-medium">${get(data.zoologist_intro)}</p></div>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
                         <div><h3 class="text-2xl font-bold text-white mb-4 flex items-center"><span class="text-green-400 mr-3 text-lg">●</span> Physical Characteristics</h3><p class="text-gray-300 leading-relaxed">${get(data.detailed_physical)}</p></div>
@@ -667,74 +626,92 @@ function createSpecimenDetailHtml(data) {
                     <div class="bg-gray-800/30 p-6 rounded-2xl border border-white/5"><h3 class="text-2xl font-bold text-white mb-4 flex items-center"><span class="text-orange-400 mr-3 text-lg">●</span> Behavior & Life Cycle</h3><p class="text-gray-300 leading-relaxed">${get(data.detailed_behavior)}</p></div>
                 </div>`;
         } else {
-            zoologistHtml = `<div class="bg-gray-800/50 p-6 rounded-xl border border-yellow-500/30 mt-6 text-center"><p class="text-gray-300 mb-2">This specimen has legacy data.</p><p class="text-yellow-400 font-bold">Click the 🔄 Refresh button to generate.</p></div>`;
+            narrativeText = `<div class="bg-gray-800/50 p-6 rounded-xl border border-yellow-500/30 mt-6 text-center"><p class="text-gray-300 mb-2">This specimen has legacy data.</p><p class="text-yellow-400 font-bold">Click the 🔄 Refresh button to generate.</p></div>`;
         }
 
-        cardBody = `
-            <div class="w-full lg:w-2/3">
-                 <div class="mb-6 border-b border-gray-700 pb-6"><h2 class="text-4xl font-bold text-white mb-2">${get(data.common_name)}</h2><p class="text-xl text-gray-400 font-mono">${get(data.scientific_name)}</p><div class="flex items-center mt-3 gap-3"><span class="inline-block px-3 py-1 rounded-full text-sm font-bold bg-gray-700 text-white border border-gray-600">${get(data.conservation_status)}</span><span class="text-xs text-gray-500 uppercase tracking-widest font-semibold">${get(data.class)} / ${get(data.order)}</span></div></div>
-                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                     <div class="bg-gray-800/40 p-3 rounded-lg border border-white/5"><span class="text-gray-500 text-xs uppercase block mb-1">Diet</span><span class="text-gray-200 font-bold text-sm block">${get(data.diet)}</span></div>
-                     <div class="bg-gray-800/40 p-3 rounded-lg border border-white/5"><span class="text-gray-500 text-xs uppercase block mb-1">Lifespan</span><span class="text-green-400 font-bold text-sm block">${get(data.lifespan)}</span></div>
-                     <div class="bg-gray-800/40 p-3 rounded-lg border border-white/5"><span class="text-gray-500 text-xs uppercase block mb-1">Family</span><span class="text-gray-200 text-sm block truncate" title="${get(data.family)}">${get(data.family)}</span></div>
-                     <div class="bg-gray-800/40 p-3 rounded-lg border border-white/5"><span class="text-gray-500 text-xs uppercase block mb-1">Predators</span><span class="text-orange-300 text-sm block" title="${get(data.predators)}">${get(data.predators)}</span></div>
-                 </div>
-                 <div class="bg-indigo-900/20 border-l-4 border-indigo-500 p-4 rounded-r-lg"><h3 class="flex items-center text-sm font-bold text-indigo-300 mb-2 uppercase tracking-wide">Did You Know?</h3><ul class="list-none space-y-1">${funFacts}</ul></div>
-                 ${zoologistHtml}
-            </div>`;
-    
     } else {
-        // GENERIC CARD LAYOUT (History, Evolution, etc.)
+        // Generic Card
         const cardData = data.cards[currentCardType];
-        
         if (!cardData) return `<div class="flex flex-col lg:flex-row gap-8 mb-8">${mediaColumn}<div class="w-full lg:w-2/3 flex items-center justify-center border border-dashed border-gray-600 rounded-xl p-10"><p class="text-gray-400">Data not generated yet.</p></div></div>`;
         
         const insightsHtml = Array.isArray(cardData.insights) ? cardData.insights.map(i => `<li class="text-gray-300 text-lg mb-2 pl-2 border-l-2 border-green-500">${i}</li>`).join('') : '';
-        
-        const dataPointsHtml = cardData.data_points ? `<div class="grid grid-cols-2 gap-4 mb-8">${Object.entries(cardData.data_points).map(([k, v]) => `
+        const dataPointsHtml = cardData.data_points ? `<div class="grid grid-cols-2 gap-4 mb-4">${Object.entries(cardData.data_points).map(([k, v]) => `
             <div class="bg-gray-800/50 p-3 rounded-lg"><span class="block text-xs uppercase text-gray-500 tracking-wider">${k}</span><span class="block text-white font-bold">${v}</span></div>
         `).join('')}</div>` : '';
 
-        cardBody = `
-            <div class="w-full lg:w-2/3 animate-fade-in">
-                 <div class="mb-6 border-b border-gray-700 pb-6">
-                    <h2 class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-blue-500 mb-2">${cardData.title}</h2>
-                    <p class="text-xl text-gray-400">${get(data.common_name)}</p>
-                 </div>
-                 
-                 <div class="prose prose-invert prose-lg max-w-none mb-8">
-                    <p class="text-gray-200 leading-loose">${cardData.main_text}</p>
-                 </div>
+        headerAndStats = `
+             <div class="mb-6 border-b border-gray-700 pb-6">
+                <h2 class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-blue-500 mb-2">${cardData.title}</h2>
+                <p class="text-xl text-gray-400">${get(data.common_name)}</p>
+             </div>
+             ${dataPointsHtml}
+             <div class="bg-gray-800/30 p-6 rounded-2xl border border-white/5 mt-6">
+                <h3 class="text-sm font-bold text-green-400 uppercase tracking-wide mb-4">Key Insights</h3>
+                <ul class="list-none space-y-2">${insightsHtml}</ul>
+             </div>`;
 
-                 ${dataPointsHtml}
-
-                 <div class="bg-gray-800/30 p-6 rounded-2xl border border-white/5">
-                    <h3 class="text-sm font-bold text-green-400 uppercase tracking-wide mb-4">Key Insights</h3>
-                    <ul class="list-none space-y-2">${insightsHtml}</ul>
-                 </div>
-            </div>`;
+        narrativeText = `
+             <div class="prose prose-invert prose-lg max-w-none mt-4 border-t border-gray-700 pt-8 animate-fade-in">
+                <p class="text-gray-200 leading-loose">${cardData.main_text}</p>
+             </div>`;
     }
 
-    return `<div class="flex flex-col lg:flex-row gap-8 mb-8">${mediaColumn}${cardBody}</div>`;
+    return `
+    <div class="flex flex-col lg:flex-row gap-8 mb-8">
+        ${mediaColumn}
+        <div class="w-full lg:w-2/3">
+            ${headerAndStats}
+        </div>
+    </div>
+    <div class="w-full">
+        ${narrativeText}
+    </div>`;
 }
 
-// --- REFRESH / GEN AI LOGIC ---
+// --- NEW FUNCTION: DELETE IMAGE ---
+async function handleDeleteImage(e, srcToDelete) {
+    e.stopPropagation();
+    if (!currentUser) return alert("Sign in required.");
+    if (!confirm("Delete this photo? This cannot be undone.")) return;
+    
+    // Remove from array
+    let images = currentModalSpecimen.gallery_images || [];
+    images = images.filter(img => img !== srcToDelete);
+    currentModalSpecimen.gallery_images = images;
+
+    // Update main image if we deleted the current main one
+    if (currentModalSpecimen.image_url === srcToDelete) {
+        currentModalSpecimen.image_url = images.length > 0 ? images[0] : null;
+        currentModalSpecimen.original_image_url = images.length > 0 ? images[0] : null;
+    }
+
+    // Save to Firestore
+    if (currentModalSpecimen.docId) {
+        try {
+            await saveSpecimen(currentUser.uid, currentModalSpecimen, currentModalSpecimen.docId);
+            renderFullModalContent(); // Refresh UI
+        } catch (err) {
+            alert("Error deleting image: " + err.message);
+        }
+    } else {
+        renderFullModalContent(); // Just refresh UI for unsaved items
+    }
+}
+
 async function handleRefreshData(isTabSwitch = false) {
     if (!isTabSwitch && !confirm(`Regenerate "${currentCardType.replace('_', ' ')}" data with AI?`)) return;
     
     refreshSpecimenBtn.classList.add('rotate-center');
     refreshSpecimenBtn.disabled = true;
     modalLoader.classList.remove('hidden');
-    if(isTabSwitch) modalContent.classList.add('hidden'); // Hide only if switching to empty tab
+    if(isTabSwitch) modalContent.classList.add('hidden'); 
 
     try {
         const geminiData = await fetchSpecimenCard(currentModalSpecimen, currentCardType);
         
         if (currentCardType === 'field_guide') {
-            // Update root keys for legacy compat
             currentModalSpecimen = { ...currentModalSpecimen, ...geminiData };
         } else {
-            // Update specific card
             if (!currentModalSpecimen.cards) currentModalSpecimen.cards = {};
             currentModalSpecimen.cards[currentCardType] = geminiData;
         }
@@ -742,7 +719,6 @@ async function handleRefreshData(isTabSwitch = false) {
         if (currentModalSpecimen.docId) {
              await saveSpecimen(currentUser.uid, currentModalSpecimen, currentModalSpecimen.docId);
         }
-        
         renderFullModalContent();
 
     } catch (e) { alert("Refresh failed: " + e.message); } 
@@ -753,8 +729,6 @@ async function handleRefreshData(isTabSwitch = false) {
         modalContent.classList.remove('hidden');
     }
 }
-
-// ... (Rest of existing functions: handleSaveToggle, handleCareQuestionSubmit, images, etc. remain unchanged) ...
 
 async function handleSaveToggle() {
     if (!currentUser) return alert("Sign in to save.");
@@ -822,7 +796,6 @@ function setupGalleryListeners() {
     const mainImg = document.getElementById('main-specimen-image');
     const thumbs = modalContent.querySelectorAll('.gallery-thumb');
     
-    // If main image exists, click opens lightbox
     if (mainImg) {
         mainImg.addEventListener('click', () => {
             openLightbox(mainImg.dataset.fullRes || mainImg.src);
@@ -831,14 +804,12 @@ function setupGalleryListeners() {
     
     if (thumbs.length > 0) {
         thumbs.forEach(thumb => {
-            thumb.addEventListener('click', () => {
+            thumb.addEventListener('click', (e) => {
+                if(e.target.closest('.delete-img-btn')) return; // Ignore clicks on delete button
                 const newSrc = thumb.dataset.fullRes || thumb.src;
-                
-                // If there is a main image (no video), swap it
                 if (mainImg) {
                     mainImg.src = newSrc;
                     mainImg.dataset.fullRes = newSrc;
-                    // Update active state for thumbs
                     thumbs.forEach(t => {
                         t.classList.remove('ring-2', 'ring-green-400', 'opacity-100');
                         t.classList.add('opacity-70');
@@ -846,7 +817,6 @@ function setupGalleryListeners() {
                     thumb.classList.remove('opacity-70');
                     thumb.classList.add('ring-2', 'ring-green-400', 'opacity-100');
                 } else {
-                    // If no main image (video is playing), click opens lightbox directly
                     openLightbox(newSrc);
                 }
             });
@@ -889,8 +859,6 @@ async function handleCareQuestionSubmit(e, context) {
         input.value = '';
     }
 }
-
-// --- SEARCH & OTHER HELPERS ---
 
 function handleSearchSubmit(e) {
     e.preventDefault();
@@ -938,47 +906,28 @@ function handlePrevClick() { if (currentPage > 1) { currentPage--; fetchAndRende
 function handleNextClick() { currentPage++; fetchAndRenderSpecimens(); }
 function returnToSanctuary() { searchResultsView.classList.add('hidden'); sanctuaryView.classList.remove('hidden'); specimenGallery.innerHTML = ''; currentSearchQuery = null; }
 
-// --- AI SUGGESTIONS ---
-
 async function loadCollectionSuggestions(query) {
     aiSuggestionsContainer.classList.remove('hidden');
     aiSuggestionsList.classList.add('hidden');
     aiSuggestionsLoader.classList.remove('hidden');
     aiSuggestionsList.innerHTML = '';
-
     try {
         const suggestions = await fetchCollectionSuggestions(query);
         aiSuggestionsLoader.classList.add('hidden');
         aiSuggestionsList.classList.remove('hidden');
-        
-        if (suggestions.length === 0) {
-            aiSuggestionsContainer.classList.add('hidden');
-            return;
-        }
-
+        if (suggestions.length === 0) { aiSuggestionsContainer.classList.add('hidden'); return; }
         aiSuggestionsList.innerHTML = `
             <div class="flex flex-wrap gap-2">
                 ${suggestions.map(s => `
-                    <button class="suggestion-btn px-3 py-1 bg-gray-700 hover:bg-green-600 rounded-full text-xs text-white transition-colors border border-gray-600" data-name="${s.common_name}">
-                        ${s.common_name}
-                    </button>
+                    <button class="suggestion-btn px-3 py-1 bg-gray-700 hover:bg-green-600 rounded-full text-xs text-white transition-colors border border-gray-600" data-name="${s.common_name}">${s.common_name}</button>
                 `).join('')}
-            </div>
-        `;
-        
+            </div>`;
         aiSuggestionsList.querySelectorAll('.suggestion-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                searchInput.value = btn.dataset.name;
-                handleSearchSubmit({ preventDefault: () => {} });
-            });
+            btn.addEventListener('click', () => { searchInput.value = btn.dataset.name; handleSearchSubmit({ preventDefault: () => {} }); });
         });
-
-    } catch (e) {
-        aiSuggestionsContainer.classList.add('hidden');
-    }
+    } catch (e) { aiSuggestionsContainer.classList.add('hidden'); }
 }
 
-// --- IMAGE UPLOAD (ID) ---
 function openImageUploadModal() { imageUploadModal.classList.remove('hidden'); }
 function closeImageUploadModal() { imageUploadModal.classList.add('hidden'); }
 function handleImageFileChange(e) {
@@ -996,19 +945,15 @@ async function handleImageUpload(e) {
     try {
         const { original, thumb } = await uploadMedia(imageFileInput.files[0], currentUser.uid);
         const result = await fetchImageIdentification(original); 
-        
         if (result && result.scientific_name !== 'Unknown') {
             uploadMessage.textContent = `Found: ${result.common_name}`;
             const gbifResult = await searchSpecimens(result.scientific_name, 1);
             if (gbifResult.data.length > 0) {
                 const foundSpecimen = gbifResult.data[0];
                 await openSpecimenModal(foundSpecimen.slug, result.common_name);
-                
-                // Initialize gallery with this identified image
                 currentModalSpecimen.image_url = thumb;
                 currentModalSpecimen.original_image_url = original;
                 currentModalSpecimen.gallery_images = [thumb];
-                
                 renderFullModalContent();
                 closeImageUploadModal();
                 alert("Identified! Don't forget to click 'Save to Sanctuary' to keep your photo.");
