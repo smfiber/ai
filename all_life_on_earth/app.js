@@ -2,8 +2,8 @@
  * APP.JS
  * The Controller for the "Life Explorer" SPA.
  * Updated: 
- * - UI FIX: Removed pagination logic (matching index.html cleanup).
- * - UI FIX: Removed 'truncate' from Common Name to fix "Przewalski's H..." cutoff.
+ * - UI FIX: Removed pagination logic and currentMeta usage.
+ * - UI FIX: Removed 'truncate' from Common Name to fix cutoff.
  */
 
 import { setApiKeys } from './config.js';
@@ -29,7 +29,7 @@ let modalBackdrop, apiKeyForm, appContainer, mainContent, authContainer, signInB
 
 // --- State ---
 let currentSearchQuery = null;
-let currentPage = 1; // Kept for API compatibility, though UI pagination is removed
+let currentPage = 1; 
 let currentUser = null; 
 let currentModalSpecimen = null; 
 let userFolders = [];
