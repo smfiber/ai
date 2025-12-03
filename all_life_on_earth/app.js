@@ -2,8 +2,9 @@
  * APP.JS
  * The Controller for the "Life Explorer" SPA.
  * Updated: 
- * - FIX: Implemented thumbnail-for-display, original-for-lightbox logic.
- * - FIX: Image uploads now correctly store both thumbnail and original URLs.
+ * - FIX: UI Unification (All tabs now share identical layout/typography).
+ * - FIX: Tooltips added to tab icons.
+ * - FIX: Image/Lightbox logic maintained.
  */
 
 import { setApiKeys } from './config.js';
@@ -399,11 +400,11 @@ function closeLightbox() {
 // --- TAB RENDERING ---
 function renderTabs() {
     const tabs = [
-        { id: 'field_guide', icon: '📖', label: 'Field Guide' },
-        { id: 'historian', icon: '🏺', label: 'History' },
-        { id: 'evolutionist', icon: '🧬', label: 'Evolution' },
-        { id: 'ecologist', icon: '🛡️', label: 'Ecology' },
-        { id: 'storyteller', icon: '✍️', label: 'Story' }
+        { id: 'field_guide', icon: '📖', label: 'Field Guide', tooltip: "General Overview" },
+        { id: 'historian', icon: '🏺', label: 'History', tooltip: "Cultural & Mythological Impact" },
+        { id: 'evolutionist', icon: '🧬', label: 'Evolution', tooltip: "Ancestry & Biology" },
+        { id: 'ecologist', icon: '🛡️', label: 'Ecology', tooltip: "Role in Ecosystem" },
+        { id: 'storyteller', icon: '✍️', label: 'Story', tooltip: "Immersive Narrative" }
     ];
 
     const tabContainer = document.createElement('div');
@@ -413,6 +414,7 @@ function renderTabs() {
         const isActive = currentCardType === tab.id;
         btn.className = `px-4 py-2 rounded-t-lg font-bold text-sm transition-colors flex items-center gap-2 ${isActive ? 'bg-gray-700 text-white border-b-2 border-green-500' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`;
         btn.innerHTML = `<span>${tab.icon}</span> <span class="hidden sm:inline">${tab.label}</span>`;
+        btn.title = tab.tooltip; // Add Tooltip
         btn.onclick = () => handleTabSwitch(tab.id);
         tabContainer.appendChild(btn);
     });
@@ -525,7 +527,6 @@ function renderFullModalContent() {
     contentDiv.innerHTML = createSpecimenDetailHtml(currentModalSpecimen);
     modalContent.appendChild(contentDiv);
     
-    // Attach delete listeners
     const deleteBtns = contentDiv.querySelectorAll('.delete-img-btn');
     deleteBtns.forEach(btn => {
         btn.addEventListener('click', (e) => handleDeleteImage(e, btn.dataset.src));
@@ -544,9 +545,42 @@ function renderFullModalContent() {
 function createSpecimenDetailHtml(data) {
     const get = (v, d = 'N/A') => (v === null || v === undefined || v === '') ? d : v;
     
-    // Media
+    // --- STANDARDIZE DATA FOR UNIFIED LAYOUT ---
+    let title, subtitle, gridData, insights, mainText;
+
+    if (currentCardType === 'field_guide') {
+        title = get(data.common_name);
+        subtitle = get(data.scientific_name);
+        gridData = {
+            "Diet": get(data.diet),
+            "Lifespan": get(data.lifespan),
+            "Family": get(data.family),
+            "Predators": get(data.predators)
+        };
+        insights = Array.isArray(data.fun_facts) ? data.fun_facts : ["No facts available."];
+        
+        // Combine legacy narrative fields if zoologist_intro exists
+        if (data.zoologist_intro) {
+            mainText = `
+                <p class="font-bold mb-2">Introduction</p><p class="mb-4">${get(data.zoologist_intro)}</p>
+                <p class="font-bold mb-2">Physical Characteristics</p><p class="mb-4">${get(data.detailed_physical)}</p>
+                <p class="font-bold mb-2">Habitat & Distribution</p><p class="mb-4">${get(data.detailed_habitat)}</p>
+                <p class="font-bold mb-2">Behavior & Life Cycle</p><p class="mb-4">${get(data.detailed_behavior)}</p>
+            `;
+        } else {
+            mainText = `<div class="bg-gray-800/50 p-6 rounded-xl border border-yellow-500/30 text-center"><p class="text-gray-300">Legacy data format.</p><p class="text-yellow-400 font-bold">Refresh to upgrade.</p></div>`;
+        }
+    } else {
+        const card = data.cards[currentCardType] || {};
+        title = card.title || "Unknown";
+        subtitle = card.subtitle || get(data.common_name);
+        gridData = card.data_points || {};
+        insights = card.insights || [];
+        mainText = card.main_text || "Data not generated yet.";
+    }
+
+    // --- MEDIA SECTION ---
     const hasImage = !!data.image_url;
-    // Use thumbnail for display if available, otherwise fall back to image_url
     const displayImage = data.thumb_url || data.image_url || 'https://placehold.co/400x400/374151/FFFFFF?text=No+Photo';
     const fullRes = data.original_image_url || data.image_url;
     
@@ -560,7 +594,7 @@ function createSpecimenDetailHtml(data) {
 
     const mainImageHtml = !data.video_url ? `
         <div class="card-image-wrapper rounded-xl overflow-hidden shadow-lg bg-gray-900/50 mb-4 group relative">
-            <img id="main-specimen-image" src="${displayImage}" data-full-res="${fullRes}" alt="${get(data.common_name)}" class="w-full h-auto object-cover cursor-zoom-in" onerror="this.onerror=null;this.src='https://placehold.co/400x400/374151/FFFFFF?text=No+Image';">
+            <img id="main-specimen-image" src="${displayImage}" data-full-res="${fullRes}" alt="${title}" class="w-full h-auto object-cover cursor-zoom-in" onerror="this.onerror=null;this.src='https://placehold.co/400x400/374151/FFFFFF?text=No+Image';">
         </div>` : '';
 
     const galleryHtml = (galleryImages.length > 0) ? 
@@ -569,98 +603,49 @@ function createSpecimenDetailHtml(data) {
                 const isActive = !data.video_url && (img === displayImage);
                 return `
                 <div class="relative flex-shrink-0 group">
-                    <img src="${img}" 
-                         data-full-res="${data.original_image_url}" 
-                         class="gallery-thumb h-20 w-20 object-cover rounded-lg cursor-pointer transition-all border border-gray-600 ${isActive ? 'ring-2 ring-green-400 opacity-100' : 'opacity-70 hover:opacity-100'}" 
-                         alt="Thumbnail">
+                    <img src="${img}" data-full-res="${data.original_image_url || img}" class="gallery-thumb h-20 w-20 object-cover rounded-lg cursor-pointer transition-all border border-gray-600 ${isActive ? 'ring-2 ring-green-400 opacity-100' : 'opacity-70 hover:opacity-100'}" alt="Thumbnail">
                     <button class="delete-img-btn absolute -top-1 -right-1 bg-red-600 hover:bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity shadow-sm" data-src="${img}" title="Delete Photo">&times;</button>
                 </div>`;
             }).join('')}
         </div>` : '';
 
-    const mediaColumn = `
-        <div class="w-full lg:w-1/3 flex-shrink-0">
-            ${videoHtml}
-            ${mainImageHtml}
-            ${galleryHtml}
-        </div>`;
+    const mediaColumn = `<div class="w-full lg:w-1/3 flex-shrink-0">${videoHtml}${mainImageHtml}${galleryHtml}</div>`;
 
-    let headerAndStats = '';
-    let narrativeText = '';
+    // --- CONTENT GENERATION (UNIFIED) ---
+    const gridHtml = Object.entries(gridData).map(([k, v]) => `
+        <div class="bg-gray-800/40 p-3 rounded-lg border border-white/5">
+            <span class="text-gray-500 text-xs uppercase block mb-1 tracking-wider">${k}</span>
+            <span class="text-gray-200 font-bold text-sm block truncate" title="${v}">${v}</span>
+        </div>
+    `).join('');
 
-    if (currentCardType === 'field_guide') {
-        const funFacts = Array.isArray(data.fun_facts) ? data.fun_facts.map(f => `<li class="text-gray-300 text-sm mb-1">• ${f}</li>`).join('') : '<li class="text-gray-500">No facts available.</li>';
-        
-        headerAndStats = `
-             <div class="mb-6 border-b border-gray-700 pb-6">
-                <h2 class="text-4xl font-bold text-white mb-2">${get(data.common_name)}</h2>
-                <p class="text-xl text-gray-400 font-mono">${get(data.scientific_name)}</p>
-                <div class="flex items-center mt-3 gap-3">
-                    <span class="inline-block px-3 py-1 rounded-full text-sm font-bold bg-gray-700 text-white border border-gray-600">${get(data.conservation_status)}</span>
-                    <span class="text-xs text-gray-500 uppercase tracking-widest font-semibold">${get(data.class)} / ${get(data.order)}</span>
-                </div>
-             </div>
-             <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                 <div class="bg-gray-800/40 p-3 rounded-lg border border-white/5"><span class="text-gray-500 text-xs uppercase block mb-1">Diet</span><span class="text-gray-200 font-bold text-sm block">${get(data.diet)}</span></div>
-                 <div class="bg-gray-800/40 p-3 rounded-lg border border-white/5"><span class="text-gray-500 text-xs uppercase block mb-1">Lifespan</span><span class="text-green-400 font-bold text-sm block">${get(data.lifespan)}</span></div>
-                 <div class="bg-gray-800/40 p-3 rounded-lg border border-white/5"><span class="text-gray-500 text-xs uppercase block mb-1">Family</span><span class="text-gray-200 text-sm block truncate" title="${get(data.family)}">${get(data.family)}</span></div>
-                 <div class="bg-gray-800/40 p-3 rounded-lg border border-white/5"><span class="text-gray-500 text-xs uppercase block mb-1">Predators</span><span class="text-orange-300 text-sm block" title="${get(data.predators)}">${get(data.predators)}</span></div>
-             </div>
-             <div class="bg-indigo-900/20 border-l-4 border-indigo-500 p-4 rounded-r-lg">
-                <h3 class="flex items-center text-sm font-bold text-indigo-300 mb-2 uppercase tracking-wide">Did You Know?</h3>
-                <ul class="list-none space-y-1">${funFacts}</ul>
-             </div>`;
-
-        if (data.zoologist_intro) {
-            narrativeText = `
-                <div class="zoologist-text space-y-8 mt-4 border-t border-gray-700 pt-8 animate-fade-in">
-                    <div class="prose prose-invert max-w-none"><p class="text-lg text-gray-200 leading-relaxed font-medium">${get(data.zoologist_intro)}</p></div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
-                        <div><h3 class="text-2xl font-bold text-white mb-4 flex items-center"><span class="text-green-400 mr-3 text-lg">●</span> Physical Characteristics</h3><p class="text-gray-300 leading-relaxed">${get(data.detailed_physical)}</p></div>
-                        <div><h3 class="text-2xl font-bold text-white mb-4 flex items-center"><span class="text-blue-400 mr-3 text-lg">●</span> Habitat & Distribution</h3><p class="text-gray-300 leading-relaxed">${get(data.detailed_habitat)}</p></div>
-                    </div>
-                    <div class="bg-gray-800/30 p-6 rounded-2xl border border-white/5"><h3 class="text-2xl font-bold text-white mb-4 flex items-center"><span class="text-orange-400 mr-3 text-lg">●</span> Behavior & Life Cycle</h3><p class="text-gray-300 leading-relaxed">${get(data.detailed_behavior)}</p></div>
-                </div>`;
-        } else {
-            narrativeText = `<div class="bg-gray-800/50 p-6 rounded-xl border border-yellow-500/30 mt-6 text-center"><p class="text-gray-300 mb-2">This specimen has legacy data.</p><p class="text-yellow-400 font-bold">Click the 🔄 Refresh button to generate.</p></div>`;
-        }
-
-    } else {
-        // Generic Card
-        const cardData = data.cards[currentCardType];
-        if (!cardData) return `<div class="flex flex-col lg:flex-row gap-8 mb-8">${mediaColumn}<div class="w-full lg:w-2/3 flex items-center justify-center border border-dashed border-gray-600 rounded-xl p-10"><p class="text-gray-400">Data not generated yet.</p></div></div>`;
-        
-        const insightsHtml = Array.isArray(cardData.insights) ? cardData.insights.map(i => `<li class="text-gray-300 text-lg mb-2 pl-2 border-l-2 border-green-500">${i}</li>`).join('') : '';
-        const dataPointsHtml = cardData.data_points ? `<div class="grid grid-cols-2 gap-4 mb-4">${Object.entries(cardData.data_points).map(([k, v]) => `
-            <div class="bg-gray-800/50 p-3 rounded-lg"><span class="block text-xs uppercase text-gray-500 tracking-wider">${k}</span><span class="block text-white font-bold">${v}</span></div>
-        `).join('')}</div>` : '';
-
-        headerAndStats = `
-             <div class="mb-6 border-b border-gray-700 pb-6">
-                <h2 class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-blue-500 mb-2">${cardData.title}</h2>
-                <p class="text-xl text-gray-400">${get(data.common_name)}</p>
-             </div>
-             ${dataPointsHtml}
-             <div class="bg-gray-800/30 p-6 rounded-2xl border border-white/5 mt-6">
-                <h3 class="text-sm font-bold text-green-400 uppercase tracking-wide mb-4">Key Insights</h3>
-                <ul class="list-none space-y-2">${insightsHtml}</ul>
-             </div>`;
-
-        narrativeText = `
-             <div class="prose prose-invert prose-lg max-w-none mt-4 border-t border-gray-700 pt-8 animate-fade-in">
-                <p class="text-gray-200 leading-loose">${cardData.main_text}</p>
-             </div>`;
-    }
+    const insightsHtml = insights.map(i => `<li class="text-gray-300 text-sm mb-2 pl-2 border-l-2 border-green-500 leading-relaxed">${i}</li>`).join('');
 
     return `
     <div class="flex flex-col lg:flex-row gap-8 mb-8">
         ${mediaColumn}
         <div class="w-full lg:w-2/3">
-            ${headerAndStats}
+             <div class="mb-6 border-b border-gray-700 pb-6">
+                <h2 class="text-4xl font-bold text-white mb-1">${title}</h2>
+                <p class="text-lg text-green-400 font-mono">${subtitle}</p>
+             </div>
+             
+             <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                ${gridHtml}
+             </div>
+
+             <div class="bg-gray-800/30 p-5 rounded-2xl border border-white/5">
+                <h3 class="flex items-center text-xs font-bold text-indigo-400 mb-3 uppercase tracking-wide">
+                    <span class="mr-2">✨</span> Insights
+                </h3>
+                <ul class="list-none">${insightsHtml}</ul>
+             </div>
         </div>
     </div>
-    <div class="w-full">
-        ${narrativeText}
+    <div class="w-full border-t border-gray-700 pt-8 animate-fade-in">
+        <div class="text-gray-300 leading-relaxed space-y-4 text-base">
+            ${mainText}
+        </div>
     </div>`;
 }
 
@@ -675,7 +660,6 @@ async function handleDeleteImage(e, srcToDelete) {
 
     if (currentModalSpecimen.image_url === srcToDelete) {
         currentModalSpecimen.image_url = images.length > 0 ? images[0] : null;
-        // Also update original_image_url if it matches
         if (currentModalSpecimen.original_image_url === srcToDelete) {
              currentModalSpecimen.original_image_url = images.length > 0 ? images[0] : null;
         }
@@ -762,10 +746,9 @@ async function handleAddImage() {
         const { original, thumb } = await uploadMedia(file, currentUser.uid);
         if (!currentModalSpecimen.gallery_images) currentModalSpecimen.gallery_images = [];
         currentModalSpecimen.gallery_images.push(thumb);
-        // Store BOTH URLs
         if (!currentModalSpecimen.image_url) {
-            currentModalSpecimen.image_url = thumb; // Use thumb for display
-            currentModalSpecimen.original_image_url = original; // Keep original for lightbox
+            currentModalSpecimen.image_url = thumb; 
+            currentModalSpecimen.original_image_url = original; 
         }
         renderFullModalContent();
         if (currentModalSpecimen.docId) await saveSpecimen(currentUser.uid, currentModalSpecimen, currentModalSpecimen.docId);
@@ -794,7 +777,6 @@ function setupGalleryListeners() {
     
     if (mainImg) {
         mainImg.addEventListener('click', () => {
-            // Use data-full-res for lightbox
             openLightbox(mainImg.dataset.fullRes || mainImg.src);
         });
     }
@@ -803,12 +785,9 @@ function setupGalleryListeners() {
         thumbs.forEach(thumb => {
             thumb.addEventListener('click', (e) => {
                 if(e.target.closest('.delete-img-btn')) return; 
-                // Get full-res URL
                 const newSrc = thumb.dataset.fullRes || thumb.src;
                 if (mainImg) {
-                    // Update main image display (still using thumb for performance)
                     mainImg.src = thumb.src; 
-                    // Update data-full-res for when main image is clicked
                     mainImg.dataset.fullRes = newSrc; 
                     thumbs.forEach(t => {
                         t.classList.remove('ring-2', 'ring-green-400', 'opacity-100');
@@ -817,7 +796,6 @@ function setupGalleryListeners() {
                     thumb.classList.remove('opacity-70');
                     thumb.classList.add('ring-2', 'ring-green-400', 'opacity-100');
                 } else {
-                    // If video is playing, open lightbox directly with full-res
                     openLightbox(newSrc);
                 }
             });
@@ -952,12 +930,9 @@ async function handleImageUpload(e) {
             if (gbifResult.data.length > 0) {
                 const foundSpecimen = gbifResult.data[0];
                 await openSpecimenModal(foundSpecimen.slug, result.common_name);
-                
-                // Store BOTH URLs correctly
-                currentModalSpecimen.image_url = thumb; // Use thumb for display
-                currentModalSpecimen.original_image_url = original; // Keep original for lightbox
+                currentModalSpecimen.image_url = thumb;
+                currentModalSpecimen.original_image_url = original;
                 currentModalSpecimen.gallery_images = [thumb];
-                
                 renderFullModalContent();
                 closeImageUploadModal();
                 alert("Identified! Don't forget to click 'Save to Sanctuary' to keep your photo.");
