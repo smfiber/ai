@@ -438,7 +438,7 @@ function updateLightboxImage() {
     const item = images[currentLightboxIndex];
     const src = (typeof item === 'object') ? item.original : item;
     lightboxImage.src = src;
-    lightboxImage.className = 'max-w-[95vw] max-h-[95vh] object-contain rounded shadow-2xl'; 
+    lightboxImage.className = 'max-w-full max-h-full object-contain rounded shadow-2xl'; 
 }
 
 function closeLightbox() {
