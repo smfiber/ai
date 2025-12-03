@@ -6,6 +6,7 @@
  * - FIX: Enforced 16:9 (Video) aspect ratio for Grid Cards (no longer square).
  * - FIX: Modal Main Image now displays full width/height (no cropping).
  * - FIX: Gallery logic fully supports Thumbnail vs Original URLs.
+ * - FEAT: Video Autoplay/Loop on initial modal open.
  */
 
 import { setApiKeys } from './config.js';
@@ -40,6 +41,7 @@ let currentFolderId = null;
 let specimenToMoveId = null; 
 let currentCardType = 'field_guide'; 
 let currentLightboxIndex = 0; 
+let shouldAutoplayVideo = false;
 
 function main() {
     document.addEventListener('DOMContentLoaded', () => {
@@ -507,6 +509,9 @@ async function openSpecimenModal(slug, name) {
     saveSpecimenBtn.textContent = 'Save to Sanctuary';
     saveSpecimenBtn.classList.remove('bg-red-600');
     saveSpecimenBtn.classList.add('bg-green-600');
+    
+    // Set Autoplay flag for initial load
+    shouldAutoplayVideo = true;
 
     try {
         let gbifData = null;
@@ -576,6 +581,9 @@ function renderFullModalContent() {
     contentDiv.innerHTML = createSpecimenDetailHtml(currentModalSpecimen);
     modalContent.appendChild(contentDiv);
     
+    // Reset Autoplay flag so subsequent renders (tabs, updates) don't autoplay
+    shouldAutoplayVideo = false;
+    
     const deleteBtns = contentDiv.querySelectorAll('.delete-img-btn');
     deleteBtns.forEach(btn => {
         btn.addEventListener('click', (e) => handleDeleteImage(e, btn.dataset.src));
@@ -640,9 +648,10 @@ function createSpecimenDetailHtml(data) {
         fullRes = (typeof first === 'object') ? first.original : first;
     }
 
+    const autoplayAttrs = shouldAutoplayVideo ? 'autoplay loop muted playsinline' : '';
     const videoHtml = data.video_url ? `
         <div class="w-full aspect-video bg-black rounded-xl overflow-hidden shadow-lg mb-4 relative group">
-            <video src="${data.video_url}" controls class="w-full h-full object-contain"></video>
+            <video src="${data.video_url}" controls ${autoplayAttrs} class="w-full h-full object-contain"></video>
         </div>` : '';
 
     // FIX: Removed object-cover, added w-full h-auto for natural aspect ratio
