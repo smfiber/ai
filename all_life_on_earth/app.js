@@ -2,8 +2,7 @@
  * APP.JS
  * The Controller for the "Life Explorer" SPA.
  * Updated: 
- * - UI FIX: Removed pagination logic and currentMeta usage.
- * - UI FIX: Removed 'truncate' from Common Name to fix cutoff.
+ * - UI FIX: Added Manual Entry Logic ("Field Journaling").
  */
 
 import { setApiKeys } from './config.js';
@@ -17,13 +16,14 @@ import {
 
 // --- DOM Variables ---
 let modalBackdrop, apiKeyForm, appContainer, mainContent, authContainer, signInBtn, signOutBtn, userInfo, userName, userPhoto, 
-    searchForm, searchInput, sanctuaryView, searchResultsView, specimenGallery, loader, galleryHeader, galleryTitle, backToSanctuaryBtn,
+    searchForm, searchInput, scientificLookupBtn, manualEntryBtn, sanctuaryView, searchResultsView, specimenGallery, loader, galleryHeader, galleryTitle, backToSanctuaryBtn,
     sanctuaryLoader, sanctuaryGallery, sanctuaryEmptyState, createFolderBtn, foldersSection, foldersGallery, folderBackBtn, sanctuaryTitle, sanctuarySubtitle,
     specimenDetailModal, modalTitle, modalCloseBtn, modalContentContainer, modalLoader, modalContent, saveSpecimenBtn, refreshSpecimenBtn, 
     updateImageBtn, updateImageInput, uploadVideoBtn, uploadVideoInput,
-    careQuestionSection, careQuestionForm, careQuestionInput, careQuestionSubmit, careResponseContainer, careResponseText, careResponseLoader, scientificLookupBtn,
+    careQuestionSection, careQuestionForm, careQuestionInput, careQuestionSubmit, careResponseContainer, careResponseText, careResponseLoader,
     aiSuggestionsContainer, aiSuggestionsList, aiSuggestionsLoader,
     identifySpecimenBtn, imageUploadModal, imageModalCloseBtn, imageUploadForm, imageFileInput, imagePreviewContainer, imagePreview, previewPlaceholder, uploadStatus, uploadMessage, identifyImageBtn,
+    manualEntryModal, manualModalCloseBtn, manualEntryForm, manualCommonNameInput, manualScientificNameInput,
     lightboxModal, lightboxImage, lightboxPlaceholder, lightboxCloseBtn,
     moveModal, moveModalCloseBtn, moveFolderSelect, confirmMoveBtn;
 
@@ -65,6 +65,7 @@ function assignDomElements() {
     searchForm = document.getElementById('search-form');
     searchInput = document.getElementById('search-input');
     scientificLookupBtn = document.getElementById('scientific-lookup-btn');
+    manualEntryBtn = document.getElementById('manual-entry-btn');
     sanctuaryView = document.getElementById('sanctuary-view');
     searchResultsView = document.getElementById('search-results-view');
     
@@ -122,6 +123,12 @@ function assignDomElements() {
     uploadMessage = document.getElementById('upload-message');
     identifyImageBtn = document.getElementById('identify-image-btn');
 
+    manualEntryModal = document.getElementById('manual-entry-modal');
+    manualModalCloseBtn = document.getElementById('manual-modal-close-btn');
+    manualEntryForm = document.getElementById('manual-entry-form');
+    manualCommonNameInput = document.getElementById('manual-common-name');
+    manualScientificNameInput = document.getElementById('manual-scientific-name');
+
     lightboxModal = document.getElementById('lightbox-modal');
     lightboxImage = document.getElementById('lightbox-image');
     lightboxPlaceholder = document.getElementById('lightbox-placeholder');
@@ -161,6 +168,11 @@ function addEventListeners() {
     if (searchForm) searchForm.addEventListener('submit', handleSearchSubmit);
     if (scientificLookupBtn) scientificLookupBtn.addEventListener('click', handleScientificLookup);
     
+    // Manual Entry Listeners
+    if (manualEntryBtn) manualEntryBtn.addEventListener('click', openManualEntryModal);
+    if (manualModalCloseBtn) manualModalCloseBtn.addEventListener('click', closeManualEntryModal);
+    if (manualEntryForm) manualEntryForm.addEventListener('submit', handleManualEntrySubmit);
+
     if (specimenGallery) specimenGallery.addEventListener('click', handleSpecimenCardClick);
     if (sanctuaryGallery) sanctuaryGallery.addEventListener('click', handleSanctuaryGridClick);
     if (modalCloseBtn) modalCloseBtn.addEventListener('click', closeModal);
@@ -397,6 +409,82 @@ async function handleScientificLookup() {
         else { alert("Could not determine scientific name."); }
     } catch (e) { console.error(e); }
     finally { scientificLookupBtn.classList.remove('animate-spin'); }
+}
+
+// --- MANUAL ENTRY LOGIC ---
+
+function openManualEntryModal() {
+    manualEntryModal.classList.remove('hidden');
+    manualCommonNameInput.value = '';
+    manualScientificNameInput.value = '';
+}
+
+function closeManualEntryModal() {
+    manualEntryModal.classList.add('hidden');
+}
+
+async function handleManualEntrySubmit(e) {
+    e.preventDefault();
+    const common = manualCommonNameInput.value.trim();
+    const sci = manualScientificNameInput.value.trim();
+    
+    if (!common || !sci) return;
+    
+    closeManualEntryModal();
+    
+    // Prepare Main Modal in loading state
+    specimenDetailModal.classList.remove('hidden');
+    modalContent.classList.add('hidden');
+    modalLoader.classList.remove('hidden');
+    modalTitle.textContent = common;
+    modalLoader.querySelector('p').textContent = 'Consulting the Zoologist...';
+    refreshSpecimenBtn.classList.add('hidden');
+    
+    currentCardType = 'field_guide';
+    modalContent.innerHTML = '';
+    
+    // Build Skeleton Object
+    // Uses a unique timestamp-based slug to avoid collision with GBIF IDs
+    const skeletonSpecimen = {
+        slug: `manual-${Date.now()}`,
+        common_name: common,
+        scientific_name: sci,
+        image_url: null,
+        kingdom: "Animalia", // Assumption
+        phylum: "Unknown",
+        class: "Unknown",
+        order: "Unknown",
+        family: "Unknown",
+        genus: "Unknown",
+        cards: {},
+        gallery_images: [],
+        qa_history: []
+    };
+    
+    try {
+        // Consult AI for content
+        const geminiData = await fetchSpecimenCard(skeletonSpecimen, 'field_guide');
+        
+        currentModalSpecimen = { ...skeletonSpecimen, ...geminiData };
+        
+        // Setup Save Button (Manual entries are not saved yet)
+        updateSaveButtonState(false);
+        saveSpecimenBtn.classList.remove('hidden');
+        refreshSpecimenBtn.classList.remove('hidden');
+        updateImageBtn.classList.remove('hidden');
+        uploadVideoBtn.classList.remove('hidden');
+        
+        renderFullModalContent();
+        
+        modalLoader.classList.add('hidden');
+        modalContent.classList.remove('hidden');
+
+    } catch (error) {
+        console.error(error);
+        modalContent.innerHTML = `<div class="p-6 text-center text-red-400"><p>The Zoologist could not process this entry.</p><p class="text-sm mt-2">${error.message}</p></div>`;
+        modalLoader.classList.add('hidden');
+        modalContent.classList.remove('hidden');
+    }
 }
 
 // --- LIGHTBOX LOGIC ---
