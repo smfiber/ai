@@ -477,7 +477,7 @@ export async function fetchCollectionSuggestions(query) {
     try {
         const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=${configStore.geminiApiKey}`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ contents: [{ parts: [{ text: `List 30 animals related to "${query}". Sorted A-Z. JSON Array: [{"common_name": "...", "scientific_name": "..."}, ...]` }] }] })
+            body: JSON.stringify({ contents: [{ parts: [{ text: `List 60 distinct animal species related to "${query}". Sorted A-Z. JSON Array: [{"common_name": "...", "scientific_name": "..."}, ...]` }] }] })
         });
         const d = await res.json();
         return extractJson(d.candidates[0].content.parts[0].text);
