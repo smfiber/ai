@@ -2,9 +2,8 @@
  * APP.JS
  * The Controller for the "Life Explorer" SPA.
  * Updated: 
- * - FIX: UI Unification (All tabs now share identical layout/typography).
- * - FIX: Tooltips added to tab icons.
- * - FIX: Image/Lightbox logic maintained.
+ * - FIX: Removed text truncation from data grid boxes to allow full text display.
+ * - Maintained unified layout and tooltip logic.
  */
 
 import { setApiKeys } from './config.js';
@@ -612,10 +611,11 @@ function createSpecimenDetailHtml(data) {
     const mediaColumn = `<div class="w-full lg:w-1/3 flex-shrink-0">${videoHtml}${mainImageHtml}${galleryHtml}</div>`;
 
     // --- CONTENT GENERATION (UNIFIED) ---
+    // FIX: Removed 'truncate' from the value span below
     const gridHtml = Object.entries(gridData).map(([k, v]) => `
         <div class="bg-gray-800/40 p-3 rounded-lg border border-white/5">
             <span class="text-gray-500 text-xs uppercase block mb-1 tracking-wider">${k}</span>
-            <span class="text-gray-200 font-bold text-sm block truncate" title="${v}">${v}</span>
+            <span class="text-gray-200 font-bold text-sm block" title="${v}">${v}</span>
         </div>
     `).join('');
 
