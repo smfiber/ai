@@ -2,9 +2,8 @@
  * API.JS
  * Final Version - "Gemini Search Engine"
  * Updated: 
- * - PROMPT OVERHAUL: Rewrote all prompts to use "8th Grade Reading Level".
- * - Removed academic jargon (no "clades", "ecotones", "morphology").
- * - Adopted a friendly, accessible "Nature Guide" persona.
+ * - SEARCH FIX: Increased result count from 20 to 100.
+ * - SEARCH FIX: Refined prompt to exclude distant taxonomic relatives (e.g. Tapirs when searching for Horses).
  */
 
 import { configStore } from './config.js';
@@ -306,9 +305,18 @@ export async function getCategorySpecimens(classKey, page) {
 
 export async function searchSpecimens(queryText, page) {
     if (!configStore.geminiApiKey) return { data: [], meta: { total: 0, endOfRecords: true } };
-    if (page > 1) return { data: [], meta: { total: 20, endOfRecords: true } };
+    
+    // AI search does not support pagination in the traditional sense.
+    // We return 100 results on page 1, and consider that the end.
+    if (page > 1) return { data: [], meta: { total: 100, endOfRecords: true } };
 
-    const prompt = `List 20 distinct animal species related to "${queryText}". Rules: 1. Animals only. 2. Provide "common_name" and "scientific_name". 3. Valid JSON Array. Format: [{ "common_name": "Gray Wolf", "scientific_name": "Canis lupus" }, ...]`;
+    // UPDATED PROMPT: Request 100 items, and filter out distant taxonomic cousins.
+    const prompt = `List up to 100 distinct animal species that are strictly subtypes, breeds, or immediate wild relatives of "${queryText}". 
+    Rules: 
+    1. Relevance: Include distinct breeds (e.g. 'Clydesdale'), subspecies, or very close relatives (e.g. Zebras for Horses). 
+    2. Exclusion: Do NOT include distant taxonomic cousins. For example, if searching for 'Horse', do NOT include Rhinos or Tapirs. 
+    3. Output: Valid JSON Array. 
+    4. Format: [{ "common_name": "Gray Wolf", "scientific_name": "Canis lupus" }, ...]`;
 
     try {
         const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=${configStore.geminiApiKey}`, {
@@ -322,6 +330,7 @@ export async function searchSpecimens(queryText, page) {
             slug: item.scientific_name, scientific_name: item.scientific_name, common_name: item.common_name,
             image_url: null, family: "Unknown", order: "Unknown", class: "Unknown"
         }));
+        // Update meta total to match result length
         return { data: mapped, meta: { total: results.length, endOfRecords: true } };
     } catch (error) {
         console.error("Gemini Search Error:", error);
