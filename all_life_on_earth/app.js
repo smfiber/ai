@@ -2,10 +2,7 @@
  * APP.JS
  * The Controller for the "Life Explorer" SPA.
  * Updated: 
- * - FIX: Added missing renderPagination to fix search error.
- * - FIX: Gemini Suggestions now use 3-column grid (table style).
- * - FIX: Gemini Suggestions now open modal directly.
- * - FEAT: Video Autoplay/Loop on initial modal open.
+ * - FEAT: Added Slideshow to Lightbox (Auto-advance every 5 seconds).
  */
 
 import { setApiKeys } from './config.js';
@@ -41,6 +38,7 @@ let specimenToMoveId = null;
 let currentCardType = 'field_guide'; 
 let currentLightboxIndex = 0; 
 let shouldAutoplayVideo = false;
+let slideshowInterval = null; // New state for slideshow timer
 
 function main() {
     document.addEventListener('DOMContentLoaded', () => {
@@ -408,6 +406,23 @@ async function handleScientificLookup() {
 
 // --- LIGHTBOX LOGIC ---
 
+function startSlideshow() {
+    stopSlideshow();
+    const images = currentModalSpecimen.gallery_images;
+    if (images && images.length > 1) {
+        slideshowInterval = setInterval(() => {
+            navigateLightbox(1);
+        }, 5000);
+    }
+}
+
+function stopSlideshow() {
+    if (slideshowInterval) {
+        clearInterval(slideshowInterval);
+        slideshowInterval = null;
+    }
+}
+
 function openLightbox(index) {
     if (!lightboxModal) return;
     if (!currentModalSpecimen || !currentModalSpecimen.gallery_images) return;
@@ -425,13 +440,23 @@ function openLightbox(index) {
     lightboxModal.classList.remove('hidden');
     lightboxPlaceholder.classList.add('hidden');
     lightboxImage.classList.remove('hidden');
+
+    // Start slideshow
+    startSlideshow();
 }
 
 function navigateLightbox(direction) {
+    // Reset the slideshow timer on interaction
+    stopSlideshow();
+    
     const images = currentModalSpecimen.gallery_images;
     if (!images || images.length <= 1) return;
+    
     currentLightboxIndex = (currentLightboxIndex + direction + images.length) % images.length;
     updateLightboxImage();
+    
+    // Restart slideshow with fresh timer
+    startSlideshow();
 }
 
 function updateLightboxImage() {
@@ -443,6 +468,7 @@ function updateLightboxImage() {
 }
 
 function closeLightbox() {
+    stopSlideshow(); // Ensure timer stops
     lightboxModal.classList.add('hidden');
     lightboxImage.src = '';
 }
