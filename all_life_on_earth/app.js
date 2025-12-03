@@ -2,9 +2,9 @@
  * APP.JS
  * The Controller for the "Life Explorer" SPA.
  * Updated: 
- * - FIX: Increased font sizes for readability (text-lg for body, text-base for grid).
- * - FIX: Prompts updated in API.JS to return simpler, friendly text.
- * - FIX: Gallery Logic (Thumbnail vs Original) and Lightbox Nav preserved.
+ * - FIX: Changed Grid Images from Square (1:1) to Wide (16:9/Video) to fit photos.
+ * - FIX: Changed Modal Thumbnails from Square to Auto-Width to prevent cropping.
+ * - Retained all previous font size and prompt fixes.
  */
 
 import { setApiKeys } from './config.js';
@@ -648,6 +648,7 @@ function createSpecimenDetailHtml(data) {
             <img id="main-specimen-image" src="${displayImage}" data-full-res="${fullRes}" alt="${title}" class="w-full h-auto object-cover cursor-zoom-in" onerror="this.onerror=null;this.src='https://placehold.co/400x400/374151/FFFFFF?text=No+Image';">
         </div>` : '';
 
+    // FIX: Changed w-20 to w-auto, added object-contain
     const galleryHtml = (galleryImages.length > 0) ? 
         `<div class="flex gap-3 overflow-x-auto pb-2 custom-scrollbar">
             ${galleryImages.map((imgObj, idx) => {
@@ -656,7 +657,7 @@ function createSpecimenDetailHtml(data) {
                 const isActive = !data.video_url && (thumb === displayImage);
                 return `
                 <div class="relative flex-shrink-0 group">
-                    <img src="${thumb}" data-full-res="${orig}" data-index="${idx}" class="gallery-thumb h-20 w-20 object-cover rounded-lg cursor-pointer transition-all border border-gray-600 ${isActive ? 'ring-2 ring-green-400 opacity-100' : 'opacity-70 hover:opacity-100'}" alt="Thumbnail">
+                    <img src="${thumb}" data-full-res="${orig}" data-index="${idx}" class="gallery-thumb h-20 w-auto object-contain rounded-lg cursor-pointer transition-all border border-gray-600 ${isActive ? 'ring-2 ring-green-400 opacity-100' : 'opacity-70 hover:opacity-100'}" alt="Thumbnail">
                     <button class="delete-img-btn absolute -top-1 -right-1 bg-red-600 hover:bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity shadow-sm" data-src="${thumb}" title="Delete Photo">&times;</button>
                 </div>`;
             }).join('')}
@@ -664,7 +665,7 @@ function createSpecimenDetailHtml(data) {
 
     const mediaColumn = `<div class="w-full lg:w-1/3 flex-shrink-0">${videoHtml}${mainImageHtml}${galleryHtml}</div>`;
 
-    // --- CONTENT GENERATION (Increased Fonts, No Truncate) ---
+    // --- CONTENT GENERATION ---
     const gridHtml = Object.entries(gridData).map(([k, v]) => `
         <div class="bg-gray-800/40 p-4 rounded-lg border border-white/5">
             <span class="text-gray-400 text-sm uppercase block mb-1 tracking-wider">${k}</span>
@@ -702,6 +703,7 @@ function createSpecimenDetailHtml(data) {
     </div>`;
 }
 
+// --- UPDATED DELETE IMAGE LOGIC ---
 async function handleDeleteImage(e, srcToDelete) {
     e.stopPropagation();
     if (!currentUser) return alert("Sign in required.");
@@ -797,6 +799,7 @@ function updateSaveButtonState(isSaved) {
     }
 }
 
+// --- UPDATED ADD IMAGE LOGIC ---
 async function handleAddImage() {
     if (!updateImageInput.files || !updateImageInput.files[0]) return;
     const file = updateImageInput.files[0];
@@ -949,7 +952,7 @@ function renderSpecimenGallery(specimens, container) {
         const hasImage = !!specimen.image_url;
         const showMoveBtn = (container === sanctuaryGallery);
         card.innerHTML = `
-            <div class="card-image-container group-hover:scale-105 transition-transform duration-700 relative">
+            <div class="relative w-full aspect-video bg-gray-800 group-hover:scale-105 transition-transform duration-700">
                 <img src="${hasImage ? specimen.image_url : ''}" class="w-full h-full object-cover transition-opacity duration-300 ${hasImage ? '' : 'hidden'}" onload="this.style.opacity=1" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden');">
                 <div class="${hasImage ? 'hidden' : ''} absolute inset-0 flex items-center justify-center bg-gray-800 card-image-placeholder"><div class="text-center opacity-30"><span class="text-5xl">🐾</span><p class="text-xs mt-2 text-gray-400">No Photo</p></div></div>
                 ${showMoveBtn ? `<div class="absolute top-2 right-2 z-10"><button class="move-specimen-btn bg-gray-900/80 hover:bg-indigo-600 text-white p-2 rounded-lg backdrop-blur-sm transition-colors shadow-lg border border-white/10">📁</button></div>` : ''}
