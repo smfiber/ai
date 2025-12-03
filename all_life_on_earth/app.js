@@ -1,10 +1,7 @@
 /*
  * APP.JS
  * The Controller for the "Life Explorer" SPA.
- * Updated: 
- * - 5-Card Perspective System (UI & Logic)
- * - FIX: Video layout now correctly displays images as thumbnails.
- * - Full Code (No Truncation)
+ * Updated: Restored missing handleApiKeySubmit and Auth/Sanctuary logic.
  */
 
 import { setApiKeys } from './config.js';
@@ -174,6 +171,272 @@ function addEventListeners() {
     if (moveModalCloseBtn) moveModalCloseBtn.addEventListener('click', () => moveModal.classList.add('hidden'));
     if (confirmMoveBtn) confirmMoveBtn.addEventListener('click', executeMoveSpecimen);
 }
+
+// --- MISSING HANDLERS RESTORED ---
+
+async function handleApiKeySubmit(e) {
+    e.preventDefault();
+    const formData = new FormData(apiKeyForm);
+    const geminiKey = formData.get('gemini-key');
+    const clientId = formData.get('google-client-id');
+    const firebaseConfigStr = formData.get('firebase-config');
+
+    try {
+        const firebaseConfig = JSON.parse(firebaseConfigStr);
+        
+        setApiKeys({
+            gemini: geminiKey,
+            googleClientId: clientId,
+            firebase: firebaseConfig
+        });
+
+        // Hide modal
+        modalBackdrop.classList.add('hidden');
+        
+        // Init Firebase
+        const result = await initFirebase();
+        if (result && result.auth) {
+            result.onAuthStateChanged(result.auth, (user) => {
+                currentUser = user;
+                updateAuthUI();
+                if (user) {
+                    loadSanctuarySpecimens();
+                    getUserFolders(user.uid).then(folders => {
+                        userFolders = folders;
+                        renderFolders();
+                    });
+                } else {
+                    sanctuaryGallery.innerHTML = '';
+                    foldersGallery.innerHTML = '';
+                    sanctuaryEmptyState.classList.remove('hidden');
+                }
+            });
+        }
+    } catch (error) {
+        console.error(error);
+        alert('Error initializing: ' + error.message + '\nCheck console and JSON format.');
+    }
+}
+
+async function handleGoogleSignIn() {
+    try {
+        const user = await signInWithGoogle();
+        if (user) {
+            currentUser = user;
+            updateAuthUI();
+            loadSanctuarySpecimens();
+        }
+    } catch (e) {
+        console.error("Sign in error:", e);
+    }
+}
+
+async function handleGoogleSignOut() {
+    await signOutUser();
+    currentUser = null;
+    updateAuthUI();
+    sanctuaryGallery.innerHTML = '';
+    foldersGallery.innerHTML = '';
+    sanctuaryEmptyState.classList.remove('hidden');
+    foldersSection.classList.add('hidden');
+}
+
+function updateAuthUI() {
+    if (currentUser) {
+        authContainer.classList.add('bg-gray-800', 'rounded-full');
+        signInBtn.classList.add('hidden');
+        userInfo.classList.remove('hidden');
+        userInfo.classList.add('flex');
+        userName.textContent = currentUser.displayName || "Explorer";
+        userPhoto.src = currentUser.photoURL || "https://ui-avatars.com/api/?name=Explorer&background=random";
+    } else {
+        authContainer.classList.remove('bg-gray-800', 'rounded-full');
+        signInBtn.classList.remove('hidden');
+        userInfo.classList.add('hidden');
+        userInfo.classList.remove('flex');
+    }
+}
+
+async function loadSanctuarySpecimens() {
+    if (!currentUser) return;
+    sanctuaryLoader.classList.remove('hidden');
+    sanctuaryGallery.innerHTML = '';
+    sanctuaryEmptyState.classList.add('hidden');
+
+    // Update Headers based on Folder
+    if (currentFolderId) {
+        const folder = userFolders.find(f => f.id === currentFolderId);
+        sanctuaryTitle.textContent = folder ? folder.name : 'Folder';
+        sanctuarySubtitle.textContent = 'Folder Collection';
+        foldersSection.classList.add('hidden');
+        folderBackBtn.classList.remove('hidden');
+        createFolderBtn.classList.add('hidden');
+    } else {
+        sanctuaryTitle.textContent = 'My Sanctuary';
+        sanctuarySubtitle.textContent = 'Your collection of saved specimens';
+        foldersSection.classList.remove('hidden');
+        folderBackBtn.classList.add('hidden');
+        createFolderBtn.classList.remove('hidden');
+    }
+
+    try {
+        const specimens = await getSavedSpecimens(currentUser.uid);
+        
+        // Filter: If currentFolderId is null, show items where folderId is missing or null
+        // If currentFolderId is set, show items matching it
+        const filtered = specimens.filter(s => {
+            if (currentFolderId) return s.folderId === currentFolderId;
+            return !s.folderId; // Show root items
+        });
+
+        if (filtered.length === 0) {
+            sanctuaryEmptyState.classList.remove('hidden');
+            if (currentFolderId) sanctuaryEmptyState.querySelector('h3').textContent = "Empty Folder";
+        } else {
+            renderSpecimenGallery(filtered, sanctuaryGallery);
+        }
+    } catch (error) {
+        console.error(error);
+        sanctuaryGallery.innerHTML = '<p class="text-red-400">Error loading sanctuary.</p>';
+    } finally {
+        sanctuaryLoader.classList.add('hidden');
+    }
+}
+
+async function handleCreateFolder() {
+    if (!currentUser) return alert("Sign in first.");
+    const name = prompt("Folder Name:");
+    if (!name) return;
+    
+    try {
+        await createFolder(currentUser.uid, name);
+        userFolders = await getUserFolders(currentUser.uid);
+        renderFolders();
+    } catch (e) { alert(e.message); }
+}
+
+function renderFolders() {
+    if (!foldersGallery) return;
+    foldersGallery.innerHTML = '';
+    
+    userFolders.forEach(folder => {
+        const div = document.createElement('div');
+        div.className = 'folder-card p-4 rounded-xl cursor-pointer transition-all duration-300 relative group';
+        div.dataset.id = folder.id;
+        div.innerHTML = `
+            <button class="delete-folder-btn absolute top-2 right-2 text-gray-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity z-10" title="Delete Folder">&times;</button>
+            <div class="text-center">
+                <span class="text-4xl block mb-2">📁</span>
+                <h4 class="text-white font-bold truncate">${folder.name}</h4>
+                <p class="text-xs text-gray-400 mt-1">Collection</p>
+            </div>
+        `;
+        
+        // Delete Handler
+        div.querySelector('.delete-folder-btn').addEventListener('click', async (e) => {
+            e.stopPropagation();
+            if(confirm(`Delete folder "${folder.name}"? Items inside will be moved to main sanctuary.`)) {
+                await deleteUserFolder(currentUser.uid, folder.id);
+                userFolders = await getUserFolders(currentUser.uid);
+                renderFolders();
+                loadSanctuarySpecimens();
+            }
+        });
+
+        foldersGallery.appendChild(div);
+    });
+}
+
+function handleFolderClick(e) {
+    const card = e.target.closest('.folder-card');
+    if (card) {
+        currentFolderId = card.dataset.id;
+        loadSanctuarySpecimens();
+    }
+}
+
+function handleSanctuaryGridClick(e) {
+    // Check if clicked move button
+    const moveBtn = e.target.closest('.move-specimen-btn');
+    if (moveBtn) {
+        e.stopPropagation();
+        const card = moveBtn.closest('.specimen-card');
+        specimenToMoveId = card.dataset.docid;
+        openMoveModal();
+        return;
+    }
+    
+    // Normal card click
+    handleSpecimenCardClick(e);
+}
+
+function openMoveModal() {
+    moveModal.classList.remove('hidden');
+    moveFolderSelect.innerHTML = '<option value="">(Unsorted)</option>';
+    userFolders.forEach(f => {
+        const opt = document.createElement('option');
+        opt.value = f.id;
+        opt.textContent = f.name;
+        moveFolderSelect.appendChild(opt);
+    });
+}
+
+async function executeMoveSpecimen() {
+    if (!specimenToMoveId) return;
+    const folderId = moveFolderSelect.value || null;
+    confirmMoveBtn.disabled = true;
+    confirmMoveBtn.textContent = "Moving...";
+    
+    try {
+        await moveSpecimenToFolder(currentUser.uid, specimenToMoveId, folderId);
+        moveModal.classList.add('hidden');
+        loadSanctuarySpecimens(); // Refresh grid
+    } catch (e) {
+        alert("Move failed: " + e.message);
+    } finally {
+        confirmMoveBtn.disabled = false;
+        confirmMoveBtn.textContent = "Move Specimen";
+    }
+}
+
+function handleSpecimenCardClick(e) {
+    const card = e.target.closest('.specimen-card');
+    if (!card) return;
+    const slug = card.dataset.slug;
+    const name = card.dataset.name;
+    if (slug) openSpecimenModal(slug, name);
+}
+
+async function handleScientificLookup() {
+    const common = searchInput.value.trim();
+    if (!common) return alert("Enter a name first.");
+    
+    scientificLookupBtn.classList.add('animate-spin');
+    try {
+        const sciName = await fetchScientificNameLookup(common);
+        if (sciName) {
+            searchInput.value = sciName;
+            handleSearchSubmit({ preventDefault: () => {} });
+        } else {
+            alert("Could not determine scientific name.");
+        }
+    } catch (e) { console.error(e); }
+    finally { scientificLookupBtn.classList.remove('animate-spin'); }
+}
+
+function openLightbox(src) {
+    if (!lightboxModal) return;
+    lightboxImage.src = src;
+    lightboxImage.classList.remove('hidden');
+    lightboxPlaceholder.classList.add('hidden');
+    lightboxModal.classList.remove('hidden');
+}
+
+function closeLightbox() {
+    lightboxModal.classList.add('hidden');
+    lightboxImage.src = '';
+}
+
 
 // --- TAB RENDERING ---
 function renderTabs() {
