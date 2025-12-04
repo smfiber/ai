@@ -2,8 +2,9 @@
  * APP.JS
  * The Controller for the "Life Explorer" SPA.
  * Updated: 
- * - UI ADDITION: Added Delete Button (Trash Can) to Sanctuary Cards.
- * - LOGIC: Implemented direct deletion from the grid view.
+ * - UI: Added "Run All" button.
+ * - LOGIC: Sequential generation of all card types for new entries.
+ * - FEATURE: Added 'jester' (Jokes) tab.
  */
 
 import { setApiKeys } from './config.js';
@@ -19,7 +20,7 @@ import {
 let modalBackdrop, apiKeyForm, appContainer, mainContent, authContainer, signInBtn, signOutBtn, userInfo, userName, userPhoto, 
     searchForm, searchInput, scientificLookupBtn, manualEntryBtn, sanctuaryView, searchResultsView, specimenGallery, loader, galleryHeader, galleryTitle, backToSanctuaryBtn,
     sanctuaryLoader, sanctuaryGallery, sanctuaryEmptyState, createFolderBtn, foldersSection, foldersGallery, folderBackBtn, sanctuaryTitle, sanctuarySubtitle,
-    specimenDetailModal, modalTitle, modalCloseBtn, modalContentContainer, modalLoader, modalContent, saveSpecimenBtn, refreshSpecimenBtn, 
+    specimenDetailModal, modalTitle, modalCloseBtn, modalContentContainer, modalLoader, modalContent, saveSpecimenBtn, refreshSpecimenBtn, runAllBtn,
     updateImageBtn, updateImageInput, uploadVideoBtn, uploadVideoInput,
     careQuestionSection, careQuestionForm, careQuestionInput, careQuestionSubmit, careResponseContainer, careResponseText, careResponseLoader,
     aiSuggestionsContainer, aiSuggestionsList, aiSuggestionsLoader,
@@ -98,6 +99,7 @@ function assignDomElements() {
     modalContent = document.getElementById('modal-content');
     saveSpecimenBtn = document.getElementById('save-specimen-btn');
     refreshSpecimenBtn = document.getElementById('refresh-specimen-btn');
+    runAllBtn = document.getElementById('run-all-btn');
     
     updateImageBtn = document.getElementById('update-image-btn');
     updateImageInput = document.getElementById('update-image-input');
@@ -184,6 +186,7 @@ function addEventListeners() {
     }
     if (saveSpecimenBtn) saveSpecimenBtn.addEventListener('click', handleSaveToggle);
     if (refreshSpecimenBtn) refreshSpecimenBtn.addEventListener('click', handleRefreshData);
+    if (runAllBtn) runAllBtn.addEventListener('click', () => handleRunAll(true));
     if (updateImageBtn && updateImageInput) updateImageBtn.addEventListener('click', () => updateImageInput.click());
     if (updateImageInput) updateImageInput.addEventListener('change', handleAddImage); 
     if (uploadVideoBtn && uploadVideoInput) uploadVideoBtn.addEventListener('click', () => uploadVideoInput.click());
@@ -460,6 +463,7 @@ async function handleManualEntrySubmit(e) {
     modalTitle.textContent = common;
     modalLoader.querySelector('p').textContent = 'Consulting the Zoologist...';
     refreshSpecimenBtn.classList.add('hidden');
+    runAllBtn.classList.add('hidden');
     
     currentCardType = 'field_guide';
     modalContent.innerHTML = '';
@@ -482,19 +486,9 @@ async function handleManualEntrySubmit(e) {
     };
     
     try {
-        const geminiData = await fetchSpecimenCard(skeletonSpecimen, 'field_guide');
-        currentModalSpecimen = { ...skeletonSpecimen, ...geminiData };
-        
-        updateSaveButtonState(false);
-        saveSpecimenBtn.classList.remove('hidden');
-        refreshSpecimenBtn.classList.remove('hidden');
-        updateImageBtn.classList.remove('hidden');
-        uploadVideoBtn.classList.remove('hidden');
-        
-        renderFullModalContent();
-        
-        modalLoader.classList.add('hidden');
-        modalContent.classList.remove('hidden');
+        // For Manual Entry, we also run the sequential generation
+        currentModalSpecimen = skeletonSpecimen;
+        await handleRunAll(false); // Run all generation for manual entry
 
     } catch (error) {
         console.error(error);
@@ -574,7 +568,8 @@ function renderTabs() {
         { id: 'historian', icon: '🏺', label: 'History', tooltip: "Cultural & Mythological Impact" },
         { id: 'evolutionist', icon: '🧬', label: 'Evolution', tooltip: "Ancestry & Biology" },
         { id: 'ecologist', icon: '🛡️', label: 'Ecology', tooltip: "Role in Ecosystem" },
-        { id: 'storyteller', icon: '✍️', label: 'Story', tooltip: "Immersive Narrative" }
+        { id: 'storyteller', icon: '✍️', label: 'Story', tooltip: "Immersive Narrative" },
+        { id: 'jester', icon: '🎭', label: 'Jokes', tooltip: "Wild Laughter" }
     ];
 
     const tabContainer = document.createElement('div');
@@ -618,6 +613,7 @@ async function openSpecimenModal(slug, name) {
     modalLoader.classList.remove('hidden');
     modalTitle.textContent = name || "Loading...";
     refreshSpecimenBtn.classList.add('hidden');
+    runAllBtn.classList.add('hidden');
     updateImageBtn.classList.remove('hidden'); 
     uploadVideoBtn.classList.remove('hidden');
     
@@ -634,7 +630,7 @@ async function openSpecimenModal(slug, name) {
     try {
         let gbifData = null;
         let isSaved = false;
-        // Detect if this is a manual entry slug (e.g. "manual-1738...")
+        // Detect if this is a manual entry slug
         const isManual = slug && slug.toString().startsWith('manual-');
         let resolvedSlug = slug;
 
@@ -650,7 +646,7 @@ async function openSpecimenModal(slug, name) {
             // Force database check for manual entries
             const savedResult = await getSavedSpecimen(currentUser.uid, resolvedSlug);
             
-            // Allow loading if data exists (removed strict diet check to be safe)
+            // Allow loading if data exists
             if (savedResult.data) {
                 currentModalSpecimen = { ...savedResult.data, docId: savedResult.docId };
                 if (!currentModalSpecimen.cards) currentModalSpecimen.cards = {};
@@ -664,6 +660,7 @@ async function openSpecimenModal(slug, name) {
                 updateSaveButtonState(true);
                 saveSpecimenBtn.classList.remove('hidden');
                 refreshSpecimenBtn.classList.remove('hidden'); 
+                runAllBtn.classList.remove('hidden');
                 modalLoader.classList.add('hidden');
                 modalContent.classList.remove('hidden');
                 return;
@@ -683,23 +680,81 @@ async function openSpecimenModal(slug, name) {
             gbifData = await getSpecimenDetails(resolvedSlug);
         }
         
-        modalLoader.querySelector('p').textContent = 'Consulting the Zoologist (AI)...';
-        const geminiData = await fetchSpecimenCard(gbifData, 'field_guide');
-
-        currentModalSpecimen = { ...gbifData, ...geminiData, qa_history: [], gallery_images: [], cards: {} };
+        // --- NEW ENTRY: TRIGGER SEQUENTIAL GENERATION ---
+        currentModalSpecimen = { ...gbifData, qa_history: [], gallery_images: [], cards: {} };
         if (currentModalSpecimen.image_url) currentModalSpecimen.gallery_images.push(currentModalSpecimen.image_url);
         if (name && currentModalSpecimen.common_name === currentModalSpecimen.scientific_name) currentModalSpecimen.common_name = name;
-
+        
         modalTitle.textContent = currentModalSpecimen.common_name;
-        renderFullModalContent();
+        
+        // This will block until all cards are generated sequentially, updating text
+        await handleRunAll(false);
 
     } catch (error) {
         console.error(error);
         modalContent.innerHTML = `<p class="text-red-400">Error: ${error.message}</p>`;
+        modalLoader.classList.add('hidden');
+        modalContent.classList.remove('hidden');
+    }
+}
+
+// --- NEW FUNCTION: SEQUENTIAL GENERATION ---
+async function handleRunAll(force = false) {
+    if (force && !confirm("Regenerate ALL sections? This may take a minute.")) return;
+
+    modalLoader.classList.remove('hidden');
+    modalContent.classList.add('hidden');
+    refreshSpecimenBtn.classList.add('hidden');
+    runAllBtn.classList.add('hidden');
+    saveSpecimenBtn.classList.add('hidden');
+
+    const cardTypes = ['field_guide', 'historian', 'evolutionist', 'ecologist', 'storyteller', 'jester'];
+    const displayNames = {
+        'field_guide': 'Field Guide',
+        'historian': 'History',
+        'evolutionist': 'Evolution',
+        'ecologist': 'Ecology',
+        'storyteller': 'Story',
+        'jester': 'Jokes'
+    };
+
+    try {
+        for (const type of cardTypes) {
+            // Update Loading Text
+            modalLoader.querySelector('p').textContent = `Writing ${displayNames[type]}...`;
+            
+            // Only fetch if forced or missing
+            const needsFetch = force || (type === 'field_guide' ? !currentModalSpecimen.zoologist_intro : !currentModalSpecimen.cards[type]);
+            
+            if (needsFetch) {
+                const data = await fetchSpecimenCard(currentModalSpecimen, type);
+                if (type === 'field_guide') {
+                    currentModalSpecimen = { ...currentModalSpecimen, ...data };
+                } else {
+                    if (!currentModalSpecimen.cards) currentModalSpecimen.cards = {};
+                    currentModalSpecimen.cards[type] = data;
+                }
+            }
+        }
+        
+        // If saved, update DB automatically
+        if (currentModalSpecimen.docId && currentUser) {
+            modalLoader.querySelector('p').textContent = `Saving changes...`;
+            await saveSpecimen(currentUser.uid, currentModalSpecimen, currentModalSpecimen.docId);
+        }
+
+        renderFullModalContent();
+        refreshSpecimenBtn.classList.remove('hidden');
+        runAllBtn.classList.remove('hidden');
+        saveSpecimenBtn.classList.remove('hidden');
+
+    } catch (e) {
+        console.error("Run All Error:", e);
+        alert("An error occurred while generating reports.");
     } finally {
         modalLoader.classList.add('hidden');
         modalContent.classList.remove('hidden');
-        modalLoader.querySelector('p').textContent = 'Loading details...';
+        modalLoader.querySelector('p').textContent = 'Loading...';
     }
 }
 
