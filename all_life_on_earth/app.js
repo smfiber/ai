@@ -2,8 +2,9 @@
  * APP.JS
  * The Controller for the "Life Explorer" SPA.
  * Updated: 
- * - UI CLEANUP: Specimen cards now hide action buttons until hover.
- * - UI CLEANUP: Removed Scientific Name from grid view for cleaner look.
+ * - UI FIX: Added Title Casing to Common Names (e.g., "great white shark" -> "Great White Shark").
+ * - UI CLEANUP: Specimen cards hide action buttons until hover.
+ * - UI CLEANUP: Removed Scientific Name from grid view.
  */
 
 import { setApiKeys } from './config.js';
@@ -140,6 +141,12 @@ function assignDomElements() {
     moveModalCloseBtn = document.getElementById('move-modal-close-btn');
     moveFolderSelect = document.getElementById('move-folder-select');
     confirmMoveBtn = document.getElementById('confirm-move-btn');
+}
+
+// --- HELPER: Title Case ---
+function toTitleCase(str) {
+    if (!str) return '';
+    return str.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
 }
 
 // --- LIGHTBOX NAVIGATION CONTROLS ---
@@ -459,7 +466,7 @@ async function handleManualEntrySubmit(e) {
     specimenDetailModal.classList.remove('hidden');
     modalContent.classList.add('hidden');
     modalLoader.classList.remove('hidden');
-    modalTitle.textContent = common;
+    modalTitle.textContent = toTitleCase(common);
     modalLoader.querySelector('p').textContent = 'Consulting the Zoologist...';
     refreshSpecimenBtn.classList.add('hidden');
     runAllBtn.classList.add('hidden');
@@ -610,7 +617,8 @@ async function openSpecimenModal(slug, name) {
     specimenDetailModal.classList.remove('hidden');
     modalContent.classList.add('hidden');
     modalLoader.classList.remove('hidden');
-    modalTitle.textContent = name || "Loading...";
+    // FIX: Apply Title Case to modal title
+    modalTitle.textContent = toTitleCase(name) || "Loading...";
     refreshSpecimenBtn.classList.add('hidden');
     runAllBtn.classList.add('hidden');
     updateImageBtn.classList.remove('hidden'); 
@@ -654,7 +662,7 @@ async function openSpecimenModal(slug, name) {
                     currentModalSpecimen.gallery_images.push(currentModalSpecimen.image_url);
                 }
                 
-                modalTitle.textContent = currentModalSpecimen.common_name;
+                modalTitle.textContent = toTitleCase(currentModalSpecimen.common_name);
                 renderFullModalContent();
                 updateSaveButtonState(true);
                 saveSpecimenBtn.classList.remove('hidden');
@@ -684,7 +692,7 @@ async function openSpecimenModal(slug, name) {
         if (currentModalSpecimen.image_url) currentModalSpecimen.gallery_images.push(currentModalSpecimen.image_url);
         if (name && currentModalSpecimen.common_name === currentModalSpecimen.scientific_name) currentModalSpecimen.common_name = name;
         
-        modalTitle.textContent = currentModalSpecimen.common_name;
+        modalTitle.textContent = toTitleCase(currentModalSpecimen.common_name);
         
         // This will block until all cards are generated sequentially, updating text
         await handleRunAll(false);
@@ -788,7 +796,8 @@ function createSpecimenDetailHtml(data) {
     let title, subtitle, gridData, insights, mainText;
 
     if (currentCardType === 'field_guide') {
-        title = get(data.common_name);
+        // FIX: Apply Title Case to content title
+        title = toTitleCase(get(data.common_name));
         subtitle = get(data.scientific_name);
         gridData = {
             "Diet": get(data.diet),
@@ -1153,7 +1162,7 @@ function renderSpecimenGallery(specimens, container) {
                     <button class="move-specimen-btn bg-gray-900/80 hover:bg-indigo-600 text-white p-2 rounded-lg backdrop-blur-sm transition-colors shadow-lg border border-white/10" title="Move to Folder">📁</button>
                     <button class="delete-specimen-btn bg-gray-900/80 hover:bg-red-600 text-white p-2 rounded-lg backdrop-blur-sm transition-colors shadow-lg border border-white/10" title="Delete Specimen">🗑️</button>
                 </div>` : ''}
-                <div class="card-text-overlay"><h3 class="text-lg font-bold text-white leading-tight">${specimen.common_name}</h3></div>
+                <div class="card-text-overlay"><h3 class="text-lg font-bold text-white leading-tight">${toTitleCase(specimen.common_name)}</h3></div>
             </div>`;
         container.appendChild(card);
     });
