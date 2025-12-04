@@ -2,8 +2,7 @@
  * API.JS
  * Final Version - "Gemini Search Engine"
  * Updated: 
- * - PERFORMANCE: Switched Search to 'gemini-1.5-flash' for speed.
- * - SEARCH FIX: Prompt rewritten to enforce strict specific relevance.
+ * - PROMPTS: Added 'jester' (Jokes) prompt.
  */
 
 import { configStore } from './config.js';
@@ -442,6 +441,21 @@ const PROMPTS = {
             "Location": "Where is the story?",
             "Time": "Morning / Night",
             "Viewpoint": "Through the animal's eyes"
+        }
+    }`,
+
+    'jester': `You are a Wildlife Comedian. Write 5 funny jokes or puns about this animal.
+    Output a valid JSON object:
+    {
+        "title": "Jungle Jokes",
+        "subtitle": "Wild Laughter",
+        "main_text": "A short stand-up routine (100 words) about this animal's funny habits or looks. Keep it light and family-friendly.",
+        "insights": ["Joke 1", "Joke 2", "Joke 3", "Joke 4", "Joke 5"],
+        "data_points": {
+            "Humor Style": "Puns/Dad Jokes",
+            "Laugh Rating": "5/5",
+            "Audience": "Everyone",
+            "Topic": "Animal Life"
         }
     }`
 };
