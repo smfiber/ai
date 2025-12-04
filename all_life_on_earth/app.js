@@ -2,9 +2,8 @@
  * APP.JS
  * The Controller for the "Life Explorer" SPA.
  * Updated: 
- * - UI: Added "Run All" button.
- * - LOGIC: Sequential generation of all card types for new entries.
- * - FEATURE: Added 'jester' (Jokes) tab.
+ * - UI CLEANUP: Specimen cards now hide action buttons until hover.
+ * - UI CLEANUP: Removed Scientific Name from grid view for cleaner look.
  */
 
 import { setApiKeys } from './config.js';
@@ -1150,11 +1149,11 @@ function renderSpecimenGallery(specimens, container) {
                 <img src="${hasImage ? specimen.image_url : ''}" class="w-full h-full object-cover transition-opacity duration-300 ${hasImage ? '' : 'hidden'}" onload="this.style.opacity=1" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden');">
                 <div class="${hasImage ? 'hidden' : ''} absolute inset-0 flex items-center justify-center bg-gray-800 card-image-placeholder"><div class="text-center opacity-30"><span class="text-5xl">🐾</span><p class="text-xs mt-2 text-gray-400">No Photo</p></div></div>
                 ${showMoveBtn ? `
-                <div class="absolute top-2 right-2 z-10 flex gap-2">
+                <div class="absolute top-2 right-2 z-10 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                     <button class="move-specimen-btn bg-gray-900/80 hover:bg-indigo-600 text-white p-2 rounded-lg backdrop-blur-sm transition-colors shadow-lg border border-white/10" title="Move to Folder">📁</button>
                     <button class="delete-specimen-btn bg-gray-900/80 hover:bg-red-600 text-white p-2 rounded-lg backdrop-blur-sm transition-colors shadow-lg border border-white/10" title="Delete Specimen">🗑️</button>
                 </div>` : ''}
-                <div class="card-text-overlay"><h3 class="text-lg font-bold text-white leading-tight">${specimen.common_name}</h3><p class="text-green-400 text-xs mt-1 leading-tight">${specimen.scientific_name}</p></div>
+                <div class="card-text-overlay"><h3 class="text-lg font-bold text-white leading-tight">${specimen.common_name}</h3></div>
             </div>`;
         container.appendChild(card);
     });
