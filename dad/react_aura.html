@@ -1,0 +1,200 @@
+import React, { useEffect, useRef, useState } from 'react';
+
+const FluidAura = () => {
+  const canvasRef = useRef(null);
+  const [debugMode, setDebugMode] = useState(false);
+  const [speed, setSpeed] = useState(1);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    let animationFrameId;
+    let width, height;
+    
+    // Configuration for the "blobs"
+    // Colors inspired by the Gemini/Google DeepMind aesthetic
+    const blobs = [
+      { x: 0, y: 0, vx: 1, vy: 1, r: 0, color: '#4285F4', baseR: 300, phase: 0 }, // Blue
+      { x: 0, y: 0, vx: -1, vy: 1, r: 0, color: '#9F55FF', baseR: 250, phase: 2 }, // Purple
+      { x: 0, y: 0, vx: 1, vy: -1, r: 0, color: '#00D2FF', baseR: 280, phase: 4 }, // Cyan
+      { x: 0, y: 0, vx: -0.5, vy: -0.5, r: 0, color: '#FF5D5D', baseR: 200, phase: 1 }, // Subtle Pink/Red accent
+      { x: 0, y: 0, vx: 0.8, vy: -0.8, r: 0, color: '#FFFFFF', baseR: 150, phase: 3 }, // White Highlight
+    ];
+
+    // Mouse interaction
+    let mouse = { x: -1000, y: -1000 };
+    let targetMouse = { x: -1000, y: -1000 };
+
+    const handleResize = () => {
+      width = window.innerWidth;
+      height = window.innerHeight;
+      canvas.width = width;
+      canvas.height = height;
+      
+      // Initialize blob positions slightly centered but scattered
+      blobs.forEach(b => {
+        b.x = Math.random() * width;
+        b.y = Math.random() * height;
+      });
+    };
+
+    const handleMouseMove = (e) => {
+      targetMouse.x = e.clientX;
+      targetMouse.y = e.clientY;
+    };
+    
+    const handleTouchMove = (e) => {
+        if(e.touches.length > 0) {
+            targetMouse.x = e.touches[0].clientX;
+            targetMouse.y = e.touches[0].clientY;
+        }
+    };
+
+    window.addEventListener('resize', handleResize);
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('touchmove', handleTouchMove);
+    
+    // Initial setup
+    handleResize();
+
+    let time = 0;
+
+    const render = () => {
+      // Clear canvas with a very deep blue/black background
+      ctx.fillStyle = '#050510'; 
+      ctx.fillRect(0, 0, width, height);
+
+      // Smooth mouse movement
+      mouse.x += (targetMouse.x - mouse.x) * 0.05;
+      mouse.y += (targetMouse.y - mouse.y) * 0.05;
+
+      time += 0.01 * speed;
+
+      // Heavy blur is the key to the "Aura" effect. 
+      // Instead of CSS blur (which can be slow for full screen), we use large radial gradients and a composite mode.
+      // However, a global canvas filter gives the smoothest "liquid" look.
+      ctx.filter = debugMode ? 'none' : 'blur(80px)';
+      ctx.globalCompositeOperation = 'screen'; // 'Screen' or 'lighter' blends colors additively
+
+      blobs.forEach((blob, i) => {
+        // Update physics
+        // 1. Natural floating movement using sine waves
+        const floatX = Math.sin(time + blob.phase) * 2;
+        const floatY = Math.cos(time + blob.phase * 0.5) * 2;
+        
+        blob.x += (blob.vx * 0.5) + floatX;
+        blob.y += (blob.vy * 0.5) + floatY;
+
+        // 2. Mouse attraction/repulsion
+        const dx = mouse.x - blob.x;
+        const dy = mouse.y - blob.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        
+        // Gentle attraction to mouse
+        if (dist < 800) {
+            blob.x += dx * 0.005;
+            blob.y += dy * 0.005;
+        }
+
+        // 3. Wall bounce
+        if (blob.x < -blob.baseR) blob.vx = Math.abs(blob.vx);
+        if (blob.x > width + blob.baseR) blob.vx = -Math.abs(blob.vx);
+        if (blob.y < -blob.baseR) blob.vy = Math.abs(blob.vy);
+        if (blob.y > height + blob.baseR) blob.vy = -Math.abs(blob.vy);
+
+        // 4. Breathing radius
+        const breathing = Math.sin(time * 2 + blob.phase) * (blob.baseR * 0.2);
+        blob.r = blob.baseR + breathing;
+
+        // Draw Blob
+        ctx.beginPath();
+        ctx.arc(blob.x, blob.y, blob.r, 0, Math.PI * 2);
+        ctx.fillStyle = blob.color;
+        ctx.fill();
+        ctx.closePath();
+      });
+
+      // Reset filter for UI or sharp elements if we were adding them
+      ctx.filter = 'none';
+      ctx.globalCompositeOperation = 'source-over';
+
+      // Optional: Add some "Stars" or noise for texture (Subtle)
+      if (!debugMode) {
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+        for (let i = 0; i < 5; i++) {
+           const sx = (Math.random() * width + time * 50) % width;
+           const sy = (Math.random() * height + time * 20) % height;
+           ctx.fillRect(sx, sy, 2, 2);
+        }
+      }
+
+      animationFrameId = requestAnimationFrame(render);
+    };
+
+    render();
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('touchmove', handleTouchMove);
+      cancelAnimationFrame(animationFrameId);
+    };
+  }, [debugMode, speed]);
+
+  return (
+    <div className="relative w-full h-screen overflow-hidden bg-black font-sans text-white">
+      {/* The Canvas Background */}
+      <canvas 
+        ref={canvasRef} 
+        className="absolute top-0 left-0 w-full h-full block"
+      />
+
+      {/* Overlay Content / Controls */}
+      <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex flex-col items-center gap-4 z-10 pointer-events-none">
+        <div className="text-center opacity-80 mb-2">
+            <h1 className="text-3xl font-thin tracking-[0.2em] uppercase text-white drop-shadow-lg">Gemini Aura</h1>
+            <p className="text-xs text-blue-200 tracking-widest mt-2">Fluid Interface Simulation</p>
+        </div>
+        
+        {/* Controls Container (Enable pointer events here) */}
+        <div className="pointer-events-auto bg-white/10 backdrop-blur-md border border-white/20 rounded-full px-6 py-3 flex items-center gap-6 shadow-2xl transition-all hover:bg-white/20">
+          
+          <div className="flex items-center gap-3">
+            <label className="text-xs font-semibold uppercase tracking-wider text-blue-100">Flow Speed</label>
+            <input 
+              type="range" 
+              min="0" 
+              max="5" 
+              step="0.1"
+              value={speed}
+              onChange={(e) => setSpeed(parseFloat(e.target.value))}
+              className="w-24 h-1 bg-white/30 rounded-lg appearance-none cursor-pointer hover:bg-white/50 accent-blue-400"
+            />
+          </div>
+
+          <div className="w-px h-4 bg-white/20 mx-2"></div>
+
+          <button 
+            onClick={() => setDebugMode(!debugMode)}
+            className={`text-xs font-semibold uppercase tracking-wider px-3 py-1 rounded-full transition-colors ${debugMode ? 'bg-red-500/80 text-white' : 'hover:bg-white/20 text-blue-100'}`}
+          >
+            {debugMode ? 'Debug: On' : 'Debug: Off'}
+          </button>
+        </div>
+      </div>
+      
+      {/* Decorative corners */}
+      <div className="absolute top-0 left-0 p-8 opacity-50 pointer-events-none">
+        <div className="w-32 h-px bg-gradient-to-r from-transparent via-blue-400 to-transparent"></div>
+        <div className="w-px h-32 bg-gradient-to-b from-transparent via-blue-400 to-transparent absolute top-8 left-8"></div>
+      </div>
+       <div className="absolute bottom-0 right-0 p-8 opacity-50 pointer-events-none transform rotate-180">
+        <div className="w-32 h-px bg-gradient-to-r from-transparent via-purple-400 to-transparent"></div>
+        <div className="w-px h-32 bg-gradient-to-b from-transparent via-purple-400 to-transparent absolute top-8 left-8"></div>
+      </div>
+
+    </div>
+  );
+};
+
+export default FluidAura;
