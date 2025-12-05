@@ -2,9 +2,9 @@
  * APP.JS
  * The Controller for the "Life Explorer" SPA.
  * Updated: 
- * - UI FIX: Added Title Casing to Common Names (e.g., "great white shark" -> "Great White Shark").
- * - UI CLEANUP: Specimen cards hide action buttons until hover.
- * - UI CLEANUP: Removed Scientific Name from grid view.
+ * - BUGFIX: Fixed sync issue where images were lost after first save.
+ * - BUGFIX: Made article generation resilient to single failures.
+ * - FEATURE: Added Nested Folder support (UI & Logic).
  */
 
 import { setApiKeys } from './config.js';
@@ -36,6 +36,7 @@ let currentUser = null;
 let currentModalSpecimen = null; 
 let userFolders = [];
 let currentFolderId = null; 
+let folderStack = []; // Tracks navigation history for nested folders
 let specimenToMoveId = null; 
 let currentCardType = 'field_guide'; 
 let currentLightboxIndex = 0; 
@@ -208,7 +209,7 @@ function addEventListeners() {
         });
     }
     if (createFolderBtn) createFolderBtn.addEventListener('click', handleCreateFolder);
-    if (folderBackBtn) folderBackBtn.addEventListener('click', () => { currentFolderId = null; loadSanctuarySpecimens(); });
+    if (folderBackBtn) folderBackBtn.addEventListener('click', handleBackFolderNavigation);
     if (foldersGallery) foldersGallery.addEventListener('click', handleFolderClick);
     if (moveModalCloseBtn) moveModalCloseBtn.addEventListener('click', () => moveModal.classList.add('hidden'));
     if (confirmMoveBtn) confirmMoveBtn.addEventListener('click', executeMoveSpecimen);
@@ -281,32 +282,38 @@ function updateAuthUI() {
     }
 }
 
+// --- UPDATED: Folder Navigation & Nested Specimen Loading ---
+
 async function loadSanctuarySpecimens() {
     if (!currentUser) return;
     sanctuaryLoader.classList.remove('hidden');
     sanctuaryGallery.innerHTML = '';
     sanctuaryEmptyState.classList.add('hidden');
 
+    // Filter folders based on current view (Nested logic)
+    renderFolders();
+
     if (currentFolderId) {
         const folder = userFolders.find(f => f.id === currentFolderId);
         sanctuaryTitle.textContent = folder ? folder.name : 'Folder';
-        sanctuarySubtitle.textContent = 'Folder Collection';
-        foldersSection.classList.add('hidden');
+        sanctuarySubtitle.textContent = folderStack.length > 0 ? 'Sub-Collection' : 'Folder Collection';
+        
         folderBackBtn.classList.remove('hidden');
-        createFolderBtn.classList.add('hidden');
     } else {
         sanctuaryTitle.textContent = 'My Sanctuary';
         sanctuarySubtitle.textContent = 'Your collection of saved specimens';
-        foldersSection.classList.remove('hidden');
         folderBackBtn.classList.add('hidden');
-        createFolderBtn.classList.remove('hidden');
     }
+
+    // Always show create folder button (nested creation allowed)
+    createFolderBtn.classList.remove('hidden');
+    foldersSection.classList.remove('hidden');
 
     try {
         const specimens = await getSavedSpecimens(currentUser.uid);
         const filtered = specimens.filter(s => {
             if (currentFolderId) return s.folderId === currentFolderId;
-            return !s.folderId;
+            return !s.folderId; // Items in root
         });
 
         if (filtered.length === 0) {
@@ -328,16 +335,30 @@ async function handleCreateFolder() {
     const name = prompt("Folder Name:");
     if (!name) return;
     try {
-        await createFolder(currentUser.uid, name);
+        // UPDATED: Pass currentFolderId as parentId to create nested folders
+        await createFolder(currentUser.uid, name, currentFolderId);
         userFolders = await getUserFolders(currentUser.uid);
         renderFolders();
     } catch (e) { alert(e.message); }
 }
 
+// UPDATED: Filter folders by parentId
 function renderFolders() {
     if (!foldersGallery) return;
     foldersGallery.innerHTML = '';
-    userFolders.forEach(folder => {
+    
+    // Only show folders whose parent matches the current view
+    const visibleFolders = userFolders.filter(f => {
+        if (!currentFolderId) return !f.parentId; // Root folders
+        return f.parentId === currentFolderId; // Children of current
+    });
+
+    if (visibleFolders.length === 0 && currentFolderId) {
+        // Optional: Hide folder section if empty inside a subfolder? 
+        // For now we keep it to allow creating new subfolders.
+    }
+
+    visibleFolders.forEach(folder => {
         const div = document.createElement('div');
         div.className = 'folder-card p-4 rounded-xl cursor-pointer transition-all duration-300 relative group';
         div.dataset.id = folder.id;
@@ -354,8 +375,7 @@ function renderFolders() {
             if(confirm(`Delete folder "${folder.name}"? Items inside will be moved to main sanctuary.`)) {
                 await deleteUserFolder(currentUser.uid, folder.id);
                 userFolders = await getUserFolders(currentUser.uid);
-                renderFolders();
-                loadSanctuarySpecimens();
+                loadSanctuarySpecimens(); // Refresh both folders and specimens
             }
         });
         foldersGallery.appendChild(div);
@@ -364,7 +384,25 @@ function renderFolders() {
 
 function handleFolderClick(e) {
     const card = e.target.closest('.folder-card');
-    if (card) { currentFolderId = card.dataset.id; loadSanctuarySpecimens(); }
+    if (card) { 
+        // Push current ID to stack before moving deeper
+        if (currentFolderId) folderStack.push(currentFolderId);
+        else folderStack.push('root'); // Marker for root
+        
+        currentFolderId = card.dataset.id; 
+        loadSanctuarySpecimens(); 
+    }
+}
+
+function handleBackFolderNavigation() {
+    if (folderStack.length === 0) {
+        currentFolderId = null;
+    } else {
+        const prev = folderStack.pop();
+        if (prev === 'root') currentFolderId = null;
+        else currentFolderId = prev;
+    }
+    loadSanctuarySpecimens();
 }
 
 function handleSanctuaryGridClick(e) {
@@ -387,7 +425,6 @@ function handleSanctuaryGridClick(e) {
         const name = card.dataset.name;
         
         if(confirm(`Are you sure you want to remove "${name}" from your sanctuary?`)) {
-            // Optimistic UI removal? No, safer to wait for DB.
             removeSpecimen(currentUser.uid, slug).then(() => {
                 loadSanctuarySpecimens();
             }).catch(err => alert("Error removing: " + err.message));
@@ -399,14 +436,28 @@ function handleSanctuaryGridClick(e) {
     handleSpecimenCardClick(e);
 }
 
+// UPDATED: Recursive Folder Hierarchy for Move Modal
 function openMoveModal() {
     moveModal.classList.remove('hidden');
-    moveFolderSelect.innerHTML = '<option value="">(Unsorted)</option>';
-    userFolders.forEach(f => {
-        const opt = document.createElement('option');
-        opt.value = f.id; opt.textContent = f.name;
-        moveFolderSelect.appendChild(opt);
-    });
+    moveFolderSelect.innerHTML = '<option value="">(Unsorted / Root)</option>';
+    
+    // Organize folders hierarchy
+    const buildOptions = (parentId, depth) => {
+        const children = userFolders.filter(f => {
+            if (!parentId) return !f.parentId;
+            return f.parentId === parentId;
+        });
+
+        children.forEach(child => {
+            const opt = document.createElement('option');
+            opt.value = child.id;
+            opt.textContent = `${"--".repeat(depth)} 📁 ${child.name}`;
+            moveFolderSelect.appendChild(opt);
+            buildOptions(child.id, depth + 1); // Recurse
+        });
+    };
+
+    buildOptions(null, 0);
 }
 
 async function executeMoveSpecimen() {
@@ -617,7 +668,6 @@ async function openSpecimenModal(slug, name) {
     specimenDetailModal.classList.remove('hidden');
     modalContent.classList.add('hidden');
     modalLoader.classList.remove('hidden');
-    // FIX: Apply Title Case to modal title
     modalTitle.textContent = toTitleCase(name) || "Loading...";
     refreshSpecimenBtn.classList.add('hidden');
     runAllBtn.classList.add('hidden');
@@ -637,11 +687,9 @@ async function openSpecimenModal(slug, name) {
     try {
         let gbifData = null;
         let isSaved = false;
-        // Detect if this is a manual entry slug
         const isManual = slug && slug.toString().startsWith('manual-');
         let resolvedSlug = slug;
 
-        // ONLY perform GBIF lookup if it's NOT manual and slug is invalid/missing
         if (!isManual && (!slug || isNaN(slug))) {
              modalLoader.querySelector('p').textContent = `Tracking ${name || 'specimen'}...`;
              gbifData = await getSpecimenDetails(slug || name);
@@ -650,10 +698,8 @@ async function openSpecimenModal(slug, name) {
 
         if (currentUser) {
             modalLoader.querySelector('p').textContent = 'Checking sanctuary...';
-            // Force database check for manual entries
             const savedResult = await getSavedSpecimen(currentUser.uid, resolvedSlug);
             
-            // Allow loading if data exists
             if (savedResult.data) {
                 currentModalSpecimen = { ...savedResult.data, docId: savedResult.docId };
                 if (!currentModalSpecimen.cards) currentModalSpecimen.cards = {};
@@ -675,7 +721,6 @@ async function openSpecimenModal(slug, name) {
             if (savedResult.data) isSaved = true;
         }
 
-        // If manual entry was NOT found in DB, we cannot proceed to GBIF
         if (isManual) {
             throw new Error("Manual entry not found in database.");
         }
@@ -694,7 +739,6 @@ async function openSpecimenModal(slug, name) {
         
         modalTitle.textContent = toTitleCase(currentModalSpecimen.common_name);
         
-        // This will block until all cards are generated sequentially, updating text
         await handleRunAll(false);
 
     } catch (error) {
@@ -705,7 +749,7 @@ async function openSpecimenModal(slug, name) {
     }
 }
 
-// --- NEW FUNCTION: SEQUENTIAL GENERATION ---
+// --- UPDATED: Resilience against single failures ---
 async function handleRunAll(force = false) {
     if (force && !confirm("Regenerate ALL sections? This may take a minute.")) return;
 
@@ -727,19 +771,25 @@ async function handleRunAll(force = false) {
 
     try {
         for (const type of cardTypes) {
-            // Update Loading Text
             modalLoader.querySelector('p').textContent = `Writing ${displayNames[type]}...`;
             
-            // Only fetch if forced or missing
             const needsFetch = force || (type === 'field_guide' ? !currentModalSpecimen.zoologist_intro : !currentModalSpecimen.cards[type]);
             
             if (needsFetch) {
-                const data = await fetchSpecimenCard(currentModalSpecimen, type);
-                if (type === 'field_guide') {
-                    currentModalSpecimen = { ...currentModalSpecimen, ...data };
-                } else {
-                    if (!currentModalSpecimen.cards) currentModalSpecimen.cards = {};
-                    currentModalSpecimen.cards[type] = data;
+                // BUGFIX: Wrapped individual fetch in try/catch
+                try {
+                    const data = await fetchSpecimenCard(currentModalSpecimen, type);
+                    if (data) {
+                        if (type === 'field_guide') {
+                            currentModalSpecimen = { ...currentModalSpecimen, ...data };
+                        } else {
+                            if (!currentModalSpecimen.cards) currentModalSpecimen.cards = {};
+                            currentModalSpecimen.cards[type] = data;
+                        }
+                    }
+                } catch (innerErr) {
+                    console.warn(`Failed to generate ${type}:`, innerErr);
+                    // Continue to next type even if this one fails
                 }
             }
         }
@@ -792,11 +842,9 @@ function renderFullModalContent() {
 function createSpecimenDetailHtml(data) {
     const get = (v, d = 'N/A') => (v === null || v === undefined || v === '') ? d : v;
     
-    // --- STANDARDIZE DATA ---
     let title, subtitle, gridData, insights, mainText;
 
     if (currentCardType === 'field_guide') {
-        // FIX: Apply Title Case to content title
         title = toTitleCase(get(data.common_name));
         subtitle = get(data.scientific_name);
         gridData = {
@@ -815,7 +863,7 @@ function createSpecimenDetailHtml(data) {
                 <p class="font-bold mb-2 text-xl">Behavior & Life Cycle</p><p class="mb-6">${get(data.detailed_behavior)}</p>
             `;
         } else {
-            mainText = `<div class="bg-gray-800/50 p-6 rounded-xl border border-yellow-500/30 text-center"><p class="text-gray-300">Legacy data format.</p><p class="text-yellow-400 font-bold">Refresh to upgrade.</p></div>`;
+            mainText = `<div class="bg-gray-800/50 p-6 rounded-xl border border-yellow-500/30 text-center"><p class="text-gray-300">Legacy data format or Generation Failed.</p><p class="text-yellow-400 font-bold">Try clicking 'Run All' or 'Refresh'.</p></div>`;
         }
     } else {
         const card = data.cards[currentCardType] || {};
@@ -866,7 +914,6 @@ function createSpecimenDetailHtml(data) {
 
     const mediaColumn = `<div class="w-full lg:w-1/3 flex-shrink-0">${videoHtml}${mainImageHtml}${galleryHtml}</div>`;
 
-    // --- CONTENT GENERATION ---
     const gridHtml = Object.entries(gridData).map(([k, v]) => `
         <div class="bg-gray-800/40 p-4 rounded-lg border border-white/5">
             <span class="text-gray-400 text-sm uppercase block mb-1 tracking-wider">${k}</span>
@@ -904,7 +951,6 @@ function createSpecimenDetailHtml(data) {
     </div>`;
 }
 
-// --- UPDATED DELETE IMAGE LOGIC ---
 async function handleDeleteImage(e, srcToDelete) {
     e.stopPropagation();
     if (!currentUser) return alert("Sign in required.");
@@ -973,6 +1019,7 @@ async function handleRefreshData(isTabSwitch = false) {
     }
 }
 
+// --- UPDATED: Fix for image save sync bug ---
 async function handleSaveToggle() {
     if (!currentUser) return alert("Sign in to save.");
     saveSpecimenBtn.disabled = true;
@@ -981,7 +1028,9 @@ async function handleSaveToggle() {
             await removeSpecimen(currentUser.uid, currentModalSpecimen.slug);
             updateSaveButtonState(false);
         } else {
-            await saveSpecimen(currentUser.uid, currentModalSpecimen);
+            // BUGFIX: Capture returned ID and assign it immediately
+            const docId = await saveSpecimen(currentUser.uid, currentModalSpecimen);
+            currentModalSpecimen.docId = docId;
             updateSaveButtonState(true);
         }
         loadSanctuarySpecimens();
@@ -1127,14 +1176,12 @@ function handleSearchSubmit(e) {
     currentSearchQuery = query; currentPage = 1;
     sanctuaryView.classList.add('hidden'); searchResultsView.classList.remove('hidden');
     fetchAndRenderSpecimens(); 
-    // loadCollectionSuggestions(query); // REMOVED: Disabled per user request
 }
 
 async function fetchAndRenderSpecimens() {
     loader.classList.remove('hidden'); specimenGallery.innerHTML = ''; 
     try {
         const results = await searchSpecimens(currentSearchQuery, currentPage);
-        // currentMeta removed
         renderSpecimenGallery(results.data, specimenGallery);
     } catch (error) { console.error(error); specimenGallery.innerHTML = '<p class="col-span-full text-center text-red-400">Error loading specimens.</p>'; } finally { loader.classList.add('hidden'); }
 }
@@ -1152,7 +1199,6 @@ function renderSpecimenGallery(specimens, container) {
         const hasImage = !!specimen.image_url;
         const showMoveBtn = (container === sanctuaryGallery);
         
-        // FIX: Remove 'truncate' from common name H3, add leading-tight for spacing.
         card.innerHTML = `
             <div class="relative w-full aspect-video bg-gray-800 group-hover:scale-105 transition-transform duration-700">
                 <img src="${hasImage ? specimen.image_url : ''}" class="w-full h-full object-cover transition-opacity duration-300 ${hasImage ? '' : 'hidden'}" onload="this.style.opacity=1" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden');">
@@ -1181,7 +1227,6 @@ async function loadCollectionSuggestions(query) {
         aiSuggestionsList.classList.remove('hidden');
         if (suggestions.length === 0) { aiSuggestionsContainer.classList.add('hidden'); return; }
         
-        // REVERT: Use a 3-column grid layout for suggestions
         aiSuggestionsList.className = 'grid grid-cols-1 md:grid-cols-3 gap-4';
         aiSuggestionsList.innerHTML = suggestions.map(s => `
             <div class="bg-gray-800 hover:bg-gray-700 p-4 rounded-xl border border-gray-600 cursor-pointer transition-colors flex items-center group suggestion-card" data-name="${s.common_name}">
@@ -1197,7 +1242,6 @@ async function loadCollectionSuggestions(query) {
 
         aiSuggestionsList.querySelectorAll('.suggestion-card').forEach(btn => {
             btn.addEventListener('click', () => { 
-                // CHANGED: Open modal directly instead of searching
                 openSpecimenModal(null, btn.dataset.name); 
             });
         });
