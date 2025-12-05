@@ -3,6 +3,7 @@
  * Final Version - "Gemini Search Engine"
  * Updated: 
  * - PROMPTS: Added 'jester' (Jokes) prompt.
+ * - FOLDERS: Added parentId support for nesting.
  */
 
 import { configStore } from './config.js';
@@ -176,14 +177,18 @@ export async function getSavedSpecimens(userId) {
 // --- Firestore: Folders ---
 const FOLDER_COLLECTION = "user_folders";
 
-export async function createFolder(userId, name) {
+// UPDATED: Now accepts optional parentId
+export async function createFolder(userId, name, parentId = null) {
     if (!db) return;
-    const ref = await addDoc(collection(db, FOLDER_COLLECTION), {
+    const payload = {
         uid: userId,
         name: name,
         created_at: Date.now()
-    });
-    return { id: ref.id, name };
+    };
+    if (parentId) payload.parentId = parentId;
+    
+    const ref = await addDoc(collection(db, FOLDER_COLLECTION), payload);
+    return { id: ref.id, name, parentId: parentId || null };
 }
 
 export async function getUserFolders(userId) {
@@ -196,6 +201,8 @@ export async function getUserFolders(userId) {
 export async function deleteUserFolder(userId, folderId) {
     if (!db) return;
     await deleteDoc(doc(db, FOLDER_COLLECTION, folderId));
+    // Note: This does not recursively delete children folders or specimens inside children. 
+    // It only resets specimens directly in this folder.
     const q = query(collection(db, DB_COLLECTION), where("uid", "==", userId), where("folderId", "==", folderId));
     const snap = await getDocs(q);
     if (!snap.empty) {
