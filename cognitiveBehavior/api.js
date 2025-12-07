@@ -70,7 +70,7 @@ async function callApi(apiUrl, payload, authorization = null) {
     }
 }
 
-// --- Exported: Call Gemini API ---
+// --- Exported: Call Gemini API (Text) ---
 export async function callGeminiAPI(prompt, isJson = false, logType = "General") {
     if (!appState.geminiApiKey) {
         throw new Error("Gemini API Key is not set.");
@@ -96,6 +96,40 @@ export async function callGeminiAPI(prompt, isJson = false, logType = "General")
     return responseText;
 }
 
+// --- Exported: Generate Audio (TTS) ---
+export async function generateAudioFromText(text) {
+    if (!appState.geminiApiKey) throw new Error("Gemini API Key is not set.");
+    if (!text) return null;
+
+    // Use gemini-2.5-flash for efficient audio generation
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${appState.geminiApiKey}`;
+
+    const payload = {
+        contents: [{ parts: [{ text: text }] }],
+        generationConfig: {
+            responseModalities: ["AUDIO"],
+            speechConfig: {
+                voiceConfig: {
+                    prebuiltVoiceConfig: {
+                        voiceName: "Aoede" // Options: "Puck", "Charon", "Kore", "Fenrir", "Aoede"
+                    }
+                }
+            }
+        }
+    };
+
+    try {
+        const result = await callApi(apiUrl, payload);
+        // Audio data is returned as base64 in inlineData
+        const audioBase64 = result?.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+        if (!audioBase64) throw new Error("No audio data received from Gemini.");
+        return audioBase64;
+    } catch (error) {
+        console.error("Audio Generation Error:", error);
+        throw error;
+    }
+}
+
 // --- Exported: Google Custom Search ---
 export async function searchGoogleForTopic(query) {
     if (!appState.googleSearchEngineId || !appState.geminiApiKey) {
@@ -117,6 +151,3 @@ export async function searchGoogleForTopic(query) {
         return []; // Fail gracefully
     }
 }
-
-// --- Exported: Generate Color Theme ---
-// [REMOVED] callColorGenAPI - No longer used as we have a permanent green theme.
