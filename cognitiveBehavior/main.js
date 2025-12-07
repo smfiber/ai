@@ -530,5 +530,3 @@ function addPostGenerationButtons(container, topicId, categoryId) {
     btnBar.appendChild(btn);
     container.appendChild(btnBar);
 }
-
-}
