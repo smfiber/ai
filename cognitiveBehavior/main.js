@@ -40,7 +40,8 @@ document.addEventListener('DOMContentLoaded', () => {
         initializeFirebase();
         initializeGoogleApiClients();
     } else {
-        // Config missing OR Old Version -> Open Setup Modal
+        // Config missing OR Old Version -> Open Setup Modal & Show Logout UI
+        setupAuthUI(null); // [CHANGED] Ensure header buttons render so user can access settings
         openModal('apiKeyModal');
     }
 });
@@ -528,4 +529,6 @@ function addPostGenerationButtons(container, topicId, categoryId) {
     
     btnBar.appendChild(btn);
     container.appendChild(btnBar);
+}
+
 }
