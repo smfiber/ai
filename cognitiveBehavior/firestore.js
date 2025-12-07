@@ -11,7 +11,7 @@ import { setupAuthUI, initializeAppContent } from './main.js'; // Circular dep h
 // --- Initialization ---
 export function initializeFirebase() {
     if (!appState.firebaseConfig) {
-        console.warn("Firebase config missing.");
+        console.warn("Firebase config missing in appState.");
         return;
     }
     try {
@@ -37,7 +37,7 @@ export function initializeFirebase() {
         });
     } catch (error) {
         console.error("Firebase Init Error:", error);
-        throw error; // Rethrow to be caught by main init
+        throw error;
     }
 }
 
@@ -46,7 +46,6 @@ export function initializeFirebase() {
 export async function saveArticleToKB(title, markdownContent, hierarchyPath, type = 'article') {
     if (!appState.userId || !appState.db) throw new Error("Not logged in or DB not ready.");
 
-    // Collection: artifacts/{APP_ID}/public/data/knowledgeBase
     const collectionName = type === 'explanatory' ? 'explanatoryArticles' : 'knowledgeBase';
     const kbRef = collection(appState.db, `${getHierarchyBasePath()}/${collectionName}`);
     
@@ -57,7 +56,7 @@ export async function saveArticleToKB(title, markdownContent, hierarchyPath, typ
         createdAt: Timestamp.now(),
         status: 'completed',
         userId: appState.userId,
-        type: type // 'article' (structured) or 'explanatory'
+        type: type 
     };
 
     const docRef = await addDoc(kbRef, data);
@@ -116,7 +115,6 @@ export async function markItemAsViewed(cardTitle, topicTitle) {
 // --- Sticky Topics (User Favorites) ---
 
 export function listenForStickyTopics(categoryId) {
-    // Unsubscribe previous listener if exists
     if (appState.stickyTopicsUnsubscribe) appState.stickyTopicsUnsubscribe();
     
     if (!appState.userId || !categoryId) {
@@ -127,7 +125,6 @@ export function listenForStickyTopics(categoryId) {
     const path = `artifacts/${APP_ID}/users/${appState.userId}/stickyTopics/${categoryId}/topics`;
     appState.stickyTopicsUnsubscribe = onSnapshot(collection(appState.db, path), (snap) => {
         appState.stickyTopics[categoryId] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        // Trigger UI update event or callback (handled via main.js integration)
         const event = new CustomEvent('stickyTopicsUpdated', { detail: { categoryId } });
         document.dispatchEvent(event);
     });
@@ -152,7 +149,7 @@ export async function updateStickyTopic(categoryId, docId, newTitle) {
     await updateDoc(doc(appState.db, path, docId), { title: newTitle });
 }
 
-// --- User Added Topics (Custom Topics in Grid) ---
+// --- User Added Topics ---
 
 export function listenForUserAddedTopics(categoryId) {
     if (appState.userTopicsUnsubscribes[categoryId]) {
@@ -178,15 +175,10 @@ export async function addUserTopic(categoryId, title) {
     });
 }
 
-// --- Data Export / Import (Data Management) ---
+// --- Data Export / Import ---
 
 export async function exportUserData() {
     if (!appState.userId) throw new Error("Must be logged in to export.");
-    
-    // Define paths to export
-    // 1. Sticky Topics (Recursive fetch needed if we don't know categories, but we can structure differently)
-    // Note: Due to the nested structure 'stickyTopics/{categoryId}/topics', exporting ALL is complex without known categories.
-    // For this version, we will export 'Viewed Items' and 'Knowledge Base' articles authored by user.
     
     const exportData = {
         version: "1.0",
@@ -202,11 +194,11 @@ export async function exportUserData() {
 
     // Fetch User's Knowledge Base Articles
     const kbRef = collection(appState.db, `${getHierarchyBasePath()}/knowledgeBase`);
-    const q = query(kbRef); // In a real app, add where('userId', '==', appState.userId)
+    const q = query(kbRef); 
     const kbSnap = await getDocs(q);
     kbSnap.forEach(doc => {
         if(doc.data().userId === appState.userId) {
-            exportData.knowledgeBase.push({ ...doc.data() }); // No ID needed for re-import usually, or keep it
+            exportData.knowledgeBase.push({ ...doc.data() }); 
         }
     });
 
@@ -218,7 +210,6 @@ export async function importUserData(jsonData) {
     const batch = writeBatch(appState.db);
     let opCount = 0;
 
-    // Import Viewed Items
     if (jsonData.viewedItems) {
         const viewedPath = `artifacts/${APP_ID}/users/${appState.userId}/viewedItems`;
         jsonData.viewedItems.forEach(item => {
@@ -228,15 +219,12 @@ export async function importUserData(jsonData) {
         });
     }
 
-    // Import KB Articles (As new items to avoid ID collisions)
     if (jsonData.knowledgeBase) {
         const kbPath = `${getHierarchyBasePath()}/knowledgeBase`;
         const kbCollection = collection(appState.db, kbPath);
         jsonData.knowledgeBase.forEach(item => {
             const newDocRef = doc(kbCollection);
-            // Update userId to current user
             const newItem = { ...item, userId: appState.userId, importedAt: Timestamp.now() };
-            // Fix timestamp reconstruction if needed
             if(newItem.createdAt && newItem.createdAt.seconds) {
                 newItem.createdAt = new Timestamp(newItem.createdAt.seconds, newItem.createdAt.nanoseconds);
             }
