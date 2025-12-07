@@ -17,7 +17,8 @@ import {
 } from './firestore.js';
 import { 
     initializeUI, openModal, closeModal, displayMessageInModal, 
-    generateAndApplyDefaultTheme, getLoaderHTML, renderAccordionFromMarkdown, 
+    generateAndApplyDefaultTheme, getLoaderHTML, 
+    renderAccordionFromMarkdown, 
     populateCardGridSelector, createBreadcrumbsHtml, truncateText, 
     displayImportedGuide, applyTheme
 } from './ui.js';
@@ -31,36 +32,45 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeUI();
     setupEventListeners();
 
-    // Version Check: Force Modal if version mismatch
-    const storedVersion = localStorage.getItem(STORAGE_KEYS.APP_VERSION);
-    const configLoaded = loadConfigFromStorage();
+    // 1. Security Wipe: Ensure no API keys linger in local storage
+    localStorage.removeItem('psych_geminiApiKey'); // Legacy key name
+    localStorage.removeItem('psych_firebaseConfig'); // Legacy key name
+    // Also clear using the dynamic keys just in case
+    // Note: We don't import the specific strings for keys from config here as they were removed
+    // but we ensure the app starts "fresh".
 
-    if (configLoaded && storedVersion === APP_VERSION) {
-        // Config exists and version matches -> Start App
-        initializeFirebase();
-        initializeGoogleApiClients();
-    } else {
-        // Config missing OR Old Version -> Open Setup Modal & Show Logout UI
-        setupAuthUI(null); // [CHANGED] Ensure header buttons render so user can access settings
-        openModal('apiKeyModal');
-    }
+    // 2. Apply Visual Theme Immediately
+    generateAndApplyDefaultTheme();
+
+    // 3. Force "Fresh Start" UI
+    console.log("Fresh Start: Requesting API Keys...");
+    
+    // Hide App Container
+    const appContainer = document.getElementById('app-container');
+    if (appContainer) appContainer.classList.add('hidden');
+
+    // Show Setup UI in header (Login buttons, etc.)
+    setupAuthUI(null); 
+    
+    // Open the API Key Modal immediately
+    openModal('apiKeyModal');
 });
 
 export async function initializeAppContent() {
     if (appState.appIsInitialized) return;
     appState.appIsInitialized = true;
 
+    // Show loading state while we prep the placeholders
     openModal('loadingStateModal');
     document.getElementById('loading-message').textContent = "Initializing Research Assistant...";
     
-    // Check for backup reminder logic
+    // Check for backup reminder logic (Safe to keep in localStorage)
     const lastBackup = localStorage.getItem(STORAGE_KEYS.LAST_BACKUP);
     if (lastBackup && (Date.now() - parseInt(lastBackup) > 604800000)) { // 7 days
         document.getElementById('backup-reminder-banner').classList.remove('hidden');
     }
 
     try {
-        await generateAndApplyDefaultTheme(); // Now applies hardcoded green theme
         document.getElementById('loading-message').textContent = "Loading content...";
         await loadDynamicPlaceholders();
     } catch (error) {
@@ -76,8 +86,9 @@ export function setupAuthUI(user) {
     if (!authStatusEl) return;
 
     if (user) {
+        // User is Logged In
         if (appContainer) appContainer.classList.remove('hidden');
-        closeModal('apiKeyModal');
+        closeModal('apiKeyModal'); // Close setup modal if open
         
         // Render User Profile & Logout Button
         authStatusEl.innerHTML = `
@@ -92,6 +103,7 @@ export function setupAuthUI(user) {
         `;
         document.getElementById('logout-button').addEventListener('click', handleFirebaseLogout);
     } else {
+         // User is Logged Out
          if (appContainer) appContainer.classList.add('hidden');
          
          // Render Login Button + Settings Button (For accessing API keys when logged out)
@@ -108,11 +120,6 @@ export function setupAuthUI(user) {
         `;
         document.getElementById('login-button').addEventListener('click', handleFirebaseLogin);
         document.getElementById('auth-settings-btn').addEventListener('click', () => openModal('apiKeyModal'));
-        
-        // Ensure modal is open if no keys exist (Fallback)
-        if (!localStorage.getItem(STORAGE_KEYS.GEMINI_KEY)) {
-             openModal('apiKeyModal');
-        }
     }
 }
 
@@ -121,6 +128,7 @@ async function handleApiKeySubmit(e) {
     const geminiKey = document.getElementById('geminiApiKeyInput').value.trim();
     const firebaseConfigText = document.getElementById('firebaseConfigInput').value.trim();
     
+    // Optional Keys
     const googleClientId = document.getElementById('googleClientIdInput').value.trim();
     const googleSearchId = document.getElementById('googleSearchEngineIdInput').value.trim();
     const algoliaAppId = document.getElementById('algoliaAppIdInput').value.trim();
@@ -128,6 +136,7 @@ async function handleApiKeySubmit(e) {
 
     if (!geminiKey || !firebaseConfigText) {
         document.getElementById('api-key-error').textContent = "Gemini Key and Firebase Config are required.";
+        document.getElementById('api-key-error').classList.remove('hidden'); 
         return;
     }
 
@@ -138,28 +147,37 @@ async function handleApiKeySubmit(e) {
         
         if (!config.apiKey || !config.projectId) throw new Error("Invalid Firebase Config properties.");
 
-        localStorage.setItem(STORAGE_KEYS.GEMINI_KEY, geminiKey);
-        localStorage.setItem(STORAGE_KEYS.FB_CONFIG, JSON.stringify(config));
-        localStorage.setItem(STORAGE_KEYS.APP_VERSION, APP_VERSION);
+        // [CHANGED] Store in Memory Only (AppState) - DO NOT SAVE TO LOCALSTORAGE
+        appState.geminiApiKey = geminiKey;
+        appState.firebaseConfig = config;
+        
+        if(googleClientId) appState.googleClientId = googleClientId;
+        if(googleSearchId) appState.googleSearchEngineId = googleSearchId;
+        if(algoliaAppId) appState.algoliaAppId = algoliaAppId;
+        if(algoliaKey) appState.algoliaSearchKey = algoliaKey;
 
-        if(googleClientId) localStorage.setItem(STORAGE_KEYS.GOOGLE_CLIENT_ID, googleClientId);
-        if(googleSearchId) localStorage.setItem(STORAGE_KEYS.GOOGLE_SEARCH_ID, googleSearchId);
-        if(algoliaAppId) localStorage.setItem(STORAGE_KEYS.ALGOLIA_APP_ID, algoliaAppId);
-        if(algoliaKey) localStorage.setItem(STORAGE_KEYS.ALGOLIA_KEY, algoliaKey);
+        // Hide error message if valid
+        document.getElementById('api-key-error').classList.add('hidden');
+        
+        // Initialize Backend services with the new memory-based credentials
+        // This will trigger onAuthStateChanged if a session exists (Autologin)
+        initializeFirebase();
+        initializeGoogleApiClients();
+        
+        // Close the modal now that keys are set
+        closeModal('apiKeyModal');
 
-        if (loadConfigFromStorage()) {
-            initializeFirebase();
-            initializeGoogleApiClients();
-            handleFirebaseLogin(); 
-            closeModal('apiKeyModal');
-        }
     } catch (err) {
         document.getElementById('api-key-error').textContent = `Config Error: ${err.message}`;
+        document.getElementById('api-key-error').classList.remove('hidden');
     }
 }
 
 async function loadDynamicPlaceholders() {
     const promptInput = document.getElementById('core-task-input');
+    // Guard clause if element missing
+    if (!promptInput) return;
+
     const prompt = `Generate a JSON array of 3 intriguing psychology research topics for input placeholders. Examples: "Impact of Social Media on Teen Anxiety", "Neuroplasticity in Adult Learners". Return ONLY the JSON array of strings.`;
     try {
         const jsonText = await callGeminiAPI(prompt, true, "Load Placeholders");
