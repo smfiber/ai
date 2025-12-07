@@ -1,10 +1,10 @@
 // auth.js
 import { appState } from './config.js';
 import { GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { displayImportedGuide } from './ui.js'; // Circular dependency handled via function call
+import { displayImportedGuide } from './ui.js'; 
 
 const G_SCOPES = 'https://www.googleapis.com/auth/drive.file';
-const DRIVE_FOLDER_NAME = 'Psychology Research Data'; // [CHANGED] Unique folder for this app
+const DRIVE_FOLDER_NAME = 'Psychology Research Data'; 
 
 // --- Firebase Authentication ---
 
@@ -18,8 +18,6 @@ export async function handleFirebaseLogin() {
         console.error("Google Sign-In Popup failed:", error);
         
         let userMessage = '';
-        
-        // Detailed Error Handling for Debugging
         if (error.code) {
              userMessage = `Login failed: ${error.code}.`;
              if (error.code === 'auth/popup-closed-by-user') {
@@ -28,14 +26,11 @@ export async function handleFirebaseLogin() {
                  userMessage += ' This domain is not authorized in Firebase Console. Add it to Authentication > Settings > Authorized Domains.';
             }
         } else if (error.message) {
-             // Fallback for standard JS errors (often unauthorized domain shows here if code is missing)
              userMessage = `Login Error: ${error.message}`;
         } else {
-             // Fallback for weird objects
              userMessage = `Unknown Login Error: ${JSON.stringify(error)}`;
         }
-
-        alert(userMessage + "\n\nPlease check your Firebase Console 'Authorized Domains' settings."); 
+        alert(userMessage); 
     }
 }
 
@@ -53,7 +48,7 @@ export function handleFirebaseLogout() {
     signOut(appState.auth).then(() => {
         appState.oauthToken = null;
         updateSigninStatus(false);
-        // Clear session only. Do NOT clear localStorage to preserve API keys.
+        // Clear session only
         sessionStorage.clear();
         location.reload();
     }).catch(error => {
@@ -65,11 +60,10 @@ export function handleFirebaseLogout() {
 
 export function initializeGoogleApiClients() {
     if (!appState.googleClientId) {
-        console.warn("Google Client ID is not provided. Cloud features disabled.");
+        console.warn("Google Client ID not provided. Cloud features disabled.");
         return;
     }
     
-    // Check for global google objects loaded via script tags in index.html
     const checkGis = () => {
         if (typeof google !== 'undefined' && google.accounts && google.accounts.oauth2) {
             initGisClient();
@@ -100,7 +94,6 @@ function initGisClient() {
                 if (appState.gapiInited && appState.oauthToken && appState.oauthToken.access_token) {
                     gapi.client.setToken(appState.oauthToken);
                     updateSigninStatus(true);
-                    // Resume pending save if one exists
                     if (appState.pendingDriveSave) {
                         saveContentToDrive(
                             appState.pendingDriveSave.content, 
@@ -124,7 +117,6 @@ async function initGapiClient() {
             discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
         });
         appState.gapiInited = true; 
-        // Check if we already have a token (unlikely on fresh load, but good practice)
         updateSigninStatus(!!(appState.oauthToken && appState.oauthToken.access_token));
     } catch(error) {
         console.error("GAPI Init Error:", error);
@@ -153,13 +145,13 @@ export function updateSigninStatus(isSignedIn) {
     const loadBtn = document.getElementById('load-from-drive-btn');
     const statusEl = document.getElementById('drive-status');
     
-    if (!authButton) return; // UI might not be ready
+    if (!authButton) return; 
 
     if (isSignedIn) {
         authButton.textContent = 'Disconnect';
         loadBtn.classList.remove('hidden');
         statusEl.textContent = 'Connected to Google Drive.';
-        getDriveFolderId(); // Pre-fetch folder
+        getDriveFolderId(); 
     } else {
         authButton.textContent = 'Connect';
         loadBtn.classList.add('hidden');
@@ -211,7 +203,6 @@ export async function saveContentToDrive(content, fileName, statusElement) {
 
     try {
         const safeFileName = fileName.replace(/'/g, "\\'").replace(/"/g, '\\"');
-        // Check if file exists to update it
         const searchResponse = await gapi.client.drive.files.list({
             q: `name='${safeFileName}' and '${folderId}' in parents and trashed=false`,
             fields: 'files(id)',
@@ -290,7 +281,7 @@ async function pickerCallbackOpen(data) {
         
         try {
             const response = await gapi.client.drive.files.get({ fileId, alt: 'media' });
-            displayImportedGuide(fileName, response.body); // Calls UI function
+            displayImportedGuide(fileName, response.body); 
         } catch (error) {
             console.error("Error loading picked file:", error);
         }
