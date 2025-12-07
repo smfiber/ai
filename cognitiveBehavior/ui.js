@@ -1,11 +1,26 @@
 // ui.js
-import { appState, DEFAULT_THEME_PROMPT } from './config.js';
-import { callColorGenAPI } from './api.js';
+import { appState } from './config.js';
+// [CHANGED] Removed callColorGenAPI import as it is no longer needed
 import { markItemAsViewed } from './firestore.js';
 
 // --- Constants for Isolation ---
 // ensuring we don't conflict with other apps on localhost
 const UI_STORAGE_PREFIX = 'psych_ui_';
+
+// --- Permanent Theme Palette (Shades of Green) ---
+const PERMANENT_THEME = {
+    bg: "#f0fdf4",          // Mint Mist (green-50)
+    text: "#1f2937",        // Gray-800
+    primary: "#15803d",     // Green-700 (Forest)
+    primaryDark: "#14532d", // Green-900
+    accent: "#16a34a",      // Green-600
+    cardBg: "#ffffff",
+    cardBorder: "#dcfce7",  // Green-100
+    textMuted: "#6b7280",
+    inputBg: "#ffffff",
+    inputBorder: "#cbd5e1",
+    buttonText: "#ffffff"
+};
 
 // --- Global UI Init ---
 export function initializeUI() {
@@ -159,21 +174,9 @@ export function applyTheme(colors) {
     });
 }
 
+// [CHANGED] Replaced async generator with instant application of permanent theme
 export async function generateAndApplyDefaultTheme() {
-    const loader = document.getElementById('header-loader');
-    if(loader) {
-        loader.classList.remove('hidden');
-        loader.classList.add('flex');
-    }
-    
-    try {
-        const colors = await callColorGenAPI(DEFAULT_THEME_PROMPT);
-        applyTheme(colors);
-    } catch (error) {
-        console.error("Theme Gen Error:", error);
-    } finally {
-        if(loader) loader.classList.add('hidden');
-    }
+    applyTheme(PERMANENT_THEME);
 }
 
 export function getIconForTheme(categoryId, topicId) {
