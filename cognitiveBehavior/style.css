@@ -4,7 +4,9 @@
 .config-card {
     max-width: 500px;
     width: 90%;
-    padding: 2.5rem;
+    /* Use theme vars for borders/bg */
+    background-color: var(--color-card-bg, #ffffff);
+    border: 1px solid var(--color-card-border, #e5e7eb);
 }
 
 .input-group {
@@ -16,53 +18,49 @@
     display: block;
     font-weight: 600;
     margin-bottom: 0.5rem;
-    color: #374151;
+    color: var(--color-text, #374151);
 }
 
 .input-group small {
     display: block;
-    color: #6B7280;
+    color: var(--color-text-muted, #6B7280);
     font-size: 0.85rem;
     margin-top: 5px;
 }
 
-textarea {
+textarea, input[type="text"], select {
     width: 100%;
     padding: 10px;
-    border: 1px solid #E5E7EB;
+    border: 1px solid var(--color-input-border, #E5E7EB);
+    background-color: var(--color-input-bg, #ffffff);
     border-radius: 6px;
-    font-family: monospace;
     font-size: 0.9rem;
-    resize: vertical;
+    color: var(--color-text, #1f2937);
+}
+
+textarea:focus, input:focus, select:focus {
+    outline: 2px solid var(--color-accent, #16a34a);
+    border-color: transparent;
 }
 
 .error-msg {
-    color: #dc2626;
-    background: #fee2e2;
+    color: #991b1b;
+    background: #fef2f2;
     padding: 10px;
     border-radius: 4px;
     margin-top: 15px;
     font-size: 0.9rem;
+    border: 1px solid #fecaca;
 }
 
-.btn-text-only {
-    background: none;
-    border: none;
-    color: #6B7280;
-    font-size: 0.8rem;
-    cursor: pointer;
-    text-decoration: underline;
-    margin-top: 10px;
-}
-
-/* --- Settings Panel & Floating Buttons --- */
-
+/* --- Floating Action Button (Settings) --- */
 .floating-action-button {
     position: fixed;
     width: 50px;
     height: 50px;
     border-radius: 50%;
-    background-color: var(--color-primary, #1f2937); /* Fallback color */
+    /* Dynamic Theme Color */
+    background-color: var(--color-primary, #15803d); 
     color: var(--color-button-text, #ffffff);
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     display: flex;
@@ -77,24 +75,27 @@ textarea {
 
 .floating-action-button:hover {
     transform: scale(1.05);
-    filter: brightness(110%);
+    background-color: var(--color-primary-dark, #14532d);
 }
 
+/* --- Settings Panel --- */
 #settings-panel {
     position: fixed;
-    bottom: 5rem; /* Above the gear icon */
+    bottom: 5rem;
     right: 2rem;
     width: 300px;
-    background-color: white;
-    border: 1px solid #e5e7eb;
+    background-color: var(--color-card-bg, white);
+    border: 1px solid var(--color-card-border, #e5e7eb);
     border-radius: 0.75rem;
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
     padding: 1.5rem;
     z-index: 50;
+    
+    /* Animation State: Hidden */
     opacity: 0;
     transform: translateY(10px);
     transition: opacity 0.2s ease-out, transform 0.2s ease-out;
-    pointer-events: none; /* Click-through when hidden */
+    pointer-events: none;
 }
 
 #settings-panel.active {
@@ -104,18 +105,16 @@ textarea {
 }
 
 #settings-panel.hidden {
-    display: block; /* Override Tailwind hidden to use opacity transition */
+    display: block !important; /* Override tailwind to allow fade out */
     opacity: 0;
     pointer-events: none;
 }
 
-/* --- Loader Override --- */
+/* --- Themed Loader --- */
 .themed-loader {
-    border: 3px solid var(--color-bg, #f3f4f6); 
-    border-top: 3px solid var(--color-accent, #3b82f6);
+    border: 3px solid var(--color-bg, #f0fdf4); 
+    border-top: 3px solid var(--color-accent, #16a34a);
     border-radius: 50%;
-    width: 24px;
-    height: 24px;
     animation: spin 1s linear infinite;
 }
 
@@ -124,26 +123,26 @@ textarea {
     100% { transform: rotate(360deg); }
 }
 
-/* --- Modal Base Z-Index Fix --- */
+/* --- Z-Index Management --- */
 .modal {
-    z-index: 100; /* Ensure modals are always on top */
+    z-index: 100; 
 }
 
-/* --- Scrollbar Customization (Optional but nice) --- */
+/* --- Scrollbar Customization --- */
 ::-webkit-scrollbar {
     width: 8px;
     height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-    background: #f1f1f1; 
+    background: var(--color-bg, #f0fdf4); 
 }
 
 ::-webkit-scrollbar-thumb {
-    background: #cbd5e1; 
+    background: var(--color-card-border, #dcfce7); 
     border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: #94a3b8; 
+    background: var(--color-accent, #16a34a); 
 }
