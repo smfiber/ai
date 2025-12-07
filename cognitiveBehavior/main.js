@@ -1,11 +1,11 @@
 // main.js
-import { appState, loadConfigFromStorage, APP_ID } from './config.js';
+import { appState, loadConfigFromStorage } from './config.js';
 import { 
     callGeminiAPI, searchGoogleForTopic, parseJsonWithCorrections 
 } from './api.js';
 import { 
     handleFirebaseLogin, handleFirebaseLogout, initializeGoogleApiClients, 
-    handleDriveAuthClick, saveContentToDrive, createPicker, updateSigninStatus 
+    handleDriveAuthClick, saveContentToDrive, createPicker 
 } from './auth.js';
 import { 
     initializeFirebase, saveArticleToKB, markItemAsViewed, 
@@ -17,11 +17,11 @@ import {
 import { 
     initializeUI, openModal, closeModal, displayMessageInModal, 
     generateAndApplyDefaultTheme, getLoaderHTML, renderAccordionFromMarkdown, 
-    populateCardGridSelector, createBreadcrumbsHtml, truncateText, getIconForTheme, 
+    populateCardGridSelector, createBreadcrumbsHtml, truncateText, 
     displayImportedGuide, applyTheme
 } from './ui.js';
 import { 
-    getPsychologyArticlePrompt, getRefinementPrompt, getExplanatoryArticlePrompt, jsonInstruction 
+    getPsychologyArticlePrompt, getRefinementPrompt, getExplanatoryArticlePrompt
 } from './prompts.js';
 
 // --- Initialization ---
@@ -31,21 +31,22 @@ document.addEventListener('DOMContentLoaded', () => {
     setupEventListeners();
 
     if (loadConfigFromStorage()) {
-        initializeFirebase();
+        initializeFirebase(); // This calls firestore.js, which eventually calls setupAuthUI back here
         initializeGoogleApiClients();
     } else {
         openModal('apiKeyModal');
     }
 });
 
-async function initializeAppContent() {
+// [FIXED] Added 'export' so firestore.js can import this
+export async function initializeAppContent() {
     if (appState.appIsInitialized) return;
     appState.appIsInitialized = true;
 
     openModal('loadingStateModal');
     document.getElementById('loading-message').textContent = "Initializing Research Assistant...";
     
-    // Check for backup reminder logic (unchanged)
+    // Check for backup reminder logic
     const lastBackup = localStorage.getItem('lastBackupTimestamp');
     if (lastBackup && (Date.now() - parseInt(lastBackup) > 604800000)) { // 7 days
         document.getElementById('backup-reminder-banner').classList.remove('hidden');
@@ -55,13 +56,51 @@ async function initializeAppContent() {
         await generateAndApplyDefaultTheme();
         document.getElementById('loading-message').textContent = "Loading content...";
         await loadDynamicPlaceholders();
-        
-        // Load Featured Categories (Optional: could load specific hardcoded IDs if desired)
-        // For now, we wait for user interaction.
     } catch (error) {
         console.error("Init Error:", error);
     } finally {
         closeModal('loadingStateModal');
+    }
+}
+
+// [FIXED] Added this function to handle the Header UI (User Avatar vs Login Button)
+export function setupAuthUI(user) {
+    const authStatusEl = document.getElementById('auth-status');
+    const appContainer = document.getElementById('app-container');
+    if (!authStatusEl) return;
+
+    if (user) {
+        if (appContainer) appContainer.classList.remove('hidden');
+        closeModal('apiKeyModal');
+        
+        // Render User Profile & Logout Button
+        authStatusEl.innerHTML = `
+            <div class="bg-white/20 backdrop-blur-sm rounded-full p-1 flex items-center gap-2 text-white text-sm">
+                <img src="${user.photoURL || 'https://via.placeholder.com/32'}" alt="User" class="w-8 h-8 rounded-full">
+                <span class="font-medium pr-2">${user.displayName || 'Researcher'}</span>
+                <button id="logout-button" class="bg-white/20 hover:bg-white/40 text-white font-semibold py-1 px-3 rounded-full flex items-center justify-center gap-2" title="Sign Out">
+                    <span>Logout</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                </button>
+            </div>
+        `;
+        document.getElementById('logout-button').addEventListener('click', handleFirebaseLogout);
+    } else {
+         if (appContainer) appContainer.classList.add('hidden');
+         
+         // Render Login Button
+         authStatusEl.innerHTML = `
+             <button id="login-button" class="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white font-semibold py-2 px-4 rounded-full flex items-center justify-center gap-2" title="Sign In with Google">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 48 48" fill="none"><path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8c-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4C12.955 4 4 12.955 4 24s8.955 20 20 20s20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"></path><path fill="#FF3D00" d="m6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4C16.318 4 9.656 8.337 6.306 14.691z"></path><path fill="#4CAF50" d="M24 44c5.166 0 9.599-1.521 12.643-4.001L30.27 34.138C28.714 36.548 26.521 38 24 38c-5.223 0-9.657-3.341-11.303-7.918l-6.573 4.818C9.656 39.663 16.318 44 24 44z"></path><path fill="#1976D2" d="M43.611 20.083H24v8h11.303c-.792 2.237-2.231 4.16-4.082 5.571l5.657 5.657C41.389 36.197 44 30.669 44 24c0-1.341-.138-2.65-.389-3.917z"></path></svg>
+                 <span>Login with Google</span>
+            </button>
+        `;
+        document.getElementById('login-button').addEventListener('click', handleFirebaseLogin);
+        
+        // Show API Key modal if keys are missing
+        if (!localStorage.getItem('geminiApiKey')) {
+             openModal('apiKeyModal');
+        }
     }
 }
 
@@ -70,7 +109,6 @@ async function handleApiKeySubmit(e) {
     const geminiKey = document.getElementById('geminiApiKeyInput').value.trim();
     const firebaseConfigText = document.getElementById('firebaseConfigInput').value.trim();
     
-    // Optional keys
     const googleClientId = document.getElementById('googleClientIdInput').value.trim();
     const googleSearchId = document.getElementById('googleSearchEngineIdInput').value.trim();
     const algoliaAppId = document.getElementById('algoliaAppIdInput').value.trim();
@@ -82,11 +120,12 @@ async function handleApiKeySubmit(e) {
     }
 
     try {
-        // Parse Firebase Config safely
         const match = firebaseConfigText.match(/\{[\s\S]*\}/);
-        if (!match) throw new Error("Invalid Config Object");
+        if (!match) throw new Error("Invalid Config Object. Paste the full object starting with { and ending with }.");
         const config = new Function(`return ${match[0]}`)();
         
+        if (!config.apiKey || !config.projectId) throw new Error("Invalid Firebase Config properties.");
+
         localStorage.setItem('geminiApiKey', geminiKey);
         localStorage.setItem('firebaseConfig', JSON.stringify(config));
         if(googleClientId) localStorage.setItem('googleClientId', googleClientId);
@@ -97,7 +136,7 @@ async function handleApiKeySubmit(e) {
         if (loadConfigFromStorage()) {
             initializeFirebase();
             initializeGoogleApiClients();
-            handleFirebaseLogin(); // Prompt login immediately on setup
+            handleFirebaseLogin(); 
             closeModal('apiKeyModal');
         }
     } catch (err) {
@@ -107,7 +146,6 @@ async function handleApiKeySubmit(e) {
 
 async function loadDynamicPlaceholders() {
     const promptInput = document.getElementById('core-task-input');
-    // Updated prompt for Psychology context
     const prompt = `Generate a JSON array of 3 intriguing psychology research topics for input placeholders. Examples: "Impact of Social Media on Teen Anxiety", "Neuroplasticity in Adult Learners". Return ONLY the JSON array of strings.`;
     try {
         const jsonText = await callGeminiAPI(prompt, true, "Load Placeholders");
@@ -123,8 +161,6 @@ async function loadDynamicPlaceholders() {
         }
     } catch(e) { console.warn("Placeholder gen failed", e); }
 }
-
-// --- Main Form Handling ---
 
 async function handleGeminiSubmit(e) {
     e.preventDefault();
@@ -147,8 +183,6 @@ async function handleGeminiSubmit(e) {
     
     e.target.reset();
 }
-
-// --- Article Generation Logic ---
 
 async function generateCustomArticle(topic, persona, tone, extraContext) {
     const fullTitle = `Custom Article: ${topic}`;
@@ -176,21 +210,17 @@ async function generateCustomArticle(topic, persona, tone, extraContext) {
     };
 
     try {
-        // Step 1: Generate Blueprint (Sections 1-4)
         const prompt = getPsychologyArticlePrompt('blueprint', context);
         let resultMarkdown = await callGeminiAPI(prompt, false, "Generate Blueprint");
         
-        // Store and Render
         resultMarkdown = cleanMarkdown(resultMarkdown);
         appState.originalGeneratedText.set(fullTitle, resultMarkdown);
         
         contentEl.innerHTML = '';
         renderAccordionFromMarkdown(resultMarkdown, contentEl);
         
-        // Pass empty hierarchy for custom search
         footerEl.dataset.fullHierarchyPath = JSON.stringify([]); 
         
-        // Add "Generate Full Article" button
         addModalActionButtons(buttonContainer, true, true);
     } catch (error) {
         contentEl.innerHTML = `<p class="text-red-500">Error: ${error.message}</p>`;
@@ -208,7 +238,7 @@ async function generateFullDetailedArticle(button) {
     }
 
     button.disabled = true;
-    button.innerHTML = `Generating...`;
+    button.innerHTML = `<span class="flex items-center gap-2"><div class="loader themed-loader w-4 h-4"></div> Generating...</span>`;
 
     const detailTitleEl = document.getElementById('inDepthDetailedModalTitle');
     const detailContentEl = document.getElementById('inDepthDetailedModalContent');
@@ -221,16 +251,13 @@ async function generateFullDetailedArticle(button) {
     detailTitleEl.textContent = finalTitle;
     detailContentEl.innerHTML = getLoaderHTML("Researching and writing sections 5-10...");
     detailFooterEl.dataset.fullTitle = finalTitle;
-    // Persist hierarchy path if exists
     detailFooterEl.dataset.fullHierarchyPath = footerEl.dataset.fullHierarchyPath;
     
     openModal('inDepthDetailedModal');
 
     try {
-        // Step 1: Live Research
         const researchLinks = await searchGoogleForTopic(`${coreTopic} psychology research`);
         
-        // Step 2: Generate Full Content
         const hierarchyPath = JSON.parse(footerEl.dataset.fullHierarchyPath || "[]");
         const context = {
             topic: coreTopic,
@@ -243,7 +270,6 @@ async function generateFullDetailedArticle(button) {
         let fullContentMarkdown = await callGeminiAPI(prompt, false, "Generate Full Article");
         fullContentMarkdown = cleanMarkdown(fullContentMarkdown);
 
-        // Merge Blueprint + Full Content
         const finalMergedMarkdown = `${blueprintMarkdown}\n\n${fullContentMarkdown}`;
         appState.originalGeneratedText.set(finalTitle, finalMergedMarkdown);
 
@@ -260,13 +286,10 @@ async function generateFullDetailedArticle(button) {
     }
 }
 
-// --- Topic Card Logic ---
-
 async function generateAndPopulateTopicCard(topic, persona, tone, extraContext) {
     const cardId = `category-card-${topic.replace(/\s+/g, '-')}-${Date.now()}`;
     const container = document.getElementById('dynamic-card-container');
     
-    // Create UI Skeleton
     const card = document.createElement('div');
     card.className = 'card';
     card.id = cardId;
@@ -283,7 +306,6 @@ async function generateAndPopulateTopicCard(topic, persona, tone, extraContext) 
     container.prepend(card);
     card.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
-    // Generate Topics
     const prompt = `
         Persona: Expert ${persona}.
         Task: Generate 8 specific sub-fields or research areas related to "${topic}".
@@ -294,38 +316,32 @@ async function generateAndPopulateTopicCard(topic, persona, tone, extraContext) 
     try {
         const jsonText = await callGeminiAPI(prompt, true, "Generate Topic Card");
         const data = parseJsonWithCorrections(jsonText);
-        appState.allThemeData[cardId] = data; // Store data
+        appState.allThemeData[cardId] = data;
         
         const selectorContainer = card.querySelector(`#${selectorId}`);
-        populateCardGridSelector(selectorContainer, cardId); // Render Grid
+        populateCardGridSelector(selectorContainer, cardId); 
     } catch (error) {
         card.querySelector(`#${selectorId}`).innerHTML = `<p class="text-red-500">Generation failed.</p>`;
     }
 }
 
-// --- Grid Interaction (Summary & Explore) ---
-
 async function handleGridSelect(target) {
     const { topicId, categoryId } = target.dataset;
     
-    // Find item data
     let item = appState.allThemeData[categoryId]?.find(d => String(d.id) === String(topicId)) 
         || appState.stickyTopics[categoryId]?.find(d => String(d.id) === String(topicId))
         || appState.userAddedTopics[categoryId]?.find(d => String(d.id) === String(topicId));
     
     if (!item) return;
 
-    // UI Active State
     const gridContainer = target.closest('.card-grid-container');
     gridContainer.querySelectorAll('.grid-card-selector').forEach(el => el.classList.remove('active'));
     target.classList.add('active');
 
-    // Mark Viewed
     const card = target.closest('.card');
     const cardTitle = card.querySelector('h2').textContent;
     markItemAsViewed(cardTitle, item.title);
 
-    // Generate Summary
     const resultContainer = document.getElementById(`details-${categoryId}`);
     resultContainer.innerHTML = getLoaderHTML(`Generating abstract for ${item.title}...`);
 
@@ -341,7 +357,6 @@ async function handleGridSelect(target) {
         
         resultContainer.innerHTML = `<div class="prose max-w-none">${marked.parse(summary)}</div>`;
         
-        // Add buttons
         addPostGenerationButtons(resultContainer, topicId, categoryId);
     } catch (error) {
         resultContainer.innerHTML = `<p class="text-red-500">Error.</p>`;
@@ -349,49 +364,23 @@ async function handleGridSelect(target) {
 }
 
 async function handleExploreInDepth(topicId, fullHierarchyPath) {
-    // Logic similar to custom article, but using hierarchy data
-    const categoryId = fullHierarchyPath[fullHierarchyPath.length - 1].id || fullHierarchyPath[0].id; // Fallback
-    
-    // Find item again (data persistence check)
-    // Note: If hierarchy browsing, data is in appState.allThemeData[categoryId]
-    // If custom card, data is in appState.allThemeData[categoryId]
-    // ... (Reuse generateCustomArticle logic but with specific hierarchy context)
-    
-    // Simplification: We fetch the title and call generation
-    const cardId = `category-card-${categoryId}`; 
-    // This part requires robust state mapping which we simplified in appState.allThemeData.
-    
-    // For this implementation, we will extract the title from the clicked element's parent data
-    // In a full app, we'd pass the item object directly.
-    
-    // Let's assume we can get the title.
-    // For the sake of the example flow:
-    // 1. Get Title from button dataset (we need to update button generation to pass title)
-    // OR 2. Lookup in appState.
-    
-    // Implementation:
+    const categoryId = fullHierarchyPath[fullHierarchyPath.length - 1].id || fullHierarchyPath[0].id;
     const item = appState.allThemeData[categoryId]?.find(d => String(d.id) === String(topicId));
     if(item) {
-        // Trigger the Custom Article flow with context
         generateCustomArticle(item.title, "Academic Researcher", "Professional", `Context: ${fullHierarchyPath.map(p=>p.title).join(' > ')}`);
     }
 }
 
-// --- Event Listeners Hub ---
-
 function setupEventListeners() {
-    // Auth
     document.getElementById('apiKeyForm')?.addEventListener('submit', handleApiKeySubmit);
     document.getElementById('auth-button')?.addEventListener('click', () => {
-        if (appState.oauthToken) handleDriveAuthClick(); // Disconnect logic
-        else handleFirebaseLogin(); // Default to Firebase for main app
+        if (appState.oauthToken) handleDriveAuthClick(); 
+        else handleFirebaseLogin();
     });
     document.getElementById('load-from-drive-btn')?.addEventListener('click', () => createPicker('open'));
 
-    // Generation
     document.getElementById('gemini-form')?.addEventListener('submit', handleGeminiSubmit);
 
-    // Tools
     document.getElementById('theme-changer-button')?.addEventListener('click', () => openModal('themeGeneratorModal'));
     document.getElementById('generate-theme-btn')?.addEventListener('click', async () => {
         const p = document.getElementById('theme-prompt').value;
@@ -399,18 +388,14 @@ function setupEventListeners() {
         import('./ui.js').then(m => { m.applyTheme(c); m.closeModal('themeGeneratorModal'); });
     });
 
-    // Delegated Clicks (Grid, Buttons, Modals)
     document.addEventListener('click', (e) => {
         const target = e.target;
         
-        // Grid Selection
         if (target.closest('.grid-card-selector')) {
             handleGridSelect(target.closest('.grid-card-selector'));
         }
         
-        // Modal Actions
         if (target.closest('.copy-button')) {
-            // Copy logic
             const content = target.closest('.card').querySelector('[id$="Content"]')?.innerText;
             if(content) navigator.clipboard.writeText(content);
         }
@@ -420,20 +405,16 @@ function setupEventListeners() {
         }
         
         if (target.closest('#add-to-kb-btn')) {
-            // Save logic
             const footer = document.getElementById('inDepthDetailedModalFooter');
             saveArticleToKB(footer.dataset.fullTitle, appState.originalGeneratedText.get(footer.dataset.fullTitle), JSON.parse(footer.dataset.fullHierarchyPath || "[]"));
             displayMessageInModal("Saved to Knowledge Base", "success");
         }
 
-        // Close Modals
         if (target.id.startsWith('close') && target.closest('.modal')) {
             closeModal(target.closest('.modal').id);
         }
     });
 }
-
-// --- Helpers ---
 
 function cleanMarkdown(text) {
     if (!text) return "";
@@ -441,7 +422,6 @@ function cleanMarkdown(text) {
 }
 
 function addModalActionButtons(container, isInitial, hasAuth) {
-    // Dynamically build buttons
     let html = `<button class="btn-secondary text-sm copy-button">Copy Text</button>`;
     if (isInitial) {
         html += `<button id="generate-detailed-steps-btn" class="btn-primary text-sm px-4 py-2">Generate Full Article (Sections 5-10)</button>`;
@@ -457,7 +437,6 @@ function addDetailedModalActionButtons(container, hasAuth) {
 }
 
 function addPostGenerationButtons(container, topicId, categoryId) {
-    // Add "Read Article" button
     let btnBar = document.createElement('div');
     btnBar.className = "flex gap-2 mt-4 pt-4 border-t";
     
@@ -465,8 +444,6 @@ function addPostGenerationButtons(container, topicId, categoryId) {
     btn.className = "btn-primary text-sm w-full";
     btn.textContent = "Explore In-Depth";
     btn.onclick = () => {
-        // Need to reconstruct hierarchy path or just pass ID
-        // Simplified for this context:
         const card = document.getElementById(`selector-${categoryId}`)?.closest('.card');
         const path = JSON.parse(card?.dataset.fullHierarchyPath || "[]");
         handleExploreInDepth(topicId, path);
