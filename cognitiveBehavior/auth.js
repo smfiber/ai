@@ -4,6 +4,7 @@ import { GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstati
 import { displayImportedGuide } from './ui.js'; // Circular dependency handled via function call
 
 const G_SCOPES = 'https://www.googleapis.com/auth/drive.file';
+const DRIVE_FOLDER_NAME = 'Psychology Research Data'; // [CHANGED] Unique folder for this app
 
 // --- Firebase Authentication ---
 
@@ -40,8 +41,7 @@ export function handleFirebaseLogout() {
     signOut(appState.auth).then(() => {
         appState.oauthToken = null;
         updateSigninStatus(false);
-        // Clear session but keep keys if possible, or clear all based on preference
-        // localStorage.clear(); 
+        // Clear session only. Do NOT clear localStorage to preserve API keys.
         sessionStorage.clear();
         location.reload();
     }).catch(error => {
@@ -161,7 +161,7 @@ export async function getDriveFolderId() {
     
     try {
         const response = await gapi.client.drive.files.list({
-            q: "mimeType='application/vnd.google-apps.folder' and name='Everything Psychology' and trashed=false",
+            q: `mimeType='application/vnd.google-apps.folder' and name='${DRIVE_FOLDER_NAME}' and trashed=false`,
             fields: 'files(id, name)',
         });
         
@@ -169,7 +169,7 @@ export async function getDriveFolderId() {
             appState.driveFolderId = response.result.files[0].id;
         } else {
             const folderResponse = await gapi.client.drive.files.create({
-                resource: { 'name': 'Everything Psychology', 'mimeType': 'application/vnd.google-apps.folder' },
+                resource: { 'name': DRIVE_FOLDER_NAME, 'mimeType': 'application/vnd.google-apps.folder' },
                 fields: 'id'
             });
             appState.driveFolderId = folderResponse.result.id;
