@@ -41,6 +41,25 @@ function applyUserPreferences() {
 }
 
 function populateSettingsPanel() {
+    // 1. Attach Toggle Logic FIRST (Fix for dead button)
+    const settingsBtn = document.getElementById('settings-button');
+    const settingsPanel = document.getElementById('settings-panel');
+    
+    if (settingsBtn && settingsPanel) {
+        settingsBtn.onclick = () => {
+            // Toggle visibility using the hidden class logic we fixed in index.html
+            if (settingsPanel.classList.contains('hidden')) {
+                settingsPanel.classList.remove('hidden');
+                // Small timeout to allow display:block to render before opacity transition
+                setTimeout(() => settingsPanel.classList.add('active'), 10);
+            } else {
+                settingsPanel.classList.remove('active');
+                setTimeout(() => settingsPanel.classList.add('hidden'), 200); // Wait for transition
+            }
+        };
+    }
+
+    // 2. Populate Dropdowns
     const families = [
         { name: "Inter (Default)", value: "'Inter', sans-serif" },
         { name: "Lato", value: "'Lato', sans-serif" },
@@ -56,7 +75,7 @@ function populateSettingsPanel() {
     const sSelect = document.getElementById('font-size-select');
     const hSelect = document.getElementById('line-height-select');
     
-    // Only proceed if the settings panel exists in HTML
+    // Only proceed with population if elements exist
     if (!fSelect || !sSelect || !hSelect) return;
 
     // Font Family
@@ -82,16 +101,6 @@ function populateSettingsPanel() {
         document.body.style.lineHeight = e.target.value;
         localStorage.setItem(`${UI_STORAGE_PREFIX}lineHeight`, e.target.value);
     };
-    
-    // Settings Panel Toggle Logic
-    const settingsBtn = document.getElementById('settings-button');
-    const settingsPanel = document.getElementById('settings-panel');
-    if (settingsBtn && settingsPanel) {
-        settingsBtn.onclick = () => {
-            settingsPanel.classList.toggle('hidden');
-            settingsPanel.classList.toggle('active'); // for potential CSS animations
-        };
-    }
 }
 
 // --- Modal Management ---
@@ -99,6 +108,7 @@ function populateSettingsPanel() {
 export function openModal(modalId) {
     const modal = document.getElementById(modalId);
     if(modal) {
+        modal.classList.remove('hidden'); 
         document.body.classList.add('modal-open');
         modal.classList.add('is-open');
     }
@@ -107,6 +117,7 @@ export function openModal(modalId) {
 export function closeModal(modalId) {
     const modal = document.getElementById(modalId);
     if(modal) {
+        modal.classList.add('hidden'); 
         modal.classList.remove('is-open');
         if (document.querySelectorAll('.modal.is-open').length === 0) {
              document.body.classList.remove('modal-open');
