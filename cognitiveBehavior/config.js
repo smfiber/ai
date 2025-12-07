@@ -1,8 +1,8 @@
 // config.js
 
 // --- Application Constants ---
-// [CHANGED] Version bumped to reflect Rich UI + Casual Persona update
-export const APP_VERSION = "2.1.0-psych";
+// [CHANGED] Version bumped for Domain Explorer & Casual Logic update
+export const APP_VERSION = "2.2.0-psych";
 export const APP_ID = 'psych-research-assistant-v1'; 
 export const DEFAULT_THEME_PROMPT = "Calm Academic Library";
 
@@ -64,8 +64,6 @@ export const appState = {
 
 // --- Helper: Load Config from LocalStorage ---
 export function loadConfigFromStorage() {
-    // Returns false to ensure the app always checks/prompts for keys on fresh load
-    // while keeping user preferences intact.
     return false; 
 }
 
