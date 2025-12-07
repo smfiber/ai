@@ -2,7 +2,7 @@
 import { appState, getHierarchyBasePath, APP_ID } from './config.js';
 import { 
     getFirestore, collection, addDoc, getDocs, onSnapshot, 
-    Timestamp, doc, setDoc, deleteDoc, updateDoc, query, getDoc 
+    Timestamp, doc, setDoc, deleteDoc, updateDoc, query, getDoc, writeBatch
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -22,7 +22,7 @@ export function initializeFirebase() {
         onAuthStateChanged(appState.auth, user => {
             if (user) {
                 appState.userId = user.uid;
-                // Path: artifacts/everything-psychology-v1/users/{uid}/viewedItems
+                // Path: artifacts/{APP_ID}/users/{uid}/viewedItems
                 const userBasePath = `artifacts/${APP_ID}/users/${appState.userId}`;
                 listenForViewedItems(userBasePath);
                 
@@ -46,7 +46,7 @@ export function initializeFirebase() {
 export async function saveArticleToKB(title, markdownContent, hierarchyPath, type = 'article') {
     if (!appState.userId || !appState.db) throw new Error("Not logged in or DB not ready.");
 
-    // Collection: artifacts/everything-psychology-v1/public/data/knowledgeBase
+    // Collection: artifacts/{APP_ID}/public/data/knowledgeBase
     const collectionName = type === 'explanatory' ? 'explanatoryArticles' : 'knowledgeBase';
     const kbRef = collection(appState.db, `${getHierarchyBasePath()}/${collectionName}`);
     
@@ -176,6 +176,80 @@ export async function addUserTopic(categoryId, title) {
         description: `User added: ${title}`,
         createdAt: Timestamp.now()
     });
+}
+
+// --- Data Export / Import (Data Management) ---
+
+export async function exportUserData() {
+    if (!appState.userId) throw new Error("Must be logged in to export.");
+    
+    // Define paths to export
+    // 1. Sticky Topics (Recursive fetch needed if we don't know categories, but we can structure differently)
+    // Note: Due to the nested structure 'stickyTopics/{categoryId}/topics', exporting ALL is complex without known categories.
+    // For this version, we will export 'Viewed Items' and 'Knowledge Base' articles authored by user.
+    
+    const exportData = {
+        version: "1.0",
+        timestamp: Date.now(),
+        viewedItems: [],
+        knowledgeBase: []
+    };
+
+    // Fetch Viewed Items
+    const viewedRef = collection(appState.db, `artifacts/${APP_ID}/users/${appState.userId}/viewedItems`);
+    const viewedSnap = await getDocs(viewedRef);
+    viewedSnap.forEach(doc => exportData.viewedItems.push({ id: doc.id, ...doc.data() }));
+
+    // Fetch User's Knowledge Base Articles
+    const kbRef = collection(appState.db, `${getHierarchyBasePath()}/knowledgeBase`);
+    const q = query(kbRef); // In a real app, add where('userId', '==', appState.userId)
+    const kbSnap = await getDocs(q);
+    kbSnap.forEach(doc => {
+        if(doc.data().userId === appState.userId) {
+            exportData.knowledgeBase.push({ ...doc.data() }); // No ID needed for re-import usually, or keep it
+        }
+    });
+
+    return exportData;
+}
+
+export async function importUserData(jsonData) {
+    if (!appState.userId) throw new Error("Must be logged in to import.");
+    const batch = writeBatch(appState.db);
+    let opCount = 0;
+
+    // Import Viewed Items
+    if (jsonData.viewedItems) {
+        const viewedPath = `artifacts/${APP_ID}/users/${appState.userId}/viewedItems`;
+        jsonData.viewedItems.forEach(item => {
+            const ref = doc(appState.db, viewedPath, item.id);
+            batch.set(ref, { viewedAt: item.viewedAt ? new Timestamp(item.viewedAt.seconds, item.viewedAt.nanoseconds) : Timestamp.now() });
+            opCount++;
+        });
+    }
+
+    // Import KB Articles (As new items to avoid ID collisions)
+    if (jsonData.knowledgeBase) {
+        const kbPath = `${getHierarchyBasePath()}/knowledgeBase`;
+        const kbCollection = collection(appState.db, kbPath);
+        jsonData.knowledgeBase.forEach(item => {
+            const newDocRef = doc(kbCollection);
+            // Update userId to current user
+            const newItem = { ...item, userId: appState.userId, importedAt: Timestamp.now() };
+            // Fix timestamp reconstruction if needed
+            if(newItem.createdAt && newItem.createdAt.seconds) {
+                newItem.createdAt = new Timestamp(newItem.createdAt.seconds, newItem.createdAt.nanoseconds);
+            }
+            batch.set(newDocRef, newItem);
+            opCount++;
+        });
+    }
+
+    if (opCount > 0) {
+        await batch.commit();
+        return opCount;
+    }
+    return 0;
 }
 
 // --- Hierarchy Management (Admin) ---
