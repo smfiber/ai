@@ -1,6 +1,7 @@
 // ui.js
 import { appState } from './config.js';
 import { markItemAsViewed } from './firestore.js';
+import { generateAudioFromText } from './api.js';
 
 // --- Constants for Isolation ---
 const UI_STORAGE_PREFIX = 'psych_ui_';
@@ -19,6 +20,9 @@ const PERMANENT_THEME = {
     inputBorder: "#cbd5e1",
     buttonText: "#ffffff"
 };
+
+// --- Audio State Management ---
+let currentAudio = null;
 
 // --- Global UI Init ---
 export function initializeUI() {
@@ -117,6 +121,12 @@ export function openModal(modalId) {
 }
 
 export function closeModal(modalId) {
+    // Stop audio if modal closes
+    if (currentAudio) {
+        currentAudio.pause();
+        currentAudio = null;
+    }
+    
     const modal = document.getElementById(modalId);
     if(modal) {
         modal.classList.add('hidden'); 
@@ -188,6 +198,70 @@ export function getIconForTheme(categoryId, topicId) {
     ];
 
     return icons[variant];
+}
+
+// --- Audio Playback Logic ---
+
+function cleanMarkdownForSpeech(markdown) {
+    // Remove headers, bolding, links, code blocks for smoother reading
+    return markdown
+        .replace(/#{1,6} /g, '') 
+        .replace(/\*\*/g, '')   
+        .replace(/\*/g, '')     
+        .replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1') 
+        .replace(/`/g, '')      
+        .trim();
+}
+
+export async function toggleSpeech(markdownText, btn) {
+    const originalIcon = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path></svg>`;
+    const stopIcon = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"></path></svg>`;
+    const loadingIcon = `<div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>`;
+
+    // 1. If playing, Stop it.
+    if (currentAudio && !currentAudio.paused) {
+        currentAudio.pause();
+        currentAudio = null;
+        btn.innerHTML = `${originalIcon} Read Aloud`;
+        btn.classList.remove('speaking-pulse');
+        return;
+    }
+
+    // 2. Start Loading
+    btn.innerHTML = `${loadingIcon} Generating...`;
+    btn.disabled = true;
+
+    try {
+        const cleanText = cleanMarkdownForSpeech(markdownText);
+        // Note: Gemini has a char limit for one pass. If text is huge, might need chunking. 
+        // For now, assume standard article length fits or truncates gracefully.
+        
+        const audioBase64 = await generateAudioFromText(cleanText);
+        
+        if (audioBase64) {
+            // 3. Play
+            const audioSrc = "data:audio/mp3;base64," + audioBase64;
+            currentAudio = new Audio(audioSrc);
+            
+            currentAudio.onended = () => {
+                btn.innerHTML = `${originalIcon} Read Aloud`;
+                btn.classList.remove('speaking-pulse');
+                currentAudio = null;
+            };
+
+            await currentAudio.play();
+            
+            btn.innerHTML = `${stopIcon} Stop Audio`;
+            btn.classList.add('speaking-pulse');
+        }
+
+    } catch (error) {
+        console.error("Audio Playback Error:", error);
+        displayMessageInModal("Could not generate audio. Please try again later.", "error");
+        btn.innerHTML = `${originalIcon} Read Aloud`;
+    } finally {
+        btn.disabled = false;
+    }
 }
 
 // --- Content Rendering (Markdown & Components) ---
