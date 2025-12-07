@@ -1,8 +1,8 @@
 // config.js
 
 // --- Application Constants ---
-// [CHANGED] Version bumped for Domain Explorer & Casual Logic update
-export const APP_VERSION = "2.2.0-psych";
+// [CHANGED] Version bumped for My Library & Read Mode update
+export const APP_VERSION = "2.3.0-psych";
 export const APP_ID = 'psych-research-assistant-v1'; 
 export const DEFAULT_THEME_PROMPT = "Calm Academic Library";
 
@@ -56,6 +56,7 @@ export const appState = {
     currentHierarchyPath: [],
     selectedHierarchyItems: { main: null, sub: null, final: null },
     pendingDriveSave: null,
+    libraryCache: [], // [ADDED] Cache for client-side search
     
     // Unsubscribers
     stickyTopicsUnsubscribe: null,
