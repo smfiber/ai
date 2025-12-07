@@ -216,6 +216,7 @@ function convertMarkdownToHtml(text) {
     return marked.parse(text);
 }
 
+// [CHANGED] Rewritten to robustly separate Intro from Accordion Sections
 export function renderAccordionFromMarkdown(markdownText, containerElement) {
     containerElement.innerHTML = '';
     if (!markdownText || !markdownText.trim()) {
@@ -223,66 +224,102 @@ export function renderAccordionFromMarkdown(markdownText, containerElement) {
         return;
     }
 
-    // Convert raw markdown to HTML structure
-    const fullHtml = convertMarkdownToHtml(markdownText);
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = fullHtml;
+    // 1. Convert Markdown to a standard HTML string
+    const rawHtml = convertMarkdownToHtml(markdownText);
+    
+    // 2. Parse into DOM nodes safely
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(rawHtml, 'text/html');
+    const nodes = Array.from(doc.body.childNodes);
 
-    const nodes = Array.from(tempDiv.childNodes);
-    let currentAccordionItem = null;
-    let introContent = document.createElement('div');
-    introContent.className = 'accordion-intro mb-4 prose max-w-none';
-    let firstHeaderFound = false;
+    // 3. Create Containers
+    const introContainer = document.createElement('div');
+    introContainer.className = 'accordion-intro mb-6 prose max-w-none prose-p:text-gray-700 prose-headings:text-gray-900';
+    
+    const accordionContainer = document.createElement('div');
+    accordionContainer.className = 'space-y-4'; // Add spacing between items
 
-    // Logic to group content under H3/H4 headers into accordion folds
+    let currentSectionContent = null;
+    let isInsideSection = false;
+
+    // 4. Iterate and Group
     nodes.forEach(node => {
-        const isHeader = node.tagName === 'H3' || node.tagName === 'H4';
-        
-        if (!firstHeaderFound && !isHeader) {
-            introContent.appendChild(node.cloneNode(true));
-            return;
-        }
+        // Handle Header Tags (H3, H4) -> Start New Accordion Item
+        const tagName = node.tagName;
+        if (tagName === 'H3' || tagName === 'H4') {
+            isInsideSection = true;
+            
+            // Create the Accordion Item Structure
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'accordion-item border rounded-lg bg-white overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-200';
+            itemDiv.style.borderColor = 'var(--color-card-border)';
 
-        if (isHeader) {
-            firstHeaderFound = true;
-            // Append any pending intro content
-            if (introContent.hasChildNodes()) {
-                containerElement.appendChild(introContent);
-                introContent = document.createElement('div'); 
-                introContent.className = 'accordion-intro mb-4 prose max-w-none';
+            const headerBtn = document.createElement('button');
+            headerBtn.className = 'accordion-header w-full px-6 py-4 flex justify-between items-center text-left font-semibold focus:outline-none bg-gray-50 hover:bg-gray-100 transition-colors duration-200';
+            headerBtn.style.color = 'var(--color-primary-dark)';
+            
+            // Add click handler for this specific item
+            headerBtn.onclick = () => {
+                const content = itemDiv.querySelector('.accordion-content');
+                const icon = headerBtn.querySelector('.icon');
+                
+                // Toggle classes
+                content.classList.toggle('hidden');
+                headerBtn.classList.toggle('active');
+                
+                // Rotate icon
+                if (content.classList.contains('hidden')) {
+                    icon.style.transform = 'rotate(0deg)';
+                } else {
+                    icon.style.transform = 'rotate(180deg)';
+                }
+            };
+
+            headerBtn.innerHTML = `
+                <span>${node.textContent}</span>
+                <svg class="icon w-5 h-5 transition-transform duration-200 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+            `;
+
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'accordion-content hidden px-6 py-4 prose max-w-none bg-white';
+            
+            itemDiv.appendChild(headerBtn);
+            itemDiv.appendChild(contentDiv);
+            accordionContainer.appendChild(itemDiv);
+
+            // Update reference to where we should append subsequent nodes
+            currentSectionContent = contentDiv;
+        } 
+        else {
+            // Non-Header Node
+            if (isInsideSection && currentSectionContent) {
+                // Append to current accordion section
+                currentSectionContent.appendChild(node.cloneNode(true));
+            } else {
+                // Append to Intro (before any headers found)
+                introContainer.appendChild(node.cloneNode(true));
             }
-            
-            // Create new accordion item
-            currentAccordionItem = document.createElement('div');
-            currentAccordionItem.className = 'accordion-item';
-            const title = node.textContent;
-            
-            currentAccordionItem.innerHTML = `
-                <button type="button" class="accordion-header">
-                    <span class="text-left">${title}</span>
-                    <svg class="icon w-5 h-5 transition-transform shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                </button>
-                <div class="accordion-content prose max-w-none"></div>`;
-            
-            containerElement.appendChild(currentAccordionItem);
-        } else if (currentAccordionItem) {
-            currentAccordionItem.querySelector('.accordion-content').appendChild(node.cloneNode(true));
         }
     });
 
-    if (!firstHeaderFound && introContent.hasChildNodes()) {
-         containerElement.appendChild(introContent);
-    } else if (introContent.hasChildNodes()) {
-        containerElement.appendChild(introContent);
+    // 5. Append final structures to the main container
+    if (introContainer.hasChildNodes()) {
+        containerElement.appendChild(introContainer);
+    }
+    if (accordionContainer.hasChildNodes()) {
+        containerElement.appendChild(accordionContainer);
     }
 
-    // Open first item by default
-    const firstItem = containerElement.querySelector('.accordion-item');
+    // 6. Automatically open the first accordion item for better UX
+    const firstItem = accordionContainer.firstElementChild;
     if (firstItem) {
-        const header = firstItem.querySelector('.accordion-header');
-        header.classList.add('active');
-        header.querySelector('.icon').style.transform = 'rotate(180deg)';
-        firstItem.querySelector('.accordion-content').classList.add('open');
+        const btn = firstItem.querySelector('.accordion-header');
+        const content = firstItem.querySelector('.accordion-content');
+        const icon = firstItem.querySelector('.icon');
+        
+        btn.classList.add('active');
+        content.classList.remove('hidden');
+        if(icon) icon.style.transform = 'rotate(180deg)';
     }
 }
 
