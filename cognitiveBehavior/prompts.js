@@ -4,7 +4,6 @@ export const jsonInstruction = ` IMPORTANT: Ensure your response is ONLY a valid
 
 /**
  * Constructs the master prompts for generating Academic Psychology Articles.
- * Replaces the old IT-focused 'getMasterGuidePrompt'.
  * * @param {string} type - 'blueprint' or 'fullArticle'.
  * @param {object} context - Data for prompt construction.
  * @returns {string} The fully constructed prompt.
@@ -28,7 +27,7 @@ export function getPsychologyArticlePrompt(type, context) {
         const pathString = fullHierarchyPath.map(p => p.title || p).join(' -> ');
         fullSubject = `${topic} (Context: ${pathString})`;
         
-        // Extract persona from hierarchy if available (for browsing mode)
+        // Extract persona from hierarchy if available
         const finalCategory = fullHierarchyPath[fullHierarchyPath.length - 1];
         if (finalCategory && finalCategory.initialPrompt) {
             const match = finalCategory.initialPrompt.match(/Persona:(.*?)(Objective:|Instructions:|$)/is);
@@ -57,26 +56,28 @@ Additional Constraints: ${additionalContext || 'None'}.
         Generate the foundational sections (1-4) for a comprehensive psychology article on "${topic}".
         ${commonInstructions}
 
-        //-- REQUIRED OUTPUT --//
-        Generate ONLY the following 4 sections in Markdown format:
+        //-- FORMATTING RULES --//
+        1. Start with a brief standard introduction paragraph (no header).
+        2. Use '###' (H3) for all main section headers. 
+        3. Do NOT use H1 (#) or H2 (##) tags.
+        4. Return ONLY the markdown.
+
+        //-- REQUIRED SECTIONS --//
 
         ### 1. Abstract & Introduction
         - Define "${topic}" clearly.
-        - State the scope of this article and why this topic is significant in the field of psychology.
+        - State the scope of this article and why this topic is significant.
 
         ### 2. Historical Context & Origins
-        - Who were the pioneers of this concept? (e.g., Freud, Skinner, Piaget, etc., if applicable).
-        - How has the understanding of this topic evolved over time?
+        - Who were the pioneers? (e.g., Freud, Skinner, Piaget).
+        - How has the understanding evolved?
 
         ### 3. Key Theories & Models
-        - Describe the primary psychological theories or models that explain "${topic}".
+        - Describe the primary psychological theories.
         - Explain the theoretical framework.
 
         ### 4. Core Concepts & Terminology
         - Define specific terms essential to understanding "${topic}".
-        - Explain the fundamental variables or psychological mechanisms involved.
-
-        Format: Use '###' for headers. Return ONLY the markdown.
         `;
     }
 
@@ -89,7 +90,7 @@ Additional Constraints: ${additionalContext || 'None'}.
 
         return `
         //-- MASTER INSTRUCTION: COMPLETE THE ACADEMIC ARTICLE --//
-        You have ALREADY created the blueprint (Sections 1-4). Your task is to write the remaining detailed sections (5-10) to complete the paper.
+        You have ALREADY created the blueprint (Sections 1-4). Your task is to write the remaining detailed sections (5-10).
         
         //-- CONTEXT: EXISTING BLUEPRINT --//
         ${blueprintMarkdown}
@@ -97,35 +98,35 @@ Additional Constraints: ${additionalContext || 'None'}.
         ${commonInstructions}
 
         //-- LIVE RESEARCH CONTEXT --//
-        Use the following real-world search results to inform your writing (especially for "Recent Research" and "References"):
+        Use these search results for "Recent Research" and "References":
         ${linksMarkdown}
 
-        //-- REQUIRED OUTPUT: SECTIONS 5-10 --//
-        Generate ONLY the markdown for the following sections. Be rigorous, cited, and detailed.
+        //-- FORMATTING RULES --//
+        1. Use '###' (H3) for all main section headers.
+        2. Do NOT use H1 (#) or H2 (##) tags.
+        3. Return ONLY the markdown for sections 5-10.
+
+        //-- REQUIRED SECTIONS --//
 
         ### 5. Methodology & Clinical Application
-        - How is this studied in a lab setting? 
-        - OR: How is this applied in therapy/clinical practice?
-        - Describe standard assessment tools or interventions.
+        - How is this studied in a lab? 
+        - OR: How is this applied in therapy?
 
         ### 6. Case Studies or Real-World Examples
-        - Provide 1-2 detailed examples or case vignettes that illustrate "${topic}" in action.
-        - Analyze the example using the theories mentioned earlier.
+        - Provide 1-2 detailed examples or case vignettes.
 
         ### 7. Biological Underpinnings (Neuroscience)
-        - What is happening in the brain? Discuss relevant brain structures, neurotransmitters, or physiological responses associated with "${topic}".
+        - Discuss relevant brain structures or neurotransmitters.
 
         ### 8. Criticisms & Debates
-        - What are the major criticisms of the prevailing theories regarding "${topic}"?
-        - Are there cultural biases or replication issues?
+        - What are the major criticisms or cultural biases?
 
         ### 9. Conclusion
-        - Synthesize the main points.
-        - Suggest future directions for research.
+        - Synthesize main points and suggest future directions.
 
         ### 10. References & Further Reading
-        - Based on the "Live Research Context" provided above, list the most relevant sources.
-        - Format as a list of links with brief descriptions of why they are valuable.
+        - List relevant sources based on the "Live Research Context".
+        - Format as a list of links.
         `;
     }
 
@@ -147,14 +148,14 @@ export function getRefinementPrompt(originalText, refinementRequest) {
     "${refinementRequest}"
     
     //-- GUIDELINES --//
-    - Maintain the academic or professional tone unless asked to change it.
+    - Maintain the academic or professional tone.
     - Ensure psychological accuracy.
     - Return ONLY the revised markdown text.
     `;
 }
 
 /**
- * Prompt for the "Explanatory Article" modal (Alternative flow)
+ * Prompt for the "Explanatory Article" modal
  */
 export function getExplanatoryArticlePrompt(type, context) {
     const { topicTitle = '', introductionText = '', expansionText = '', sources = '' } = context;
@@ -167,22 +168,8 @@ export function getExplanatoryArticlePrompt(type, context) {
         Write the main body of an article explaining "${topicTitle}".
         Context (Intro): "${introductionText}"
         Focus on: Psychological mechanisms, behavioral impacts, and theoretical significance.
-        Structure: Use narrative paragraphs (not numbered lists). Use bold text for key terms.
+        Structure: Use narrative paragraphs. Use bold text for key terms.
         Return only the raw text.
-        `;
-    }
-    if (type === 'review') {
-        return `
-        Review and polish this psychology article. Integrate citations where possible.
-        
-        Intro: "${introductionText}"
-        Body: "${expansionText}"
-        
-        Available Sources:
-        ${sources}
-        
-        Task: Merge into a cohesive piece. Add inline citations [1] where sources support claims. Add a "### References" section at the end matching the citations.
-        Return ONLY the final markdown.
         `;
     }
     return '';
