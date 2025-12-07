@@ -60,7 +60,7 @@ export async function initializeAppContent() {
     }
 
     try {
-        await generateAndApplyDefaultTheme();
+        await generateAndApplyDefaultTheme(); // Now applies hardcoded green theme
         document.getElementById('loading-message').textContent = "Loading content...";
         await loadDynamicPlaceholders();
     } catch (error) {
@@ -454,13 +454,7 @@ function setupEventListeners() {
     document.getElementById('load-from-drive-btn')?.addEventListener('click', () => createPicker('open'));
 
     document.getElementById('gemini-form')?.addEventListener('submit', handleGeminiSubmit);
-
-    document.getElementById('theme-changer-button')?.addEventListener('click', () => openModal('themeGeneratorModal'));
-    document.getElementById('generate-theme-btn')?.addEventListener('click', async () => {
-        const p = document.getElementById('theme-prompt').value;
-        const c = await import('./api.js').then(m => m.callColorGenAPI(p));
-        import('./ui.js').then(m => { m.applyTheme(c); m.closeModal('themeGeneratorModal'); });
-    });
+    // [CHANGED] Removed Theme Button Listeners
 
     // Data Management Listeners
     document.getElementById('export-data-button')?.addEventListener('click', handleExportData);
