@@ -50,29 +50,29 @@
                     
                     <div class="p-6">
                         <p class="text-sm text-gray-500 mb-6 bg-green-50 p-3 rounded-lg border border-green-100">
-                            Craft a detailed prompt to generate exactly what you need. The AI will assume the persona you select.
+                            Explore psychology simply. Choose a topic and let the AI guide you.
                         </p>
                         <form id="gemini-form" class="space-y-6">
                             <div>
-                                <label for="core-task-input" class="block text-sm font-bold text-gray-700 mb-1">1. Research Topic</label>
-                                <input type="text" id="core-task-input" class="themed-input w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-green-500 focus:border-transparent shadow-sm" placeholder="Define the topic (e.g. Cognitive Dissonance)...">
+                                <label for="core-task-input" class="block text-sm font-bold text-gray-700 mb-1">1. What are you curious about?</label>
+                                <input type="text" id="core-task-input" class="themed-input w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-green-500 focus:border-transparent shadow-sm" placeholder="e.g. Why do we dream?">
                             </div>
 
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
-                                    <label class="block text-sm font-bold text-gray-700 mb-2">2. AI Persona</label>
+                                    <label class="block text-sm font-bold text-gray-700 mb-2">2. Who should explain it?</label>
                                     <div id="persona-selector" class="flex flex-wrap gap-2">
-                                        <button type="button" class="prompt-builder-btn active px-3 py-1 text-xs font-semibold rounded-full border transition-colors" data-value="Clinical Psychologist">Clinical Psychologist</button>
-                                        <button type="button" class="prompt-builder-btn px-3 py-1 text-xs font-semibold rounded-full border transition-colors" data-value="Cognitive Researcher">Cognitive Researcher</button>
-                                        <button type="button" class="prompt-builder-btn px-3 py-1 text-xs font-semibold rounded-full border transition-colors" data-value="Neurology Student">Neurology Student</button>
+                                        <button type="button" class="prompt-builder-btn active px-3 py-1 text-xs font-semibold rounded-full border transition-colors" data-value="Science Journalist">Science Journalist</button>
+                                        <button type="button" class="prompt-builder-btn px-3 py-1 text-xs font-semibold rounded-full border transition-colors" data-value="Psychology Teacher">Psych Teacher</button>
+                                        <button type="button" class="prompt-builder-btn px-3 py-1 text-xs font-semibold rounded-full border transition-colors" data-value="Life Coach">Life Coach</button>
                                     </div>
                                 </div>
                                 <div>
-                                    <label class="block text-sm font-bold text-gray-700 mb-2">3. Tone</label>
+                                    <label class="block text-sm font-bold text-gray-700 mb-2">3. Tone Style</label>
                                     <div id="tone-selector" class="flex flex-wrap gap-2">
-                                        <button type="button" class="prompt-builder-btn active px-3 py-1 text-xs font-semibold rounded-full border transition-colors" data-value="Academic">Academic</button>
-                                        <button type="button" class="prompt-builder-btn px-3 py-1 text-xs font-semibold rounded-full border transition-colors" data-value="Empathetic">Empathetic</button>
-                                        <button type="button" class="prompt-builder-btn px-3 py-1 text-xs font-semibold rounded-full border transition-colors" data-value="General Public">General Public</button>
+                                        <button type="button" class="prompt-builder-btn active px-3 py-1 text-xs font-semibold rounded-full border transition-colors" data-value="Casual">Casual</button>
+                                        <button type="button" class="prompt-builder-btn px-3 py-1 text-xs font-semibold rounded-full border transition-colors" data-value="Encouraging">Encouraging</button>
+                                        <button type="button" class="prompt-builder-btn px-3 py-1 text-xs font-semibold rounded-full border transition-colors" data-value="Storyteller">Storyteller</button>
                                     </div>
                                 </div>
                             </div>
@@ -82,7 +82,7 @@
                                 <div id="format-selector" class="flex gap-6">
                                     <label class="flex items-center gap-2 cursor-pointer hover:text-green-700 transition-colors">
                                         <input type="radio" name="output-format" value="guide" class="text-green-600 focus:ring-green-500" checked> 
-                                        <span class="font-medium">Detailed Article</span>
+                                        <span class="font-medium">Simple Guide</span>
                                     </label>
                                     <label class="flex items-center gap-2 cursor-pointer hover:text-green-700 transition-colors">
                                         <input type="radio" name="output-format" value="card" class="text-green-600 focus:ring-green-500"> 
@@ -92,12 +92,12 @@
                             </div>
                             
                             <div>
-                                <label for="additional-context-input" class="block text-sm font-bold text-gray-700 mb-1">5. Additional Constraints (Optional)</label>
-                                <textarea id="additional-context-input" class="themed-input w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-green-500 focus:border-transparent shadow-sm" rows="2" placeholder="e.g., 'Focus only on Pavlovian response...'"></textarea>
+                                <label for="additional-context-input" class="block text-sm font-bold text-gray-700 mb-1">5. Special Instructions (Optional)</label>
+                                <textarea id="additional-context-input" class="themed-input w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-green-500 focus:border-transparent shadow-sm" rows="2" placeholder="e.g., 'Use sports analogies' or 'Keep it very short'"></textarea>
                             </div>
                             
                             <div class="pt-4 border-t border-gray-100">
-                                <button type="submit" id="workshop-generate-button" class="btn-primary w-full py-3 text-lg font-bold shadow-md hover:shadow-lg transition-all transform hover:-translate-y-0.5">Generate Research</button>
+                                <button type="submit" id="workshop-generate-button" class="btn-primary w-full py-3 text-lg font-bold shadow-md hover:shadow-lg transition-all transform hover:-translate-y-0.5">Start Research</button>
                             </div>
                         </form>
                     </div>
