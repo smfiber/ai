@@ -9,15 +9,17 @@ export const DEFAULT_THEME_PROMPT = "Calm Academic Library";
 // --- Storage Keys Namespace ---
 // [ADDED] unique prefixes to prevent conflict with other localhost apps
 const KEY_PREFIX = 'psych_';
+
+// [CHANGED] Removed Sensitive API Keys from Storage Definitions
 export const STORAGE_KEYS = {
-    GEMINI_KEY: `${KEY_PREFIX}geminiApiKey`,
-    FB_CONFIG: `${KEY_PREFIX}firebaseConfig`,
-    GOOGLE_CLIENT_ID: `${KEY_PREFIX}googleClientId`,
-    GOOGLE_SEARCH_ID: `${KEY_PREFIX}googleSearchEngineId`,
-    ALGOLIA_APP_ID: `${KEY_PREFIX}algoliaAppId`,
-    ALGOLIA_KEY: `${KEY_PREFIX}algoliaSearchKey`,
+    // UI & State Preferences (Safe to store)
     APP_VERSION: `${KEY_PREFIX}appVersion`,
-    LAST_BACKUP: `${KEY_PREFIX}lastBackupTimestamp`
+    LAST_BACKUP: `${KEY_PREFIX}lastBackupTimestamp`,
+    
+    // UI Visual Preferences (Fonts, etc.)
+    FONT_FAMILY: `${KEY_PREFIX}ui_fontFamily`,
+    FONT_SIZE: `${KEY_PREFIX}ui_fontSize`,
+    LINE_HEIGHT: `${KEY_PREFIX}ui_lineHeight`
 };
 
 // --- External Library Imports (CDN) ---
@@ -64,25 +66,15 @@ export const appState = {
 
 // --- Helper: Load Config from LocalStorage ---
 export function loadConfigFromStorage() {
-    // [CHANGED] Now uses namespaced keys
-    appState.geminiApiKey = localStorage.getItem(STORAGE_KEYS.GEMINI_KEY);
-    const firebaseConfigString = localStorage.getItem(STORAGE_KEYS.FB_CONFIG);
-    appState.googleClientId = localStorage.getItem(STORAGE_KEYS.GOOGLE_CLIENT_ID);
-    appState.googleSearchEngineId = localStorage.getItem(STORAGE_KEYS.GOOGLE_SEARCH_ID);
-    appState.algoliaAppId = localStorage.getItem(STORAGE_KEYS.ALGOLIA_APP_ID);
-    appState.algoliaSearchKey = localStorage.getItem(STORAGE_KEYS.ALGOLIA_KEY);
-
-    if (firebaseConfigString) {
-        try {
-            appState.firebaseConfig = JSON.parse(firebaseConfigString);
-        } catch (e) {
-            console.error("Failed to parse Firebase config from localStorage", e);
-            return false;
-        }
-    }
-
-    // Return true if critical keys exist
-    return !!(appState.geminiApiKey && appState.firebaseConfig);
+    // [CHANGED] This function no longer loads API keys. 
+    // It is effectively a "Check if App Version Matches" utility now.
+    
+    const storedVersion = localStorage.getItem(STORAGE_KEYS.APP_VERSION);
+    
+    // We return false to indicate "No Config Loaded" (forcing the modal),
+    // but we can still return the version status if needed.
+    // For the new "Always Prompt" flow, we simply return false regarding keys.
+    return false; 
 }
 
 // --- Helper: Get Hierarchy Base Path ---
