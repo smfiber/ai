@@ -126,7 +126,7 @@
         </main>
     </div>
 
-    <div id="apiKeyModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 modal">
+    <div id="apiKeyModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 modal">
         <div class="card p-8 w-full max-w-lg m-4 config-card">
             <h2 class="text-2xl font-bold mb-4">Application Setup</h2>
             <p class="themed-text-muted mb-6">Enter your credentials. These are saved locally and isolated to this application.</p>
@@ -157,14 +157,14 @@
         </div>
     </div>
     
-    <div id="loadingStateModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 modal">
+    <div id="loadingStateModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 modal">
         <div class="flex flex-col items-center">
             <div class="loader themed-loader" style="width: 48px; height: 48px;"></div>
             <p id="loading-message" class="text-white mt-4 font-semibold text-lg"></p>
         </div>
     </div>
     
-    <div id="inDepthModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 modal">
+    <div id="inDepthModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 modal">
         <div class="card w-full max-w-4xl m-4 flex flex-col overflow-hidden" style="max-height: 90vh;">
             <div class="p-6 border-b flex justify-between items-center shrink-0">
                 <h2 id="inDepthModalTitle" class="text-2xl font-bold themed-text-primary mb-0"></h2>
@@ -178,7 +178,7 @@
         </div>
     </div>
 
-    <div id="inDepthDetailedModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 modal">
+    <div id="inDepthDetailedModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 modal">
          <div class="card w-full max-w-4xl m-4 flex flex-col overflow-hidden" style="max-height: 90vh;">
             <div class="p-6 border-b flex justify-between items-center shrink-0">
                 <h2 id="inDepthDetailedModalTitle" class="text-2xl font-bold themed-text-primary mb-0"></h2>
@@ -192,7 +192,7 @@
         </div>
     </div>
 
-    <div id="themeGeneratorModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 modal">
+    <div id="themeGeneratorModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 modal">
         <div class="card p-8 w-full max-w-lg m-4">
             <h2 class="text-2xl font-bold mb-4">Generate Custom Theme</h2>
             <p class="text-sm themed-text-muted mb-4">Describe a mood (e.g., "Cyberpunk Psychology", "Victorian Library").</p>
@@ -202,7 +202,7 @@
         </div>
     </div>
     
-    <div id="messageModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 modal"></div>
+    <div id="messageModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 modal"></div>
 
     <div id="settings-panel" class="hidden">
         <h3 class="font-bold text-lg mb-4 pb-2 border-b">Settings</h3>
