@@ -9,7 +9,7 @@ import {
 } from './auth.js';
 import { 
     initializeFirebase, saveArticleToKB, markItemAsViewed, 
-    exportUserData, importUserData 
+    exportUserData, importUserData, getKnowledgeBaseContent 
 } from './firestore.js';
 import { 
     initializeUI, openModal, closeModal, displayMessageInModal, 
@@ -24,27 +24,23 @@ import {
 
 // --- Static Data: Comprehensive Domains ---
 const PSYCH_DOMAINS = [
-    { title: "Clinical Psychology", desc: "Mental health, disorders, and therapy.", icon: "M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" }, // DNA/Bio style
-    { title: "Cognitive Psychology", desc: "Memory, decision-making, and language.", icon: "M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" }, // Brain
-    { title: "Social Psychology", desc: "Group behavior, bias, and relationships.", icon: "M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" }, // Group
-    { title: "Developmental Psychology", desc: "Lifespan growth from childhood to aging.", icon: "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" }, // Clock/Time
-    { title: "Behavioral Neuroscience", desc: "Brain structure, chemistry, and genetics.", icon: "M13 10V3L4 14h7v7l9-11h-7z" }, // Lightning/Impulse
-    { title: "Industrial-Organizational", desc: "Workplace behavior and leadership.", icon: "M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" }, // Briefcase
-    { title: "Forensic Psychology", desc: "Psychology within the legal/criminal system.", icon: "M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" }, // Scales
-    { title: "Educational Psychology", desc: "How people learn and teaching methods.", icon: "M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" }, // Book
-    { title: "Health Psychology", desc: "Stress, wellness, and lifestyle factors.", icon: "M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" }, // Heart
-    { title: "Personality Psychology", desc: "Individual differences and character traits.", icon: "M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" }, // Face
-    { title: "Sports & Performance", desc: "Motivation, resilience, and peak performance.", icon: "M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" }, // Stats/Bar chart
-    { title: "Evolutionary Psychology", desc: "Adaptation and human nature.", icon: "M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" } // Globe
+    { title: "Clinical Psychology", desc: "Mental health, disorders, and therapy.", icon: "M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" },
+    { title: "Cognitive Psychology", desc: "Memory, decision-making, and language.", icon: "M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" },
+    { title: "Social Psychology", desc: "Group behavior, bias, and relationships.", icon: "M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" },
+    { title: "Developmental Psychology", desc: "Lifespan growth from childhood to aging.", icon: "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" },
+    { title: "Behavioral Neuroscience", desc: "Brain structure, chemistry, and genetics.", icon: "M13 10V3L4 14h7v7l9-11h-7z" },
+    { title: "Industrial-Organizational", desc: "Workplace behavior and leadership.", icon: "M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" },
+    { title: "Forensic Psychology", desc: "Psychology within the legal/criminal system.", icon: "M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" },
+    { title: "Educational Psychology", desc: "How people learn and teaching methods.", icon: "M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" },
+    { title: "Health Psychology", desc: "Stress, wellness, and lifestyle factors.", icon: "M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" },
+    { title: "Personality Psychology", desc: "Individual differences and character traits.", icon: "M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" },
+    { title: "Sports & Performance", desc: "Motivation, resilience, and peak performance.", icon: "M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" },
+    { title: "Evolutionary Psychology", desc: "Adaptation and human nature.", icon: "M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" }
 ];
-
-// --- Initialization ---
 
 document.addEventListener('DOMContentLoaded', () => {
     initializeUI();
     setupEventListeners();
-    
-    // Render Static Domains Immediately
     renderDomainExplorer();
 
     localStorage.removeItem('psych_geminiApiKey'); 
@@ -58,7 +54,6 @@ document.addEventListener('DOMContentLoaded', () => {
     openModal('apiKeyModal');
 });
 
-// [ADDED] Render the 12 Domain Cards
 function renderDomainExplorer() {
     const container = document.getElementById('domain-explorer-container');
     if (!container) return;
@@ -80,9 +75,7 @@ function renderDomainExplorer() {
     `).join('');
 }
 
-// [ADDED] Global Handler for the onclick event in HTML string
 window.triggerDomainSearch = (title) => {
-    // Defaults to "Science Journalist" and "Casual" for exploration
     generateAndPopulateTopicCard(title, "Science Journalist", "Casual", "Comprehensive overview of this field.");
 };
 
@@ -133,7 +126,7 @@ export function setupAuthUI(user) {
          authStatusEl.innerHTML = `
              <div class="flex gap-2">
                  <button id="auth-settings-btn" class="bg-white/10 backdrop-blur-sm hover:bg-white/20 text-white p-2 rounded-full transition-all" title="API Settings">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
                  </button>
                  <button id="login-button" class="bg-green-600 hover:bg-green-500 text-white font-semibold py-2 px-4 rounded-full flex items-center justify-center gap-2 shadow-lg transition-all transform hover:-translate-y-0.5" title="Sign In with Google">
                     <span>Login</span>
@@ -170,10 +163,8 @@ async function handleApiKeySubmit(e) {
         if(googleClientId) appState.googleClientId = googleClientId;
 
         document.getElementById('api-key-error').classList.add('hidden');
-        
         initializeFirebase();
         initializeGoogleApiClients();
-        
         closeModal('apiKeyModal');
 
     } catch (err) {
@@ -414,8 +405,6 @@ async function handleExploreInDepth(topicId, fullHierarchyPath) {
     const categoryId = fullHierarchyPath[fullHierarchyPath.length - 1]?.id || Object.keys(appState.allThemeData).find(k => appState.allThemeData[k].find(i => i.id == topicId));
     
     if(!categoryId) {
-        // Fallback for direct calls from domain exploration if ID matching fails
-        // We just use the topic ID as the title if it's not found in data
         generateCustomArticle(fullHierarchyPath[0]?.title || topicId, "Science Journalist", "Casual", "");
         return;
     }
@@ -428,6 +417,73 @@ async function handleExploreInDepth(topicId, fullHierarchyPath) {
         generateCustomArticle(fullHierarchyPath[0]?.title || "Psychology Topic", "Science Journalist", "Casual", "");
     }
 }
+
+// [ADDED] Library Handler
+async function handleOpenLibrary() {
+    if (!appState.userId) {
+        displayMessageInModal("Please login to access your library.", "warning");
+        return;
+    }
+    
+    openModal('libraryModal');
+    const content = document.getElementById('libraryModalContent');
+    content.innerHTML = getLoaderHTML("Fetching your saved articles...");
+    
+    try {
+        const items = await getKnowledgeBaseContent();
+        renderLibraryItems(items);
+    } catch(e) {
+        content.innerHTML = `<p class="text-red-500 p-4">Error loading library: ${e.message}</p>`;
+    }
+}
+
+// [ADDED] Library Renderer
+function renderLibraryItems(items) {
+    const content = document.getElementById('libraryModalContent');
+    if (!items || items.length === 0) {
+        content.innerHTML = `<div class="col-span-full text-center p-8 text-gray-500">Your library is empty. Save an article to see it here.</div>`;
+        return;
+    }
+
+    content.innerHTML = items.map(item => `
+        <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between h-full">
+            <div>
+                <h3 class="font-bold text-lg text-gray-800 mb-1 line-clamp-2">${item.title}</h3>
+                <p class="text-xs text-green-600 font-semibold uppercase mb-2">${item.type || 'Article'}</p>
+                <p class="text-xs text-gray-400">Saved: ${item.createdAt ? new Date(item.createdAt.seconds * 1000).toLocaleDateString() : 'Just now'}</p>
+            </div>
+            <button onclick="window.openSavedArticle('${item.id}')" class="mt-4 w-full btn-secondary text-sm border-green-200 text-green-700 hover:bg-green-50">Read Now</button>
+        </div>
+    `).join('');
+    
+    // Store items in memory for search filtering
+    appState.libraryCache = items;
+}
+
+// [ADDED] Open Saved Article Logic
+window.openSavedArticle = (id) => {
+    const item = appState.libraryCache.find(i => i.id === id);
+    if (!item) return;
+
+    // We reuse the inDepthModal for reading
+    const titleEl = document.getElementById('inDepthModalTitle');
+    const contentEl = document.getElementById('inDepthModalContent');
+    const footerEl = document.getElementById('inDepthModalFooter');
+    const buttonContainer = document.getElementById('inDepthModalButtons');
+
+    titleEl.textContent = item.title;
+    contentEl.innerHTML = '';
+    
+    // Render the markdown content
+    renderAccordionFromMarkdown(item.markdownContent, contentEl);
+    
+    // Hide buttons since it's saved
+    buttonContainer.innerHTML = ''; 
+    footerEl.dataset.fullTitle = item.title;
+    
+    closeModal('libraryModal');
+    openModal('inDepthModal');
+};
 
 async function handleExportData() {
     try {
@@ -506,6 +562,16 @@ function setupEventListeners() {
 
     document.getElementById('export-data-button')?.addEventListener('click', handleExportData);
     document.getElementById('import-data-button')?.addEventListener('click', handleImportData);
+    
+    // [ADDED] Library Listeners
+    document.getElementById('my-library-btn')?.addEventListener('click', handleOpenLibrary);
+    
+    // Library Search Filter
+    document.getElementById('library-search')?.addEventListener('input', (e) => {
+        const term = e.target.value.toLowerCase();
+        const filtered = appState.libraryCache.filter(item => item.title.toLowerCase().includes(term));
+        renderLibraryItems(filtered);
+    });
 
     document.addEventListener('click', (e) => {
         const target = e.target;
