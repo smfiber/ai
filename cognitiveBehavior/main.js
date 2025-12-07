@@ -16,7 +16,8 @@ import {
     generateAndApplyDefaultTheme, getLoaderHTML, 
     renderAccordionFromMarkdown, 
     populateCardGridSelector, truncateText, 
-    displayImportedGuide, applyTheme
+    displayImportedGuide, applyTheme,
+    toggleSpeech 
 } from './ui.js';
 import { 
     getPsychologyArticlePrompt
@@ -595,6 +596,15 @@ function setupEventListeners() {
             displayMessageInModal("Saved to Knowledge Base", "success");
         }
 
+        // [ADDED] Read Aloud Listener
+        if (target.closest('#read-aloud-btn')) {
+            const btn = target.closest('#read-aloud-btn');
+            const footer = document.getElementById('inDepthDetailedModalFooter');
+            const fullTitle = footer.dataset.fullTitle;
+            const text = appState.originalGeneratedText.get(fullTitle);
+            if (text) toggleSpeech(text, btn);
+        }
+
         if (target.id.startsWith('close') && target.closest('.modal')) {
             closeModal(target.closest('.modal').id);
         }
@@ -613,7 +623,21 @@ function addModalActionButtons(container, isInitial, hasAuth) {
 }
 
 function addDetailedModalActionButtons(container, hasAuth) {
-    addModalActionButtons(container, false, hasAuth);
+    // [UPDATED] Added "Read Aloud" button here
+    let html = `<button class="btn-secondary text-sm copy-button py-2 px-4 shadow-sm hover:shadow-md transition-shadow">Copy Text</button>`;
+    
+    // Read Aloud Button (with Speaker Icon)
+    html += `
+        <button id="read-aloud-btn" class="btn-secondary text-sm py-2 px-4 shadow-sm hover:shadow-md transition-shadow flex items-center gap-2 text-green-700 border-green-200 hover:bg-green-50">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path></svg>
+            Read Aloud
+        </button>
+    `;
+
+    html += `<button id="add-to-kb-btn" class="btn-primary text-sm px-6 py-2 shadow-md hover:shadow-lg transition-shadow">Add to KB</button>`;
+    if(hasAuth) html += `<button id="save-to-drive-btn" class="btn-secondary text-sm py-2 px-4">Save to Drive</button>`;
+    
+    container.innerHTML = html;
 }
 
 function addPostGenerationButtons(container, topicId, categoryId) {
