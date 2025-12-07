@@ -1,16 +1,14 @@
 // config.js
 
 // --- Application Constants ---
-export const APP_VERSION = "2.0.1-psych";
-// [CHANGED] Updated to ensure uniqueness in Firestore paths
+// [CHANGED] Version bumped to reflect Rich UI + Casual Persona update
+export const APP_VERSION = "2.1.0-psych";
 export const APP_ID = 'psych-research-assistant-v1'; 
 export const DEFAULT_THEME_PROMPT = "Calm Academic Library";
 
 // --- Storage Keys Namespace ---
-// [ADDED] unique prefixes to prevent conflict with other localhost apps
 const KEY_PREFIX = 'psych_';
 
-// [CHANGED] Removed Sensitive API Keys from Storage Definitions
 export const STORAGE_KEYS = {
     // UI & State Preferences (Safe to store)
     APP_VERSION: `${KEY_PREFIX}appVersion`,
@@ -66,14 +64,8 @@ export const appState = {
 
 // --- Helper: Load Config from LocalStorage ---
 export function loadConfigFromStorage() {
-    // [CHANGED] This function no longer loads API keys. 
-    // It is effectively a "Check if App Version Matches" utility now.
-    
-    const storedVersion = localStorage.getItem(STORAGE_KEYS.APP_VERSION);
-    
-    // We return false to indicate "No Config Loaded" (forcing the modal),
-    // but we can still return the version status if needed.
-    // For the new "Always Prompt" flow, we simply return false regarding keys.
+    // Returns false to ensure the app always checks/prompts for keys on fresh load
+    // while keeping user preferences intact.
     return false; 
 }
 
