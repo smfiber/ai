@@ -1,5 +1,5 @@
 // main.js
-import { appState, loadConfigFromStorage } from './config.js';
+import { appState, loadConfigFromStorage, APP_VERSION } from './config.js';
 import { 
     callGeminiAPI, searchGoogleForTopic, parseJsonWithCorrections 
 } from './api.js';
@@ -30,15 +30,22 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeUI();
     setupEventListeners();
 
-    if (loadConfigFromStorage()) {
-        initializeFirebase(); // This calls firestore.js, which eventually calls setupAuthUI back here
+    // Version Check: Force Modal if version mismatch
+    const storedVersion = localStorage.getItem('appVersion');
+    const configLoaded = loadConfigFromStorage();
+
+    if (configLoaded && storedVersion === APP_VERSION) {
+        // Config exists and version matches -> Start App
+        initializeFirebase();
         initializeGoogleApiClients();
     } else {
+        // Config missing OR Old Version -> Open Setup Modal
+        // We pre-fill the inputs with existing keys in the UI if they exist (handled in index.html logic if we added it, 
+        // but here we just open the modal).
         openModal('apiKeyModal');
     }
 });
 
-// [FIXED] Added 'export' so firestore.js can import this
 export async function initializeAppContent() {
     if (appState.appIsInitialized) return;
     appState.appIsInitialized = true;
@@ -63,7 +70,6 @@ export async function initializeAppContent() {
     }
 }
 
-// [FIXED] Added this function to handle the Header UI (User Avatar vs Login Button)
 export function setupAuthUI(user) {
     const authStatusEl = document.getElementById('auth-status');
     const appContainer = document.getElementById('app-container');
@@ -88,16 +94,22 @@ export function setupAuthUI(user) {
     } else {
          if (appContainer) appContainer.classList.add('hidden');
          
-         // Render Login Button
+         // Render Login Button + Settings Button (For accessing API keys when logged out)
          authStatusEl.innerHTML = `
-             <button id="login-button" class="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white font-semibold py-2 px-4 rounded-full flex items-center justify-center gap-2" title="Sign In with Google">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 48 48" fill="none"><path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8c-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4C12.955 4 4 12.955 4 24s8.955 20 20 20s20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"></path><path fill="#FF3D00" d="m6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4C16.318 4 9.656 8.337 6.306 14.691z"></path><path fill="#4CAF50" d="M24 44c5.166 0 9.599-1.521 12.643-4.001L30.27 34.138C28.714 36.548 26.521 38 24 38c-5.223 0-9.657-3.341-11.303-7.918l-6.573 4.818C9.656 39.663 16.318 44 24 44z"></path><path fill="#1976D2" d="M43.611 20.083H24v8h11.303c-.792 2.237-2.231 4.16-4.082 5.571l5.657 5.657C41.389 36.197 44 30.669 44 24c0-1.341-.138-2.65-.389-3.917z"></path></svg>
-                 <span>Login with Google</span>
-            </button>
+             <div class="flex gap-2">
+                 <button id="auth-settings-btn" class="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white p-2 rounded-full" title="API Settings">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                 </button>
+                 <button id="login-button" class="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white font-semibold py-2 px-4 rounded-full flex items-center justify-center gap-2" title="Sign In with Google">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 48 48" fill="none"><path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8c-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4C12.955 4 4 12.955 4 24s8.955 20 20 20s20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"></path><path fill="#FF3D00" d="m6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4C16.318 4 9.656 8.337 6.306 14.691z"></path><path fill="#4CAF50" d="M24 44c5.166 0 9.599-1.521 12.643-4.001L30.27 34.138C28.714 36.548 26.521 38 24 38c-5.223 0-9.657-3.341-11.303-7.918l-6.573 4.818C9.656 39.663 16.318 44 24 44z"></path><path fill="#1976D2" d="M43.611 20.083H24v8h11.303c-.792 2.237-2.231 4.16-4.082 5.571l5.657 5.657C41.389 36.197 44 30.669 44 24c0-1.341-.138-2.65-.389-3.917z"></path></svg>
+                     <span>Login with Google</span>
+                </button>
+            </div>
         `;
         document.getElementById('login-button').addEventListener('click', handleFirebaseLogin);
+        document.getElementById('auth-settings-btn').addEventListener('click', () => openModal('apiKeyModal'));
         
-        // Show API Key modal if keys are missing
+        // Ensure modal is open if no keys exist (Fallback)
         if (!localStorage.getItem('geminiApiKey')) {
              openModal('apiKeyModal');
         }
@@ -128,6 +140,10 @@ async function handleApiKeySubmit(e) {
 
         localStorage.setItem('geminiApiKey', geminiKey);
         localStorage.setItem('firebaseConfig', JSON.stringify(config));
+        
+        // [FIXED] Save the App Version to prevent the modal from reappearing on next reload
+        localStorage.setItem('appVersion', APP_VERSION);
+
         if(googleClientId) localStorage.setItem('googleClientId', googleClientId);
         if(googleSearchId) localStorage.setItem('googleSearchEngineId', googleSearchId);
         if(algoliaAppId) localStorage.setItem('algoliaAppId', algoliaAppId);
