@@ -1,18 +1,29 @@
 // config.js
 
 // --- Application Constants ---
-export const APP_VERSION = "2.0.0-psych";
-export const APP_ID = 'everything-psychology-v1'; // [CHANGED] New database namespace
-export const DEFAULT_THEME_PROMPT = "Calm Academic Library"; // [CHANGED] New default visual theme
+export const APP_VERSION = "2.0.1-psych";
+// [CHANGED] Updated to ensure uniqueness in Firestore paths
+export const APP_ID = 'psych-research-assistant-v1'; 
+export const DEFAULT_THEME_PROMPT = "Calm Academic Library";
+
+// --- Storage Keys Namespace ---
+// [ADDED] unique prefixes to prevent conflict with other localhost apps
+const KEY_PREFIX = 'psych_';
+export const STORAGE_KEYS = {
+    GEMINI_KEY: `${KEY_PREFIX}geminiApiKey`,
+    FB_CONFIG: `${KEY_PREFIX}firebaseConfig`,
+    GOOGLE_CLIENT_ID: `${KEY_PREFIX}googleClientId`,
+    GOOGLE_SEARCH_ID: `${KEY_PREFIX}googleSearchEngineId`,
+    ALGOLIA_APP_ID: `${KEY_PREFIX}algoliaAppId`,
+    ALGOLIA_KEY: `${KEY_PREFIX}algoliaSearchKey`,
+    APP_VERSION: `${KEY_PREFIX}appVersion`,
+    LAST_BACKUP: `${KEY_PREFIX}lastBackupTimestamp`
+};
 
 // --- External Library Imports (CDN) ---
-// We export these strings to ensure consistent versioning across modules if needed,
-// though modules will usually import directly.
 export const FIREBASE_SDK_URL = "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 
 // --- Global State Container ---
-// We use a shared state object to manage dependencies (like db, auth) across modules
-// without relying on the global 'window' scope.
 export const appState = {
     db: null,
     auth: null,
@@ -53,12 +64,13 @@ export const appState = {
 
 // --- Helper: Load Config from LocalStorage ---
 export function loadConfigFromStorage() {
-    appState.geminiApiKey = localStorage.getItem('geminiApiKey');
-    const firebaseConfigString = localStorage.getItem('firebaseConfig');
-    appState.googleClientId = localStorage.getItem('googleClientId');
-    appState.googleSearchEngineId = localStorage.getItem('googleSearchEngineId');
-    appState.algoliaAppId = localStorage.getItem('algoliaAppId');
-    appState.algoliaSearchKey = localStorage.getItem('algoliaSearchKey');
+    // [CHANGED] Now uses namespaced keys
+    appState.geminiApiKey = localStorage.getItem(STORAGE_KEYS.GEMINI_KEY);
+    const firebaseConfigString = localStorage.getItem(STORAGE_KEYS.FB_CONFIG);
+    appState.googleClientId = localStorage.getItem(STORAGE_KEYS.GOOGLE_CLIENT_ID);
+    appState.googleSearchEngineId = localStorage.getItem(STORAGE_KEYS.GOOGLE_SEARCH_ID);
+    appState.algoliaAppId = localStorage.getItem(STORAGE_KEYS.ALGOLIA_APP_ID);
+    appState.algoliaSearchKey = localStorage.getItem(STORAGE_KEYS.ALGOLIA_KEY);
 
     if (firebaseConfigString) {
         try {
