@@ -1,4 +1,6 @@
-/* Config Modal Specifics */
+/* style.css */
+
+/* --- Config Modal Specifics --- */
 .config-card {
     max-width: 500px;
     width: 90%;
@@ -51,4 +53,97 @@ textarea {
     cursor: pointer;
     text-decoration: underline;
     margin-top: 10px;
+}
+
+/* --- Settings Panel & Floating Buttons --- */
+
+.floating-action-button {
+    position: fixed;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background-color: var(--color-primary, #1f2937); /* Fallback color */
+    color: var(--color-button-text, #ffffff);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 40;
+    border: none;
+    font-size: 1.25rem;
+    transition: transform 0.2s, background-color 0.2s;
+}
+
+.floating-action-button:hover {
+    transform: scale(1.05);
+    filter: brightness(110%);
+}
+
+#settings-panel {
+    position: fixed;
+    bottom: 5rem; /* Above the gear icon */
+    right: 2rem;
+    width: 300px;
+    background-color: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.75rem;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    padding: 1.5rem;
+    z-index: 50;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.2s ease-out, transform 0.2s ease-out;
+    pointer-events: none; /* Click-through when hidden */
+}
+
+#settings-panel.active {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+
+#settings-panel.hidden {
+    display: block; /* Override Tailwind hidden to use opacity transition */
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* --- Loader Override --- */
+.themed-loader {
+    border: 3px solid var(--color-bg, #f3f4f6); 
+    border-top: 3px solid var(--color-accent, #3b82f6);
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* --- Modal Base Z-Index Fix --- */
+.modal {
+    z-index: 100; /* Ensure modals are always on top */
+}
+
+/* --- Scrollbar Customization (Optional but nice) --- */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1; 
+}
+
+::-webkit-scrollbar-thumb {
+    background: #cbd5e1; 
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8; 
 }
