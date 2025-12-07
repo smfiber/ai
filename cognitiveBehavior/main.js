@@ -1,5 +1,5 @@
 // main.js
-import { appState, loadConfigFromStorage, APP_VERSION } from './config.js';
+import { appState, loadConfigFromStorage, APP_VERSION, STORAGE_KEYS } from './config.js';
 import { 
     callGeminiAPI, searchGoogleForTopic, parseJsonWithCorrections 
 } from './api.js';
@@ -27,14 +27,12 @@ import {
 // --- Initialization ---
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Explicitly clear local storage to reset application state and remove cache
-    localStorage.clear();
-
     initializeUI();
     setupEventListeners();
 
     // Version Check: Force Modal if version mismatch
-    const storedVersion = localStorage.getItem('appVersion');
+    // [CHANGED] Use namespaced keys
+    const storedVersion = localStorage.getItem(STORAGE_KEYS.APP_VERSION);
     const configLoaded = loadConfigFromStorage();
 
     if (configLoaded && storedVersion === APP_VERSION) {
@@ -43,8 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
         initializeGoogleApiClients();
     } else {
         // Config missing OR Old Version -> Open Setup Modal
-        // We pre-fill the inputs with existing keys in the UI if they exist (handled in index.html logic if we added it, 
-        // but here we just open the modal).
+        // We pre-fill the inputs with existing keys in the UI if they exist
         openModal('apiKeyModal');
     }
 });
@@ -57,7 +54,8 @@ export async function initializeAppContent() {
     document.getElementById('loading-message').textContent = "Initializing Research Assistant...";
     
     // Check for backup reminder logic
-    const lastBackup = localStorage.getItem('lastBackupTimestamp');
+    // [CHANGED] Use namespaced key
+    const lastBackup = localStorage.getItem(STORAGE_KEYS.LAST_BACKUP);
     if (lastBackup && (Date.now() - parseInt(lastBackup) > 604800000)) { // 7 days
         document.getElementById('backup-reminder-banner').classList.remove('hidden');
     }
@@ -113,7 +111,8 @@ export function setupAuthUI(user) {
         document.getElementById('auth-settings-btn').addEventListener('click', () => openModal('apiKeyModal'));
         
         // Ensure modal is open if no keys exist (Fallback)
-        if (!localStorage.getItem('geminiApiKey')) {
+        // [CHANGED] Use namespaced key
+        if (!localStorage.getItem(STORAGE_KEYS.GEMINI_KEY)) {
              openModal('apiKeyModal');
         }
     }
@@ -141,16 +140,15 @@ async function handleApiKeySubmit(e) {
         
         if (!config.apiKey || !config.projectId) throw new Error("Invalid Firebase Config properties.");
 
-        localStorage.setItem('geminiApiKey', geminiKey);
-        localStorage.setItem('firebaseConfig', JSON.stringify(config));
-        
-        // [FIXED] Save the App Version to prevent the modal from reappearing on next reload
-        localStorage.setItem('appVersion', APP_VERSION);
+        // [CHANGED] Save using namespaced keys
+        localStorage.setItem(STORAGE_KEYS.GEMINI_KEY, geminiKey);
+        localStorage.setItem(STORAGE_KEYS.FB_CONFIG, JSON.stringify(config));
+        localStorage.setItem(STORAGE_KEYS.APP_VERSION, APP_VERSION);
 
-        if(googleClientId) localStorage.setItem('googleClientId', googleClientId);
-        if(googleSearchId) localStorage.setItem('googleSearchEngineId', googleSearchId);
-        if(algoliaAppId) localStorage.setItem('algoliaAppId', algoliaAppId);
-        if(algoliaKey) localStorage.setItem('algoliaSearchKey', algoliaKey);
+        if(googleClientId) localStorage.setItem(STORAGE_KEYS.GOOGLE_CLIENT_ID, googleClientId);
+        if(googleSearchId) localStorage.setItem(STORAGE_KEYS.GOOGLE_SEARCH_ID, googleSearchId);
+        if(algoliaAppId) localStorage.setItem(STORAGE_KEYS.ALGOLIA_APP_ID, algoliaAppId);
+        if(algoliaKey) localStorage.setItem(STORAGE_KEYS.ALGOLIA_KEY, algoliaKey);
 
         if (loadConfigFromStorage()) {
             initializeFirebase();
