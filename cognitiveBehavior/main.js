@@ -27,6 +27,9 @@ import {
 // --- Initialization ---
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Explicitly clear local storage to reset application state and remove cache
+    localStorage.clear();
+
     initializeUI();
     setupEventListeners();
 
