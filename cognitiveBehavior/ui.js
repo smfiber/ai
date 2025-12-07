@@ -3,6 +3,10 @@ import { appState, DEFAULT_THEME_PROMPT } from './config.js';
 import { callColorGenAPI } from './api.js';
 import { markItemAsViewed } from './firestore.js';
 
+// --- Constants for Isolation ---
+// ensuring we don't conflict with other apps on localhost
+const UI_STORAGE_PREFIX = 'psych_ui_';
+
 // --- Global UI Init ---
 export function initializeUI() {
     marked.setOptions({
@@ -13,10 +17,80 @@ export function initializeUI() {
         breaks: true,
     });
     
-    // Set default font settings if not in CSS
+    // [ADDED] Apply isolated user preferences on load
+    applyUserPreferences();
+    
+    // [ADDED] Initialize the settings panel logic
+    populateSettingsPanel();
+}
+
+// --- User Preferences & Settings Panel ---
+
+function applyUserPreferences() {
     const root = document.documentElement;
-    if (!root.style.getPropertyValue('--font-family')) {
-        root.style.setProperty('--font-family', "'Inter', sans-serif");
+    
+    const savedFont = localStorage.getItem(`${UI_STORAGE_PREFIX}fontFamily`);
+    const savedSize = localStorage.getItem(`${UI_STORAGE_PREFIX}fontSize`);
+    const savedLineHeight = localStorage.getItem(`${UI_STORAGE_PREFIX}lineHeight`);
+
+    if (savedFont) root.style.setProperty('--font-family', savedFont);
+    else root.style.setProperty('--font-family', "'Inter', sans-serif");
+
+    if (savedSize) root.style.fontSize = savedSize;
+    if (savedLineHeight) document.body.style.lineHeight = savedLineHeight;
+}
+
+function populateSettingsPanel() {
+    const families = [
+        { name: "Inter (Default)", value: "'Inter', sans-serif" },
+        { name: "Lato", value: "'Lato', sans-serif" },
+        { name: "Montserrat", value: "'Montserrat', sans-serif" },
+        { name: "Open Sans", value: "'Open Sans', sans-serif" },
+        { name: "Roboto Slab", value: "'Roboto Slab', serif" },
+        { name: "System UI", value: "system-ui, sans-serif" }
+    ];
+    const sizes = ["14px", "16px", "18px", "20px"];
+    const heights = ["1.5", "1.6", "1.8", "2.0"];
+
+    const fSelect = document.getElementById('font-family-select');
+    const sSelect = document.getElementById('font-size-select');
+    const hSelect = document.getElementById('line-height-select');
+    
+    // Only proceed if the settings panel exists in HTML
+    if (!fSelect || !sSelect || !hSelect) return;
+
+    // Font Family
+    fSelect.innerHTML = families.map(f => `<option value="${f.value}">${f.name}</option>`).join('');
+    fSelect.value = localStorage.getItem(`${UI_STORAGE_PREFIX}fontFamily`) || families[0].value;
+    fSelect.onchange = (e) => {
+        document.documentElement.style.setProperty('--font-family', e.target.value);
+        localStorage.setItem(`${UI_STORAGE_PREFIX}fontFamily`, e.target.value);
+    };
+
+    // Font Size
+    sSelect.innerHTML = sizes.map(s => `<option value="${s}">${s}</option>`).join('');
+    sSelect.value = localStorage.getItem(`${UI_STORAGE_PREFIX}fontSize`) || "16px";
+    sSelect.onchange = (e) => {
+        document.documentElement.style.fontSize = e.target.value;
+        localStorage.setItem(`${UI_STORAGE_PREFIX}fontSize`, e.target.value);
+    };
+
+    // Line Height
+    hSelect.innerHTML = heights.map(h => `<option value="${h}">${h}</option>`).join('');
+    hSelect.value = localStorage.getItem(`${UI_STORAGE_PREFIX}lineHeight`) || "1.5";
+    hSelect.onchange = (e) => {
+        document.body.style.lineHeight = e.target.value;
+        localStorage.setItem(`${UI_STORAGE_PREFIX}lineHeight`, e.target.value);
+    };
+    
+    // Settings Panel Toggle Logic
+    const settingsBtn = document.getElementById('settings-button');
+    const settingsPanel = document.getElementById('settings-panel');
+    if (settingsBtn && settingsPanel) {
+        settingsBtn.onclick = () => {
+            settingsPanel.classList.toggle('hidden');
+            settingsPanel.classList.toggle('active'); // for potential CSS animations
+        };
     }
 }
 
@@ -246,14 +320,6 @@ function createGridItemHtml(item, categoryId, type) {
         indicatorHtml = `<div class="indicator sticky-indicator" title="Sticky Topic"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 01-1.414 1.414L13 7.414V17a1 1 0 11-2 0V7.414L7.707 10.707a1 1 0 01-1.414-1.414l4-4z" clip-rule="evenodd" /></svg></div>`;
     } else if (type === 'user') {
         indicatorHtml = `<div class="indicator" style="background-color: #f59e0b;" title="Your Topic"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-3 h-3"><path d="M10 8a3 3 0 100-6 3 3 0 000 6zM3.465 14.493a1.23 1.23 0 00.41 1.412A9.957 9.957 0 0010 18c2.31 0 4.438-.784 6.131-2.1.43-.333.604-.903.41-1.412A6.962 6.962 0 0010 11.5c-2.25 0-4.33.9-5.535 2.993z"></path></svg></div>`;
-    } else {
-        // Check viewed status
-        // We need the parent card title to check viewed status accurately based on composite key logic
-        // This is a slight limitation of the modular split, we'll check viewed status via JS logic after render or pass it in.
-        // For simplicity, we'll render without and let the logic in main.js apply the class, OR we check appState here:
-        // Note: Checking appState.viewedItemIds requires constructing the key: "CategoryTitle - TopicTitle".
-        // Accessing the CategoryTitle here is hard without passing it down. 
-        // Strategy: We will check logic in main.js to update viewed status classes on render or interaction.
     }
 
     return `
