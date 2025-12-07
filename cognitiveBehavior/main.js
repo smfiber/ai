@@ -12,7 +12,8 @@ import {
     listenForStickyTopics, listenForUserAddedTopics, addStickyTopic, 
     addUserTopic, updateStickyTopic, deleteStickyTopic, 
     getHierarchyData, addHierarchyItem, updateHierarchyItem, deleteHierarchyItem,
-    loadKbItem, getKnowledgeBaseContent
+    loadKbItem, getKnowledgeBaseContent,
+    exportUserData, importUserData 
 } from './firestore.js';
 import { 
     initializeUI, openModal, closeModal, displayMessageInModal, 
@@ -31,7 +32,6 @@ document.addEventListener('DOMContentLoaded', () => {
     setupEventListeners();
 
     // Version Check: Force Modal if version mismatch
-    // [CHANGED] Use namespaced keys
     const storedVersion = localStorage.getItem(STORAGE_KEYS.APP_VERSION);
     const configLoaded = loadConfigFromStorage();
 
@@ -41,7 +41,6 @@ document.addEventListener('DOMContentLoaded', () => {
         initializeGoogleApiClients();
     } else {
         // Config missing OR Old Version -> Open Setup Modal
-        // We pre-fill the inputs with existing keys in the UI if they exist
         openModal('apiKeyModal');
     }
 });
@@ -54,7 +53,6 @@ export async function initializeAppContent() {
     document.getElementById('loading-message').textContent = "Initializing Research Assistant...";
     
     // Check for backup reminder logic
-    // [CHANGED] Use namespaced key
     const lastBackup = localStorage.getItem(STORAGE_KEYS.LAST_BACKUP);
     if (lastBackup && (Date.now() - parseInt(lastBackup) > 604800000)) { // 7 days
         document.getElementById('backup-reminder-banner').classList.remove('hidden');
@@ -111,7 +109,6 @@ export function setupAuthUI(user) {
         document.getElementById('auth-settings-btn').addEventListener('click', () => openModal('apiKeyModal'));
         
         // Ensure modal is open if no keys exist (Fallback)
-        // [CHANGED] Use namespaced key
         if (!localStorage.getItem(STORAGE_KEYS.GEMINI_KEY)) {
              openModal('apiKeyModal');
         }
@@ -140,7 +137,6 @@ async function handleApiKeySubmit(e) {
         
         if (!config.apiKey || !config.projectId) throw new Error("Invalid Firebase Config properties.");
 
-        // [CHANGED] Save using namespaced keys
         localStorage.setItem(STORAGE_KEYS.GEMINI_KEY, geminiKey);
         localStorage.setItem(STORAGE_KEYS.FB_CONFIG, JSON.stringify(config));
         localStorage.setItem(STORAGE_KEYS.APP_VERSION, APP_VERSION);
@@ -388,6 +384,66 @@ async function handleExploreInDepth(topicId, fullHierarchyPath) {
     }
 }
 
+// --- Data Export / Import Handlers ---
+
+async function handleExportData() {
+    try {
+        const btn = document.getElementById('export-data-button');
+        const originalText = btn.textContent;
+        btn.textContent = "Exporting...";
+        btn.disabled = true;
+
+        const data = await exportUserData();
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(data));
+        const downloadAnchorNode = document.createElement('a');
+        downloadAnchorNode.setAttribute("href", dataStr);
+        downloadAnchorNode.setAttribute("download", `psych-research-backup-${new Date().toISOString().slice(0,10)}.json`);
+        document.body.appendChild(downloadAnchorNode); // required for firefox
+        downloadAnchorNode.click();
+        downloadAnchorNode.remove();
+
+        // Update Backup Timestamp to silence reminder
+        const now = Date.now().toString();
+        localStorage.setItem(STORAGE_KEYS.LAST_BACKUP, now);
+        document.getElementById('backup-reminder-banner').classList.add('hidden');
+        
+        displayMessageInModal("Data exported successfully.", "success");
+    } catch (error) {
+        console.error("Export failed:", error);
+        displayMessageInModal(`Export failed: ${error.message}`, "error");
+    } finally {
+        const btn = document.getElementById('export-data-button');
+        btn.textContent = "Export Data";
+        btn.disabled = false;
+    }
+}
+
+function handleImportData() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    
+    input.onchange = e => {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        const reader = new FileReader();
+        reader.onload = async (event) => {
+            try {
+                const json = JSON.parse(event.target.result);
+                const count = await importUserData(json);
+                displayMessageInModal(`Successfully imported ${count} items. Refresh to see changes.`, "success");
+            } catch (error) {
+                console.error("Import failed:", error);
+                displayMessageInModal(`Import failed: ${error.message}`, "error");
+            }
+        };
+        reader.readAsText(file);
+    };
+    
+    input.click();
+}
+
 function setupEventListeners() {
     document.getElementById('apiKeyForm')?.addEventListener('submit', handleApiKeySubmit);
     document.getElementById('auth-button')?.addEventListener('click', () => {
@@ -404,6 +460,10 @@ function setupEventListeners() {
         const c = await import('./api.js').then(m => m.callColorGenAPI(p));
         import('./ui.js').then(m => { m.applyTheme(c); m.closeModal('themeGeneratorModal'); });
     });
+
+    // Data Management Listeners
+    document.getElementById('export-data-button')?.addEventListener('click', handleExportData);
+    document.getElementById('import-data-button')?.addEventListener('click', handleImportData);
 
     document.addEventListener('click', (e) => {
         const target = e.target;
