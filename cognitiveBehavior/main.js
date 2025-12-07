@@ -22,26 +22,69 @@ import {
     getPsychologyArticlePrompt
 } from './prompts.js';
 
+// --- Static Data: Comprehensive Domains ---
+const PSYCH_DOMAINS = [
+    { title: "Clinical Psychology", desc: "Mental health, disorders, and therapy.", icon: "M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" }, // DNA/Bio style
+    { title: "Cognitive Psychology", desc: "Memory, decision-making, and language.", icon: "M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" }, // Brain
+    { title: "Social Psychology", desc: "Group behavior, bias, and relationships.", icon: "M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" }, // Group
+    { title: "Developmental Psychology", desc: "Lifespan growth from childhood to aging.", icon: "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" }, // Clock/Time
+    { title: "Behavioral Neuroscience", desc: "Brain structure, chemistry, and genetics.", icon: "M13 10V3L4 14h7v7l9-11h-7z" }, // Lightning/Impulse
+    { title: "Industrial-Organizational", desc: "Workplace behavior and leadership.", icon: "M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" }, // Briefcase
+    { title: "Forensic Psychology", desc: "Psychology within the legal/criminal system.", icon: "M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" }, // Scales
+    { title: "Educational Psychology", desc: "How people learn and teaching methods.", icon: "M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" }, // Book
+    { title: "Health Psychology", desc: "Stress, wellness, and lifestyle factors.", icon: "M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" }, // Heart
+    { title: "Personality Psychology", desc: "Individual differences and character traits.", icon: "M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" }, // Face
+    { title: "Sports & Performance", desc: "Motivation, resilience, and peak performance.", icon: "M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" }, // Stats/Bar chart
+    { title: "Evolutionary Psychology", desc: "Adaptation and human nature.", icon: "M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" } // Globe
+];
+
 // --- Initialization ---
 
 document.addEventListener('DOMContentLoaded', () => {
     initializeUI();
     setupEventListeners();
+    
+    // Render Static Domains Immediately
+    renderDomainExplorer();
 
-    // 1. Security Wipe
     localStorage.removeItem('psych_geminiApiKey'); 
     localStorage.removeItem('psych_firebaseConfig'); 
-
-    // 2. Apply Visual Theme
     generateAndApplyDefaultTheme();
 
-    // 3. Force "Fresh Start" UI
     const appContainer = document.getElementById('app-container');
     if (appContainer) appContainer.classList.add('hidden');
 
     setupAuthUI(null); 
     openModal('apiKeyModal');
 });
+
+// [ADDED] Render the 12 Domain Cards
+function renderDomainExplorer() {
+    const container = document.getElementById('domain-explorer-container');
+    if (!container) return;
+
+    container.innerHTML = PSYCH_DOMAINS.map(domain => `
+        <div class="group bg-white rounded-xl shadow-sm border border-gray-200 p-5 hover:shadow-md hover:border-green-300 transition-all cursor-pointer flex flex-col justify-between h-full" onclick="window.triggerDomainSearch('${domain.title}')">
+            <div>
+                <div class="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center mb-3 text-green-600 group-hover:bg-green-600 group-hover:text-white transition-colors">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${domain.icon}"></path></svg>
+                </div>
+                <h3 class="font-bold text-gray-800 text-lg mb-1 group-hover:text-green-700">${domain.title}</h3>
+                <p class="text-sm text-gray-500 leading-snug">${domain.desc}</p>
+            </div>
+            <div class="mt-4 pt-3 border-t border-gray-100 flex items-center text-xs font-semibold text-green-600 uppercase tracking-wide group-hover:text-green-800">
+                <span>Discover Topics</span>
+                <svg class="w-4 h-4 ml-1 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+            </div>
+        </div>
+    `).join('');
+}
+
+// [ADDED] Global Handler for the onclick event in HTML string
+window.triggerDomainSearch = (title) => {
+    // Defaults to "Science Journalist" and "Casual" for exploration
+    generateAndPopulateTopicCard(title, "Science Journalist", "Casual", "Comprehensive overview of this field.");
+};
 
 export async function initializeAppContent() {
     if (appState.appIsInitialized) return;
@@ -90,7 +133,7 @@ export function setupAuthUI(user) {
          authStatusEl.innerHTML = `
              <div class="flex gap-2">
                  <button id="auth-settings-btn" class="bg-white/10 backdrop-blur-sm hover:bg-white/20 text-white p-2 rounded-full transition-all" title="API Settings">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
                  </button>
                  <button id="login-button" class="bg-green-600 hover:bg-green-500 text-white font-semibold py-2 px-4 rounded-full flex items-center justify-center gap-2 shadow-lg transition-all transform hover:-translate-y-0.5" title="Sign In with Google">
                     <span>Login</span>
@@ -106,8 +149,6 @@ async function handleApiKeySubmit(e) {
     e.preventDefault();
     const geminiKey = document.getElementById('geminiApiKeyInput').value.trim();
     const firebaseConfigText = document.getElementById('firebaseConfigInput').value.trim();
-    
-    // Optional Keys
     const googleClientId = document.getElementById('googleClientIdInput').value.trim();
 
     if (!geminiKey || !firebaseConfigText) {
@@ -145,7 +186,6 @@ async function loadDynamicPlaceholders() {
     const promptInput = document.getElementById('core-task-input');
     if (!promptInput) return;
 
-    // [CHANGED] Simpler placeholder prompt
     const prompt = `Generate a JSON array of 3 simple, popular psychology questions for beginners. Examples: "Why do we dream?", "How to reduce stress". Return ONLY the JSON array of strings.`;
     try {
         const jsonText = await callGeminiAPI(prompt, true, "Load Placeholders");
@@ -170,7 +210,6 @@ async function handleGeminiSubmit(e) {
         return;
     }
 
-    // [CHANGED] Get values directly from active buttons
     const persona = document.querySelector('#persona-selector .active')?.dataset.value || "Science Journalist";
     const tone = document.querySelector('#tone-selector .active')?.dataset.value || "Casual";
     const outputFormat = document.querySelector('input[name="output-format"]:checked').value;
@@ -214,7 +253,6 @@ async function generateCustomArticle(topic, persona, tone, extraContext) {
         const prompt = getPsychologyArticlePrompt('blueprint', context);
         let resultMarkdown = await callGeminiAPI(prompt, false, "Generate Blueprint");
         
-        // Clean and store
         resultMarkdown = resultMarkdown.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim();
         appState.originalGeneratedText.set(fullTitle, resultMarkdown);
         
@@ -311,7 +349,6 @@ async function generateAndPopulateTopicCard(topic, persona, tone, extraContext) 
     container.prepend(card);
     card.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
-    // [CHANGED] Request simpler topics
     const prompt = `
         Persona: ${persona}.
         Task: Generate 8 interesting, beginner-friendly sub-topics or concepts related to "${topic}". 
@@ -345,14 +382,12 @@ async function handleGridSelect(target) {
     target.classList.add('active', 'ring-2', 'ring-green-500');
 
     const card = target.closest('.card');
-    // Safe check for title
     const cardTitle = card.querySelector('h2')?.textContent || "Unknown Topic";
     markItemAsViewed(cardTitle, item.title);
 
     const resultContainer = document.getElementById(`details-${categoryId}`);
     resultContainer.innerHTML = getLoaderHTML(`Explaining ${item.title}...`);
 
-    // [CHANGED] Request simpler summary
     const prompt = `
         Topic: "${item.title}" (Context: ${cardTitle}).
         Task: Write a simple, engaging 3-sentence summary explaining this concept to a beginner.
@@ -376,11 +411,12 @@ async function handleGridSelect(target) {
 }
 
 async function handleExploreInDepth(topicId, fullHierarchyPath) {
-    // Find the item name from the ID using the path or state
     const categoryId = fullHierarchyPath[fullHierarchyPath.length - 1]?.id || Object.keys(appState.allThemeData).find(k => appState.allThemeData[k].find(i => i.id == topicId));
     
     if(!categoryId) {
-        console.warn("Could not find category for in-depth.");
+        // Fallback for direct calls from domain exploration if ID matching fails
+        // We just use the topic ID as the title if it's not found in data
+        generateCustomArticle(fullHierarchyPath[0]?.title || topicId, "Science Journalist", "Casual", "");
         return;
     }
 
@@ -389,17 +425,13 @@ async function handleExploreInDepth(topicId, fullHierarchyPath) {
     if(item) {
         generateCustomArticle(item.title, "Science Journalist", "Casual", `Context: ${fullHierarchyPath.map(p=>p.title || p).join(' > ')}`);
     } else {
-        // Fallback if data structure is slightly off
         generateCustomArticle(fullHierarchyPath[0]?.title || "Psychology Topic", "Science Journalist", "Casual", "");
     }
 }
 
-// --- Data Export / Import Handlers ---
-
 async function handleExportData() {
     try {
         const btn = document.getElementById('export-data-button');
-        const originalText = btn.textContent;
         btn.textContent = "Exporting...";
         btn.disabled = true;
 
@@ -463,7 +495,6 @@ function setupEventListeners() {
 
     document.getElementById('gemini-form')?.addEventListener('submit', handleGeminiSubmit);
 
-    // [ADDED] Fix for Persona/Tone Button Selection
     document.addEventListener('click', (e) => {
         const btn = e.target.closest('.prompt-builder-btn');
         if (btn) {
@@ -523,12 +554,10 @@ function addPostGenerationButtons(container, topicId, categoryId) {
     let btnBar = document.createElement('div');
     btnBar.className = "flex gap-2 mt-4 pt-4 border-t border-green-100";
     
-    // [CHANGED] Robust Explore button
     const btn = document.createElement('button');
     btn.className = "btn-primary text-sm w-full py-2 shadow-sm hover:shadow-md transition-all";
     btn.textContent = "Explore In-Depth";
     btn.onclick = () => {
-        // Try to find the card container context
         const card = document.getElementById(`selector-${categoryId}`)?.closest('.card');
         const path = JSON.parse(card?.dataset.fullHierarchyPath || "[]");
         handleExploreInDepth(topicId, path);
