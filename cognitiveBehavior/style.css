@@ -1,131 +1,182 @@
 /* style.css */
 
-/* --- Config Modal Specifics --- */
-.config-card {
-    max-width: 500px;
-    width: 90%;
-    /* Use theme vars for borders/bg */
-    background-color: var(--color-card-bg, #ffffff);
-    border: 1px solid var(--color-card-border, #e5e7eb);
+/* --- Variables (Fallback) --- */
+:root {
+    --color-primary: #15803d;
+    --color-primary-dark: #14532d;
+    --color-accent: #16a34a;
+    --color-bg: #f0fdf4;
+    --color-card-border: #dcfce7;
 }
 
-.input-group {
-    margin-bottom: 1.5rem;
-    text-align: left;
+/* --- Base Layout & Typography --- */
+body {
+    font-family: var(--font-family, 'Inter', sans-serif);
+    background-color: #f3f4f6; /* Slate-100 */
+    color: #1f2937;
+    -webkit-font-smoothing: antialiased;
 }
 
-.input-group label {
-    display: block;
+/* --- Rich Input Styling --- */
+.themed-input {
+    transition: all 0.2s ease-in-out;
+    background-color: #ffffff;
+}
+
+.themed-input:focus {
+    outline: none;
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.2); /* Green ring */
+}
+
+/* --- Button Overrides --- */
+.btn-primary {
+    background-color: var(--color-primary);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
     font-weight: 600;
-    margin-bottom: 0.5rem;
-    color: var(--color-text, #374151);
+    transition: background-color 0.2s;
+}
+.btn-primary:hover {
+    background-color: var(--color-primary-dark);
 }
 
-.input-group small {
-    display: block;
-    color: var(--color-text-muted, #6B7280);
-    font-size: 0.85rem;
-    margin-top: 5px;
+.btn-secondary {
+    background-color: white;
+    color: #374151;
+    border: 1px solid #d1d5db;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+.btn-secondary:hover {
+    background-color: #f9fafb;
+    border-color: var(--color-accent);
+    color: var(--color-primary);
 }
 
-textarea, input[type="text"], select {
-    width: 100%;
-    padding: 10px;
-    border: 1px solid var(--color-input-border, #E5E7EB);
-    background-color: var(--color-input-bg, #ffffff);
-    border-radius: 6px;
-    font-size: 0.9rem;
-    color: var(--color-text, #1f2937);
-}
-
-textarea:focus, input:focus, select:focus {
-    outline: 2px solid var(--color-accent, #16a34a);
-    border-color: transparent;
-}
-
-.error-msg {
-    color: #991b1b;
-    background: #fef2f2;
-    padding: 10px;
-    border-radius: 4px;
-    margin-top: 15px;
-    font-size: 0.9rem;
-    border: 1px solid #fecaca;
-}
-
-/* --- Floating Action Button (Settings) --- */
-.floating-action-button {
-    position: fixed;
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-    /* Dynamic Theme Color */
-    background-color: var(--color-primary, #15803d); 
-    color: var(--color-button-text, #ffffff);
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    z-index: 40;
-    border: none;
+/* --- Manual Prose / Typography Engine --- */
+/* This styles the markdown content inside cards without needing Tailwind plugins */
+.prose h3 {
     font-size: 1.25rem;
-    transition: transform 0.2s, background-color 0.2s;
+    font-weight: 700;
+    color: var(--color-primary-dark);
+    margin-top: 1.5rem;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.25rem;
+    border-bottom: 2px solid #f0fdf4;
 }
 
+.prose h4 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #374151;
+    margin-top: 1.25rem;
+    margin-bottom: 0.5rem;
+}
+
+.prose p {
+    margin-bottom: 1rem;
+    line-height: 1.7;
+}
+
+.prose ul {
+    list-style-type: none;
+    padding-left: 0;
+    margin-bottom: 1rem;
+}
+
+.prose ul li {
+    position: relative;
+    padding-left: 1.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.prose ul li::before {
+    content: "•";
+    color: var(--color-accent);
+    font-weight: bold;
+    position: absolute;
+    left: 0.25rem;
+}
+
+.prose strong {
+    color: var(--color-primary);
+    font-weight: 700;
+}
+
+.prose blockquote {
+    border-left: 4px solid var(--color-card-border);
+    padding-left: 1rem;
+    font-style: italic;
+    color: #6b7280;
+    background: #f9fafb;
+    padding: 0.75rem;
+    border-radius: 0 0.5rem 0.5rem 0;
+}
+
+/* --- Prompt Workshop Buttons --- */
+.prompt-builder-btn {
+    border: 1px solid #e5e7eb;
+    background: white;
+    color: #4b5563;
+}
+.prompt-builder-btn:hover {
+    border-color: var(--color-accent);
+    color: var(--color-primary);
+}
+.prompt-builder-btn.active {
+    background-color: var(--color-bg);
+    border-color: var(--color-primary);
+    color: var(--color-primary-dark);
+    font-weight: 600;
+}
+
+/* --- Floating Settings Button --- */
+.floating-action-button {
+    /* Base styles in HTML classes, these are specific interactions */
+    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
 .floating-action-button:hover {
-    transform: scale(1.05);
-    background-color: var(--color-primary-dark, #14532d);
+    transform: scale(1.1) rotate(90deg);
 }
 
-/* --- Settings Panel --- */
-#settings-panel {
-    position: fixed;
-    bottom: 5rem;
-    right: 2rem;
-    width: 300px;
-    background-color: var(--color-card-bg, white);
-    border: 1px solid var(--color-card-border, #e5e7eb);
-    border-radius: 0.75rem;
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-    padding: 1.5rem;
-    z-index: 50;
-    
-    /* Animation State: Hidden */
-    opacity: 0;
-    transform: translateY(10px);
-    transition: opacity 0.2s ease-out, transform 0.2s ease-out;
-    pointer-events: none;
+/* --- Accordion Transitions --- */
+.accordion-content {
+    /* Content hidden via 'hidden' class, but we add smooth border transition */
+    transition: border 0.3s ease;
+}
+.accordion-header.active {
+    background-color: var(--color-primary-dark) !important;
 }
 
-#settings-panel.active {
-    opacity: 1;
-    transform: translateY(0);
-    pointer-events: auto;
+/* --- Animations --- */
+@keyframes spin {
+    to { transform: rotate(360deg); }
 }
-
-#settings-panel.hidden {
-    display: block !important; /* Override tailwind to allow fade out */
-    opacity: 0;
-    pointer-events: none;
-}
-
-/* --- Themed Loader --- */
 .themed-loader {
-    border: 3px solid var(--color-bg, #f0fdf4); 
-    border-top: 3px solid var(--color-accent, #16a34a);
+    border: 3px solid #e5e7eb; 
+    border-top: 3px solid var(--color-accent);
     border-radius: 50%;
     animation: spin 1s linear infinite;
 }
 
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+/* Modal Entry Animation */
+.modal > div {
+    animation: fadeInUp 0.3s ease-out forwards;
 }
 
-/* --- Z-Index Management --- */
-.modal {
-    z-index: 100; 
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px) scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
 }
 
 /* --- Scrollbar Customization --- */
@@ -135,14 +186,15 @@ textarea:focus, input:focus, select:focus {
 }
 
 ::-webkit-scrollbar-track {
-    background: var(--color-bg, #f0fdf4); 
+    background: transparent; 
 }
 
 ::-webkit-scrollbar-thumb {
-    background: var(--color-card-border, #dcfce7); 
-    border-radius: 4px;
+    background: #cbd5e1; 
+    border-radius: 10px;
+    border: 2px solid #f3f4f6; /* Creates padding effect */
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: var(--color-accent, #16a34a); 
+    background: var(--color-accent); 
 }
