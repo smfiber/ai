@@ -4,9 +4,12 @@ import { jsonInstruction } from './prompts.js';
 
 // --- Helper: Parse JSON with fault tolerance ---
 export function parseJsonWithCorrections(jsonString) {
+    // [FIX] Strict type check to prevent "u[v] is not a function" or regex errors
     if (!jsonString || typeof jsonString !== 'string') {
-        throw new Error("Invalid input: not a string.");
+        console.warn("parseJsonWithCorrections received invalid input:", jsonString);
+        return []; 
     }
+
     let cleanedString = jsonString.replace(/```(json|markdown)?\n?/g, '').replace(/```/g, '').trim();
     try {
         return JSON.parse(cleanedString);
@@ -16,13 +19,14 @@ export function parseJsonWithCorrections(jsonString) {
         try {
             // Basic cleanup for common AI JSON errors
             const correctedJsonString = cleanedString
-                .replace(/\\'/g, "'")
+                .replace(/\\'/g, "'") // Fix escaped single quotes
                 .replace(/([{\s,])(\w+)(:)/g, '$1"$2"$3') // Quote unquoted keys
                 .replace(/,\s*([\]}])/g, '$1'); // Remove trailing commas
             return JSON.parse(correctedJsonString);
         } catch (finalError) {
             console.error("Failed to parse JSON even after cleaning:", finalError);
-            throw new Error(`JSON Parse Error: ${finalError.message}`);
+            // Return null instead of throwing to keep the app alive
+            return null; 
         }
     }
 }
@@ -69,7 +73,7 @@ async function callApi(apiUrl, payload, authorization = null) {
 // --- Exported: Call Gemini API ---
 export async function callGeminiAPI(prompt, isJson = false, logType = "General") {
     if (!appState.geminiApiKey) {
-        throw new Error("Gemini API Key is not set. Please enter it in the settings.");
+        throw new Error("Gemini API Key is not set.");
     }
     
     // Using strict version as requested
@@ -115,9 +119,4 @@ export async function searchGoogleForTopic(query) {
 }
 
 // --- Exported: Generate Color Theme ---
-export async function callColorGenAPI(prompt) {
-    const fullPrompt = `Based on the visual theme "${prompt}", generate a color palette for a web app. I need a JSON object with keys: "bg", "text", "primary", "primaryDark", "accent", "cardBg", "cardBorder", "textMuted", "inputBg", "inputBorder", "buttonText". Determine if the "primary" color is light or dark to set the "buttonText" appropriately (#FFFFFF for dark, #111827 for light).`;
-    const jsonText = await callGeminiAPI(fullPrompt, true, "Generate Color Theme");
-    if (jsonText) return parseJsonWithCorrections(jsonText);
-    throw new Error("Could not parse a valid color theme from API response.");
-}
+// [REMOVED] callColorGenAPI - No longer used as we have a permanent green theme.
