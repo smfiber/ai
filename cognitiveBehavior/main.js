@@ -461,12 +461,12 @@ function renderLibraryItems(items) {
     appState.libraryCache = items;
 }
 
-// [ADDED] Open Saved Article Logic
+// [CHANGED] Fixed to include buttons & ensure audio works
 window.openSavedArticle = (id) => {
     const item = appState.libraryCache.find(i => i.id === id);
     if (!item) return;
 
-    // We reuse the inDepthModal for reading
+    // Reuse inDepthModal
     const titleEl = document.getElementById('inDepthModalTitle');
     const contentEl = document.getElementById('inDepthModalContent');
     const footerEl = document.getElementById('inDepthModalFooter');
@@ -475,12 +475,22 @@ window.openSavedArticle = (id) => {
     titleEl.textContent = item.title;
     contentEl.innerHTML = '';
     
-    // Render the markdown content
+    // Set text in appState so Audio can find it
+    appState.originalGeneratedText.set(item.title, item.markdownContent);
+    
+    // Render markdown
     renderAccordionFromMarkdown(item.markdownContent, contentEl);
     
-    // Hide buttons since it's saved
-    buttonContainer.innerHTML = ''; 
-    footerEl.dataset.fullTitle = item.title;
+    // Inject Copy & Read Aloud Buttons
+    buttonContainer.innerHTML = `
+        <button class="btn-secondary text-sm copy-button py-2 px-4 shadow-sm hover:shadow-md transition-shadow">Copy Text</button>
+        <button id="read-aloud-btn" class="btn-secondary text-sm py-2 px-4 shadow-sm hover:shadow-md transition-shadow flex items-center gap-2 text-green-700 border-green-200 hover:bg-green-50">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path></svg>
+            Read Aloud
+        </button>
+    `;
+
+    footerEl.dataset.fullTitle = item.title; // Key for lookup
     
     closeModal('libraryModal');
     openModal('inDepthModal');
@@ -599,14 +609,17 @@ function setupEventListeners() {
         // [ADDED] Read Aloud Listener
         if (target.closest('#read-aloud-btn')) {
             const btn = target.closest('#read-aloud-btn');
-            const footer = document.getElementById('inDepthDetailedModalFooter');
+            // Check both footers because openSavedArticle uses 'inDepthModalFooter'
+            const footer = document.getElementById('inDepthDetailedModalFooter') || document.getElementById('inDepthModalFooter');
             const fullTitle = footer.dataset.fullTitle;
             const text = appState.originalGeneratedText.get(fullTitle);
             if (text) toggleSpeech(text, btn);
         }
 
-        if (target.id.startsWith('close') && target.closest('.modal')) {
-            closeModal(target.closest('.modal').id);
+        // [FIXED] Close Button Logic (now handles child SVG clicks)
+        const closeBtn = target.closest('button');
+        if (closeBtn && closeBtn.id.startsWith('close') && closeBtn.closest('.modal')) {
+            closeModal(closeBtn.closest('.modal').id);
         }
     });
 }
