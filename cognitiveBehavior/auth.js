@@ -16,14 +16,26 @@ export async function handleFirebaseLogin() {
         // UI updates handled by onAuthStateChanged in main.js
     } catch (error) {
         console.error("Google Sign-In Popup failed:", error);
-        let userMessage = `Login failed: ${error.code}.`;
-        if (error.code === 'auth/popup-closed-by-user') {
-            userMessage += ' You closed the login window before completing sign-in.';
+        
+        let userMessage = '';
+        
+        // Detailed Error Handling for Debugging
+        if (error.code) {
+             userMessage = `Login failed: ${error.code}.`;
+             if (error.code === 'auth/popup-closed-by-user') {
+                userMessage += ' You closed the login window before completing sign-in.';
+            } else if (error.code === 'auth/unauthorized-domain') {
+                 userMessage += ' This domain is not authorized in Firebase Console. Add it to Authentication > Settings > Authorized Domains.';
+            }
+        } else if (error.message) {
+             // Fallback for standard JS errors (often unauthorized domain shows here if code is missing)
+             userMessage = `Login Error: ${error.message}`;
         } else {
-            userMessage += ' This can be caused by pop-up blockers. Please check your browser settings.';
+             // Fallback for weird objects
+             userMessage = `Unknown Login Error: ${JSON.stringify(error)}`;
         }
-        // We might need a way to show this error in UI, but for now log it
-        alert(userMessage); 
+
+        alert(userMessage + "\n\nPlease check your Firebase Console 'Authorized Domains' settings."); 
     }
 }
 
