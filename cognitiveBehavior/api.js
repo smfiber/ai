@@ -101,8 +101,8 @@ export async function generateAudioFromText(text) {
     if (!appState.geminiApiKey) throw new Error("Gemini API Key is not set.");
     if (!text) return null;
 
-    // Use gemini-2.5-flash for efficient audio generation
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${appState.geminiApiKey}`;
+    // [FIX] Use gemini-2.0-flash-exp for audio generation capabilities
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${appState.geminiApiKey}`;
 
     const payload = {
         contents: [{ parts: [{ text: text }] }],
