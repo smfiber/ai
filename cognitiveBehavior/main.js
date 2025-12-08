@@ -609,11 +609,14 @@ function setupEventListeners() {
         // [ADDED] Read Aloud Listener
         if (target.closest('#read-aloud-btn')) {
             const btn = target.closest('#read-aloud-btn');
-            // Check both footers because openSavedArticle uses 'inDepthModalFooter'
-            const footer = document.getElementById('inDepthDetailedModalFooter') || document.getElementById('inDepthModalFooter');
-            const fullTitle = footer.dataset.fullTitle;
-            const text = appState.originalGeneratedText.get(fullTitle);
-            if (text) toggleSpeech(text, btn);
+            // Locate the footer specifically for the button clicked (works for both Blueprint and Detailed modals)
+            const footer = btn.closest('[id$="Footer"]');
+            
+            if (footer) {
+                const fullTitle = footer.dataset.fullTitle;
+                const text = appState.originalGeneratedText.get(fullTitle);
+                if (text) toggleSpeech(text, btn);
+            }
         }
 
         // [FIXED] Close Button Logic (now handles child SVG clicks)
