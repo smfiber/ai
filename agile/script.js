@@ -634,20 +634,23 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             const prompt = `
-                I am a Server Administrator on the core infrastructure team.
-                My goal is to find new operational tasks for my backlog.
-                
-                Please generate 5-7 distinct task ideas related to the following criteria:
-                -   Technology: "${selectedTech}"
-                -   My Team's Function: "${selectedFunction}"
-
-                For each idea:
-                1.  Start with a clear **Task:** (e.g., "Task: Audit stale GPOs...").
-                2.  Follow it with the **Pain Point:** this task solves (e.g., "Pain Point: Reduces logon time...").
-                3.  Keep the entire idea (Task + Pain Point) to 2-3 sentences.
-                
-                IMPORTANT: My team does NOT handle enterprise security, backups, or end-user device management. Please exclude ideas related to those specific areas and focus only on my team's function as it relates to the technology.
-
+                I am a Tool Developer for the Core Infrastructure team.
+                My goal is to build PowerShell GUI tools (using WPF/XAML) to simplify complex admin tasks.
+            
+                Please generate 5-7 ideas for GUI-based tools related to:
+                - Technology: "${selectedTech}"
+                - Operational Focus: "${selectedFunction}"
+            
+                Criteria for valid GUI tools:
+                1. **Why a GUI?** The task must benefit from a visual interface (e.g., selecting multiple items from a list, reviewing data before clicking 'Apply', or real-time status dashboards).
+                2. **Exclusions:** No simple "one-click" scripts that don't need a UI. No backups, security scanning, or end-user support tools.
+                3. **Audience:** The tool is for other Server Admins to use manually.
+            
+                Format for each idea:
+                **Tool Name:** [Professional name, e.g., 'ClusterNode Manager']
+                **The Workflow:** [1 sentence on what the admin does in the tool]
+                **Key UI Elements:** [List specific WPF controls, e.g., 'Multi-select DataGrid', 'Real-time Progress Bar', 'Tabbed Output View']
+            
                 Do not number the list. Separate each idea with a blank line.
             `;
             
