@@ -637,7 +637,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 I am a Tool Developer for the Core Infrastructure team.
                 My goal is to build PowerShell GUI tools (using WPF/XAML) to simplify complex admin tasks.
             
-                Please generate 5-7 ideas for GUI-based tools related to:
+                Please generate 10 ideas for GUI-based tools related to:
                 - Technology: "${selectedTech}"
                 - Operational Focus: "${selectedFunction}"
             
