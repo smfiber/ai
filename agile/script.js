@@ -183,7 +183,7 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-        const API_URL = `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-pro:generateContent?key=${appKeys.geminiApiKey}`;
+        const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=${appKeys.geminiApiKey}`;
 
         generatedAiIdeasHtml.innerHTML = "<p>Generating... Please wait.</p>";
         generatedAiIdeasOutput.style.display = "block";
