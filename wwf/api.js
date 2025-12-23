@@ -1,7 +1,7 @@
 import { configStore } from './config.js';
 
 let app, auth, db; 
-let GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, setPersistence, browserSessionPersistence;
+let GoogleAuthProvider, signInWithRedirect, signOut, onAuthStateChanged, setPersistence, browserSessionPersistence;
 let collection, addDoc, doc, query, where, getDocs, setDoc, orderBy, limit, updateDoc; 
 
 export async function initFirebase() {
@@ -10,13 +10,17 @@ export async function initFirebase() {
     try {
         const { initializeApp } = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js');
         
-        // ADDED: setPersistence and browserSessionPersistence
-        const { getAuth, GoogleAuthProvider: GAP, signInWithPopup: SIWP, signOut: SO, onAuthStateChanged: OASC, setPersistence: SP, browserSessionPersistence: BSP } = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js');
+        // CHANGED: Imported signInWithRedirect instead of signInWithPopup
+        const { getAuth, GoogleAuthProvider: GAP, signInWithRedirect: SIWR, signOut: SO, onAuthStateChanged: OASC, setPersistence: SP, browserSessionPersistence: BSP } = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js');
         
         const { getFirestore, collection: COL, addDoc: AD, doc: DOC, query: Q, where: W, getDocs: GD, setDoc: SD, orderBy: OB, limit: L, updateDoc: UD } = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js');
 
-        GoogleAuthProvider = GAP; signInWithPopup = SIWP; signOut = SO; onAuthStateChanged = OASC;
-        setPersistence = SP; browserSessionPersistence = BSP;
+        GoogleAuthProvider = GAP; 
+        signInWithRedirect = SIWR; // Updated assignment
+        signOut = SO; 
+        onAuthStateChanged = OASC;
+        setPersistence = SP; 
+        browserSessionPersistence = BSP;
         
         collection = COL; addDoc = AD; doc = DOC; query = Q; where = W; getDocs = GD; setDoc = SD; orderBy = OB; limit = L; updateDoc = UD;
 
@@ -24,7 +28,6 @@ export async function initFirebase() {
         auth = getAuth(app);
         db = getFirestore(app);
 
-        // ADDED: This ensures the browser allows the session to exist
         await setPersistence(auth, browserSessionPersistence);
         
         return { auth, onAuthStateChanged };
@@ -38,8 +41,12 @@ export async function signInWithGoogle() {
     try {
         const provider = new GoogleAuthProvider();
         provider.setCustomParameters({ 'client_id': configStore.googleClientId });
-        const result = await signInWithPopup(auth, provider);
-        return result.user;
+        
+        // CHANGED: Using Redirect instead of Popup to avoid COOP/COEP errors
+        await signInWithRedirect(auth, provider);
+        // Note: The page will reload. The 'onAuthStateChanged' listener in app.js 
+        // will automatically detect the user when the page comes back.
+        
     } catch (error) {
         console.error("Sign In Error:", error);
         alert(`Authentication Error: ${error.message}`);
