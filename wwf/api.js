@@ -1,3 +1,9 @@
+/*
+ * API.JS
+ * GitHub Pages / Production Version
+ * Auth Method: Redirect (Bypasses Cross-Origin Blocking)
+ */
+
 import { configStore } from './config.js';
 
 let app, auth, db; 
@@ -10,13 +16,13 @@ export async function initFirebase() {
     try {
         const { initializeApp } = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js');
         
-        // CHANGED: Imported signInWithRedirect instead of signInWithPopup
+        // IMPORT "signInWithRedirect" instead of Popup
         const { getAuth, GoogleAuthProvider: GAP, signInWithRedirect: SIWR, signOut: SO, onAuthStateChanged: OASC, setPersistence: SP, browserSessionPersistence: BSP } = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js');
         
         const { getFirestore, collection: COL, addDoc: AD, doc: DOC, query: Q, where: W, getDocs: GD, setDoc: SD, orderBy: OB, limit: L, updateDoc: UD } = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js');
 
         GoogleAuthProvider = GAP; 
-        signInWithRedirect = SIWR; // Updated assignment
+        signInWithRedirect = SIWR; 
         signOut = SO; 
         onAuthStateChanged = OASC;
         setPersistence = SP; 
@@ -28,6 +34,7 @@ export async function initFirebase() {
         auth = getAuth(app);
         db = getFirestore(app);
 
+        // Required for maintaining session on GitHub Pages
         await setPersistence(auth, browserSessionPersistence);
         
         return { auth, onAuthStateChanged };
@@ -42,10 +49,12 @@ export async function signInWithGoogle() {
         const provider = new GoogleAuthProvider();
         provider.setCustomParameters({ 'client_id': configStore.googleClientId });
         
-        // CHANGED: Using Redirect instead of Popup to avoid COOP/COEP errors
+        // USE REDIRECT: This avoids the "Cross-Origin" error
         await signInWithRedirect(auth, provider);
-        // Note: The page will reload. The 'onAuthStateChanged' listener in app.js 
-        // will automatically detect the user when the page comes back.
+        
+        // Note: The page will reload after this call. 
+        // The onAuthStateChanged listener in app.js will handle the login 
+        // when the page reloads.
         
     } catch (error) {
         console.error("Sign In Error:", error);
