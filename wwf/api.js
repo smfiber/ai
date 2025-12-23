@@ -1,13 +1,12 @@
 /*
  * API.JS
- * GitHub Pages / Production Version
- * Auth Method: Redirect (Bypasses Cross-Origin Blocking)
+ * Final Fixed Version - Popup Auth
  */
 
 import { configStore } from './config.js';
 
 let app, auth, db; 
-let GoogleAuthProvider, signInWithRedirect, signOut, onAuthStateChanged, setPersistence, browserSessionPersistence;
+let GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, setPersistence, browserSessionPersistence;
 let collection, addDoc, doc, query, where, getDocs, setDoc, orderBy, limit, updateDoc; 
 
 export async function initFirebase() {
@@ -15,14 +14,11 @@ export async function initFirebase() {
 
     try {
         const { initializeApp } = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js');
-        
-        // IMPORT "signInWithRedirect" instead of Popup
-        const { getAuth, GoogleAuthProvider: GAP, signInWithRedirect: SIWR, signOut: SO, onAuthStateChanged: OASC, setPersistence: SP, browserSessionPersistence: BSP } = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js');
-        
+        const { getAuth, GoogleAuthProvider: GAP, signInWithPopup: SIWP, signOut: SO, onAuthStateChanged: OASC, setPersistence: SP, browserSessionPersistence: BSP } = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js');
         const { getFirestore, collection: COL, addDoc: AD, doc: DOC, query: Q, where: W, getDocs: GD, setDoc: SD, orderBy: OB, limit: L, updateDoc: UD } = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js');
 
         GoogleAuthProvider = GAP; 
-        signInWithRedirect = SIWR; 
+        signInWithPopup = SIWP; // MUST USE POPUP
         signOut = SO; 
         onAuthStateChanged = OASC;
         setPersistence = SP; 
@@ -34,7 +30,7 @@ export async function initFirebase() {
         auth = getAuth(app);
         db = getFirestore(app);
 
-        // Required for maintaining session on GitHub Pages
+        // Required for modern browser security
         await setPersistence(auth, browserSessionPersistence);
         
         return { auth, onAuthStateChanged };
@@ -49,16 +45,19 @@ export async function signInWithGoogle() {
         const provider = new GoogleAuthProvider();
         provider.setCustomParameters({ 'client_id': configStore.googleClientId });
         
-        // USE REDIRECT: This avoids the "Cross-Origin" error
-        await signInWithRedirect(auth, provider);
-        
-        // Note: The page will reload after this call. 
-        // The onAuthStateChanged listener in app.js will handle the login 
-        // when the page reloads.
+        // Using Popup so page DOES NOT reload and keys are kept in memory
+        const result = await signInWithPopup(auth, provider);
+        return result.user;
         
     } catch (error) {
         console.error("Sign In Error:", error);
-        alert(`Authentication Error: ${error.message}`);
+        
+        // Helper for common "Internal Auth" or "Cross Origin" issues
+        if (error.code === 'auth/internal-error' || error.message.includes('Cross-Origin')) {
+            alert(`Login Blocked by Browser.\n\n1. Try an Incognito/Private Window (Extensions break popups).\n2. Ensure "${window.location.hostname}" is in Firebase Console > Auth > Authorized Domains.`);
+        } else {
+            alert(`Authentication Error: ${error.message}`);
+        }
     }
 }
 
