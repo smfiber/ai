@@ -3,12 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>App Launch Pad</title>
+    <title>SMFiber Launch Pad</title>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
         :root {
+            /* Background: A nice mountain/lake view that captures all elements */
             --bg-image: url('https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?q=80&w=2874&auto=format&fit=crop');
             --glass-bg: rgba(255, 255, 255, 0.1);
             --glass-border: 1px solid rgba(255, 255, 255, 0.2);
@@ -21,11 +22,11 @@
             --water-color: #03A9F4;
             --water-gradient: linear-gradient(135deg, #0277bd, #81d4fa);
             
-            --air-color: #90CAF9;
-            --air-gradient: linear-gradient(135deg, #607d8b, #cfd8dc);
+            --air-color: #90CAF9; /* Light blue/grey for Air/Cloud */
+            --air-gradient: linear-gradient(135deg, #455A64, #90A4AE);
             
             --fire-color: #FF5722;
-            --fire-gradient: linear-gradient(135deg, #c62828, #ffab91);
+            --fire-gradient: linear-gradient(135deg, #d84315, #ffccbc);
         }
 
         * {
@@ -46,7 +47,7 @@
             background-position: center;
             background-repeat: no-repeat;
             color: var(--text-color);
-            overflow: hidden; /* Prevents scrollbars if not needed */
+            overflow: hidden; 
         }
 
         /* Dark overlay to ensure text pops */
@@ -57,7 +58,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.6);
+            background: rgba(0, 0, 0, 0.5); /* Slightly darker for better contrast */
             z-index: -1;
         }
 
@@ -69,6 +70,7 @@
             letter-spacing: 5px;
             text-shadow: 0 4px 10px rgba(0,0,0,0.5);
             animation: fadeIn Down 1s ease-out;
+            text-align: center;
         }
 
         /* Grid Layout for Cards */
@@ -84,8 +86,8 @@
         /* Card Styles */
         .card {
             background: var(--glass-bg);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
             border: var(--glass-border);
             border-radius: 20px;
             padding: 2rem;
@@ -104,19 +106,21 @@
         }
 
         .card h2 {
-            font-size: 1.5rem;
+            font-size: 1.4rem;
             margin: 1rem 0;
             z-index: 2;
+            font-weight: 600;
         }
 
         .card p {
-            font-size: 0.9rem;
-            opacity: 0.8;
+            font-size: 0.85rem;
+            opacity: 0.9;
             z-index: 2;
+            line-height: 1.4;
         }
 
         .icon-container {
-            font-size: 4rem;
+            font-size: 3.5rem;
             margin-bottom: 1rem;
             z-index: 2;
             transition: transform 0.3s ease;
@@ -134,7 +138,7 @@
 
         /* Specific Element Styling & Glows */
         
-        /* EARTH */
+        /* EARTH - IT Applications */
         .card.earth:hover { border-color: var(--earth-color); }
         .card.earth .icon-container { color: var(--earth-color); }
         .card.earth::after {
@@ -144,9 +148,9 @@
             background: var(--earth-gradient);
             transition: height 0.3s ease;
         }
-        .card.earth:hover::after { height: 100%; opacity: 0.2; }
+        .card.earth:hover::after { height: 100%; opacity: 0.3; }
 
-        /* WATER */
+        /* WATER - Backstory Generator */
         .card.water:hover { border-color: var(--water-color); }
         .card.water .icon-container { color: var(--water-color); }
         .card.water::after {
@@ -156,9 +160,9 @@
             background: var(--water-gradient);
             transition: height 0.3s ease;
         }
-        .card.water:hover::after { height: 100%; opacity: 0.2; }
+        .card.water:hover::after { height: 100%; opacity: 0.3; }
 
-        /* AIR */
+        /* AIR - IT Admin Hub */
         .card.air:hover { border-color: var(--air-color); }
         .card.air .icon-container { color: var(--air-color); }
         .card.air::after {
@@ -168,9 +172,9 @@
             background: var(--air-gradient);
             transition: height 0.3s ease;
         }
-        .card.air:hover::after { height: 100%; opacity: 0.2; }
+        .card.air:hover::after { height: 100%; opacity: 0.3; }
 
-        /* FIRE */
+        /* FIRE - PowerShell ScriptSmith */
         .card.fire:hover { border-color: var(--fire-color); }
         .card.fire .icon-container { color: var(--fire-color); }
         .card.fire::after {
@@ -180,7 +184,7 @@
             background: var(--fire-gradient);
             transition: height 0.3s ease;
         }
-        .card.fire:hover::after { height: 100%; opacity: 0.2; }
+        .card.fire:hover::after { height: 100%; opacity: 0.3; }
 
 
         /* Responsive Design */
@@ -204,40 +208,40 @@
 </head>
 <body>
 
-    <h1>Application Portal</h1>
+    <h1>Development Launchpad</h1>
 
     <div class="grid-container">
         
         <a href="#" class="card earth">
             <div class="icon-container">
-                <i class="fa-solid fa-leaf"></i>
+                <i class="fa-solid fa-laptop-code"></i>
             </div>
-            <h2>Life Explorer</h2>
-            <p>Cataloging the natural world. Species, plants, and wildlife.</p>
+            <h2>IT Applications</h2>
+            <p>Core software suite and general utility applications.</p>
         </a>
 
-        <a href="#" class="card water">
+        <a href="https://smfiber.github.io/ai/agile/index.html" class="card water">
             <div class="icon-container">
-                <i class="fa-solid fa-water"></i>
+                <i class="fa-solid fa-pen-nib"></i>
             </div>
-            <h2>Deep Dive</h2>
-            <p>Analytics, data lakes, and fluid information streams.</p>
+            <h2>Backstory Generator</h2>
+            <p>AI-driven persona creation for agile development.</p>
         </a>
 
-        <a href="#" class="card air">
+        <a href="https://smfiber.github.io/ai/itadmintool/index.html" class="card air">
             <div class="icon-container">
-                <i class="fa-solid fa-wind"></i>
+                <i class="fa-solid fa-network-wired"></i>
             </div>
-            <h2>Psychology</h2>
-            <p>Thought, mind, and the invisible currents of behavior.</p>
+            <h2>IT Admin Hub</h2>
+            <p>Centralized control for system administration tasks.</p>
         </a>
 
-        <a href="#" class="card fire">
+        <a href="https://smfiber.github.io/ai/powershell.html" class="card fire">
             <div class="icon-container">
-                <i class="fa-solid fa-fire"></i>
+                <i class="fa-solid fa-terminal"></i>
             </div>
-            <h2>Project Phoenix</h2>
-            <p>Experimental tools, admin panels, and hotfixes.</p>
+            <h2>PowerShell ScriptSmith</h2>
+            <p>Advanced scripting tools and automation engine.</p>
         </a>
 
     </div>
