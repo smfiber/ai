@@ -22,65 +22,78 @@
             --water-color: #03A9F4;
             --water-gradient: linear-gradient(135deg, #0277bd, #81d4fa);
             
-            --air-color: #90CAF9; /* Light blue/grey for Air/Cloud */
+            --air-color: #90CAF9; 
             --air-gradient: linear-gradient(135deg, #455A64, #90A4AE);
             
             --fire-color: #FF5722;
             --fire-gradient: linear-gradient(135deg, #d84315, #ffccbc);
+
+            /* Metal (Gold) for Finance */
+            --metal-color: #FFD700;
+            --metal-gradient: linear-gradient(135deg, #FFC107, #FFF59D);
         }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
 
         body {
             font-family: 'Montserrat', sans-serif;
-            height: 100vh;
+            min-height: 100vh;
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
+            justify-content: flex-start; 
             background-image: var(--bg-image);
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
+            background-attachment: fixed;
             color: var(--text-color);
-            overflow: hidden; 
+            padding: 40px 0;
         }
 
-        /* Dark overlay to ensure text pops */
+        /* Dark overlay */
         body::before {
             content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5); /* Slightly darker for better contrast */
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.6);
             z-index: -1;
         }
 
         h1 {
             font-weight: 300;
-            font-size: 3rem;
-            margin-bottom: 2rem;
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
             text-transform: uppercase;
-            letter-spacing: 5px;
+            letter-spacing: 4px;
             text-shadow: 0 4px 10px rgba(0,0,0,0.5);
-            animation: fadeIn Down 1s ease-out;
             text-align: center;
         }
 
-        /* Grid Layout for Cards */
+        /* Section Divider Header */
+        h2.section-title {
+            width: 90%;
+            max-width: 1600px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-top: 3rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.3);
+            color: rgba(255,255,255,0.8);
+        }
+
+        /* Container */
         .grid-container {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
             gap: 2rem;
             width: 90%;
-            max-width: 1400px;
-            padding: 1rem;
+            max-width: 1600px;
+            margin-bottom: 1rem;
         }
 
         /* Card Styles */
@@ -98,150 +111,124 @@
             color: white;
             position: relative;
             overflow: hidden;
-            height: 350px;
+            width: 280px; 
+            height: 320px;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
         }
 
-        .card h2 {
-            font-size: 1.4rem;
-            margin: 1rem 0;
-            z-index: 2;
-            font-weight: 600;
-        }
+        .card h2 { font-size: 1.3rem; margin: 1rem 0; z-index: 2; font-weight: 600; }
+        .card p { font-size: 0.85rem; opacity: 0.9; z-index: 2; line-height: 1.4; }
+        .icon-container { font-size: 3rem; margin-bottom: 1rem; z-index: 2; transition: transform 0.3s ease; }
 
-        .card p {
-            font-size: 0.85rem;
-            opacity: 0.9;
-            z-index: 2;
-            line-height: 1.4;
-        }
+        .card:hover { transform: translateY(-10px) scale(1.02); box-shadow: 0 20px 40px rgba(0,0,0,0.4); }
+        .card:hover .icon-container { transform: scale(1.2); }
 
-        .icon-container {
-            font-size: 3.5rem;
-            margin-bottom: 1rem;
-            z-index: 2;
-            transition: transform 0.3s ease;
-        }
-
-        /* Hover Effects */
-        .card:hover {
-            transform: translateY(-15px) scale(1.02);
-            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
-        }
-
-        .card:hover .icon-container {
-            transform: scale(1.2);
-        }
-
-        /* Specific Element Styling & Glows */
-        
-        /* EARTH - IT Applications */
+        /* Element Colors */
         .card.earth:hover { border-color: var(--earth-color); }
         .card.earth .icon-container { color: var(--earth-color); }
-        .card.earth::after {
-            content: '';
-            position: absolute;
-            bottom: 0; left: 0; width: 100%; height: 5px;
-            background: var(--earth-gradient);
-            transition: height 0.3s ease;
-        }
+        .card.earth::after { content: ''; position: absolute; bottom: 0; left: 0; width: 100%; height: 5px; background: var(--earth-gradient); transition: height 0.3s ease; }
         .card.earth:hover::after { height: 100%; opacity: 0.3; }
 
-        /* WATER - Backstory Generator */
         .card.water:hover { border-color: var(--water-color); }
         .card.water .icon-container { color: var(--water-color); }
-        .card.water::after {
-            content: '';
-            position: absolute;
-            bottom: 0; left: 0; width: 100%; height: 5px;
-            background: var(--water-gradient);
-            transition: height 0.3s ease;
-        }
+        .card.water::after { content: ''; position: absolute; bottom: 0; left: 0; width: 100%; height: 5px; background: var(--water-gradient); transition: height 0.3s ease; }
         .card.water:hover::after { height: 100%; opacity: 0.3; }
 
-        /* AIR - IT Admin Hub */
         .card.air:hover { border-color: var(--air-color); }
         .card.air .icon-container { color: var(--air-color); }
-        .card.air::after {
-            content: '';
-            position: absolute;
-            bottom: 0; left: 0; width: 100%; height: 5px;
-            background: var(--air-gradient);
-            transition: height 0.3s ease;
-        }
+        .card.air::after { content: ''; position: absolute; bottom: 0; left: 0; width: 100%; height: 5px; background: var(--air-gradient); transition: height 0.3s ease; }
         .card.air:hover::after { height: 100%; opacity: 0.3; }
 
-        /* FIRE - PowerShell ScriptSmith */
         .card.fire:hover { border-color: var(--fire-color); }
         .card.fire .icon-container { color: var(--fire-color); }
-        .card.fire::after {
-            content: '';
-            position: absolute;
-            bottom: 0; left: 0; width: 100%; height: 5px;
-            background: var(--fire-gradient);
-            transition: height 0.3s ease;
-        }
+        .card.fire::after { content: ''; position: absolute; bottom: 0; left: 0; width: 100%; height: 5px; background: var(--fire-gradient); transition: height 0.3s ease; }
         .card.fire:hover::after { height: 100%; opacity: 0.3; }
 
+        .card.metal:hover { border-color: var(--metal-color); }
+        .card.metal .icon-container { color: var(--metal-color); }
+        .card.metal::after { content: ''; position: absolute; bottom: 0; left: 0; width: 100%; height: 5px; background: var(--metal-gradient); transition: height 0.3s ease; }
+        .card.metal:hover::after { height: 100%; opacity: 0.3; }
 
-        /* Responsive Design */
-        @media (max-width: 1000px) {
-            .grid-container {
-                grid-template-columns: repeat(2, 1fr);
-                overflow-y: auto;
-            }
-            body {
-                height: auto;
-                padding: 50px 0;
-            }
-        }
-
-        @media (max-width: 600px) {
-            .grid-container {
-                grid-template-columns: 1fr;
-            }
-        }
     </style>
 </head>
 <body>
 
     <h1>Development Launchpad</h1>
 
+    <h2 class="section-title">Development Suite</h2>
     <div class="grid-container">
         
         <a href="#" class="card earth">
-            <div class="icon-container">
-                <i class="fa-solid fa-laptop-code"></i>
-            </div>
+            <div class="icon-container"><i class="fa-solid fa-laptop-code"></i></div>
             <h2>IT Applications</h2>
             <p>Core software suite and general utility applications.</p>
         </a>
 
         <a href="https://smfiber.github.io/ai/agile/index.html" class="card water">
-            <div class="icon-container">
-                <i class="fa-solid fa-pen-nib"></i>
-            </div>
+            <div class="icon-container"><i class="fa-solid fa-pen-nib"></i></div>
             <h2>Backstory Generator</h2>
             <p>AI-driven persona creation for agile development.</p>
         </a>
 
         <a href="https://smfiber.github.io/ai/itadmintool/index.html" class="card air">
-            <div class="icon-container">
-                <i class="fa-solid fa-network-wired"></i>
-            </div>
+            <div class="icon-container"><i class="fa-solid fa-network-wired"></i></div>
             <h2>IT Admin Hub</h2>
-            <p>Centralized control for system administration tasks.</p>
+            <p>Centralized control for system administration.</p>
         </a>
 
         <a href="https://smfiber.github.io/ai/powershell.html" class="card fire">
-            <div class="icon-container">
-                <i class="fa-solid fa-terminal"></i>
-            </div>
-            <h2>PowerShell ScriptSmith</h2>
+            <div class="icon-container"><i class="fa-solid fa-terminal"></i></div>
+            <h2>ScriptSmith</h2>
             <p>Advanced scripting tools and automation engine.</p>
+        </a>
+
+        <a href="https://smfiber.github.io/ai/bills.html" class="card metal">
+            <div class="icon-container"><i class="fa-solid fa-wallet"></i></div>
+            <h2>Personal Finance</h2>
+            <p>Bill tracking, budgeting, and planning.</p>
+        </a>
+    </div>
+
+
+    <h2 class="section-title">Market Analytics</h2>
+    <div class="grid-container">
+
+        <a href="https://smfiber.github.io/ai/stocks/thesis/index.html" class="card metal">
+            <div class="icon-container"><i class="fa-solid fa-magnifying-glass-chart"></i></div>
+            <h2>GARP Research</h2>
+            <p>Thesis validation and growth-at-reasonable-price analysis.</p>
+        </a>
+
+        <a href="https://smfiber.github.io/ai/stocks/sec/index.html" class="card metal">
+            <div class="icon-container"><i class="fa-solid fa-building-columns"></i></div>
+            <h2>SEC Command</h2>
+            <p>Regulatory filings, 10-Ks, and institutional data.</p>
+        </a>
+
+        <a href="https://smfiber.github.io/ai/stocks/garp/screener/index.html" class="card metal">
+            <div class="icon-container"><i class="fa-solid fa-filter-circle-dollar"></i></div>
+            <h2>GARP Screener</h2>
+            <p>Filter the market for high-value growth opportunities.</p>
+        </a>
+
+    </div>
+
+    <h2 class="section-title">Living World</h2>
+    <div class="grid-container">
+
+        <a href="https://smfiber.github.io/ai/farmersalmanac/index.html" class="card earth">
+            <div class="icon-container"><i class="fa-solid fa-seedling"></i></div>
+            <h2>Digital Gardening</h2>
+            <p>Cultivating ideas, tracking seasons, and organic growth.</p>
+        </a>
+
+        <a href="https://smfiber.github.io/ai/all_life_on_earth/index.html" class="card earth">
+            <div class="icon-container"><i class="fa-solid fa-paw"></i></div>
+            <h2>Discover the Wild</h2>
+            <p>A comprehensive catalog of all life on Earth.</p>
         </a>
 
     </div>
